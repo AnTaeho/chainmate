@@ -1,0 +1,110 @@
+// 점수 파이프라인. 값 × 연쇄.
+//
+// 조정자(modifier)는 두 조각으로 나뉜다.
+//   정의(def)  — defineModifier(id, def)로 등록하는 함수 묶음. 코드에만 있고 저장되지 않는다.
+//   명세(spec) — 대국 상태에 들어가는 순수 데이터 { id, kind?, data?, state? }. JSON으로 저장된다.
+//                data = 레벨·수치 같은 고정 인수, state = 조정자가 대국 동안 스스로 바꾸는 값(예: 「희생」 사용 여부).
+// 대국 상태의 t.mods(명인 · 기보 · 격언 순서대로, 격언은 왼쪽부터)와, 떨군 기물의 각인 명세(chain.engraving)가 켜진다.
+//
+// 훅(모두 선택). 각 훅은 ctx 하나를 받는다(아래 makeCtx).
+//   onBattleStart  대국 시작, 판을 만들기 전. ctx.rules를 고쳐 수·손·킹 수 등을 바꿀 수 있다.
+//   onDropCheck    떨굴 칸을 셀 때. ctx.event = { type, engraving, allow }. ctx.event.allow.attacked = true 로 노려진 칸 허용(각인 「깃」).
+//   onDrop         떨군 직후. ctx.event = { type, sq }. ctx.flags로 사슬 규칙 깃발을 세울 수 있다.
+//   allowCapture   먹을 칸을 걸러 낼 때. ctx.event = { from, to, piece, form }. false를 돌려주면 금지.
+//   onCapture      먹을 때마다(기본 값·연쇄를 더한 뒤). ctx.event = { from, to, piece(먹힌 종류), form(먹을 때의 모습), dist, index, forced, born }
+//   onTransform    모습이 바뀔 때. ctx.event = { from, to }  (종류가 같으면 안 불림)
+//   onPromote      승급. ctx.event = { sq }
+//   onForced       응수가 걸렸을 때(이어짐). ctx.event = { sq, attackers }
+//   onCut          끊김 직전. ctx.cancelCut()을 부르면 끊김이 무시되고 응수 제한이 풀린 채 사슬이 이어진다.
+//   onChainEnd     사슬이 끝날 때(끊김 · 막힘 · 외통). ctx.event = { reason }. ×연쇄는 여기서.
+//                  ctx.chain.scoreMul(기본 1)을 곱하면 최종 점수 배율(예: 명인 「앙갚음」 0.5).
+//
+// 순서: 기본 규칙이 먼저, 그다음 종류 순서(KIND_ORDER) — 같은 종류 안에서는 t.mods의 배열 순서.
+//   먹기 훅: 명인 → 기보 → 각인 → 격언   (DESIGN 「점수」 1~3)
+//   사슬 끝: (기보) → 각인 → 격언 → 명인  (DESIGN 「점수」 4, 명인은 마지막에 판을 비튼다)
+// 최종 점수 = floor(값 × 연쇄 × scoreMul).
+
+export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onForced', 'onCut', 'onChainEnd'];
+export const KINDS = ['master', 'chart', 'engraving', 'maxim'];
+const DEFAULT_ORDER = ['master', 'chart', 'engraving', 'maxim'];
+export const KIND_ORDER = {
+  onChainEnd: ['chart', 'engraving', 'maxim', 'master'],
+};
+
+const REGISTRY = new Map();
+
+export function defineModifier(id, def) {
+  if (!def.kind || !KINDS.includes(def.kind)) throw new Error(`modifier ${id}: kind must be one of ${KINDS}`);
+  REGISTRY.set(id, { id, ...def });
+  return REGISTRY.get(id);
+}
+export const getModifier = (id) => REGISTRY.get(id);
+export const undefineModifier = (id) => REGISTRY.delete(id);
+
+// 켜진 명세 목록을 훅 순서대로.
+function ordered(t, hook) {
+  const specs = t.chain && t.chain.engraving ? [...(t.mods || []), t.chain.engraving] : (t.mods || []);
+  if (specs.length === 0) return specs;
+  const order = KIND_ORDER[hook] || DEFAULT_ORDER;
+  const withKind = [];
+  specs.forEach((spec, i) => {
+    const def = REGISTRY.get(spec.id);
+    if (!def) throw new Error(`unknown modifier ${spec.id}`);
+    if (!def[hook]) return;
+    withKind.push({ spec, def, k: order.indexOf(spec.kind || def.kind), i });
+  });
+  withKind.sort((a, b) => a.k - b.k || a.i - b.i);
+  return withKind;
+}
+
+function makeCtx(t, spec, def, event, events) {
+  const chain = t.chain;
+  const src = spec.id;
+  const ctx = {
+    t, chain, event, spec,
+    data: spec.data || {},
+    get state() { return spec.state || (spec.state = {}); },
+    rules: t.rules,
+    flags: chain ? chain.flags : null,
+    addValue(n) { if (!n) return; chain.value += n; events.push({ type: 'score', src, value: n }); },
+    addMult(n) { if (!n) return; chain.mult += n; events.push({ type: 'score', src, mult: n }); },
+    mulMult(x) { if (x === 1) return; chain.mult *= x; events.push({ type: 'score', src, xmult: x }); },
+    cancelCut() { ctx._cancel = true; },
+    emit(ev) { events.push({ ...ev, src }); },
+  };
+  return ctx;
+}
+
+// 훅을 차례로 부른다. 돌려주는 값: allowCapture면 허용 여부, onCut이면 취소 여부, 그 밖엔 없음.
+export function runHook(t, hook, event, events = []) {
+  const list = ordered(t, hook);
+  let allowed = true, cancelled = false;
+  for (const { spec, def } of list) {
+    const ctx = makeCtx(t, spec, def, event, events);
+    const r = def[hook](ctx);
+    if (hook === 'allowCapture' && r === false) allowed = false;
+    if (ctx._cancel) cancelled = true;
+  }
+  if (hook === 'allowCapture') return allowed;
+  if (hook === 'onCut') return cancelled;
+  return undefined;
+}
+
+export const hasHook = (t, hook) => ordered(t, hook).length > 0;
+
+export const finalScore = (chain) => Math.floor(chain.value * chain.mult * (chain.scoreMul ?? 1));
+
+// ── 기보(모습별 레벨) 조정자. 표는 step 2의 data/charts.js가 넘긴다.
+// 명세: { id: 'charts', data: { table: { P: { a: 10, b: 1 }, ... }, levels: { N: 2, ... } } }
+// 「먹을 때의 모습」(event.form) 기준으로 값 += a×레벨, 연쇄 += b×레벨.
+defineModifier('charts', {
+  kind: 'chart',
+  onCapture(ctx) {
+    const form = ctx.event.form;
+    const lv = (ctx.data.levels || {})[form] || 0;
+    const row = (ctx.data.table || {})[form];
+    if (!lv || !row) return;
+    ctx.addValue((row.a || 0) * lv);
+    ctx.addMult((row.b || 0) * lv);
+  },
+});
