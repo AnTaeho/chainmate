@@ -31,7 +31,7 @@ export const DEFAULT_RULES = {
 // 무엇이 보이느냐는 rules.lookahead(기본 1, 격언 「그림자 읽기」 2)가 정하고, 뽑는 횟수는 같다
 // (격언이 있든 없든 같은 시드면 같은 판).
 function rollIncoming(b, taken) {
-  const n = b.rules.reinforce ?? reinforceCount(b.ante);
+  const n = (b.rules.reinforce ?? reinforceCount(b.ante)) + (b.rules.reinforceBonus || 0); // reinforceBonus: 단 2부터 +1
   const out = [];
   for (let i = 0; i < n; i++) {
     const sq = randomEmpty(b.rng.reinf, b.board, 3, [...taken, ...out.map((x) => x.sq)]);

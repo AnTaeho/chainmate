@@ -73,8 +73,12 @@ export function fragmentOffer(run, rng, source) {
 const rollEngravingId = (rng, exclude = []) =>
   weighted(rng, ENGRAVINGS.filter((e) => !exclude.includes(e.id)).map((e) => [e.id, SHOP.engravingWeights[e.rarity] || 1]));
 
+// 단(난이도)이 바꾸는 상점 수치: 값 +1(단 3) · 첫 조각 확률 반(단 6)
+export const priceBonus = (run) => (run.stake ? run.stake.price : 0);
+export const fragmentMult = (run) => (run.stake ? run.stake.fragment : 1);
+
 export function rollItem(run, rng, exclude) {
-  if (next(rng) < SHOP.fragmentChance.display) {
+  if (next(rng) < SHOP.fragmentChance.display * fragmentMult(run)) {
     const f = fragmentOffer(run, rng, 'display');
     if (f && !exclude.includes(f.legend)) return { ...f, price: SHOP.fragmentPrice };
   }
@@ -97,7 +101,7 @@ export function rollDisplay(run) {
     const it = rollItem(run, rng, exclude);
     if (it.kind === 'maxim') exclude.push(it.id);
     if (it.kind === 'fragment') exclude.push(it.legend);
-    out.push({ ...it, sold: false });
+    out.push({ ...it, price: it.price + priceBonus(run), sold: false });
   }
   run.shop.display = out;
 }
@@ -107,7 +111,7 @@ export function rollPacks(run) {
   run.shop.packs = [];
   for (let i = 0; i < SHOP.packSlots; i++) {
     const kind = SHOP.packKinds[int(rng, SHOP.packKinds.length)];
-    run.shop.packs.push({ kind, price: SHOP.packPrice, sold: false });
+    run.shop.packs.push({ kind, price: SHOP.packPrice + priceBonus(run), sold: false });
   }
 }
 
@@ -138,12 +142,12 @@ export function rollPackOptions(run, kind) {
       out.push({ kind: 'chart', form: pool[int(rng, pool.length)] });
     } else out.push({ kind: 'engraving', id: rollEngravingId(rng, out.map((o) => o.id)) });
   }
-  if (next(rng) < SHOP.fragmentChance.pack) {
+  if (next(rng) < SHOP.fragmentChance.pack * fragmentMult(run)) {
     const f = fragmentOffer(run, rng, kind);
     if (f) out[out.length - 1] = f;
   }
   return out;
 }
 
-export const rerollCost = (run) => SHOP.rerollBase + run.shop.rerolls;
+export const rerollCost = (run) => SHOP.rerollBase + run.shop.rerolls + priceBonus(run);
 export const chartName = (f) => CHARTS[f].name;

@@ -10,9 +10,9 @@
 //   won     8관 명인을 이김. endless
 //   lost    끝.
 import { createRng, fork, int, next, shuffle } from './rng.js';
-import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN } from './battle.js';
+import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES } from './battle.js';
 import { getModifier } from './scoring.js';
-import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice } from './shop.js';
+import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult } from './shop.js';
 import { gradeOf } from './chain.js';
 import { MAXIM_BY_ID } from '../data/maxims.js';
 import { CHART_TABLE, CHART_FORMS } from '../data/charts.js';
@@ -60,9 +60,27 @@ export const TAGS = [
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const root = (run) => createRng(run.seed);
 
-export function targetFor(ante, kind) {
+// 단(난이도, 판 밖): 한 판을 이기면 다음 단이 열린다. 단 k는 1..k번 규칙을 모두 켠다(단 0 = 기본, 규칙 없음).
+export const DANS = [
+  { n: 1, text: '목표 ×1.25' },
+  { n: 2, text: '증원 +1' },
+  { n: 3, text: '상점 값 +1' },
+  { n: 4, text: '무르기 −1' },
+  { n: 5, text: '명인의 상자 다섯 칸이 반' },
+  { n: 6, text: '명국 첫 조각이 반' },
+  { n: 7, text: '수 −1' },
+  { n: 8, text: '대가 목표 ×1.5' },
+];
+export function danRules(dan) {
+  return {
+    target: dan >= 1 ? 1.25 : 1, reinforce: dan >= 2 ? 1 : 0, price: dan >= 3 ? 1 : 0, discards: dan >= 4 ? -1 : 0,
+    chestFive: dan >= 5 ? 0.5 : 1, fragment: dan >= 6 ? 0.5 : 1, moves: dan >= 7 ? -1 : 0, finalTarget: dan >= 8 ? 1.5 : 1,
+  };
+}
+
+export function targetFor(ante, kind, mult = 1) {
   const base = ante <= ANTES ? B[ante - 1] : B[ANTES - 1] * ENDLESS_GROWTH ** (ante - ANTES);
-  const raw = base * KIND_MULT[kind];
+  const raw = base * KIND_MULT[kind] * mult;
   // 보기 좋게: 유효 숫자 둘
   const mag = 10 ** Math.max(0, Math.floor(Math.log10(raw)) - 1);
   return Math.round(raw / mag) * mag;
@@ -84,24 +102,34 @@ function tagFor(run, ante, blind) {
 // 지금(또는 다음) 대국의 정보: 종류 · 목표 · 명인 · 건너뛰기 패
 export function blindInfo(run, ante = run.ante, blind = run.blind) {
   const kind = KINDS[blind];
+  const master = kind === 'master' ? masterFor(run, ante) : null;
+  const st = run.stake;
+  const mult = st ? st.target * (master === FINAL_MASTER ? st.finalTarget : 1) : 1;
   return {
     ante, blind, kind,
-    target: targetFor(ante, kind),
-    master: kind === 'master' ? masterFor(run, ante) : null,
+    target: targetFor(ante, kind, mult),
+    master,
     tag: kind === 'master' ? null : tagFor(run, ante, blind),
   };
 }
 
-export function createRun({ seed = 1, opening = DEFAULT_OPENING } = {}) {
+export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0 } = {}) {
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
   const conf = { ...RUN_DEFAULTS, ...op.run };
   const r = fork(createRng(seed), 'masters');
   const pool = shuffle(r, MASTERS.map((m) => m.id).filter((id) => id !== FINAL_MASTER));
+  const rules = clone(op.rules);
+  const stake = dan > 0 ? danRules(dan) : null;
+  if (stake) {
+    if (stake.discards) rules.discards = (rules.discards ?? DEFAULT_RULES.discards) + stake.discards;
+    if (stake.moves) rules.moves = (rules.moves ?? DEFAULT_RULES.moves) + stake.moves;
+    if (stake.reinforce) rules.reinforceBonus = stake.reinforce;
+  }
   const run = {
     v: 1,
-    seed, opening,
-    rules: clone(op.rules),
+    seed, opening, dan, stake,
+    rules,
     ante: 1, blind: 0,
     phase: 'select',
     endless: false,
@@ -253,7 +281,7 @@ function goldenReward(run, n, events) {
   for (let i = 0; i < n; i++) {
     const ready = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && f.first && f.feat && !f.gold; });
     if (ready.length) grantFragment(run, ready[int(r, ready.length)].id, 'gold', events);
-    else if (!LEGENDS.some((l) => run.fragments[l.id] && run.fragments[l.id].first) && next(r) < SHOP.goldenFragmentChance) fragment = true;
+    else if (!LEGENDS.some((l) => run.fragments[l.id] && run.fragments[l.id].first) && next(r) < SHOP.goldenFragmentChance * fragmentMult(run)) fragment = true;
   }
   return { fragment };
 }
@@ -261,7 +289,7 @@ function goldenReward(run, n, events) {
 // ── 명인의 상자. 결과는 판 시드와 관으로 정해진다(릴은 화면의 몫: 이벤트에 칸마다 무엇이 멈추는지 다 싣는다).
 function openChest(run, events) {
   const r = fork(root(run), `chest:${run.ante}`);
-  const count = weighted(r, CHEST.counts);
+  const count = weighted(r, chestCounts(run));
   const items = [];
   for (let i = 0; i < count; i++) items.push(chestItem(run, r, items));
   const lit = litCells(count);
@@ -270,6 +298,13 @@ function openChest(run, events) {
   events.push({ type: 'chest', count, tier: count >= 5 ? 'rare' : count >= 3 ? 'uncommon' : 'common', cells, items: clone(items) });
   for (const it of items) applyChestItem(run, it, events);
   return count;
+}
+// 단 5부터 다섯 칸 무게가 반(덜어 낸 몫은 한 칸으로)
+export function chestCounts(run) {
+  const f = run.stake ? run.stake.chestFive : 1;
+  if (f === 1) return CHEST.counts;
+  const five = CHEST.counts.find(([n]) => n === 5)[1];
+  return CHEST.counts.map(([n, w]) => [n, n === 5 ? w * f : n === 1 ? w + five * (1 - f) : w]);
 }
 const litCells = (n) => { const mid = (CHEST.cells - 1) / 2, h = (n - 1) / 2; return Array.from({ length: n }, (_, i) => mid - h + i); };
 
