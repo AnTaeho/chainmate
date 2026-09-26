@@ -4,6 +4,7 @@ import { PAL } from '../render/palette.js';
 import { context } from '../render/surface.js';
 import { W, H, text, box, rect } from '../render/gfx.js';
 import { UI, tooltip } from './ui.js';
+import { miniShard } from './parts.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { SCREENS } from './screens/index.js';
@@ -107,6 +108,23 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.shakeAmt = Math.max(app.shakeAmt, px);
     app.shakeT = Math.max(app.shakeT, dur);
   };
+  app.hitstop = (sec) => { if (!app.reducedMotion) app.hitstopT = Math.max(app.hitstopT || 0, sec / app.speed()); };
+  // 명국 조각이 (x0, y0)에서 조각 띠(x1, y1)로 날아간다
+  app.flyShard = (x0, y0, x1, y1) => {
+    app.fx.add({
+      life: 0.9, layer: 1,
+      draw: (c, e) => {
+        const k = Math.min(1, e.t / 0.75);
+        const q = k * k * (3 - 2 * k);
+        const x = x0 + (x1 - x0) * q, y = y0 + (y1 - y0) * q - Math.sin(q * Math.PI) * 40;
+        for (let i = 1; i <= 4; i++) { const qq = Math.max(0, q - i * 0.04); c.globalAlpha = 0.5 - i * 0.1; rect(c, x0 + (x1 - x0) * qq, y0 + (y1 - y0) * qq - Math.sin(qq * Math.PI) * 40 + 2, 2, 2, PAL.goldHi); }
+        c.globalAlpha = k >= 1 ? Math.max(0, 1 - (e.t - 0.75) / 0.15) : 1;
+        miniShard(c, Math.round(x) - 2, Math.round(y) - 2);
+        if (k >= 1) { const r = (e.t - 0.75) * 60; for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; rect(c, x1 + Math.cos(a) * r, y1 + Math.sin(a) * r, 1, 1, PAL.goldHi); } }
+        c.globalAlpha = 1;
+      },
+    });
+  };
   app.toast = (msg, col = PAL.ink, dur = 2.2) => {
     app.toasts.push({ msg, col, t: 0, life: dur });
     if (app.toasts.length > 3) app.toasts.shift();
@@ -141,9 +159,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.time += dt;
     app.ui.time = app.time;
     const sp = app.speed();
-    app.fx.update(dt * sp);
     for (const t of app.toasts) t.t += dt;
     app.toasts = app.toasts.filter((t) => t.t < t.life);
+    // 멈칫(히트스톱): 짧게 모든 연출이 선다
+    if (app.hitstopT > 0) { app.hitstopT -= dt; if (app.audio) app.audio.update(dt, app); return; }
+    app.fx.update(dt * sp);
     if (app.shakeT > 0) { app.shakeT -= dt; if (app.shakeT <= 0) app.shakeAmt = 0; }
     if (app.overlay && app.overlay.update) app.overlay.update(dt);
     else if (app.screen && app.screen.update) app.screen.update(dt);

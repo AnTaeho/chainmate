@@ -36,22 +36,57 @@ export function chartTip(form, level = null) {
   return tipLines(CHARTS[form].name + (level ? ` · ${level}` : ''), chartText(form));
 }
 
+// 판본 빛깔(HOOKS 「등급과 빛깔」): 은박 = 가로로 흐르는 빛, 자개 = 무지갯빛 얼룩, 무지개 = 색 순환, 흑요 = 검은 광택 + 보랏빛 테.
+// 카드를 그린 뒤 그 위에 얹는다. t = 화면 시간(초)
+export function editionShine(ctx, edition, x, y, w, h, t) {
+  if (!edition) return;
+  if (edition === 'foil' || edition === 'obsidian') {
+    const span = w + h + 20;
+    const p = ((t * 55) % (span + 40)) - 20;
+    ctx.globalAlpha = edition === 'foil' ? 0.45 : 0.3;
+    for (let j = 1; j < h - 1; j++) {
+      const bx = Math.round(x + p - j * 0.6);
+      const x0 = Math.max(x + 1, bx), x1 = Math.min(x + w - 1, bx + 4);
+      if (x1 > x0) rect(ctx, x0, y + j, x1 - x0, 1, edition === 'foil' ? '#ffffff' : '#c9a0ff');
+    }
+    ctx.globalAlpha = 1;
+    frame(ctx, x, y, w, h, edition === 'foil' ? EDITION_TINT.foil : EDITION_TINT.obsidian);
+  } else if (edition === 'pearl') {
+    for (let i = 0; i < 7; i++) {
+      const px = x + 5 + ((i * 37) % (w - 10)), py = y + 3 + ((i * 13) % (h - 6));
+      ctx.globalAlpha = 0.55;
+      rect(ctx, px, py, 2, 1, `hsl(${Math.floor(t * 90 + i * 51) % 360},70%,80%)`);
+      ctx.globalAlpha = 1;
+    }
+    frame(ctx, x, y, w, h, `hsl(${Math.floor(t * 60) % 360},45%,82%)`);
+  } else if (edition === 'rainbow') {
+    const hue = Math.floor(t * 140) % 360;
+    frame(ctx, x, y, w, h, `hsl(${hue},85%,60%)`);
+    frame(ctx, x + 1, y + 1, w - 2, h - 2, `hsl(${(hue + 60) % 360},85%,70%)`);
+  }
+}
+
 // 격언 카드 하나(이름 + 동사). h가 작으면 이름만.
-export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift = 0 } = {}) {
+export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift = 0, t = 0 } = {}) {
   const info = maximInfo(m.id);
   const legendary = info.rarity === 'legendary';
+  const obsidian = m.edition === 'obsidian';
   y -= lift;
-  const fill = legendary ? '#f6d98a' : PAL.card;
-  const edge = hot ? PAL.gold : m.edition ? EDITION_TINT[m.edition] : PAL.frameDk;
+  const fill = legendary ? '#f6d98a' : obsidian ? '#231a2c' : PAL.card;
   box(ctx, x, y, w, h, fill, PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, legendary ? PAL.goldHi : PAL.cardHi);
+  rect(ctx, x + 1, y + 1, w - 2, 1, legendary ? PAL.goldHi : obsidian ? '#4a3a5c' : PAL.cardHi);
   rect(ctx, x + 1, y + 2, 2, h - 3, RARITY[info.rarity] || PAL.dim);
-  if (m.edition || hot) frame(ctx, x, y, w, h, edge);
-  const ink = off ? PAL.cardDim : PAL.cardInk;
+  if (legendary) {
+    const k = Math.floor(t * 8) % 20;
+    if (k < 4) rect(ctx, x + 10 + k * 22, y + 2 + (k % 2) * 3, 1, 1, PAL.white);
+  }
+  editionShine(ctx, m.edition, x, y, w, h, t);
+  if (hot) frame(ctx, x, y, w, h, PAL.gold);
+  const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
   text(ctx, info.name, x + 6, y + Math.max(2, Math.min(3, h - 14)), ink, { bold: true });
   if (h >= 28) {
     const sub = off ? '잠듦' : m.edition ? EDITION_BY_ID[m.edition].name : legendary ? '전설' : info.verb;
-    text(ctx, sub, x + 6, y + 16, off ? PAL.red : PAL.cardDim);
+    text(ctx, sub, x + 6, y + 16, off ? PAL.red : obsidian ? '#b89ad8' : PAL.cardDim);
   }
   if (off) { rect(ctx, x + 4, y + Math.floor(h / 2), w - 8, 1, PAL.red); }
 }
@@ -76,13 +111,13 @@ export function maximColumn(ctx, ui, run, x, y, w, hTotal, { idPrefix = 'maxim',
     const r = ui.region(id, x, yy, w, h, { tip: () => maximTip(m), onClick: onClick ? () => onClick(i, m) : null, drag: drag ? true : false, onDrop: drag ? (mx, my) => drag(i, mx, my) : null });
     const dragging = ui.drag && ui.drag.region === r && ui.drag.moved;
     if (dragging) { dots(ctx, x, yy, w, h, PAL.gold, 2); spots.push({ i, x, y: yy, w, h }); continue; }
-    maximCard(ctx, m, x, yy, w, h, { off: offUids.includes(m.uid), hot: ui.isHover(id) || hotIndex === i, lift: ui.isHover(id) && (onClick || drag) ? 1 : 0 });
+    maximCard(ctx, m, x, yy, w, h, { off: offUids.includes(m.uid), hot: ui.isHover(id) || hotIndex === i, lift: ui.isHover(id) && (onClick || drag) ? 1 : 0, t: ui.time + i * 0.37 });
     spots.push({ i, x, y: yy, w, h });
   }
   // 끌고 있는 카드는 마우스를 따라 그린다
   if (ui.drag && ui.drag.moved && ui.drag.region.id.startsWith(idPrefix + ':')) {
     const i = Number(ui.drag.region.id.split(':')[1]);
-    if (maxims[i]) maximCard(ctx, maxims[i], ui.mouse.x - Math.floor(w / 2), ui.mouse.y - Math.floor(h / 2), w, h, { hot: true });
+    if (maxims[i]) maximCard(ctx, maxims[i], ui.mouse.x - Math.floor(w / 2), ui.mouse.y - Math.floor(h / 2), w, h, { hot: true, t: ui.time });
   }
   return { spots, h, gap, slots, count: maximCount(run), cap };
 }
@@ -150,7 +185,7 @@ export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
   rows.forEach((r, j) => { for (let i = 0; i < 8; i++) if (r[i] === '#') rect(ctx, x + i * 2, y + j * 2, 2, 2, (i + j) % 4 === 0 ? PAL.goldHi : j > 3 ? dk : col); });
 }
 
-export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false } = {}) {
+export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0 } = {}) {
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
@@ -160,7 +195,7 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   box(ctx, x, y, w, h, fill, hover ? PAL.gold : PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
-  if (it.edition) frame(ctx, x, y, w, h, EDITION_TINT[it.edition]);
+  if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
   if (w < 30 || back) return;
   text(ctx, ITEM_KIND[it.kind], x + w / 2, y + 4, PAL.cardDim, { align: 'center' });

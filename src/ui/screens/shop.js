@@ -52,7 +52,12 @@ export class ShopScreen {
     try { ev = this.app.cmd(cmd); } catch (e) { this.app.toast('할 수 없다', PAL.red); return null; }
     this.app.sfx(sound);
     for (const e of ev) {
-      if (e.type === 'fragment') this.app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6);
+      if (e.type === 'fragment') {
+        this.app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6);
+        this.app.sfx('fragment');
+        const r = this.app.ui.hover;
+        this.app.flyShard(r ? r.x + r.w / 2 : 240, r ? r.y + r.h / 2 : 100, RX + RW - 8, 34);
+      }
       if (e.type === 'legend') { this.app.flow([['legend', { legend: e.legend, back: 'shop' }]]); return ev; }
       if (e.type === 'chart') this.app.toast(`${CHARTS[e.form].name} ${e.level}`, PAL.gold);
     }
@@ -71,7 +76,7 @@ export class ShopScreen {
       const x = 12 + i * 74, y = 46, id = `shop:buy:${i}`;
       const ok = canBuy(run, it);
       ui.region(id, x, y, 68, 96, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemTip(it) });
-      itemCard(ctx, it, x, y, 68, 96, { hover: ui.isHover(id) && ok, sold: it.sold });
+      itemCard(ctx, it, x, y, 68, 96, { hover: ui.isHover(id) && ok, sold: it.sold, t: ui.time + i });
       if (!it.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, 68, 96, PAL.shadow); ctx.globalAlpha = 1; }
     });
     // 꾸러미

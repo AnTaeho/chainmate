@@ -3,8 +3,8 @@
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits } from '../../render/gfx.js';
-import { spriteChips } from '../../render/sprites.js';
-import { dropSquaresFor, visibleIncoming, isHidden } from '../../sim/battle.js';
+import { spriteChips, spriteCanvas } from '../../render/sprites.js';
+import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { REWARD, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
@@ -17,7 +17,7 @@ import { pauseButton } from './common.js';
 
 export const S = 28, BX = 128, BY = 23;
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
-const LX = 8, LW = 112, RX = 360, RW = 112;
+export const LX = 8, LW = 112, RX = 360, RW = 112;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // 값 · 연쇄 상자에 들어가는 짧은 숫자
@@ -212,7 +212,7 @@ export class BattleScreen {
             app.shake(1, 0.08);
           },
         }); break;
-        case 'golden': add(0.12, { begin: () => { this.burst(e.sq, PAL.gold, 18); app.sfx('golden'); } }); break;
+        case 'golden': add(0.12, { begin: () => { this.burst(e.sq, PAL.gold, 20); this.dust(e.sq, 26); app.sfx('golden'); app.shake(1, 0.1); } }); break;
         case 'scoreGroup': add(0.05 + 0.03 * Math.min(3, e.list.length), {
           begin: () => {
             const c = v.chain;
@@ -244,11 +244,11 @@ export class BattleScreen {
         case 'forced': add(0.1, { begin: () => { if (v.chain) v.chain.forced = e.attackers.slice(); app.sfx('forced'); } }); break;
         case 'cutIgnored': add(0.2, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('넘겼다', PAL.silver); } }); break;
         case 'cut':
-          add(0.15, { begin: () => { v.cut = { sq: e.sq, attackers: e.attackers, p: 0 }; if (v.chain) v.chain.cut = true; app.sfx('cut'); app.shake(2, 0.15); } });
+          add(0.15, { begin: () => { v.cut = { sq: e.sq, attackers: e.attackers, p: 0 }; if (v.chain) v.chain.cut = true; app.sfx('cut'); app.hitstop(0.12); app.shake(2, 0.15); } });
           add(0.3, { tick: (p) => { v.cut.p = p; } });
           break;
         case 'mate': add(0.5, {
-          begin: () => { this.word('외통', PAL.gold, 1.4, 4); app.sfx('mate'); app.shake(3, 0.3); },
+          begin: () => { this.topple(e.sq); this.word('외통', PAL.gold, 1.6, 4); app.sfx('mate'); app.hitstop(0.25); app.shake(3, 0.3); },
         }); break;
         case 'refill': add(0.35, {
           begin: () => { this.word('판이 다시 채워진다', PAL.gold, 1.1, 1); app.sfx('refill'); },
@@ -258,7 +258,14 @@ export class BattleScreen {
           begin: () => { if (v.chain) { v.board[v.chain.sq] = null; v.chain.awaiting = e.squares.slice(); } this.word('다시 떨군다', PAL.gold, 1); },
         }); break;
         case 'end': this.endSteps(e); break;
-        case 'overflow': add(0.08, { begin: () => { this.word(`목표 ×${e.tier}`, e.tier >= 5 ? PAL.red : PAL.gold, 1.2, e.tier >= 5 ? 2 : 1); app.sfx('overflow', e.tier); app.shake(e.tier >= 5 ? 2 : 1, 0.2); } }); break;
+        case 'overflow': add(0.08, {
+          begin: () => {
+            const big = { 1: 1, 2: 2, 5: 3, 10: 4 }[e.tier] || 1;
+            this.word(e.tier === 1 ? '목표 달성' : `목표 ×${e.tier}`, e.tier >= 5 ? PAL.red : PAL.gold, 1 + big * 0.2, Math.min(3, big));
+            this.ring = { t: 0, life: 0.5 + big * 0.15, col: e.tier >= 10 ? PAL.white : e.tier >= 5 ? PAL.red : PAL.gold };
+            app.sfx('overflow', e.tier); app.shake(big, 0.2 + big * 0.05);
+          },
+        }); break;
         case 'shatter': add(0.2, { begin: () => { app.toast(`유리 각인 ${PIECE_NAME[e.piece]}가 깨졌다`, PAL.sky); app.sfx('glass'); } }); break;
         case 'reinforce': add(0.1, {
           begin: () => { v.board[e.sq] = post[e.sq] || { t: e.piece, id: -1 }; if (!post[e.sq]) v.board[e.sq] = { t: e.piece, id: -1 }; this.flash(e.sq, PAL.dim); app.sfx('reinforce'); },
@@ -269,7 +276,7 @@ export class BattleScreen {
         }); break;
         case 'win': add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); app.sfx('win'); } }); break;
         case 'lose': add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); app.sfx('lose'); } }); break;
-        case 'fragment': add(0.05, { begin: () => { app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); app.sfx('fragment'); } }); this.runEvents.push(e); break;
+        case 'fragment': add(0.05, { begin: () => { app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); app.sfx('fragment'); app.flyShard(BX + 112, BY + 112, RX + RW - 30, 10); } }); this.runEvents.push(e); break;
         default: this.runEvents.push(e);
       }
     }
@@ -288,7 +295,18 @@ export class BattleScreen {
       },
       tick: (p) => { v.gather.p = ease.in(p); },
     });
-    add(0.2, { begin: () => { v.gather.burst = true; app.sfx('boom', e.score); app.shake(e.score >= v.target ? 2 : 1, 0.12); } });
+    add(0.2, {
+      begin: () => {
+        v.gather.burst = true; app.sfx('boom', e.score); app.shake(e.score >= v.target ? 2 : 1, 0.12);
+        const parts = [];
+        for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; parts.push({ x: LX + 56, y: 109, vx: Math.cos(a) * 90, vy: Math.sin(a) * 50 }); }
+        app.fx.add({
+          life: 0.4, layer: 1, parts,
+          update: (dt, f) => { for (const p of f.parts) { p.x += p.vx * dt; p.y += p.vy * dt; } },
+          draw: (c, f) => { c.globalAlpha = 1 - f.t / f.life; for (const p of f.parts) rect(c, p.x, p.y, 2, 2, PAL.goldHi); c.globalAlpha = 1; },
+        });
+      },
+    });
     const from = v.score;
     add(0.3, {
       begin: () => { v.count = { from, to: from + e.score, p: 0 }; app.sfx('count'); },
@@ -300,6 +318,7 @@ export class BattleScreen {
         v.gather = null;
         v.chain = null;
         v.cut = null;
+        if (this.glow) this.glow.fading = true;
         if (this.bRef) { v.movesLeft = this.bRef.movesLeft; }
       },
     });
@@ -377,9 +396,66 @@ export class BattleScreen {
       },
     });
   }
+  // 먹힌 킹이 천천히 쓰러진다
+  topple(sq) {
+    const { x, y } = sqXY(sq);
+    this.app.fx.add({
+      life: 1.0, layer: 1,
+      draw: (ctx, e) => {
+        const k = Math.min(1, e.t / 0.55);
+        const ang = (k * k) * Math.PI / 2;
+        ctx.save();
+        ctx.globalAlpha = e.t < 0.7 ? 1 : Math.max(0, 1 - (e.t - 0.7) / 0.3);
+        ctx.translate(x + 6 + 14, y + 3 + 21);
+        ctx.rotate(ang);
+        ctx.drawImage(spriteCanvas('K', 'b'), -14, -21);
+        ctx.restore();
+      },
+    });
+  }
+  // 금가루: 위로 튀었다가 천천히 내려앉는 점
+  dust(sq, n) {
+    const { x, y } = this.center(sq);
+    let seed = sq * 31 + 7;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    const parts = [];
+    for (let i = 0; i < n; i++) parts.push({ x: x + (rnd() - 0.5) * 20, y: y + (rnd() - 0.5) * 10, vx: (rnd() - 0.5) * 60, vy: -30 - rnd() * 70, c: rnd() < 0.3 ? PAL.goldHi : PAL.gold });
+    this.app.fx.add({
+      life: 1.1, layer: 1, parts,
+      update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt; p.vx *= 0.97; } },
+      draw: (ctx, e) => { for (const p of e.parts) { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life) * (Math.floor(e.t * 20 + p.x) % 3 ? 1 : 0.4); rect(ctx, p.x, p.y, 1, 1, p.c); } ctx.globalAlpha = 1; },
+    });
+  }
+  // 점수 칸의 불꽃: 목표를 넘기면 붙고, 넘친 층(×2 · ×5 · ×10)마다 세진다
+  updateFlames(dt) {
+    const v = this.view;
+    const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
+    const tier = v.target ? overflowTier(score, v.target) : 0;
+    this.flames = (this.flames || []).filter((f) => (f.t += dt) < f.life);
+    if (!tier || this.app.reducedMotion) return;
+    const rate = { 1: 20, 2: 40, 5: 70, 10: 110 }[tier];
+    this.flameAcc = (this.flameAcc || 0) + dt * rate;
+    while (this.flameAcc >= 1) {
+      this.flameAcc -= 1;
+      const r = Math.random();
+      this.flames.push({ x: LX + 4 + Math.random() * (LW - 8), y: 70, vy: -(18 + Math.random() * (14 + tier * 3)), t: 0, life: 0.4 + r * 0.5, tier });
+    }
+  }
+  drawFlames(ctx) {
+    for (const f of this.flames || []) {
+      const k = f.t / f.life;
+      const col = f.tier >= 10 && k < 0.3 ? PAL.white : k < 0.35 ? PAL.goldHi : k < 0.7 ? PAL.gold : PAL.red;
+      ctx.globalAlpha = 1 - k * 0.6;
+      const s = k < 0.4 ? (f.tier >= 5 ? 3 : 2) : 1;
+      rect(ctx, f.x + Math.sin((f.t + f.x) * 12) * 1.5, f.y + f.vy * f.t, s, s + (k < 0.3 ? 1 : 0), col);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   gradeStamp(e) {
-    const cols = { '!': PAL.white, '!!': PAL.gold, '!!!': PAL.red, '∞': PAL.gold };
+    const cols = { '!': PAL.white, '!!': PAL.gold, '!!!': PAL.red, '∞': null };
     this.stamp = { mark: e.mark, t: 0, life: 1.1, col: cols[e.mark] };
+    this.glow = { mark: e.mark, fade: 0 };
     this.app.sfx('grade', e.mark);
     this.app.shake({ '!': 1, '!!': 2, '!!!': 3, '∞': 4 }[e.mark] || 1, 0.25);
   }
@@ -387,6 +463,9 @@ export class BattleScreen {
   update(dt) {
     const sp = this.app.speed() * (this.fast ? 5 : 1);
     this.seq.update(dt * sp);
+    if (this.glow && this.glow.fading) { this.glow.fade += dt * this.app.speed(); if (this.glow.fade > 0.6) this.glow = null; }
+    if (this.ring) { this.ring.t += dt * this.app.speed(); if (this.ring.t > this.ring.life) this.ring = null; }
+    this.updateFlames(dt);
     if (this.banner) { this.banner.t += dt; if (this.banner.t > this.banner.life) this.banner = null; }
     if (this.stamp) { this.stamp.t += dt * this.app.speed(); if (this.stamp.t > this.stamp.life) this.stamp = null; }
   }
@@ -401,14 +480,23 @@ export class BattleScreen {
 
   drawBoard(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, time = app.time;
-    const grade = this.stamp ? this.stamp.mark : null;
-    const glow = { '!': PAL.white, '!!': PAL.gold, '!!!': PAL.red, '∞': null }[grade];
     box(ctx, BX - 6, BY - 6, S * 8 + 12, S * 8 + 12, PAL.frame, PAL.frameDk);
     rect(ctx, BX - 5, BY - 5, S * 8 + 10, 1, PAL.frameHi);
-    if (grade) {
-      const col = glow || `hsl(${Math.floor(time * 360) % 360},80%,60%)`;
-      ctx.globalAlpha = 0.8 * (1 - this.stamp.t / this.stamp.life);
-      frame(ctx, BX - 6, BY - 6, S * 8 + 12, S * 8 + 12, col, 2);
+    // 사슬 평가의 테두리 불빛: 흰 → 금 → 붉은 금 → 무지개. 사슬이 끝나면 사그라든다
+    if (this.glow) {
+      const g = this.glow;
+      const a = Math.max(0, 1 - g.fade / 0.6) * (0.75 + 0.25 * Math.sin(time * 10));
+      const hue = Math.floor(time * 360) % 360;
+      const cols = { '!': [PAL.white], '!!': [PAL.gold, PAL.goldHi], '!!!': [PAL.red, PAL.gold, PAL.red], '∞': [`hsl(${hue},85%,60%)`, `hsl(${(hue + 90) % 360},85%,60%)`, `hsl(${(hue + 180) % 360},85%,60%)`] }[g.mark];
+      ctx.globalAlpha = a;
+      cols.forEach((c, i) => frame(ctx, BX - 6 + i, BY - 6 + i, S * 8 + 12 - i * 2, S * 8 + 12 - i * 2, c, 1));
+      ctx.globalAlpha = 1;
+    }
+    if (this.ring) {
+      const k = this.ring.t / this.ring.life;
+      ctx.globalAlpha = Math.max(0, 1 - k);
+      const o = Math.round(k * 10);
+      frame(ctx, BX - 6 - o, BY - 6 - o, S * 8 + 12 + o * 2, S * 8 + 12 + o * 2, this.ring.col, 2);
       ctx.globalAlpha = 1;
     }
     const t = this.clickable();
@@ -527,8 +615,8 @@ export class BattleScreen {
     if (hot) {
       const k = Math.floor(app.time * 10) % 3;
       frame(ctx, LX, 70, LW, 24, k ? PAL.gold : PAL.red);
-      for (let i = 0; i < 6; i++) rect(ctx, LX + 10 + i * 17 + ((k + i) % 3), 68 - ((k + i) % 3), 2, 2, (i + k) % 2 ? PAL.gold : PAL.red);
     }
+    this.drawFlames(ctx);
     text(ctx, '점수', LX + 6, 75, PAL.dim);
     text(ctx, num(score), LX + LW - 6, 75, hot ? PAL.gold : PAL.ink, { align: 'right', bold: true });
     // 값 × 연쇄
@@ -538,6 +626,12 @@ export class BattleScreen {
     const mul = g ? g.mult : c ? c.mult : 0;
     const gp = g ? g.p : 0;
     const dx = Math.round(gp * 32);
+    if (v.count) {
+      // 곱이 점수 칸으로 흘러 들어간다
+      const k = v.count.p;
+      const tx = lerp(LX + LW / 2, LX + LW - 30, k), ty = lerp(103, 75, k);
+      text(ctx, num(v.count.to - v.count.from), tx, ty, PAL.gold, { align: 'center', bold: true, alpha: 1 - k * 0.8, shadow: PAL.shadow });
+    }
     if (g && g.burst) {
       box(ctx, LX, 98, LW, 22, PAL.gold, PAL.frameDk);
       text(ctx, num(g.score), LX + LW / 2, 103, PAL.linkInk, { align: 'center', bold: true });
