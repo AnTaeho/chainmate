@@ -27,10 +27,12 @@ legend('immortal', {
 export const OPERA_REFILLS = 3;
 legend('opera', {
   name: '오페라 대국', year: 1858, story: '모피가 오페라 관람석에서 17수 만에 이겼다',
-  text: '외통하면 판이 다시 채워지고 킹이 된 기물이 사슬을 잇는다', verb: '외통',
+  text: '지켜진 킹도 먹는다 · 외통하면 판이 다시 채워지고 킹이 된 기물이 사슬을 잇는다', verb: '외통',
   feat: '대국 첫 수에 외통', source: 'display',
   check: (h) => h.move === 0 && h.mates > 0,
 }, {
+  // 킹 수비(셋 · 넷)를 그대로 두면 외통이 대국당 3~5%라 이 전설이 거의 듣지 않았다(첫 손 최선 수 평균 ×1.0).
+  onBattleStart(ctx) { ctx.rules.openKings = true; },
   onMate(ctx) { if (ctx.chain.refills < OPERA_REFILLS) ctx.keepGoing(); },
 });
 

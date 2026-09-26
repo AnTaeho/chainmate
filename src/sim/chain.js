@@ -14,7 +14,12 @@ import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
 
-export const boardOpts = (t) => (t.rules && t.rules.pawnSides ? { pawnSides: true } : {});
+const NO_OPTS = {};
+export const boardOpts = (t) => {
+  const r = t.rules;
+  if (!r || (!r.pawnSides && !r.openKings)) return NO_OPTS;
+  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings };
+};
 
 // 사슬 평가(기보 표기). 먹은 수가 이 값에 닿는 순간 「grade」 이벤트.
 export const GRADES = [

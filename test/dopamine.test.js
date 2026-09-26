@@ -476,6 +476,22 @@ test('전설 오페라 대국: 외통 뒤 판이 다시 채워지고 킹이 된 
   assert.equal(OPERA_REFILLS, 3);
 });
 
+test('전설 오페라 대국: 지켜진 킹도 먹는다(떨굴 칸도 그만큼 늘어난다)', () => {
+  // 킹 e6을 d7 폰이 지킨다. 나이트 d4에서 e6은 보통 못 먹는다
+  const MAP = { e6: 'K', d7: 'P', h8: 'R' };
+  const plain = table(MAP);
+  startChain(plain, { type: 'N', sq: S('d4') });
+  assert.equal(plain.chain.done, true, '먹을 적이 없어 곧바로 막힘');
+  const b = createBattle({ seed: 4, mods: LEG('opera'), golden: false });
+  assert.equal(b.rules.openKings, true);
+  const t = table(MAP, LEG('opera'), { rules: { openKings: true }, seed: 8, ante: 1 });
+  startChain(t, { type: 'N', sq: S('d4') });
+  assert.deepEqual(chainCaptures(t), [S('e6')]);
+  const ev = chainCapture(t, S('e6'));
+  assert.ok(types(ev).includes('mate') && types(ev).includes('refill'));
+  assert.equal(t.chain.done, false);
+});
+
 test('전설 세기의 대국: 퀸 모습으로 먹은 수만큼 사슬 끝 ×1.5를 거듭 곱한다', () => {
   // 퀸 h1 → h5 룩(퀸 모습 1번): 50 × 1.5 = 75
   assert.equal(play({ h5: 'R' }, ['Q', 'h1'], ['h5'], LEG('century')).end.score, 75);

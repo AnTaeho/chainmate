@@ -99,12 +99,13 @@ export function kingTakeable(board, ksq, from, opts = {}) {
 }
 
 // 모습 form으로 sq에서 먹을 수 있는 적 칸. 응수 제한은 chain.js가 건다.
+// opts.openKings: 지켜진 킹도 먹을 수 있다(전설 「오페라 대국」).
 export function captures(board, form, sq, opts = {}) {
   const out = [];
   for (const s of reach(board, form, sq, 1)) {
     const c = board[s];
     if (!isEnemy(c)) continue;
-    if (c.t === 'K' && !kingTakeable(board, s, sq, opts)) continue;
+    if (c.t === 'K' && !opts.openKings && !kingTakeable(board, s, sq, opts)) continue;
     out.push(s);
   }
   return out;

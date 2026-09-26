@@ -22,6 +22,7 @@ export const DEFAULT_RULES = {
   guards: null,     // 킹 하나를 지키는 적 수(폰 하나 포함). null이면 kingGuards(관)
   reinforce: null,  // 수마다 증원 수. null이면 reinforceCount(관)
   pawnSides: false, // 명인 「철벽」
+  openKings: false, // 지켜진 킹도 먹는다(전설 「오페라 대국」)
   fog: 0,           // 명인 「안개」: 위에서 몇 줄이 가려지나
   lookahead: 1,     // 증원 예고가 몇 수 앞까지 보이나(격언 「그림자 읽기」 2)
 };
