@@ -256,10 +256,10 @@ test('명인 8: 철벽 · 모래시계 · 무거운 손 · 대가', () => {
   assert.equal(createBattle({ seed: 1, mods: [{ id: 'heavy_hand' }] }).hand.length, 3);
   const gm = createBattle({ seed: 3, ante: 8, mods: [{ id: 'grandmaster' }, { id: 'charts', data: { table: CHART_TABLE, levels: { N: 5 } } }] });
   assert.equal(gm.board.filter((c) => isEnemy(c) && c.t === 'K').length, 2);
-  assert.equal(gm.mods[1].off, true);
+  assert.equal(gm.mods[1].off, undefined);
 });
 
-test('명인 대가: 기보 레벨이 듣지 않는다', () => {
+test('꺼진 기보(off)는 레벨이 듣지 않는다', () => {
   const charts = { id: 'charts', data: { table: CHART_TABLE, levels: { N: 2 } } };
   assert.equal(play('knight', [charts]).score, 60 * 3);
   assert.equal(play('knight', [{ ...charts, off: true }]).score, 30);

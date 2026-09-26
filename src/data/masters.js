@@ -36,11 +36,8 @@ master('silence', '침묵', '가장 왼쪽 격언이 잠든다', {
 master('grudge', '앙갚음', '끊긴 사슬은 점수 반', {
   onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.chain.scoreMul *= 0.5; },
 });
-master('grandmaster', '대가', '킹이 둘 · 기보가 듣지 않는다', {
-  onBattleStart(ctx) {
-    ctx.rules.kings = 2;
-    for (const s of ctx.t.mods) if (s.id === 'charts') s.off = true;
-  },
+master('grandmaster', '대가', '킹이 둘이다', {
+  onBattleStart(ctx) { ctx.rules.kings = 2; },
 });
 
 export const MASTER_BY_ID = Object.fromEntries(MASTERS.map((m) => [m.id, m]));
