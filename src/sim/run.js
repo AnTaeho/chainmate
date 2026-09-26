@@ -237,18 +237,16 @@ function checkFeats(run, h, events) {
   }
 }
 
-// 황금 기물을 먹고 이긴 대국 뒤: 첫 조각을 가진 명국 하나의 금빛 조각(재현까지 한 명국 먼저),
-// 줄 것이 없으면 금빛 꾸러미에 첫 조각이 끼어 나올 기회. 돌려주는 값 { fragment: 꾸러미에 첫 조각이 드나 }
+// 황금 기물을 먹고 이긴 대국 뒤: 재현까지 해낸 명국 하나의 셋째(금빛) 조각 — 조각은 첫 → 재현 → 금빛 차례로만 모인다
+// (HOOKS 「가진 조각 중 하나의 다음 조각」). 첫 조각이 하나도 없으면 금빛 꾸러미에 첫 조각이 끼어 나올 기회.
+// 돌려주는 값 { fragment: 꾸러미에 첫 조각이 드나 }
 function goldenReward(run, n, events) {
   const r = fork(root(run), `golden:${run.ante}:${run.blind}`);
   let fragment = false;
   for (let i = 0; i < n; i++) {
-    const cand = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && f.first && !f.gold; });
-    if (cand.length) {
-      const ready = cand.filter((l) => run.fragments[l.id].feat);
-      const pool = ready.length ? ready : cand;
-      grantFragment(run, pool[int(r, pool.length)].id, 'gold', events);
-    } else if (next(r) < SHOP.goldenFragmentChance) fragment = true;
+    const ready = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && f.first && f.feat && !f.gold; });
+    if (ready.length) grantFragment(run, ready[int(r, ready.length)].id, 'gold', events);
+    else if (!LEGENDS.some((l) => run.fragments[l.id] && run.fragments[l.id].first) && next(r) < SHOP.goldenFragmentChance) fragment = true;
   }
   return { fragment };
 }
