@@ -16,7 +16,7 @@ export function startChain(t, { type, sq, engraving = null }) {
   t.chain = {
     dropType: type, dropSq: sq, engraving: engraving || null,
     sq, form: type,
-    value: 0, mult: 0, scoreMul: 1,
+    value: 0, mult: 0, scoreMul: 1, money: 0,
     captures: [], forms: [type],
     forced: null, flags: {},
     transforms: 0, promotions: 0, forcedReplies: 0,
@@ -133,5 +133,5 @@ function finish(t, reason, events) {
   runHook(t, 'onChainEnd', { reason }, events);
   c.score = finalScore(c);
   if (t.board[c.sq] && t.board[c.sq].mine) t.board[c.sq] = null;
-  events.push({ type: 'end', reason, value: c.value, mult: c.mult, score: c.score, captures: c.captures.length });
+  events.push({ type: 'end', reason, value: c.value, mult: c.mult, score: c.score, captures: c.captures.length, money: c.money });
 }

@@ -18,13 +18,21 @@
 //   onCut          끊김 직전. ctx.cancelCut()을 부르면 끊김이 무시되고 응수 제한이 풀린 채 사슬이 이어진다.
 //   onChainEnd     사슬이 끝날 때(끊김 · 막힘 · 외통). ctx.event = { reason }. ×연쇄는 여기서.
 //                  ctx.chain.scoreMul(기본 1)을 곱하면 최종 점수 배율(예: 명인 「앙갚음」 0.5).
+//   onBoard        대국판이 바뀐 뒤(시작 · 먹기 · 증원). 화면용 표시를 ctx.t.hints에 적는다. 점수와 무관, 풀이기는 부르지 않는다.
+//
+// 사슬 밖에 남는 것: ctx.addMoney(n) — 이번 사슬에서 번 상금(chain.money). 대국이 모아 판(런)에 넘긴다.
+// 명세에 off: true가 붙으면 그 조정자는 꺼진다(명인 「침묵」 · 「대가」).
+// 정의의 onRunEvent(spec, ev)는 판(런)이 부른다: 대국 밖에서 명세 data를 바꾸는 자리
+//   (ev.type: 'chartUsed' | 'battleWon'). 대국 안의 state는 대국마다 새로 시작한다.
 //
 // 순서: 기본 규칙이 먼저, 그다음 종류 순서(KIND_ORDER) — 같은 종류 안에서는 t.mods의 배열 순서.
 //   먹기 훅: 명인 → 기보 → 각인 → 격언   (DESIGN 「점수」 1~3)
 //   사슬 끝: (기보) → 각인 → 격언 → 명인  (DESIGN 「점수」 4, 명인은 마지막에 판을 비튼다)
 // 최종 점수 = floor(값 × 연쇄 × scoreMul).
 
-export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onForced', 'onCut', 'onChainEnd'];
+import { attackers } from './board.js';
+
+export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onForced', 'onCut', 'onChainEnd', 'onBoard'];
 export const KINDS = ['master', 'chart', 'engraving', 'maxim'];
 const DEFAULT_ORDER = ['master', 'chart', 'engraving', 'maxim'];
 export const KIND_ORDER = {
@@ -48,6 +56,7 @@ function ordered(t, hook) {
   const order = KIND_ORDER[hook] || DEFAULT_ORDER;
   const withKind = [];
   specs.forEach((spec, i) => {
+    if (spec.off) return;
     const def = REGISTRY.get(spec.id);
     if (!def) throw new Error(`unknown modifier ${spec.id}`);
     if (!def[hook]) return;
@@ -69,6 +78,9 @@ function makeCtx(t, spec, def, event, events) {
     addValue(n) { if (!n) return; chain.value += n; events.push({ type: 'score', src, value: n }); },
     addMult(n) { if (!n) return; chain.mult += n; events.push({ type: 'score', src, mult: n }); },
     mulMult(x) { if (x === 1) return; chain.mult *= x; events.push({ type: 'score', src, xmult: x }); },
+    // 지금 sq를 노리는 적 칸(명인 「철벽」 반영)
+    attackers(sq) { return attackers(t.board, sq, t.rules && t.rules.pawnSides ? { pawnSides: true } : {}); },
+    addMoney(n) { if (!n) return; chain.money = (chain.money || 0) + n; events.push({ type: 'money', src, money: n }); },
     cancelCut() { ctx._cancel = true; },
     emit(ev) { events.push({ ...ev, src }); },
   };
@@ -80,6 +92,7 @@ export function runHook(t, hook, event, events = []) {
   const list = ordered(t, hook);
   let allowed = true, cancelled = false;
   for (const { spec, def } of list) {
+    if (spec.off) continue; // 앞선 조정자가 이번 훅 안에서 끈 경우(「침묵」)
     const ctx = makeCtx(t, spec, def, event, events);
     const r = def[hook](ctx);
     if (hook === 'allowCapture' && r === false) allowed = false;

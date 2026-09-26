@@ -2,9 +2,9 @@
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 apply(b, cmd) 하나뿐.
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'discard', handIndices }
 import { createRng, fork, int, next, shuffle } from './rng.js';
-import { at, attackers, dropSquares, emptyBoard, fileOf, rankOf } from './board.js';
+import { at, attackers, dropSquares, emptyBoard, fileOf, rankOf, reach } from './board.js';
 import { startChain, chainCapture, chainCaptures, boardOpts } from './chain.js';
-import { runHook } from './scoring.js';
+import { runHook, getModifier } from './scoring.js';
 
 export const DEFAULT_BAG = ['P', 'P', 'P', 'P', 'N', 'N', 'B', 'R'];
 export const BASE_REWARD = { practice: 3, official: 4, master: 5 };
@@ -19,6 +19,8 @@ export const DEFAULT_RULES = {
   guards: null,     // 킹 하나를 지키는 적 수(폰 하나 포함). null이면 kingGuards(관)
   reinforce: null,  // 수마다 증원 수. null이면 reinforceCount(관)
   pawnSides: false, // 명인 「철벽」
+  fog: 0,           // 명인 「안개」: 위에서 몇 줄이 가려지나
+  lookahead: 1,     // 증원 예고가 몇 수 앞까지 보이나(격언 「그림자 읽기」 2)
 };
 
 // 판 생성 수치(하네스로 맞춤, step 2a):
@@ -112,16 +114,27 @@ function generateBoard(b) {
   throw new Error('board generation failed');
 }
 
-function telegraph(b) {
+// 증원 예고는 늘 두 수 앞까지 뽑아 둔다: incoming(다음 수 뒤) · incomingNext(그다음).
+// 무엇이 보이느냐는 rules.lookahead(기본 1, 격언 「그림자 읽기」 2)가 정하고, 뽑는 횟수는 같다
+// (격언이 있든 없든 같은 시드면 같은 판).
+function rollIncoming(b, taken) {
   const n = b.rules.reinforce ?? reinforceCount(b.ante);
   const out = [];
   for (let i = 0; i < n; i++) {
-    const sq = randomEmpty(b.rng.reinf, b.board, 3, out.map((x) => x.sq));
+    const sq = randomEmpty(b.rng.reinf, b.board, 3, [...taken, ...out.map((x) => x.sq)]);
     if (sq < 0) break;
     out.push({ sq, t: rollType(b.rng.reinf, b.ante) });
   }
-  b.incoming = out;
+  return out;
 }
+function telegraph(b) {
+  if (b.incomingNext) b.incoming = b.incomingNext;
+  else b.incoming = rollIncoming(b, []);
+  b.incomingNext = rollIncoming(b, b.incoming.map((x) => x.sq));
+}
+
+// 화면에 보여 줄 예고(두 수 앞까지는 「그림자 읽기」일 때만).
+export const visibleIncoming = (b) => (b.rules.lookahead >= 2 ? [b.incoming, b.incomingNext] : [b.incoming]);
 
 // 예고 칸이 막혔으면 가장 가까운 빈칸(체비쇼프 → 맨해튼 → 칸 번호 순).
 export function nearestEmpty(board, sq) {
@@ -143,6 +156,25 @@ export function arrive(b, events = []) {
     events.push({ type: 'reinforce', sq, planned: r.sq, piece: r.t });
   }
   telegraph(b);
+  refreshHints(b);
+}
+
+// 판이 바뀔 때마다(시작 · 먹기 · 증원) 화면용 표시를 다시 잰다(격언 「왕의 목」 등이 onBoard에서 b.hints를 채운다).
+// 풀이기 탐색은 이 길을 타지 않는다(apply만 부른다).
+export function refreshHints(b) {
+  b.hints = {};
+  runHook(b, 'onBoard', {}, []);
+}
+
+// 명인 「안개」: 위 세 줄의 적은 내 기물의 행마가 한 번이라도 닿은 칸만 드러난다(대국 동안 유지).
+function reveal(b) {
+  if (!b.rules.fog || !b.chain) return;
+  const c = b.chain;
+  for (const s of reach(b.board, c.form, c.sq, 1)) if (!b.revealed.includes(s)) b.revealed.push(s);
+  if (!b.revealed.includes(c.sq)) b.revealed.push(c.sq);
+}
+export function isHidden(b, sq) {
+  return !!b.rules.fog && rankOf(sq) >= 8 - b.rules.fog && !b.revealed.includes(sq);
 }
 
 function draw(b) {
@@ -158,16 +190,22 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     seed, ante, kind, target,
     rules: { ...DEFAULT_RULES, ...rules },
     mods: JSON.parse(JSON.stringify(mods)),
-    rng: { board: fork(root, 'board'), bag: fork(root, 'bag'), reinf: fork(root, 'reinf') },
+    rng: { board: fork(root, 'board'), bag: fork(root, 'bag'), reinf: fork(root, 'reinf'), glass: fork(root, 'glass') },
     board: null,
     bag: bag.map(normPiece),
     hand: [], used: [],
     movesLeft: 0, movesUsed: 0, discardsLeft: 0, discardsUsed: 0,
     score: 0, history: [],
-    incoming: [],
+    incoming: [], incomingNext: null,
     chain: null, chainPiece: null,
     status: 'play', result: null,
     nextId: 100,
+    money: 0,          // 대국 중에 번 상금(격언 「금고」 · 각인 「금」 …). 판(런)이 보상에 더한다
+    deckSize: bag.length,
+    discarded: 0,      // 무르기로 버린 기물 수
+    shattered: [],     // 깨진 기물 id(각인 「유리」). 판(런)이 주머니에서 뺀다
+    revealed: [],      // 명인 「안개」로 드러난 칸
+    hints: {},         // 화면용 표시(격언 「왕의 목」: openKings)
   };
   runHook(b, 'onBattleStart', {}, []);
   b.movesLeft = b.rules.moves;
@@ -180,6 +218,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     if (hasLegalDrop(b)) break;
   }
   telegraph(b);
+  refreshHints(b);
   return b;
 }
 
@@ -231,13 +270,16 @@ export function apply(b, cmd) {
       b.chainPiece = piece;
       b.status = 'chain';
       events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng }));
+      reveal(b);
       if (b.chain.done) endMove(b, events);
       break;
     }
     case 'capture': {
       if (b.status !== 'chain') throw new Error('no chain');
       events.push(...chainCapture(b, cmd.sq));
+      reveal(b);
       if (b.chain.done) endMove(b, events);
+      else refreshHints(b);
       break;
     }
     case 'discard': {
@@ -251,6 +293,7 @@ export function apply(b, cmd) {
       b.used.push(...gone);
       b.discardsLeft--;
       b.discardsUsed++;
+      b.discarded += gone.length;
       draw(b);
       events.push({ type: 'discard', pieces: gone.map((p) => p.t) });
       checkStuck(b, events);
@@ -264,17 +307,24 @@ export function apply(b, cmd) {
 function endMove(b, events) {
   const c = b.chain;
   b.score += c.score;
+  b.money += c.money || 0;
   b.movesLeft--;
   b.movesUsed++;
-  b.used.push(b.chainPiece);
+  // 각인 「유리」 꼴: 쓸 때마다 확률로 깨져 주머니에서 사라진다. 판정은 여기서만(풀이기가 난수를 건드리지 않게).
+  const eng = b.chainPiece.eng && getModifier(b.chainPiece.eng.id);
+  if (eng && eng.breakChance && next(b.rng.glass) < eng.breakChance) {
+    b.shattered.push(b.chainPiece.id);
+    b.deckSize--;
+    events.push({ type: 'shatter', piece: b.chainPiece.t, id: b.chainPiece.id });
+  } else b.used.push(b.chainPiece);
   b.history.push({
-    piece: c.dropType, sq: c.dropSq, value: c.value, mult: c.mult, score: c.score, reason: c.reason,
+    piece: c.dropType, sq: c.dropSq, value: c.value, mult: c.mult, score: c.score, reason: c.reason, money: c.money || 0,
     captures: c.captures.length, transforms: c.transforms, promotions: c.promotions, forced: c.forcedReplies,
   });
   b.chain = null;
   b.chainPiece = null;
   b.status = 'play';
-  if (c.reason === 'mate') return finishBattle(b, 'won', 'mate', events);
+  if (c.reason === 'mate') { refreshHints(b); return finishBattle(b, 'won', 'mate', events); }
   if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
   if (b.movesLeft <= 0) return finishBattle(b, 'lost', 'moves', events);
   arrive(b, events);
