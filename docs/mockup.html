@@ -1,0 +1,385 @@
+<title>체인메이트 컨셉</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600&display=swap">
+<style>
+@font-face { font-family: "Galmuri11"; src: url("../assets/fonts/Galmuri11.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Galmuri11"; src: url("../assets/fonts/Galmuri11-Bold.woff2") format("woff2"); font-weight: 700; }
+:root {
+  color-scheme: dark;
+  --ground: #141d1a;
+  --panel: #1c2925;
+  --line: #2f423b;
+  --ink: #ece3cf;
+  --muted: #9fb0a8;
+  --brass: #e8b64f;
+  --ivory: #f4ead2;
+  --red: #e0604c;
+}
+body { background: var(--ground); color: var(--ink); font: 16px/1.7 "IBM Plex Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: grid; gap: 56px; }
+h1, h2, h3, .px { font-family: "Galmuri11", "IBM Plex Sans KR", monospace; font-weight: 700; letter-spacing: 0; }
+h1 { font-size: clamp(36px, 7vw, 64px); line-height: 1.1; margin: 0; color: var(--ivory); text-wrap: balance; }
+h2 { font-size: 22px; margin: 0 0 16px; color: var(--brass); text-wrap: balance; }
+h3 { font-size: 16px; margin: 0 0 6px; color: var(--ivory); }
+p { margin: 0; max-width: 66ch; }
+.lead { display: grid; gap: 18px; }
+.eyebrow { font-family: "Galmuri11", monospace; color: var(--muted); font-size: 13px; letter-spacing: .08em; }
+.root { font-family: "Galmuri11", monospace; font-size: clamp(17px, 2.6vw, 22px); line-height: 1.6; color: var(--brass); border-block: 2px solid var(--line); padding-block: 16px; max-width: none; }
+.screen { display: grid; gap: 10px; }
+canvas { display: block; width: 100%; max-width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; background: #0e1513; }
+.cap { color: var(--muted); font-size: 14px; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.step { background: var(--panel); border: 1px solid var(--line); padding: 16px; display: grid; gap: 6px; align-content: start; }
+.step .n { font-family: "Galmuri11", monospace; color: var(--brass); font-size: 13px; }
+.step p { font-size: 15px; color: var(--ink); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: "Galmuri11", monospace; color: var(--muted); font-weight: 400; font-size: 13px; }
+td:first-child { color: var(--muted); white-space: nowrap; }
+td b { color: var(--ivory); font-weight: 600; }
+.words { display: flex; flex-wrap: wrap; gap: 8px; }
+.word { font-family: "Galmuri11", monospace; font-size: 14px; border: 1px solid var(--line); padding: 6px 10px; background: var(--panel); }
+.word span { color: var(--muted); margin-left: 6px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+li { max-width: 66ch; }
+.no { color: var(--muted); }
+.no b { color: var(--ink); text-decoration: line-through; text-decoration-color: var(--red); font-weight: 600; }
+a { color: var(--brass); }
+</style>
+
+<div class="wrap">
+  <header class="lead">
+    <div class="eyebrow">새 게임 컨셉 · 정한 안</div>
+    <h1>체인메이트</h1>
+    <p class="root">잡으면 그것이 된다. 한 수 안에서 기물은 잡은 적의 모습으로 갈아입으며 판을 쓸어 낸다.</p>
+    <p>체스 기물로 하는 로그라이크 퍼즐. 판마다 적 기물이 놓인 8×8 판이 나오고, 나는 주머니에서 뽑은 기물 하나를 빈칸에 떨군다. 떨군 기물은 적을 잡을 때마다 잡은 기물로 바뀌고, 바뀐 모습의 행마로 다음 적을 잡는다. 사슬이 길수록, 비싼 기물을 먹을수록 점수가 곱으로 뛴다. 무엇을 어디에 떨구고 어떤 순서로 먹을지가 퍼즐이고, 그 판을 부수는 격언과 기물을 모아 가는 것이 로그라이크다.</p>
+  </header>
+
+  <section class="screen">
+    <h2>대국 화면</h2>
+    <canvas id="play" width="480" height="270" aria-label="체인메이트 대국 화면 시안"></canvas>
+    <p class="cap">480×270 도트, 정수배 확대. 나이트를 c3에 떨궈 비숍 → 룩 → 퀸을 잇달아 먹고, 마지막에 폰이 지키던 e5를 먹는 순간 사슬이 끊긴 장면. d6 폰을 먼저 치웠다면 사슬이 이어졌다.</p>
+  </section>
+
+  <section>
+    <h2>한 수가 흘러가는 순서</h2>
+    <div class="steps">
+      <div class="step"><div class="n">떨구기</div><p>손에 든 기물 하나를 빈칸에 놓는다. 적이 노리는 칸에는 놓을 수 없다.</p></div>
+      <div class="step"><div class="n">먹기</div><p>그 기물이 닿는 적을 하나 고른다. 잡으면 그 적의 모습이 된다. 나이트가 퀸을 먹으면 이제부터 퀸이다.</p></div>
+      <div class="step"><div class="n">이어 가기</div><p>바뀐 모습으로 또 먹는다. 먹을 게 없으면 끝. 폰이 끝줄에 닿으면 퀸으로 승급해서 이어 간다.</p></div>
+      <div class="step"><div class="n">끊김</div><p>다른 적이 지키던 기물을 먹으면 곧바로 되잡혀 사슬이 끝난다. 지키는 놈부터 치우는 순서가 곧 퍼즐이다.</p></div>
+      <div class="step"><div class="n">외통</div><p>사슬 끝에 킹을 먹으면 그 대국은 즉시 이긴다. 남은 수는 상금으로 바뀐다.</p></div>
+      <div class="step"><div class="n">증원</div><p>수를 둘 때마다 적 기물이 들어온다. 어디로 올지는 흐린 그림자로 미리 보인다.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>발라트로의 뼈대를 체스 말로</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>뼈대</th><th>체인메이트</th><th>뿌리와 이어지는 곳</th></tr></thead>
+        <tbody>
+          <tr><td>칩 × 배수</td><td><b>값 × 연쇄</b>. 값은 먹은 기물의 무게(폰 10 · 나이트·비숍 30 · 룩 50 · 퀸 90 · 킹 150), 연쇄는 사슬 길이</td><td>길게 먹을수록, 비싼 걸로 갈아입을수록 곱이 커진다</td></tr>
+          <tr><td>핸드 · 버리기</td><td>대국마다 <b>수 4번, 무르기 3번</b>. 손에 4개를 쥐고, 무르기로 손을 갈아 뽑는다</td><td>이번 판에 맞는 첫 기물을 고르는 압박</td></tr>
+          <tr><td>블라인드 · 앤티</td><td>8관, 관마다 <b>연습 · 정식 · 명인 대국</b>. 목표 점수가 관마다 오른다</td><td>판이 넓어지고 지키는 적이 늘어 사슬 설계가 어려워진다</td></tr>
+          <tr><td>보스 블라인드</td><td>명인마다 규칙 하나를 비튼다. 모든 폰이 서로 지킴 / 뒤 두 줄이 안개 / 같은 모습 두 번 금지 / 수 3번뿐</td><td>갈아입기의 한 부분을 막아 다른 길을 찾게 한다</td></tr>
+          <tr><td>조커</td><td><b>격언</b> 5칸. 「갈아입을 때마다 연쇄 +2」, 「나이트로 시작한 사슬 ×1.5」, 「승급하면 사슬이 한 번 더 이어진다」, 「첫 끊김 무시」</td><td>전부 떨구기 · 먹기 · 갈아입기 · 끊김 중 하나를 건드린다</td></tr>
+          <tr><td>행성 카드</td><td><b>기보</b>. 한 기물 종류를 연구해 그 모습일 때 값·연쇄가 오른다</td><td>「무엇으로 갈아입을지」에 무게를 싣는다</td></tr>
+          <tr><td>타로 · 강화</td><td><b>각인</b>. 주머니의 기물 하나에 새긴다. 금(상금), 상아(값+), 흑단(연쇄×), 유리(연쇄×2, 가끔 깨짐)</td><td>처음 떨군 기물이 무엇이었는지가 사슬 전체에 남는다</td></tr>
+          <tr><td>덱</td><td><b>주머니</b>. 폰 4 · 나이트 2 · 비숍 1 · 룩 1로 시작. 상점에서 사고, 승급시키고, 버린다</td><td>무작위는 주머니 뽑기와 증원 두 곳에만 둔다</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="screen">
+    <h2>기물 12종 식별 시험</h2>
+    <canvas id="sheet" width="336" height="64" aria-label="흰 기물과 검은 기물을 밝은 칸과 어두운 칸에 올린 시험 시트"></canvas>
+    <p class="cap">16×22 도트 기물, 칸 28px. 테두리 · 빛 · 몸 · 그늘 · 새김 다섯 톤과 바닥 그림자. 위는 내 쪽(상아), 아래는 적(흑단). 각 기물을 밝은 칸과 어두운 칸에 한 번씩 올려 실루엣만으로 구별되는지 본다.</p>
+  </section>
+
+  <section>
+    <h2>세계의 말</h2>
+    <p style="margin-bottom:14px">밤마다 열리는 끝나지 않는 기원. 여덟 관의 명인을 차례로 꺾어야 문이 열린다. 화면에 쓰는 말은 이 목록 안에서만 고른다.</p>
+    <div class="words">
+      <div class="word">대국<span>한 판</span></div>
+      <div class="word">관<span>세 대국 묶음</span></div>
+      <div class="word">명인<span>관의 우두머리</span></div>
+      <div class="word">수<span>기물 한 번 떨구기</span></div>
+      <div class="word">무르기<span>손 갈아 뽑기</span></div>
+      <div class="word">사슬<span>한 수의 연속 잡기</span></div>
+      <div class="word">값 · 연쇄<span>점수의 두 인수</span></div>
+      <div class="word">끊김<span>되잡힘</span></div>
+      <div class="word">외통<span>킹을 먹음</span></div>
+      <div class="word">주머니<span>내 기물 전체</span></div>
+      <div class="word">격언 · 기보 · 각인<span>상점 물건</span></div>
+      <div class="word">상금<span>돈</span></div>
+    </div>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>버린 안</h2>
+      <ul class="no">
+        <li><b>전술 족보</b> 포크·핀·스큐어를 포커 족보처럼 쓰는 안. 공격선으로 점수를 매기는 <a href="https://store.steampowered.com/app/3538860/Tabulo/">Tabulo</a>와 너무 가깝다.</li>
+        <li><b>배치 커버리지</b> 기물을 깔아 공격하는 칸 수로 점수를 내는 안. 같은 이유로 버림.</li>
+        <li><b>AI와 턴제 대국</b> 규칙을 비트는 모디파이어로 AI를 이기는 안. <a href="https://store.steampowered.com/app/3509230/Gambonanza/">Gambonanza</a>, <a href="https://store.steampowered.com/app/3353100/Passant_A_Chess_Roguelike/">Passant</a>가 이미 이 자리에 있다.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>겹치는 것과 다른 점</h2>
+      <ul>
+        <li><a href="https://crow-maki.itch.io/chessplusplus">Chess++</a>에 폰이 잡은 기물로 승급하는 규칙이 있다. 거기선 폰 하나의 영구 변화이고, 체인메이트는 모든 기물이 한 수 안에서 계속 갈아입고 그 길이가 점수 엔진이 된다.</li>
+        <li>상대 턴이 없다. 판 전체가 한 수짜리 퍼즐이고, 긴장은 증원과 끊김에서 온다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>이번에 만드는 것과 남는 것</h2>
+    <div class="cols">
+      <div>
+        <h3>이번 세션</h3>
+        <ul>
+          <li>브라우저에서 도는 완주 가능한 판: 8관 24대국, 상점, 격언 30여 종, 기보·각인, 명인 규칙 8개</li>
+          <li>화면 없이 수천 판을 돌리는 시뮬레이터로 목표 점수 곡선 맞추기</li>
+          <li>시드 고정 판(같은 시드 = 같은 판) → 오늘의 대국</li>
+        </ul>
+      </div>
+      <div>
+        <h3>스팀 출시까지 더 필요한 것</h3>
+        <ul>
+          <li>데스크톱 포장(Tauri/Electron), Steamworks 도전 과제 · 클라우드 저장</li>
+          <li>사람 손 플레이 테스트와 밸런스 몇 바퀴</li>
+          <li>도트 아트 · 사운드 전담 손질, 스토어 페이지 자산</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const PAL = {
+  felt: '#1b2b27', feltDk: '#132019', feltHi: '#263a34',
+  frame: '#3b2616', frameHi: '#6a4526', frameDk: '#24170d',
+  light: '#e2cda2', dark: '#a4744a',
+  wO: '#3b2a1b', wF: '#f4ead2', wH: '#ffffff', wS: '#cfbd97',
+  bO: '#0b080c', bF: '#352a3b', bH: '#65546e',
+  gold: '#efbd55', goldDk: '#9c6f24', red: '#df5a45', ink: '#ece3cf', dim: '#8ea198',
+  val: '#f4ead2', valInk: '#3b2a1b', link: '#efbd55', linkInk: '#2a1c08',
+};
+
+// 16×22. #=몸 d=새김. 테두리와 명암은 모양에서 자동으로 만든다.
+const BASE = ['...##########...','..############..','..dddddddddddd..','..############..','................'];
+const E = '................';
+const SPR = {
+  P: [E,E,E,E,E,E,'......####......','.....######.....','.....######.....','.....######.....','......####......','....########....','......####......','......####......','.....######.....','....########....','...##########...', ...BASE],
+  N: [E,'........##......','.......####.....','......######....','.....#######d...','....###d#####...','...##########d..','..############..','..############d.','..d####..######.','...##....######.','.........######.','........#######.','.......########.','......########..','....##########..','...##########...', ...BASE],
+  B: ['.......##.......','.......##.......','......####......','.....######.....','....####d###....','....###d####....','....##d#####....','.....######.....','......####......','.....######.....','....dddddddd....','......####......','......####......','.....######.....','....########....','...##########...','...##########...', ...BASE],
+  R: [E,E,'...##.####.##...','...##.####.##...','...##########...','...##########...','....########....','.....######.....','.....##d###.....','.....######.....','.....###d##.....','.....######.....','.....##d###.....','.....######.....','....########....','...##########...','...dddddddddd...', ...BASE],
+  Q: ['..#..#.##.#..#..','..##.#.##.#.##..','..############..','...##d##d##d#...','...##########...','....########....','.....######.....','......####......','.....######.....','....dddddddd....','......####......','......####......','.....######.....','.....######.....','....########....','...##########...','...##########...', ...BASE],
+  K: ['.......##.......','......####......','.......##.......','....########....','...##########...','...###d##d###...','...##########...','....########....','.....######.....','....dddddddd....','......####......','......####......','.....######.....','.....######.....','....########....','...##########...','...##########...', ...BASE],
+};
+const TONE = {
+  w: { o: '#3b2a1b', s: '#c4ad84', f: '#efe3c7', h: '#fffcf2', d: '#8c704b' },
+  b: { o: '#0a070b', s: '#211828', f: '#382c41', h: '#6d5a7a', d: '#120c16' },
+};
+const SW = 16, SH = 22;
+const SPRPIX = {};
+for (const [k, rows] of Object.entries(SPR)) {
+  if (rows.length !== SH) console.warn('sprite height', k, rows.length);
+  rows.forEach((r, i) => { if (r.length !== SW) console.warn('sprite width', k, i, r.length); });
+  const body = (x, y) => x >= 0 && y >= 0 && x < SW && y < SH && rows[y][x] !== '.';
+  const px = [];
+  for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+    const ch = rows[y][x];
+    if (ch === '.') {
+      if (body(x - 1, y) || body(x + 1, y) || body(x, y - 1) || body(x, y + 1)) px.push([x, y, 'o']);
+      continue;
+    }
+    if (ch === 'd') { px.push([x, y, 'd']); continue; }
+    let l = x, r = x;
+    while (body(l - 1, y)) l--;
+    while (body(r + 1, y)) r++;
+    const t = r > l ? (x - l) / (r - l) : 0.5;
+    let tone = 'f';
+    if (y >= SH - 2) tone = 's';
+    else if (r - l >= 2 && t <= 0.28) tone = 'h';
+    else if (t >= 0.72) tone = 's';
+    if (tone === 'f' && !body(x, y - 1) && t < 0.6) tone = 'h';
+    px.push([x, y, tone]);
+  }
+  SPRPIX[k] = px;
+}
+
+function sprite(ctx, type, side, x, y, alpha = 1) {
+  const c = TONE[side];
+  ctx.globalAlpha = alpha * 0.35;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x + 3, y + SH - 1, 10, 1); ctx.fillRect(x + 2, y + SH - 2, 12, 1);
+  ctx.globalAlpha = alpha;
+  for (const [i, j, t] of SPRPIX[type]) { ctx.fillStyle = c[t]; ctx.fillRect(x + i, y + j, 1, 1); }
+  ctx.globalAlpha = 1;
+}
+
+const DIG = { 1: ['010','110','010','010','111'], 2: ['110','001','010','100','111'], 3: ['110','001','010','001','110'], 4: ['101','101','111','001','001'] };
+function digit(ctx, n, x, y, col) { ctx.fillStyle = col; DIG[n].forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '1') ctx.fillRect(x + i, y + j, 1, 1); }); }
+function rect(ctx, x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+function box(ctx, x, y, w, h, fill, edge) { rect(ctx, x, y, w, h, edge); rect(ctx, x + 1, y + 1, w - 2, h - 2, fill); }
+function text(ctx, s, x, y, col, align = 'left', bold = false) {
+  ctx.font = `${bold ? 700 : 400} 12px Galmuri11`;
+  ctx.textAlign = align; ctx.textBaseline = 'top'; ctx.fillStyle = col;
+  ctx.fillText(s, x, y);
+}
+function pline(ctx, x0, y0, x1, y1, col) {
+  ctx.fillStyle = col;
+  let dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx + dy;
+  for (;;) {
+    ctx.fillRect(x0, y0, 1, 1);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * e;
+    if (e2 >= dy) { e += dy; x0 += sx; }
+    if (e2 <= dx) { e += dx; y0 += sy; }
+  }
+}
+
+function drawPlay() {
+  const cv = document.getElementById('play'), ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  rect(ctx, 0, 0, 480, 270, PAL.felt);
+  // 펠트 결
+  for (let y = 0; y < 270; y += 3) for (let x = (y / 3) % 2 ? 1 : 0; x < 480; x += 6) rect(ctx, x, y, 1, 1, PAL.feltHi);
+
+  const S = 28, BX = 128, BY = 23;
+  // 판 틀
+  box(ctx, BX - 6, BY - 6, S * 8 + 12, S * 8 + 12, PAL.frame, PAL.frameDk);
+  rect(ctx, BX - 5, BY - 5, S * 8 + 10, 1, PAL.frameHi);
+  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) rect(ctx, BX + f * S, BY + r * S, S, S, (r + f) % 2 ? PAL.dark : PAL.light);
+  // 좌표 글자
+  ctx.font = '400 12px Galmuri11';
+  const sq = (name) => { const f = name.charCodeAt(0) - 97, r = +name[1]; return { x: BX + f * S, y: BY + (8 - r) * S, cx: BX + f * S + 14, cy: BY + (8 - r) * S + 14 }; };
+  const put = (type, side, at, a) => { const s = sq(at); sprite(ctx, type, side, s.x + 6, s.y + 3, a); };
+
+  // 적
+  const enemies = [['K','c8'],['P','a7'],['P','b7'],['P','d6'],['P','h6'],['N','b5'],['P','e5'],['B','d5'],['R','g8'],['Q','g3'],['P','h4']];
+  // 사슬: c3 N → d5 B → g8 R → g3 Q → e5 P(끊김)
+  const chain = ['c3','d5','g8','g3','e5'];
+  // 증원 그림자
+  for (const [t, at] of [['N','a3'],['R','h1']]) {
+    const s = sq(at);
+    for (let i = 0; i < S; i += 2) { rect(ctx, s.x + i, s.y, 1, 1, PAL.bO); rect(ctx, s.x + i, s.y + S - 1, 1, 1, PAL.bO); rect(ctx, s.x, s.y + i, 1, 1, PAL.bO); rect(ctx, s.x + S - 1, s.y + i, 1, 1, PAL.bO); }
+    put(t, 'b', at, 0.35);
+  }
+  // 먹힌 칸 표시
+  for (let i = 1; i < chain.length; i++) {
+    const s = sq(chain[i]);
+    const col = i === chain.length - 1 ? PAL.red : PAL.gold;
+    rect(ctx, s.x, s.y, S, 1, col); rect(ctx, s.x, s.y + S - 1, S, 1, col); rect(ctx, s.x, s.y, 1, S, col); rect(ctx, s.x + S - 1, s.y, 1, S, col);
+  }
+  for (const [t, at] of enemies) put(t, 'b', at, chain.includes(at) ? 0.45 : 1);
+  // 떨군 자리
+  put('N', 'w', 'c3', 0.5);
+  // 경로
+  for (let i = 0; i < chain.length - 1; i++) { const a = sq(chain[i]), b = sq(chain[i + 1]); pline(ctx, a.cx, a.cy, b.cx, b.cy, PAL.gold); }
+  // 갈아입은 모습(작은 흰 기물)과 순번
+  const became = ['B','R','Q','P'];
+  for (let i = 1; i < chain.length; i++) {
+    const s = sq(chain[i]);
+    box(ctx, s.x + 1, s.y + 1, 7, 9, i === chain.length - 1 ? PAL.red : PAL.gold, PAL.frameDk);
+    digit(ctx, i, s.x + 3, s.y + 3, PAL.linkInk);
+  }
+  // 마지막 칸: 퀸이 폰을 먹고 되잡힘
+  put('Q', 'w', 'e5');
+  const e5 = sq('e5');
+  pline(ctx, e5.x + 19, e5.y + 2, e5.x + 25, e5.y + 8, PAL.red); pline(ctx, e5.x + 25, e5.y + 2, e5.x + 19, e5.y + 8, PAL.red);
+  // d6 폰의 지킴선
+  const d6 = sq('d6'); pline(ctx, d6.cx, d6.cy, e5.cx - 2, e5.cy - 2, PAL.red);
+
+  // 왼쪽 판
+  const LX = 8, LW = 112;
+  box(ctx, LX, 8, LW, 58, PAL.feltDk, PAL.frameDk);
+  text(ctx, '3관 · 정식 대국', LX + 6, 12, PAL.dim);
+  text(ctx, '목표', LX + 6, 27, PAL.dim);
+  text(ctx, '2,400', LX + LW - 6, 27, PAL.ink, 'right', true);
+  text(ctx, '이기면 $5', LX + 6, 42, PAL.goldDk);
+
+  box(ctx, LX, 70, LW, 24, PAL.feltDk, PAL.frameDk);
+  text(ctx, '점수', LX + 6, 75, PAL.dim);
+  text(ctx, '1,350', LX + LW - 6, 75, PAL.ink, 'right', true);
+
+  // 값 × 연쇄
+  box(ctx, LX, 98, 48, 22, PAL.val, PAL.frameDk);
+  text(ctx, '180', LX + 24, 103, PAL.valInk, 'center', true);
+  text(ctx, '×', LX + 56, 103, PAL.ink, 'center', true);
+  box(ctx, LX + 64, 98, 48, 22, PAL.link, PAL.frameDk);
+  text(ctx, '12', LX + 88, 103, PAL.linkInk, 'center', true);
+  // 사슬 내역: 갈아입은 모습 줄
+  box(ctx, LX, 126, LW, 30, PAL.feltDk, PAL.frameDk);
+  const seq = ['N','B','R','Q','P'];
+  rect(ctx, LX + 4 + 4 * 21, 128, 20, 26, 'rgba(223,90,69,0.35)');
+  seq.forEach((t, i) => sprite(ctx, t, 'w', LX + 6 + i * 21, 130));
+
+  box(ctx, LX, 162, LW, 44, PAL.feltDk, PAL.frameDk);
+  text(ctx, '수', LX + 6, 168, PAL.dim);
+  for (let i = 0; i < 4; i++) rect(ctx, LX + 52 + i * 14, 170, 10, 8, i < 3 ? PAL.gold : PAL.frame);
+  text(ctx, '무르기', LX + 6, 186, PAL.dim);
+  for (let i = 0; i < 3; i++) rect(ctx, LX + 52 + i * 14, 188, 10, 8, i < 2 ? PAL.red : PAL.frame);
+
+  box(ctx, LX, 212, LW, 22, PAL.feltDk, PAL.frameDk);
+  text(ctx, '상금', LX + 6, 217, PAL.dim);
+  text(ctx, '$14', LX + LW - 6, 217, PAL.gold, 'right', true);
+  box(ctx, LX, 240, LW, 22, PAL.feltDk, PAL.frameDk);
+  text(ctx, '주머니', LX + 6, 245, PAL.dim);
+  text(ctx, '7 / 11', LX + LW - 6, 245, PAL.ink, 'right');
+
+  // 오른쪽: 격언
+  const RX = 360, RW = 112;
+  text(ctx, '격언 3/5', RX, 8, PAL.dim);
+  const maxims = [['N', '기사도', '나이트 시작 ×1.5'], ['Q', '갈아입기', '바뀔 때 연쇄+2'], ['P', '끝줄의 꿈', '승급 때 한 번 더']];
+  maxims.forEach(([t, name, desc], i) => {
+    const y = 22 + i * 36;
+    box(ctx, RX, y, RW, 32, '#efe3c6', PAL.frameDk);
+    rect(ctx, RX + 1, y + 1, RW - 2, 1, '#fff8e8');
+    text(ctx, name, RX + 6, y + 3, '#2a1c10', 'left', true);
+    text(ctx, desc, RX + 6, y + 17, '#6b563c');
+  });
+  for (let i = 3; i < 5; i++) {
+    const y = 22 + i * 36;
+    for (let k = 0; k < RW; k += 3) { rect(ctx, RX + k, y, 1, 1, PAL.feltHi); rect(ctx, RX + k, y + 31, 1, 1, PAL.feltHi); }
+    for (let k = 0; k < 32; k += 3) { rect(ctx, RX, y + k, 1, 1, PAL.feltHi); rect(ctx, RX + RW - 1, y + k, 1, 1, PAL.feltHi); }
+  }
+  // 손
+  text(ctx, '손', RX, 206, PAL.dim);
+  const hand = [['R', 0], ['P', 0], ['P', 1], ['B', 2]]; // 1=상아 각인, 2=유리 각인
+  hand.forEach(([t, e], i) => {
+    const x = RX + i * 29, y = 222;
+    const lift = i === 3 ? -4 : 0;
+    box(ctx, x, y + lift, 26, 36, e === 1 ? '#f7efdb' : e === 2 ? '#bfe0e6' : PAL.light, PAL.frameDk);
+    if (e === 2) { rect(ctx, x + 3, y + lift + 3, 1, 6, '#ffffff'); rect(ctx, x + 5, y + lift + 3, 1, 3, '#ffffff'); }
+    if (e === 1) rect(ctx, x + 2, y + lift + 2, 22, 1, PAL.gold);
+    sprite(ctx, t, 'w', x + 5, y + lift + 8);
+  });
+}
+
+function drawSheet() {
+  const cv = document.getElementById('sheet'), ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  rect(ctx, 0, 0, 336, 64, '#0e1513');
+  const types = ['P','N','B','R','Q','K'];
+  ['w','b'].forEach((side, row) => {
+    types.forEach((t, i) => {
+      for (let k = 0; k < 2; k++) {
+        const x = (i * 2 + k) * 28, y = 4 + row * 28;
+        rect(ctx, x, y, 28, 28, k ? PAL.dark : PAL.light);
+        sprite(ctx, t, side, x + 6, y + 3);
+      }
+    });
+  });
+}
+
+function draw() { drawPlay(); drawSheet(); }
+draw();
+Promise.all([document.fonts.load('400 12px Galmuri11'), document.fonts.load('700 12px Galmuri11')]).then(draw, draw);
+</script>
