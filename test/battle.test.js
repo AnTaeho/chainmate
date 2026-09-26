@@ -20,7 +20,7 @@ function playOut(b) {
   return cmds;
 }
 
-test('대국판 생성: 적 수는 관을 따르고, 킹 하나는 폰 포함 셋이 지킨 채 시작, 시작 손으로 떨굴 수 있다', () => {
+test('대국판 생성: 적 수는 관을 따르고, 킹 하나는 폰 포함 셋(3관부터 넷)이 지킨 채 시작, 시작 손으로 떨굴 수 있다', () => {
   for (let ante = 1; ante <= 8; ante++) {
     for (let seed = 1; seed <= 25; seed++) {
       const b = createBattle({ seed, ante });
@@ -29,7 +29,7 @@ test('대국판 생성: 적 수는 관을 따르고, 킹 하나는 폰 포함 �
       const kings = b.board.map((c, sq) => (isEnemy(c) && c.t === 'K' ? sq : -1)).filter((s) => s >= 0);
       assert.equal(kings.length, 1);
       const guards = attackers(b.board, kings[0]);
-      assert.ok(guards.length >= 3, 'king defended by 3+');
+      assert.ok(guards.length >= (ante >= 3 ? 4 : 3), 'king defended by 3+ (4+ from ante 3)');
       assert.ok(guards.some((s) => b.board[s].t === 'P'), 'one guard is a pawn');
       assert.ok(hasLegalDrop(b));
       assert.equal(b.hand.length, 4);
@@ -47,7 +47,7 @@ test('rules로 기본값을 바꾼다(손 · 수 · 무르기 · 킹 수)', () =
   assert.equal(b.discardsLeft, 1);
   const ks = b.board.map((c, sq) => (isEnemy(c) && c.t === 'K' ? sq : -1)).filter((s) => s >= 0);
   assert.equal(ks.length, 2);
-  for (const k of ks) assert.ok(attackers(b.board, k).some((s) => b.board[s].t === 'P') && attackers(b.board, k).length >= 3);
+  for (const k of ks) assert.ok(attackers(b.board, k).some((s) => b.board[s].t === 'P') && attackers(b.board, k).length >= 4);
 });
 
 test('증원은 예고된 칸에 들어온다', () => {

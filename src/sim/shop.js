@@ -14,7 +14,7 @@ export const SHOP = {
   packSize: 3,
   promotePrice: 3,    // 기물 승급(상점마다 한 번)
   removePrice: 3,     // 기물 버리기(상점마다 한 번)
-  deckMin: 4,         // 주머니는 손 크기 밑으로 줄일 수 없다
+  deckMin: 6,         // 주머니는 여섯 밑으로 줄일 수 없다(손 4 + 무르기 여유. 4까지 줄이면 대국 끝에 손이 비어 막힌다)
   // 진열 칸에 무엇이 나오나(무게)
   kindWeights: [['maxim', 55], ['chart', 20], ['engraving', 12], ['piece', 13]],
   // 격언 등급(무게). 전설은 상점에 나오지 않는다(step 2b)
