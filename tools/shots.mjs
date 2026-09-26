@@ -133,6 +133,15 @@ await clickId(`sq:${plan3.line[0]}`);
 await idle();
 await settle(90);
 await shot('05b-battle-forced');
+// 명인 규칙 글이 카드와 띠에 들어가는지: 가장 긴 글(안개)
+await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.run.masters[0] = 'fog'; a.goPhase(); });
+await settle(200);
+await shot('02b-select-fog');
+await ev(() => { const a = window.__app; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase(); });
+await settle(200);
+await clickId('select:play');
+await settle(600);
+await shot('02c-fog-banner');
 // 명인 대국 들어가기(초상이 들어오는 띠)
 await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase(); });
 await settle(100);

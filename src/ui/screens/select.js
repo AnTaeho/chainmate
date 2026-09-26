@@ -35,15 +35,14 @@ export class SelectScreen {
       text(ctx, '목표', x + 10, y + 30, PAL.dim);
       text(ctx, num(info.target), x + w - 10, y + 30, ink, { align: 'right', bold: true });
       text(ctx, '이기면', x + 10, y + 46, PAL.dim);
-      text(ctx, `$${REWARD.base[info.kind]}`, x + w - 10, y + 46, PAL.gold, { align: 'right', bold: true });
+      text(ctx, master ? `$${REWARD.base[info.kind]} + 상자` : `$${REWARD.base[info.kind]}`, x + w - 10, y + 46, PAL.gold, { align: 'right', bold: true });
       rect(ctx, x + 8, y + 64, w - 16, 1, PAL.frameDk);
       if (master) {
         const m = MASTER_BY_ID[info.master];
         box(ctx, x + w - 44, y + 68, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + w - 42, y + 70, 1, cur ? 1 : 0.6);
         text(ctx, `명인 ${m.name}`, x + 10, y + 72, PAL.red, { bold: true });
-        wrap(m.text, w - 20).forEach((l, k) => text(ctx, l, x + 10, y + 108 + k * 13, ink));
-        text(ctx, '이기면 명인의 상자', x + 10, y + 150, PAL.goldDk);
+        wrap(m.text, w - 20).slice(0, 4).forEach((l, k) => text(ctx, l, x + 10, y + 108 + k * 13, ink));
       } else {
         text(ctx, '건너뛰면', x + 10, y + 72, PAL.dim);
         wrap(tagText(info.tag), w - 20).forEach((l, k) => text(ctx, l, x + 10, y + 88 + k * 13, cur ? PAL.gold : PAL.dim, { bold: true }));

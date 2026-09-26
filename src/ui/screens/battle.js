@@ -556,7 +556,7 @@ export class BattleScreen {
     const inc = visibleIncoming(b);
     inc.forEach((wave, k) => {
       for (const r of wave || []) {
-        if (v.board[r.sq]) continue;
+        if (v.board[r.sq] || isHidden(b, r.sq)) continue;
         const { x, y } = sqXY(r.sq);
         dots(ctx, x, y, S, S, k ? PAL.dimDk : PAL.shadow, 2);
         sprite(ctx, r.t, 'b', x + 6, y + 3, { alpha: k ? 0.3 : 0.55 });
@@ -734,7 +734,7 @@ export class BattleScreen {
       const bn = this.banner;
       const a = Math.min(1, bn.t * 6, (bn.life - bn.t) * 3);
       ctx.globalAlpha = Math.max(0, a) * 0.85;
-      const bh = bn.master ? 76 : 44, by = BY + 106 - bh / 2;
+      const bh = bn.master ? 86 : 44, by = BY + 106 - bh / 2;
       rect(ctx, BX - 6, by, S * 8 + 12, bh, PAL.shadow);
       ctx.globalAlpha = Math.max(0, a);
       if (bn.master) {
