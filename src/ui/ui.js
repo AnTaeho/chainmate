@@ -84,7 +84,8 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
 }
 
 // 말풍선: 제목 + 몇 줄. 화면 밖으로 나가지 않게.
-export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk, w = 150 } = {}) {
+export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk, w = 150, scale = 1 } = {}) {
+  if (scale > 1) return bigTooltip(ctx, lines, { title, titleCol, w });
   const pad = 5;
   const h = pad * 2 + (title ? 14 : 0) + lines.length * 13;
   let tx = Math.min(480 - w - 2, Math.max(2, x));
@@ -101,4 +102,16 @@ export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk
     yy += 13;
   }
   frame(ctx, tx, ty, w, h, PAL.frameDk);
+}
+
+// 큰 글자 설정: 말풍선을 두 배 글자로 화면 아래 가운데에
+function bigTooltip(ctx, lines, { title, titleCol, w }) {
+  const all = [];
+  if (title) all.push([title, titleCol, true]);
+  for (const l of lines) { const [s, col] = Array.isArray(l) ? l : [l, PAL.cardDim]; all.push([s, col, false]); }
+  const bw = Math.min(472, Math.max(...all.map(([s, , b]) => measure(s, b))) * 2 + 16);
+  const bh = all.length * 26 + 10;
+  const x = Math.floor((480 - bw) / 2), y = 268 - bh;
+  box(ctx, x, y, bw, bh, PAL.card, PAL.frameDk);
+  all.forEach(([s, col, b], i) => text(ctx, s, x + 8, y + 5 + i * 26, col, { bold: b, scale: 2 }));
 }

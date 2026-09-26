@@ -33,6 +33,11 @@ export function short(n) {
   for (const [u, s] of units) if (a >= u) { const v = n / u; return (v < 100 ? v.toFixed(1) : Math.floor(v)) + s; }
   return String(Math.floor(n));
 }
+// 빗금(노림수 · 끊김): 붉은색을 못 가려도 무늬로 알아보게
+function hatch(ctx, x, y, col) {
+  ctx.fillStyle = col;
+  for (let i = 0; i < S * 2; i += 5) for (let j = 0; j < S; j++) { const k = i - j; if (k >= 0 && k < S) ctx.fillRect(x + k, y + j, 1, 1); }
+}
 const bagTip = (b) => {
   const counts = {};
   for (const p of b.bag) counts[p.t] = (counts[p.t] || 0) + 1;
@@ -151,10 +156,10 @@ export class BattleScreen {
   // ── 사건 → 연출
   play(events, post, cmd) {
     const app = this.app, v = this.view, seq = this.seq;
-    // 한 수의 연출이 쌓인 시간(moveT)이 1.2초를 넘으면 뒤 걸음을 줄여 간다: 한 수 연출이 4초(×1) 안에 들게.
+    // 한 수의 연출이 쌓인 시간(moveT)이 1.1초를 넘으면 뒤 걸음을 줄여 간다: 한 수 연출이 4초(×1) 안에 들게.
     // 사슬 끝의 곱 · 외통은 줄이지 않는다(그 순간이 보상이라서).
     if (cmd && cmd.type === 'drop') { this.moveT = 0; this.matesInMove = 0; }
-    const pace = () => { const T = this.moveT || 0; return T < 1.2 ? 1 : Math.max(0.02, (2.3 - T) / 1.1); };
+    const pace = () => { const T = this.moveT || 0; return T < 1.1 ? 1 : Math.max(0.01, (2.1 - T) / 1.0); };
     let label = '';
     const add = (dur, o = {}) => {
       const d = label === 'mate' && !this.matesInMove++ ? dur : dur * pace();
@@ -571,6 +576,7 @@ export class BattleScreen {
       if (forced && forced.has(sq)) {
         if (Math.floor(time * 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
         ctx.globalAlpha = 0.25; rect(ctx, x, y, S, S, PAL.red); ctx.globalAlpha = 1;
+        hatch(ctx, x, y, PAL.redDk);
       }
       sprite(ctx, c.t, c.gold ? 'g' : 'b', x + 6, y + 3 + dy);
       if (c.gold) {
@@ -591,6 +597,7 @@ export class BattleScreen {
       const { x, y } = sqXY(v.cut.sq);
       line(ctx, x + 4, y + 3, x + 12, y + 12, PAL.red); line(ctx, x + 12, y + 12, x + 9, y + 18, PAL.red); line(ctx, x + 9, y + 18, x + 22, y + 26, PAL.red);
       frame(ctx, x, y, S, S, PAL.red, 2);
+      hatch(ctx, x, y, PAL.red);
     }
     // 응수 칸
     if (v.chain && v.chain.forced && !v.cut) {
