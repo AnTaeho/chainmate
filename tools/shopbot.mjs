@@ -2,10 +2,15 @@
 //   smart  — 사 보기 전에 그려 본다: 지금 짜임과 바꾼 짜임을 같은 대국판 K개(공통 난수)로 풀이기에 돌려
 //            평균 총점이 몇 % 오르는지(득) 재고, 득/값이 가장 큰 것부터 산다. 초반엔 적립을 위해 돈을 남긴다.
 //   random — 살 수 있는 것 중 아무거나(진열 · 꾸러미 · 나가기를 고르게), 꾸러미도 아무거나, 두루마리 대상도 아무거나.
+//   hunt   — smart에 더해 불멸의 기보를 노린다: 조각은 보이면 사고 꾸러미는 열어 보고, 돈이 남으면 다시 진열해 조각을 찾고,
+//            대국에서는 황금 기물 · 가진 첫 조각의 재현이 되는 줄에 덤을 얹어 고른다.
 //   none   — 아무것도 사지 않는다(격언 없이 어디까지 가나 보는 기준선).
+//   smart도 조각이 진열에 보이면 적립을 반만 남기고 산다(사람이 흔히 그러듯). 꾸러미에서는 나머지가 거의 안 오를 때만 조각.
 import { createRng, fork, int, next } from '../src/sim/rng.js';
 import { createBattle } from '../src/sim/battle.js';
-import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo } from '../src/sim/run.js';
+import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell } from '../src/sim/run.js';
+import { EDITION_BY_ID } from '../src/data/editions.js';
+import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { stepBattle } from './bot.mjs';
@@ -23,6 +28,28 @@ export const SMART = {
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
+// 하네스용 세기: 진열에 나온 격언 · 판본 · 조각, 꾸러미에 끼어 나온 조각(playRun마다 새로)
+export const SEEN = { reset() { Object.assign(this, { maxims: 0, slots: 0, editions: {}, fragDisplay: 0, packs: 0, fragPack: 0, golden: 0 }); } };
+SEEN.reset();
+function noteDisplay(run) {
+  for (const it of run.shop.display) {
+    SEEN.slots++;
+    if (it.kind === 'maxim') { SEEN.maxims++; if (it.edition) SEEN.editions[it.edition] = (SEEN.editions[it.edition] || 0) + 1; }
+    if (it.kind === 'fragment') SEEN.fragDisplay++;
+  }
+}
+function notePack(run) {
+  if (run.pack.kind === 'golden') SEEN.golden++;
+  else SEEN.packs++;
+  if (run.pack.options.some((o) => o.kind === 'fragment')) SEEN.fragPack++;
+}
+function act(run, cmd) {
+  const ev = applyRun(run, cmd);
+  if (cmd.type === 'reroll') noteDisplay(run);
+  if (cmd.type === 'buyPack') notePack(run);
+  return ev;
+}
+
 // ── 짜임 재기
 function buildOf(run) {
   return { deck: clone(run.deck), maxims: clone(run.maxims), charts: { ...run.charts } };
@@ -39,7 +66,7 @@ export function evalBuild(run, build, seeds, ante, master = null) {
   let total = 0;
   seeds.forEach((seed, k) => {
     const b = createBattle({
-      seed, ante, kind: 'practice', target: null,
+      seed, ante, kind: 'practice', target: null, golden: false,
       bag: build.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng })),
       rules: run.rules, mods: battleMods(build, master),
     });
@@ -111,10 +138,10 @@ function makeCtx(run) {
 function useConsumables(run, ctx) {
   while (run.consumables.length) {
     const c = run.consumables[0];
-    if (c.kind === 'chart') applyRun(run, { type: 'use', index: 0 });
+    if (c.kind === 'chart') act(run, { type: 'use', index: 0 });
     else {
       const t = bestEngraveTarget(run, buildOf(run), c.id, ctx);
-      applyRun(run, { type: 'use', index: 0, target: t ? t.target : run.deck[0].id });
+      act(run, { type: 'use', index: 0, target: t ? t.target : run.deck[0].id });
     }
   }
 }
@@ -123,6 +150,9 @@ function useConsumables(run, ctx) {
 function weakestMaxim(run, build, ctx) {
   let best = null;
   build.maxims.forEach((m, i) => {
+    if (!canSell(m)) return;
+    // 흑요를 팔면 칸이 하나 줄어 자리가 나지 않는다
+    if (m.edition && EDITION_BY_ID[m.edition].slots) return;
     const v = { ...build, maxims: build.maxims.filter((_, j) => j !== i) };
     const s = ctx.score(v);
     if (!best || s > best.score) best = { index: i, score: s };
@@ -133,8 +163,9 @@ function weakestMaxim(run, build, ctx) {
 // 산 뒤의 짜임(그려 보기). 돌려주는 값 { build, cmds: [명령…] } 또는 null
 function variantFor(run, build, it, ctx) {
   if (it.kind === 'maxim') {
-    const m = { uid: -1, id: it.id, data: {}, edition: null, paid: it.price };
-    if (build.maxims.length < run.maximSlots) return { build: { ...build, maxims: [...build.maxims, m] }, sell: null };
+    const m = { uid: -1, id: it.id, data: {}, edition: it.edition || null, paid: it.price };
+    const cap = maximCapacity({ maximSlots: run.maximSlots, maxims: [...build.maxims, m] });
+    if (build.maxims.filter((x) => !x.legendary).length < cap) return { build: { ...build, maxims: [...build.maxims, m] }, sell: null };
     const w = weakestMaxim(run, build, ctx);
     if (!w) return null;
     return { build: { ...build, maxims: [...build.maxims.filter((_, j) => j !== w.index), m] }, sell: w.index };
@@ -149,13 +180,40 @@ function variantFor(run, build, it, ctx) {
   return null;
 }
 
-function smartShop(run) {
+// 금빛 꾸러미(공짜)를 먼저 연다: 가장 좋은 격언(판본째), 칸이 차면 가장 약한 격언을 팔고 받는다. hunt는 첫 조각이 있으면 그것.
+function openGolden(run, ctx, hunt) {
+  const slot = run.shop.packs.findIndex((p) => p.kind === 'golden' && !p.sold);
+  if (slot < 0) return;
+  act(run, { type: 'buyPack', slot });
+  const build = buildOf(run);
+  const base = Math.max(1, ctx.score(build));
+  const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
+  if (frag >= 0 && hunt) { act(run, { type: 'pick', index: frag }); return; }
+  let pick = null;
+  run.pack.options.forEach((o, index) => {
+    const v = variantFor(run, build, o, ctx);
+    if (!v) return;
+    const s = ctx.score(v.build);
+    if (!pick || s > pick.s) pick = { s, index, sell: v.sell };
+  });
+  if (frag >= 0 && (!pick || pick.s < base * 1.1)) { act(run, { type: 'pick', index: frag }); return; }
+  if (pick && pick.s > base) {
+    if (pick.sell != null) act(run, { type: 'sell', index: pick.sell });
+    act(run, { type: 'pick', index: pick.index });
+  } else act(run, { type: 'skipPack' });
+}
+
+function smartShop(run, hunt = false) {
   const ctx = makeCtx(run);
+  openGolden(run, ctx, hunt);
   for (let step = 0; step < SMART.maxActions && run.phase === 'shop'; step++) {
     useConsumables(run, ctx);
     const build = buildOf(run);
     const base = Math.max(1, ctx.score(build));
     const reserve = SMART.reserve(run.ante);
+    // 불멸의 기보 첫 조각: hunt는 보이면, smart는 적립을 반만 남기고 산다
+    const fslot = run.shop.display.findIndex((it) => it.kind === 'fragment' && canBuy(run, it) && run.money - it.price >= (hunt ? 0 : reserve / 2));
+    if (fslot >= 0) { act(run, { type: 'buy', slot: fslot }); continue; }
     const cands = [];
     const consider = (cost, score, act, extra = {}) => {
       const gain = score / base - 1;
@@ -207,14 +265,14 @@ function smartShop(run) {
       best = pickBest();
     }
     if (best) {
-      if (best.sell != null) applyRun(run, { type: 'sell', index: best.sell });
-      applyRun(run, best.act);
+      if (best.sell != null) act(run, { type: 'sell', index: best.sell });
+      act(run, best.act);
       continue;
     }
-    // 꾸러미: 여유 돈이 있으면 열어 보고 가장 좋은 것(오르지 않으면 넘김)
-    const pk = run.shop.packs.findIndex((p) => !p.sold && run.money - p.price >= reserve);
+    // 꾸러미: 여유 돈이 있으면 열어 보고 가장 좋은 것(오르지 않으면 넘김). hunt는 적립을 헐어서라도 연다.
+    const pk = run.shop.packs.findIndex((p) => !p.sold && run.money - p.price >= (hunt ? Math.min(reserve, 4) : reserve));
     if (pk >= 0) {
-      applyRun(run, { type: 'buyPack', slot: pk });
+      act(run, { type: 'buyPack', slot: pk });
       let pick = null;
       run.pack.options.forEach((o, index) => {
         const v = variantFor(run, build, o, ctx);
@@ -222,15 +280,17 @@ function smartShop(run) {
         const s = ctx.score(v.build);
         if (!pick || s > pick.s) pick = { s, cmd: { type: 'pick', index, target: v.target } };
       });
-      if (pick && pick.s > base * 1.0) applyRun(run, pick.cmd);
-      else applyRun(run, { type: 'skipPack' });
+      const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
+      if (frag >= 0 && (hunt || !pick || pick.s < base * 1.1)) act(run, { type: 'pick', index: frag });
+      else if (pick && pick.s > base * 1.0) act(run, pick.cmd);
+      else act(run, { type: 'skipPack' });
       continue;
     }
-    // 다시 진열: 돈이 넉넉할 때만
-    if (run.money - rerollCost(run) >= reserve + 8) { applyRun(run, { type: 'reroll' }); continue; }
+    // 다시 진열: 돈이 넉넉할 때만(hunt는 조각을 찾으려 조금 더 자주)
+    if (run.money - rerollCost(run) >= reserve + (hunt ? 2 : 8)) { act(run, { type: 'reroll' }); continue; }
     break;
   }
-  if (run.phase === 'shop') { useConsumables(run, ctx); applyRun(run, { type: 'leave' }); }
+  if (run.phase === 'shop') { useConsumables(run, ctx); act(run, { type: 'leave' }); }
 }
 
 function randomShop(run, r) {
@@ -238,45 +298,65 @@ function randomShop(run, r) {
     const cmds = legalRunCommands(run).filter((c) => ['buy', 'buyPack', 'leave', 'use'].includes(c.type));
     // 나가기의 몫을 살 것들과 같게: 살 게 n개면 나가기 확률 1/(n+1)
     const c = cmds[int(r, cmds.length)];
-    applyRun(run, c);
+    act(run, c);
     if (run.phase === 'pack') {
       const opts = legalRunCommands(run).filter((x) => x.type === 'pick');
-      applyRun(run, opts.length ? opts[int(r, opts.length)] : { type: 'skipPack' });
+      act(run, opts.length ? opts[int(r, opts.length)] : { type: 'skipPack' });
     }
   }
-  if (run.phase === 'shop') applyRun(run, { type: 'leave' });
+  if (run.phase === 'shop') act(run, { type: 'leave' });
+}
+
+// hunt의 줄 평가: 황금 기물을 먹는 줄은 점수 ×3, 가진 첫 조각의 재현이 되는 줄은 ×5(둘 다 목표를 넘길 만큼이면 덤이 이긴다)
+function huntRank(run) {
+  const open = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && f.first && !f.feat; });
+  return (r) => {
+    let k = r.score + 1;
+    if (r.h && r.h.golden) k *= 3;
+    if (r.h && open.some((l) => l.check(r.h))) k *= 5;
+    return k;
+  };
 }
 
 // 판 하나를 끝까지. 돌려주는 값: 요약(하네스용)
 export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null } = {}) {
   const r = createRng((run.seed * 2654435761) >>> 0);
   const bought = new Set();
-  const trackBuys = (before) => { for (const m of run.maxims) if (!before.includes(m.uid)) bought.add(m.id); };
+  const editions = [];
+  let legendAt = null;
+  SEEN.reset();
+  const trackBuys = (before) => {
+    for (const m of run.maxims) if (!before.includes(m.uid)) { bought.add(m.id); if (m.edition) editions.push(m.edition); }
+  };
   let guard = 0;
   while (guard++ < 5000) {
     if (run.phase === 'lost') break;
     if (stopAt && stopAt(run)) break;
-    if (run.phase === 'won') { if (endlessUntil > run.ante) applyRun(run, { type: 'endless' }); else break; }
+    if (run.phase === 'won') { if (endlessUntil > run.ante) act(run, { type: 'endless' }); else break; }
     if (run.phase === 'select') {
-      if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) applyRun(run, { type: 'skip' });
-      else applyRun(run, { type: 'play' });
+      if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) act(run, { type: 'skip' });
+      else act(run, { type: 'play' });
       continue;
     }
     if (run.phase === 'battle') {
-      if (!stepBattle(run.battle, (c) => applyRun(run, c), {})) throw new Error('bot has no move but battle is live');
+      const opts = policy === 'hunt' ? { rank: huntRank(run) } : {};
+      if (!stepBattle(run.battle, (c) => act(run, c), opts)) throw new Error('bot has no move but battle is live');
       continue;
     }
+    if (legendAt == null && run.legends.length) legendAt = run.ante;
     if (run.phase === 'shop') {
+      noteDisplay(run);
       const before = run.maxims.map((m) => m.uid);
-      if (policy === 'smart') smartShop(run);
+      if (policy === 'smart' || policy === 'hunt') smartShop(run, policy === 'hunt');
       else if (policy === 'random') randomShop(run, r);
-      else applyRun(run, { type: 'leave' });
+      else act(run, { type: 'leave' });
       trackBuys(before);
       continue;
     }
-    if (run.phase === 'pack') { applyRun(run, { type: 'skipPack' }); continue; }
+    if (run.phase === 'pack') { act(run, { type: 'skipPack' }); continue; }
   }
-  return { bought: [...bought] };
+  if (legendAt == null && run.legends.length) legendAt = run.ante;
+  return { bought: [...bought], editions, legendAt, seen: JSON.parse(JSON.stringify({ ...SEEN, reset: undefined })) };
 }
 
 export { blindInfo, canBuy };

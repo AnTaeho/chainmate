@@ -8,13 +8,13 @@
 //   목표가 있으면: 목표를 넘기는 수가 여럿이면 그중 아무거나(최선)로 충분하다.
 import { bestPerPiece, lineCommands } from '../src/sim/solver.js';
 
-const betterMove = (x, y, nomate) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : x.score > y.score);
+const betterMove = (x, y, nomate, rank) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : rank ? rank(x) > rank(y) : x.score > y.score);
 
 // rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
 export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null } = {}) {
   const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true, rank });
   let best = null;
-  for (const m of per) if (m && betterMove(m, best, nomate)) best = m;
+  for (const m of per) if (m && betterMove(m, best, nomate, rank)) best = m;
   if (best && best.mate && !nomate) return { play: best };
   const canDiscard = b.discardsLeft > 0 && b.bag.length > 0;
   const roomy = b.bag.length >= b.movesLeft;
