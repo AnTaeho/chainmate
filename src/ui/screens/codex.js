@@ -8,6 +8,7 @@ import { OPENINGS } from '../../data/openings.js';
 import { EDITIONS } from '../../data/editions.js';
 import { button } from '../ui.js';
 import { tipLines, miniShard } from '../parts.js';
+import { drawIcon } from '../../render/icons.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
 
 const TABS = [['maxims', '격언'], ['masters', '명인'], ['legends', '명국'], ['openings', '오프닝'], ['editions', '판본']];
@@ -42,7 +43,8 @@ export class CodexScreen {
       box(ctx, x, y, cw, ch, e.done ? '#f6d98a' : PAL.card, ui.isHover(id) ? PAL.gold : PAL.frameDk);
       rect(ctx, x + 1, y + 2, 2, ch - 3, e.col);
       text(ctx, e.name, x + 6, y + 6, PAL.cardInk, { bold: true });
-      if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - 20 + k * 6, y + 3, PAL.goldDk); }
+      if (this.tab === 'maxims' || this.tab === 'legends') drawIcon(ctx, e.id, x + cw - 15, y + 6, 0.9);
+      if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - 36 + k * 6, y + 17, PAL.goldDk); }
     });
     button(ctx, ui, 'codex:back', 12, H - 26, 80, 18, '돌아가기', { onClick: () => this.app.go('title') });
   }

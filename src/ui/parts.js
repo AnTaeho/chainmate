@@ -7,6 +7,7 @@ import { CHARTS, chartText } from '../data/charts.js';
 import { PIECE_NAME } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
+import { drawIcon } from '../render/icons.js';
 
 // 말풍선 내용(제목 · 줄들)을 너비에 맞게
 export function tipLines(title, body, w = 150, extra = []) {
@@ -83,6 +84,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   editionShine(ctx, m.edition, x, y, w, h, t);
   if (hot) frame(ctx, x, y, w, h, PAL.gold);
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
+  if (h >= 14) drawIcon(ctx, m.id, x + w - 15, y + Math.floor((h - 12) / 2), off ? 0.35 : 1);
   text(ctx, info.name, x + 6, y + Math.max(2, Math.min(3, h - 14)), ink, { bold: true });
   if (h >= 28) {
     const sub = off ? '잠듦' : m.edition ? EDITION_BY_ID[m.edition].name : legendary ? '전설' : info.verb;
@@ -203,9 +205,10 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
   if (it.kind === 'maxim') {
     const info = maximInfo(it.id);
     rect(ctx, x + 6, y + 19, w - 12, 2, RARITY[info.rarity]);
+    drawIcon(ctx, it.id, cx - 6, y + 25);
     const lines = wrap(info.name, w - 8, true);
-    lines.slice(0, 2).forEach((l, k) => text(ctx, l, cx, y + 26 + k * 13, PAL.cardInk, { align: 'center', bold: true }));
-    if (it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + 54, PAL.goldDk, { align: 'center' });
+    lines.slice(0, 2).forEach((l, k) => text(ctx, l, cx, y + 40 + k * 13, PAL.cardInk, { align: 'center', bold: true }));
+    if (it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + h - 28, PAL.goldDk, { align: 'center' });
   } else if (it.kind === 'chart' || it.kind === 'piece') {
     const t = it.kind === 'chart' ? it.form : it.t;
     if (it.kind === 'chart') { box(ctx, cx - 13, y + 20, 26, 30, '#e8dcc0', PAL.cardDim); }
