@@ -174,9 +174,15 @@ await settle(300);
 await shot('11-chest-spin');
 await settle(2600);
 await shot('12-chest');
-await ev(() => { window.__app.go('legend', { legend: 'immortal' }); });
-await settle(1200);
+await ev(() => { window.__app.settings.speed = 1; window.__app.go('legend', { legend: 'immortal' }); });
+await settle(1500);
+await shot('13-legend-replay');
+await settle(1900);
 await shot('13-legend');
+await ev(() => { window.__app.go('legend', { legend: 'eight_pawns' }); });
+await settle(3800);
+await shot('13-legend-pawns');
+await ev(() => { window.__app.settings.speed = 2; });
 await ev(() => { window.__app.openOverlay('pause'); });
 await settle(100);
 await shot('14-pause');
@@ -217,6 +223,11 @@ await idle();
 for (let i = 0; i < Math.min(2, plan2.line.length - 1); i++) { await clickId(`sq:${plan2.line[i]}`); await idle(); }
 await hoverId('frag:century');
 await shot('17-battle-full');
+// 평가 불빛 · 점수 불꽃(목표 ×5)
+await ev(() => { const s = window.__app.screen; s.glow = { mark: '!!!', fade: 0 }; s.stamp = { mark: '!!!', t: 0.3, life: 1.1, col: '#df5a45' }; s.view.score = s.view.target * 6; });
+await page.mouse.move(1, 1);
+await settle(500);
+await shot('17-battle-fire');
 await finishBattle();
 await settle(1500);
 for (let g = 0; g < 6; g++) {
