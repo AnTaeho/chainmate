@@ -9,6 +9,7 @@ import { button } from '../ui.js';
 import { KIND_NAME } from '../words.js';
 import { topBar } from './common.js';
 import { fragmentStrip } from '../parts.js';
+import { drawPortrait } from '../../render/portraits.js';
 
 export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` : tag.kind === 'chart' ? `${CHARTS[tag.form].name} 한 장` : '');
 
@@ -37,9 +38,11 @@ export class SelectScreen {
       rect(ctx, x + 8, y + 64, w - 16, 1, PAL.frameDk);
       if (master) {
         const m = MASTER_BY_ID[info.master];
+        box(ctx, x + w - 44, y + 68, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
+        drawPortrait(ctx, info.master, x + w - 42, y + 70, 1, cur ? 1 : 0.6);
         text(ctx, `명인 ${m.name}`, x + 10, y + 72, PAL.red, { bold: true });
-        wrap(m.text, w - 20).forEach((l, k) => text(ctx, l, x + 10, y + 88 + k * 13, ink));
-        text(ctx, '이기면 명인의 상자', x + 10, y + 140, PAL.goldDk);
+        wrap(m.text, w - 20).forEach((l, k) => text(ctx, l, x + 10, y + 108 + k * 13, ink));
+        text(ctx, '이기면 명인의 상자', x + 10, y + 150, PAL.goldDk);
       } else {
         text(ctx, '건너뛰면', x + 10, y + 72, PAL.dim);
         wrap(tagText(info.tag), w - 20).forEach((l, k) => text(ctx, l, x + 10, y + 88 + k * 13, cur ? PAL.gold : PAL.dim, { bold: true }));

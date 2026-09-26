@@ -14,6 +14,8 @@ import { button } from '../ui.js';
 import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines, fragmentStrip } from '../parts.js';
 import { KIND_SHORT, PIECE_NAME, PART_NAME } from '../words.js';
 import { pauseButton } from './common.js';
+import { drawPortrait } from '../../render/portraits.js';
+import { wrap } from '../../render/text.js';
 
 export const S = 28, BX = 128, BY = 23;
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
@@ -55,7 +57,7 @@ export class BattleScreen {
     const info = events.find((e) => e.type === 'battleStart');
     const b = this.bRef;
     const m = b.mods.find((s) => MASTER_BY_ID[s.id]);
-    if (m) this.banner = { title: `명인 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: 2.2, col: PAL.red };
+    if (m) { this.banner = { title: `명인 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: 2.6, col: PAL.red, master: m.id }; app.sfx('start'); }
     else if (info) this.banner = { title: `${app.run.ante}관 · ${KIND_SHORT[b.kind]} 대국`, sub: `목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold };
   }
 
@@ -699,10 +701,21 @@ export class BattleScreen {
       const bn = this.banner;
       const a = Math.min(1, bn.t * 6, (bn.life - bn.t) * 3);
       ctx.globalAlpha = Math.max(0, a) * 0.85;
-      rect(ctx, BX - 6, BY + 84, S * 8 + 12, 44, PAL.shadow);
+      const bh = bn.master ? 76 : 44, by = BY + 106 - bh / 2;
+      rect(ctx, BX - 6, by, S * 8 + 12, bh, PAL.shadow);
       ctx.globalAlpha = Math.max(0, a);
-      text(ctx, bn.title, BX + 112, BY + 90, bn.col, { align: 'center', bold: true, scale: 2 });
-      text(ctx, bn.sub, BX + 112, BY + 114, PAL.ink, { align: 'center' });
+      if (bn.master) {
+        // 초상이 오른쪽에서 미끄러져 들어온다(64×64)
+        const k = Math.min(1, bn.t / 0.35);
+        const px = Math.round(BX + 150 + (1 - k * k * (3 - 2 * k)) * 90);
+        drawPortrait(ctx, bn.master, px, by + 6, 2);
+        rect(ctx, BX - 6, by, S * 8 + 12, 1, PAL.red); rect(ctx, BX - 6, by + bh - 1, S * 8 + 12, 1, PAL.red);
+        text(ctx, bn.title, BX + 4, by + 14, bn.col, { bold: true, scale: 2 });
+        wrap(bn.sub, 140).slice(0, 3).forEach((l, i) => text(ctx, l, BX + 4, by + 42 + i * 12, PAL.ink));
+      } else {
+        text(ctx, bn.title, BX + 112, by + 6, bn.col, { align: 'center', bold: true, scale: 2 });
+        text(ctx, bn.sub, BX + 112, by + 30, PAL.ink, { align: 'center' });
+      }
       ctx.globalAlpha = 1;
     }
     if (this.stamp) {

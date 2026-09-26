@@ -99,12 +99,31 @@ await ev(async () => {
 });
 await settle(200);
 await shot('00-sprites');
+// 명인 초상 여덟(2배)
+await ev(async () => {
+  const { portraitCanvas, PORTRAIT_IDS } = await import('/src/render/portraits.js');
+  const c = document.getElementById('screen');
+  window.__app.draw = () => {
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = '#1b2b27'; g.fillRect(0, 0, 480, 270);
+    PORTRAIT_IDS.forEach((id, i) => g.drawImage(portraitCanvas(id), 20 + (i % 4) * 116, 20 + Math.floor(i / 4) * 120, 96, 96));
+  };
+});
+await settle(200);
+await shot('00-portraits');
 await page.reload();
 await page.waitForFunction(() => window.__app && window.__app.screen);
 await ev(() => { window.__app.settings.speed = 2; });
 await settle(900);
 await shot('01-title');
 
+// 명인 대국 들어가기(초상이 들어오는 띠)
+await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase(); });
+await settle(100);
+await clickId('select:play');
+await settle(450);
+await shot('02-master-banner');
 await ev(() => { localStorage.clear(); window.__app.newRun({ seed: 7 }); });
 await settle(200);
 await shot('02-select');
