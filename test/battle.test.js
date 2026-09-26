@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { attackers, boardFrom, parseSq as S, isEnemy } from '../src/sim/board.js';
-import { createBattle, apply, legalCommands, arrive, nearestEmpty, hasLegalDrop } from '../src/sim/battle.js';
+import { createBattle, apply, legalCommands, arrive, nearestEmpty, hasLegalDrop, enemyCount } from '../src/sim/battle.js';
 import { bestMove } from '../src/sim/solver.js';
 
 const enemies = (b) => b.board.filter(isEnemy);
@@ -20,20 +20,22 @@ function playOut(b) {
   return cmds;
 }
 
-test('대국판 생성: 적 7+관, 킹 하나, 킹은 지켜진 채 시작, 시작 손으로 떨굴 수 있다', () => {
+test('대국판 생성: 적 수는 관을 따르고, 킹 하나는 폰 포함 셋이 지킨 채 시작, 시작 손으로 떨굴 수 있다', () => {
   for (let ante = 1; ante <= 8; ante++) {
     for (let seed = 1; seed <= 25; seed++) {
       const b = createBattle({ seed, ante });
       const es = enemies(b);
-      assert.equal(es.length, 7 + ante);
+      assert.equal(es.length, enemyCount(ante));
       const kings = b.board.map((c, sq) => (isEnemy(c) && c.t === 'K' ? sq : -1)).filter((s) => s >= 0);
       assert.equal(kings.length, 1);
-      assert.ok(attackers(b.board, kings[0]).length > 0, 'king defended');
+      const guards = attackers(b.board, kings[0]);
+      assert.ok(guards.length >= 3, 'king defended by 3+');
+      assert.ok(guards.some((s) => b.board[s].t === 'P'), 'one guard is a pawn');
       assert.ok(hasLegalDrop(b));
       assert.equal(b.hand.length, 4);
       assert.equal(b.movesLeft, 4);
       assert.equal(b.discardsLeft, 3);
-      assert.equal(b.incoming.length, ante >= 4 ? 2 : 1);
+      assert.equal(b.incoming.length, 2);
     }
   }
 });
@@ -43,7 +45,9 @@ test('rules로 기본값을 바꾼다(손 · 수 · 무르기 · 킹 수)', () =
   assert.equal(b.hand.length, 5);
   assert.equal(b.movesLeft, 3);
   assert.equal(b.discardsLeft, 1);
-  assert.equal(enemies(b).filter((c) => c.t === 'K').length, 2);
+  const ks = b.board.map((c, sq) => (isEnemy(c) && c.t === 'K' ? sq : -1)).filter((s) => s >= 0);
+  assert.equal(ks.length, 2);
+  for (const k of ks) assert.ok(attackers(b.board, k).some((s) => b.board[s].t === 'P') && attackers(b.board, k).length >= 3);
 });
 
 test('증원은 예고된 칸에 들어온다', () => {

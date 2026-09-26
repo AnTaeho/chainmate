@@ -2,16 +2,13 @@
 //   node tools/sim.mjs --battles 500 --ante 1..8 --seed 1 [--nomate]
 //   --ante 3 처럼 하나만, 1..8 처럼 범위로.
 //   --nomate: 봇이 외통을 피한다(다른 수가 없을 때만 외통). 외통 없이 4수로 낼 수 있는 점수를 보려고.
-// 봇: 매 결정마다 풀이기(solver.js)로 손 기물별 최선 수를 찾는다.
-//   외통이 보이면 바로 둔다. 무르기가 남았고 최선 수의 사슬이 2 이하로 약하면,
-//   혼자서 1 이하밖에 못 잇는 손 기물(최선 수를 낸 기물 제외)을 버린다(주머니가 남은 수 이상 남았을 때만).
-//   떨굴 수가 아예 없으면 무르기가 남은 한 손 전체를 버린다. 그 밖엔 최선 수.
+// 봇: tools/bot.mjs(풀이기 최선 수 + 무르기 · 폰 먼저 쓰기 규칙).
 // 목표 점수 없이 수 4를 다 쓴다(외통이면 거기서 끝). 관별로 찍는 것:
 //   점수/수 평균, 대국 총점 평균, 총점 p10/p50/p90(외통으로 끝난 대국 제외), 사슬 길이 평균,
 //   끊김률(끊김으로 끝난 수 / 수), 응수율(응수로 먹은 먹기 / 먹기), 응수 있는 수 비율,
 //   외통률(대국), 막힘 패배율(대국), 무르기 평균, 결정당 ms(평균 / 최대).
 import { createBattle, apply } from '../src/sim/battle.js';
-import { bestPerPiece } from '../src/sim/solver.js';
+import { decideBattle } from './bot.mjs';
 
 function parseArgs(argv) {
   const a = { battles: 300, ante: [1, 8], seed: 1, nomate: false };
@@ -30,24 +27,6 @@ function parseArgs(argv) {
   return a;
 }
 
-const betterMove = (x, y, nomate) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : x.score > y.score);
-
-function decide(b, nomate) {
-  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true });
-  let best = null;
-  for (const m of per) if (m && betterMove(m, best, nomate)) best = m;
-  if (best && best.mate && !nomate) return { play: best };
-  const canDiscard = b.discardsLeft > 0 && b.bag.length > 0;
-  // 주머니를 다 태우면 손이 줄어 막힌다: 약한 수 무르기는 남은 수만큼 주머니가 남을 때만
-  const roomy = b.bag.length >= b.movesLeft;
-  if (!best) return canDiscard ? { discard: b.hand.map((_, i) => i).slice(0, b.rules.maxDiscard) } : null;
-  if (canDiscard && roomy && best.captures <= 2) {
-    const weak = per.map((m, i) => (i !== best.handIndex && (!m || m.captures <= 1) ? i : -1)).filter((i) => i >= 0);
-    if (weak.length) return { discard: weak.slice(0, b.rules.maxDiscard) };
-  }
-  return { play: best };
-}
-
 function pct(sorted, p) {
   if (!sorted.length) return NaN;
   const i = Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))));
@@ -63,7 +42,7 @@ function runAnte(ante, n, seed, nomate) {
     const b = createBattle({ seed: (seed * 1000003 + ante * 7919 + i * 104729) >>> 0, ante });
     while (b.status === 'play') {
       const t0 = performance.now();
-      const d = decide(b, nomate);
+      const d = decideBattle(b, { nomate });
       const dt = performance.now() - t0;
       s.decisions++; s.ms += dt; s.maxMs = Math.max(s.maxMs, dt);
       if (!d) break;

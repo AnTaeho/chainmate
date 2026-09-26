@@ -2,7 +2,7 @@
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 apply(b, cmd) 하나뿐.
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'discard', handIndices }
 import { createRng, fork, int, next, shuffle } from './rng.js';
-import { attackers, dropSquares, emptyBoard, fileOf, rankOf } from './board.js';
+import { at, attackers, dropSquares, emptyBoard, fileOf, rankOf } from './board.js';
 import { startChain, chainCapture, chainCaptures, boardOpts } from './chain.js';
 import { runHook } from './scoring.js';
 
@@ -15,10 +15,19 @@ export const DEFAULT_RULES = {
   discards: 3,      // 무르기
   maxDiscard: 4,    // 한 번에 버리는 최대 수
   kings: 1,         // 킹 수(명인 「대가」 2)
-  enemies: null,    // null이면 7 + 관
-  reinforce: null,  // 수마다 증원 수. null이면 관 1~3: 1, 4관부터: 2
+  enemies: null,    // null이면 enemyCount(관)
+  guards: null,     // 킹 하나를 지키는 적 수(폰 하나 포함). null이면 kingGuards(관)
+  reinforce: null,  // 수마다 증원 수. null이면 reinforceCount(관)
   pawnSides: false, // 명인 「철벽」
 };
+
+// 판 생성 수치(하네스로 맞춤, step 2a):
+//   적 수 8 + 관(최소 10) — 7 + 관이면 1~3관에서 판이 빨리 비어 폰이 떨굴 곳을 잃고 막힘 패배가 잦았다.
+//   킹 수비 3(폰 하나 포함) — 둘이면 첫 수 외통이 3~5%, 셋이면 1~2%.
+//   증원 수마다 2 — 1이면 1~3관 막힘이 두 배.
+export const enemyCount = (ante) => Math.max(10, 8 + ante);
+export const kingGuards = () => 3;
+export const reinforceCount = () => 2;
 
 // 관이 오를수록 무거운 적. 초안 — step 2에서 시뮬로 맞춘다.
 export function enemyWeights(ante) {
@@ -45,31 +54,66 @@ function randomEmpty(rng, board, minRank, exclude = []) {
   return free.length ? free[int(rng, free.length)] : -1;
 }
 
+// 킹 수비: 킹마다 둘 이상이 지키고 그중 하나는 폰(킹 한 줄 위 대각).
+// 폰 모습은 위로만 먹으니 그 폰을 먹은 자리에서는 킹에 닿지 못한다 — 수비수 하나만 치워 곧바로 외통이 나는 판을 막는다.
+function defenderSquares(board, t, ksq, opts) {
+  const out = [];
+  for (let sq = 16; sq < 64; sq++) {
+    if (board[sq]) continue;
+    board[sq] = { t, id: 0, born: -1 };
+    const ok = attackers(board, ksq, opts).includes(sq);
+    board[sq] = null;
+    if (ok) out.push(sq);
+  }
+  return out;
+}
+
+export function kingDefended(board, ksq, opts = {}, guards = 2) {
+  const at = attackers(board, ksq, opts);
+  return at.length >= guards && at.some((s) => board[s].t === 'P');
+}
+
 function generateBoard(b) {
   const rng = b.rng.board;
-  const count = b.rules.enemies ?? 7 + b.ante;
+  const count = b.rules.enemies ?? enemyCount(b.ante);
   const kings = b.rules.kings;
+  const guards = b.rules.guards ?? kingGuards(b.ante);
+  const opts = { pawnSides: b.rules.pawnSides };
   for (let attempt = 0; attempt < 500; attempt++) {
     const board = emptyBoard();
     const ksqs = [];
-    for (let k = 0; k < kings; k++) {
-      const sq = randomEmpty(rng, board, 4);
-      board[sq] = { t: 'K', id: b.nextId++, born: -1 };
-      ksqs.push(sq);
+    let placed = 0, ok = true;
+    const put = (sq, t) => { board[sq] = { t, id: b.nextId++, born: -1 }; placed++; };
+    for (let k = 0; k < kings && ok; k++) {
+      // 킹은 rank 4~6(폰 수비수가 한 줄 위에 설 자리가 있게)
+      const free = [];
+      for (let sq = 32; sq < 56; sq++) if (!board[sq]) free.push(sq);
+      const ksq = free[int(rng, free.length)];
+      put(ksq, 'K');
+      ksqs.push(ksq);
+      const pawnAt = [at(fileOf(ksq) - 1, rankOf(ksq) + 1), at(fileOf(ksq) + 1, rankOf(ksq) + 1)].filter((s) => s >= 0 && !board[s]);
+      if (!pawnAt.length) { ok = false; break; }
+      put(pawnAt[int(rng, pawnAt.length)], 'P');
+      for (let g = 1; g < guards && ok; g++) {
+        const t2 = rollType(rng, b.ante);
+        const cand = defenderSquares(board, t2, ksq, opts);
+        if (!cand.length) { ok = false; break; }
+        put(cand[int(rng, cand.length)], t2);
+      }
     }
-    for (let i = kings; i < count; i++) {
+    if (!ok) continue;
+    for (let i = placed; i < count; i++) {
       const sq = randomEmpty(rng, board, 2);
       if (sq < 0) break;
-      board[sq] = { t: rollType(rng, b.ante), id: b.nextId++, born: -1 };
+      put(sq, rollType(rng, b.ante));
     }
-    const opts = { pawnSides: b.rules.pawnSides };
-    if (ksqs.every((s) => attackers(board, s, opts).length > 0)) return board;
+    if (ksqs.every((s) => kingDefended(board, s, opts, guards))) return board;
   }
   throw new Error('board generation failed');
 }
 
 function telegraph(b) {
-  const n = b.rules.reinforce ?? (b.ante >= 4 ? 2 : 1);
+  const n = b.rules.reinforce ?? reinforceCount(b.ante);
   const out = [];
   for (let i = 0; i < n; i++) {
     const sq = randomEmpty(b.rng.reinf, b.board, 3, out.map((x) => x.sq));
