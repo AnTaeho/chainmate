@@ -118,6 +118,21 @@ await ev(() => { window.__app.settings.speed = 2; });
 await settle(900);
 await shot('01-title');
 
+// 응수가 걸린 순간(노림수 빗금): seed 3 첫 대국 최선 수의 첫 먹기 뒤
+await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.cmd({ type: 'play' }); a.go('battle', { events: [] }); });
+await settle(2600);
+const plan3 = await ev(async () => {
+  const { bestMove } = await import('/src/sim/solver.js');
+  const d = bestMove(window.__app.run.battle, { preferMate: 'avoid' });
+  return { hand: d.handIndex, sq: d.sq, line: d.line };
+});
+await clickId(`hand:${plan3.hand}`);
+await clickId(`sq:${plan3.sq}`);
+await idle();
+await clickId(`sq:${plan3.line[0]}`);
+await idle();
+await settle(90);
+await shot('05b-battle-forced');
 // 명인 대국 들어가기(초상이 들어오는 띠)
 await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase(); });
 await settle(100);
