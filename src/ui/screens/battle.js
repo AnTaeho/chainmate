@@ -11,7 +11,7 @@ import { MASTER_BY_ID } from '../../data/masters.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
-import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines } from '../parts.js';
+import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines, fragmentStrip } from '../parts.js';
 import { KIND_SHORT, PIECE_NAME, PART_NAME } from '../words.js';
 import { pauseButton } from './common.js';
 
@@ -577,6 +577,7 @@ export class BattleScreen {
     const app = this.app, v = this.view, b = this.b, run = app.run;
     text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
     pauseButton(ctx, ui, app, RX + RW - 12, 6);
+    fragmentStrip(ctx, ui, run, RX + RW - 18, 8, { align: 'right' });
     const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
     maximColumn(ctx, ui, run, RX, 22, RW, 180, { offUids: off });
     // 손

@@ -8,6 +8,7 @@ import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { KIND_NAME } from '../words.js';
 import { topBar } from './common.js';
+import { fragmentStrip } from '../parts.js';
 
 export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` : tag.kind === 'chart' ? `${CHARTS[tag.form].name} 한 장` : '');
 
@@ -16,6 +17,7 @@ export class SelectScreen {
   draw(ctx, ui) {
     const app = this.app, run = app.run;
     topBar(ctx, ui, app, `${run.ante}관`);
+    fragmentStrip(ctx, ui, run, 60, 8);
     for (let i = 0; i < 3; i++) {
       const info = blindInfo(run, run.ante, i);
       const x = 22 + i * 148, y = 34, w = 140, h = 196;

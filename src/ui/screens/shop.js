@@ -7,7 +7,7 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, ENG_FILL, shardIcon } from '../parts.js';
+import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, ENG_FILL, fragmentStrip } from '../parts.js';
 import { PACK_NAME, PIECE_NAME, PART_NAME } from '../words.js';
 import { topBar } from './common.js';
 
@@ -95,6 +95,7 @@ export class ShopScreen {
     });
     // 오른쪽: 격언
     text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
+    fragmentStrip(ctx, ui, run, RX + RW, 32, { align: 'right' });
     const col = maximColumn(ctx, ui, run, RX, 46, RW, 150, {
       onClick: (i) => { this.menu = this.menu && this.menu.kind === 'maxim' && this.menu.index === i ? null : { kind: 'maxim', index: i }; this.target = null; },
       drag: (i, mx, my) => this.dropMaxim(i, my, col),

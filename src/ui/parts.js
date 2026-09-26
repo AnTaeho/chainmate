@@ -6,7 +6,7 @@ import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
 import { PIECE_NAME } from './words.js';
 import { wrap } from '../render/text.js';
-import { LEGEND_BY_ID } from '../data/legends.js';
+import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 
 // 말풍선 내용(제목 · 줄들)을 너비에 맞게
 export function tipLines(title, body, w = 150, extra = []) {
@@ -192,4 +192,34 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
   } else if (price && it.price != null) {
     text(ctx, `$${it.price}`, cx, y + h - 15, PAL.goldDk, { align: 'center', bold: true });
   }
+}
+
+// ── 불멸의 기보 조각 띠: 조각을 하나라도 모은 명국마다 작은 조각 + 모은 수. 올리면 명국 · 조각 · 재현 조건(첫 조각 뒤에만).
+export function miniShard(ctx, x, y, col = PAL.gold) {
+  const rows = ['.###.', '#####', '####.', '.##..', '..#..'];
+  rows.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, j === 0 && i === 1 ? PAL.goldHi : col); });
+}
+export function fragmentTip(run, l) {
+  const f = run.fragments[l.id] || {};
+  const parts = [['first', '첫 조각'], ['feat', '재현'], ['gold', '금빛']].map(([k, n]) => `${f[k] ? '■' : '□'} ${n}`).join('  ');
+  const lines = [parts];
+  if (f.first && !f.feat) lines.push(`재현: ${l.feat}`);
+  if (f.first && f.feat && !f.gold) lines.push('황금 기물을 먹고 이기면 금빛 조각');
+  return tipLines(l.name, lines, 170);
+}
+export function fragmentStrip(ctx, ui, run, x, y, { align = 'left' } = {}) {
+  const list = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && (f.first || f.feat || f.gold) && !run.legends.includes(l.id); });
+  const w = 15;
+  let xx = align === 'right' ? x - list.length * w : x;
+  for (const l of list) {
+    const f = run.fragments[l.id];
+    const n = (f.first ? 1 : 0) + (f.feat ? 1 : 0) + (f.gold ? 1 : 0);
+    ui.region(`frag:${l.id}`, xx, y - 1, w - 1, 11, { tip: () => fragmentTip(run, l) });
+    miniShard(ctx, xx, y + 2, ui.isHover(`frag:${l.id}`) ? PAL.goldHi : PAL.gold);
+    ctx.fillStyle = PAL.gold;
+    const DIG = { 1: ['010', '110', '010', '010', '111'], 2: ['110', '001', '010', '100', '111'], 3: ['110', '001', '010', '001', '110'] };
+    DIG[n].forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '1') ctx.fillRect(xx + 7 + i, y + 2 + j, 1, 1); });
+    xx += w;
+  }
+  return list.length * w;
 }
