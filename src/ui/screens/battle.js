@@ -295,6 +295,10 @@ export class BattleScreen {
         case 'reinforce': add(0.1, {
           begin: () => { v.board[e.sq] = post[e.sq] || { t: e.piece, id: -1 }; if (!post[e.sq]) v.board[e.sq] = { t: e.piece, id: -1 }; this.flash(e.sq, PAL.dim); app.sfx('reinforce'); },
         }); break;
+        case 'regrip': add(0.45, {
+          begin: () => { this.word('손을 새로 쥔다', PAL.gold, 1.2, 1); app.sfx('discard'); },
+          done: () => { const b = this.bRef; v.hand = clone(b.hand); v.bag = b.bag.length; },
+        }); break;
         case 'discard': add(0.22, {
           begin: () => { app.sfx('discard'); },
           done: () => { const b = this.bRef; v.hand = clone(b.hand); v.discardsLeft = b.discardsLeft; v.bag = b.bag.length; },
