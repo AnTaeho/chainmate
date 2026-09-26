@@ -220,11 +220,13 @@ console.log(`한 수 연출(×1) 평균 ${(mt.reduce((a, x) => a + x, 0) / Math.
 if (VERBOSE && worst) console.log('가장 긴 수', JSON.stringify(worst));
 console.log(`방문 화면: ${[...visited].join(' ')}`);
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
+console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 let fail = false;
 if (errors.length) fail = true;
 if (missing.length) { console.log(`못 간 화면: ${missing.join(' ')}`); fail = true; }
 if (!reloaded) fail = true;
+if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }
 if (mt.length && mt[mt.length - 1] > 4) { console.log('한 수 연출이 4초를 넘는다'); fail = true; }
 if (pct(0.99) > 16) { console.log('프레임 p99가 16ms를 넘는다'); fail = true; }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');

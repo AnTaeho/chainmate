@@ -24,6 +24,20 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
       return { left: Math.floor((width - w) / 2), top: Math.floor((height - h) / 2), width: w, height: h };
     }
   }
+  // 가짜 WebAudio: 마디를 만들고 잇기만 한다(합성 코드의 예외를 잡으려고)
+  const audioCalls = { nodes: 0 };
+  const param = () => ({ value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime(v) { if (!(v > 0)) throw new Error('exponential ramp to non-positive'); } });
+  const node = (extra = {}) => { audioCalls.nodes++; return { connect() {}, disconnect() {}, start() {}, stop() {}, gain: param(), frequency: param(), Q: param(), type: '', buffer: null, ...extra }; };
+  class FakeAudioContext {
+    constructor() { this.sampleRate = 8000; this.state = 'running'; this.destination = node(); this.t0 = performance.now(); }
+    get currentTime() { return (performance.now() - this.t0) / 1000; }
+    createGain() { return node(); }
+    createOscillator() { return node(); }
+    createBiquadFilter() { return node(); }
+    createBufferSource() { return node(); }
+    createBuffer(ch, n) { const d = new Float32Array(n); return { getChannelData: () => d }; }
+    resume() { this.state = 'running'; }
+  }
   const screen = new FakeCanvas();
   const store = new Map();
   let rafCb = null;
@@ -44,10 +58,11 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
     requestAnimationFrame(cb) { rafCb = cb; },
     performance: globalThis.performance,
     matchMedia: () => ({ matches: false }),
+    AudioContext: FakeAudioContext,
   };
   const fire = (list, e) => { for (const fn of list || []) fn(e); };
   return {
-    document, window, screen, store, counter,
+    document, window, screen, store, counter, audioCalls,
     // 게임 좌표 (gx, gy)를 화면 좌표로 바꿔 누른다
     clientOf(gx, gy) {
       const r = screen.getBoundingClientRect();
