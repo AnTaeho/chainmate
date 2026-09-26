@@ -33,8 +33,9 @@ export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
 export const ENDLESS_GROWTH = 2.2; // 9관부터 관마다 목표 ×
 export const REWARD = {
-  // 연습 3 · 정식 4 · 명인 3. 명인은 2a의 5에서 명인의 상자 몫만큼 뺐다(상자까지 얹으면 판 봇 승률이 12%→34%, 보고서 2b).
-  base: { ...BASE_REWARD, master: 3 },
+  // 연습 3 · 정식 4 · 명인 2. 명인은 2a의 5에서 명인의 상자 몫만큼 뺐다: 상자 기댓값 ≈ 1.5칸 × 상금 2~3어치 ≈ 3.6이라
+  // 2 + 3.6 ≈ 2a의 5. 3으로 두면 판 봇 승률 24%(300판), 상자를 얹고 5 그대로면 34%(80판) — 보고서 2b.
+  base: { ...BASE_REWARD, master: 2 },
   perMove: 1,          // 남은 수 하나당
   interestStep: 5,     // 가진 상금 5당 1
   interestMax: 5,
