@@ -21,6 +21,7 @@ export function emptyRecords() {
     codex: { maxims: {}, masters: {}, legends: {}, legendsDone: {}, openings: { standard: true }, editions: {} },
     unlocked: { openings: ['standard'], dan: 0 },
     danWins: {},
+    bestEndless: 0,            // 끝없는 대국에서 닿은 가장 깊은 관
     daily: null,               // { date, ante, blind, won, score, runs }
   };
 }
@@ -89,6 +90,14 @@ export function finishRun(rec, run, { daily = null } = {}) {
     rec.daily = d;
   }
   return out;
+}
+
+// 끝없는 대국이 끝났을 때(이긴 판은 이미 세었다): 닿은 관만 남긴다
+export function finishEndless(rec, run) {
+  if (!run.endless) return false;
+  const deeper = run.ante > (rec.bestEndless || 0);
+  rec.bestEndless = Math.max(rec.bestEndless || 0, run.ante);
+  return deeper;
 }
 
 // 다음 해금 하나(결과 화면 · 판 준비 화면에 보인다)

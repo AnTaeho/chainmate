@@ -18,6 +18,7 @@ export class SelectScreen {
   draw(ctx, ui) {
     const app = this.app, run = app.run;
     topBar(ctx, ui, app, `${run.ante}관`);
+    if (run.endless) text(ctx, '끝없는 대국', W / 2, 8, PAL.gold, { align: 'center', bold: true });
     fragmentStrip(ctx, ui, run, 60, 8);
     for (let i = 0; i < 3; i++) {
       const info = blindInfo(run, run.ante, i);

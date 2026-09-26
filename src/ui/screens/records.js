@@ -16,11 +16,12 @@ export class RecordsScreen {
       ['판', `${r.runs}`], ['이긴 판', `${r.wins}`], ['최고 관', r.bestAnte ? `${r.bestAnte}관` : '-'],
       ['외통', `${r.mates}`], ['전설 완성', `${r.legends}`], ['신의 한 수(!!!)', `${(r.grades['!!!'] || 0) + (r.grades['∞'] || 0)}`],
       ['열린 단', danName(r.unlocked.dan)],
+      ['끝없는 대국', r.bestEndless ? `${r.bestEndless}관` : '-'],
       ['오늘의 대국', d ? `${d.won ? '이김' : `${d.ante}관`} · ${d.runs}판` : '아직'],
     ];
     rows.forEach(([a, b], i) => {
-      text(ctx, a, 40, 40 + i * 18, PAL.dim);
-      text(ctx, b, 240, 40 + i * 18, PAL.ink, { align: 'right', bold: true });
+      text(ctx, a, 40, 36 + i * 17, PAL.dim);
+      text(ctx, b, 240, 36 + i * 17, PAL.ink, { align: 'right', bold: true });
     });
     // 최고 한 수
     box(ctx, 270, 40, 196, 120, PAL.feltDk, PAL.frameDk);

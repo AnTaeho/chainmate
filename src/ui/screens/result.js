@@ -29,7 +29,8 @@ export class ResultScreen {
     const app = this.app, run = app.run;
     const x = 90, y = 16, w = 300, h = 238;
     box(ctx, x, y, w, h, PAL.feltDk, this.won ? PAL.gold : PAL.red);
-    text(ctx, this.won ? '여덟 관을 꺾었다' : '판이 끝났다', W / 2, y + 10, this.won ? PAL.gold : PAL.red, { align: 'center', bold: true, scale: 2 });
+    const title = run.endless && !this.won ? `끝없는 대국 ${run.ante}관` : this.won ? '여덟 관을 꺾었다' : '판이 끝났다';
+    text(ctx, title, W / 2, y + 10, this.won || run.endless ? PAL.gold : PAL.red, { align: 'center', bold: true, scale: 2 });
     const rows = [];
     if (this.last) rows.push(['도달', `${run.ante}관 ${KIND_NAME[this.last.kind]}`]);
     rows.push(['최고 한 수', num(this.best)]);
@@ -62,6 +63,7 @@ export class ResultScreen {
     const ny = y + h - 64;
     const notes = [];
     if (this.out.fresh) notes.push([`도감 ${this.out.fresh}칸을 새로 채웠다`, PAL.ink]);
+    if (this.out.deeper) notes.push([`끝없는 대국 가장 깊은 곳 ${this.out.endless}관`, PAL.gold]);
     for (const id of this.out.unlocked) notes.push([`오프닝 「${OPENINGS[id].name}」이 열렸다`, PAL.gold]);
     if (this.out.dan) notes.push([`${this.out.dan}단이 열렸다`, PAL.gold]);
     if (!this.out.unlocked.length && this.next) notes.push([`다음 해금 ${OPENINGS[this.next.id].name}: ${this.next.text} ${this.next.have}/${this.next.need}`, PAL.dim]);

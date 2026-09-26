@@ -7,7 +7,7 @@ import { UI, tooltip } from './ui.js';
 import { miniShard } from './parts.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
-import { loadRecords, observe, finishRun, noteMove, dailySeed, today } from './records.js';
+import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
 import { SCREENS } from './screens/index.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -47,6 +47,12 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   // 판이 끝나면 한 번: 기록 · 해금. 결과 화면이 부른다.
   app.finishRun = () => {
     const run = app.run;
+    if (run && run.endless && run.phase === 'lost' && !run.endlessRecorded) {
+      run.endlessRecorded = true;
+      const deeper = finishEndless(app.records, run);
+      app.saveRecords();
+      return { ...(run.recordedOut || { unlocked: [], dan: null }), fresh: app.fresh.length, endless: run.ante, deeper };
+    }
     if (!run || run.recorded) return run && run.recordedOut;
     const out = finishRun(app.records, run, { daily: run.daily || null });
     out.fresh = app.fresh.length;
@@ -174,6 +180,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       app.ui.up(x, y);
     }
     app.lastInputMs = now() - t0;
+    app.stats.maxInputMs = Math.max(app.stats.maxInputMs || 0, app.lastInputMs);
+    if (!app.stats.inputMs) app.stats.inputMs = [];
+    if (type !== 'move' && app.stats.inputMs.length < 20000) app.stats.inputMs.push(app.lastInputMs);
   };
   app.key = (k) => {
     if (app.audio) app.audio.unlock();
@@ -233,7 +242,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const h = ui.hover;
     if (h && h.tip && !ui.drag) {
       const tip = typeof h.tip === 'function' ? h.tip() : h.tip;
-      if (tip) tooltip(ctx, h.x + h.w + 4 > W - (tip.w || 150) ? h.x - (tip.w || 150) - 4 : h.x + h.w + 4, h.y, tip.lines, { title: tip.title, w: tip.w || 150 });
+      if (tip) tooltip(ctx, h.x + h.w + 4 > W - (tip.w || 150) ? h.x - (tip.w || 150) - 4 : h.x + h.w + 4, h.y, tip.lines, { title: tip.title, w: tip.w || 150, scale: app.settings.big ? 2 : 1 });
     }
   };
 
