@@ -1,0 +1,12 @@
+@font-face { font-family: "Galmuri11"; src: url("assets/fonts/Galmuri11.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Galmuri11"; src: url("assets/fonts/Galmuri11-Bold.woff2") format("woff2"); font-weight: 700; }
+html, body { margin: 0; height: 100%; background: #0b1210; overflow: hidden; }
+body { display: grid; place-items: center; }
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #1b2b27;
+  cursor: default;
+  outline: none;
+}
