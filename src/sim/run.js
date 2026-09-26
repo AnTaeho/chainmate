@@ -20,8 +20,11 @@ import { MASTERS, FINAL_MASTER } from '../data/masters.js';
 import { OPENINGS, DEFAULT_OPENING } from '../data/openings.js';
 
 // ── 수치
-// 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. (tools/run.mjs로 맞춘다)
-export const B = [150, 400, 1000, 2400, 5500, 12000, 26000, 55000];
+// 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. tools/run.mjs(smart 봇)로 맞춤:
+//   1관은 격언 없이도 넘는다(100%), 2~4관에서 첫 격언 · 기보를 못 모은 판이 떨어져 4관 도달 80%대,
+//   5~7관은 관마다 ×2.3~2.5 — 격언의 곱(×연쇄)과 기보 레벨이 붙은 짜임이라야 따라간다.
+//   8관은 명인 「대가」(기보 무시)가 벽이라 8관 연습 · 정식만 보고 잡았다(보고서 참고).
+export const B = [150, 600, 2000, 5200, 13000, 32000, 72000, 150000];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
