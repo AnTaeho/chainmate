@@ -49,42 +49,46 @@ export function defineModifier(id, def) {
 export const getModifier = (id) => REGISTRY.get(id);
 export const undefineModifier = (id) => REGISTRY.delete(id);
 
-// 켜진 명세 목록을 훅 순서대로.
+// 켜진 명세 목록을 훅 순서대로. 훅이 없으면 빈 배열(탐색 중 가장 흔한 경우라 아무것도 만들지 않는다).
+const NONE = [];
 function ordered(t, hook) {
-  const specs = t.chain && t.chain.engraving ? [...(t.mods || []), t.chain.engraving] : (t.mods || []);
-  if (specs.length === 0) return specs;
+  const mods = t.mods || NONE;
+  const eng = t.chain && t.chain.engraving;
+  let withKind = null;
   const order = KIND_ORDER[hook] || DEFAULT_ORDER;
-  const withKind = [];
-  specs.forEach((spec, i) => {
-    if (spec.off) return;
+  const n = mods.length + (eng ? 1 : 0);
+  for (let i = 0; i < n; i++) {
+    const spec = i < mods.length ? mods[i] : eng;
+    if (spec.off) continue;
     const def = REGISTRY.get(spec.id);
     if (!def) throw new Error(`unknown modifier ${spec.id}`);
-    if (!def[hook]) return;
-    withKind.push({ spec, def, k: order.indexOf(spec.kind || def.kind), i });
-  });
-  withKind.sort((a, b) => a.k - b.k || a.i - b.i);
+    if (!def[hook]) continue;
+    (withKind || (withKind = [])).push({ spec, def, k: order.indexOf(spec.kind || def.kind), i });
+  }
+  if (!withKind) return NONE;
+  if (withKind.length > 1) withKind.sort((a, b) => a.k - b.k || a.i - b.i);
   return withKind;
 }
 
-function makeCtx(t, spec, def, event, events) {
-  const chain = t.chain;
-  const src = spec.id;
-  const ctx = {
-    t, chain, event, spec,
-    data: spec.data || {},
-    get state() { return spec.state || (spec.state = {}); },
-    rules: t.rules,
-    flags: chain ? chain.flags : null,
-    addValue(n) { if (!n) return; chain.value += n; events.push({ type: 'score', src, value: n }); },
-    addMult(n) { if (!n) return; chain.mult += n; events.push({ type: 'score', src, mult: n }); },
-    mulMult(x) { if (x === 1) return; chain.mult *= x; events.push({ type: 'score', src, xmult: x }); },
-    // 지금 sq를 노리는 적 칸(명인 「철벽」 반영)
-    attackers(sq) { return attackers(t.board, sq, t.rules && t.rules.pawnSides ? { pawnSides: true } : {}); },
-    addMoney(n) { if (!n) return; chain.money = (chain.money || 0) + n; events.push({ type: 'money', src, money: n }); },
-    cancelCut() { ctx._cancel = true; },
-    emit(ev) { events.push({ ...ev, src }); },
-  };
-  return ctx;
+// 훅이 받는 ctx. 메서드는 프로토타입에 두어 부를 때마다 닫힘을 만들지 않는다.
+class Ctx {
+  constructor(t, spec, event, events) {
+    this.t = t; this.chain = t.chain; this.event = event; this.spec = spec;
+    this.data = spec.data || {};
+    this.rules = t.rules;
+    this.flags = t.chain ? t.chain.flags : null;
+    this._events = events;
+    this._cancel = false;
+  }
+  get state() { return this.spec.state || (this.spec.state = {}); }
+  addValue(n) { if (!n) return; this.chain.value += n; this._events.push({ type: 'score', src: this.spec.id, value: n }); }
+  addMult(n) { if (!n) return; this.chain.mult += n; this._events.push({ type: 'score', src: this.spec.id, mult: n }); }
+  mulMult(x) { if (x === 1) return; this.chain.mult *= x; this._events.push({ type: 'score', src: this.spec.id, xmult: x }); }
+  addMoney(n) { if (!n) return; this.chain.money = (this.chain.money || 0) + n; this._events.push({ type: 'money', src: this.spec.id, money: n }); }
+  // 지금 sq를 노리는 적 칸(명인 「철벽」 반영)
+  attackers(sq) { return attackers(this.t.board, sq, this.t.rules && this.t.rules.pawnSides ? { pawnSides: true } : {}); }
+  cancelCut() { this._cancel = true; }
+  emit(ev) { this._events.push({ ...ev, src: this.spec.id }); }
 }
 
 // 훅을 차례로 부른다. 돌려주는 값: allowCapture면 허용 여부, onCut이면 취소 여부, 그 밖엔 없음.
@@ -93,7 +97,7 @@ export function runHook(t, hook, event, events = []) {
   let allowed = true, cancelled = false;
   for (const { spec, def } of list) {
     if (spec.off) continue; // 앞선 조정자가 이번 훅 안에서 끈 경우(「침묵」)
-    const ctx = makeCtx(t, spec, def, event, events);
+    const ctx = new Ctx(t, spec, event, events);
     const r = def[hook](ctx);
     if (hook === 'allowCapture' && r === false) allowed = false;
     if (ctx._cancel) cancelled = true;
@@ -102,6 +106,11 @@ export function runHook(t, hook, event, events = []) {
   if (hook === 'onCut') return cancelled;
   return undefined;
 }
+
+// 탐색 · 조회용 가지치기: 명세 겉과 state만 새로 만들고 data는 같이 쓴다(대국 안의 훅은 data를 바꾸지 않는다).
+// 탐색 중 훅이 state를 바꿔도(또는 새로 만들어도) 원래 대국의 명세에 새지 않는다.
+export const forkSpec = (s) => (s ? (s.state ? { ...s, state: JSON.parse(JSON.stringify(s.state)) } : { ...s }) : s);
+export const forkSpecs = (mods) => (mods && mods.length ? mods.map(forkSpec) : mods);
 
 export const hasHook = (t, hook) => ordered(t, hook).length > 0;
 

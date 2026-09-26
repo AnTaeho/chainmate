@@ -2,20 +2,20 @@
 // 손 기물 × 떨굴 칸 × 먹기 선택의 깊이 우선 탐색. 점수 파이프라인(조정자 포함)을 그대로 돌린다.
 import { startChain, chainCaptures, chainCapture } from './chain.js';
 import { dropSquaresFor } from './battle.js';
+import { forkSpec, forkSpecs } from './scoring.js';
 
-const cloneMods = (mods) => (mods && mods.length ? JSON.parse(JSON.stringify(mods)) : mods);
 
 function cloneTable(t) {
   const c = t.chain;
   return {
     ...t,
     board: t.board.slice(),
-    mods: cloneMods(t.mods),
+    mods: forkSpecs(t.mods),
     chain: c && {
       ...c,
       captures: c.captures.slice(), forms: c.forms.slice(), flags: { ...c.flags },
       forced: c.forced && c.forced.slice(),
-      engraving: c.engraving && JSON.parse(JSON.stringify(c.engraving)),
+      engraving: forkSpec(c.engraving),
     },
   };
 }
@@ -62,7 +62,7 @@ export function bestMove(b, opts = {}) {
     for (const sq of dropSquaresFor(b, piece)) {
       const t = cloneTable({ ...b, chain: null });
       // 각인 명세는 복사해서 쓴다(탐색 중 조정자 state가 실제 손 기물에 새지 않게)
-      startChain(t, { type: piece.t, sq, engraving: piece.eng && JSON.parse(JSON.stringify(piece.eng)) });
+      startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng) });
       const r = dfs(t, stats, preferMate);
       if (!r) continue;
       if (better(r, best, preferMate)) best = { ...r, handIndex, sq };

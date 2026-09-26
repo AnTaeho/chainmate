@@ -4,7 +4,7 @@
 import { createRng, fork, int, next, shuffle } from './rng.js';
 import { at, attackers, dropSquares, emptyBoard, fileOf, rankOf, reach } from './board.js';
 import { startChain, chainCapture, chainCaptures, boardOpts } from './chain.js';
-import { runHook, getModifier } from './scoring.js';
+import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 
 export const DEFAULT_BAG = ['P', 'P', 'P', 'P', 'N', 'N', 'B', 'R'];
 export const BASE_REWARD = { practice: 3, official: 4, master: 5 };
@@ -226,7 +226,7 @@ export function dropSquaresFor(b, piece) {
   const allow = { attacked: false };
   if ((b.mods && b.mods.length) || piece.eng) {
     // 조회일 뿐이라 조정자 state가 새지 않게 복사본으로 돌린다
-    const t = { ...b, mods: JSON.parse(JSON.stringify(b.mods)), chain: piece.eng ? { engraving: JSON.parse(JSON.stringify(piece.eng)) } : null };
+    const t = { ...b, mods: forkSpecs(b.mods), chain: piece.eng ? { engraving: forkSpec(piece.eng) } : null };
     const ctxEvent = { type: piece.t, engraving: piece.eng };
     // onDropCheck: ctx.event.allow.attacked = true 로 노려진 칸 허용
     ctxEvent.allow = allow;
