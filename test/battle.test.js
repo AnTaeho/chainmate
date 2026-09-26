@@ -152,6 +152,20 @@ test('하위 스트림은 서로 흔들지 않는다: 주머니가 달라도 판
   assert.deepEqual(a.incoming, b.incoming);
 });
 
+test('판의 첫 대국(1관 연습)은 시작 손으로 셋 잇는 사슬이 있다', async () => {
+  const { createRun, applyRun } = await import('../src/sim/run.js');
+  const { bestMove } = await import('../src/sim/solver.js');
+  const { hasChainOf } = await import('../src/sim/battle.js');
+  let ok = 0;
+  for (let seed = 1; seed <= 60; seed++) {
+    const run = createRun({ seed });
+    applyRun(run, { type: 'play' });
+    const best = bestMove(run.battle, { preferMate: 'avoid' });
+    if (best.captures >= 3 || hasChainOf(run.battle, 3)) ok++;
+  }
+  assert.ok(ok >= 58, `셋 잇는 판 ${ok}/60`);
+});
+
 test('막히면 대국마다 한 번 손을 새로 쥔다(손 · 쓴 기물을 주머니에 섞어 다시 뽑기)', async () => {
   const { checkStuck } = await import('../src/sim/battle.js');
   const b = createBattle({ seed: 5 });

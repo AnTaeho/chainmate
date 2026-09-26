@@ -141,9 +141,11 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
   shuffle(b.rng.bag, b.bag);
   draw(b);
   // 시작 손으로 떨굴 수가 없으면 판을 다시 만든다(시드 안에서 결정적으로).
+  // 판(런)의 첫 대국(1관 연습)은 시작 손으로 셋 이상 잇는 사슬(「!」)이 하나는 있는 판을 고른다 — 첫 사슬이 곧바로 나오게(밤샘 D-3)
+  const easy = ante === 1 && kind === 'practice' && rules.easyStart !== false;
   for (let i = 0; i < 100; i++) {
     b.board = generateBoard(b);
-    if (hasLegalDrop(b)) break;
+    if (hasLegalDrop(b) && (!easy || i >= 60 || hasChainOf(b, EASY_CHAIN))) break;
   }
   const gr = fork(root, 'gold');
   if (golden ?? next(gr) < goldenChance) {
@@ -171,6 +173,31 @@ export function dropSquaresFor(b, piece) {
 }
 // 명인 「안개」: 안개 속(위 fog줄)에는 떨굴 수 없다
 export const fogFilter = (t, list) => (t.rules && t.rules.fog ? list.filter((sq) => rankOf(sq) < 8 - t.rules.fog) : list);
+
+// 시작 손의 어떤 기물로 n번 이상 잇는 사슬이 있나(조정자 없이, 깊이 우선, 마디 예산 안에서)
+export const EASY_CHAIN = 3;
+export function hasChainOf(b, n, budget = 4000) {
+  let nodes = 0;
+  const walk = (t, depth) => {
+    if (depth >= n) return true;
+    if (++nodes > budget) return false;
+    for (const sq of chainCaptures(t)) {
+      const u = { ...t, board: t.board.slice(), chain: { ...t.chain, captures: t.chain.captures.slice(), forms: t.chain.forms.slice(), flags: { ...t.chain.flags }, forced: t.chain.forced && t.chain.forced.slice() } };
+      chainCapture(u, sq);
+      if (u.chain.captures.length >= n) return true;
+      if (!u.chain.done && walk(u, depth + 1)) return true;
+    }
+    return false;
+  };
+  for (const piece of b.hand) {
+    for (const sq of dropSquares(b.board, piece.t, boardOpts(b))) {
+      const t = { board: b.board.slice(), rules: b.rules, mods: [], chain: null };
+      startChain(t, { type: piece.t, sq });
+      if (walk(t, 0)) return true;
+    }
+  }
+  return false;
+}
 
 export function hasLegalDrop(b) {
   return b.hand.some((p) => dropSquaresFor(b, p).length > 0);
