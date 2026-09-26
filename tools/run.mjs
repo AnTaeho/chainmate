@@ -26,14 +26,16 @@ function parseArgs(argv) {
     else if (k === '--k') a.k = Number(argv[++i]);
     else if (k === '--B') a.B = argv[++i].split(',').map(Number);       // 실험: 목표 기준 덮어쓰기
     else if (k === '--shop') a.shop = JSON.parse(argv[++i]);            // 실험: 상점 수치 덮어쓰기(JSON)
-    else if (k === '--tune') a.tune = JSON.parse(argv[++i]);            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
+    else if (k === '--tune') a.tune = JSON.parse(argv[++i]);
+    else if (k === '--opening') a.opening = argv[++i];                  // 오프닝(판 밖 해금)
+    else if (k === '--dan') a.dan = Number(argv[++i]);                   // 단(난이도) 0~8            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
   }
   return a;
 }
 
-function one(seed, policy) {
+function one(seed, policy, opening = undefined, dan = 0) {
   const t0 = performance.now();
-  const run = createRun({ seed });
+  const run = createRun({ seed, opening, dan });
   const { bought, editions, legendAt, seen } = playRun(run, policy);
   return {
     seed, won: run.phase === 'won', ante: run.ante, blind: run.blind,
@@ -46,7 +48,7 @@ function one(seed, policy) {
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan } = workerData;
   if (tune && tune.overflow) REWARD.overflow = tune.overflow;
   if (tune && tune.chest) CHEST.counts = tune.chest;
   if (tune && tune.chestItems) CHEST.items = tune.chestItems;
@@ -58,7 +60,7 @@ if (!isMainThread) {
   if (b) b.forEach((x, i) => { B[i] = x; });
   if (shop) Object.assign(SHOP, shop);
   const out = [];
-  for (const s of seeds) out.push(one(s, policy));
+  for (const s of seeds) out.push(one(s, policy, opening, dan || 0));
   parentPort.postMessage(out);
 } else {
   const args = parseArgs(process.argv.slice(2));
@@ -66,7 +68,7 @@ if (!isMainThread) {
   const t0 = performance.now();
   const chunks = Array.from({ length: args.workers }, (_, w) => seeds.filter((_, i) => i % args.workers === w));
   const results = (await Promise.all(chunks.filter((c) => c.length).map((c) => new Promise((res, rej) => {
-    const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { seeds: c, policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune } });
+    const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { seeds: c, policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan } });
     wk.on('message', res);
     wk.on('error', rej);
   })))).flat();
@@ -88,7 +90,7 @@ function report(R, args, wall) {
 
   const wins = R.filter((r) => r.won).length;
   console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
-  console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
+  console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
 
   // 관별
   const rows = [];
