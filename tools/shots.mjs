@@ -99,7 +99,6 @@ await ev(async () => {
 });
 await settle(200);
 await shot('00-sprites');
-await ev(() => { delete window.__app.draw; });
 await page.reload();
 await page.waitForFunction(() => window.__app && window.__app.screen);
 await ev(() => { window.__app.settings.speed = 2; });
