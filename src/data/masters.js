@@ -30,7 +30,11 @@ master('heavy_hand', '무거운 손', '손 3', {
 master('silence', '침묵', '가장 왼쪽 격언이 잠든다', {
   onBattleStart(ctx) {
     const first = ctx.t.mods.find((s) => (s.kind || (getModifier(s.id) || {}).kind) === 'maxim');
-    if (first) first.off = true;
+    if (first) {
+      first.off = true;
+      // 그 격언의 판본(edition:* 명세, of = uid)도 같이 잠든다
+      for (const s of ctx.t.mods) if (first.uid != null && s.of === first.uid) s.off = true;
+    }
   },
 });
 master('grudge', '앙갚음', '끊긴 사슬은 점수 반', {

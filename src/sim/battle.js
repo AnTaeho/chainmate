@@ -97,12 +97,12 @@ const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: nul
 
 // 황금 기물: 대국 시작 판에서 킹이 아닌 적 하나가 이 확률로 금빛(HOOKS 「드문 것들의 사다리」 대국당 ~4%).
 // 먹으면 값을 한 번 더 받고(chain.js), 판(런)이 대국 뒤 금빛 꾸러미와 조각 기회로 바꾼다.
-export const GOLDEN_CHANCE = 0.04;
+export const GOLDEN = { chance: 0.04 };
 // 목표를 넘긴 비율의 층(HOOKS 「넘친 만큼 축하」). 넘는 순간 「overflow」 이벤트.
 export const OVERFLOW_TIERS = [1, 2, 5, 10];
 export const overflowTier = (score, target) => (target ? OVERFLOW_TIERS.reduce((a, x) => (score >= x * target ? x : a), 0) : 0);
 
-// golden: null이면 GOLDEN_CHANCE로 굴린다(시드의 'gold' 하위 스트림), true/false로 강제.
+// golden: null이면 GOLDEN.chance로 굴린다(시드의 'gold' 하위 스트림), true/false로 강제.
 export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [], golden = null } = {}) {
   const root = createRng(seed);
   const b = {
@@ -140,7 +140,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     if (hasLegalDrop(b)) break;
   }
   const gr = fork(root, 'gold');
-  if (golden ?? next(gr) < GOLDEN_CHANCE) {
+  if (golden ?? next(gr) < GOLDEN.chance) {
     const cand = [];
     b.board.forEach((c, sq) => { if (c && c.t !== 'K') cand.push(sq); });
     if (cand.length) b.board[cand[Math.floor(next(gr) * cand.length)]].gold = true;
