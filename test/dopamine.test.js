@@ -88,8 +88,8 @@ test('넘친 목표: 층 ×1 · ×2 · ×5 · ×10, 한 수로 여러 층을 넘
   assert.equal(b.status, 'won');
 });
 
-test('넘친 목표 상금: ×2 +1 · ×5 +2 · ×10 +3, 보상 내역에 overflow', () => {
-  assert.deepEqual(REWARD.overflow, { 2: 1, 5: 2, 10: 3 });
+test('넘친 목표 상금: ×5 +1 · ×10 +2, 보상 내역에 overflow', () => {
+  assert.deepEqual(REWARD.overflow, { 5: 1, 10: 2 });
   let checked = 0;
   for (let seed = 1; seed <= 12; seed++) {
     const run = createRun({ seed });
@@ -154,10 +154,10 @@ test('판본: 값에 판본 값이 붙고(팔면 절반), 흑요는 격언 칸 +
   assert.equal(sellPrice(m), 5);
 });
 
-test('판본: 진열 격언에 약 8%(칸당 ~4~5%), 무게는 은박 > 자개 > 무지개 > 흑요', () => {
+test('판본: 진열 격언에 약 4%(칸당 ~2%), 무게는 은박 > 자개 > 무지개 > 흑요', () => {
   const run = createRun({ seed: 1 });
   const counts = {}; let maxims = 0, slots = 0;
-  for (let i = 0; i < 4000; i++) {
+  for (let i = 0; i < 8000; i++) {
     run.shop = { rng: createRng(1000 + i), display: [], packs: [], rerolls: 0 };
     rollDisplay(run);
     for (const it of run.shop.display) {
@@ -169,9 +169,9 @@ test('판본: 진열 격언에 약 8%(칸당 ~4~5%), 무게는 은박 > 자개 >
     }
   }
   const total = Object.values(counts).reduce((a, x) => a + x, 0);
-  assert.equal(SHOP.editionChance, 0.08);
-  assert.ok(total / maxims > 0.065 && total / maxims < 0.095, `edition share ${total / maxims}`);
-  assert.ok(total / slots > 0.035 && total / slots < 0.055, `per slot ${total / slots}`);
+  assert.equal(SHOP.editionChance, 0.04);
+  assert.ok(total / maxims > 0.03 && total / maxims < 0.05, `edition share ${total / maxims}`);
+  assert.ok(total / slots > 0.015 && total / slots < 0.03, `per slot ${total / slots}`);
   assert.ok(counts.foil > counts.pearl && counts.pearl > counts.rainbow && counts.rainbow > counts.obsidian, JSON.stringify(counts));
 });
 
@@ -225,9 +225,9 @@ test('명인의 상자: 개수 분포 1 ≈ 77% · 3 ≈ 20% · 5 ≈ 3% (판 �
   assert.ok(n[5] / N > 0.01 && n[5] / N < 0.06, JSON.stringify(n));
 });
 
-test('명인의 상자: 물건 넷(기보 · 상금 · 각인 · 판본)이 판에 그대로 들어간다', () => {
+test('명인의 상자: 물건 셋(상금 · 기보 · 각인)이 판에 그대로 들어간다', () => {
   const kinds = new Set();
-  for (let seed = 1; seed <= 150 && kinds.size < 4; seed++) {
+  for (let seed = 1; seed <= 150 && kinds.size < 3; seed++) {
     const run = createRun({ seed });
     run.maxims.push({ uid: 50, id: 'edge', data: {}, edition: null, paid: 4 });
     applyRun(run, { type: 'skip' });
@@ -246,7 +246,8 @@ test('명인의 상자: 물건 넷(기보 · 상금 · 각인 · 판본)이 판�
       if (it.kind === 'money') assert.ok(events.some((e) => e.type === 'money' && e.src === 'chest'));
     }
   }
-  assert.deepEqual([...kinds].sort(), ['chart', 'edition', 'engrave', 'money']);
+  assert.deepEqual([...kinds].sort(), ['chart', 'engrave', 'money']);
+  assert.deepEqual(CHEST.items.map((x) => x[0]), ['money', 'chart', 'engrave']);
 });
 
 // ── 불멸의 기보: 조각
@@ -300,7 +301,7 @@ test('첫 조각: 진열에서 사거나 꾸러미에서 고른다', () => {
   assert.equal(run.fragments.eight_pawns.first, true);
 });
 
-test('첫 조각 확률: 진열 칸 3% · 꾸러미 5%, 나오는 곳이 맞는 명국만, 가진 첫 조각은 다시 안 나온다', () => {
+test('첫 조각 확률: 진열 칸 3% · 꾸러미 4%, 나오는 곳이 맞는 명국만, 가진 첫 조각은 다시 안 나온다', () => {
   const run = createRun({ seed: 1 });
   let frag = 0, slots = 0;
   for (let i = 0; i < 6000; i++) {
@@ -321,7 +322,7 @@ test('첫 조각 확률: 진열 칸 3% · 꾸러미 5%, 나오는 곳이 맞는 
       const f = o.find((x) => x.kind === 'fragment');
       if (f) { got++; assert.equal(LEGEND_BY_ID[f.legend].source, kind); }
     }
-    assert.ok(got / 4000 > 0.04 && got / 4000 < 0.06, `${kind} ${got / 4000}`);
+    assert.ok(got / 4000 > 0.03 && got / 4000 < 0.05, `${kind} ${got / 4000}`);
   }
   run.fragments = { immortal: { first: true, feat: false, gold: false }, opera: { first: true, feat: false, gold: false } };
   for (let i = 0; i < 2000; i++) {
@@ -354,7 +355,7 @@ test('재현(둘째 조각): 첫 조각을 가진 판에서만, 해낸 사슬 �
   assert.ok(ev2.findIndex((e) => e.type === 'fragment') > endAt, '사슬이 끝난 뒤');
 });
 
-test('셋째 조각: 황금 기물을 먹고 이기면 첫 조각을 가진 명국의 금빛 조각(재현까지 한 명국 먼저) + 금빛 꾸러미', () => {
+test('셋째 조각: 황금 기물을 먹고 이기면 재현까지 해낸 명국의 금빛 조각 + 금빛 꾸러미', () => {
   const run = createRun({ seed: 2 });
   run.fragments.century = { first: true, feat: false, gold: false };
   run.fragments.evergreen = { first: true, feat: true, gold: false };
@@ -390,6 +391,23 @@ test('셋째 조각: 황금 기물을 먹고 이기면 첫 조각을 가진 명�
   const li = run.maxims.findIndex((m) => m.legendary);
   assert.throws(() => applyRun(run, { type: 'sell', index: li }), /legend/);
   assert.ok(!legalRunCommands(run).some((c) => c.type === 'sell' && c.index === li));
+});
+
+test('셋째 조각: 조각은 첫 → 재현 → 금빛 차례, 재현 전의 황금 기물은 조각을 주지 않는다', () => {
+  const run = createRun({ seed: 2 });
+  run.fragments.century = { first: true, feat: false, gold: false };
+  applyRun(run, { type: 'play' });
+  const b = run.battle;
+  b.board = boardFrom({ e5: 'B', a8: 'K', b7: 'P', h7: 'N' });
+  b.board[S('e5')].gold = true;
+  b.hand = [{ t: 'N', id: 1, eng: null }];
+  b.target = 1;
+  const ev = applyRun(run, { type: 'drop', handIndex: 0, sq: S('d3') }).concat(applyRun(run, { type: 'capture', sq: S('e5') }));
+  assert.equal(run.phase, 'shop');
+  assert.ok(!ev.some((e) => e.type === 'fragment'));
+  assert.deepEqual(run.fragments.century, { first: true, feat: false, gold: false });
+  assert.equal(run.shop.goldenFragment, false, '첫 조각을 가졌으면 꾸러미에 첫 조각도 끼지 않는다');
+  assert.ok(run.shop.packs.some((p) => p.kind === 'golden'));
 });
 
 test('셋째 조각: 첫 조각이 없으면 금빛 꾸러미에 첫 조각이 끼어 나올 기회', () => {

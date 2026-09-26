@@ -104,7 +104,7 @@ const CASES = [
   ['no_regrets', 'knight', 30, { discardsUsed: 1 }],
   ['second_thought', 'knight', 45, { discarded: 3 }],
   ['empty_bag', 'knight', 180, { bag: [1, 2, 3, 4, 5] }],
-  ['small_bag', 'knight', 60, { deckSize: 8 }],
+  ['small_bag', 'knight', 45, { deckSize: 8 }],
   ['small_bag', 'knight', 30, { deckSize: 9 }],
   ['welcome', 'knight', 70, { movesUsed: 2, bornAt: { e5: 2 } }],
   ['welcome', 'knight', 30, { movesUsed: 2, bornAt: { e5: 1 } }],

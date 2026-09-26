@@ -33,18 +33,20 @@ export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
 export const ENDLESS_GROWTH = 2.2; // 9관부터 관마다 목표 ×
 export const REWARD = {
-  base: BASE_REWARD,   // 연습 3 · 정식 4 · 명인 5
+  // 연습 3 · 정식 4 · 명인 3. 명인은 2a의 5에서 명인의 상자 몫만큼 뺐다(상자까지 얹으면 판 봇 승률이 12%→34%, 보고서 2b).
+  base: { ...BASE_REWARD, master: 3 },
   perMove: 1,          // 남은 수 하나당
   interestStep: 5,     // 가진 상금 5당 1
   interestMax: 5,
   mate: 3,             // 외통으로 이기면
-  overflow: { 2: 1, 5: 2, 10: 3 }, // 목표를 넘긴 층마다 덤(×2 · ×5 · ×10). 적립 최대의 절반 남짓으로 작게 묶었다
+  overflow: { 5: 1, 10: 2 }, // 목표를 ×5 · ×10 넘기면 덤. ×2부터 주면(이긴 대국의 절반) 판 봇 승률이 10%p 넘게 올라 작게 묶었다
 };
 // 명인의 상자(명인 대국을 이기면): 몇 개가 나오나(무게, HOOKS 1 흔함 · 3 드묾 · 5 ~3%)와 한 칸에 무엇이 드나.
 export const CHEST = {
   counts: [[1, 77], [3, 20], [5, 3]],
-  items: [['chart', 40], ['money', 25], ['engrave', 20], ['edition', 15]],
-  money: 4,     // 상금 칸 하나
+  // 판본은 넣지 않는다: 가진 격언에 곧바로 붙어(은박 연쇄 +5) 상자 하나가 판 봇 승률을 10%p 넘게 올렸다(보고서 2b).
+  items: [['money', 60], ['chart', 30], ['engrave', 10]],
+  money: 2,     // 상금 칸 하나
   cells: 5,     // 릴 칸 수. 나온 개수만큼 가운데부터 불이 켜진다(1: 가운데 · 3: 가운데 셋 · 5: 전부)
 };
 export const RUN_DEFAULTS = { money: 4, maximSlots: 5, consumableSlots: 2 };

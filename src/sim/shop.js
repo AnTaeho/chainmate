@@ -27,11 +27,12 @@ export const SHOP = {
   engravingWeights: { common: 3, uncommon: 2 },
   packKinds: ['piece', 'chart', 'engraving'],
   // 격언 판본(HOOKS 「드문 것들의 사다리」 귀함 층, 칸당 ~5%): 진열에 나온 격언에 이 확률로 판본이 붙는다.
-  // 격언이 진열 칸의 55%라 칸당 ≈ 4.4%. 금빛 꾸러미의 격언은 늘 판본이 붙는다.
-  editionChance: 0.08,
+  // 격언이 진열 칸의 55%라 판본은 칸당 ≈ 2.2%, 귀한 격언(칸당 ≈ 2.75%)과 합쳐 귀함 층 ≈ 5%.
+  // 8%(칸당 4.4%)에서는 판 봇의 81%가 판본 격언을 가졌고 은박(연쇄 +5)이 1~4관을 거의 공짜로 넘겼다. 금빛 꾸러미의 격언은 늘 판본.
+  editionChance: 0.04,
   // 불멸의 기보 첫 조각: 진열 칸마다 · 꾸러미를 열 때마다 이 확률(명국마다 나오는 곳이 다르다, legends.js source).
   // 하네스로 맞춤(보고서 docs/reports/2b.md).
-  fragmentChance: { display: 0.03, pack: 0.05 },
+  fragmentChance: { display: 0.03, pack: 0.04 },
   fragmentPrice: 4,
   // 금빛 꾸러미(황금 기물을 먹은 대국 뒤 상점에 공짜로): 판본 붙은 격언 셋 중 하나. 등급은 드묾 쪽으로.
   goldenRarity: [['common', 40], ['uncommon', 45], ['rare', 15]],

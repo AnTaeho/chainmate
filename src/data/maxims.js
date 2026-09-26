@@ -133,8 +133,10 @@ maxim('second_thought', '다시 생각', '무른 기물 하나마다 이번 대�
 maxim('empty_bag', '빈 주머니', '주머니에 남은 기물마다 연쇄 +1', '주머니', 'common', 4, {
   onChainEnd(ctx) { ctx.addMult(ctx.t.bag ? ctx.t.bag.length : 0); },
 });
-maxim('small_bag', '작은 주머니', '가진 기물이 여덟 이하면 연쇄 ×2', '주머니', 'uncommon', 6, {
-  onChainEnd(ctx) { if (num(ctx.t.deckSize, 99) <= 8) ctx.mulMult(2); },
+// ×2였을 때(2a) 판 봇의 주머니가 끝에 평균 6개라 조건이 늘 참이었고, 산 판 승률이 35%(평균 10%)로 홀로 높았다.
+// ×1.5로 낮췄다(보고서 docs/reports/2b.md).
+maxim('small_bag', '작은 주머니', '가진 기물이 여덟 이하면 연쇄 ×1.5', '주머니', 'uncommon', 6, {
+  onChainEnd(ctx) { if (num(ctx.t.deckSize, 99) <= 8) ctx.mulMult(1.5); },
 });
 
 // ── 증원
