@@ -24,7 +24,15 @@ export class RewardScreen {
   update(dt) {
     this.t += dt * this.app.speed();
     const n = Math.min(this.lines.length + 1, Math.floor(this.t / this.step));
-    while (this.shown < n) { this.shown++; this.app.sfx('coin', this.shown); }
+    while (this.shown < n) {
+      this.shown++;
+      const line = this.lines[this.shown - 1];
+      // 한 줄의 상금이 한 개씩 동전 소리로(최대 여섯)
+      this.coins = (this.coins || 0) + (line ? Math.min(6, line[1]) : 0);
+      if (!line) this.app.sfx('coin', 8);
+    }
+    this.coinT = (this.coinT || 0) - dt * this.app.speed();
+    if (this.coins > 0 && this.coinT <= 0) { this.coins--; this.coinT = 0.05; this.app.sfx('coin', this.coinN = (this.coinN || 0) + 1); }
   }
   draw(ctx, ui) {
     const app = this.app, last = this.last;
