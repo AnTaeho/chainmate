@@ -9,6 +9,7 @@
 //   외통률(대국), 막힘 패배율(대국), 무르기 평균, 결정당 ms(평균 / 최대).
 import { createBattle, apply } from '../src/sim/battle.js';
 import { decideBattle } from './bot.mjs';
+import { lineCommands } from '../src/sim/solver.js';
 
 function parseArgs(argv) {
   const a = { battles: 300, ante: [1, 8], seed: 1, nomate: false };
@@ -48,7 +49,7 @@ function runAnte(ante, n, seed, nomate) {
       if (!d) break;
       if (d.discard) { apply(b, { type: 'discard', handIndices: d.discard }); continue; }
       apply(b, { type: 'drop', handIndex: d.play.handIndex, sq: d.play.sq });
-      for (const sq of d.play.line) apply(b, { type: 'capture', sq });
+      for (const c of lineCommands(d.play.line)) apply(b, c);
     }
     for (const h of b.history) {
       s.moves++; s.moveScore += h.score; s.captures += h.captures; s.forcedCaps += h.forced;

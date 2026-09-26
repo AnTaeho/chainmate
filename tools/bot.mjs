@@ -6,12 +6,13 @@
 //   폰 아끼지 않기: 폰은 떨굴 자리가 드물어 끝까지 남기면 막힌다. 남은 폰이 남은 수 − 1 이상이면
 //   최선의 절반 이상을 내는 폰 수를 먼저 둔다.
 //   목표가 있으면: 목표를 넘기는 수가 여럿이면 그중 아무거나(최선)로 충분하다.
-import { bestPerPiece } from '../src/sim/solver.js';
+import { bestPerPiece, lineCommands } from '../src/sim/solver.js';
 
 const betterMove = (x, y, nomate) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : x.score > y.score);
 
-export function decideBattle(b, { nomate = false, pawnRatio = 0.5 } = {}) {
-  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true });
+// rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
+export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null } = {}) {
+  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true, rank });
   let best = null;
   for (const m of per) if (m && betterMove(m, best, nomate)) best = m;
   if (best && best.mate && !nomate) return { play: best };
@@ -41,6 +42,6 @@ export function stepBattle(b, apply, opts) {
   if (!d) return false;
   if (d.discard) { apply({ type: 'discard', handIndices: d.discard }); return true; }
   apply({ type: 'drop', handIndex: d.play.handIndex, sq: d.play.sq });
-  for (const sq of d.play.line) apply({ type: 'capture', sq });
+  for (const c of lineCommands(d.play.line)) apply(c);
   return true;
 }
