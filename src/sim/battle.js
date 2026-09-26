@@ -1,10 +1,13 @@
 // 대국 하나: 손 · 주머니 · 수 · 무르기 · 증원 · 승패.
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 apply(b, cmd) 하나뿐.
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'discard', handIndices }
-import { createRng, fork, int, next, shuffle } from './rng.js';
-import { at, attackers, dropSquares, emptyBoard, fileOf, rankOf, reach } from './board.js';
+import { createRng, fork, next, shuffle } from './rng.js';
+import { dropSquares, fileOf, rankOf, reach } from './board.js';
 import { startChain, chainCapture, chainCaptures, boardOpts } from './chain.js';
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
+import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js';
+
+export { enemyCount, kingGuards, reinforceCount, enemyWeights, kingDefended } from './setup.js';
 
 export const DEFAULT_BAG = ['P', 'P', 'P', 'P', 'N', 'N', 'B', 'R'];
 export const BASE_REWARD = { practice: 3, official: 4, master: 5 };
@@ -22,98 +25,6 @@ export const DEFAULT_RULES = {
   fog: 0,           // 명인 「안개」: 위에서 몇 줄이 가려지나
   lookahead: 1,     // 증원 예고가 몇 수 앞까지 보이나(격언 「그림자 읽기」 2)
 };
-
-// 판 생성 수치(하네스로 맞춤, step 2a):
-//   적 수 8 + 관(최소 10) — 7 + 관이면 1~3관에서 판이 빨리 비어 폰이 떨굴 곳을 잃고 막힘 패배가 잦았다.
-//   킹 수비 3, 3관부터 4(폰 하나 포함) — 둘이면 첫 수 외통이 3~5%, 셋이면 1~2%. 판(런)에서 무거운 주머니와
-//   끊김 넘기기 격언이 붙으면 셋으로도 5~9%라 3관부터 넷.
-//   증원 수마다 2 — 1이면 1~3관 막힘이 두 배.
-export const enemyCount = (ante) => Math.max(10, 8 + ante);
-export const kingGuards = (ante) => (ante >= 3 ? 4 : 3);
-export const reinforceCount = () => 2;
-
-// 관이 오를수록 무거운 적. 초안 — step 2에서 시뮬로 맞춘다.
-export function enemyWeights(ante) {
-  return [
-    ['P', Math.max(2, 7 - 0.6 * ante)],
-    ['N', 2 + 0.1 * ante],
-    ['B', 2 + 0.1 * ante],
-    ['R', 1 + 0.25 * ante],
-    ['Q', 0.3 + 0.2 * ante],
-  ];
-}
-function rollType(rng, ante) {
-  const w = enemyWeights(ante);
-  let total = 0;
-  for (const [, x] of w) total += x;
-  let r = next(rng) * total;
-  for (const [t, x] of w) { if ((r -= x) < 0) return t; }
-  return w[w.length - 1][0];
-}
-
-function randomEmpty(rng, board, minRank, exclude = []) {
-  const free = [];
-  for (let sq = minRank * 8; sq < 64; sq++) if (!board[sq] && !exclude.includes(sq)) free.push(sq);
-  return free.length ? free[int(rng, free.length)] : -1;
-}
-
-// 킹 수비: 킹마다 둘 이상이 지키고 그중 하나는 폰(킹 한 줄 위 대각).
-// 폰 모습은 위로만 먹으니 그 폰을 먹은 자리에서는 킹에 닿지 못한다 — 수비수 하나만 치워 곧바로 외통이 나는 판을 막는다.
-function defenderSquares(board, t, ksq, opts) {
-  const out = [];
-  for (let sq = 16; sq < 64; sq++) {
-    if (board[sq]) continue;
-    board[sq] = { t, id: 0, born: -1 };
-    const ok = attackers(board, ksq, opts).includes(sq);
-    board[sq] = null;
-    if (ok) out.push(sq);
-  }
-  return out;
-}
-
-export function kingDefended(board, ksq, opts = {}, guards = 2) {
-  const at = attackers(board, ksq, opts);
-  return at.length >= guards && at.some((s) => board[s].t === 'P');
-}
-
-function generateBoard(b) {
-  const rng = b.rng.board;
-  const count = b.rules.enemies ?? enemyCount(b.ante);
-  const kings = b.rules.kings;
-  const guards = b.rules.guards ?? kingGuards(b.ante);
-  const opts = { pawnSides: b.rules.pawnSides };
-  for (let attempt = 0; attempt < 500; attempt++) {
-    const board = emptyBoard();
-    const ksqs = [];
-    let placed = 0, ok = true;
-    const put = (sq, t) => { board[sq] = { t, id: b.nextId++, born: -1 }; placed++; };
-    for (let k = 0; k < kings && ok; k++) {
-      // 킹은 rank 4~6(폰 수비수가 한 줄 위에 설 자리가 있게)
-      const free = [];
-      for (let sq = 32; sq < 56; sq++) if (!board[sq]) free.push(sq);
-      const ksq = free[int(rng, free.length)];
-      put(ksq, 'K');
-      ksqs.push(ksq);
-      const pawnAt = [at(fileOf(ksq) - 1, rankOf(ksq) + 1), at(fileOf(ksq) + 1, rankOf(ksq) + 1)].filter((s) => s >= 0 && !board[s]);
-      if (!pawnAt.length) { ok = false; break; }
-      put(pawnAt[int(rng, pawnAt.length)], 'P');
-      for (let g = 1; g < guards && ok; g++) {
-        const t2 = rollType(rng, b.ante);
-        const cand = defenderSquares(board, t2, ksq, opts);
-        if (!cand.length) { ok = false; break; }
-        put(cand[int(rng, cand.length)], t2);
-      }
-    }
-    if (!ok) continue;
-    for (let i = placed; i < count; i++) {
-      const sq = randomEmpty(rng, board, 2);
-      if (sq < 0) break;
-      put(sq, rollType(rng, b.ante));
-    }
-    if (ksqs.every((s) => kingDefended(board, s, opts, guards))) return board;
-  }
-  throw new Error('board generation failed');
-}
 
 // 증원 예고는 늘 두 수 앞까지 뽑아 둔다: incoming(다음 수 뒤) · incomingNext(그다음).
 // 무엇이 보이느냐는 rules.lookahead(기본 1, 격언 「그림자 읽기」 2)가 정하고, 뽑는 횟수는 같다
