@@ -34,8 +34,14 @@ function better(a, b, preferMate, rank) {
 // 줄(line)의 원소: 수(먹을 칸) 또는 { type: 'redrop', sq }. 명령으로 바꾸려면 lineCommands.
 export const lineCommands = (line) => line.map((x) => (typeof x === 'number' ? { type: 'capture', sq: x } : x));
 
+// 탐색 예산: bestMove 한 번에 이만큼 마디를 넘으면 그 뒤로는 가지마다 첫 수만 따라 줄을 끝까지 채운다(결정적, 늘 둘 수 있는 온전한 줄).
+// 보통 한 수는 마디 100~200, 전설 「상록」 수천. 「오페라」(지켜진 킹도 먹고 판을 세 번 다시 채움)에 각인 「깃」이 겹치면
+// 수백만까지 불어나 판 봇의 상점 한 번이 몇 분씩 걸렸다.
+export const NODE_BUDGET = 10000;
+
 function dfs(t, stats, preferMate, rank) {
   stats.nodes++;
+  const greedy = stats.nodes > stats.max;
   const c = t.chain;
   if (c.done) {
     return { score: c.score, value: c.value, mult: c.mult, reason: c.reason, mate: c.reason === 'mate', line: [], captures: c.captures.length, forced: c.forcedReplies, h: chainSummary(c, t.movesUsed ?? 0) };
@@ -43,6 +49,7 @@ function dfs(t, stats, preferMate, rank) {
   let best = null;
   if (c.awaiting) {
     for (const sq of chainRedrops(t)) {
+      if (greedy && best) break;
       const u = cloneTable(t);
       chainRedrop(u, sq);
       const r = dfs(u, stats, preferMate, rank);
@@ -52,6 +59,7 @@ function dfs(t, stats, preferMate, rank) {
     return best;
   }
   for (const sq of chainCaptures(t)) {
+    if (greedy && best) break;
     const u = cloneTable(t);
     chainCapture(u, sq);
     const r = dfs(u, stats, preferMate, rank);
@@ -66,7 +74,7 @@ function dfs(t, stats, preferMate, rank) {
 export function bestMove(b, opts = {}) {
   const preferMate = opts.preferMate ?? true;
   const rank = opts.rank || null;
-  const stats = { nodes: 0 };
+  const stats = { nodes: 0, max: opts.maxNodes ?? NODE_BUDGET };
   let best = null;
   const seen = new Set();
   const indices = opts.handIndices ?? b.hand.map((_, i) => i);

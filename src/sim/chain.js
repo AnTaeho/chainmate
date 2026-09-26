@@ -136,19 +136,32 @@ export function chainCapture(t, sq) {
 // 외통 뒤 판을 새로 채운다. 판은 (대국 시드, 몇째 수, 몇째 채움)으로 정해진다 — 풀이기가 그려 봐도,
 // 실제로 두어도 같은 판이고 대국의 난수 스트림은 건드리지 않는다.
 // 내 기물 칸은 비워 두고, 그 칸이 노려지지 않으면서 킹 모습으로 먹을 적이 곁에 있는 판을 고른다(20번 안에서).
+// 같은 (시드 · 수 · 채움 · 칸 · 규칙 · 관)이면 같은 판이라 지어 둔 것을 다시 쓴다(풀이기가 같은 외통 칸에 수없이 닿는다).
+const REFILLS = new Map();
 function refill(t, events) {
   const c = t.chain;
   c.refills++;
-  const rng = fork(createRng((t.seed ?? 1) >>> 0), `refill:${t.movesUsed ?? 0}:${c.refills}`);
-  const tb = { rules: t.rules || {}, ante: t.ante ?? 1, nextId: t.nextId ?? 1000 };
-  let board = null;
-  for (let i = 0; i < 20; i++) {
-    board = generateBoard(tb, rng, [c.sq]);
-    board[c.sq] = { t: 'K', mine: true };
-    if (!isAttacked(board, c.sq, boardOpts(t)) && captures(board, 'K', c.sq, boardOpts(t)).length) break;
+  const key = `${t.seed ?? 1}|${t.movesUsed ?? 0}|${c.refills}|${c.sq}|${t.ante ?? 1}|${JSON.stringify(t.rules || {})}`;
+  let hit = REFILLS.get(key);
+  if (!hit) {
+    const rng = fork(createRng((t.seed ?? 1) >>> 0), `refill:${t.movesUsed ?? 0}:${c.refills}`);
+    const tb = { rules: t.rules || {}, ante: t.ante ?? 1, nextId: 0 };
+    let board = null;
+    for (let i = 0; i < 20; i++) {
+      board = generateBoard(tb, rng, [c.sq]);
+      board[c.sq] = { t: 'K', mine: true };
+      if (!isAttacked(board, c.sq, boardOpts(t)) && captures(board, 'K', c.sq, boardOpts(t)).length) break;
+    }
+    board[c.sq] = null;
+    if (REFILLS.size > 2000) REFILLS.clear();
+    hit = { board, ids: tb.nextId };
+    REFILLS.set(key, hit);
   }
+  // id는 대국의 nextId에서 이어 붙인다(지을 때는 0부터 셌다)
+  const base = t.nextId ?? 1000;
+  const board = hit.board.map((x) => (x ? { ...x, id: x.id + base } : null));
   board[c.sq] = { t: c.form, mine: true };
-  t.nextId = tb.nextId;
+  t.nextId = base + hit.ids;
   t.board = board;
   events.push({ type: 'refill', sq: c.sq, count: c.refills, enemies: board.filter(isEnemy).length });
 }
