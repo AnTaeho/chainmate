@@ -24,7 +24,11 @@ export const SMART = {
   maxActions: 14,
   finalFrom: 5,    // 이 관부터 대가 대비
   finalWeight: 0.5, // 대가 판에서 잰 값의 몫
+  // 상금 격언의 값(밤샘 D-2): 한 수 점수로는 보이지 않으니 대국당 기대 상금 × 남은 대국 × 1원의 몫(minGainPerCoin)의 절반으로 친다
+  moneyMaxims: { vault: 4, mate_hunter: 0.25 },
 };
+const battlesLeft = (run) => Math.max(0, (8 - run.ante) * 3 + (2 - run.blind));
+export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5;
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -225,7 +229,8 @@ function smartShop(run, hunt = false) {
       const v = variantFor(run, build, it, ctx);
       if (!v) return;
       const refund = v.sell != null ? sellPrice(run.maxims[v.sell]) : 0;
-      consider(it.price - refund, ctx.score(v.build), { type: 'buy', slot }, { sell: v.sell });
+      const econ = it.kind === 'maxim' ? moneyGain(run, it.id) : 0;
+      consider(it.price - refund, ctx.score(v.build) * (1 + econ), { type: 'buy', slot }, { sell: v.sell });
     });
     // 가장 좋은 것: 득/값
     const pickBest = () => {
