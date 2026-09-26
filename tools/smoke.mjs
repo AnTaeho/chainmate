@@ -9,6 +9,7 @@ import { canBuy } from '../src/sim/run.js';
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const SEED = Number(opt('--seed', 3));
+const LANG = opt('--lang', 'ko');
 const RUNS = Number(opt('--runs', 2));
 const VERBOSE = args.includes('--verbose');
 const log = (...a) => { if (VERBOSE) console.log(...a); };
@@ -26,6 +27,7 @@ let t = 0;
 let app = null;
 
 async function start() {
+  if (LANG !== 'ko') dom.store.set('chainmate.settings.v1', JSON.stringify({ lang: LANG }));
   app = await boot({ window: dom.window, document: dom.document });
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
@@ -271,6 +273,11 @@ console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${sett
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 let fail = false;
+if (LANG !== 'ko') {
+  const { untranslated } = await import('../src/ui/lang.js');
+  console.log(`옮기지 못한 글 ${untranslated.size}${untranslated.size ? ': ' + [...untranslated].slice(0, 40).join(' | ') : ''}`);
+  if (untranslated.size) fail = true;
+}
 if (errors.length) fail = true;
 if (missing.length) { console.log(`못 간 화면: ${missing.join(' ')}`); fail = true; }
 if (!reloaded) fail = true;

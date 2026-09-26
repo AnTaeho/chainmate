@@ -2,12 +2,13 @@
 import { PAL } from '../../render/palette.js';
 import { W, text, box } from '../../render/gfx.js';
 import { button } from '../ui.js';
+import { setLang } from '../lang.js';
 
 export class SettingsScreen {
   constructor(app, { back = null } = {}) { this.app = app; this.back = back; }
   draw(ctx, ui) {
     const app = this.app, s = app.settings;
-    const x = 130, y = 36, w = 220, h = 204;
+    const x = 130, y = 26, w = 220, h = 224;
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
     text(ctx, '설정', W / 2, y + 8, PAL.gold, { align: 'center', bold: true });
     const row = (i, label) => { text(ctx, label, x + 12, y + 34 + i * 26, PAL.ink); return y + 30 + i * 26; };
@@ -24,6 +25,8 @@ export class SettingsScreen {
     [1, 2, 4].forEach((v, i) => button(ctx, ui, `set:speed${v}`, x + 110 + i * 34, yy, 30, 18, `×${v}`, { onClick: () => set('speed', v), tone: s.speed === v ? 'gold' : 'plain' }));
     yy = row(3, '화면 흔들림');
     button(ctx, ui, 'set:shake', x + 110, yy, 64, 18, s.shake ? '켬' : '끔', { onClick: () => set('shake', !s.shake), tone: s.shake ? 'gold' : 'plain' });
+    yy = row(5, '언어');
+    button(ctx, ui, 'set:lang', x + 110, yy, 64, 18, s.lang === 'en' ? 'English' : '한국어', { onClick: () => { set('lang', s.lang === 'en' ? 'ko' : 'en'); setLang(s.lang); } });
     yy = row(4, '큰 글자');
     button(ctx, ui, 'set:big', x + 110, yy, 64, 18, s.big ? '켬' : '끔', { onClick: () => set('big', !s.big), tone: s.big ? 'gold' : 'plain' });
     button(ctx, ui, 'set:back', W / 2 - 40, y + h - 26, 80, 18, '돌아가기', { onClick: () => this.close() });

@@ -2,6 +2,7 @@
 import { PAL } from './palette.js';
 import { textImage, textWidth } from './text.js';
 import { spriteCanvas, SW, SH } from './sprites.js';
+import { L } from '../ui/lang.js';
 
 export const W = 480, H = 270;
 
@@ -45,6 +46,7 @@ export function line(ctx, x0, y0, x1, y1, col) {
 
 // 글자. align: left | center | right. scale: 정수배 확대(큰 글자).
 export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false, scale = 1, shadow = null, alpha = 1 } = {}) {
+  s = L(String(s));
   const img = textImage(s, col, bold);
   const w = img.w * scale;
   let dx = x;

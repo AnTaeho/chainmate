@@ -5,6 +5,7 @@ import { context } from '../render/surface.js';
 import { W, H, text, box, rect } from '../render/gfx.js';
 import { UI, tooltip } from './ui.js';
 import { miniShard } from './parts.js';
+import { setLang } from './lang.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
@@ -36,6 +37,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
 
   app.speed = () => app.settings.speed || 1;
   app.records = loadRecords(store);
+  setLang(app.settings.lang);
   app.fresh = [];   // 이번 판에 새로 채운 도감 칸
   app.saveRecords = () => store.set(KEYS.records, app.records);
   app.noteMove = (score, steps) => {

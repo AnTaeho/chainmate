@@ -290,6 +290,21 @@ await ev(() => window.__app.go('title'));
 await settle(300);
 await shot('01-title');
 
+// 영어 화면 셋(대국 · 상점 · 판 준비)
+await ev(() => { const a = window.__app; a.settings.lang = 'en'; a.saveSettings(); });
+await page.reload();
+await page.waitForFunction(() => window.__app && window.__app.screen);
+await settle(300);
+await shot('23-en-title');
+await ev(() => { const a = window.__app; localStorage.removeItem('chainmate.run.v1'); a.newRun({ seed: 7 }); a.cmd({ type: 'play' }); a.go('battle', { events: [] }); });
+await settle(2600);
+await hoverId('hand:0');
+await shot('24-en-battle');
+await ev(() => { const a = window.__app; a.go('setup'); });
+await settle(200);
+await shot('25-en-setup');
+await ev(() => { const a = window.__app; a.settings.lang = 'ko'; a.saveSettings(); });
+
 console.log(errors.length ? `페이지 오류 ${errors.length}\n${errors.join('\n')}` : '페이지 오류 0');
 await browser.close();
 srv.close();

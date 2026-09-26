@@ -2,6 +2,7 @@
 // 숫자와 제목은 굵게(Bold 파일).
 import { makeCanvas, context } from './surface.js';
 import { rgb } from './palette.js';
+import { L } from '../ui/lang.js';
 
 export const FONT_PX = 12;
 export const LINE_H = 13;
@@ -19,7 +20,7 @@ function measureCtx() {
 export function textWidth(s, bold = false) {
   const ctx = measureCtx();
   ctx.font = fontOf(bold);
-  return Math.ceil(ctx.measureText(String(s)).width);
+  return Math.ceil(ctx.measureText(L(String(s))).width);
 }
 
 export function clearTextCache() { CACHE.clear(); }
@@ -51,6 +52,7 @@ export function textImage(s, col, bold = false) {
 
 // 줄 바꿈: 너비 w 안에서 낱말(띄어쓰기) 단위로, 낱말이 너무 길면 글자 단위로
 export function wrap(s, w, bold = false) {
+  s = L(String(s));
   const out = [];
   for (const para of String(s).split('\n')) {
     let line = '';

@@ -7,7 +7,7 @@ import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { OPENING_ORDER, UNLOCKS, nextUnlock } from '../records.js';
 
-export const danName = (d) => (d ? `${d}단` : '기본');
+export const danName = (d) => (d ? `${d}단` : '없음');
 
 export class SetupScreen {
   constructor(app) {
@@ -39,7 +39,7 @@ export class SetupScreen {
       if (sel) frame(ctx, x - 1, y - 1, w + 2, h + 2, PAL.gold);
       if (!open) {
         text(ctx, '?', x + w / 2, y + 16, PAL.dimDk, { align: 'center', bold: true, scale: 3 });
-        wrap(unlock.text, w - 8).slice(0, 3).forEach((l, k) => text(ctx, l, x + w / 2, y + 52 + k * 12, PAL.dimDk, { align: 'center' }));
+        wrap(unlock.text, w - 8).slice(0, 4).forEach((l, k) => text(ctx, l, x + w / 2, y + 48 + k * 11, PAL.dimDk, { align: 'center' }));
         return;
       }
       text(ctx, op.name, x + w / 2, y + 5, sel ? PAL.gold : PAL.ink, { align: 'center', bold: true });

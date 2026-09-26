@@ -8,6 +8,7 @@ import { PIECE_NAME } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
+import { L } from './lang.js';
 
 // 말풍선 내용(제목 · 줄들)을 너비에 맞게
 export function tipLines(title, body, w = 150, extra = []) {
@@ -218,7 +219,7 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
     box(ctx, cx - 11, y + 20, 22, 30, ENG_FILL[it.id] || PAL.light, PAL.cardDim);
     const e = engravingInfo(it.id);
     text(ctx, e.name, cx, y + 54, PAL.cardInk, { align: 'center', bold: true });
-    text(ctx, e.name[0], cx, y + 29, PAL.cardInk, { align: 'center', bold: true });
+    text(ctx, L(e.name).slice(0, 1), cx, y + 29, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'fragment') {
     shardIcon(ctx, cx - 8, y + 22);
     const lines = wrap(LEGEND_BY_ID[it.legend].name, w - 8, true);
