@@ -151,3 +151,26 @@ test('하위 스트림은 서로 흔들지 않는다: 주머니가 달라도 판
   assert.deepEqual(a.board, b.board);
   assert.deepEqual(a.incoming, b.incoming);
 });
+
+test('막히면 대국마다 한 번 손을 새로 쥔다(손 · 쓴 기물을 주머니에 섞어 다시 뽑기)', async () => {
+  const { checkStuck } = await import('../src/sim/battle.js');
+  const b = createBattle({ seed: 5 });
+  // 폰만 쥐었고(적이 맨 아래 줄뿐이라 폰은 못 먹는다) 무르기도 주머니도 없다. 쓴 기물에 나이트가 있다
+  b.board = boardFrom({ e1: 'B', a1: 'R' });
+  b.hand = [{ t: 'P', id: 1, eng: null }];
+  b.bag = [];
+  b.used = [{ t: 'N', id: 3, eng: null }, { t: 'N', id: 4, eng: null }];
+  b.discardsLeft = 0;
+  const events = [];
+  checkStuck(b, events);
+  assert.equal(b.status, 'play');
+  assert.ok(events.some((e) => e.type === 'regrip'));
+  assert.equal(b.regrip, true);
+  assert.equal(b.hand.length + b.bag.length, 3);
+  // 두 번째로 막히면 진다
+  b.hand = [{ t: 'P', id: 1, eng: null }]; b.bag = []; b.used = [];
+  const ev2 = [];
+  checkStuck(b, ev2);
+  assert.equal(b.status, 'lost');
+  assert.equal(b.result.reason, 'stuck');
+});

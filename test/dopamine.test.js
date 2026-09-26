@@ -181,12 +181,13 @@ test('판본: 진열 격언에 약 4%(칸당 ~2%), 무게는 은박 > 자개 > �
 
 // ── 명인의 상자
 function toMasterWin(seed) {
-  // 1관 명인 대국 직전까지 건너뛰고(연습 · 정식), 명인 대국을 목표 1로 이긴다
+  // 1관 명인 대국 직전까지 건너뛰고(연습 · 정식), 명인 대국을 목표 0으로 이긴다(첫 수가 끝나면 이긴다 —
+  // 명인 「앙갚음」은 끊긴 사슬 점수가 0이라 목표 1로는 질 수 있다)
   const run = createRun({ seed });
   applyRun(run, { type: 'skip' });
   applyRun(run, { type: 'skip' });
   applyRun(run, { type: 'play' });
-  run.battle.target = 1;
+  run.battle.target = 0;
   let events = [];
   while (run.phase === 'battle') stepBattle(run.battle, (c) => { events = events.concat(applyRun(run, c)); }, {});
   return { run, events };

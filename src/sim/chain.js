@@ -176,7 +176,8 @@ function resolveReply(t, events) {
   c.forced = null;
   if (threats.length) {
     c.forced = threats;
-    if (chainCaptures(t).length > 0) {
+    // 명인 「철벽」(rules.noReply): 응수가 없다 — 노려진 칸을 먹으면 곧바로 끊긴다
+    if (!(t.rules && t.rules.noReply) && chainCaptures(t).length > 0) {
       events.push({ type: 'forced', sq: c.sq, attackers: threats.slice() });
       runHook(t, 'onForced', { sq: c.sq, attackers: threats.slice() }, events);
       return;
@@ -218,7 +219,9 @@ export function chainRedrops(t) {
   if (!c || c.done || !c.awaiting) return [];
   const allow = { attacked: false };
   runHook(t, 'onDropCheck', { type: c.form, engraving: c.engraving, allow }, []);
-  return dropSquares(t.board, c.form, { ...boardOpts(t), allowAttacked: allow.attacked });
+  const list = dropSquares(t.board, c.form, { ...boardOpts(t), allowAttacked: allow.attacked });
+  // 명인 「안개」: 안개 속에는 떨굴 수 없다(battle.js fogFilter와 같은 규칙)
+  return t.rules && t.rules.fog ? list.filter((s) => rankOf(s) < 8 - t.rules.fog) : list;
 }
 
 export function chainRedrop(t, sq) {

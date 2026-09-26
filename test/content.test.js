@@ -246,14 +246,9 @@ test('각인 유리: 대국 흐름에서 1/4로 깨져 shattered에 남는다', 
 test('명인 8: 철벽 · 모래시계 · 무거운 손 · 대가', () => {
   assert.equal(MASTERS.length, 8);
   const iron = createBattle({ seed: 1, mods: [{ id: 'iron_wall' }] });
-  assert.equal(iron.rules.pawnSides, true);
-  iron.board = boardFrom({ d5: 'P', h8: 'R' });
-  iron.hand = [{ t: 'N', id: 1, eng: null }];
-  // c5는 폰 옆 칸이라 노려진다: 거기선 떨굴 수 없다
-  const drops = legalCommands(iron).filter((c) => c.type === 'drop').map((c) => c.sq);
-  assert.ok(!drops.includes(S('c5')) && !drops.includes(S('e5')));
-  assert.equal(createBattle({ seed: 1, mods: [{ id: 'hourglass' }] }).movesLeft, 3);
-  assert.equal(createBattle({ seed: 1, mods: [{ id: 'heavy_hand' }] }).hand.length, 3);
+  assert.equal(iron.rules.noReply, true);
+  assert.equal(createBattle({ seed: 1, mods: [{ id: 'hourglass' }] }).movesLeft, 2);
+  assert.equal(createBattle({ seed: 1, mods: [{ id: 'heavy_hand' }] }).rules.noHeavyDrop, true);
   const gm = createBattle({ seed: 3, ante: 8, mods: [{ id: 'grandmaster' }, { id: 'charts', data: { table: CHART_TABLE, levels: { N: 5 } } }] });
   assert.equal(gm.board.filter((c) => isEnemy(c) && c.t === 'K').length, 2);
   assert.equal(gm.mods[1].off, undefined);
@@ -265,25 +260,64 @@ test('꺼진 기보(off)는 레벨이 듣지 않는다', () => {
   assert.equal(play('knight', [{ ...charts, off: true }]).score, 30);
 });
 
-test('명인 침묵: 가장 왼쪽 격언이 꺼진다', () => {
-  const b = createBattle({ seed: 1, mods: [{ id: 'silence' }, { id: 'charts', data: {} }, { id: 'chivalry' }, { id: 'quick_change' }] });
+test('명인 침묵: 왼쪽 격언 둘이 꺼진다', () => {
+  const b = createBattle({ seed: 1, mods: [{ id: 'silence' }, { id: 'charts', data: {} }, { id: 'chivalry' }, { id: 'payback' }, { id: 'quick_change' }] });
   assert.equal(b.mods[2].off, true);
-  assert.equal(b.mods[3].off, undefined);
+  assert.equal(b.mods[3].off, true);
+  assert.equal(b.mods[4].off, undefined);
   b.board = boardFrom({ e5: 'B', a8: 'R' });
   b.hand = [{ t: 'N', id: 1, eng: null }];
   apply(b, { type: 'drop', handIndex: 0, sq: S('d3') });
   apply(b, { type: 'capture', sq: S('e5') });
-  assert.equal(b.score, 90); // 갈아입기만(+2), 기사도 꺼짐
+  assert.equal(b.score, 90); // 갈아입기만(+2), 기사도 · 되갚음 꺼짐
 });
 
-test('명인 앙갚음: 끊긴 사슬 점수 반', () => {
-  assert.equal(play('cut', [{ id: 'grudge' }]).score, 25);
+test('명인 앙갚음: 끊긴 사슬은 점수가 4분의 1', () => {
+  assert.equal(play('cut', [{ id: 'grudge' }]).score, 12); // 50 × 1 × 0.25
   assert.equal(play('knight', [{ id: 'grudge' }]).score, 30);
 });
 
-test('명인 거울: 같은 모습으로 두 번 갈아입지 못한다', () => {
-  // N c3 → B d5 → N? : d5 비숍 모습에서 f7 나이트를 먹으면 나이트로 갈아입기(처음, 떨군 모습은 갈아입기가 아님) → 허용
-  // 그다음 나이트 모습으로 비숍을 먹으면 비숍으로 두 번째 → 금지
+test('명인 철벽: 응수가 없다 — 노려진 칸을 먹으면 곧바로 끊긴다', () => {
+  // N d3 → B e5, e5를 f6 폰이 노린다. 보통은 f6을 먹어 잇지만(응수), 철벽이면 곧바로 끊긴다
+  const plain = { board: boardFrom({ e5: 'B', f6: 'P', a8: 'R' }), rules: {}, mods: [], chain: null };
+  startChain(plain, { type: 'N', sq: S('d3') });
+  chainCapture(plain, S('e5'));
+  assert.equal(plain.chain.done, false);
+  const iron = createBattle({ seed: 1, mods: [{ id: 'iron_wall' }] });
+  assert.equal(iron.rules.noReply, true);
+  const t = { board: boardFrom({ e5: 'B', f6: 'P', a8: 'R' }), rules: iron.rules, mods: [], chain: null };
+  startChain(t, { type: 'N', sq: S('d3') });
+  chainCapture(t, S('e5'));
+  assert.equal(t.chain.done, true);
+  assert.equal(t.chain.reason, 'cut');
+});
+
+test('명인 안개: 안개 속에는 떨굴 수 없다', () => {
+  const b = createBattle({ seed: 1, mods: [{ id: 'fog' }] });
+  b.board = boardFrom({ e7: 'P', a1: 'R' });
+  b.hand = [{ t: 'N', id: 1, eng: null }];
+  const drops = legalCommands(b).filter((c) => c.type === 'drop').map((c) => c.sq);
+  assert.ok(drops.length > 0);
+  assert.ok(drops.every((sq) => (sq >> 3) < 3), drops.join(','));
+  const plain = createBattle({ seed: 1 });
+  plain.board = boardFrom({ e7: 'P', a1: 'R' });
+  plain.hand = [{ t: 'N', id: 1, eng: null }];
+  assert.ok(legalCommands(plain).some((c) => c.type === 'drop' && (c.sq >> 3) >= 5));
+});
+
+test('명인 모래시계 · 무거운 손: 무르기가 줄어든다', () => {
+  const h = createBattle({ seed: 1, mods: [{ id: 'hourglass' }] });
+  assert.equal(h.movesLeft, 2);
+  assert.equal(h.discardsLeft, 1);
+  const w = createBattle({ seed: 1, mods: [{ id: 'heavy_hand' }] });
+  w.board = boardFrom({ e5: 'B', a8: 'R' });
+  w.hand = [{ t: 'Q', id: 1, eng: null }, { t: 'R', id: 2, eng: null }, { t: 'N', id: 3, eng: null }];
+  const drops = legalCommands(w).filter((c) => c.type === 'drop');
+  assert.ok(drops.length > 0 && drops.every((c) => c.handIndex === 2));
+});
+
+test('명인 거울: 같은 종류를 두 번 먹지 못한다', () => {
+  // N c3 → B d5 → N f7 → (B e5 금지: 비숍은 이미 먹었다)
   const t = { board: boardFrom({ d5: 'B', f7: 'N', e5: 'B' }), rules: {}, mods: [{ id: 'mirror' }], chain: null };
   startChain(t, { type: 'N', sq: S('c3') });
   chainCapture(t, S('d5'));
@@ -301,15 +335,15 @@ test('명인 거울: 같은 모습으로 두 번 갈아입지 못한다', () => 
   assert.deepEqual(chainCaptures(u), [S('e5')]);
 });
 
-test('명인 안개: 위 세 줄은 내 기물이 닿은 칸만 드러난다', () => {
+test('명인 안개: 위 다섯 줄은 내 기물이 닿은 칸만 드러난다', () => {
   const b = createBattle({ seed: 1, mods: [{ id: 'fog' }] });
-  assert.equal(b.rules.fog, 3);
-  b.board = boardFrom({ e5: 'B', h8: 'R', a8: 'P' });
+  assert.equal(b.rules.fog, 5);
+  b.board = boardFrom({ d2: 'B', h6: 'R', a8: 'P' });
   b.hand = [{ t: 'N', id: 1, eng: null }];
-  assert.ok(isHidden(b, S('h8')) && isHidden(b, S('a8')) && !isHidden(b, S('e5')));
-  apply(b, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(b, { type: 'capture', sq: S('e5') }); // 비숍 모습 e5: 대각 f6 g7 h8이 닿는다
-  assert.ok(!isHidden(b, S('h8')));
+  assert.ok(isHidden(b, S('h6')) && isHidden(b, S('a8')) && !isHidden(b, S('d2')));
+  apply(b, { type: 'drop', handIndex: 0, sq: S('b1') });
+  apply(b, { type: 'capture', sq: S('d2') }); // 비숍 모습 d2: 대각 e3 f4 g5 h6이 닿는다
+  assert.ok(!isHidden(b, S('h6')));
   assert.ok(isHidden(b, S('a8')));
   assert.equal(isHidden(createBattle({ seed: 1 }), S('h8')), false);
 });

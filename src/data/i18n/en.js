@@ -88,7 +88,7 @@ export const EN = {
   '대가': 'Grandmaster', '킹이 둘이다': 'There are two kings',
   '적 폰 · 나이트 · 비숍이 둘레 여덟 칸을 모두 지킨다': 'Enemy pawns, knights and bishops guard all eight squares around them',
   '위 다섯 줄이 안개에 덮여 떨굴 수 없다': 'Fog covers the top five ranks; no drops there', '퀸과 룩은 떨굴 수 없다': 'Queens and rooks cannot be dropped',
-  '끊긴 사슬은 점수가 4분의 1': 'Broken chains score a quarter', '손을 새로 쥔다': 'A fresh hand',
+  '끊긴 사슬은 점수가 4분의 1': 'Broken chains score a quarter', '응수가 없다': 'No replies', '노려진 칸을 먹으면 곧바로 끊긴다': 'Taking a guarded square breaks the chain at once', '손을 새로 쥔다': 'A fresh hand',
   // ── 불멸의 기보
   '불멸의 대국': 'The Immortal Game', '앤더슨이 룩 둘 · 비숍 · 퀸을 버리고 이겼다': 'Anderssen gave up both rooks, a bishop and his queen, and won',
   '끊겨도 사슬이 이어진다': 'Breaks do not end the chain', '끊길 때마다 연쇄 ×2': 'Links ×2 per break', '한 사슬에서 끊기지 않고 룩 둘을 먹는다': 'Take two rooks in one chain without a break',

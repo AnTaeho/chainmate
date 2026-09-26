@@ -21,7 +21,9 @@ export const DEFAULT_RULES = {
   enemies: null,    // null이면 enemyCount(관)
   guards: null,     // 킹 하나를 지키는 적 수(폰 하나 포함). null이면 kingGuards(관)
   reinforce: null,  // 수마다 증원 수. null이면 reinforceCount(관)
-  pawnSides: false, // 명인 「철벽」
+  pawnSides: false, // 적 폰이 옆 칸도 지킨다(2a의 명인 「철벽」, 지금은 쓰지 않는 규칙 깃발)
+  noHeavyDrop: false, // 명인 「무거운 손」: 퀸 · 룩은 떨굴 수 없다
+  noReply: false,   // 명인 「철벽」: 응수 없이 노려진 칸을 먹으면 곧바로 끊긴다
   openKings: false, // 지켜진 킹도 먹는다(전설 「오페라 대국」)
   fog: 0,           // 명인 「안개」: 위에서 몇 줄이 가려지나
   lookahead: 1,     // 증원 예고가 몇 수 앞까지 보이나(격언 「그림자 읽기」 2)
@@ -127,6 +129,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     deckSize: bag.length,
     discarded: 0,      // 무르기로 버린 기물 수
     shattered: [],     // 깨진 기물 id(각인 「유리」). 판(런)이 주머니에서 뺀다
+    regrip: false,     // 막혀서 손을 새로 쥐었나(대국마다 한 번)
     revealed: [],      // 명인 「안개」로 드러난 칸
     hints: {},         // 화면용 표시(격언 「왕의 목」: openKings)
     golden: 0,         // 이번 대국에서 먹은 황금 기물 수
@@ -154,6 +157,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
 }
 
 export function dropSquaresFor(b, piece) {
+  if (b.rules.noHeavyDrop && (piece.t === 'Q' || piece.t === 'R')) return [];
   const allow = { attacked: false };
   if ((b.mods && b.mods.length) || piece.eng) {
     // 조회일 뿐이라 조정자 state가 새지 않게 복사본으로 돌린다
@@ -163,8 +167,10 @@ export function dropSquaresFor(b, piece) {
     ctxEvent.allow = allow;
     runHook(t, 'onDropCheck', ctxEvent, []);
   }
-  return dropSquares(b.board, piece.t, { ...boardOpts(b), allowAttacked: allow.attacked });
+  return fogFilter(b, dropSquares(b.board, piece.t, { ...boardOpts(b), allowAttacked: allow.attacked }));
 }
+// 명인 「안개」: 안개 속(위 fog줄)에는 떨굴 수 없다
+export const fogFilter = (t, list) => (t.rules && t.rules.fog ? list.filter((sq) => rankOf(sq) < 8 - t.rules.fog) : list);
 
 export function hasLegalDrop(b) {
   return b.hand.some((p) => dropSquaresFor(b, p).length > 0);
@@ -279,10 +285,20 @@ function endMove(b, events) {
   checkStuck(b, events);
 }
 
-function checkStuck(b, events) {
+export function checkStuck(b, events) {
   if (b.status !== 'play') return;
   if (hasLegalDrop(b)) return;
   if (b.discardsLeft > 0 && b.bag.length > 0) return;
+  // 손을 새로 쥔다(대국마다 한 번): 떨굴 곳도 무를 것도 없으면 손과 쓴 기물을 주머니에 섞어 넣고 다시 뽑는다.
+  // 막힘 패배는 둘 수 없어 지는 것이라 아프기만 하다 — 명인 「안개」 · 「무거운 손」을 세게 하며 판의 13%가 막힘으로 끝나서 넣었다(밤샘 D-1).
+  if (!b.regrip) {
+    b.regrip = true;
+    b.bag.push(...b.hand.splice(0), ...b.used.splice(0));
+    shuffle(b.rng.bag, b.bag);
+    draw(b);
+    events.push({ type: 'regrip', hand: b.hand.map((p) => p.t) });
+    if (hasLegalDrop(b)) return;
+  }
   finishBattle(b, 'lost', 'stuck', events);
 }
 

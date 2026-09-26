@@ -7,38 +7,40 @@ function master(id, name, text, def) {
   defineModifier(id, { kind: 'master', ...def });
 }
 
-master('iron_wall', '철벽', '적 폰이 좌우 옆 칸도 지킨다', {
-  onBattleStart(ctx) { ctx.rules.pawnSides = true; },
+// 명인마다 뿌리의 동사 하나를 확실히 비튼다(밤샘 D-1: 2a · 2b에서 1~7관 명인 통과 90~97%로 너무 약했다 — 보고서 docs/reports/night-D.md).
+// 철벽 = 응수, 안개 = 떨구기, 거울 = 갈아입기, 모래시계 = 수, 무거운 손 = 손, 침묵 = 격언, 앙갚음 = 끊김, 대가 = 외통.
+master('iron_wall', '철벽', '응수가 없다 · 노려진 칸을 먹으면 곧바로 끊긴다', {
+  onBattleStart(ctx) { ctx.rules.noReply = true; },
 });
-master('fog', '안개', '위 세 줄이 안개에 덮인다 · 내 기물이 닿은 칸만 걷힌다', {
-  onBattleStart(ctx) { ctx.rules.fog = 3; },
+master('fog', '안개', '위 다섯 줄이 안개에 덮여 떨굴 수 없다 · 내 기물이 닿은 칸만 걷힌다', {
+  onBattleStart(ctx) { ctx.rules.fog = 5; },
 });
-// 같은 모습으로 두 번 갈아입지 못한다: 이 사슬에서 이미 X로 갈아입었으면(먹을 때 모습 ≠ X인 X 먹기) 다른 모습으로 X를 먹을 수 없다.
-master('mirror', '거울', '한 사슬에서 같은 모습으로 두 번 갈아입지 못한다', {
+// 한 사슬에서 같은 종류의 적을 두 번 먹지 못한다(킹은 하나뿐이라 뺀다)
+master('mirror', '거울', '한 사슬에서 같은 종류를 두 번 먹지 못한다', {
   allowCapture(ctx) {
-    const { piece, form } = ctx.event;
-    if (piece === form || piece === 'K') return true;
-    return !ctx.chain.captures.some((c) => c.piece === piece && c.form !== piece);
+    const { piece } = ctx.event;
+    if (piece === 'K') return true;
+    return !ctx.chain.captures.some((c) => c.piece === piece);
   },
 });
-master('hourglass', '모래시계', '수 3', {
-  onBattleStart(ctx) { ctx.rules.moves = 3; },
+master('hourglass', '모래시계', '수 2 · 무르기 1', {
+  onBattleStart(ctx) { ctx.rules.moves = 2; ctx.rules.discards = 1; },
 });
-master('heavy_hand', '무거운 손', '손 3', {
-  onBattleStart(ctx) { ctx.rules.hand = 3; },
+master('heavy_hand', '무거운 손', '퀸과 룩은 떨굴 수 없다', {
+  onBattleStart(ctx) { ctx.rules.noHeavyDrop = true; },
 });
-master('silence', '침묵', '가장 왼쪽 격언이 잠든다', {
+master('silence', '침묵', '왼쪽 격언 둘이 잠든다', {
   onBattleStart(ctx) {
-    const first = ctx.t.mods.find((s) => (s.kind || (getModifier(s.id) || {}).kind) === 'maxim');
-    if (first) {
+    const firsts = ctx.t.mods.filter((s) => (s.kind || (getModifier(s.id) || {}).kind) === 'maxim' && !s.of).slice(0, 2);
+    for (const first of firsts) {
       first.off = true;
       // 그 격언의 판본(edition:* 명세, of = uid)도 같이 잠든다
       for (const s of ctx.t.mods) if (first.uid != null && s.of === first.uid) s.off = true;
     }
   },
 });
-master('grudge', '앙갚음', '끊긴 사슬은 점수 반', {
-  onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.chain.scoreMul *= 0.5; },
+master('grudge', '앙갚음', '끊긴 사슬은 점수가 4분의 1', {
+  onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.chain.scoreMul *= 0.25; },
 });
 master('grandmaster', '대가', '킹이 둘이다', {
   onBattleStart(ctx) { ctx.rules.kings = 2; },
