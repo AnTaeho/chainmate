@@ -53,6 +53,7 @@ if (!isMainThread) {
   if (tune && tune.masterBase != null) REWARD.base.master = tune.masterBase;
   if (tune && tune.chestMoney != null) CHEST.money = tune.chestMoney;
   if (tune && tune.golden != null) GOLDEN.chance = tune.golden;
+  if (tune && tune.calling != null) GOLDEN.calling = tune.calling;
   SMART.K = k;
   if (b) b.forEach((x, i) => { B[i] = x; });
   if (shop) Object.assign(SHOP, shop);
