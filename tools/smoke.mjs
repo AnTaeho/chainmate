@@ -20,12 +20,14 @@ globalThis.window = dom.window;
 const { boot } = await import('../src/main.js');
 
 const errors = [];
+const apps = [];
 const visited = new Set();
 let t = 0;
 let app = null;
 
 async function start() {
   app = await boot({ window: dom.window, document: dom.document });
+  apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
 }
@@ -80,7 +82,7 @@ let paused = false, settingsSeen = false, draggedMaxim = false, reloaded = false
 function battleStep() {
   const s = app.screen;
   const b = app.run.battle;
-  if (!paused) { dom.key('Escape'); pump(1); if (screen() !== 'pause') throw new Error('pause did not open'); click('pause:settings'); click('set:speed4'); click('set:shake'); click('set:back'); click('pause:resume'); paused = true; settingsSeen = true; }
+  if (!paused) { dom.key('Escape'); pump(1); if (screen() !== 'pause') throw new Error('pause did not open'); click('pause:settings'); click('set:speed4'); click('set:shake'); click('set:big'); click('set:big'); click('set:back'); click('pause:resume'); paused = true; settingsSeen = true; }
   if (b.status === 'chain') {
     // 사슬 한가운데서 이어 하기(드묾): 먹을 칸 하나
     const t = s.clickable();
@@ -157,6 +159,7 @@ async function reload() {
   const phase = app.run.phase, ante = app.run.ante, money = app.run.money;
   seen();
   app = await boot({ window: dom.window, document: dom.document });
+  apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
   click('title:continue');
@@ -221,6 +224,25 @@ results.push(await playOne(SEED + 100, {
     run.fragments.century = { first: true, feat: false, gold: false };
   },
 }));
+// 이긴 판이면 끝없는 대국으로 이어 두다가 진다
+let endless = false;
+if (app.run.phase === 'won') {
+  // 쥐여 준 전설을 거둬야 끝없는 대국이 몇 관 안에 끝난다
+  app.run.maxims = app.run.maxims.filter((m) => !m.legendary);
+  click('result:endless');
+  endless = true;
+  for (let steps = 0; steps < 3000 && screen() !== 'result'; steps++) {
+    const name = screen();
+    if (name === 'select') { click('select:play'); pump(2); continue; }
+    if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
+    if (name === 'reward' || name === 'chest' || name === 'legend') { click('next'); pump(1); if (screen() === name) click('next'); continue; }
+    if (name === 'shop') { shopStep(); continue; }
+    if (name === 'pack') { packStep(); continue; }
+    throw new Error(`stuck on ${name}`);
+  }
+  if (!app.records.bestEndless) throw new Error('endless not recorded');
+  log('  끝없는 대국', app.run.ante, '관까지');
+}
 // 결과 화면에서 다시 → 타이틀, 전설 장면 직접
 click('result:title');
 app.run = results[results.length - 1];
@@ -239,7 +261,12 @@ console.log(`연기 시험 seed ${SEED}: 판 ${results.length} (${results.map((r
 console.log(`프레임 ${ms.length} · 그리기 평균 ${avg.toFixed(2)}ms · p99 ${pct(0.99).toFixed(2)}ms · 최대 ${ms[ms.length - 1].toFixed(2)}ms · 그리기 호출 ${dom.counter.calls}`);
 console.log(`한 수 연출(×1) 평균 ${(mt.reduce((a, x) => a + x, 0) / Math.max(1, mt.length)).toFixed(2)}s · 최대 ${(mt[mt.length - 1] || 0).toFixed(2)}s (${mt.length}수)`);
 if (VERBOSE && worst) console.log('가장 긴 수', JSON.stringify(worst));
+const ims = [];
+for (const a of apps) ims.push(...(a.stats.inputMs || []));
+ims.sort((a, b) => a - b);
+console.log(`누르기 처리 ${ims.length}번 · 평균 ${(ims.reduce((a, x) => a + x, 0) / Math.max(1, ims.length)).toFixed(2)}ms · p99 ${(ims[Math.floor(ims.length * 0.99)] || 0).toFixed(2)}ms · 최대 ${(ims[ims.length - 1] || 0).toFixed(2)}ms`);
 console.log(`방문 화면: ${[...visited].join(' ')}`);
+console.log(`끝없는 대국: ${endless ? `${app.records.bestEndless}관` : '못 감'}`);
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
@@ -250,5 +277,6 @@ if (!reloaded) fail = true;
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }
 if (mt.length && mt[mt.length - 1] > 4) { console.log('한 수 연출이 4초를 넘는다'); fail = true; }
 if (pct(0.99) > 16) { console.log('프레임 p99가 16ms를 넘는다'); fail = true; }
+if (ims.length && ims[Math.floor(ims.length * 0.99)] > 50) { console.log('누르기 처리 p99가 50ms를 넘는다'); fail = true; }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);
