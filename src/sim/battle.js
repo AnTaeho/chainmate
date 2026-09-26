@@ -142,7 +142,8 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
 export function dropSquaresFor(b, piece) {
   const allow = { attacked: false };
   if ((b.mods && b.mods.length) || piece.eng) {
-    const t = { ...b, chain: piece.eng ? { engraving: piece.eng } : null };
+    // 조회일 뿐이라 조정자 state가 새지 않게 복사본으로 돌린다
+    const t = { ...b, mods: JSON.parse(JSON.stringify(b.mods)), chain: piece.eng ? { engraving: JSON.parse(JSON.stringify(piece.eng)) } : null };
     const ctxEvent = { type: piece.t, engraving: piece.eng };
     // onDropCheck: ctx.event.allow.attacked = true 로 노려진 칸 허용
     ctxEvent.allow = allow;
@@ -198,6 +199,8 @@ export function apply(b, cmd) {
     case 'discard': {
       if (b.status !== 'play') throw new Error('not expecting a discard');
       if (b.discardsLeft <= 0) throw new Error('no discards left');
+      // 주머니가 비면 무르기는 손만 줄인다: legalCommands · 막힘 판정과 같이 막는다
+      if (b.bag.length === 0) throw new Error('bag is empty');
       const idx = [...new Set(cmd.handIndices)].sort((x, y) => y - x);
       if (!idx.length || idx.length > b.rules.maxDiscard || idx.some((i) => !b.hand[i])) throw new Error('bad discard');
       const gone = idx.map((i) => b.hand.splice(i, 1)[0]);

@@ -128,3 +128,12 @@ test('각인 명세는 그 기물로 떨군 사슬에서만 켜진다(대국 흐
   assert.equal(b.history[0].value, 80);
   assert.equal(b.score, 80);
 });
+
+defineModifier('t_counter', { kind: 'engraving', onDrop: (ctx) => { ctx.state.n = (ctx.state.n || 0) + 1; } });
+test('풀이기 탐색은 손 기물의 각인 state를 건드리지 않는다', () => {
+  const b = createBattle({ seed: 1 });
+  b.board = boardFrom({ e5: 'R', h1: 'P' });
+  b.hand = [{ t: 'N', id: 1, eng: { id: 't_counter' } }];
+  bestMove(b);
+  assert.equal(b.hand[0].eng.state, undefined);
+});

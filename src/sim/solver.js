@@ -61,7 +61,8 @@ export function bestMove(b, opts = {}) {
     seen.add(key);
     for (const sq of dropSquaresFor(b, piece)) {
       const t = cloneTable({ ...b, chain: null });
-      startChain(t, { type: piece.t, sq, engraving: piece.eng });
+      // 각인 명세는 복사해서 쓴다(탐색 중 조정자 state가 실제 손 기물에 새지 않게)
+      startChain(t, { type: piece.t, sq, engraving: piece.eng && JSON.parse(JSON.stringify(piece.eng)) });
       const r = dfs(t, stats, preferMate);
       if (!r) continue;
       if (better(r, best, preferMate)) best = { ...r, handIndex, sq };

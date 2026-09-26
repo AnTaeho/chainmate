@@ -109,6 +109,11 @@ test('무르기: 골라 버리고 다시 뽑는다, 떨굴 수 없고 무르기�
   assert.equal(b.discardsLeft, 2);
   assert.equal(b.hand.length, 4);
   assert.deepEqual(b.used.map((p) => p.id).sort(), [before[0], before[2]].sort());
+  const saved = b.bag;
+  b.bag = [];
+  assert.throws(() => apply(b, { type: 'discard', handIndices: [0] }), /bag is empty/);
+  assert.ok(!legalCommands(b).some((c) => c.type === 'discard'));
+  b.bag = saved;
   b.board = boardFrom({});
   b.discardsLeft = 1;
   apply(b, { type: 'discard', handIndices: [0] });
