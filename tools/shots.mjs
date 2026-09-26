@@ -81,6 +81,27 @@ async function hoverId(id) {
   await settle(80);
 }
 
+// 기물 12종 식별 시험(mockup의 시트): 흰 · 검은 · 금빛 기물을 밝은 칸과 어두운 칸에
+await ev(async () => {
+  const { spriteCanvas } = await import('/src/render/sprites.js');
+  const c = document.getElementById('screen');
+  const a = window.__app;
+  a.go('title');
+  a.draw = () => {
+    const g = c.getContext('2d');
+    g.fillStyle = '#0e1513'; g.fillRect(0, 0, 480, 270);
+    ['P', 'N', 'B', 'R', 'Q', 'K'].forEach((t, i) => ['w', 'b', 'g', 's', 'q'].forEach((side, row) => [0, 1].forEach((k) => {
+      const x = 36 + (i * 2 + k) * 34, y = 40 + row * 34;
+      g.fillStyle = k ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
+      g.drawImage(spriteCanvas(t, side), x + 6, y + 3);
+    })));
+  };
+});
+await settle(200);
+await shot('00-sprites');
+await ev(() => { delete window.__app.draw; });
+await page.reload();
+await page.waitForFunction(() => window.__app && window.__app.screen);
 await ev(() => { window.__app.settings.speed = 2; });
 await settle(900);
 await shot('01-title');
@@ -119,11 +140,17 @@ async function finishBattle() {
     const d = await ev(async () => {
       const { decideBattle } = await import('/tools/bot.mjs');
       const b = window.__app.run.battle;
+      if (b && b.status === 'chain') {
+        const { chainCaptures, chainRedrops } = await import('/src/sim/chain.js');
+        const l = b.chain.awaiting ? chainRedrops(b) : chainCaptures(b);
+        return { sqs: [l[0]] };
+      }
       if (!b || b.status !== 'play') return null;
       const d = decideBattle(b);
       return d && (d.play ? { hand: d.play.handIndex, sq: d.play.sq, line: d.play.line } : { discard: d.discard });
     });
     if (!d) { await settle(100); continue; }
+    if (d.sqs) { await clickId(`sq:${d.sqs[0]}`); await idle(); continue; }
     if (d.discard) { for (const i of d.discard) await clickId(`hand:${i}`); await clickId('btn:discard'); await idle(); continue; }
     await clickId(`hand:${d.hand}`); await clickId(`sq:${d.sq}`); await idle();
     for (const c of d.line) { if (typeof c !== 'number') { await clickId(`sq:${c.sq}`); await idle(); continue; } await clickId(`sq:${c}`); await idle(); }
@@ -160,6 +187,50 @@ await shot('15-settings');
 await ev(() => { const a = window.__app; a.closeOverlay(); a.run.phase = 'lost'; a.run.log.push({ ante: a.run.ante, blind: 1, kind: 'official', score: 740, target: 900, best: 420, won: false }); a.go('result'); });
 await settle(200);
 await shot('16-result');
+
+// 짜임이 찬 판: 격언 다섯(판본 · 전설), 조각, 두루마리
+await ev(() => {
+  const a = window.__app;
+  a.closeOverlay();
+  localStorage.clear();
+  a.newRun({ seed: 11 });
+  const r = a.run;
+  const add = (id, edition = null, legendary = false) => r.maxims.push({ uid: r.nextUid++, id, data: {}, edition, paid: 5, ...(legendary ? { legendary: true } : {}) });
+  add('quick_change', 'foil'); add('first_move'); add('whim', 'rainbow'); add('wall_breaker'); add('sacrifice'); add('immortal', null, true);
+  r.legends.push('immortal');
+  r.fragments.century = { first: true, feat: false, gold: false };
+  r.fragments.opera = { first: true, feat: true, gold: false };
+  r.consumables.push({ kind: 'chart', form: 'Q' }, { kind: 'engraving', id: 'glass' });
+  r.deck[0].eng = { id: 'glass' }; r.deck[4].eng = { id: 'ivory' }; r.deck[6].eng = { id: 'ebony' };
+  r.money = 23;
+  a.cmd({ type: 'play' });
+  a.go('battle', { events: [] });
+});
+await settle(2400);
+const plan2 = await ev(async () => {
+  const { bestMove } = await import('/src/sim/solver.js');
+  const d = bestMove(window.__app.run.battle, { preferMate: 'avoid' });
+  return { hand: d.handIndex, sq: d.sq, line: d.line };
+});
+await clickId(`hand:${plan2.hand}`);
+await clickId(`sq:${plan2.sq}`);
+await idle();
+for (let i = 0; i < Math.min(2, plan2.line.length - 1); i++) { await clickId(`sq:${plan2.line[i]}`); await idle(); }
+await hoverId('frag:century');
+await shot('17-battle-full');
+await finishBattle();
+await settle(1500);
+for (let g = 0; g < 6; g++) {
+  const n = await ev(() => window.__app.screen.name);
+  if (n === 'shop' || n === 'result') break;
+  const has = await ev(() => !!window.__app.ui.regions.find((x) => x.id === 'next'));
+  if (has) await clickId('next');
+  await settle(400);
+}
+if ((await ev(() => window.__app.screen.name)) === 'shop') {
+  await hoverId('maxim:2');
+  await shot('18-shop-full');
+} else console.log('상점까지 못 갔다:', await ev(() => window.__app.screen.name));
 
 console.log(errors.length ? `페이지 오류 ${errors.length}\n${errors.join('\n')}` : '페이지 오류 0');
 await browser.close();
