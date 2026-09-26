@@ -5,7 +5,7 @@
 //          명인별 통과율, 많이 산 격언과 산 판의 승률, 관별 최고 한 수, 판당 ms.
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
-import { createRun, B } from '../src/sim/run.js';
+import { createRun, B, targetFor } from '../src/sim/run.js';
 import { SHOP } from '../src/sim/shop.js';
 import { playRun, SMART } from './shopbot.mjs';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
@@ -95,7 +95,7 @@ function report(R, args, wall) {
       pc(mates.length / bs.length), pc(mates.filter((b) => b.moves === 1).length / bs.length),
       pc(bs.filter((b) => b.reason === 'stuck').length / bs.length),
       String(pctile(bests, 0.5)), String(pctile(bests, 0.9)), String(Math.max(0, ...bests)),
-      String(bs.length ? bs[0].target : '-'),
+      String(targetFor(ante, 'practice')),
     ]);
   }
   table(['관', '도달', '통과', '대국', '연습', '정식', '명인', '점수/목표p10', 'p25', 'p50', 'p90', '외통', '첫수외통', '막힘', '최고수p50', 'p90', '최고', '연습목표'], rows);
