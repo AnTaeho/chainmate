@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node --test 'test/*.test.js'",
     "sim": "node tools/sim.mjs",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "smoke": "node tools/smoke.mjs"
   }
 }
