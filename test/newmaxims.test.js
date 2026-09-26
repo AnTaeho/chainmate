@@ -75,3 +75,40 @@ test('증원 사냥: 들어온 적(born ≥ 0)을 먹을 때마다 연쇄 +2', (
   chainCapture(t, S('e5'));
   assert.equal(t.chain.mult, 1 + 2);
 });
+
+// ── 밤샘 D-2: 효과를 올린 넷
+test('외통 사냥꾼: 킹 수비가 하나 적은 판', async () => {
+  const { createBattle } = await import('../src/sim/battle.js');
+  const { attackers } = await import('../src/sim/board.js');
+  for (const ante of [1, 3]) {
+    const b = createBattle({ seed: 4, ante, mods: [{ id: 'mate_hunter' }] });
+    const plain = createBattle({ seed: 4, ante });
+    assert.equal(b.rules.guards, plain.rules.guards == null ? (ante >= 3 ? 3 : 2) : plain.rules.guards - 1);
+    const k = b.board.findIndex((c) => c && c.t === 'K');
+    assert.ok(attackers(b.board, k).length >= b.rules.guards);
+  }
+});
+
+test('왕의 목: 킹을 지키던 적을 먹으면 연쇄 +2', () => {
+  // e5 비숍이 h8 킹을 지킨다(대각). N d3 → e5
+  const c = chain({ e5: 'B', h8: 'K', a1: 'R' }, 'N', 'd3', ['e5'], ['kings_neck']);
+  assert.equal(c.mult, 1 + 2);
+  const d = chain({ e5: 'B', h7: 'K', a1: 'R' }, 'N', 'd3', ['e5'], ['kings_neck']);
+  assert.equal(d.mult, 1);
+});
+
+test('다시 생각: 무르기 +1 · 무른 기물마다 값 +10', async () => {
+  const { createBattle } = await import('../src/sim/battle.js');
+  assert.equal(createBattle({ seed: 1, mods: [{ id: 'second_thought' }] }).discardsLeft, 4);
+});
+
+test('그림자 읽기: 증원이 올 칸에 떨구면 연쇄 +4', () => {
+  const t = { board: boardFrom({ e5: 'B', a8: 'R' }), rules: {}, mods: [{ id: 'shadow_reading' }], chain: null, incoming: [{ sq: S('d3'), t: 'P' }], incomingNext: [] };
+  startChain(t, { type: 'N', sq: S('d3') });
+  chainCapture(t, S('e5'));
+  assert.equal(t.chain.mult, 1 + 4);
+  const u = { board: boardFrom({ e5: 'B', a8: 'R' }), rules: {}, mods: [{ id: 'shadow_reading' }], chain: null, incoming: [{ sq: S('h1'), t: 'P' }], incomingNext: [] };
+  startChain(u, { type: 'N', sq: S('d3') });
+  chainCapture(u, S('e5'));
+  assert.equal(u.chain.mult, 1);
+});

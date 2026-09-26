@@ -94,7 +94,7 @@ const CASES = [
   ['close_call', 'mate', 370 * 6],
   ['mate_hunter', 'mate', 2040, {}, 6],
   ['mate_hunter', 'knight', 30, {}, 0],
-  ['kings_neck', 'mate', 6120],
+  ['kings_neck', 'mate', 8160], // a8 룩이 a4 킹을 지키고 있었다: 연쇄 +2, 사슬 끝 ×3
   ['kings_neck', 'knight', 30],
   ['first_move', 'knight', 60, { movesUsed: 0 }],
   ['first_move', 'knight', 30, { movesUsed: 1 }],
@@ -102,7 +102,7 @@ const CASES = [
   ['last_move', 'knight', 30, { movesLeft: 2 }],
   ['no_regrets', 'knight', 150, { discardsUsed: 0 }],
   ['no_regrets', 'knight', 30, { discardsUsed: 1 }],
-  ['second_thought', 'knight', 45, { discarded: 3 }],
+  ['second_thought', 'knight', 60, { discarded: 3 }],
   ['empty_bag', 'knight', 180, { bag: [1, 2, 3, 4, 5] }],
   ['small_bag', 'knight', 45, { deckSize: 8 }],
   ['small_bag', 'knight', 30, { deckSize: 9 }],

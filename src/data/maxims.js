@@ -4,6 +4,8 @@
 // 필드: id · name(화면 이름) · text(화면 한 줄) · verb(뿌리의 어느 동사) · rarity('common'|'uncommon'|'rare') · price(3~8)
 // 전설(불멸의 기보)은 step 2b: rarity 'legendary', 상점에는 나오지 않는다.
 import { defineModifier } from '../sim/scoring.js';
+import { reach } from '../sim/board.js';
+import { kingGuards } from '../sim/setup.js';
 
 const EDGE = (sq) => (sq & 7) === 0 || (sq & 7) === 7 || sq >> 3 === 0 || sq >> 3 === 7;
 const CENTER = [27, 28, 35, 36]; // d4 e4 d5 e5
@@ -91,10 +93,18 @@ maxim('close_call', '아슬아슬', '끊기지 않고 끝난 사슬 값 +30', '�
 });
 
 // ── 외통
-maxim('mate_hunter', '외통 사냥꾼', '외통으로 이기면 상금 +6', '외통', 'common', 4, {
+// 밤샘 D-2: 외통 사냥꾼 · 왕의 목 · 다시 생각 · 그림자 읽기는 판 시작에 쥐여 줘도 통과한 관이 +0.25(보통 격언 +1.1)라 효과를 올렸다.
+maxim('mate_hunter', '외통 사냥꾼', '킹을 지키는 적이 하나 적다 · 외통으로 이기면 상금 +6', '외통', 'common', 4, {
+  onBattleStart(ctx) { ctx.rules.guards = Math.max(1, (ctx.rules.guards ?? kingGuards(ctx.t.ante ?? 1)) - 1); },
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.addMoney(6); },
 });
-maxim('kings_neck', '왕의 목', '지키는 이 없는 킹이 빛난다 · 외통 사슬 연쇄 ×3', '외통', 'uncommon', 6, {
+maxim('kings_neck', '왕의 목', '지키는 이 없는 킹이 빛난다 · 킹을 지키던 적을 먹으면 연쇄 +2 · 외통 사슬 연쇄 ×3', '외통', 'uncommon', 6, {
+  onCapture(ctx) {
+    const { piece, to } = ctx.event;
+    if (piece === 'K') return;
+    const board = ctx.t.board;
+    if (reach(board, piece, to, -1).some((s) => board[s] && !board[s].mine && board[s].t === 'K')) ctx.addMult(2);
+  },
   // 화면용: 지금 지키는 적이 없는 킹 칸. b.hints.openKings
   onBoard(ctx) {
     const t = ctx.t;
@@ -125,8 +135,9 @@ maxim('last_move', '마지막 수', '대국 마지막 수 연쇄 ×3', '수', 'u
 maxim('no_regrets', '무르지 않는다', '무르기 전까지 모든 수 연쇄 +4', '무르기', 'common', 4, {
   onChainEnd(ctx) { if (num(ctx.t.discardsUsed) === 0) ctx.addMult(4); },
 });
-maxim('second_thought', '다시 생각', '무른 기물 하나마다 이번 대국 값 +5', '무르기', 'common', 3, {
-  onChainEnd(ctx) { ctx.addValue(5 * num(ctx.t.discarded)); },
+maxim('second_thought', '다시 생각', '무르기 +1 · 무른 기물 하나마다 이번 대국 값 +10', '무르기', 'common', 3, {
+  onBattleStart(ctx) { ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
+  onChainEnd(ctx) { ctx.addValue(10 * num(ctx.t.discarded)); },
 });
 
 // ── 주머니
@@ -143,8 +154,14 @@ maxim('small_bag', '작은 주머니', '가진 기물이 여덟 이하면 연쇄
 maxim('welcome', '증원 환영', '막 들어온 적을 먹으면 값 +40', '증원', 'common', 3, {
   onCapture(ctx) { if (ctx.event.born >= 0 && ctx.event.born === num(ctx.t.movesUsed)) ctx.addValue(40); },
 });
-maxim('shadow_reading', '그림자 읽기', '증원이 두 수 앞까지 보인다', '증원', 'common', 3, {
+maxim('shadow_reading', '그림자 읽기', '증원이 두 수 앞까지 보인다 · 증원이 올 칸에 떨구면 연쇄 +4', '증원', 'common', 3, {
   onBattleStart(ctx) { ctx.rules.lookahead = Math.max(ctx.rules.lookahead || 1, 2); },
+  onDrop(ctx) {
+    const t = ctx.t;
+    const waves = [...(t.incoming || []), ...(t.incomingNext || [])];
+    if (waves.some((r) => r.sq === ctx.event.sq)) ctx.flags.shadowDrop = true;
+  },
+  onChainEnd(ctx) { if (ctx.flags && ctx.flags.shadowDrop) ctx.addMult(4); },
 });
 
 // ── 각인
