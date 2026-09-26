@@ -10,7 +10,7 @@
 //   won     8관 명인을 이김. endless
 //   lost    끝.
 import { createRng, fork, int, next, shuffle } from './rng.js';
-import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD } from './battle.js';
+import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN } from './battle.js';
 import { getModifier } from './scoring.js';
 import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice } from './shop.js';
 import { gradeOf } from './chain.js';
@@ -147,6 +147,7 @@ function startBattle(run) {
     seed, ante: run.ante, kind: info.kind, target: info.target,
     bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng })),
     rules: run.rules, mods: battleMods(run, info.master),
+    goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
   });
   run.phase = 'battle';
 }
@@ -231,6 +232,9 @@ function grantFragment(run, id, part, events) {
   }
   return true;
 }
+
+// 첫 조각과 재현을 모아 금빛 조각만 남은 명국이 있나(그동안 황금 기물이 자주 나온다: GOLDEN.calling)
+export const awaitingGold = (run) => LEGENDS.some((l) => { const f = run.fragments[l.id]; return f && f.first && f.feat && !f.gold; });
 
 // 재현: 끝난 사슬 요약 h로 첫 조각을 가진 명국의 둘째 조각을 판정한다.
 function checkFeats(run, h, events) {

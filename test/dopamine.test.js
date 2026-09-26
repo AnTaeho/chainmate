@@ -7,7 +7,7 @@ import { createBattle, apply, GOLDEN, overflowTier, OVERFLOW_TIERS } from '../sr
 import { bestMove, lineCommands } from '../src/sim/solver.js';
 import { createRng } from '../src/sim/rng.js';
 import {
-  createRun, applyRun, legalRunCommands, battleMods, REWARD, CHEST, maximCapacity, hasMaximRoom, sellPrice, canBuy,
+  createRun, applyRun, legalRunCommands, battleMods, REWARD, CHEST, maximCapacity, hasMaximRoom, sellPrice, canBuy, awaitingGold,
 } from '../src/sim/run.js';
 import { SHOP, rollDisplay, rollPackOptions, maximPrice } from '../src/sim/shop.js';
 import { EDITIONS, EDITION_BY_ID } from '../src/data/editions.js';
@@ -68,6 +68,10 @@ test('황금 기물: 대국 시작 판의 킹 아닌 적 하나, 확률은 대�
   for (let s = 1; s <= N; s++) if (createBattle({ seed: s * 7 + 1 }).board.some((c) => c && c.gold)) n++;
   assert.equal(GOLDEN.chance, 0.04);
   assert.ok(n / N > 0.03 && n / N < 0.05, `golden rate ${n / N}`);
+  let m = 0;
+  for (let s = 1; s <= N; s++) if (createBattle({ seed: s * 7 + 1, goldenChance: GOLDEN.calling }).board.some((c) => c && c.gold)) m++;
+  assert.equal(GOLDEN.calling, 0.1);
+  assert.ok(m / N > 0.085 && m / N < 0.115, `calling rate ${m / N}`);
 });
 
 // ── 넘친 목표
@@ -391,6 +395,23 @@ test('셋째 조각: 황금 기물을 먹고 이기면 재현까지 해낸 명�
   const li = run.maxims.findIndex((m) => m.legendary);
   assert.throws(() => applyRun(run, { type: 'sell', index: li }), /legend/);
   assert.ok(!legalRunCommands(run).some((c) => c.type === 'sell' && c.index === li));
+});
+
+test('금빛의 부름: 재현까지 모은 명국이 금빛만 기다리면 그 판의 대국에 황금 기물이 10%로', () => {
+  const run = createRun({ seed: 1 });
+  assert.equal(awaitingGold(run), false);
+  run.fragments.century = { first: true, feat: false, gold: false };
+  assert.equal(awaitingGold(run), false);
+  run.fragments.century.feat = true;
+  assert.equal(awaitingGold(run), true);
+  let n = 0;
+  for (let seed = 1; seed <= 400; seed++) {
+    const r = createRun({ seed });
+    r.fragments.opera = { first: true, feat: true, gold: false };
+    applyRun(r, { type: 'play' });
+    if (r.battle.board.some((c) => c && c.gold)) n++;
+  }
+  assert.ok(n / 400 > 0.06 && n / 400 < 0.14, `${n}/400`);
 });
 
 test('셋째 조각: 조각은 첫 → 재현 → 금빛 차례, 재현 전의 황금 기물은 조각을 주지 않는다', () => {
