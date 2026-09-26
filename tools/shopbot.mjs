@@ -5,7 +5,7 @@
 //   hunt   — smart에 더해 불멸의 기보를 노린다: 조각은 보이면 사고 꾸러미는 열어 보고, 돈이 남으면 다시 진열해 조각을 찾고,
 //            대국에서는 황금 기물 · 가진 첫 조각의 재현이 되는 줄에 덤을 얹어 고른다.
 //   none   — 아무것도 사지 않는다(격언 없이 어디까지 가나 보는 기준선).
-//   smart도 조각이 진열에 보이면 적립을 반만 남기고 산다(사람이 흔히 그러듯). 꾸러미에서는 나머지가 거의 안 오를 때만 조각.
+//   smart도 조각이 진열에 보이면 적립을 다 남기고도 살 수 있을 때 산다(운 좋은 판). 꾸러미에서는 나머지가 짜임을 올리지 못할 때만 조각.
 import { createRng, fork, int, next } from '../src/sim/rng.js';
 import { createBattle } from '../src/sim/battle.js';
 import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell } from '../src/sim/run.js';
@@ -196,7 +196,7 @@ function openGolden(run, ctx, hunt) {
     const s = ctx.score(v.build);
     if (!pick || s > pick.s) pick = { s, index, sell: v.sell };
   });
-  if (frag >= 0 && (!pick || pick.s < base * 1.1)) { act(run, { type: 'pick', index: frag }); return; }
+  if (frag >= 0 && (!pick || pick.s <= base)) { act(run, { type: 'pick', index: frag }); return; }
   if (pick && pick.s > base) {
     if (pick.sell != null) act(run, { type: 'sell', index: pick.sell });
     act(run, { type: 'pick', index: pick.index });
@@ -211,8 +211,8 @@ function smartShop(run, hunt = false) {
     const build = buildOf(run);
     const base = Math.max(1, ctx.score(build));
     const reserve = SMART.reserve(run.ante);
-    // 불멸의 기보 첫 조각: hunt는 보이면, smart는 적립을 반만 남기고 산다
-    const fslot = run.shop.display.findIndex((it) => it.kind === 'fragment' && canBuy(run, it) && run.money - it.price >= (hunt ? 0 : reserve / 2));
+    // 불멸의 기보 첫 조각: hunt는 보이면, smart는 적립을 다 남기고도 살 수 있으면
+    const fslot = run.shop.display.findIndex((it) => it.kind === 'fragment' && canBuy(run, it) && run.money - it.price >= (hunt ? 0 : reserve));
     if (fslot >= 0) { act(run, { type: 'buy', slot: fslot }); continue; }
     const cands = [];
     const consider = (cost, score, act, extra = {}) => {
@@ -281,7 +281,7 @@ function smartShop(run, hunt = false) {
         if (!pick || s > pick.s) pick = { s, cmd: { type: 'pick', index, target: v.target } };
       });
       const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
-      if (frag >= 0 && (hunt || !pick || pick.s < base * 1.1)) act(run, { type: 'pick', index: frag });
+      if (frag >= 0 && (hunt || !pick || pick.s <= base)) act(run, { type: 'pick', index: frag });
       else if (pick && pick.s > base * 1.0) act(run, pick.cmd);
       else act(run, { type: 'skipPack' });
       continue;

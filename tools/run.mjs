@@ -49,6 +49,9 @@ if (!isMainThread) {
   const { seeds, policy, k, B: b, shop, tune } = workerData;
   if (tune && tune.overflow) REWARD.overflow = tune.overflow;
   if (tune && tune.chest) CHEST.counts = tune.chest;
+  if (tune && tune.chestItems) CHEST.items = tune.chestItems;
+  if (tune && tune.masterBase != null) REWARD.base.master = tune.masterBase;
+  if (tune && tune.chestMoney != null) CHEST.money = tune.chestMoney;
   if (tune && tune.golden != null) GOLDEN.chance = tune.golden;
   SMART.K = k;
   if (b) b.forEach((x, i) => { B[i] = x; });
