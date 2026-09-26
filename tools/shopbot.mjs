@@ -17,7 +17,8 @@ export const SMART = {
   reserve: (ante) => (ante <= 1 ? 0 : ante <= 6 ? 15 : 0), // 적립용으로 남길 돈(득이 크면 넘는다)
   bigGain: 0.35,   // 이만큼 오르면 reserve를 무시
   maxActions: 14,
-  finalFrom: 6,    // 이 관부터 대가 대비
+  finalFrom: 5,    // 이 관부터 대가 대비
+  finalWeight: 0.5, // 대가 판에서 잰 값의 몫
 };
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -90,11 +91,16 @@ function makeCtx(run) {
     score(build) {
       const key = JSON.stringify([build.deck.map((p) => p.t + (p.eng ? p.eng.id : '')).sort(), build.maxims.map((m) => m.id + JSON.stringify(m.data || {})), build.charts]);
       if (!cache.has(key)) {
-        // 다음이 명인 대국이면 그 명인을 걸고도 잰다. 6관부터는 8관 「대가」(기보가 안 듣는다)도 미리 섞는다.
+        // 다음이 명인 대국이면 그 명인을 걸고도 잰다. finalFrom관부터는 8관 「대가」(기보가 안 듣는다)도 미리 섞는다.
         const parts = [evalBuild(run, build, seeds, ante)];
-        if (nextMaster) parts.push(evalBuild(run, build, seeds, ante, nextMaster));
-        if (run.ante >= SMART.finalFrom && nextMaster !== FINAL_MASTER) parts.push(evalBuild(run, build, seeds, Math.max(ante, 8), FINAL_MASTER));
-        cache.set(key, parts.reduce((a, x) => a + x, 0) / parts.length);
+        if (nextMaster && nextMaster !== FINAL_MASTER) parts.push(evalBuild(run, build, seeds, ante, nextMaster));
+        let v = parts.reduce((a, x) => a + x, 0) / parts.length;
+        if (run.ante >= SMART.finalFrom || nextMaster === FINAL_MASTER) {
+          const fin = evalBuild(run, build, seeds, Math.max(ante, 8), FINAL_MASTER);
+          // 대가 판은 기보가 빠져 값이 한 자릿수 작다: 비율끼리 섞이게 기하 평균
+          v = Math.pow(v + 1, 1 - SMART.finalWeight) * Math.pow(fin + 1, SMART.finalWeight);
+        }
+        cache.set(key, v);
       }
       return cache.get(key);
     },
