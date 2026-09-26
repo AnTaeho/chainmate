@@ -145,12 +145,30 @@ export class BattleScreen {
     const bRef = this.app.run.battle;
     this.bRef = bRef;
     const v = this.view;
+    const run = this.app.run;
+    if (cmd.type === 'drop') this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
     const events = this.app.cmd(cmd);
+    this.record(events, run);
     const post = clone(bRef.board);
     for (const e of events) if (e.type === 'reinforce') post[e.sq] = null;
     if (cmd.type === 'drop') v.hand.splice(cmd.handIndex, 1);
     this.targets = null;
     this.play(events, post, cmd);
+  }
+
+  // 이번 판 최고 한 수를 다시 보기용으로 남긴다(결과 화면이 작은 판에 다시 둔다)
+  record(events, run) {
+    const r = this.rec;
+    if (!r) return;
+    for (const e of events) {
+      if (e.type === 'capture') r.caps.push({ from: e.from, to: e.to, piece: e.piece, form: e.form, after: e.form });
+      else if ((e.type === 'transform' || e.type === 'promote') && r.caps.length) r.caps[r.caps.length - 1].after = e.type === 'promote' ? 'Q' : e.to;
+      else if (e.type === 'refill' || e.type === 'redrop') r.broken = true;
+      else if (e.type === 'end') {
+        if (!r.broken && (!run.bestReplay || e.score > run.bestReplay.score)) run.bestReplay = { ...r, score: e.score, reason: e.reason };
+        this.rec = null;
+      }
+    }
   }
 
   // ── 사건 → 연출
