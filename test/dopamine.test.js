@@ -552,6 +552,20 @@ test('전설 폰 여덟의 행진: 폰으로 떨군 사슬은 여섯째 줄부�
   assert.deepEqual([two.value, two.mult, two.score], [50, 21, 1050]);
 });
 
+test('풀이기 마디 예산: 넘으면 첫 수만 따라가도 늘 끝까지 둘 수 있는 줄, 점수는 그 줄을 둔 결과와 같다', () => {
+  for (const seed of [3, 9, 21]) {
+    const full = createBattle({ seed, ante: 6, golden: false, mods: LEG('opera') });
+    const cut = JSON.parse(JSON.stringify(full));
+    const a = bestMove(full), m = bestMove(cut, { maxNodes: 5 });
+    assert.ok(m.nodes < a.nodes || a.nodes <= 5);
+    assert.ok(m.score <= a.score);
+    apply(cut, { type: 'drop', handIndex: m.handIndex, sq: m.sq });
+    for (const c of lineCommands(m.line)) apply(cut, c);
+    assert.equal(cut.chain, null, '줄이 사슬을 끝낸다');
+    assert.equal(cut.history.at(-1).score, m.score);
+  }
+});
+
 // ── 저장 · 결정성
 function legalCommandsOf(b) {
   return b.status === 'chain' && b.chain.awaiting ? chainRedrops(b).map((sq) => ({ type: 'redrop', sq })) : [];
