@@ -9,6 +9,9 @@ import { PackScreen } from './pack.js';
 import { ResultScreen } from './result.js';
 import { PauseScreen } from './pause.js';
 import { SettingsScreen } from './settings.js';
+import { SetupScreen } from './setup.js';
+import { CodexScreen } from './codex.js';
+import { RecordsScreen } from './records.js';
 
 export const SCREENS = {
   title: TitleScreen,
@@ -22,4 +25,7 @@ export const SCREENS = {
   result: ResultScreen,
   pause: PauseScreen,
   settings: SettingsScreen,
+  setup: SetupScreen,
+  codex: CodexScreen,
+  records: RecordsScreen,
 };

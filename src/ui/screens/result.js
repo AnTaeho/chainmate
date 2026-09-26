@@ -5,6 +5,8 @@ import { LEGENDS } from '../../data/legends.js';
 import { button } from '../ui.js';
 import { KIND_NAME } from '../words.js';
 import { shardIcon } from '../parts.js';
+import { OPENINGS } from '../../data/openings.js';
+import { nextUnlock } from '../records.js';
 
 export class ResultScreen {
   constructor(app) {
@@ -19,7 +21,8 @@ export class ResultScreen {
     this.short = !this.won && last && last.target ? Math.max(0, last.target - last.score) : 0;
     this.pct = last && last.target ? Math.floor((last.score / last.target) * 100) : 0;
     app.sfx(this.won ? 'fanfare' : 'lose');
-    if (app.onRunEnd) app.onRunEnd(run);
+    this.out = app.finishRun() || { unlocked: [], dan: null, fresh: 0 };
+    this.next = nextUnlock(app.records);
   }
   update(dt) { this.t += dt; }
   draw(ctx, ui) {
@@ -55,7 +58,15 @@ export class ResultScreen {
         }
       });
     }
-    if (app.resultExtra) app.resultExtra(ctx, ui, x, y, w, h);
+    // 판 밖에 남은 것: 새 도감 칸 · 해금 · 다음 해금까지
+    const ny = y + h - 64;
+    const notes = [];
+    if (this.out.fresh) notes.push([`도감 ${this.out.fresh}칸을 새로 채웠다`, PAL.ink]);
+    for (const id of this.out.unlocked) notes.push([`오프닝 「${OPENINGS[id].name}」이 열렸다`, PAL.gold]);
+    if (this.out.dan) notes.push([`${this.out.dan}단이 열렸다`, PAL.gold]);
+    if (!this.out.unlocked.length && this.next) notes.push([`다음 해금 ${OPENINGS[this.next.id].name}: ${this.next.text} ${this.next.have}/${this.next.need}`, PAL.dim]);
+    if (run.daily) notes.push([`오늘의 대국 ${run.daily}`, PAL.goldDk]);
+    notes.slice(-3).forEach(([s, c], i) => text(ctx, s, W / 2, ny - (notes.slice(-3).length - 1 - i) * 14, c, { align: 'center' }));
     const by = y + h - 28;
     if (this.won) {
       button(ctx, ui, 'result:endless', x + 20, by, 80, 18, '계속 두기', { onClick: () => this.endless() });
@@ -66,7 +77,7 @@ export class ResultScreen {
       button(ctx, ui, 'result:title', x + 160, by, 90, 18, '타이틀', { onClick: () => app.toTitle() });
     }
   }
-  again() { const op = this.app.run.opening; this.app.newRun({ opening: op }); }
+  again() { const r = this.app.run; this.app.newRun({ opening: r.opening, dan: r.dan, daily: !!r.daily }); }
   endless() { this.app.cmd({ type: 'endless' }); this.app.goPhase(); }
   key(k) { if (k === 'Enter') this.again(); else if (k === 'Escape') this.app.toTitle(); }
 }

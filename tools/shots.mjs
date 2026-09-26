@@ -242,6 +242,35 @@ if ((await ev(() => window.__app.screen.name)) === 'shop') {
   await shot('18-shop-full');
 } else console.log('상점까지 못 갔다:', await ev(() => window.__app.screen.name));
 
+// 판 밖: 판 준비 · 도감 · 기록(기록을 조금 채워서)
+await ev(() => {
+  const a = window.__app;
+  const r = a.records;
+  r.runs = 7; r.wins = 1; r.bestAnte = 8; r.mates = 3; r.legends = 1; r.grades = { '!!!': 2 };
+  r.unlocked = { openings: ['standard', 'london', 'queens_gambit'], dan: 2 };
+  r.bestMove = { score: 48210, steps: ['N', 'B', 'R', 'Q', 'P', 'Q', 'R', 'K'], ante: 6 };
+  for (const id of ['quick_change', 'first_move', 'whim', 'wall_breaker', 'sacrifice', 'edge', 'center', 'chivalry', 'payback', 'coronation']) r.codex.maxims[id] = true;
+  for (const id of ['fog', 'mirror', 'grandmaster']) r.codex.masters[id] = true;
+  r.codex.legends = { immortal: 3, century: 1 }; r.codex.legendsDone = { immortal: true };
+  r.codex.editions = { foil: true, rainbow: true };
+  a.go('setup');
+});
+await settle(200);
+await shot('19-setup');
+await ev(() => window.__app.go('codex'));
+await settle(100);
+await hoverId('codex:whim');
+await shot('20-codex');
+await clickId('codex:tab:legends');
+await hoverId('codex:immortal');
+await shot('21-codex-legends');
+await ev(() => window.__app.go('records'));
+await settle(100);
+await shot('22-records');
+await ev(() => window.__app.go('title'));
+await settle(300);
+await shot('01-title');
+
 console.log(errors.length ? `페이지 오류 ${errors.length}\n${errors.join('\n')}` : '페이지 오류 0');
 await browser.close();
 srv.close();

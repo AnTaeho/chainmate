@@ -165,11 +165,19 @@ async function reload() {
   log('  이어 하기 확인', phase, ante);
 }
 
-async function playOne(seed, { inject = null } = {}) {
+async function playOne(seed, { inject = null, opening = null, dan = null, daily = false } = {}) {
   app.nextSeed = seed;
   if (screen() !== 'title') app.toTitle();
   pump(1);
-  click('title:new');
+  if (daily) click('title:daily');
+  else {
+    click('title:new');
+    if (opening) click(`setup:op:${opening}`);
+    if (dan != null) click(`setup:dan:${dan}`);
+    click('setup:start');
+    if (opening && app.run.opening !== opening) throw new Error('opening not chosen');
+    if (dan != null && app.run.dan !== dan) throw new Error('dan not chosen');
+  }
   if (inject) inject(app.run);
   let steps = 0;
   while (steps++ < 4000) {
@@ -192,6 +200,19 @@ const t0 = performance.now();
 await start();
 const results = [];
 for (let k = 0; k < RUNS; k++) results.push(await playOne(SEED + k));
+// 판 밖: 도감 · 기록 화면, 오프닝과 단을 모두 연 뒤 시실리안 3단 판, 오늘의 대국
+click('result:title');
+click('title:codex');
+for (const t of ['masters', 'legends', 'openings', 'editions', 'maxims']) click(`codex:tab:${t}`);
+click('codex:back');
+click('title:records');
+click('records:back');
+if (app.records.runs < RUNS) throw new Error('records did not count runs');
+app.records.unlocked.openings = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
+app.records.unlocked.dan = 8;
+results.push(await playOne(SEED + 50, { opening: 'sicilian', dan: 3 }));
+results.push(await playOne(0, { daily: true }));
+if (!app.run.daily || !app.records.daily) throw new Error('daily not recorded');
 // 전설 셋을 쥐여 준 판: 상록(다시 떨구기) · 오페라(판 다시 채우기) · 불멸(끊김 넘기기)의 연출
 results.push(await playOne(SEED + 100, {
   inject: (run) => {
@@ -208,7 +229,7 @@ pump(30);
 click('next');
 
 seen();
-const need = ['title', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend'];
+const need = ['title', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records'];
 const missing = need.filter((n) => !visited.has(n));
 const ms = app.stats.drawMs.slice().sort((a, b) => a - b);
 const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;

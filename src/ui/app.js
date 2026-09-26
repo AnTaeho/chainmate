@@ -7,6 +7,7 @@ import { UI, tooltip } from './ui.js';
 import { miniShard } from './parts.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
+import { loadRecords, observe, finishRun, noteMove, dailySeed, today } from './records.js';
 import { SCREENS } from './screens/index.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -34,6 +35,26 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
 
   app.speed = () => app.settings.speed || 1;
+  app.records = loadRecords(store);
+  app.fresh = [];   // 이번 판에 새로 채운 도감 칸
+  app.saveRecords = () => store.set(KEYS.records, app.records);
+  app.noteMove = (score, steps) => {
+    if (!app.run) return false;
+    const best = noteMove(app.records, score, steps, app.run.ante);
+    if (best) app.saveRecords();
+    return best;
+  };
+  // 판이 끝나면 한 번: 기록 · 해금. 결과 화면이 부른다.
+  app.finishRun = () => {
+    const run = app.run;
+    if (!run || run.recorded) return run && run.recordedOut;
+    const out = finishRun(app.records, run, { daily: run.daily || null });
+    out.fresh = app.fresh.length;
+    run.recorded = true;
+    run.recordedOut = out;
+    app.saveRecords();
+    return out;
+  };
 
   app.go = (name, args = {}) => {
     const S = SCREENS[name];
@@ -55,9 +76,13 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   // ── 판
   app.hasSave = () => !!store.get(KEYS.run);
   app.newRun = (opts = {}) => {
-    const seed = opts.seed ?? app.nextSeed ?? ((Math.floor(now() * 7919) ^ Date.now()) >>> 0) % 2147483647;
+    const daily = opts.daily ? today() : null;
+    const seed = daily ? dailySeed(daily) : opts.seed ?? app.nextSeed ?? ((Math.floor(now() * 7919) ^ Date.now()) >>> 0) % 2147483647;
     app.nextSeed = null;
-    app.run = createRun({ seed, opening: opts.opening });
+    app.run = createRun({ seed, opening: daily ? 'standard' : opts.opening, dan: daily ? 0 : opts.dan || 0 });
+    if (daily) app.run.daily = daily;
+    app.fresh = [];
+    observe(app.records, app.run, [], app.fresh);
     app.save();
     app.goPhase();
   };
@@ -79,6 +104,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.cmd = (cmd) => {
     const ev = applyRun(app.run, cmd);
     app.save();
+    const before = app.fresh.length;
+    observe(app.records, app.run, ev, app.fresh);
+    if (app.fresh.length !== before || ev.some((e) => e.type === 'win' || e.type === 'grade' || e.type === 'legend')) app.saveRecords();
     if (app.onCommand) app.onCommand(cmd, ev);
     return ev;
   };

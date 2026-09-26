@@ -315,6 +315,7 @@ export class BattleScreen {
         v.score = from + e.score;
         v.count = null;
         this.lastEnd = { value: e.value, mult: e.mult, score: e.score, reason: e.reason, steps: v.chain ? v.chain.steps.slice() : [] };
+        if (e.score > 0 && app.noteMove(e.score, this.lastEnd.steps) && app.records.runs + app.records.wins > 0) app.toast('최고 한 수', PAL.gold);
         v.gather = null;
         v.chain = null;
         v.cut = null;

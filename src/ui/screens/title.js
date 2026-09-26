@@ -49,14 +49,16 @@ export class TitleScreen {
     const has = app.hasSave();
     const items = [];
     if (has) items.push(['title:continue', '이어 하기', () => app.continueRun(), 'gold']);
-    items.push(['title:new', '새 판', () => app.newRun(), has ? 'plain' : 'gold']);
-    if (app.extraTitleItems) items.push(...app.extraTitleItems());
+    items.push(['title:new', '새 판', () => app.go('setup'), has ? 'plain' : 'gold']);
+    items.push(['title:daily', '오늘의 대국', () => app.newRun({ daily: true }), 'plain']);
+    items.push(['title:codex', '도감', () => app.go('codex'), 'plain']);
+    items.push(['title:records', '기록', () => app.go('records'), 'plain']);
     items.push(['title:settings', '설정', () => app.openOverlay('settings'), 'plain']);
-    const bw = 120, bh = 18, x = (W - bw) / 2;
-    items.forEach(([id, label, fn, tone], i) => button(ctx, ui, id, x, 128 + i * 24, bw, bh, label, { onClick: fn, tone }));
+    const bw = 120, bh = 16, x = (W - bw) / 2;
+    items.forEach(([id, label, fn, tone], i) => button(ctx, ui, id, x, 116 + i * 21, bw, bh, label, { onClick: fn, tone }));
     rect(ctx, 0, H - 1, W, 1, PAL.feltDk);
   }
   key(k) {
-    if (k === 'Enter' || k === ' ') { if (!this.app.continueRun()) this.app.newRun(); }
+    if (k === 'Enter' || k === ' ') { if (!this.app.continueRun()) this.app.go('setup'); }
   }
 }
