@@ -120,10 +120,12 @@ for (const [id, scene, score, extra = {}, money, more] of CASES) {
   });
 }
 
-test('격언 32종 모두 장면 검사가 있다', () => {
-  assert.equal(MAXIMS.length, 32);
+test('격언 40종 모두 장면 검사가 있다', () => {
+  assert.equal(MAXIMS.length, 40);
   const covered = new Set(CASES.map((c) => c[0]));
   for (const id of ['sacrifice', 'back_rank_dream', 'memory', 'collector', 'ivory_tower', 'kings_neck', 'shadow_reading']) covered.add(id);
+  // 밤샘 D-8의 여덟은 test/newmaxims.test.js
+  for (const id of ['light_step', 'queen_hunt', 'bare_board', 'homecoming', 'collector_forms', 'reply_master', 'promotion_road', 'reinforce_hunt']) covered.add(id);
   for (const m of MAXIMS) assert.ok(covered.has(m.id), m.id);
   for (const m of MAXIMS) {
     assert.ok(['common', 'uncommon', 'rare'].includes(m.rarity), m.id);

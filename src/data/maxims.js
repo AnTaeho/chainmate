@@ -160,4 +160,32 @@ maxim('collector', '기보 수집가', '기보를 쓸 때마다 연쇄 +1씩 쌓
   },
 });
 
+// ── 밤샘 D-8: 여덟 더(뿌리의 동사마다 하나 이상)
+maxim('light_step', '가벼운 발', '폰이나 나이트로 떨군 사슬 연쇄 +3', '떨구기', 'common', 4, {
+  onChainEnd(ctx) { if (ctx.chain.dropType === 'P' || ctx.chain.dropType === 'N') ctx.addMult(3); },
+});
+maxim('queen_hunt', '퀸 사냥', '퀸을 먹을 때마다 값 +60', '먹기', 'common', 4, {
+  onCapture(ctx) { if (ctx.event.piece === 'Q') ctx.addValue(60); },
+});
+maxim('bare_board', '빈 판', '적이 여덟 이하로 남으면 사슬 끝 연쇄 ×1.5', '먹기', 'uncommon', 6, {
+  onChainEnd(ctx) { if (ctx.t.board.filter((c) => c && !c.mine).length <= 8) ctx.mulMult(1.5); },
+});
+maxim('homecoming', '되돌이', '떨군 모습으로 다시 갈아입으면 연쇄 ×2(사슬마다 한 번)', '갈아입기', 'uncommon', 5, {
+  onTransform(ctx) {
+    if (ctx.event.to === ctx.chain.dropType && !ctx.flags.homecoming) { ctx.flags.homecoming = true; ctx.mulMult(2); }
+  },
+});
+maxim('collector_forms', '모습 모으기', '한 사슬에서 처음 되는 모습마다 값 +20', '갈아입기', 'common', 4, {
+  onTransform(ctx) { if (!ctx.chain.forms.includes(ctx.event.to)) ctx.addValue(20); },
+});
+maxim('reply_master', '응수의 달인', '응수로 먹을 때마다 연쇄 +2', '응수', 'uncommon', 5, {
+  onCapture(ctx) { if (ctx.event.forced) ctx.addMult(2); },
+});
+maxim('promotion_road', '승급의 길', '승급할 때마다 값 +80', '승급', 'common', 4, {
+  onPromote(ctx) { ctx.addValue(80); },
+});
+maxim('reinforce_hunt', '증원 사냥', '증원으로 들어온 적을 먹을 때마다 연쇄 +2', '증원', 'common', 3, {
+  onCapture(ctx) { if (ctx.event.born >= 0) ctx.addMult(2); },
+});
+
 export const MAXIM_BY_ID = Object.fromEntries(MAXIMS.map((m) => [m.id, m]));
