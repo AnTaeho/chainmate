@@ -468,7 +468,9 @@ export class BattleScreen {
     this.app.shake({ '!': 1, '!!': 2, '!!!': 3, '∞': 4 }[e.mark] || 1, 0.25);
   }
 
+  pointerDown() { this.idleT = 0; }
   update(dt) {
+    this.idleT = (this.idleT || 0) + dt;
     const sp = this.app.speed() * (this.fast ? 5 : 1);
     this.seq.update(dt * sp);
     if (this.glow && this.glow.fading) { this.glow.fade += dt * this.app.speed(); if (this.glow.fade > 0.6) this.glow = null; }
@@ -699,7 +701,9 @@ export class BattleScreen {
       ui.region(id, x, y - 4, w, 40, { onClick: () => this.toggle(i), tip: p.eng ? () => pieceTip(p) : null });
       const hov = ui.isHover(id);
       const usable = live && live.status === 'play' && !this.busy;
-      pieceCard(ctx, p, x, y, w, 36, { lift: selected ? 4 : hov && usable ? 1 : 0, selected, hover: hov, dim: !usable });
+      // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)
+      const nudge = usable && !this.sel.length && this.idleT > 2.5 && Math.floor(app.time * 3) % v.hand.length === i ? 2 : 0;
+      pieceCard(ctx, p, x, y, w, 36, { lift: selected ? 4 : hov && usable ? 1 : nudge, selected, hover: hov || nudge > 0, dim: !usable });
     });
   }
 
@@ -736,6 +740,7 @@ export class BattleScreen {
 
   key(k) {
     const b = this.app.run.battle;
+    this.idleT = 0;
     if (k === 'Escape') {
       if (this.sel.length) { this.sel = []; this.targets = null; return; }
       this.app.openOverlay('pause');
