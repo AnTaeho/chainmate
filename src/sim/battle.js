@@ -1,9 +1,9 @@
 // 대국 하나: 손 · 주머니 · 수 · 무르기 · 증원 · 승패.
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 apply(b, cmd) 하나뿐.
-//   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'discard', handIndices }
+//   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }
 import { createRng, fork, next, shuffle } from './rng.js';
 import { dropSquares, fileOf, rankOf, reach } from './board.js';
-import { startChain, chainCapture, chainCaptures, boardOpts } from './chain.js';
+import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts } from './chain.js';
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js';
 
@@ -95,7 +95,15 @@ function draw(b) {
 
 const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null });
 
-export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [] } = {}) {
+// 황금 기물: 대국 시작 판에서 킹이 아닌 적 하나가 이 확률로 금빛(HOOKS 「드문 것들의 사다리」 대국당 ~4%).
+// 먹으면 값을 한 번 더 받고(chain.js), 판(런)이 대국 뒤 금빛 꾸러미와 조각 기회로 바꾼다.
+export const GOLDEN_CHANCE = 0.04;
+// 목표를 넘긴 비율의 층(HOOKS 「넘친 만큼 축하」). 넘는 순간 「overflow」 이벤트.
+export const OVERFLOW_TIERS = [1, 2, 5, 10];
+export const overflowTier = (score, target) => (target ? OVERFLOW_TIERS.reduce((a, x) => (score >= x * target ? x : a), 0) : 0);
+
+// golden: null이면 GOLDEN_CHANCE로 굴린다(시드의 'gold' 하위 스트림), true/false로 강제.
+export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [], golden = null } = {}) {
   const root = createRng(seed);
   const b = {
     v: 1,
@@ -118,6 +126,8 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     shattered: [],     // 깨진 기물 id(각인 「유리」). 판(런)이 주머니에서 뺀다
     revealed: [],      // 명인 「안개」로 드러난 칸
     hints: {},         // 화면용 표시(격언 「왕의 목」: openKings)
+    golden: 0,         // 이번 대국에서 먹은 황금 기물 수
+    overflow: 0,       // 목표를 넘긴 층(0 · 1 · 2 · 5 · 10)
   };
   runHook(b, 'onBattleStart', {}, []);
   b.movesLeft = b.rules.moves;
@@ -128,6 +138,12 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
   for (let i = 0; i < 100; i++) {
     b.board = generateBoard(b);
     if (hasLegalDrop(b)) break;
+  }
+  const gr = fork(root, 'gold');
+  if (golden ?? next(gr) < GOLDEN_CHANCE) {
+    const cand = [];
+    b.board.forEach((c, sq) => { if (c && c.t !== 'K') cand.push(sq); });
+    if (cand.length) b.board[cand[Math.floor(next(gr) * cand.length)]].gold = true;
   }
   telegraph(b);
   refreshHints(b);
@@ -152,7 +168,10 @@ export function hasLegalDrop(b) {
 }
 
 export function legalCommands(b) {
-  if (b.status === 'chain') return chainCaptures(b).map((sq) => ({ type: 'capture', sq }));
+  if (b.status === 'chain') {
+    if (b.chain.awaiting) return chainRedrops(b).map((sq) => ({ type: 'redrop', sq }));
+    return chainCaptures(b).map((sq) => ({ type: 'capture', sq }));
+  }
   if (b.status !== 'play') return [];
   const out = [];
   b.hand.forEach((p, handIndex) => {
@@ -194,6 +213,14 @@ export function apply(b, cmd) {
       else refreshHints(b);
       break;
     }
+    case 'redrop': {
+      if (b.status !== 'chain' || !b.chain.awaiting) throw new Error('not expecting a redrop');
+      events.push(...chainRedrop(b, cmd.sq));
+      reveal(b);
+      if (b.chain.done) endMove(b, events);
+      else refreshHints(b);
+      break;
+    }
     case 'discard': {
       if (b.status !== 'play') throw new Error('not expecting a discard');
       if (b.discardsLeft <= 0) throw new Error('no discards left');
@@ -218,7 +245,14 @@ export function apply(b, cmd) {
 
 function endMove(b, events) {
   const c = b.chain;
+  const before = b.score;
   b.score += c.score;
+  if (b.target) {
+    for (const tier of OVERFLOW_TIERS) {
+      if (before < tier * b.target && b.score >= tier * b.target) events.push({ type: 'overflow', tier, score: b.score, target: b.target });
+    }
+    b.overflow = overflowTier(b.score, b.target);
+  }
   b.money += c.money || 0;
   b.movesLeft--;
   b.movesUsed++;
@@ -229,10 +263,8 @@ function endMove(b, events) {
     b.deckSize--;
     events.push({ type: 'shatter', piece: b.chainPiece.t, id: b.chainPiece.id });
   } else b.used.push(b.chainPiece);
-  b.history.push({
-    piece: c.dropType, sq: c.dropSq, value: c.value, mult: c.mult, score: c.score, reason: c.reason, money: c.money || 0,
-    captures: c.captures.length, transforms: c.transforms, promotions: c.promotions, forced: c.forcedReplies,
-  });
+  b.history.push(chainSummary(c, b.movesUsed - 1));
+  b.golden += c.golden;
   b.chain = null;
   b.chainPiece = null;
   b.status = 'play';

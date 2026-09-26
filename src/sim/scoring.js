@@ -16,6 +16,10 @@
 //   onPromote      승급. ctx.event = { sq }
 //   onForced       응수가 걸렸을 때(이어짐). ctx.event = { sq, attackers }
 //   onCut          끊김 직전. ctx.cancelCut()을 부르면 끊김이 무시되고 응수 제한이 풀린 채 사슬이 이어진다.
+//   onMate         외통 직후(마지막 킹을 먹음). ctx.keepGoing()을 부르면 대국을 끝내는 대신 판이 다시 채워지고
+//                  내 기물은 킹 모습으로 사슬을 잇는다(전설 「오페라 대국」). ctx.event = { sq, mates }
+//   onChainStop    사슬이 멈출 때, 점수를 매기기 전(끊김 · 막힘. 외통은 빼고). ctx.event = { reason }.
+//                  ctx.redrop()을 부르면 기물을 들어 지금 모습 그대로 떨굴 칸을 다시 고른다 — 값 · 연쇄를 이어받는 두 번째 사슬(사슬당 한 번, 전설 「상록의 대국」).
 //   onChainEnd     사슬이 끝날 때(끊김 · 막힘 · 외통). ctx.event = { reason }. ×연쇄는 여기서.
 //                  ctx.chain.scoreMul(기본 1)을 곱하면 최종 점수 배율(예: 명인 「앙갚음」 0.5).
 //   onBoard        대국판이 바뀐 뒤(시작 · 먹기 · 증원). 화면용 표시를 ctx.t.hints에 적는다. 점수와 무관, 풀이기는 부르지 않는다.
@@ -32,7 +36,9 @@
 
 import { attackers } from './board.js';
 
-export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onForced', 'onCut', 'onChainEnd', 'onBoard'];
+export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onForced', 'onCut', 'onMate', 'onChainStop', 'onChainEnd', 'onBoard'];
+// ctx가 「기본 결말을 물린다」를 돌려줄 수 있는 훅: onCut(cancelCut) · onMate(keepGoing) · onChainStop(redrop)
+const CANCEL_HOOKS = new Set(['onCut', 'onMate', 'onChainStop']);
 export const KINDS = ['master', 'chart', 'engraving', 'maxim'];
 const DEFAULT_ORDER = ['master', 'chart', 'engraving', 'maxim'];
 export const KIND_ORDER = {
@@ -88,10 +94,12 @@ class Ctx {
   // 지금 sq를 노리는 적 칸(명인 「철벽」 반영)
   attackers(sq) { return attackers(this.t.board, sq, this.t.rules && this.t.rules.pawnSides ? { pawnSides: true } : {}); }
   cancelCut() { this._cancel = true; }
+  keepGoing() { this._cancel = true; }
+  redrop() { this._cancel = true; }
   emit(ev) { this._events.push({ ...ev, src: this.spec.id }); }
 }
 
-// 훅을 차례로 부른다. 돌려주는 값: allowCapture면 허용 여부, onCut이면 취소 여부, 그 밖엔 없음.
+// 훅을 차례로 부른다. 돌려주는 값: allowCapture면 허용 여부, onCut · onMate · onChainStop이면 기본 결말을 물렸나, 그 밖엔 없음.
 export function runHook(t, hook, event, events = []) {
   const list = ordered(t, hook);
   let allowed = true, cancelled = false;
@@ -103,7 +111,7 @@ export function runHook(t, hook, event, events = []) {
     if (ctx._cancel) cancelled = true;
   }
   if (hook === 'allowCapture') return allowed;
-  if (hook === 'onCut') return cancelled;
+  if (CANCEL_HOOKS.has(hook)) return cancelled;
   return undefined;
 }
 

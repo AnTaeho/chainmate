@@ -1,6 +1,6 @@
 // 지금 손으로 둘 수 있는 최선의 한 수를 끝까지 찾는다.
 // 손 기물 × 떨굴 칸 × 먹기 선택의 깊이 우선 탐색. 점수 파이프라인(조정자 포함)을 그대로 돌린다.
-import { startChain, chainCaptures, chainCapture } from './chain.js';
+import { startChain, chainCaptures, chainCapture, chainRedrops, chainRedrop, chainSummary } from './chain.js';
 import { dropSquaresFor } from './battle.js';
 import { forkSpec, forkSpecs } from './scoring.js';
 
@@ -20,36 +20,52 @@ function cloneTable(t) {
   };
 }
 
-// 결과 비교: 외통 우선(opts.preferMate), 그다음 점수, 그다음 짧은 줄.
+// 결과 비교: 외통 우선(opts.preferMate), 그다음 점수(opts.rank가 있으면 그 값), 그다음 짧은 줄.
 // preferMate: true = 외통 우선, false = 점수만, 'avoid' = 외통 줄은 다른 수가 없을 때만.
-function better(a, b, preferMate) {
+// rank(r): 줄 결과(r.h = chainSummary 꼴 요약)를 받아 비교할 수를 돌려준다(봇이 황금 기물 · 재현을 노릴 때).
+function better(a, b, preferMate, rank) {
   if (!b) return true;
   if (preferMate && a.mate !== b.mate) return preferMate === 'avoid' ? b.mate : a.mate;
-  if (a.score !== b.score) return a.score > b.score;
+  const ka = rank ? rank(a) : a.score, kb = rank ? rank(b) : b.score;
+  if (ka !== kb) return ka > kb;
   return a.line.length < b.line.length;
 }
 
-function dfs(t, stats, preferMate) {
+// 줄(line)의 원소: 수(먹을 칸) 또는 { type: 'redrop', sq }. 명령으로 바꾸려면 lineCommands.
+export const lineCommands = (line) => line.map((x) => (typeof x === 'number' ? { type: 'capture', sq: x } : x));
+
+function dfs(t, stats, preferMate, rank) {
   stats.nodes++;
   const c = t.chain;
   if (c.done) {
-    return { score: c.score, value: c.value, mult: c.mult, reason: c.reason, mate: c.reason === 'mate', line: [], captures: c.captures.length, forced: c.forcedReplies };
+    return { score: c.score, value: c.value, mult: c.mult, reason: c.reason, mate: c.reason === 'mate', line: [], captures: c.captures.length, forced: c.forcedReplies, h: chainSummary(c, t.movesUsed ?? 0) };
   }
   let best = null;
+  if (c.awaiting) {
+    for (const sq of chainRedrops(t)) {
+      const u = cloneTable(t);
+      chainRedrop(u, sq);
+      const r = dfs(u, stats, preferMate, rank);
+      r.line = [{ type: 'redrop', sq }, ...r.line];
+      if (better(r, best, preferMate, rank)) best = r;
+    }
+    return best;
+  }
   for (const sq of chainCaptures(t)) {
     const u = cloneTable(t);
     chainCapture(u, sq);
-    const r = dfs(u, stats, preferMate);
+    const r = dfs(u, stats, preferMate, rank);
     r.line = [sq, ...r.line];
-    if (better(r, best, preferMate)) best = r;
+    if (better(r, best, preferMate, rank)) best = r;
   }
   return best;
 }
 
 // 대국 b(status 'play')의 최선 수. { handIndex, sq, line:[capture sq…], score, value, mult, reason, mate, captures }
-// opts.handIndices: 이 손 칸들만 본다. opts.preferMate: true(기본) | false | 'avoid'.
+// opts.handIndices: 이 손 칸들만 본다. opts.preferMate: true(기본) | false | 'avoid'. opts.rank: 위 better 참고.
 export function bestMove(b, opts = {}) {
   const preferMate = opts.preferMate ?? true;
+  const rank = opts.rank || null;
   const stats = { nodes: 0 };
   let best = null;
   const seen = new Set();
@@ -63,9 +79,9 @@ export function bestMove(b, opts = {}) {
       const t = cloneTable({ ...b, chain: null });
       // 각인 명세는 복사해서 쓴다(탐색 중 조정자 state가 실제 손 기물에 새지 않게)
       startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng) });
-      const r = dfs(t, stats, preferMate);
+      const r = dfs(t, stats, preferMate, rank);
       if (!r) continue;
-      if (better(r, best, preferMate)) best = { ...r, handIndex, sq };
+      if (better(r, best, preferMate, rank)) best = { ...r, handIndex, sq };
     }
   }
   if (best) best.nodes = stats.nodes;

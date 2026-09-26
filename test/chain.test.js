@@ -26,7 +26,8 @@ test('장면: 응수 · 승급 뒤 응수 · 외통, 값 340 × 연쇄 6 = 2040'
   assert.deepEqual(names(chainCaptures(t)), ['f8', 'g7']);
 
   ev = chainCapture(t, S('g7'));
-  assert.deepEqual(types(ev), ['capture', 'transform', 'forced']);
+  assert.deepEqual(types(ev), ['capture', 'grade', 'transform', 'forced'], '셋째 먹기에 평가 「!」');
+  assert.deepEqual(ev.find((e) => e.type === 'grade'), { type: 'grade', n: 3, mark: '!' });
   assert.deepEqual(names(t.chain.forced), ['f8']);
 
   ev = chainCapture(t, S('f8'));
@@ -36,7 +37,8 @@ test('장면: 응수 · 승급 뒤 응수 · 외통, 값 340 × 연쇄 6 = 2040'
   assert.deepEqual(names(chainCaptures(t)), ['a8'], '퀸으로는 f3도 닿지만 응수가 먼저');
 
   ev = chainCapture(t, S('a8'));
-  assert.deepEqual(types(ev), ['capture', 'transform']);
+  assert.deepEqual(types(ev), ['capture', 'grade', 'transform'], '다섯째 먹기에 「!!」');
+  assert.equal(ev[1].mark, '!!');
   assert.deepEqual(names(chainCaptures(t)), ['a4'], '지키던 룩이 사라져 킹을 먹을 수 있다');
 
   ev = chainCapture(t, S('a4'));
