@@ -45,14 +45,23 @@ const bagTip = (b) => {
   return tipLines('주머니', parts.length ? parts.join(' · ') : '비었다');
 };
 
+// 대국이 어디서 오나: 판(런)의 대국(기본) · 첫 수업 · 타이틀 시연. 화면은 같은 규칙 · 같은 연출을 쓴다.
+//   live()   지금 둘 수 있는 대국(끝나 판에서 빠졌으면 null)
+//   cmd(c)   명령 하나 → 사건 배열
+//   run      판(런) 상태(없으면 상금 · 격언 칸 · 막간을 그리지 않는다)
+export const runSource = (app) => ({ kind: 'run', live: () => app.run.battle, cmd: (c) => app.cmd(c), get run() { return app.run; } });
+
 export class BattleScreen {
-  constructor(app, { events = [] } = {}) {
+  constructor(app, { events = [], source = null, quiet = false, fx = null } = {}) {
     this.app = app;
+    this.src = source || runSource(app);
+    this.quiet = quiet;            // 소리 · 흔들림 · 알림 없음(타이틀 시연)
+    this.fx = fx || app.fx;
     this.seq = new Seq();
     this.sel = [];
     this.view = {};
     this.runEvents = [];
-    this.bRef = app.run.battle;
+    this.bRef = this.src.live();
     this.drops = null;
     this.fast = false;
     this.banner = null;
@@ -62,11 +71,17 @@ export class BattleScreen {
     const info = events.find((e) => e.type === 'battleStart');
     const b = this.bRef;
     const m = b.mods.find((s) => MASTER_BY_ID[s.id]);
-    if (m) { this.banner = { title: `명인 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: 2.6, col: PAL.red, master: m.id }; app.sfx('start'); }
-    else if (info) this.banner = { title: `${app.run.ante}관 · ${KIND_SHORT[b.kind]} 대국`, sub: `목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold };
+    if (m) { this.banner = { title: `명인 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: 2.6, col: PAL.red, master: m.id }; this.snd('start'); }
+    else if (info && this.run) this.banner = { title: `${this.run.ante}관 · ${KIND_SHORT[b.kind]} 대국`, sub: `목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold };
   }
 
-  get b() { return this.app.run.battle || this.bRef; }
+  get run() { return this.src.run; }
+  live() { return this.src.live(); }
+  get b() { return this.live() || this.bRef; }
+  snd(name, arg) { if (!this.quiet) this.app.sfx(name, arg); }
+  shake(px, dur) { if (!this.quiet) this.app.shake(px, dur); }
+  hitstop(sec) { if (!this.quiet) this.app.hitstop(sec); }
+  toast(msg, col, dur) { if (!this.quiet) this.app.toast(msg, col, dur); }
   get busy() { return this.seq.busy; }
 
   // 규칙 상태에서 보이는 판을 다시 읽는다(연출이 끝날 때마다)
@@ -98,7 +113,7 @@ export class BattleScreen {
   // 지금 누를 수 있는 칸(판이 바뀔 때만 다시 잰다)
   clickable() {
     if (this.busy) return { kind: null, list: [] };
-    const b = this.app.run.battle;
+    const b = this.live();
     if (!b) return { kind: null, list: [] };
     if (!this.targets) {
       if (b.status === 'chain') this.targets = b.chain.awaiting ? { kind: 'redrop', list: chainRedrops(b) } : { kind: 'capture', list: chainCaptures(b) };
@@ -112,16 +127,16 @@ export class BattleScreen {
   }
 
   toggle(i) {
-    const b = this.app.run.battle;
+    const b = this.live();
     if (this.busy || !b || b.status !== 'play' || i >= b.hand.length) return;
     this.sel = this.sel.includes(i) ? this.sel.filter((x) => x !== i) : [...this.sel, i].sort((x, y) => x - y);
     this.targets = null;
-    this.app.sfx('pick');
+    this.snd('pick');
   }
 
   clickSq(sq) {
     if (this.busy) { this.fast = true; return; }
-    const b = this.app.run.battle;
+    const b = this.live();
     if (!b) return;
     const t = this.clickable();
     if (t.list.includes(sq)) {
@@ -134,7 +149,7 @@ export class BattleScreen {
   }
 
   discard() {
-    const b = this.app.run.battle;
+    const b = this.live();
     if (this.busy || !b || b.status !== 'play' || !this.sel.length || b.discardsLeft <= 0 || !b.bag.length) return;
     const idx = this.sel;
     this.sel = [];
@@ -142,13 +157,13 @@ export class BattleScreen {
   }
 
   send(cmd) {
-    const bRef = this.app.run.battle;
+    const bRef = this.live();
     this.bRef = bRef;
     const v = this.view;
-    const run = this.app.run;
-    if (cmd.type === 'drop') this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
-    const events = this.app.cmd(cmd);
-    this.record(events, run);
+    const run = this.run;
+    if (cmd.type === 'drop' && run) this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
+    const events = this.src.cmd(cmd);
+    if (run) this.record(events, run);
     const post = clone(bRef.board);
     for (const e of events) if (e.type === 'reinforce') post[e.sq] = null;
     if (cmd.type === 'drop') v.hand.splice(cmd.handIndex, 1);
@@ -200,7 +215,7 @@ export class BattleScreen {
             v.board[e.sq] = { t: e.piece, mine: true };
             v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], forced: null, awaiting: null, cut: false };
             v.dropIn = { sq: e.sq, p: 0 };
-            app.sfx('drop');
+            this.snd('drop');
           },
           tick: (p) => { v.dropIn.p = p; },
           done: () => { v.dropIn = null; },
@@ -210,7 +225,7 @@ export class BattleScreen {
             v.board[e.sq] = { t: e.piece, mine: true };
             v.chain.sq = e.sq; v.chain.awaiting = null; v.chain.path.push(e.sq);
             v.dropIn = { sq: e.sq, p: 0 };
-            app.sfx('drop');
+            this.snd('drop');
           },
           tick: (p) => { v.dropIn.p = p; },
           done: () => { v.dropIn = null; },
@@ -233,11 +248,11 @@ export class BattleScreen {
             this.shatter(e.to, victim ? victim.t : e.piece, victim && victim.gold ? 'g' : 'b');
             this.flash(e.to, PAL.white);
             this.pop(`+${e.value}`, 'value');
-            app.sfx('capture', c.path.length - 1);
-            app.shake(1, 0.08);
+            this.snd('capture', c.path.length - 1);
+            this.shake(1, 0.08);
           },
         }); break;
-        case 'golden': add(0.12, { begin: () => { this.burst(e.sq, PAL.gold, 20); this.dust(e.sq, 26); app.sfx('golden'); app.shake(1, 0.1); } }); break;
+        case 'golden': add(0.12, { begin: () => { this.burst(e.sq, PAL.gold, 20); this.dust(e.sq, 26); this.snd('golden'); this.shake(1, 0.1); } }); break;
         case 'scoreGroup': add(0.05 + 0.03 * Math.min(3, e.list.length), {
           begin: () => {
             const c = v.chain;
@@ -251,32 +266,32 @@ export class BattleScreen {
             if (dv) this.pop(`+${short(dv)}`, 'value');
             if (dm) this.pop(`+${short(dm)}`, 'mult');
             if (xm !== 1) this.pop(`×${Number(xm.toFixed(2))}`, 'mult', dm ? 10 : 0);
-            app.sfx('tick', c.mult);
+            this.snd('tick', c.mult);
           },
         }); break;
-        case 'money': if (e.src !== 'chest') add(0.05, { begin: () => { this.pop(`$${e.money}`, 'money'); app.sfx('coin'); } }); break;
+        case 'money': if (e.src !== 'chest') add(0.05, { begin: () => { this.pop(`$${e.money}`, 'money'); this.snd('coin'); } }); break;
         case 'transform': add(0.1, {
-          begin: () => { v.flip = { sq: e.sq, p: 0, from: e.from, to: e.to }; app.sfx('transform'); },
+          begin: () => { v.flip = { sq: e.sq, p: 0, from: e.from, to: e.to }; this.snd('transform'); },
           tick: (p) => { v.flip.p = p; if (p >= 0.5 && v.chain) { v.chain.form = e.to; v.chain.steps[v.chain.steps.length - 1] = e.to; if (v.board[e.sq] && v.board[e.sq].mine) v.board[e.sq].t = e.to; } },
           done: () => { v.flip = null; this.sparkle(e.sq, PAL.silver, 6); },
         }); break;
         case 'promote': add(0.3, {
-          begin: () => { v.lift = { sq: e.sq, p: 0 }; app.sfx('promote'); },
+          begin: () => { v.lift = { sq: e.sq, p: 0 }; this.snd('promote'); },
           tick: (p) => { v.lift.p = p; if (p >= 0.5 && v.chain) { v.chain.form = 'Q'; v.chain.steps[v.chain.steps.length - 1] = 'Q'; if (v.board[e.sq]) v.board[e.sq].t = 'Q'; } },
           done: () => { v.lift = null; this.sparkle(e.sq, PAL.gold, 12); this.word('승급', PAL.gold); },
         }); break;
         case 'grade': add(0.2, { begin: () => this.gradeStamp(e) }); break;
-        case 'forced': add(0.1, { begin: () => { if (v.chain) v.chain.forced = e.attackers.slice(); app.sfx('forced'); } }); break;
+        case 'forced': add(0.1, { begin: () => { if (v.chain) v.chain.forced = e.attackers.slice(); this.snd('forced'); } }); break;
         case 'cutIgnored': add(0.2, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('넘겼다', PAL.silver); } }); break;
         case 'cut':
-          add(0.15, { begin: () => { v.cut = { sq: e.sq, attackers: e.attackers, p: 0 }; if (v.chain) v.chain.cut = true; app.sfx('cut'); app.hitstop(0.12); app.shake(2, 0.15); } });
+          add(0.15, { begin: () => { v.cut = { sq: e.sq, attackers: e.attackers, p: 0 }; if (v.chain) v.chain.cut = true; this.snd('cut'); this.hitstop(0.12); this.shake(2, 0.15); } });
           add(0.3, { tick: (p) => { v.cut.p = p; } });
           break;
         case 'mate': add(0.5, {
-          begin: () => { this.topple(e.sq); this.word('외통', PAL.gold, 1.6, 4); app.sfx('mate'); app.hitstop(0.25); app.shake(3, 0.3); },
+          begin: () => { this.topple(e.sq); this.word('외통', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
         }); break;
         case 'refill': add(0.35, {
-          begin: () => { this.word('판이 다시 채워진다', PAL.gold, 1.1, 1); app.sfx('refill'); },
+          begin: () => { this.word('판이 다시 채워진다', PAL.gold, 1.1, 1); this.snd('refill'); },
           done: () => { v.board = clone(post); if (v.chain) { v.chain.path = [e.sq]; } },
         }); break;
         case 'redropReady': add(0.15, {
@@ -288,24 +303,24 @@ export class BattleScreen {
             const big = { 1: 1, 2: 2, 5: 3, 10: 4 }[e.tier] || 1;
             this.word(e.tier === 1 ? '목표 달성' : `목표 ×${e.tier}`, e.tier >= 5 ? PAL.red : PAL.gold, 1 + big * 0.2, Math.min(3, big));
             this.ring = { t: 0, life: 0.5 + big * 0.15, col: e.tier >= 10 ? PAL.white : e.tier >= 5 ? PAL.red : PAL.gold };
-            app.sfx('overflow', e.tier); app.shake(big, 0.2 + big * 0.05);
+            this.snd('overflow', e.tier); this.shake(big, 0.2 + big * 0.05);
           },
         }); break;
-        case 'shatter': add(0.2, { begin: () => { app.toast(`유리 각인 ${PIECE_NAME[e.piece]}가 깨졌다`, PAL.sky); app.sfx('glass'); } }); break;
+        case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${PIECE_NAME[e.piece]}가 깨졌다`, PAL.sky); this.snd('glass'); } }); break;
         case 'reinforce': add(0.1, {
-          begin: () => { v.board[e.sq] = post[e.sq] || { t: e.piece, id: -1 }; if (!post[e.sq]) v.board[e.sq] = { t: e.piece, id: -1 }; this.flash(e.sq, PAL.dim); app.sfx('reinforce'); },
+          begin: () => { v.board[e.sq] = post[e.sq] || { t: e.piece, id: -1 }; if (!post[e.sq]) v.board[e.sq] = { t: e.piece, id: -1 }; this.flash(e.sq, PAL.dim); this.snd('reinforce'); },
         }); break;
         case 'regrip': add(0.45, {
-          begin: () => { this.word('손을 새로 쥔다', PAL.gold, 1.2, 1); app.sfx('discard'); },
+          begin: () => { this.word('손을 새로 쥔다', PAL.gold, 1.2, 1); this.snd('discard'); },
           done: () => { const b = this.bRef; v.hand = clone(b.hand); v.bag = b.bag.length; },
         }); break;
         case 'discard': add(0.22, {
-          begin: () => { app.sfx('discard'); },
+          begin: () => { this.snd('discard'); },
           done: () => { const b = this.bRef; v.hand = clone(b.hand); v.discardsLeft = b.discardsLeft; v.bag = b.bag.length; },
         }); break;
-        case 'win': add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); app.sfx('win'); } }); break;
-        case 'lose': add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); app.sfx('lose'); } }); break;
-        case 'fragment': add(0.05, { begin: () => { app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); app.sfx('fragment'); app.flyShard(BX + 112, BY + 112, RX + RW - 30, 10); } }); this.runEvents.push(e); break;
+        case 'win': add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); } }); break;
+        case 'lose': add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
+        case 'fragment': add(0.05, { begin: () => { this.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); this.snd('fragment'); this.app.flyShard(BX + 112, BY + 112, RX + RW - 30, 10); } }); this.runEvents.push(e); break;
         default: this.runEvents.push(e);
       }
     }
@@ -320,16 +335,16 @@ export class BattleScreen {
         if (v.chain) { v.chain.value = e.value; v.chain.mult = e.mult; }
         v.gather = { p: 0, value: e.value, mult: e.mult, score: e.score };
         if (v.chain && v.board[v.chain.sq] && v.board[v.chain.sq].mine) v.board[v.chain.sq] = null;
-        app.sfx('gather');
+        this.snd('gather');
       },
       tick: (p) => { v.gather.p = ease.in(p); },
     });
     add(0.2, {
       begin: () => {
-        v.gather.burst = true; app.sfx('boom', e.score); app.shake(e.score >= v.target ? 2 : 1, 0.12);
+        v.gather.burst = true; this.snd('boom', e.score); this.shake(e.score >= v.target ? 2 : 1, 0.12);
         const parts = [];
         for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; parts.push({ x: LX + 56, y: 109, vx: Math.cos(a) * 90, vy: Math.sin(a) * 50 }); }
-        app.fx.add({
+        this.fx.add({
           life: 0.4, layer: 1, parts,
           update: (dt, f) => { for (const p of f.parts) { p.x += p.vx * dt; p.y += p.vy * dt; } },
           draw: (c, f) => { c.globalAlpha = 1 - f.t / f.life; for (const p of f.parts) rect(c, p.x, p.y, 2, 2, PAL.goldHi); c.globalAlpha = 1; },
@@ -338,13 +353,13 @@ export class BattleScreen {
     });
     const from = v.score;
     add(0.3, {
-      begin: () => { v.count = { from, to: from + e.score, p: 0 }; app.sfx('count'); },
+      begin: () => { v.count = { from, to: from + e.score, p: 0 }; this.snd('count'); },
       tick: (p) => { v.count.p = ease.out(p); },
       done: () => {
         v.score = from + e.score;
         v.count = null;
         this.lastEnd = { value: e.value, mult: e.mult, score: e.score, reason: e.reason, steps: v.chain ? v.chain.steps.slice() : [] };
-        if (e.score > 0 && app.noteMove(e.score, this.lastEnd.steps) && app.records.runs + app.records.wins > 0) app.toast('최고 한 수', PAL.gold);
+        if (this.run && e.score > 0 && app.noteMove(e.score, this.lastEnd.steps) && app.records.runs + app.records.wins > 0) this.toast('최고 한 수', PAL.gold);
         v.gather = null;
         v.chain = null;
         v.cut = null;
@@ -357,6 +372,7 @@ export class BattleScreen {
   afterSeq() {
     this.fast = false;
     const app = this.app;
+    if (this.src.after) { this.sync(); this.src.after(this); return; }
     if (app.run.phase === 'battle') { this.sync(); return; }
     // 대국이 끝났다: 막간(보상 · 상자 · 전설) 뒤 국면 화면으로
     const ev = this.runEvents;
@@ -382,7 +398,7 @@ export class BattleScreen {
       const c = chips[Math.floor(rnd() * chips.length)];
       parts.push({ x: x + 6 + c.x, y: y + 3 + c.y, vx: (c.x - 8) * 6 + (rnd() - 0.5) * 30, vy: -40 - rnd() * 50, col: c.col, s: rnd() < 0.3 ? 2 : 1 });
     }
-    this.app.fx.add({
+    this.fx.add({
       life: 0.7, layer: 1, parts,
       update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt; } },
       draw: (ctx, e) => { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life); for (const p of e.parts) rect(ctx, p.x, p.y, p.s, p.s, p.col); ctx.globalAlpha = 1; },
@@ -392,7 +408,7 @@ export class BattleScreen {
     const { x, y } = this.center(sq);
     const parts = [];
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; parts.push({ x, y, vx: Math.cos(a) * 70, vy: Math.sin(a) * 70 }); }
-    this.app.fx.add({
+    this.fx.add({
       life: 0.5, layer: 1, parts,
       update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; } },
       draw: (ctx, e) => { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life); for (const p of e.parts) rect(ctx, p.x, p.y, 2, 2, col); ctx.globalAlpha = 1; },
@@ -402,22 +418,22 @@ export class BattleScreen {
     const { x, y } = sqXY(sq);
     const pts = [];
     for (let i = 0; i < n; i++) pts.push({ x: x + 3 + ((i * 7 + sq * 3) % 22), y: y + 2 + ((i * 11 + sq) % 22) });
-    this.app.fx.add({
+    this.fx.add({
       life: 0.35, layer: 1,
       draw: (ctx, e) => { const k = e.t / e.life; ctx.globalAlpha = 1 - k; for (const p of pts) { rect(ctx, p.x, p.y - k * 6, 1, 1, col); rect(ctx, p.x - 1, p.y - k * 6, 3, 1, col); } ctx.globalAlpha = 1; },
     });
   }
   flash(sq, col) {
     const { x, y } = sqXY(sq);
-    this.app.fx.add({ life: 0.15, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = 0.6 * (1 - e.t / e.life); rect(ctx, x, y, S, S, col); ctx.globalAlpha = 1; } });
+    this.fx.add({ life: 0.15, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = 0.6 * (1 - e.t / e.life); rect(ctx, x, y, S, S, col); ctx.globalAlpha = 1; } });
   }
   pop(s, where, dy = 0) {
     const pos = where === 'value' ? { x: LX + 24, y: 96 - dy } : where === 'mult' ? { x: LX + 88, y: 96 - dy } : { x: LX + LW - 20, y: 210 };
     const col = where === 'value' ? PAL.val : where === 'mult' ? PAL.gold : PAL.gold;
-    this.app.fx.add({ life: 0.6, layer: 1, draw: (ctx, e) => { const k = e.t / e.life; text(ctx, s, pos.x, pos.y - 6 - k * 10, col, { align: 'center', bold: true, alpha: 1 - k * k, shadow: PAL.shadow }); } });
+    this.fx.add({ life: 0.6, layer: 1, draw: (ctx, e) => { const k = e.t / e.life; text(ctx, s, pos.x, pos.y - 6 - k * 10, col, { align: 'center', bold: true, alpha: 1 - k * k, shadow: PAL.shadow }); } });
   }
   word(s, col, life = 1, scale = 2) {
-    this.app.fx.add({
+    this.fx.add({
       life, layer: 1,
       draw: (ctx, e) => {
         const k = e.t / e.life;
@@ -429,7 +445,7 @@ export class BattleScreen {
   // 먹힌 킹이 천천히 쓰러진다
   topple(sq) {
     const { x, y } = sqXY(sq);
-    this.app.fx.add({
+    this.fx.add({
       life: 1.0, layer: 1,
       draw: (ctx, e) => {
         const k = Math.min(1, e.t / 0.55);
@@ -450,7 +466,7 @@ export class BattleScreen {
     const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
     const parts = [];
     for (let i = 0; i < n; i++) parts.push({ x: x + (rnd() - 0.5) * 20, y: y + (rnd() - 0.5) * 10, vx: (rnd() - 0.5) * 60, vy: -30 - rnd() * 70, c: rnd() < 0.3 ? PAL.goldHi : PAL.gold });
-    this.app.fx.add({
+    this.fx.add({
       life: 1.1, layer: 1, parts,
       update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt; p.vx *= 0.97; } },
       draw: (ctx, e) => { for (const p of e.parts) { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life) * (Math.floor(e.t * 20 + p.x) % 3 ? 1 : 0.4); rect(ctx, p.x, p.y, 1, 1, p.c); } ctx.globalAlpha = 1; },
@@ -486,8 +502,8 @@ export class BattleScreen {
     const cols = { '!': PAL.white, '!!': PAL.gold, '!!!': PAL.red, '∞': null };
     this.stamp = { mark: e.mark, t: 0, life: 1.1, col: cols[e.mark] };
     this.glow = { mark: e.mark, fade: 0 };
-    this.app.sfx('grade', e.mark);
-    this.app.shake({ '!': 1, '!!': 2, '!!!': 3, '∞': 4 }[e.mark] || 1, 0.25);
+    this.snd('grade', e.mark);
+    this.shake({ '!': 1, '!!': 2, '!!!': 3, '∞': 4 }[e.mark] || 1, 0.25);
   }
 
   pointerDown() { this.idleT = 0; }
@@ -631,7 +647,7 @@ export class BattleScreen {
   }
 
   drawLeft(ctx, ui) {
-    const app = this.app, v = this.view, b = this.b, run = app.run;
+    const app = this.app, v = this.view, b = this.b, run = this.run;
     const master = b.mods.find((s) => MASTER_BY_ID[s.id]);
     panel(ctx, LX, 8, LW, 58);
     text(ctx, `${b.ante}관 · ${KIND_SHORT[b.kind]} 대국`, LX + 6, 12, PAL.dim);
@@ -692,9 +708,11 @@ export class BattleScreen {
     for (let i = 0; i < v.moves; i++) rect(ctx, LX + 52 + i * 14, 170, 10, 8, i < v.movesLeft ? PAL.gold : PAL.frame);
     text(ctx, '무르기', LX + 6, 186, PAL.dim);
     for (let i = 0; i < v.discards; i++) rect(ctx, LX + 52 + i * 14, 188, 10, 8, i < v.discardsLeft ? PAL.red : PAL.frame);
-    panel(ctx, LX, 212, LW, 22);
-    text(ctx, '상금', LX + 6, 217, PAL.dim);
-    text(ctx, `$${run.money}`, LX + LW - 6, 217, PAL.gold, { align: 'right', bold: true });
+    if (run) {
+      panel(ctx, LX, 212, LW, 22);
+      text(ctx, '상금', LX + 6, 217, PAL.dim);
+      text(ctx, `$${run.money}`, LX + LW - 6, 217, PAL.gold, { align: 'right', bold: true });
+    }
     panel(ctx, LX, 240, LW, 22);
     ui.region('bag', LX, 240, LW, 22, { tip: () => bagTip(this.b) });
     text(ctx, '주머니', LX + 6, 245, PAL.dim);
@@ -702,15 +720,17 @@ export class BattleScreen {
   }
 
   drawRight(ctx, ui) {
-    const app = this.app, v = this.view, b = this.b, run = app.run;
-    text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
+    const app = this.app, v = this.view, b = this.b, run = this.run;
     pauseButton(ctx, ui, app, RX + RW - 12, 6);
-    fragmentStrip(ctx, ui, run, RX + RW - 18, 8, { align: 'right' });
-    const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
-    maximColumn(ctx, ui, run, RX, 22, RW, 180, { offUids: off });
+    if (run) {
+      text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
+      fragmentStrip(ctx, ui, run, RX + RW - 18, 8, { align: 'right' });
+      const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
+      maximColumn(ctx, ui, run, RX, 22, RW, 180, { offUids: off });
+    }
     // 손
     text(ctx, '손', RX, 206, PAL.dim);
-    const live = app.run.battle;
+    const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
     button(ctx, ui, 'btn:discard', RX + RW - 62, 203, 62, 16, '무르기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
     const n = Math.max(1, v.hand.length);
@@ -761,7 +781,7 @@ export class BattleScreen {
   }
 
   key(k) {
-    const b = this.app.run.battle;
+    const b = this.live();
     this.idleT = 0;
     if (k === 'Escape') {
       if (this.sel.length) { this.sel = []; this.targets = null; return; }
