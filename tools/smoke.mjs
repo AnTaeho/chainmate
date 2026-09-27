@@ -73,6 +73,30 @@ const pvSeen = { capture: 0, drop: 0, cut: 0, kb: 0, touch: 0 };
 const tipSeen = { incoming: 0, forced: 0, path: 0 };
 const newsSeen = { battles: 0, icons: 0 };
 const objTips = { step: 0, gate: 0, highway: 0, wall: 0, gem: 0 };
+// 낱말 상자: 카드를 가리키면 옆에 낱말 상자가 1개 이상, 카드 · 말풍선을 가리지 않고 화면 안에
+const keySeen = { shop: 0, pack: 0, draft: 0, overlap: 0, off: 0, touch: 0 };
+const cross = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+function keyBoxesAt(id, kind) {
+  if (keySeen[kind] >= 30 || !hover(id)) return;
+  const r = region(id), boxes = app.keyBoxes || [];
+  if (boxes.length) keySeen[kind]++;
+  for (const b of boxes) {
+    if (cross(b, r)) keySeen.overlap++;
+    if (b.x < 0 || b.y < 0 || b.x + b.w > 480 || b.y + b.h > 270) keySeen.off++;
+  }
+}
+// 손가락: 진열 카드를 처음 누르면 사지 않고 보이기만, 한 번 더 누르면 산다
+function touchBuy(i) {
+  const it = app.run.shop.display[i], money = app.run.money;
+  app.touch = true;
+  try {
+    click(`shop:buy:${i}`);
+    if (it.sold || app.run.money !== money) throw new Error('touch: first tap on a shop card should only preview');
+    const shown = (app.keyBoxes || []).length;
+    click(`shop:buy:${i}`);
+    if (it.sold && shown) keySeen.touch++;
+  } finally { app.touch = false; }
+}
 const hoverTip = () => { const h = app.ui.hover; return !!(h && h.tip && (typeof h.tip === 'function' ? h.tip() : h.tip)); };
 const screen = () => (app.overlay ? app.overlay.name : app.screen.name);
 function idle(max = 3000) {
@@ -191,6 +215,8 @@ function shopStep() {
   for (let guard = 0; guard < 12 && app.screen.name === 'shop'; guard++) {
     const shop = run.shop;
     const i = shop.display.findIndex((it) => canBuy(run, it));
+    if (i >= 0) keyBoxesAt(`shop:buy:${i}`, 'shop');
+    if (i >= 0 && !keySeen.touch && app.screen.name === 'shop') { touchBuy(i); continue; }
     if (i >= 0 && rnd() < 0.8) { click(`shop:buy:${i}`); continue; }
     const p = shop.packs.findIndex((pk) => !pk.sold && run.money >= pk.price);
     if (p >= 0 && rnd() < 0.6) { click(`shop:pack:${p}`); return; }
@@ -228,6 +254,8 @@ function packStep() {
   let i = pack.options.findIndex((o) => o.kind !== 'maxim' || app.run.maxims.length < 5);
   if (i < 0 || rnd() < 0.15) { click('pack:skip'); return; }
   pump(60);
+  pump(40);
+  keyBoxesAt(`pack:pick:${i}`, 'pack');
   click(`pack:pick:${i}`);
   if (pack.options[i].kind === 'engraving' && app.screen.name === 'pack') {
     click(`deck:${app.run.deck[0].id}`);
@@ -271,7 +299,7 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
   while (steps++ < 4000) {
     const name = screen();
     if (name === 'result') break;
-    if (name === 'draft') { pump(40); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
+    if (name === 'draft') { pump(40); keyBoxesAt('draft:0', 'draft'); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
     if (name === 'select' && !tipSeen.path) { hover('select:path'); if (hoverTip()) tipSeen.path++; }
     if (name === 'select') { if (app.run.blind < 2 && rnd() < 0.15) click('select:skip'); else click('select:play'); pump(2); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
@@ -471,6 +499,8 @@ if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확�
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
+console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch}`);
+if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch) { console.log('낱말 상자를 보지 못했거나 카드를 가린다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }
