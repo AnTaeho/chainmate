@@ -23,6 +23,7 @@ export function emptyRecords() {
     danWins: {},
     bestEndless: 0,            // 끝없는 대국에서 닿은 가장 깊은 관
     daily: null,               // { date, ante, blind, won, score, runs }
+    lessonsDone: false,        // 첫 수업을 끝까지 두었나
   };
 }
 

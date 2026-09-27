@@ -18,10 +18,11 @@ export class RecordsScreen {
       ['열린 단', danName(r.unlocked.dan)],
       ['끝없는 대국', r.bestEndless ? `${r.bestEndless}관` : '-'],
       ['오늘의 대국', d ? `${d.won ? '이김' : `${d.ante}관`} · ${d.runs}판` : '아직'],
+      ['첫 수업', r.lessonsDone ? '끝' : '아직'],
     ];
     rows.forEach(([a, b], i) => {
-      text(ctx, a, 40, 36 + i * 17, PAL.dim);
-      text(ctx, b, 240, 36 + i * 17, PAL.ink, { align: 'right', bold: true });
+      text(ctx, a, 40, 34 + i * 16, PAL.dim);
+      text(ctx, b, 240, 34 + i * 16, PAL.ink, { align: 'right', bold: true });
     });
     // 최고 한 수
     box(ctx, 270, 40, 196, 120, PAL.feltDk, PAL.frameDk);

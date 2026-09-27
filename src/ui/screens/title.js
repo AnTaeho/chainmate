@@ -49,16 +49,19 @@ export class TitleScreen {
     const has = app.hasSave();
     const items = [];
     if (has) items.push(['title:continue', '이어 하기', () => app.continueRun(), 'gold']);
-    items.push(['title:new', '새 판', () => app.go('setup'), has ? 'plain' : 'gold']);
+    // 처음 켰으면(기록이 비었으면) 새 판은 첫 수업부터
+    const first = !app.records.lessonsDone && app.records.runs === 0;
+    items.push(['title:new', '새 판', () => (first ? app.go('lesson') : app.go('setup')), has ? 'plain' : 'gold']);
+    items.push(['title:lesson', '첫 수업', () => app.go('lesson'), 'plain']);
     items.push(['title:daily', '오늘의 대국', () => app.newRun({ daily: true }), 'plain']);
     items.push(['title:codex', '도감', () => app.go('codex'), 'plain']);
     items.push(['title:records', '기록', () => app.go('records'), 'plain']);
     items.push(['title:settings', '설정', () => app.openOverlay('settings'), 'plain']);
     const bw = 120, bh = 16, x = (W - bw) / 2;
-    items.forEach(([id, label, fn, tone], i) => button(ctx, ui, id, x, 116 + i * 21, bw, bh, label, { onClick: fn, tone }));
+    items.forEach(([id, label, fn, tone], i) => button(ctx, ui, id, x, 110 + i * 20, bw, bh, label, { onClick: fn, tone }));
     rect(ctx, 0, H - 1, W, 1, PAL.feltDk);
   }
   key(k) {
-    if (k === 'Enter' || k === ' ') { if (!this.app.continueRun()) this.app.go('setup'); }
+    if (k === 'Enter' || k === ' ') { if (!this.app.continueRun()) this.app.go(!this.app.records.lessonsDone && this.app.records.runs === 0 ? 'lesson' : 'setup'); }
   }
 }

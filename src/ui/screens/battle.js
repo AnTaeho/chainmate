@@ -141,9 +141,14 @@ export class BattleScreen {
         if (!this.drops || this.drops.i !== i) this.drops = { i, list: dropSquaresFor(b, b.hand[i]) };
         this.targets = { kind: 'drop', list: this.drops.list };
       } else this.targets = { kind: null, list: [] };
+      this.targets = this.filterTargets(this.targets, b);
     }
     return this.targets;
   }
+  // 첫 수업이 누를 곳을 좁힌다(평소 대국은 그대로)
+  filterTargets(t) { return t; }
+  // 누를 수 없는 칸을 눌렀다
+  missSq() {}
 
   // 미리 보기: 지금 겨누는 칸(마우스 · 화살표 · 첫 누르기)과 그 결과. 규칙 조회는 칸마다 한 번.
   aimSq(ui) {
@@ -195,6 +200,7 @@ export class BattleScreen {
       return;
     }
     if (b.status === 'play' && this.sel.length) { this.sel = []; this.targets = null; }
+    this.missSq(sq);
   }
 
   discard() {
@@ -319,10 +325,10 @@ export class BattleScreen {
           },
         }); break;
         case 'money': if (e.src !== 'chest') add(0.05, { begin: () => { this.pop(`$${e.money}`, 'money'); this.snd('coin'); } }); break;
-        case 'transform': add(0.1, {
-          begin: () => { v.flip = { sq: e.sq, p: 0, from: e.from, to: e.to }; this.snd('transform'); },
+        case 'transform': add(this.bigFlip ? 0.4 : 0.1, {
+          begin: () => { v.flip = { sq: e.sq, p: 0, from: e.from, to: e.to, big: this.bigFlip }; this.snd('transform'); if (this.bigFlip) { this.hitstop(0.2); this.shake(2, 0.15); } },
           tick: (p) => { v.flip.p = p; if (p >= 0.5 && v.chain) { v.chain.form = e.to; v.chain.steps[v.chain.steps.length - 1] = e.to; if (v.board[e.sq] && v.board[e.sq].mine) v.board[e.sq].t = e.to; } },
-          done: () => { v.flip = null; this.sparkle(e.sq, PAL.silver, 6); },
+          done: () => { if (v.flip && v.flip.big) this.burst(e.sq, PAL.gold, 18); v.flip = null; this.sparkle(e.sq, PAL.silver, 6); },
         }); break;
         case 'promote': add(0.3, {
           begin: () => { v.lift = { sq: e.sq, p: 0 }; this.snd('promote'); },
@@ -350,7 +356,7 @@ export class BattleScreen {
         case 'overflow': add(0.08, {
           begin: () => {
             const big = { 1: 1, 2: 2, 5: 3, 10: 4 }[e.tier] || 1;
-            this.word(e.tier === 1 ? '목표 달성' : `목표 ×${e.tier}`, e.tier >= 5 ? PAL.red : PAL.gold, 1 + big * 0.2, Math.min(3, big));
+            if (this.src.kind !== 'lesson') this.word(e.tier === 1 ? '목표 달성' : `목표 ×${e.tier}`, e.tier >= 5 ? PAL.red : PAL.gold, 1 + big * 0.2, Math.min(3, big));
             this.ring = { t: 0, life: 0.5 + big * 0.15, col: e.tier >= 10 ? PAL.white : e.tier >= 5 ? PAL.red : PAL.gold };
             this.snd('overflow', e.tier); this.shake(big, 0.2 + big * 0.05);
           },
@@ -367,8 +373,8 @@ export class BattleScreen {
           begin: () => { this.snd('discard'); },
           done: () => { const b = this.bRef; v.hand = clone(b.hand); v.discardsLeft = b.discardsLeft; v.bag = b.bag.length; },
         }); break;
-        case 'win': add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); } }); break;
-        case 'lose': add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
+        case 'win': if (this.src.kind === 'lesson') break; add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); } }); break;
+        case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
         case 'fragment': add(0.05, { begin: () => { this.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); this.snd('fragment'); this.app.flyShard(BX + 112, BY + 112, RX + RW - 30, 10); } }); this.runEvents.push(e); break;
         default: this.runEvents.push(e);
       }
@@ -584,7 +590,7 @@ export class BattleScreen {
     const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
     const live = v.chain && !v.gather ? Math.floor(v.chain.value * v.chain.mult) : v.gather && !v.count ? v.gather.score : 0;
     const total = score + live;
-    const maxMul = total < tgt ? 1 : total < 2 * tgt ? 2 : total < 5 * tgt ? 5 : 10;
+    const maxMul = total <= tgt ? 1 : total <= 2 * tgt ? 2 : total <= 5 * tgt ? 5 : 10;
     const maxV = tgt * maxMul;
     const X = BX, Y = 14, Wd = S * 8, Hh = 7;
     box(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, PAL.feltDk, PAL.frameDk);

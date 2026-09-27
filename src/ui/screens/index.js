@@ -12,6 +12,7 @@ import { SettingsScreen } from './settings.js';
 import { SetupScreen } from './setup.js';
 import { CodexScreen } from './codex.js';
 import { RecordsScreen } from './records.js';
+import { LessonScreen } from './lesson.js';
 
 export const SCREENS = {
   title: TitleScreen,
@@ -28,4 +29,5 @@ export const SCREENS = {
   setup: SetupScreen,
   codex: CodexScreen,
   records: RecordsScreen,
+  lesson: LessonScreen,
 };

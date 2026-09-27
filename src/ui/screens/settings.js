@@ -29,7 +29,8 @@ export class SettingsScreen {
     button(ctx, ui, 'set:lang', x + 110, yy, 64, 18, s.lang === 'en' ? 'English' : '한국어', { onClick: () => { set('lang', s.lang === 'en' ? 'ko' : 'en'); setLang(s.lang); } });
     yy = row(4, '큰 글자');
     button(ctx, ui, 'set:big', x + 110, yy, 64, 18, s.big ? '켬' : '끔', { onClick: () => set('big', !s.big), tone: s.big ? 'gold' : 'plain' });
-    button(ctx, ui, 'set:back', W / 2 - 40, y + h - 26, 80, 18, '돌아가기', { onClick: () => this.close() });
+    button(ctx, ui, 'set:lessons', W / 2 - 92, y + h - 26, 88, 18, '첫 수업 다시', { onClick: () => { app.closeOverlay(); app.run = null; app.fx.clear(); app.go('lesson'); } });
+    button(ctx, ui, 'set:back', W / 2 + 4, y + h - 26, 80, 18, '돌아가기', { onClick: () => this.close() });
   }
   close() { if (this.back) this.app.openOverlay(this.back); else this.app.closeOverlay(); }
   key(k) { if (k === 'Escape' || k === 'Enter') this.close(); }

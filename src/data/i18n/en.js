@@ -33,6 +33,8 @@ export const EN = {
   '판': 'Runs', '이긴 판': 'Runs won', '최고 관': 'Best hall', '전설 완성': 'Legends', '신의 한 수(!!!)': 'Divine moves (!!!)', '열린 단': 'Dan unlocked', '아직': 'Not yet',
   '5관에 닿는다': 'Reach hall 5', '외통으로 다섯 번 이긴다': 'Win by mate five times', '한 사슬에 여덟을 먹는다(!!!)': 'Take eight in one chain (!!!)', '불멸의 기보 하나를 완성한다': 'Complete one immortal game',
   '폰': 'Pawn', '나이트': 'Knight', '비숍': 'Bishop', '룩': 'Rook', '퀸': 'Queen', '킹': 'King',
+  '첫 수업': 'First Lessons', '첫 수업 다시': 'Lessons Again', '좋은 수': 'Good Move', '끝': 'Done',
+  '떨구고 먹는다': 'Drop and Take', '잡으면 그것이 된다': 'Take It, Become It', '이을수록 곱해진다': 'Links Multiply', '노리는 놈부터': 'Guards First',
   '지금': 'Now', '먹으면': 'Take', '되잡힌다': 'Recaptured', '사슬이 끝난다': 'Chain ends',
   '한국어': '한국어', 'English': 'English', '없음': 'None',
   // 동사
@@ -157,6 +159,7 @@ export const TEMPLATES = [
   [/^전설: (.+)$/, (m, tr) => `Legend: ${tr(m[1])}`],
   [/^([■□]) (.+)$/, (m, tr) => `${m[1]} ${tr(m[2])}`],
   [/^(\d+)판$/, (m) => `${m[1]} runs`],
+  [/^첫 수업 (\d+)\/(\d+)$/, (m) => `Lesson ${m[1]}/${m[2]}`],
   [/^다음에 먹을 적 (\d+)$/, (m) => `Next prey ${m[1]}`],
   [/^응수 (\d+)$/, (m) => `Reply ${m[1]}`],
   [/^연쇄 \+(.+)$/, (m) => `Links +${m[1]}`],
