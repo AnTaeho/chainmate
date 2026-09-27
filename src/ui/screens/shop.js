@@ -9,7 +9,7 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { maximColumn, itemCard, itemTip, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem } from '../parts.js';
+import { maximColumn, itemCard, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
@@ -71,7 +71,11 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
   else if (c.kind === 'tactic') tacticIcon(ctx, c.id, x + 3, ay + 4);
   else if (c.kind === 'chart') { dots(ctx, x + 2, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', x + 3, ay - 3, { alpha: 0.9 }); }
   const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
-  text(ctx, name, x + 21 + Math.floor((w - 21) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
+  if (w < 80) { text(ctx, name, x + 21 + Math.floor((w - 21) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true }); return; }
+  // 넓은 칸: 이름 아래에 효과 앞머리 한 줄(다 못 적으면 「…」)
+  text(ctx, name, x + 23, y + 1, PAL.cardInk, { bold: true });
+  const ls = wrap(effectHead(itemEffect(c)), w - 26);
+  text(ctx, ls.length > 1 ? `${ls[0].replace(/\s*[·—,]$/, '')}…` : ls[0] || '', x + 23, y + 13, PAL.cardDim);
 }
 // 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
 const TIP_AT = { x: 196, y: 174 };
@@ -181,13 +185,16 @@ export class ShopScreen {
     });
     this.col = col;
     // 두루마리
-    text(ctx, '두루마리', RX, 202, PAL.dim);
+    // 칸마다 한 줄씩(두 칸): 이름 아래에 효과 앞머리가 보이게 오른쪽 판 너비를 다 쓴다. 칸이 셋 이상이면 두 줄 두 칸씩 좁게
+    const wide = run.consumableSlots <= 2;
+    text(ctx, '두루마리', RX, 201, PAL.dim);
     for (let i = 0; i < run.consumableSlots; i++) {
-      const x = RX + (i % 2) * 57, y = 216 + Math.floor(i / 2) * 26, c = run.consumables[i];
-      if (!c) { frame(ctx, x, y, 55, 24, PAL.feltHi); continue; }
+      const [x, y, cw, ch] = wide ? [RX, 214 + i * 28, RW, 26] : [RX + (i % 2) * 57, 216 + Math.floor(i / 2) * 26, 55, 24];
+      const c = run.consumables[i];
+      if (!c) { frame(ctx, x, y, cw, ch, PAL.feltHi); continue; }
       const id = `cons:${i}`;
-      ui.region(id, x, y, 55, 24, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c) });
-      consumableCard(ctx, c, x, y, 55, 24, ui.isHover(id) || (this.target && this.target.index === i));
+      ui.region(id, x, y, cw, ch, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c) });
+      consumableCard(ctx, c, x, y, cw, ch, ui.isHover(id) || (this.target && this.target.index === i));
     }
     this.drawMenu(ctx, ui);
     // 두루마리를 쓰는 중: 고른 기물이 어떻게 되는지 미리 보이고 확인을 받는다

@@ -8,7 +8,7 @@ import { maximFamilies, FAMILY_BY_ID } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID } from '../data/souls.js';
 import { TACTIC_BY_ID } from '../data/tactics.js';
-import { L } from './lang.js';
+import { L, getLang } from './lang.js';
 import { familyGlyphs } from './parts-depth.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
@@ -222,6 +222,15 @@ export function itemEffect(it) {
   if (it.kind === 'gamble') return it.id === 'potion' ? '주머니의 아무 기물에 아무 혼이나 각인이 붙는다' : '주머니의 아무 기물이 아무 이형이 된다';
   if (it.kind === 'fragment') return `조각 셋을 모으면 전설: ${LEGEND_BY_ID[it.legend].text}`;
   return '';
+}
+// 좁은 칸에 적는 효과 앞머리: 「언제」를 떼고 「무엇」부터(두루마리 칸). 전부는 가리키면 보인다.
+export function effectHead(s) {
+  s = L(String(s));
+  // 「언제」는 첫 마디(「 — 」 앞)에서만 찾는다: 뒤에 붙은 대가(「대신 사슬이 끝나면 연쇄 −1」)를 앞머리로 올리지 않게
+  const cut = s.indexOf(' — ');
+  const first = cut >= 0 ? s.slice(0, cut) : s;
+  const m = getLang() === 'en' ? first.match(/^[^:]{1,60}?:\s+(.+)$/) : first.match(/^.*?(?:면|마다|순간|동안)\s+(.+)$/);
+  return m ? m[1] + s.slice(first.length) : s;
 }
 // 어떻게 쓰나(카드 아래 흐린 한 줄)
 export function itemUse(it) {
