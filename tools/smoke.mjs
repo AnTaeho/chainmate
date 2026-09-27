@@ -22,6 +22,7 @@ globalThis.document = dom.document;
 globalThis.window = dom.window;
 const { boot } = await import('../src/main.js');
 const lessonMod = await import('../src/ui/lessons.js');
+const { termsIn } = await import('../src/ui/glossary.js');
 
 const errors = [];
 const apps = [];
@@ -77,9 +78,12 @@ const objTips = { step: 0, gate: 0, highway: 0, wall: 0, gem: 0 };
 const keySeen = { shop: 0, pack: 0, draft: 0, overlap: 0, off: 0, touch: 0 };
 const cross = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 function keyBoxesAt(id, kind) {
-  if (keySeen[kind] >= 30 || !hover(id)) return;
+  if (keySeen[kind] >= 60 || !hover(id)) return;
   const r = region(id), boxes = app.keyBoxes || [];
-  if (boxes.length) keySeen[kind]++;
+  // 카드 글 · 말풍선 글에 낱말이 있는데 상자가 없으면 따로 센다(체스 기물 카드처럼 낱말이 없는 카드는 빼고)
+  const h = app.ui.hover, tip = h && h.tip ? h.tip() : null;
+  const expect = termsIn([...(h && h.keys ? h.keys() : []), tip ? tip.lines.map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null]).length;
+  if (boxes.length) keySeen[kind]++; else if (expect) { keySeen.none = (keySeen.none || 0) + 1; if (VERBOSE) console.log('상자 없음', id); }
   for (const b of boxes) {
     if (cross(b, r)) keySeen.overlap++;
     if (b.x < 0 || b.y < 0 || b.x + b.w > 480 || b.y + b.h > 270) keySeen.off++;
@@ -299,7 +303,7 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
   while (steps++ < 4000) {
     const name = screen();
     if (name === 'result') break;
-    if (name === 'draft') { pump(40); keyBoxesAt('draft:0', 'draft'); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
+    if (name === 'draft') { pump(40); for (let k = 0; k < app.run.draft.options.length; k++) keyBoxesAt(`draft:${k}`, 'draft'); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
     if (name === 'select' && !tipSeen.path) { hover('select:path'); if (hoverTip()) tipSeen.path++; }
     if (name === 'select') { if (app.run.blind < 2 && rnd() < 0.15) click('select:skip'); else click('select:play'); pump(2); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
@@ -501,8 +505,8 @@ if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확�
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
-console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch}`);
-if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch) { console.log('낱말 상자를 보지 못했거나 카드를 가린다'); fail = true; }
+console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0}`);
+if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none) { console.log('낱말 상자를 보지 못했거나 카드를 가린다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }
