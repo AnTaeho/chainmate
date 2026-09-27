@@ -1,4 +1,5 @@
 // 관 선택: 연습 · 정식 · 명인 세 장. 목표 · 보상 · 명인 규칙 · 건너뛰면 받는 패. 「두기」 / 「건너뛰기」.
+import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, num, frame, measure } from '../../render/gfx.js';
@@ -77,7 +78,7 @@ export class SelectScreen {
         box(ctx, x + w - 44, y + 68, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + w - 42, y + 70, 1, cur ? 1 : 0.6);
         wrap(`명인 ${m.name}`, w - 60, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + 10, y + 72 + k * 13, PAL.red, { bold: true }));
-        wrap(m.text, w - 20).slice(0, 4).forEach((l, k) => text(ctx, l, x + 10, y + 108 + k * 13, ink));
+        wrap(m.text, w - 20).slice(0, 4).forEach((l, k) => richText(ctx, l, x + 10, y + 108 + k * 13, ink, { termCol: PAL.gold }));
       } else {
         text(ctx, '건너뛰면', x + 10, y + 72, PAL.dim);
         wrap(tagText(info.tag), w - 20).forEach((l, k) => text(ctx, l, x + 10, y + 88 + k * 13, cur ? PAL.gold : PAL.dim, { bold: true }));

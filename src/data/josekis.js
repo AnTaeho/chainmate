@@ -45,22 +45,22 @@ const collinear5 = (squares) => {
 const pick3 = (rng, free, n) => { const out = []; while (out.length < n && free.length) out.push(free.splice(Math.floor(rng() * free.length), 1)[0]); return out; };
 
 // ── 은: 기물 하나를 바꾸거나 판에 작은 규칙
-joseki('knight_oath', '기사 서약', 'silver', ['leap'], '주머니의 나이트 둘이 야간기사가 된다', {
+joseki('knight_oath', '기사 서약', 'silver', ['leap'], '고르면 주머니의 나이트 둘이 야간기사가 된다', {
   pick(run, events) { evolve(run, 'N', 'H', 2, events); },
 });
-joseki('rampart', '성벽 쌓기', 'silver', ['line', 'leap'], '주머니의 룩 하나가 재상이 된다', {
+joseki('rampart', '성벽 쌓기', 'silver', ['line', 'leap'], '고르면 주머니의 룩 하나가 재상이 된다', {
   pick(run, events) { evolve(run, 'R', 'C', 1, events); },
 });
-joseki('mitre', '주교관', 'silver', ['diag', 'leap'], '주머니의 비숍 하나가 대주교가 된다', {
+joseki('mitre', '주교관', 'silver', ['diag', 'leap'], '고르면 주머니의 비숍 하나가 대주교가 된다', {
   pick(run, events) { evolve(run, 'B', 'A', 1, events); },
 });
-joseki('archery', '활터', 'silver', ['hunt'], '주머니의 폰 둘이 궁수가 된다', {
+joseki('archery', '활터', 'silver', ['hunt'], '고르면 주머니의 폰 둘이 궁수가 된다', {
   pick(run, events) { evolve(run, 'P', 'S', 2, events); },
 });
 joseki('highway', '고속도로', 'silver', ['line'], 'b · g 줄에서는 어떤 모습이든 룩처럼 세로로도 미끄러져 먹는다', {
   rules(b) { b.rules.highways = [1, 6]; },
 });
-joseki('stepping', '발판', 'silver', ['hunt'], '대국마다 금빛 발판 셋, 발판 위의 적을 먹으면 연쇄 ×2', {
+joseki('stepping', '발판', 'silver', ['hunt'], '대국마다 판에 금빛 발판 셋 — 발판 위의 적을 먹으면 연쇄 ×2', {
   rules(b, rng) {
     const free = [];
     for (let sq = 16; sq < 56; sq++) free.push(sq);
@@ -81,7 +81,7 @@ joseki('gates', '판의 문', 'gold', ['leap', 'change'], '판에 문 두 칸 �
     b.rules.gates = [a, c];
   },
 });
-joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], '끊기는 순간 둘레 여덟 칸의 적(킹 빼고)을 모두 먹은 것으로 친다', {
+joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], '사슬이 끊기는 순간 둘레 여덟 칸의 적(킹 빼고)을 모두 먹은 것으로 친다', {
   onCut(ctx) {
     const sq = ctx.event.sq, board = ctx.t.board;
     for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
@@ -96,12 +96,12 @@ joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], '끊기는 순�
     }
   },
 });
-joseki('pact', '결사', 'gold', ['sacrifice'], '대국마다 첫 사슬 연쇄 ×3 — 그 기물은 판에서 사라진다(주머니 여섯은 남긴다)', {
+joseki('pact', '결사', 'gold', ['sacrifice'], '대국마다 첫 사슬은 연쇄 ×3 — 그 기물은 주머니에서 사라진다(여섯은 남긴다)', {
   onChainEnd(ctx) { if (!(ctx.t.movesUsed ?? 0)) { ctx.mulMult(3); ctx.chain.pact = true; } },
 });
 
 // ── 무지개: 판의 조건을 바꾼다
-joseki('highlander', '하이랜더', 'rainbow', ['hunt'], '주머니에 같은 종류가 둘 이상 없으면 목표가 절반', {
+joseki('highlander', '하이랜더', 'rainbow', ['hunt'], '주머니에 같은 종류가 둘 이상 없으면 대국 목표가 절반', {
   targetMult(run) { const seen = new Set(); for (const p of run.deck) { if (seen.has(p.t)) return 1; seen.add(p.t); } return 0.5; },
 });
 joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 떨군 사슬이 승급하면 그 폰은 주머니에 퀸으로 남는다', {
@@ -114,7 +114,7 @@ joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 사슬이 한 줄�
     if (!c.flags.gomoku && collinear5(sqs)) { c.flags.gomoku = true; ctx.emit({ type: 'gomoku', squares: sqs }); }
   },
 });
-joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 가족의 문턱이 하나씩 낮아진다');
+joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 가족의 문턱(2 · 4 · 6)이 하나씩 낮아진다');
 
 export const JOSEKI_BY_ID = Object.fromEntries(JOSEKIS.map((j) => [j.id, j]));
 export const josekiFamilies = (ids) => (ids || []).flatMap((id) => (JOSEKI_BY_ID[id] ? [JOSEKI_BY_ID[id].families] : []));

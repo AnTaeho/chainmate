@@ -19,10 +19,10 @@ function maxim(id, name, text, verb, rarity, price, def) {
 }
 
 // ── 떨구기
-maxim('chivalry', '기사도', '나이트로 떨군 사슬 연쇄 ×1.5', '떨구기', 'uncommon', 5, {
+maxim('chivalry', '기사도', '나이트로 떨군 사슬이 끝나면 연쇄 ×1.5', '떨구기', 'uncommon', 5, {
   onChainEnd(ctx) { if (ctx.chain.dropType === 'N') ctx.mulMult(1.5); },
 });
-maxim('pawn_march', '폰의 행진', '폰으로 떨군 사슬 값 +40', '떨구기', 'common', 3, {
+maxim('pawn_march', '폰의 행진', '폰으로 떨군 사슬이 끝나면 값 +40', '떨구기', 'common', 3, {
   onChainEnd(ctx) { if (ctx.chain.dropType === 'P') ctx.addValue(40); },
 });
 
@@ -30,10 +30,10 @@ maxim('pawn_march', '폰의 행진', '폰으로 떨군 사슬 값 +40', '떨구�
 maxim('quick_change', '갈아입기', '모습이 바뀔 때마다 연쇄 +2', '갈아입기', 'common', 4, {
   onTransform(ctx) { ctx.addMult(2); },
 });
-maxim('whim', '변덕', '한 사슬에 모습 넷 이상이면 연쇄 ×2', '갈아입기', 'rare', 7, {
+maxim('whim', '변덕', '모습을 넷 이상 거친 사슬이 끝나면 연쇄 ×2', '갈아입기', 'rare', 7, {
   onChainEnd(ctx) { if (ctx.chain.forms.length >= 4) ctx.mulMult(2); },
 });
-maxim('steadfast', '한결같음', '모습이 한 번도 안 바뀐 사슬 연쇄 ×3', '갈아입기', 'uncommon', 6, {
+maxim('steadfast', '한결같음', '모습이 한 번도 안 바뀐 사슬이 끝나면 연쇄 ×3', '갈아입기', 'uncommon', 6, {
   onChainEnd(ctx) { if (ctx.chain.transforms === 0 && ctx.chain.promotions === 0) ctx.mulMult(3); },
 });
 maxim('coronation', '대관식', '퀸 모습이 될 때마다 값 +50', '갈아입기', 'common', 4, {
@@ -54,16 +54,16 @@ maxim('wall_breaker', '성벽 허물기', '룩을 먹을 때마다 연쇄 +4', '
 maxim('long_chain', '긴 사슬', '다섯째 먹기부터 먹을 때마다 연쇄 ×1.2', '먹기', 'rare', 7, {
   onCapture(ctx) { if (ctx.event.index >= 4) ctx.mulMult(1.2); },
 });
-maxim('long_road', '먼 길', '세 칸 이상 미끄러져 먹으면 값 +20', '먹기', 'common', 3, {
+maxim('long_road', '먼 길', '세 칸 이상 미끄러져 먹을 때마다 값 +20', '먹기', 'common', 3, {
   onCapture(ctx) { if (ctx.event.dist >= 3) ctx.addValue(20); },
 });
-maxim('edge', '가장자리', '판 가장자리에서 먹으면 연쇄 +2', '먹기', 'common', 4, {
+maxim('edge', '가장자리', '판 가장자리 칸에서 먹을 때마다 연쇄 +2', '먹기', 'common', 4, {
   onCapture(ctx) { if (EDGE(ctx.event.to)) ctx.addMult(2); },
 });
-maxim('center', '중앙 장악', '가운데 네 칸에서 먹으면 연쇄 ×1.5', '먹기', 'uncommon', 5, {
+maxim('center', '중앙 장악', '가운데 네 칸에서 먹을 때마다 연쇄 ×1.5', '먹기', 'uncommon', 5, {
   onCapture(ctx) { if (CENTER.includes(ctx.event.to)) ctx.mulMult(1.5); },
 });
-maxim('vault', '금고', '먹은 수만큼 상금, 대국마다 5까지', '먹기', 'uncommon', 5, {
+maxim('vault', '금고', '사슬이 끝나면 먹은 수만큼 상금 — 대국마다 5까지', '먹기', 'uncommon', 5, {
   onChainEnd(ctx) {
     const got = num(ctx.state.got);
     const n = Math.min(ctx.chain.captures.length, 5 - got);
@@ -72,7 +72,7 @@ maxim('vault', '금고', '먹은 수만큼 상금, 대국마다 5까지', '먹�
 });
 
 // ── 승급
-maxim('back_rank_dream', '끝줄의 꿈', '승급한 사슬은 끊겨도 한 번 이어진다', '승급', 'uncommon', 6, {
+maxim('back_rank_dream', '끝줄의 꿈', '승급한 사슬이 끊길 때 한 번은 이어진다', '승급', 'uncommon', 6, {
   onCut(ctx) {
     if (ctx.chain.promotions > 0 && !ctx.flags.backRankDream) { ctx.flags.backRankDream = true; ctx.cancelCut(); }
   },
@@ -82,13 +82,13 @@ maxim('promotion_feast', '승급 잔치', '승급할 때마다 연쇄 ×2', '승
 });
 
 // ── 끊김
-maxim('sacrifice', '희생', '대국마다 첫 끊김을 넘긴다', '끊김', 'uncommon', 5, {
+maxim('sacrifice', '희생', '대국마다 첫 끊김 한 번은 사슬이 이어진다', '끊김', 'uncommon', 5, {
   onCut(ctx) { if (!ctx.state.used) { ctx.state.used = true; ctx.cancelCut(); } },
 });
-maxim('payback', '되갚음', '끊겨 끝난 사슬 연쇄 +8', '끊김', 'common', 4, {
+maxim('payback', '되갚음', '끊겨 끝난 사슬은 연쇄 +8', '끊김', 'common', 4, {
   onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.addMult(8); },
 });
-maxim('close_call', '아슬아슬', '끊기지 않고 끝난 사슬 값 +30', '끊김', 'common', 3, {
+maxim('close_call', '아슬아슬', '끊기지 않고 끝난 사슬은 값 +30', '끊김', 'common', 3, {
   onChainEnd(ctx) { if (ctx.event.reason !== 'cut') ctx.addValue(30); },
 });
 
@@ -116,7 +116,7 @@ maxim('kings_neck', '왕의 목', '지키는 이 없는 킹이 빛난다 · 킹�
   },
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.mulMult(3); },
 });
-maxim('memory', '대국의 기억', '외통 한 번마다 연쇄 ×0.5씩 쌓인다', '외통', 'rare', 8, {
+maxim('memory', '대국의 기억', '외통으로 이긴 대국마다 사슬 끝 연쇄 배수가 0.5씩 는다(한 번 ×1.5 · 두 번 ×2)', '외통', 'rare', 8, {
   onChainEnd(ctx) { const m = num(ctx.data.mates); if (m > 0) ctx.mulMult(1 + 0.5 * m); },
   onRunEvent(spec, ev) {
     if (ev.type === 'battleWon' && ev.reason === 'mate') spec.data = { ...spec.data, mates: num(spec.data && spec.data.mates) + 1 };
@@ -124,34 +124,34 @@ maxim('memory', '대국의 기억', '외통 한 번마다 연쇄 ×0.5씩 쌓인
 });
 
 // ── 수
-maxim('first_move', '첫수', '대국 첫 수 연쇄 ×2', '수', 'common', 4, {
+maxim('first_move', '첫수', '대국 첫 수의 사슬이 끝나면 연쇄 ×2', '수', 'common', 4, {
   onChainEnd(ctx) { if (num(ctx.t.movesUsed) === 0) ctx.mulMult(2); },
 });
-maxim('last_move', '마지막 수', '대국 마지막 수 연쇄 ×3', '수', 'uncommon', 6, {
+maxim('last_move', '마지막 수', '대국 마지막 수의 사슬이 끝나면 연쇄 ×3', '수', 'uncommon', 6, {
   onChainEnd(ctx) { if (ctx.t.movesLeft === 1) ctx.mulMult(3); },
 });
 
 // ── 무르기
-maxim('no_regrets', '무르지 않는다', '무르기 전까지 모든 수 연쇄 +4', '무르기', 'common', 4, {
+maxim('no_regrets', '무르지 않는다', '이번 대국에 아직 무르지 않았으면 사슬 끝 연쇄 +4', '무르기', 'common', 4, {
   onChainEnd(ctx) { if (num(ctx.t.discardsUsed) === 0) ctx.addMult(4); },
 });
-maxim('second_thought', '다시 생각', '무르기 +1 · 무른 기물 하나마다 이번 대국 값 +10', '무르기', 'common', 3, {
+maxim('second_thought', '다시 생각', '무르기 +1 · 사슬이 끝나면 이번 대국에 무른 기물마다 값 +10', '무르기', 'common', 3, {
   onBattleStart(ctx) { ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
   onChainEnd(ctx) { ctx.addValue(10 * num(ctx.t.discarded)); },
 });
 
 // ── 주머니
-maxim('empty_bag', '빈 주머니', '주머니에 남은 기물마다 연쇄 +1', '주머니', 'common', 4, {
+maxim('empty_bag', '빈 주머니', '사슬이 끝나면 주머니에 남은 기물마다 연쇄 +1', '주머니', 'common', 4, {
   onChainEnd(ctx) { ctx.addMult(ctx.t.bag ? ctx.t.bag.length : 0); },
 });
 // ×2였을 때(2a) 판 봇의 주머니가 끝에 평균 6개라 조건이 늘 참이었고, 산 판 승률이 35%(평균 10%)로 홀로 높았다.
 // ×1.5로 낮췄다(보고서 docs/reports/2b.md).
-maxim('small_bag', '작은 주머니', '가진 기물이 여덟 이하면 연쇄 ×1.5', '주머니', 'uncommon', 6, {
+maxim('small_bag', '작은 주머니', '가진 기물이 여덟 이하면 사슬 끝 연쇄 ×1.5', '주머니', 'uncommon', 6, {
   onChainEnd(ctx) { if (num(ctx.t.deckSize, 99) <= 8) ctx.mulMult(1.5); },
 });
 
 // ── 증원
-maxim('welcome', '증원 환영', '막 들어온 적을 먹으면 값 +40', '증원', 'common', 3, {
+maxim('welcome', '증원 환영', '이번 수에 막 들어온 증원을 먹으면 값 +40', '증원', 'common', 3, {
   onCapture(ctx) { if (ctx.event.born >= 0 && ctx.event.born === num(ctx.t.movesUsed)) ctx.addValue(40); },
 });
 maxim('shadow_reading', '그림자 읽기', '증원이 두 수 앞까지 보인다 · 증원이 올 칸에 떨구면 연쇄 +4', '증원', 'common', 3, {
@@ -165,12 +165,12 @@ maxim('shadow_reading', '그림자 읽기', '증원이 두 수 앞까지 보인�
 });
 
 // ── 각인
-maxim('ivory_tower', '상아탑', '상아 기물로 떨군 사슬 연쇄 +5', '각인', 'uncommon', 5, {
+maxim('ivory_tower', '상아탑', '상아 각인 기물로 떨군 사슬이 끝나면 연쇄 +5', '각인', 'uncommon', 5, {
   onChainEnd(ctx) { if (ctx.chain.engraving && ctx.chain.engraving.id === 'ivory') ctx.addMult(5); },
 });
 
 // ── 기보
-maxim('collector', '기보 수집가', '기보를 쓸 때마다 연쇄 +1씩 쌓인다', '기보', 'rare', 7, {
+maxim('collector', '기보 수집가', '기보를 쓸 때마다 사슬 끝 연쇄 +1이 쌓인다', '기보', 'rare', 7, {
   onChainEnd(ctx) { ctx.addMult(num(ctx.data.n)); },
   onRunEvent(spec, ev) {
     if (ev.type === 'chartUsed') spec.data = { ...spec.data, n: num(spec.data && spec.data.n) + 1 };
@@ -178,7 +178,7 @@ maxim('collector', '기보 수집가', '기보를 쓸 때마다 연쇄 +1씩 쌓
 });
 
 // ── 밤샘 D-8: 여덟 더(뿌리의 동사마다 하나 이상)
-maxim('light_step', '가벼운 발', '폰이나 나이트로 떨군 사슬 연쇄 +3', '떨구기', 'common', 4, {
+maxim('light_step', '가벼운 발', '폰이나 나이트로 떨군 사슬이 끝나면 연쇄 +3', '떨구기', 'common', 4, {
   onChainEnd(ctx) { if (ctx.chain.dropType === 'P' || ctx.chain.dropType === 'N') ctx.addMult(3); },
 });
 maxim('queen_hunt', '퀸 사냥', '퀸을 먹을 때마다 값 +60', '먹기', 'common', 4, {
@@ -213,11 +213,11 @@ maxim('promotion_rush', '특진', '한 사슬에서 폰 모습으로 둘을 먹�
     if (ctx.flags.pawnTakes >= 2) ctx.flags.promoteFrom = 0;
   },
 });
-maxim('mad_horse', '광마', '나이트 모습이 판 가장자리에서 먹으면 그 칸의 노림을 한 번 무시', '응수', 'common', 4, {
+maxim('mad_horse', '광마', '나이트 모습으로 판 가장자리에서 먹으면 그 칸의 노림수를 한 번 무시한다', '응수', 'common', 4, {
   onCapture(ctx) { if (ctx.event.form === 'N' && EDGE(ctx.event.to) && !ctx.flags.madHorseUsed) ctx.flags.madHorse = true; },
   onThreat(ctx) { if (ctx.flags.madHorse) { ctx.flags.madHorse = false; ctx.flags.madHorseUsed = true; ctx.ignoreThreat(); } },
 });
-maxim('rook_lift', '룩 리프트', '룩 모습이 네 구석에서 먹으면 연쇄 ×2', '먹기', 'common', 4, {
+maxim('rook_lift', '룩 리프트', '룩 모습으로 네 구석에서 먹을 때마다 연쇄 ×2', '먹기', 'common', 4, {
   onCapture(ctx) { const s = ctx.event.to; if (ctx.event.form === 'R' && (s === 0 || s === 7 || s === 56 || s === 63)) ctx.mulMult(2); },
 });
 

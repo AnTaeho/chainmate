@@ -20,7 +20,7 @@ import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js'
 import { topBar } from './common.js';
 
 const RX = 360, RW = 112;
-const CARD_W = 100, CARD_H = 104;
+const CARD_W = 100, CARD_H = 116;
 
 // 주머니 줄: 작은 기물 카드들. pick(p)이 있으면 누를 수 있다.
 // flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝) · grow: { form, p } 기보로 자라는 모습(0.5초 빛 기둥)
@@ -141,35 +141,35 @@ export class ShopScreen {
     text(ctx, '진열', 12, 28, PAL.dim);
     // 진열 카드는 효과를 적을 만큼 넓게(가리키지 않아도 읽힌다)
     shop.display.forEach((it, i) => {
-      const x = 12 + i * 104, y = 42, id = `shop:buy:${i}`;
+      const x = 12 + i * 104, y = 40, id = `shop:buy:${i}`;
       const ok = canBuy(run, it);
       ui.region(id, x, y, CARD_W, CARD_H, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemExtraTip(it), tipAt: TIP_AT });
-      itemCard(ctx, it, x, y, CARD_W, CARD_H, { hover: ui.isHover(id) && ok, sold: it.sold, t: ui.time + i, run });
+      itemCard(ctx, it, x, y, CARD_W, CARD_H, { hover: ui.isHover(id) && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok } });
       if (!it.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, CARD_W, CARD_H, PAL.shadow); ctx.globalAlpha = 1; }
     });
     // 꾸러미
     text(ctx, '꾸러미', 222, 28, PAL.dim);
     shop.packs.forEach((pk, i) => {
-      const x = 222 + i * 66, y = 42, id = `shop:pack:${i}`;
+      const x = 222 + i * 66, y = 40, id = `shop:pack:${i}`;
       const ok = !pk.sold && run.money >= pk.price;
       ui.region(id, x, y, 62, CARD_H, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack') });
       this.packCard(ctx, pk, x, y, 62, CARD_H, ui.isHover(id) && ok);
       if (!pk.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, 62, CARD_H, PAL.shadow); ctx.globalAlpha = 1; }
     });
     const rc = rerollCost(run);
-    button(ctx, ui, 'shop:reroll', 12, 152, 204, 18, `다시 진열 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
-    button(ctx, ui, 'shop:leave', 222, 152, 128, 18, '나가기', { onClick: () => this.leave(), tone: 'gold' });
+    button(ctx, ui, 'shop:reroll', 12, 160, 204, 18, `다시 진열 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
+    button(ctx, ui, 'shop:leave', 222, 160, 128, 18, '나가기', { onClick: () => this.leave(), tone: 'gold' });
     // 주머니
-    text(ctx, `주머니 ${run.deck.length}`, 12, 178, PAL.dim);
+    text(ctx, `주머니 ${run.deck.length}`, 12, 184, PAL.dim);
 
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
     const fp = since(this.flash, 0.3), gp = since(this.grow, 0.5);
-    bagRow(ctx, ui, run, 12, 194, 330, {
+    bagRow(ctx, ui, run, 12, 198, 330, {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : this.target ? this.target.pieceId : null,
       flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { form: this.grow.form, p: gp } : null,
     });
     // 가족 띠(주머니 아래)
-    familyStrip(ctx, ui, run, 12, 254, 330, { time: app.time, fx: this.famFx, max: 6 });
+    familyStrip(ctx, ui, run, 12, 256, 330, { time: app.time, fx: this.famFx, max: 6 });
     // 오른쪽: 격언
     text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
     josekiBadges(ctx, ui, run, RX + 56, 33);
@@ -194,7 +194,7 @@ export class ShopScreen {
     if (this.target && run.consumables[this.target.index]) {
       const c = run.consumables[this.target.index];
       const p = this.target.pieceId != null ? run.deck.find((x) => x.id === this.target.pieceId) : null;
-      targetPanel(ctx, ui, run, c, p, 12, 150, 338, {
+      targetPanel(ctx, ui, run, c, p, 12, 156, 338, {
         to: p && c.kind === 'evolve' ? evolveTo(run.seed, p) : null,
         onConfirm: () => { const i = this.target.index, id = this.target.pieceId; this.target = null; this.act({ type: 'use', index: i, target: id }, 'engrave'); },
         onCancel: () => { this.target = null; },

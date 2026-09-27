@@ -61,7 +61,7 @@ export class PackScreen {
     const gold = pack.kind === 'golden';
     topBar(ctx, ui, this.app, PACK_NAME[pack.kind]);
     const n = pack.options.length;
-    const cw = 104, ch = 112, gap = 10;
+    const cw = 104, ch = 124, gap = 10;
     const x0 = Math.floor((W - n * cw - (n - 1) * gap) / 2) - (pack.options.some((o) => o.kind === 'maxim') ? 54 : 0);
     pack.options.forEach((o, i) => {
       const at = flipAt(i);
@@ -70,13 +70,13 @@ export class PackScreen {
       const id = `pack:pick:${i}`;
       const scaleX = Math.abs(1 - 2 * p);
       const shown = p >= 0.5;
-      ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: shown ? () => itemExtraTip(o) : null, tipAt: { x: Math.min(W - 176, x), y: 178 } });
+      ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: shown ? () => itemExtraTip(o) : null, tipAt: { x: Math.min(W - 176, x), y: 190 } });
       if (!shown) {
         const nw = Math.max(2, Math.round(cw * scaleX));
         if (this.t < OPEN) return;
         box(ctx, x + Math.floor((cw - nw) / 2), y, nw, ch, gold ? PAL.gold : '#c9a36a', PAL.frameDk);
         if (nw > 20) rect(ctx, x + Math.floor(cw / 2) - 6, y + 46, 12, 12, gold ? PAL.goldHi : '#e6c690');
-      } else itemCard(ctx, o, x, y, cw, ch, { hover: ui.isHover(id), price: false, scaleX, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + i, run });
+      } else itemCard(ctx, o, x, y, cw, ch, { hover: ui.isHover(id), price: false, scaleX, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + i, run, ui, under: { onClick: () => this.pick(i) } });
       if (this.engraveIndex === i) { rect(ctx, x, y + ch + 2, cw, 2, PAL.gold); }
     });
     // 봉투: 봉랍이 깨지고 덮개가 젖혀진 뒤 카드가 솟아 나온다
@@ -92,13 +92,13 @@ export class PackScreen {
       // 기물을 고르면 새긴 모습을 미리 보이고, 「새긴다」로 확인한다
       const o = pack.options[this.engraveIndex];
       const p = this.engraveTarget != null ? run.deck.find((x) => x.id === this.engraveTarget) : null;
-      targetPanel(ctx, ui, run, o, p, 12, 150, 330, {
+      targetPanel(ctx, ui, run, o, p, 12, 164, 330, {
         onConfirm: () => this.finish({ type: 'pick', index: this.engraveIndex, target: this.engraveTarget }),
         onCancel: () => { this.engraveIndex = null; this.engraveTarget = null; },
       });
-      bagRow(ctx, ui, run, 12, 196, 330, { pick: (q) => { this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget });
+      bagRow(ctx, ui, run, 12, 208, 330, { pick: (q) => { this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget });
     }
-    if (this.engraveIndex == null) button(ctx, ui, 'pack:skip', W / 2 - 50 - (pack.options.some((o) => o.kind === 'maxim') ? 54 : 0), 154, 100, 18, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
+    if (this.engraveIndex == null) button(ctx, ui, 'pack:skip', W / 2 - 50 - (pack.options.some((o) => o.kind === 'maxim') ? 54 : 0), 166, 100, 18, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
     // 금빛 꾸러미: 격언 칸과 팔기
     if (pack.options.some((o) => o.kind === 'maxim')) {
       const RX = 360, RW = 112;

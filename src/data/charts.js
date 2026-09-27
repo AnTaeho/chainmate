@@ -14,4 +14,4 @@ export const CHART_PRICE = 3;
 // 'charts' 조정자에 넘길 표
 export const CHART_TABLE = Object.fromEntries(CHART_FORMS.map((f) => [f, { a: CHARTS[f].a, b: CHARTS[f].b }]));
 
-export const chartText = (f) => `${{ P: '폰', N: '나이트', B: '비숍', R: '룩', Q: '퀸' }[f]} 모습으로 먹을 때 값 +${CHARTS[f].a} · 연쇄 +${CHARTS[f].b}`;
+export const chartText = (f) => `${{ P: '폰', N: '나이트', B: '비숍', R: '룩', Q: '퀸' }[f]} 모습으로 먹을 때마다 값 +${CHARTS[f].a} · 연쇄 +${CHARTS[f].b}`;

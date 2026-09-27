@@ -1,4 +1,5 @@
 // 정석 고르기(깊이 E): 1 · 3 · 5관의 첫 대국 앞. 카드 셋이 차례로 뒤집히며 나오고(등급 빛: 은 · 금 · 무지개) 하나를 고른다.
+import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame } from '../../render/gfx.js';
@@ -69,7 +70,7 @@ export class DraftScreen {
       text(ctx, TIER_NAME[j.tier], x + CW / 2, yy + 10, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk, { align: 'center' });
       wrap(j.name, CW - 16, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + CW / 2, yy + 26 + k * 13, PAL.cardInk, { align: 'center', bold: true }));
       rect(ctx, x + 16, yy + 54, CW - 32, 1, col);
-      wrap(j.text, CW - 18).slice(0, 6).forEach((l, k) => text(ctx, l, x + 9, yy + 60 + k * 13, PAL.cardInk));
+      wrap(j.text, CW - 18).slice(0, 6).forEach((l, k) => richText(ctx, l, x + 9, yy + 60 + k * 13, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } }));
       // 가족
       j.families.forEach((f, k) => {
         const fy = yy + CH - 22 - (j.families.length - 1 - k) * 13;

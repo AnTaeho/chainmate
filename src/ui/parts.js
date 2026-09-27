@@ -1,4 +1,5 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
+import { richText } from './glossary.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, frame, dots, sprite, measure, line } from '../render/gfx.js';
 import { button } from './ui.js';
@@ -222,10 +223,10 @@ export function itemEffect(it) {
 }
 // 어떻게 쓰나(카드 아래 흐린 한 줄)
 export function itemUse(it) {
-  if (it.kind === 'engraving') return '주머니 기물 하나에 새긴다';
-  if (it.kind === 'soul') return '주머니 기물 하나에 깃든다';
-  if (it.kind === 'evolve') return '주머니 기물 하나를 고른다';
-  if (it.kind === 'tactic') return '대국 중 떨구기 전에 쓴다';
+  if (it.kind === 'engraving') return '기물에 새긴다';
+  if (it.kind === 'soul') return '기물에 깃든다';
+  if (it.kind === 'evolve') return '기물이 자란다';
+  if (it.kind === 'tactic') return '대국 중에 쓴다';
   if (it.kind === 'piece') return '주머니에 들어온다';
   return '';
 }
@@ -345,14 +346,14 @@ export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
   rows.forEach((r, j) => { for (let i = 0; i < 8; i++) if (r[i] === '#') rect(ctx, x + i * 2, y + j * 2, 2, 2, (i + j) % 4 === 0 ? PAL.goldHi : j > 3 ? dk : col); });
 }
 
-export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null } = {}) {
+export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null } = {}) {
   const t0 = t;
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
     x += Math.floor((w - nw) / 2); w = nw;
   }
-  if (w >= 88) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run });
+  if (w >= 88) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under });
   const back = scaleX < 1 && it._back;
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   box(ctx, x, y, w, h, fill, hover ? PAL.gold : PAL.frameDk);
@@ -442,7 +443,7 @@ function itemArt(ctx, it, x, y, t, run) {
   if (it.kind === 'fragment') { shardIcon(ctx, x + 3, y + 5); return 22; }
   return 0;
 }
-function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run }) {
+function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under }) {
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   box(ctx, x, y, w, h, fill, hover ? PAL.gold : PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
@@ -454,21 +455,24 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run 
   text(ctx, ITEM_KIND[it.kind], x + 5, y + 4, PAL.cardDim);
   const fams = it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : [];
   if (fams.length) familyGlyphs(ctx, fams, x + w - 8 * fams.length - 3, y + 6);
-  const aw = itemArt(ctx, it, x + 5, y + 18, t, run);
+  const aw = itemArt(ctx, it, x + 5, y + 16, t, run);
   const nx = x + 5 + aw + 4, nw = x + w - 4 - nx;
   const name = it.kind === 'chart' ? `${PIECE_NAME[it.form]} 모습` : it.kind === 'engraving' ? engravingInfo(it.id).name : it.kind === 'soul' ? SOUL_BY_ID[it.id].name : itemName(it);
   const nl = wrap(name, nw, true).slice(0, 2);
-  nl.forEach((l, k) => text(ctx, l, nx, y + 18 + (nl.length === 1 ? 7 : 0) + k * 13, PAL.cardInk, { bold: true }));
-  rect(ctx, x + 5, y + 47, w - 10, 1, edge || PAL.cardDim);
+  nl.forEach((l, k) => text(ctx, l, nx, y + 16 + (nl.length === 1 ? 7 : 0) + k * 13, PAL.cardInk, { bold: true }));
+  rect(ctx, x + 5, y + 45, w - 10, 1, edge || PAL.cardDim);
   const foot = (price && it.price != null && !sold) ? 16 : 2;
-  const use = wrap(itemUse(it), w - 10).slice(0, 2);
-  let yy = y + 50;
+  const use = itemUse(it) ? [itemUse(it)] : [];
+  let yy = y + 48;
   const bottom = y + h - foot - use.length * 12;
   const lines = [];
   for (const l of wrap(itemEffect(it), w - 10)) lines.push([l, PAL.cardInk]);
   if (it.kind === 'chart' && run) lines.push([`${run.charts[it.form] || 0} › ${(run.charts[it.form] || 0) + 1}단계`, PAL.cardDim]);
   if (it.edition) for (const l of wrap(`${EDITION_BY_ID[it.edition].name}: ${L(EDITION_BY_ID[it.edition].text)}`, w - 10)) lines.push([l, PAL.goldDk]);
-  for (const [l, c] of lines) { if (yy + 12 > bottom) break; text(ctx, l, x + 5, yy, c); yy += 12; }
+  const room = Math.floor((bottom - yy) / 12);
+  // 넘치면 마지막 줄 끝에 「…」(나머지는 말풍선에)
+  if (room > 0 && lines.length > room) { const [l, c] = lines[room - 1]; lines.length = room - 1; lines.push([`${l}…`, c]); }
+  for (const [l, c] of lines) { if (yy + 12 > bottom) break; if (c === PAL.cardInk) richText(ctx, l, x + 5, yy, c, { ui: sold ? null : ui, under }); else text(ctx, l, x + 5, yy, c); yy += 12; }
   use.forEach((l, k) => text(ctx, l, x + 5, bottom + k * 12, PAL.cardDim));
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;

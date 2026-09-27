@@ -1,5 +1,6 @@
 // 첫 수업: 수업마다 시범(흐린 손가락이 실제 연출로 한 번 둔다 → 판이 처음으로) → 내 차례(지금 누를 곳만 빛나고, 오른쪽에 할 일 한 줄).
 // 대국 화면을 그대로 쓰고, 누를 곳만 걸음(lessons.js steps)으로 좁힌다. 규칙은 실제 sim.
+import { richText } from '../glossary.js';
 import { PAL } from '../../render/palette.js';
 import { text, rect, frame, box } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
@@ -189,7 +190,7 @@ export class LessonScreen extends BattleScreen {
     const say = this.say;
     panel(ctx, RX, 22, RW, 150);
     text(ctx, this.phase === 'demo' ? '보기' : '할 일', RX + 6, 26, this.phase === 'demo' ? PAL.dim : PAL.gold, { bold: true });
-    wrap(say, RW - 12).slice(0, 10).forEach((l, k) => text(ctx, l, RX + 6, 42 + k * 13, PAL.ink));
+    wrap(say, RW - 12).slice(0, 10).forEach((l, k) => richText(ctx, l, RX + 6, 42 + k * 13, PAL.ink, { termCol: PAL.gold, ui }));
     if (this.phase === 'demo') text(ctx, '누르면 내 차례', RX + RW - 6, 156, PAL.dimDk, { align: 'right' });
     // 누를 곳이 손이면 그 카드에 숨 쉬는 테, 무르기면 단추에
     const st = this.step;

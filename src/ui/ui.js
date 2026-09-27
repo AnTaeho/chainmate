@@ -1,5 +1,6 @@
 // 즉시 모드 화면 조작: 그리는 동안 누를 수 있는 구역(region)을 적어 두고, 입력은 지난 프레임의 구역에 맞춘다.
 // 구역 id는 연기 시험(tools/smoke.mjs)이 찾아 누르는 이름표이기도 하다.
+import { richText } from './glossary.js';
 import { PAL } from '../render/palette.js';
 import { box, rect, text, frame, measure } from '../render/gfx.js';
 
@@ -99,8 +100,8 @@ export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk
   let yy = ty + pad;
   if (title) { text(ctx, title, tx + pad, yy, titleCol, { bold: true }); yy += 14; }
   for (const l of lines) {
-    const [s, col] = Array.isArray(l) ? l : [l, PAL.cardDim];
-    text(ctx, s, tx + pad, yy, col);
+    if (Array.isArray(l)) text(ctx, l[0], tx + pad, yy, l[1]);
+    else richText(ctx, l, tx + pad, yy, PAL.cardDim, { termCol: PAL.goldDk });
     yy += 13;
   }
   frame(ctx, tx, ty, w, h, PAL.frameDk);

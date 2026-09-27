@@ -356,6 +356,8 @@ click('title:records');
 click('records:back');
 click('title:lesson');
 if (!region('lessons:9')) throw new Error('lesson list incomplete');
+click('lessons:terms');
+click('lessons:back');
 click('lessons:back');
 if (app.records.runs < RUNS) throw new Error('records did not count runs');
 app.records.unlocked.openings = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];

@@ -109,6 +109,9 @@ for (let i = 0; i < lessons.length; i++) {
 await ev(() => { const a = window.__app; a.records.lessonsSeen = { drop: true, become: true, chain: true }; a.go('lessons'); });
 await settle(300);
 await shot('lesson-list');
+await clickId('lessons:terms');
+await settle(200);
+await shot('glossary');
 
 // ── 3. 첫 판: 수업을 다 한 사람의 새 판
 await ev(() => { const a = window.__app; a.records.lessonsDone = true; a.saveRecords(); a.nextSeed = 7; a.newRun(); });

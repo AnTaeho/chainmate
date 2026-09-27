@@ -7,6 +7,9 @@ import { createRun } from '../../sim/run.js';
 import { createRng, fork } from '../../sim/rng.js';
 import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide } from '../coach.js';
+import { TERMS } from '../glossary.js';
+import { wrap } from '../../render/text.js';
+import { L } from '../lang.js';
 
 const seenOf = (app) => app.records.lessonsSeen || {};
 
@@ -91,6 +94,7 @@ export class LessonsScreen {
   constructor(app) { this.app = app; }
   draw(ctx, ui) {
     const app = this.app, seen = seenOf(app);
+    if (this.terms) return this.drawTerms(ctx, ui);
     text(ctx, '첫 수업', W / 2, 10, PAL.gold, { align: 'center', bold: true });
     const colW = 140, x0 = Math.floor((W - colW * 3 - 16) / 2);
     LESSON_GROUPS.forEach((g, gi) => {
@@ -108,7 +112,19 @@ export class LessonsScreen {
         text(ctx, L.title, x + 30, y + 10, done ? PAL.ink : PAL.dim);
       });
     });
-    button(ctx, ui, 'lessons:back', W / 2 - 40, 240, 80, 18, '돌아가기', { onClick: () => app.toTitle() });
+    button(ctx, ui, 'lessons:terms', W / 2 - 88, 240, 84, 18, '낱말 풀이', { onClick: () => { this.terms = true; } });
+    button(ctx, ui, 'lessons:back', W / 2 + 4, 240, 84, 18, '돌아가기', { onClick: () => app.toTitle() });
   }
-  key(k) { if (k === 'Escape') this.app.toTitle(); }
+  // 낱말 풀이: 글 안에서 빛나는 낱말 열한 개를 한곳에
+  drawTerms(ctx, ui) {
+    text(ctx, '낱말 풀이', W / 2, 10, PAL.gold, { align: 'center', bold: true });
+    box(ctx, 16, 28, W - 32, 206, PAL.feltDk, PAL.frameDk);
+    TERMS.forEach((t, k) => {
+      const y = 34 + k * 18;
+      text(ctx, t.word, 24, y, PAL.gold, { bold: true });
+      text(ctx, wrap(L(t.say), W - 32 - 84)[0], 96, y, PAL.ink);
+    });
+    button(ctx, ui, 'lessons:back', W / 2 - 42, 240, 84, 18, '돌아가기', { onClick: () => { this.terms = false; } });
+  }
+  key(k) { if (k === 'Escape') { if (this.terms) this.terms = false; else this.app.toTitle(); } }
 }

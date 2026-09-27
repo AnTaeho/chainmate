@@ -38,7 +38,7 @@ legend('opera', {
 
 legend('century', {
   name: '세기의 대국', year: 1956, story: '열세 살 피셔의 퀸 희생',
-  text: '퀸 모습으로 먹을 때마다 사슬 끝 연쇄 ×1.5가 거듭 곱해진다', verb: '갈아입기',
+  text: '퀸 모습으로 먹을 때마다 사슬 끝에 연쇄 ×1.5가 한 번 더 곱해진다', verb: '갈아입기',
   feat: '퀸을 먹고 곧바로 퀸을 또 먹는다', source: 'chart',
   check: (h) => h.caps.includes('QQ'),
 }, {
