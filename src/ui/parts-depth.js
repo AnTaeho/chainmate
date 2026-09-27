@@ -37,7 +37,8 @@ export function familyTip(id, n, drop = 0) {
   const f = FAMILY_BY_ID[id];
   // 효과 글에 「 · 」가 들어 있어 영어로 옮길 때 쪼개지지 않게 먼저 옮긴다
   const lines = [];
-  THRESHOLDS.forEach((th, i) => { for (const l of wrap(`${Math.max(1, th - drop)}  ${L(f.text[i])}`, 160)) lines.push([l, n >= th - drop ? PAL.goldDk : PAL.cardDim]); });
+  // 문턱과 효과를 헷갈리지 않게 「2개 모으면: …」
+  THRESHOLDS.forEach((th, i) => { for (const l of wrap(`${L(`${Math.max(1, th - drop)}개 모으면`)}: ${L(f.text[i])}`, 160)) lines.push([l, n >= th - drop ? PAL.goldDk : PAL.cardDim]); });
   return tipLines(`${f.name} ${n}`, [], 170, lines);
 }
 

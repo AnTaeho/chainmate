@@ -20,6 +20,9 @@ export const HINTS = {
   fairy: '체스 밖의 행마를 가진 기물 — 누르면 먹을 수 있는 칸이 보인다',
   incoming: '점선 그림자는 증원 — 이 수가 끝나면 그 칸에 적이 들어온다',
   maximSell: '격언을 누르면 팔 수 있다 — 끌어서 순서를 바꾼다',
+  joseki: '고른 정석 — 가리키면 무엇을 하는지 보인다',
+  tactic: '묘수 — 떨구기 전에 눌러 이번 대국에 한 번 쓴다',
+  bigText: '창이 작아 글이 작게 보인다 — 설정에서 큰 글자를 켤 수 있다',
 };
 
 const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id]);

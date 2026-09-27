@@ -1,5 +1,6 @@
 // 타이틀: 달빛 아래의 기원. 밤하늘 · 별 · 달 · 멀리 거대한 기물 실루엣 · 안개 · 원근 체스 바닥(한 번 그려 캐시),
 // 그 바닥 위에 눕힌 판에서 풀이기가 실제 규칙 · 실제 연출로 사슬을 계속 둔다(소리 없음). 반딧불 · 로고 빛 · 시연만 매 프레임.
+import { hint } from '../coach.js';
 import { openLesson } from './lessons.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, rect, sprite } from '../../render/gfx.js';
@@ -185,6 +186,7 @@ export class TitleScreen {
   }
   draw(ctx, ui) {
     const app = this.app, time = app.time;
+    if (app.pixelScale && app.pixelScale < 2 && !app.settings.big) hint(app, 'bigText', 'title:settings');
     ctx.drawImage(backdrop, 0, 0);
     this.drawDemo(ctx);
     // 반딧불 불티: 천천히 떠오르며 깜빡인다

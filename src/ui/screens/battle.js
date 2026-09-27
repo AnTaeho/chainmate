@@ -1,6 +1,7 @@
 // 대국 화면(mockup 배치). 가운데 8×8 판, 왼쪽 판(관 · 목표 · 점수 · 값 × 연쇄 · 사슬 모습 줄 · 수 · 무르기 · 상금 · 주머니),
 // 오른쪽(격언 칸 · 손).
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
+import { termTip } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
@@ -709,6 +710,10 @@ export class BattleScreen {
     if (sq >= 0) hint(app, 'things', `sq:${sq}`);
     const f = v.hand.findIndex((p) => PIECES[p.t] && PIECES[p.t].fairy);
     if (f >= 0) hint(app, 'fairy', `hand:${f}`);
+    const reg = (p) => app.ui.regions.find((r) => r.id.startsWith(p));
+    if (reg('fam:')) hint(app, 'family', reg('fam:').id);
+    if (reg('joseki:')) hint(app, 'joseki', reg('joseki:').id);
+    if (reg('tactic:')) hint(app, 'tactic', reg('tactic:').id);
   }
 
   // 목표는 막대로: 지금 점수는 채움, 이번 사슬로 얻을 몫(값 × 연쇄)은 빗금으로 미리 차오른다.
@@ -723,6 +728,7 @@ export class BattleScreen {
     const maxMul = total <= tgt ? 1 : total <= 2 * tgt ? 2 : total <= 5 * tgt ? 5 : 10;
     const maxV = tgt * maxMul;
     const X = BX, Y = 15, Wd = S * 8, Hh = 7;
+    if (this.src.kind !== 'demo') this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '점수가 이 막대 끝에 닿으면 대국을 이긴다 — 넘기면 ×2 · ×5 · ×10 눈금으로 늘어난다') });
     box(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, PAL.feltDk, PAL.frameDk);
     const fill = Math.round(Wd * Math.min(1, score / maxV));
     const hot = score >= tgt;
@@ -1085,6 +1091,8 @@ export class BattleScreen {
       box(ctx, LX, 98, LW, 22, PAL.gold, PAL.frameDk);
       text(ctx, num(g.score), LX + LW / 2, 103, PAL.linkInk, { align: 'center', bold: true });
     } else {
+      ui.region('box:value', LX, 98, 48, 22, { tip: () => termTip('value') });
+      ui.region('box:links', LX + 64, 98, 48, 22, { tip: () => termTip('links') });
       box(ctx, LX + dx, 98, 48, 22, PAL.val, PAL.frameDk);
       text(ctx, short(val), LX + dx + 24, 103, PAL.valInk, { align: 'center', bold: true });
       if (!g) text(ctx, '×', LX + 56, 103, PAL.ink, { align: 'center', bold: true });
@@ -1110,6 +1118,8 @@ export class BattleScreen {
     }
     // 수 · 무르기
     panel(ctx, LX, 180, LW, 28);
+    ui.region('pips:moves', LX, 180, LW, 13, { tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수 — 다 쓰면 대국이 끝난다') });
+    ui.region('pips:discards', LX, 193, LW, 15, { tip: () => tipLines('무르기', '손을 골라 버리고 주머니에서 새로 쥘 수 있는 횟수') });
     text(ctx, '수', LX + 6, 181, PAL.dim);
     // 구슬은 두 이름표 중 긴 것 뒤에서(영어 「Redraw」가 붉은 구슬과 붙지 않게), 칸이 모자라면 간격을 줄인다
     const pipX = Math.max(52, Math.max(measure('수'), measure('무르기')) + 12);

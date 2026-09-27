@@ -9,11 +9,14 @@ export async function boot(env = {}) {
   const W = 480, H = 270;
 
   // 창에 맞춰 정수배 확대(작으면 비정수) + 레터박스. 장치 화소 기준으로 정수배를 잡는다.
+  let app = null;
   function fit() {
     const dpr = win.devicePixelRatio || 1;
     const aw = win.innerWidth * dpr, ah = win.innerHeight * dpr;
     let s = Math.floor(Math.min(aw / W, ah / H));
     if (s < 1) s = Math.min(aw / W, ah / H);
+    // 화면 글 12px가 몇 배로 보이나(CSS 화소). 작은 창에서 처음 안내가 큰 글자를 권한다
+    if (app) app.pixelScale = s / dpr;
     canvas.style.width = `${(W * s) / dpr}px`;
     canvas.style.height = `${(H * s) / dpr}px`;
   }
@@ -32,7 +35,8 @@ export async function boot(env = {}) {
 
   const reduced = !!(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const now = () => (win.performance || globalThis.performance).now();
-  const app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio });
+  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio });
+  fit();
   if (audio) audio.apply(app.settings);
 
   // 마우스 → 게임 좌표(레터박스 · 확대 · DPR 포함: 보이는 캔버스 사각형 기준)

@@ -3,6 +3,12 @@
 // 값 Value · 연쇄 Links · 끊김 Break · 외통 Mate · 격언 Maxim · 기보 Study · 각인 Engraving · 상금 Purse · 단 Dan
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명국 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 export const EN = {
+  '이번 대국에 떨굴 수 있는 횟수 — 다 쓰면 대국이 끝난다': 'How many drops you have this match — the match ends when they run out',
+  '손을 골라 버리고 주머니에서 새로 쥘 수 있는 횟수': 'How many times you can throw back part of your hand and draw again',
+  '점수가 이 막대 끝에 닿으면 대국을 이긴다 — 넘기면 ×2 · ×5 · ×10 눈금으로 늘어난다': 'Reach the end of this bar to win — past it, the bar stretches to ×2, ×5, ×10',
+  '고른 정석 — 가리키면 무엇을 하는지 보인다': 'Your joseki — point at it to see what it does',
+  '묘수 — 떨구기 전에 눌러 이번 대국에 한 번 쓴다': 'A trick — tap it before a drop to use it once this match',
+  '창이 작아 글이 작게 보인다 — 설정에서 큰 글자를 켤 수 있다': 'The window is small, so text is small — turn on Big text in Settings',
   // 낱말 풀이(glossary.js)
   '낱말 풀이': 'Glossary', '사슬': 'Chain', '값': 'Value', '연쇄': 'Links', '모습': 'Form',
   '손의 기물을 판에 내려놓는다 — 그 자리에서 먹을 적이 닿는 칸에만': 'Put a piece from your hand on the board — only where it can reach prey',
@@ -316,6 +322,7 @@ export const EN = {
 // 틀: 숫자나 이름이 끼는 글. fn(m, tr) — tr로 끼인 말을 다시 옮긴다.
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
+  [/^(\d+)개 모으면$/, (m) => `At ${m[1]}`],
   [/^조각 셋을 모으면 전설: (.+)$/, (m, tr) => `Three fragments make a legend: ${tr(m[1])}`],
   [/^가족: (.+) — 같은 가족을 2 · 4 · 6 모으면 효과$/, (m, tr) => `Family: ${m[1].split(' · ').map(tr).join(' · ')} — effects at 2, 4 and 6 of one family`],
   [/^([^\s:\d]+(?: [^\s:\d]+)?): (.+)$/, (m, tr) => `${tr(m[1])}: ${tr(m[2])}`],
