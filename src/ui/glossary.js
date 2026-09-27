@@ -134,12 +134,14 @@ export function keyList(ids, hot = null, max = KEY_MAX) {
   if (hot && ids.includes(hot) && !list.includes(hot)) list = [...list.slice(0, max - 1), hot];
   return list;
 }
-// 낱말 상자 하나를 (x, y)에 폭 w로. 그린 네모를 돌려준다(연기 시험이 센다)
-export function drawKeyBox(ctx, id, x, y, w, hot = false) {
+// 낱말 상자 하나를 (x, y)에 폭 w로. 그린 네모를 돌려준다(연기 시험이 센다).
+// note: 낱말 옆에 붙이는 지금 값(시너지 상자의 「5/6」 — 판 틀에서 설명이 왼쪽 칸의 시너지 줄을 덮으므로)
+export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null) {
   const h = keyHeight(id, w);
   box(ctx, x, y, w, h, '#16231f', hot ? PAL.gold : PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, '#2a3a33');
   text(ctx, termWord(id), x + 5, y + 2, PAL.gold, { bold: true });
+  if (note && measure(termWord(id), true) + 6 + measure(note) <= w - 10) text(ctx, note, x + w - 5, y + 2, PAL.ink, { align: 'right' });
   keyLines(id, w).forEach((l, k) => text(ctx, l, x + 5, y + 16 + k * 13, PAL.ink));
   return { id, x, y, w, h };
 }

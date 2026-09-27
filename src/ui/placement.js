@@ -41,7 +41,11 @@ export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [] } = 
       if (total > H - EDGE * 2) continue;
       return { x, y: Math.max(EDGE, Math.min(H - EDGE - total, anchor.y)), w, n, side: 'right' };
     }
-    return null;
+    // 왼쪽 칸 안의 것인데 말풍선 하나가 위 · 아래 어디에도 안 들어가면(영어의 긴 시너지 풀이): 넓은 쪽으로 화면 끝까지 당긴다.
+    // 가리킨 것을 덮지만 설명이 안 뜨는 것보다 낫다(squeezed — 연기 시험이 따로 센다)
+    const h0 = Math.min(hs[0], H - EDGE * 2);
+    const roomBelow = H - EDGE - (anchor.y + anchor.h + NOTE_OFF), roomAbove = anchor.y - NOTE_OFF - EDGE;
+    return { x, y: roomBelow >= roomAbove ? H - EDGE - h0 : EDGE, w, n: 1, side: roomBelow >= roomAbove ? 'below' : 'above', squeezed: true };
   }
   let x = anchor.x;
   if (x + w > W - EDGE) x = anchor.x + anchor.w - w;

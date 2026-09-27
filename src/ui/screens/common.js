@@ -73,7 +73,7 @@ export function moneyPanel(ctx, ui, run) {
   panel(ctx, L, y, LW, SIDE_ROWS.rowH);
   text(ctx, '상금', L + 6, y + 5, PAL.dim);
   const amt = `$${run.money}`;
-  const fx = L + 6 + measure('상금') + 6;
-  fragmentStrip(ctx, ui, run, fx, y + 5, { max: Math.floor((L + LW - 6 - measure(amt, true) - 4 - fx) / 15) });
+  const fx = L + 6 + measure('상금') + 4;
+  fragmentStrip(ctx, ui, run, fx, y + 5, { max: Math.floor((L + LW - 6 - measure(amt, true) - 3 - fx) / 13), step: 13 });
   text(ctx, amt, L + LW - 6, y + 5, PAL.gold, { align: 'right', bold: true });
 }

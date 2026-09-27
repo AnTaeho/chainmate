@@ -144,6 +144,9 @@ test('설명 자리: 판 틀은 왼쪽 칸에 가리킨 것의 윗변 높이로,
   assert.equal(c.y + 30, 197);
   // 다 안 들어가면 뒤의 것부터 뺀다
   assert.equal(placeNotes('side', { x: 200, y: 50, w: 28, h: 28 }, [120, 100, 90]).n, 2);
+  // 왼쪽 칸 안의 것인데 위 · 아래 어디에도 안 들어가면 넓은 쪽으로 화면 끝까지 당긴다(안 뜨지는 않는다)
+  const sq = placeNotes('side', { x: 14, y: 77, w: 100, h: 13 }, [180]);
+  assert.ok(sq.squeezed && sq.y + 180 === 268);
   // 처음 안내도 같은 자리(판 틀은 왼쪽 칸, 화살표는 오른쪽)
   const h = placeBubble('side', { x: 300, y: 100, w: 28, h: 28 }, 40);
   assert.deepEqual([h.x, h.y, h.arrow], [SIDE_X, 100, 'right']);

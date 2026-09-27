@@ -607,9 +607,9 @@ export function fragmentTip(run, l) {
   return tipLines(l.name, lines, 170);
 }
 // max: 놓을 수 있는 조각 수(좁은 칸 — 상금 칸 안)
-export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9 } = {}) {
+export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9, step = 15 } = {}) {
   const list = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && (f.first || f.feat || f.gold) && !run.legends.includes(l.id); }).slice(0, Math.max(0, max));
-  const w = 15;
+  const w = step;
   let xx = align === 'right' ? x - list.length * w : x;
   for (const l of list) {
     const f = run.fragments[l.id];

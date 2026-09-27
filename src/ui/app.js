@@ -9,6 +9,7 @@ import { miniShard } from './parts.js';
 import { setLang } from './lang.js';
 import { termsIn, keyList, keyHeight, drawKeyBox } from './glossary.js';
 import { placeNotes, noteMode, noteWidth, NOTE_GAP } from './placement.js';
+import { familyCounts, THRESHOLDS, levelOf } from '../data/families.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
@@ -292,13 +293,16 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     let y = lay.y, k = 0;
     const rects = [];
     if (tip) { app.tipRect = tooltip(ctx, lay.x, y, tip, lay.w); rects.push(app.tipRect); y += app.tipRect.h + NOTE_GAP; k++; }
+    // 시너지 상자: 지금 모은 수(「5/6」)를 낱말 옆에
+    const counts = app.run && ids.some((id) => id.startsWith('fam_')) ? familyCounts(app.run) : null;
+    const famNote = (id) => { if (!counts || !id.startsWith('fam_')) return null; const n = counts[id.slice(4)] || 0, next = THRESHOLDS[levelOf(n)]; return next ? `${n}/${next}` : `${n}`; };
     for (const id of ids) {
       if (k >= lay.n) break;
-      const r = drawKeyBox(ctx, id, lay.x, y, lay.w, id === hot);
+      const r = drawKeyBox(ctx, id, lay.x, y, lay.w, id === hot, famNote(id));
       app.keyBoxes.push(r); rects.push(r);
       y += r.h + NOTE_GAP; k++;
     }
-    app.noteStack = { mode, anchor, id: h ? h.id : null, rects, side: lay.side };
+    app.noteStack = { mode, anchor, id: h ? h.id : null, rects, side: lay.side, squeezed: !!lay.squeezed };
   };
 
   app.frame = (t) => {
