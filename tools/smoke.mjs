@@ -6,6 +6,7 @@ import { decideBattle } from './bot.mjs';
 import { lineCommands } from '../src/sim/solver.js';
 import { canBuy } from '../src/sim/run.js';
 import { evolveTo } from '../src/data/tactics.js';
+import { isHidden } from '../src/sim/battle.js';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -70,6 +71,8 @@ function hover(id) {
 const pvSeen = { capture: 0, drop: 0, cut: 0, kb: 0, touch: 0 };
 // 칸 말풍선: 증원 그림자 · 노림수
 const tipSeen = { incoming: 0, forced: 0, path: 0 };
+const newsSeen = { battles: 0, icons: 0 };
+const objTips = { step: 0, gate: 0, highway: 0, wall: 0, gem: 0 };
 const hoverTip = () => { const h = app.ui.hover; return !!(h && h.tip && (typeof h.tip === 'function' ? h.tip() : h.tip)); };
 const screen = () => (app.overlay ? app.overlay.name : app.screen.name);
 function idle(max = 3000) {
@@ -100,6 +103,8 @@ let paused = false, settingsSeen = false, draggedMaxim = false, reloaded = false
 function battleStep() {
   const s = app.screen;
   const b = app.run.battle;
+  // 대국 첫 띠의 「새로」 줄(이번 판에서 처음 나온 것)
+  if (s.banner && s.banner.news && !s.newsCounted) { s.newsCounted = true; newsSeen.battles++; newsSeen.icons += s.banner.news.length; }
   if (!paused) { dom.key('Escape'); pump(1); if (screen() !== 'pause') throw new Error('pause did not open'); click('pause:settings'); click('set:speed4'); click('set:shake'); click('set:big'); click('set:big'); click('set:back'); click('pause:resume'); paused = true; settingsSeen = true; }
   if (b.status === 'chain') {
     // 사슬 한가운데서 이어 하기(드묾): 먹을 칸 하나
@@ -120,6 +125,9 @@ function battleStep() {
   s.seq.total = 0;
   s.seq.trace = [];
   // 증원 그림자 위에 올리면 말풍선
+  // 판 위 사물(발판 · 문 · 고속도로 줄 · 벽 · 보석) 칸에 올리면 말풍선
+  const objSq = { step: (b.rules.steps || [])[0], gate: (b.rules.gates || [])[0], highway: (b.rules.highways || []).length ? b.rules.highways[0] + 8 * 3 : undefined, wall: b.board.findIndex((c) => c && c.t === 'X'), gem: b.board.findIndex((c) => c && c.t === 'J') };
+  for (const [k, sq] of Object.entries(objSq)) if (sq != null && sq >= 0 && objTips[k] < 5 && !isHidden(b, sq)) { hover(`sq:${sq}`); if (hoverTip()) objTips[k]++; }
   const ghost = (b.incoming || []).find((r) => !b.board[r.sq]);
   if (ghost && tipSeen.incoming < 20) { hover(`sq:${ghost.sq}`); if (hoverTip()) tipSeen.incoming++; }
   click(`hand:${d.play.handIndex}`);
@@ -444,6 +452,8 @@ console.log(`끝없는 대국: ${endless ? `${app.records.bestEndless}관` : '�
 console.log(`첫 수업: ${lessonLog.join(' · ')}`);
 console.log(`미리 보기: 먹기 ${pvSeen.capture} · 끊김 ${pvSeen.cut} · 떨구기 ${pvSeen.drop} · 화살표 ${pvSeen.kb} · 터치 ${pvSeen.touch}`);
 console.log(`말풍선: 증원 ${tipSeen.incoming} · 노림수 ${tipSeen.forced} · 판의 길 ${tipSeen.path}`);
+console.log(`대국 띠 「새로」: 대국 ${newsSeen.battles} · 그림 ${newsSeen.icons}`);
+console.log(`판 위 사물 말풍선: 발판 ${objTips.step} · 문 ${objTips.gate} · 고속도로 ${objTips.highway} · 벽 ${objTips.wall} · 보석 ${objTips.gem}`);
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);

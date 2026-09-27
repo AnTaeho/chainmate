@@ -57,7 +57,7 @@ test('화면 글에 만든 쪽 말 · 설명서 말투가 없다', () => {
   }
 });
 
-test('영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · 해금)이 모두 옮겨진다', async () => {
+test('영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · 해금 · 정석 · 혼 · 특성 · 묘수 · 행마)이 모두 옮겨진다', async () => {
   const { missing } = await import('../src/ui/lang.js');
   const { MASTERS } = await import('../src/data/masters.js');
   const { ENGRAVINGS } = await import('../src/data/engravings.js');
@@ -66,7 +66,14 @@ test('영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · �
   const { CHARTS, chartText } = await import('../src/data/charts.js');
   const { DANS } = await import('../src/sim/run.js');
   const { UNLOCKS } = await import('../src/ui/records.js');
+  const { JOSEKIS } = await import('../src/data/josekis.js');
+  const { SOULS } = await import('../src/data/souls.js');
+  const { TRAITS } = await import('../src/data/traits.js');
+  const { TACTICS } = await import('../src/data/tactics.js');
+  const { PIECE_MOVE, PIECE_NAME } = await import('../src/ui/words.js');
   const all = [
+    ...JOSEKIS.flatMap((j) => [j.name, j.text]), ...SOULS.flatMap((x) => [x.name, x.text]), ...TRAITS.flatMap((x) => [x.name, x.text]),
+    ...TACTICS.flatMap((x) => [x.name, x.text]), ...Object.values(PIECE_MOVE), ...Object.values(PIECE_NAME),
     ...MAXIMS.flatMap((m) => [m.name, m.text, m.verb]), ...MASTERS.flatMap((m) => [m.name, m.text]),
     ...LEGENDS.flatMap((l) => [l.name, l.story, l.text, l.feat, l.verb]), ...ENGRAVINGS.flatMap((e) => [e.name, e.text]),
     ...EDITIONS.flatMap((e) => [e.name, e.text]), ...Object.values(OPENINGS).flatMap((o) => [o.name, o.text]),
