@@ -93,7 +93,7 @@ export function splitTerms(s) {
 
 export const termWord = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enWord : TERM_BY_ID[id].word);
 export const termSay = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enSay : TERM_BY_ID[id].say);
-export const termTip = (id) => ({ title: termWord(id), lines: wrap(termSay(id), 160).map((l) => [l, PAL.cardInk]), w: 170 });
+export const termTip = (id) => ({ title: termWord(id), body: [], extra: [[termSay(id), PAL.cardInk]], w: 170 });
 
 // 낱말을 두드러지게 한 줄. ui가 있으면 낱말 자리를 적어 둔다(ui.termSpans) — 가리키면 그 낱말 상자가 금빛 테로 켜진다.
 // 기본 낱말(떨구기 · 사슬 · 값 · 배수 …)은 빛깔도 자리도 받지 않는다(글이 알록달록해지지 않게).
@@ -125,71 +125,21 @@ export function termsIn(list) {
   return out;
 }
 export const KEY_MAX = 2; // 카드 하나에 상자 둘까지
-export const KEY_W = 176;
-const KEY_WS = [KEY_W, 150, 128]; // 옆자리가 좁으면 더 좁은 상자로(줄이 늘어난다)
-const KEY_GAP = 2;
-const keyLines = (id, w = KEY_W) => wrap(termSay(id), w - 10);
-const keyH = (id, w = KEY_W) => 16 + keyLines(id, w).length * 13 + 3;
-// 앞 칸부터 견준다([덮는 넓이, 상자 너비 차례, 줄 차례, 윗변과의 거리])
-const less = (a, b) => { for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return a[k] < b[k]; return false; };
-const area = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
-// 자리 잡기: 피할 네모들(avoid[0] = 카드, 그다음 말풍선) 어느 것과도 겹치지 않는 세로 줄을 찾는다.
-// 후보는 카드 · 말풍선의 오른쪽 · 왼쪽 줄마다 카드 윗변에 가까운 자리와 빈 틈의 위 · 아래 끝.
-// 고르는 차례: 다른 카드 · 단추(others)를 덮는 넓이가 가장 적은 곳 → 넓은 상자 → 카드 오른쪽 · 왼쪽 차례 → 카드 윗변에 가까운 곳.
-// 상자가 다 안 들어가면 뒤에서부터 뺀다.
-export function layoutKeyBoxes(ids, avoid, { max = KEY_MAX, hot = null, W = 480, H = 270, others = [] } = {}) {
+const keyLines = (id, w) => wrap(termSay(id), w - 10);
+// 낱말 상자 높이(폭 w). 폭은 설명 묶음이 정한다(말풍선과 같은 폭 — placement.js)
+export const keyHeight = (id, w) => 16 + keyLines(id, w).length * 13 + 3;
+// 상자에 띄울 낱말: 앞에서 KEY_MAX개, 가리킨 낱말(hot)은 꼭 넣는다
+export function keyList(ids, hot = null, max = KEY_MAX) {
   let list = ids.slice(0, max);
   if (hot && ids.includes(hot) && !list.includes(hot)) list = [...list.slice(0, max - 1), hot];
-  if (!list.length || !avoid.length) return null;
-  const pref = avoid[0].y;
-  for (let n = list.length; n >= 1; n--) {
-    let best = null;
-    KEY_WS.forEach((bw, wi) => {
-      const heights = list.slice(0, n).map((id) => keyH(id, bw));
-      const total = heights.reduce((u, v) => u + v, 0) + KEY_GAP * (n - 1);
-      if (total > H - 4) return;
-      // 줄 후보: 카드 · 말풍선의 오른쪽 · 왼쪽, 카드 바로 위 · 아래(카드 왼끝 · 오른끝에 맞춰), 화면 왼끝 · 오른끝
-      const xs = [];
-      for (const a of avoid) xs.push(a.x + a.w + 3, a.x - bw - 3);
-      xs.push(avoid[0].x, avoid[0].x + avoid[0].w - bw, 2, W - 2 - bw);
-      xs.forEach((x, xi) => {
-        if (x < 2 || x + bw > W - 2) return;
-        const blocks = avoid.filter((a) => a.x < x + bw && a.x + a.w > x).map((a) => [a.y - 2, a.y + a.h + 2]).sort((u, v) => u[0] - v[0]);
-        const tryY = (y) => {
-          const r = { x, y, w: bw, h: total };
-          const cover = others.reduce((sum, o) => sum + area(r, o), 0);
-          const key = [cover, wi, xi, Math.abs(y - pref)];
-          if (!best || less(key, best.key)) best = { key, x, y, w: bw, list: list.slice(0, n), heights };
-        };
-        const tryIv = (lo, hi) => {
-          if (hi - lo < total) return;
-          tryY(Math.max(lo, Math.min(hi - total, pref)));
-          tryY(lo);
-          tryY(hi - total);
-        };
-        let cur = 2;
-        for (const [lo, hi] of blocks) { if (lo > cur) tryIv(cur, lo); cur = Math.max(cur, hi); }
-        tryIv(cur, H - 2);
-      });
-    });
-    if (best) return { x: best.x, y: best.y, w: best.w, list: best.list, heights: best.heights };
-  }
-  return null;
+  return list;
 }
-// 그린 상자 네모들을 돌려준다(연기 시험이 센다)
-export function drawKeyBoxes(ctx, ids, avoid, opts = {}) {
-  const lay = layoutKeyBoxes(ids, avoid, opts);
-  if (!lay) return [];
-  const out = [];
-  let y = lay.y;
-  lay.list.forEach((id, i) => {
-    const h = lay.heights[i], x = lay.x, w = lay.w;
-    box(ctx, x, y, w, h, '#16231f', id === opts.hot ? PAL.gold : PAL.frameDk);
-    rect(ctx, x + 1, y + 1, w - 2, 1, '#2a3a33');
-    text(ctx, termWord(id), x + 5, y + 2, PAL.gold, { bold: true });
-    keyLines(id, w).forEach((l, k) => text(ctx, l, x + 5, y + 16 + k * 13, PAL.ink));
-    out.push({ id, x, y, w, h });
-    y += h + KEY_GAP;
-  });
-  return out;
+// 낱말 상자 하나를 (x, y)에 폭 w로. 그린 네모를 돌려준다(연기 시험이 센다)
+export function drawKeyBox(ctx, id, x, y, w, hot = false) {
+  const h = keyHeight(id, w);
+  box(ctx, x, y, w, h, '#16231f', hot ? PAL.gold : PAL.frameDk);
+  rect(ctx, x + 1, y + 1, w - 2, 1, '#2a3a33');
+  text(ctx, termWord(id), x + 5, y + 2, PAL.gold, { bold: true });
+  keyLines(id, w).forEach((l, k) => text(ctx, l, x + 5, y + 16 + k * 13, PAL.ink));
+  return { id, x, y, w, h };
 }

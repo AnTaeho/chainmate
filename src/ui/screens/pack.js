@@ -7,9 +7,10 @@ import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button } from '../ui.js';
-import { itemCard, itemKeys, itemExtraTip, maximColumn, envelope, targetPanel } from '../parts.js';
+import { itemCard, itemKeys, itemExtraTip, maximGrid, envelope, targetPanel } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
-import { topBar } from './common.js';
+import { runSide, pauseButton } from './common.js';
+import { MAIN, TOP, CARD, BTN_H } from '../frame.js';
 import { bagRow } from './shop.js';
 import { familyCounts } from '../../data/families.js';
 
@@ -23,6 +24,7 @@ export class PackScreen {
     this.t = 0;
     this.engraveIndex = null;
     this.sellMenu = null;
+    this.notes = 'side';
     app.sfx('pack');
   }
   get run() { return this.app.run; }
@@ -55,22 +57,26 @@ export class PackScreen {
     if (legend) this.app.flow([['legend', { legend: legend.legend }]]);
     else if (this.run.phase !== 'pack') this.app.goPhase();
   }
+  // 판 틀: 왼쪽 칸(꾸러미 이름 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(카드 셋 · 건너뛰기 · 새기기 · 금빛 꾸러미의 격언 칸)
   draw(ctx, ui) {
     const run = this.run, pack = run.pack;
     if (!pack) return;
     const gold = pack.kind === 'golden';
-    topBar(ctx, ui, this.app, PACK_NAME[pack.kind]);
+    runSide(ctx, ui, this.app, PACK_NAME[pack.kind]);
+    pauseButton(ctx, ui, this.app);
     const n = pack.options.length;
-    const cw = 104, ch = 124, gap = 10;
-    const x0 = Math.floor((W - n * cw - (n - 1) * gap) / 2) - (pack.options.some((o) => o.kind === 'maxim') ? 54 : 0);
+    const cw = CARD.w, ch = 124;
+    const x0 = MAIN.x + Math.floor((MAIN.w - n * cw - (n - 1) * CARD.gap) / 2);
     pack.options.forEach((o, i) => {
       const at = flipAt(i);
       const p = Math.max(0, Math.min(1, (this.t - at) / 0.24));
-      const x = x0 + i * (cw + gap), y = 36;
+      const x = x0 + i * (cw + CARD.gap), y = TOP;
       const id = `pack:pick:${i}`;
       const scaleX = Math.abs(1 - 2 * p);
       const shown = p >= 0.5;
-      ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: shown ? () => itemExtraTip(o) : null, tipAt: { x: Math.min(W - 176, x), y: 190 }, keys: shown ? () => itemKeys(o) : null, preview: true });
+      // 새길 기물을 고르는 동안은 카드 말풍선을 띄우지 않는다(고른 각인은 미리 보기 판이 말한다)
+      const talk = shown && this.engraveIndex == null;
+      ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: talk ? () => itemExtraTip(o) : null, keys: talk ? () => itemKeys(o) : null, preview: true });
       if (!shown) {
         const nw = Math.max(2, Math.round(cw * scaleX));
         if (this.t < OPEN) return;
@@ -83,31 +89,32 @@ export class PackScreen {
     if (this.t < OPEN + 0.25) {
       const k = Math.min(1, this.t / OPEN);
       const fade = this.t < OPEN ? 1 : 1 - (this.t - OPEN) / 0.25;
-      const ew = 96, eh = 66, ex = Math.floor(x0 + (n * cw + (n - 1) * gap) / 2 - ew / 2), ey = 70 + Math.round(Math.max(0, this.t - OPEN) * 60);
+      const ew = 96, eh = 66, ex = Math.floor(x0 + (n * cw + (n - 1) * CARD.gap) / 2 - ew / 2), ey = 50 + Math.round(Math.max(0, this.t - OPEN) * 60);
       ctx.globalAlpha = Math.max(0, fade);
       envelope(ctx, ex, ey, ew, eh, pack.kind, { open: k });
       ctx.globalAlpha = 1;
     }
+    const below = TOP + ch + 6;
     if (this.engraveIndex != null) {
       // 기물을 고르면 새긴 모습을 미리 보이고, 「새긴다」로 확인한다
       const o = pack.options[this.engraveIndex];
       const p = this.engraveTarget != null ? run.deck.find((x) => x.id === this.engraveTarget) : null;
-      targetPanel(ctx, ui, run, o, p, 12, 164, 330, {
+      targetPanel(ctx, ui, run, o, p, MAIN.x, below, MAIN.w, {
         onConfirm: () => this.finish({ type: 'pick', index: this.engraveIndex, target: this.engraveTarget }),
         onCancel: () => { this.engraveIndex = null; this.engraveTarget = null; },
       });
-      bagRow(ctx, ui, run, 12, 208, 330, { pick: (q) => { this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget });
-    }
-    if (this.engraveIndex == null) button(ctx, ui, 'pack:skip', W / 2 - 50 - (pack.options.some((o) => o.kind === 'maxim') ? 54 : 0), 166, 100, 18, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
-    // 금빛 꾸러미: 격언 칸과 팔기
+      bagRow(ctx, ui, run, MAIN.x, below + 46, MAIN.w, { pick: (q) => { this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget, bottom: 268 });
+    } else button(ctx, ui, 'pack:skip', MAIN.x + Math.floor(MAIN.w / 2) - 50, below, 100, BTN_H, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
+    // 금빛 꾸러미: 격언 칸(세 칸씩 두 줄)과 팔기 — 칸이 찬 채로 격언을 받으려면 먼저 판다
     if (pack.options.some((o) => o.kind === 'maxim')) {
-      const RX = 360, RW = 112;
-      text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
-      const col = maximColumn(ctx, ui, run, RX, 46, RW, 170, { onClick: (i) => { this.sellMenu = this.sellMenu === i ? null : i; }, hotIndex: this.sellMenu ?? -1 });
+      const gy = below + BTN_H + 6;
+      text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, MAIN.x, gy, PAL.dim);
+      const spots = maximGrid(ctx, ui, run, MAIN.x, gy + 14, 3, CARD.w, 28, CARD.gap, 4, { onClick: (i) => { this.sellMenu = this.sellMenu === i ? null : i; }, hotIndex: this.sellMenu ?? -1 });
       if (this.sellMenu != null) {
         const m = run.maxims[this.sellMenu];
-        const spot = col.spots.find((s) => s.i === this.sellMenu);
-        if (m && spot && canSell(m)) button(ctx, ui, 'pack:sell', RX - 70, spot.y + Math.floor(spot.h / 2) - 9, 66, 18, `팔기 $${sellPrice(m)}`, { tone: 'red', onClick: () => { const i = this.sellMenu; this.sellMenu = null; this.app.cmd({ type: 'sell', index: i }); this.app.sfx('coin'); } });
+        const spot = spots.find((q) => q.i === this.sellMenu);
+        // 팔기 단추: 고른 격언 칸 오른쪽 끝에 겹쳐(칸 안)
+        if (m && spot && canSell(m)) button(ctx, ui, 'pack:sell', spot.x + spot.w - 62, spot.y + 5, 60, 16, `팔기 $${sellPrice(m)}`, { tone: 'red', onClick: () => { const i = this.sellMenu; this.sellMenu = null; this.app.cmd({ type: 'sell', index: i }); this.app.sfx('coin'); } });
         else this.sellMenu = null;
       }
     }

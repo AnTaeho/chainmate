@@ -17,19 +17,22 @@ import { TACTIC_BY_ID, evolveTo } from '../../data/tactics.js';
 const ENG_NAME = (id) => engravingInfo(id).name;
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
-import { topBar } from './common.js';
+import { runSide, pauseButton } from './common.js';
+import { RIGHT, CENTER, CARD, TOP, BTN_H } from '../frame.js';
 
-const RX = 360, RW = 112;
-const CARD_W = 100, CARD_H = 116;
+const RX = RIGHT.x, RW = RIGHT.w;
+// 가운데 칸: 진열(22 ~ 138) · 꾸러미(142 ~ 184) · 단추(188) · 주머니(210 ~ 268). 오른쪽 칸: 격언(22 ~ 178) · 두루마리(198 ~)
+const CARD_W = CARD.w, CARD_H = 116, PACK_Y = 142, PACK_H = 42, BTN_Y = 188, BAG_Y = 210, MAXIM_H = 156, SCROLL_Y = 198;
 
 // 주머니 줄: 작은 기물 카드들. pick(p)이 있으면 누를 수 있다.
 // flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝) · grow: { form, p } 기보로 자라는 모습(0.5초 빛 기둥)
-export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selectedId = null, idPrefix = 'deck', flash = null, grow = null } = {}) {
+// bottom: 줄이 여럿이면 이 아래로 넘지 않게 줄 간격을 줄인다(카드가 겹쳐 쌓인다)
+export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selectedId = null, idPrefix = 'deck', flash = null, grow = null, bottom = 268 } = {}) {
   const n = run.deck.length;
   const cw = 20, ch = 28;
   const per = Math.max(1, Math.floor((w + 3) / (cw + 3)));
   const rows = Math.ceil(n / per);
-  const step = rows > 2 ? 16 : ch + 3;
+  const step = rows > 1 ? Math.min(ch + 3, Math.floor((bottom - y - ch) / (rows - 1))) : ch + 3;
   run.deck.forEach((p, i) => {
     const col = i % per, row = Math.floor(i / per);
     const px = x + col * (cw + 3), py = y + row * step;
@@ -79,8 +82,6 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
   const ls = wrap(main, w - 26);
   text(ctx, ls.length > 1 || main !== head ? `${ls[0].replace(/\s*[·—,]$/, '')}…` : ls[0] || '', x + 23, y + 14, PAL.cardDim);
 }
-// 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
-const TIP_AT = { x: 196, y: 174 };
 export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
@@ -88,6 +89,7 @@ export class ShopScreen {
     this.app = app;
     this.menu = null;      // { kind: 'maxim', index } | { kind: 'piece', id }
     this.target = null;    // 각인 두루마리를 쓸 대상 고르기 { index }
+    this.notes = 'side';   // 설명 자리: 왼쪽 칸(placement.js)
     const fx = app.shopFx || [];
     app.shopFx = null;
     for (const e of fx) this.fx(e);
@@ -139,59 +141,53 @@ export class ShopScreen {
     return ev;
   }
 
+  // 판 틀(docs/design-notes/layout.md): 왼쪽 칸(상점 · 시너지 · 정석 · 상금 · 주머니 수 — 설명 자리),
+  // 가운데(진열 둘 · 꾸러미 둘 · 다시 진열 · 나가기 · 주머니), 오른쪽 칸(격언 · 두루마리)
   draw(ctx, ui) {
     const app = this.app, run = this.run, shop = run.shop;
-    topBar(ctx, ui, app, '상점');
-    text(ctx, `${run.ante}관`, 60, 8, PAL.dim);
-    // 진열
-    text(ctx, '진열', 12, 28, PAL.dim);
+    runSide(ctx, ui, app, '상점');
+    pauseButton(ctx, ui, app);
+    const CX = CENTER.x;
+    text(ctx, '진열', CX, 8, PAL.dim);
     // 진열 카드는 효과를 적을 만큼 넓게(가리키지 않아도 읽힌다)
     shop.display.forEach((it, i) => {
-      const x = 12 + i * 104, y = 40, id = `shop:buy:${i}`;
+      const x = CX + i * (CARD_W + 8), y = TOP, id = `shop:buy:${i}`;
       const ok = canBuy(run, it);
-      ui.region(id, x, y, CARD_W, CARD_H, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemExtraTip(it), tipAt: TIP_AT, keys: () => itemKeys(it), preview: true });
+      ui.region(id, x, y, CARD_W, CARD_H, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemExtraTip(it), keys: () => itemKeys(it), preview: true });
       itemCard(ctx, it, x, y, CARD_W, CARD_H, { hover: ui.isHover(id) && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok } });
       if (!it.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, CARD_W, CARD_H, PAL.shadow); ctx.globalAlpha = 1; }
     });
-    // 꾸러미
-    text(ctx, '꾸러미', 222, 28, PAL.dim);
+    // 꾸러미: 진열 아래 가로 칸 둘
     shop.packs.forEach((pk, i) => {
-      const x = 222 + i * 66, y = 40, id = `shop:pack:${i}`;
+      const x = CX + i * (CARD_W + 8), y = PACK_Y, id = `shop:pack:${i}`;
       const ok = !pk.sold && run.money >= pk.price;
-      ui.region(id, x, y, 62, CARD_H, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack') });
-      this.packCard(ctx, pk, x, y, 62, CARD_H, ui.isHover(id) && ok);
-      if (!pk.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, 62, CARD_H, PAL.shadow); ctx.globalAlpha = 1; }
+      ui.region(id, x, y, CARD_W, PACK_H, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack') });
+      this.packCard(ctx, pk, x, y, CARD_W, PACK_H, ui.isHover(id) && ok);
+      if (!pk.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, CARD_W, PACK_H, PAL.shadow); ctx.globalAlpha = 1; }
     });
     const rc = rerollCost(run);
-    button(ctx, ui, 'shop:reroll', 12, 160, 204, 18, `다시 진열 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
-    button(ctx, ui, 'shop:leave', 222, 160, 128, 18, '나가기', { onClick: () => this.leave(), tone: 'gold' });
-    // 주머니
-    text(ctx, `주머니 ${run.deck.length}`, 12, 184, PAL.dim);
-
+    button(ctx, ui, 'shop:reroll', CX, BTN_Y, CARD_W, BTN_H, `다시 진열 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
+    button(ctx, ui, 'shop:leave', CX + CARD_W + 8, BTN_Y, CARD_W, BTN_H, '나가기', { onClick: () => this.leave(), tone: 'gold' });
+    // 주머니(가운데 아래). 수는 왼쪽 칸 「주머니」
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
     const fp = since(this.flash, 0.3), gp = since(this.grow, 0.5);
-    bagRow(ctx, ui, run, 12, 198, 330, {
+    bagRow(ctx, ui, run, CX, BAG_Y, CENTER.w, {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : this.target ? this.target.pieceId : null,
-      flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { form: this.grow.form, p: gp } : null,
+      flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { form: this.grow.form, p: gp } : null, bottom: 268,
     });
-    // 가족 띠(주머니 아래)
-    familyStrip(ctx, ui, run, 12, 256, 330, { time: app.time, fx: this.famFx, max: 6 });
-    // 오른쪽: 격언
-    text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
-    josekiBadges(ctx, ui, run, RX + 56, 33);
-    fragmentStrip(ctx, ui, run, RX + RW, 32, { align: 'right' });
-    const col = maximColumn(ctx, ui, run, RX, 46, RW, 146, {
+    // 오른쪽 칸: 격언
+    text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
+    const col = maximColumn(ctx, ui, run, RX, TOP, RW, MAXIM_H, {
       onClick: (i) => { this.menu = this.menu && this.menu.kind === 'maxim' && this.menu.index === i ? null : { kind: 'maxim', index: i }; this.target = null; },
       drag: (i, mx, my) => this.dropMaxim(i, my, col),
       hotIndex: this.menu && this.menu.kind === 'maxim' ? this.menu.index : -1,
     });
     this.col = col;
-    // 두루마리
-    // 칸마다 한 줄씩(두 칸): 이름 아래에 효과 앞머리가 보이게 오른쪽 판 너비를 다 쓴다. 칸이 셋 이상이면 두 줄 두 칸씩 좁게
+    // 두루마리: 두 칸이면 한 줄에 하나(이름 아래 효과 앞머리), 셋 이상이면 두 칸씩
     const wide = run.consumableSlots <= 2;
-    text(ctx, '두루마리', RX, 197, PAL.dim);
+    text(ctx, '두루마리', RX, SCROLL_Y - 14, PAL.dim);
     for (let i = 0; i < run.consumableSlots; i++) {
-      const [x, y, cw, ch] = wide ? [RX, 210 + i * 30, RW, 28] : [RX + (i % 2) * 57, 216 + Math.floor(i / 2) * 26, 55, 24];
+      const [x, y, cw, ch] = wide ? [RX, SCROLL_Y + i * 32, RW, 28] : [RX + (i % 2) * 57, SCROLL_Y + Math.floor(i / 2) * 32, 55, 28];
       const c = run.consumables[i];
       if (!c) { frame(ctx, x, y, cw, ch, PAL.feltHi); continue; }
       const id = `cons:${i}`;
@@ -199,11 +195,11 @@ export class ShopScreen {
       consumableCard(ctx, c, x, y, cw, ch, ui.isHover(id) || (this.target && this.target.index === i));
     }
     this.drawMenu(ctx, ui);
-    // 두루마리를 쓰는 중: 고른 기물이 어떻게 되는지 미리 보이고 확인을 받는다
+    // 두루마리를 쓰는 중: 고른 기물이 어떻게 되는지 미리 보이고 확인을 받는다(꾸러미 줄 자리)
     if (this.target && run.consumables[this.target.index]) {
       const c = run.consumables[this.target.index];
       const p = this.target.pieceId != null ? run.deck.find((x) => x.id === this.target.pieceId) : null;
-      targetPanel(ctx, ui, run, c, p, 12, 156, 338, {
+      targetPanel(ctx, ui, run, c, p, CX, PACK_Y, CENTER.w, {
         to: p && c.kind === 'evolve' ? evolveTo(run.seed, p) : null,
         onConfirm: () => { const i = this.target.index, id = this.target.pieceId; this.target = null; this.act({ type: 'use', index: i, target: id }, 'engrave'); },
         onCancel: () => { this.target = null; },
@@ -219,17 +215,20 @@ export class ShopScreen {
     }
   }
 
+  // 꾸러미 칸(가로): 왼쪽 봉투 · 이름(앞 낱말)과 값 · 봉투 속 「무엇 셋 중 하나」
   packCard(ctx, pk, x, y, w, h, hover) {
-    envelope(ctx, x, y + 12, w, h - 58, pk.kind, { hover });
-    const name = PACK_NAME[pk.kind].split(' ');
-    text(ctx, name[0], x + w / 2, y - 1, PAL.ink, { align: 'center', bold: true });
-    // 봉투 속: 무엇 셋 중 하나
+    box(ctx, x, y, w, h, PAL.feltDk, hover ? PAL.gold : PAL.frameDk);
+    envelope(ctx, x + 4, y + 5, 34, h - 10, pk.kind, { hover });
+    const tx = x + 44, tw = w - 48;
+    text(ctx, PACK_NAME[pk.kind].split(' ')[0], tx, y + 3, PAL.ink, { bold: true });
     const inside = { piece: '기물 셋 중 하나', chart: '기보 셋 중 하나', engraving: '각인 셋 중 하나', golden: '판본 격언 셋 중 하나' }[pk.kind] || '';
-    if (!pk.sold) wrap(inside, w - 2).slice(0, 2).forEach((l, k) => text(ctx, l, x + w / 2, y + h - 44 + k * 12, PAL.dim, { align: 'center' }));
     if (pk.sold) {
-      ctx.globalAlpha = 0.7; rect(ctx, x, y + 12, w, h - 30, PAL.feltDk); ctx.globalAlpha = 1;
+      ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
       text(ctx, '열었다', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
-    } else text(ctx, pk.price ? `$${pk.price}` : '공짜', x + w / 2, y + h - 14, PAL.gold, { align: 'center', bold: true });
+      return;
+    }
+    text(ctx, pk.price ? `$${pk.price}` : '공짜', x + w - 4, y + 3, PAL.gold, { align: 'right', bold: true });
+    wrap(inside, tw).slice(0, 2).forEach((l, k) => text(ctx, l, tx, y + 16 + k * 12, PAL.dim));
   }
 
   drawMenu(ctx, ui) {
@@ -250,7 +249,7 @@ export class ShopScreen {
       if (!run.shop.removed) opts.push(['shop:remove', `빼기 $${SHOP.removePrice}`, run.money >= SHOP.removePrice && run.deck.length > SHOP.deckMin, () => this.act({ type: 'remove', pieceId: p.id }, 'discard')]);
       if (!opts.length) opts.push(['shop:none', '이번 상점에선 끝', false, null]);
       const w = 112, h = opts.length * 20 + 4;
-      const x = Math.min(r.x, 340 - w), y = r.y - h - 2;
+      const x = Math.min(r.x, CENTER.x + CENTER.w - w), y = r.y - h - 2;
       box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
       opts.forEach(([id, label, ok, fn], k) => button(ctx, ui, id, x + 2, y + 2 + k * 20, w - 4, 18, label, { enabled: ok, onClick: () => { this.menu = null; if (fn) fn(); } }));
     }

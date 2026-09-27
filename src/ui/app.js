@@ -4,10 +4,11 @@ import { createRun, applyRun } from '../sim/run.js';
 import { PAL } from '../render/palette.js';
 import { context } from '../render/surface.js';
 import { W, H, text, box, rect } from '../render/gfx.js';
-import { UI, tooltip } from './ui.js';
+import { UI, tooltip, bigTooltip, tipHeight, tipTexts } from './ui.js';
 import { miniShard } from './parts.js';
 import { setLang } from './lang.js';
-import { termsIn, drawKeyBoxes } from './glossary.js';
+import { termsIn, keyList, keyHeight, drawKeyBox } from './glossary.js';
+import { placeNotes, noteMode, noteWidth, NOTE_GAP } from './placement.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
@@ -256,9 +257,10 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (!app.overlay) drawCoach(ctx, app);
     else { app.hintNow = null; app.hintShown = null; }
     ui.end();
-    // 말풍선 + 낱말 상자
+    // 말풍선 + 낱말 상자: 한 묶음(말풍선 → 상자, 같은 폭)을 화면의 설명 자리 규칙대로(placement.js)
     app.keyBoxes = [];
     app.tipRect = null;
+    app.noteStack = null;
     const h = ui.hover;
     if (ui.drag || app.guide) return;
     const mx = ui.mouse.x, my = ui.mouse.y;
@@ -266,29 +268,37 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const hot = span ? span.id : null;
     const tip = h && h.tip ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null;
     const keys = h && h.keys ? (typeof h.keys === 'function' ? h.keys() : h.keys) : null;
-    const big = !!app.settings.big;
-    let tipRect = null;
-    if (tip) {
-      // tipAt: 말풍선을 둘 빈자리(옆 카드를 가리지 않게). 없으면 구역 오른쪽(넘치면 왼쪽)
-      const at = h.tipAt || { x: h.x + h.w + 4 > W - (tip.w || 150) ? h.x - (tip.w || 150) - 4 : h.x + h.w + 4, y: h.y };
-      tipRect = tooltip(ctx, at.x, at.y, tip.lines, { title: tip.title, w: tip.w || 150, scale: big ? 2 : 1, diagram: tip.diagram || null });
-      app.tipRect = tipRect;
-    }
-    // 큰 글자 설정에서는 말풍선이 화면 아래를 차지해 낱말 상자를 두지 않는다
-    // 큰 글자 설정에서는 말풍선이 화면 아래를 차지해 낱말 상자를 두지 않는다. 가리킨 것이 곧 그 낱말(시너지 칩)이어도 말풍선 하나만
-    if (big || (h && h.noKeys)) return;
+    // 큰 글자 설정: 말풍선 하나를 화면 아래 가운데에(상자 없음)
+    if (app.settings.big) { if (tip) app.tipRect = bigTooltip(ctx, tip); return; }
+    let ids = [], anchor = null;
     if (tip || keys) {
-      // 카드 글(keys) 다음에 말풍선 글. 말풍선 줄은 이어 붙여 줄바꿈에 잘린 낱말(「뛰기 / 모음」)도 찾는다
-      const tipText = tip ? tip.lines.filter((l) => !(l && l.chips)).map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null;
-      const ids = termsIn([...(keys || []), tipText]).filter((id) => !(tip && tip.term === id));
-      const card = h.anchor || { x: h.x, y: h.y, w: h.w, h: h.h };
-      // 덮지 않으면 좋은 것: 화면의 다른 카드 · 단추 · 칸(가리킨 것과 화면을 넓게 차지하는 판넬은 빼고)
-      const others = ui.regions.filter((r) => r !== h && r.w * r.h < (W * H) / 4 && !(r.x >= card.x && r.y >= card.y && r.x + r.w <= card.x + card.w && r.y + r.h <= card.y + card.h));
-      app.keyBoxes = drawKeyBoxes(ctx, ids, tipRect ? [card, tipRect] : [card], { hot, others });
+      // 카드 글(keys) 다음에 말풍선 글. 가리킨 것이 곧 그 낱말이면(시너지 칩: noKeys) 말풍선 하나만
+      if (!h.noKeys) ids = keyList(termsIn([...(keys || []), ...(tip ? tipTexts(tip) : [])]).filter((id) => !(tip && tip.term === id)), hot);
+      anchor = h.anchor || { x: h.x, y: h.y, w: h.w, h: h.h };
     } else if (span) {
       // 카드 밖의 글(수업 할 일 줄 등): 가리킨 낱말 하나만
-      app.keyBoxes = drawKeyBoxes(ctx, [span.id], [{ x: span.x, y: span.y, w: span.w, h: span.h }], { hot });
+      ids = [span.id];
+      anchor = { x: span.x, y: span.y, w: span.w, h: span.h };
     }
+    if (!tip && !ids.length) return;
+    const mode = noteMode(app.overlay || app.screen);
+    const w = noteWidth(mode);
+    const hs = [...(tip ? [tipHeight(tip, w)] : []), ...ids.map((id) => keyHeight(id, w))];
+    // 덮으면 안 되는 것: 누를 수 있는 다른 구역(가리킨 것 · 그 안의 것은 빼고)
+    const inAnchor = (r) => r.x >= anchor.x && r.y >= anchor.y && r.x + r.w <= anchor.x + anchor.w && r.y + r.h <= anchor.y + anchor.h;
+    const avoid = ui.regions.filter((r) => r !== h && r.onClick && r.enabled && !inAnchor(r));
+    const lay = placeNotes(mode, anchor, hs, { W, H, avoid });
+    if (!lay) return;
+    let y = lay.y, k = 0;
+    const rects = [];
+    if (tip) { app.tipRect = tooltip(ctx, lay.x, y, tip, lay.w); rects.push(app.tipRect); y += app.tipRect.h + NOTE_GAP; k++; }
+    for (const id of ids) {
+      if (k >= lay.n) break;
+      const r = drawKeyBox(ctx, id, lay.x, y, lay.w, id === hot);
+      app.keyBoxes.push(r); rects.push(r);
+      y += r.h + NOTE_GAP; k++;
+    }
+    app.noteStack = { mode, anchor, id: h ? h.id : null, rects, side: lay.side };
   };
 
   app.frame = (t) => {

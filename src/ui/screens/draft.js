@@ -7,14 +7,15 @@ import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows } from '../parts-depth.js';
 import { cornerTicks, tipLines } from '../parts.js';
-import { topBar } from './common.js';
+import { runSide, pauseButton } from './common.js';
+import { MAIN, TOP, CARD, CARD_ROW } from '../frame.js';
 
 const TIER_NAME = { silver: '은', gold: '금', rainbow: '무지개' };
-const CW = 132, CH = 170, GAP = 12;
+const CW = CARD.w, CH = 150, PADJ = 6; // 테가 두 겹이라 글은 x + 6
 const at = (i) => 0.2 + i * 0.22;
 
 export class DraftScreen {
-  constructor(app) { this.app = app; this.t = 0; this.chosen = null; app.sfx('pack'); }
+  constructor(app) { this.app = app; this.t = 0; this.chosen = null; this.notes = 'side'; app.sfx('pack'); }
   get run() { return this.app.run; }
   update(dt) {
     const before = this.t;
@@ -36,23 +37,25 @@ export class DraftScreen {
     for (const e of ev) if (e.type === 'evolve' || e.type === 'piece') this.app.toast('주머니가 바뀌었다', PAL.gold);
     this.chosen = { i, id, t: this.t };
   }
+  // 판 틀: 왼쪽 칸(정석 · 가진 정석 · 시너지 · 상금 — 설명 자리) + 본 칸(카드 셋)
   draw(ctx, ui) {
     const run = this.run;
     const d = run.draft || (this.chosen ? { ante: run.ante, options: [] } : null);
-    topBar(ctx, ui, this.app, `정석 · ${run.ante}관`);
+    runSide(ctx, ui, this.app, '정석');
+    pauseButton(ctx, ui, this.app);
     if (!d) return;
     const opts = this.chosen ? this.chosenOpts || [] : d.options;
     if (!this.chosen) this.chosenOpts = d.options.slice();
     const n = opts.length;
-    const x0 = Math.floor((W - n * CW - (n - 1) * GAP) / 2);
+    const x0 = MAIN.x + Math.floor((MAIN.w - n * CW - (n - 1) * CARD.gap) / 2);
     const time = this.app.time;
     opts.forEach((id, i) => {
       const j = JOSEKI_BY_ID[id];
       const p = Math.max(0, Math.min(1, (this.t - at(i)) / 0.26));
       const sx = Math.abs(1 - 2 * p);
-      const x = x0 + i * (CW + GAP), y = 40;
+      const x = x0 + i * (CW + CARD.gap), y = TOP;
       const uid = `draft:${i}`;
-      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null, tipAt: { x: x + 4, y: y + CH + 4 } });
+      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
       const hov = ui.isHover(uid) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
       if (p < 0.5) { box(ctx, xx, y, nw, CH, '#2a3a33', PAL.frameDk); if (nw > 30) rect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, TIER_COL[j.tier]); return; }
@@ -60,26 +63,24 @@ export class DraftScreen {
       const picked = this.chosen && this.chosen.i === i;
       const faded = this.chosen && !picked;
       if (faded) ctx.globalAlpha = 0.35;
-      box(ctx, xx, y - (hov ? 2 : 0), nw, CH, PAL.card, hov || picked ? PAL.white : PAL.frameDk);
-      frame(ctx, xx + 1, y + 1 - (hov ? 2 : 0), nw - 2, CH - 2, col);
-      if (j.tier !== 'silver') frame(ctx, xx + 3, y + 3 - (hov ? 2 : 0), nw - 6, CH - 6, col);
-      cornerTicks(ctx, xx + 5, y + 5 - (hov ? 2 : 0), nw - 10, CH - 10, col, 4);
+      // 카드(물건 카드와 같은 자리): 등급 테 · 모서리 꺾쇠, 왼쪽 위 등급 → 이름 → 가로줄 → 효과 글 → 맨 아래 왼쪽 시너지 칩
+      box(ctx, xx, y, nw, CH, PAL.card, picked ? PAL.white : hov ? PAL.gold : PAL.frameDk);
+      rect(ctx, xx + 1, y + 1, nw - 2, 1, PAL.cardHi);
+      frame(ctx, xx + 1, y + 1, nw - 2, CH - 2, col);
+      if (j.tier !== 'silver') frame(ctx, xx + 2, y + 2, nw - 4, CH - 4, col);
+      cornerTicks(ctx, xx + 3, y + 3, nw - 6, CH - 6, col, 3);
+      if (hov) frame(ctx, xx, y, nw, CH, PAL.gold);
       if (nw < CW - 4) { ctx.globalAlpha = 1; return; }
-      const yy = y - (hov ? 2 : 0);
-      text(ctx, TIER_NAME[j.tier], x + CW / 2, yy + 10, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk, { align: 'center' });
-      wrap(j.name, CW - 16, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + CW / 2, yy + 26 + k * 13, PAL.cardInk, { align: 'center', bold: true }));
-      rect(ctx, x + 16, yy + 54, CW - 32, 1, col);
-      wrap(j.text, CW - 18).slice(0, 6).forEach((l, k) => richText(ctx, l, x + 9, yy + 60 + k * 13, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } }));
-      // 시너지 칩(「기사 +1」)
-      if (j.families.length) familyChips(ctx, j.families, x + 9, yy + CH - 22 - (chipRows(j.families, CW - 18) - 1) * 13, CW - 18);
-      if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, yy, CW, CH, PAL.white); ctx.globalAlpha = 1; }
+      text(ctx, TIER_NAME[j.tier], x + PADJ, y + 4, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
+      const nl = wrap(j.name, CW - PADJ * 2, true).slice(0, 2);
+      nl.forEach((l, k) => text(ctx, l, x + PADJ, y + 17 + (nl.length === 1 ? 6 : 0) + k * 13, PAL.cardInk, { bold: true }));
+      rect(ctx, x + PADJ, y + 45, CW - PADJ * 2, 1, col);
+      const chipsY = y + CH - 6 - chipRows(j.families, CW - PADJ * 2) * 13;
+      wrap(j.text, CW - PADJ * 2).forEach((l, k) => { if (y + 48 + (k + 1) * CARD_ROW <= chipsY) richText(ctx, l, x + PADJ, y + 48 + k * CARD_ROW, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } }); });
+      if (j.families.length) familyChips(ctx, j.families, x + PADJ, chipsY + 1, CW - PADJ * 2);
+      if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, y, CW, CH, PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     });
-    // 가진 정석
-    if (run.josekis.length) {
-      text(ctx, '정석', 12, H - 26, PAL.dim);
-      run.josekis.forEach((id, k) => text(ctx, JOSEKI_BY_ID[id].name, 50 + k * 110, H - 26, TIER_COL[JOSEKI_BY_ID[id].tier], { bold: true }));
-    }
     if (!this.chosen && this.t > 1.2) hint(this.app, 'draft', 'draft:1');
   }
   key(k) {

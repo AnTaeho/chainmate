@@ -9,8 +9,9 @@ import { CHARTS } from '../../data/charts.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { KIND_NAME } from '../words.js';
-import { topBar } from './common.js';
-import { fragmentStrip, tipLines } from '../parts.js';
+import { runSide, pauseButton } from './common.js';
+import { MAIN, TOP, CARD, BTN_H, cardX } from '../frame.js';
+import { tipLines } from '../parts.js';
 import { drawPortrait } from '../../render/portraits.js';
 
 // 마지막 관(대가)의 왕관 9×7
@@ -44,21 +45,22 @@ export function antePath(ctx, ui, run, cx, y, time) {
     } else box(ctx, x, py, pw, pw, PAL.feltDk, PAL.dimDk);
   }
   const fm = MASTER_BY_ID[FINAL_MASTER];
-  ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${fm.name}`, '꺾으면 판을 이긴다'), tipAt: { x: Math.round(cx - 75), y: y - 56 } });
+  ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${fm.name}`, '꺾으면 판을 이긴다') });
 }
 
 export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` : tag.kind === 'chart' ? `${CHARTS[tag.form].name} 한 장` : '');
 
 export class SelectScreen {
-  constructor(app) { this.app = app; }
+  constructor(app) { this.app = app; this.notes = 'side'; }
+  // 판 틀: 왼쪽 칸(관 선택 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(대국 카드 셋 · 판의 길)
   draw(ctx, ui) {
     const app = this.app, run = app.run;
-    topBar(ctx, ui, app, `${run.ante}관`);
-    fragmentStrip(ctx, ui, run, 60, 8);
-    antePath(ctx, ui, run, W / 2, 242, app.time);
+    runSide(ctx, ui, app, '관 선택');
+    pauseButton(ctx, ui, app);
+    antePath(ctx, ui, run, MAIN.x + MAIN.w / 2, 246, app.time);
     for (let i = 0; i < 3; i++) {
       const info = blindInfo(run, run.ante, i);
-      const x = 22 + i * 148, y = 34, w = 140, h = 196;
+      const x = cardX(i), y = TOP, w = CARD.w, h = 214;
       const cur = i === run.blind;
       const past = i < run.blind;
       const log = run.log.find((l) => l.ante === run.ante && l.blind === i);
@@ -67,31 +69,40 @@ export class SelectScreen {
       box(ctx, x, y, w, h, cur ? PAL.feltDk : PAL.felt, edge);
       if (cur) frame(ctx, x - 1, y - 1, w + 2, h + 2, edge);
       const ink = cur ? PAL.ink : PAL.dim;
-      text(ctx, KIND_NAME[info.kind], x + w / 2, y + 8, master ? PAL.red : cur ? PAL.gold : PAL.dim, { align: 'center', bold: true });
-      text(ctx, '목표', x + 10, y + 30, PAL.dim);
-      text(ctx, num(info.target), x + w - 10, y + 30, ink, { align: 'right', bold: true });
-      text(ctx, '이기면', x + 10, y + 46, PAL.dim);
-      text(ctx, master ? `$${REWARD.base[info.kind]} + 상자` : `$${REWARD.base[info.kind]}`, x + w - 10, y + 46, PAL.gold, { align: 'right', bold: true });
-      rect(ctx, x + 8, y + 64, w - 16, 1, PAL.frameDk);
+      const P = 6;
+      text(ctx, KIND_NAME[info.kind], x + P, y + 5, master ? PAL.red : cur ? PAL.gold : PAL.dim, { bold: true });
+      // 이름표 · 수치 한 줄(넘치면 수치를 다음 줄 오른쪽에)
+      const row = (label, val, yy, col, bold = true) => {
+        text(ctx, label, x + P, yy, PAL.dim);
+        const two = measure(label) + 6 + measure(val, bold) > w - P * 2;
+        text(ctx, val, x + w - P, two ? yy + 13 : yy, col, { align: 'right', bold });
+        return two ? 26 : 13;
+      };
+      let yy = y + 24;
+      yy += row('목표', num(info.target), yy, ink);
+      yy += row('이기면', master ? `$${REWARD.base[info.kind]} + 상자` : `$${REWARD.base[info.kind]}`, yy, PAL.gold);
+      rect(ctx, x + P, yy + 3, w - P * 2, 1, PAL.frameDk);
+      yy += 8;
       if (master) {
         const m = MASTER_BY_ID[info.master];
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)
         ui.region(`select:card:${i}`, x, y, w, h, { keys: [m.text] });
-        box(ctx, x + w - 44, y + 68, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
-        drawPortrait(ctx, info.master, x + w - 42, y + 70, 1, cur ? 1 : 0.6);
-        wrap(`명인 ${m.name}`, w - 60, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + 10, y + 72 + k * 13, PAL.red, { bold: true }));
-        wrap(m.text, w - 20).slice(0, 4).forEach((l, k) => richText(ctx, l, x + 10, y + 108 + k * 13, ink, { termCol: PAL.gold }));
+        box(ctx, x + P, yy, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
+        drawPortrait(ctx, info.master, x + P + 2, yy + 2, 1, cur ? 1 : 0.6);
+        wrap(`명인 ${m.name}`, w - P * 2 - 42, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + P + 42, yy + 4 + k * 13, PAL.red, { bold: true }));
+        wrap(m.text, w - P * 2).slice(0, 5).forEach((l, k) => richText(ctx, l, x + P, yy + 42 + k * 13, ink, { termCol: PAL.gold }));
       } else {
-        text(ctx, '건너뛰면', x + 10, y + 72, PAL.dim);
-        wrap(tagText(info.tag), w - 20).forEach((l, k) => text(ctx, l, x + 10, y + 88 + k * 13, cur ? PAL.gold : PAL.dim, { bold: true }));
+        text(ctx, '건너뛰면', x + P, yy, PAL.dim);
+        wrap(tagText(info.tag), w - P * 2).forEach((l, k) => text(ctx, l, x + P, yy + 14 + k * 13, cur ? PAL.gold : PAL.dim, { bold: true }));
       }
+      const by = y + h - 24;
       if (past) {
-        text(ctx, log && log.skipped ? '건너뜀' : '이김', x + w / 2, y + h - 26, PAL.dim, { align: 'center', bold: true });
+        text(ctx, log && log.skipped ? '건너뜀' : '이김', x + w / 2, by + 3, PAL.dim, { align: 'center', bold: true });
       } else if (cur) {
-        if (master) { button(ctx, ui, 'select:play', x + 20, y + h - 30, w - 40, 20, '두기', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
+        if (master) { button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '두기', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
         else {
-          button(ctx, ui, 'select:play', x + 8, y + h - 30, 60, 20, '두기', { onClick: () => this.play(), tone: 'gold' });
-          button(ctx, ui, 'select:skip', x + 72, y + h - 30, 60, 20, '건너뛰기', { onClick: () => this.skip() });
+          button(ctx, ui, 'select:play', x + P, by, 38, BTN_H, '두기', { onClick: () => this.play(), tone: 'gold' });
+          button(ctx, ui, 'select:skip', x + P + 42, by, w - P * 2 - 42, BTN_H, '건너뛰기', { onClick: () => this.skip() });
         }
       }
     }

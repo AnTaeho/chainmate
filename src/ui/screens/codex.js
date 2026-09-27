@@ -12,11 +12,13 @@ import { button } from '../ui.js';
 import { tipLines, miniShard, moveTip } from '../parts.js';
 import { drawIcon } from '../../render/icons.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
+import { pageHead, pageButtons } from './common.js';
+import { PAGE } from '../frame.js';
 
 const TABS = [['maxims', '격언'], ['pieces', '기물'], ['masters', '명인'], ['legends', '명국'], ['openings', '오프닝'], ['editions', '판본']];
 
 export class CodexScreen {
-  constructor(app) { this.app = app; this.tab = 'maxims'; }
+  constructor(app) { this.app = app; this.tab = 'maxims'; this.page = 0; }
   entries() {
     const c = this.app.records.codex;
     if (this.tab === 'maxims') return MAXIMS.map((m) => ({ id: m.id, seen: !!c.maxims[m.id], name: m.name, tip: () => tipLines(m.name, [m.text, `${m.verb} · $${m.price}`]), col: RARITY[m.rarity] }));
@@ -27,16 +29,18 @@ export class CodexScreen {
     if (this.tab === 'openings') return OPENING_ORDER.map((id) => { const o = OPENINGS[id]; const u = UNLOCKS.find((x) => x.id === id); const open = this.app.records.unlocked.openings.includes(id); return { id, seen: open, name: o.name, tip: () => (open ? tipLines(o.name, o.text) : tipLines('잠김', u.text)), col: PAL.gold }; });
     return EDITIONS.map((e) => ({ id: e.id, seen: !!c.editions[e.id], name: e.name, tip: () => tipLines(e.name, e.text), col: EDITION_TINT[e.id] }));
   }
+  // 판 밖 틀: 머리줄(제목 · 탭 · 모은 수) + 격자(다섯 칸 × 일곱 줄, 넘치면 쪽) + 맨 아래 단추 줄. 칸 말풍선은 칸 바로 아래(마지막 줄은 위)
   draw(ctx, ui) {
-    text(ctx, '도감', 12, 8, PAL.gold, { bold: true });
-    TABS.forEach(([id, label], i) => button(ctx, ui, `codex:tab:${id}`, 44 + i * 58, 5, 54, 16, label, { tone: this.tab === id ? 'gold' : 'plain', onClick: () => { this.tab = id; this.app.sfx('pick'); } }));
-    rect(ctx, 8, 25, W - 16, 1, PAL.feltHi);
+    pageHead(ctx, '도감');
+    TABS.forEach(([id, label], i) => button(ctx, ui, `codex:tab:${id}`, 44 + i * 58, 5, 54, 16, label, { tone: this.tab === id ? 'gold' : 'plain', onClick: () => { this.tab = id; this.page = 0; this.app.sfx('pick'); } }));
     const list = this.entries();
     const seen = list.filter((e) => e.seen).length;
-    text(ctx, `${seen} / ${list.length}`, W - 12, 8, PAL.dim, { align: 'right' });
-    const cols = 5, cw = 88, ch = 24;
-    list.forEach((e, i) => {
-      const x = 12 + (i % cols) * (cw + 4), y = 32 + Math.floor(i / cols) * (ch + 4);
+    text(ctx, `${seen} / ${list.length}`, W - PAGE.titleX, PAGE.titleY, PAL.dim, { align: 'right' });
+    const cols = 5, rows = 7, cw = 88, ch = 24, per = cols * rows;
+    const pages = Math.max(1, Math.ceil(list.length / per));
+    const page = Math.min(this.page || 0, pages - 1);
+    list.slice(page * per, page * per + per).forEach((e, i) => {
+      const x = 12 + (i % cols) * (cw + 4), y = PAGE.bodyY + Math.floor(i / cols) * (ch + 4);
       const id = `codex:${e.id}`;
       ui.region(id, x, y, cw, ch, { tip: e.seen ? e.tip : null });
       if (!e.seen) {
@@ -51,12 +55,13 @@ export class CodexScreen {
       if (e.piece) sprite(ctx, e.piece, 'w', x + cw - 19, y + 1);
       if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - 36 + k * 6, y + 17, PAL.goldDk); }
     });
-    button(ctx, ui, 'codex:back', 12, H - 26, 80, 18, '돌아가기', { onClick: () => this.app.go('title') });
+    button(ctx, ui, 'codex:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.app.go('title') });
+    if (pages > 1) pageButtons(ctx, ui, 'codex', page, pages, (p) => { this.page = p; });
   }
   key(k) {
     if (k === 'Escape' || k === 'Enter') this.app.go('title');
     const i = TABS.findIndex(([id]) => id === this.tab);
-    if (k === 'ArrowRight') this.tab = TABS[(i + 1) % TABS.length][0];
-    if (k === 'ArrowLeft') this.tab = TABS[(i + TABS.length - 1) % TABS.length][0];
+    if (k === 'ArrowRight') { this.tab = TABS[(i + 1) % TABS.length][0]; this.page = 0; }
+    if (k === 'ArrowLeft') { this.tab = TABS[(i + TABS.length - 1) % TABS.length][0]; this.page = 0; }
   }
 }

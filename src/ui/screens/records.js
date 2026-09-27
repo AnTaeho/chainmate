@@ -4,13 +4,14 @@ import { W, H, text, box, rect, sprite, num } from '../../render/gfx.js';
 import { button } from '../ui.js';
 import { today } from '../records.js';
 import { danName } from './setup.js';
+import { pageHead } from './common.js';
+import { PAGE } from '../frame.js';
 
 export class RecordsScreen {
   constructor(app) { this.app = app; }
   draw(ctx, ui) {
     const r = this.app.records;
-    text(ctx, '기록', 12, 8, PAL.gold, { bold: true });
-    rect(ctx, 8, 25, W - 16, 1, PAL.feltHi);
+    pageHead(ctx, '기록');
     const d = r.daily && r.daily.date === today() ? r.daily : null;
     const rows = [
       ['판', `${r.runs}`], ['이긴 판', `${r.wins}`], ['최고 관', r.bestAnte ? `${r.bestAnte}관` : '-'],
@@ -33,7 +34,7 @@ export class RecordsScreen {
       steps.forEach((t, i) => sprite(ctx, t, 'w', 280 + (i % 8) * 22, 70 + Math.floor(i / 8) * 26));
       text(ctx, `${r.bestMove.ante}관`, 456, 140, PAL.dim, { align: 'right' });
     } else text(ctx, '아직', 280, 70, PAL.dimDk);
-    button(ctx, ui, 'records:back', 12, H - 26, 80, 18, '돌아가기', { onClick: () => this.app.go('title') });
+    button(ctx, ui, 'records:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.app.go('title') });
   }
   key(k) { if (k === 'Escape' || k === 'Enter') this.app.go('title'); }
 }

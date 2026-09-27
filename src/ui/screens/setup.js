@@ -6,6 +6,8 @@ import { DANS } from '../../sim/run.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { OPENING_ORDER, UNLOCKS, nextUnlock } from '../records.js';
+import { pageHead } from './common.js';
+import { PAGE } from '../frame.js';
 
 export const danName = (d) => (d ? `${d}단` : '없음');
 
@@ -24,8 +26,7 @@ export class SetupScreen {
   }
   draw(ctx, ui) {
     const rec = this.app.records;
-    text(ctx, '새 판', 12, 8, PAL.gold, { bold: true });
-    rect(ctx, 8, 25, W - 16, 1, PAL.feltHi);
+    pageHead(ctx, '새 판');
     text(ctx, '오프닝', 12, 32, PAL.dim);
     OPENING_ORDER.forEach((id, i) => {
       const op = OPENINGS[id];
@@ -34,7 +35,8 @@ export class SetupScreen {
       const sel = this.opening === id;
       const rid = `setup:op:${id}`;
       const unlock = UNLOCKS.find((u) => u.id === id);
-      ui.region(rid, x, y, w, h, { enabled: open, onClick: () => { this.opening = id; this.app.sfx('pick'); }, tip: open ? null : () => ({ title: '잠김', lines: wrap(unlock.text, 140), w: 150 }) });
+      // 잠긴 오프닝은 카드가 해금 과제를 적는다(말풍선 없음)
+      ui.region(rid, x, y, w, h, { enabled: open, onClick: () => { this.opening = id; this.app.sfx('pick'); } });
       box(ctx, x, y, w, h, open ? PAL.feltDk : PAL.felt, sel ? PAL.gold : ui.isHover(rid) && open ? PAL.goldDk : PAL.frameDk);
       if (sel) frame(ctx, x - 1, y - 1, w + 2, h + 2, PAL.gold);
       if (!open) {
@@ -61,8 +63,8 @@ export class SetupScreen {
     wrap(rules.length ? rules.join(' · ') : '더하는 규칙 없음', W - 30).slice(0, 3).forEach((l, k) => text(ctx, l, 14, 188 + k * 13, this.dan ? PAL.red : PAL.dim));
     const nu = nextUnlock(rec);
     if (nu) text(ctx, `다음 해금 ${OPENINGS[nu.id].name}: ${nu.text} (${nu.have}/${nu.need})`, 14, 230, PAL.dim);
-    button(ctx, ui, 'setup:back', 12, H - 26, 80, 18, '돌아가기', { onClick: () => this.app.go('title') });
-    button(ctx, ui, 'setup:start', W - 112, H - 26, 100, 18, '두기', { onClick: () => this.start(), tone: 'gold' });
+    button(ctx, ui, 'setup:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.app.go('title') });
+    button(ctx, ui, 'setup:start', W - PAGE.titleX - 100, PAGE.btnY, 100, PAGE.btnH, '두기', { onClick: () => this.start(), tone: 'gold' });
   }
   key(k) {
     if (k === 'Enter') this.start();

@@ -8,6 +8,8 @@ import { createRng, fork } from '../../sim/rng.js';
 import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide } from '../coach.js';
 import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
+import { pageHead, pageButtons } from './common.js';
+import { PAGE } from '../frame.js';
 
 const TERM_DEF_X = 120; // 낱말 풀이: 풀이 글이 시작하는 x
 import { wrap } from '../../render/text.js';
@@ -97,7 +99,7 @@ export class LessonsScreen {
   draw(ctx, ui) {
     const app = this.app, seen = seenOf(app);
     if (this.terms) return this.drawTerms(ctx, ui);
-    text(ctx, '첫 수업', W / 2, 10, PAL.gold, { align: 'center', bold: true });
+    pageHead(ctx, '첫 수업');
     const colW = 140, x0 = Math.floor((W - colW * 3 - 16) / 2);
     LESSON_GROUPS.forEach((g, gi) => {
       const x = x0 + gi * (colW + 8);
@@ -114,39 +116,36 @@ export class LessonsScreen {
         text(ctx, L.title, x + 30, y + 10, done ? PAL.ink : PAL.dim);
       });
     });
-    button(ctx, ui, 'lessons:terms', W / 2 - 88, 240, 84, 18, '낱말 풀이', { onClick: () => { this.terms = true; } });
-    button(ctx, ui, 'lessons:back', W / 2 + 4, 240, 84, 18, '돌아가기', { onClick: () => app.toTitle() });
+    button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => app.toTitle() });
+    button(ctx, ui, 'lessons:terms', W - PAGE.titleX - 100, PAGE.btnY, 100, PAGE.btnH, '낱말 풀이', { onClick: () => { this.terms = true; } });
   }
   // 낱말 풀이: 카드 옆 낱말 상자와 같은 표(glossary.js TERMS)를 묶음 탭(대국 · 판 · 물건 · 모음)과 쪽으로
   drawTerms(ctx, ui) {
-    text(ctx, '낱말 풀이', W / 2, 8, PAL.gold, { align: 'center', bold: true });
+    // 판 밖 틀: 머리줄(제목 · 탭) + 본 칸 + 맨 아래 단추 줄(돌아가기 왼쪽 · 쪽 넘기기 오른쪽)
+    pageHead(ctx, '낱말 풀이');
     const tab = this.termTab || 'battle';
-    const tw = 70, tx0 = Math.floor((W - TERM_GROUPS.length * (tw + 4) + 4) / 2);
+    const tw = 62;
     TERM_GROUPS.forEach(([id, name], k) => {
-      button(ctx, ui, `terms:tab:${id}`, tx0 + k * (tw + 4), 24, tw, 16, name, { tone: id === tab ? 'gold' : 'plain', onClick: () => { this.termTab = id; this.termPage = 0; } });
+      button(ctx, ui, `terms:tab:${id}`, 90 + k * (tw + 4), 5, tw, 16, name, { tone: id === tab ? 'gold' : 'plain', onClick: () => { this.termTab = id; this.termPage = 0; } });
     });
     const pages = this.termPages(tab);
     const page = Math.min(this.termPage || 0, pages.length - 1);
-    box(ctx, 16, 44, W - 32, 188, PAL.feltDk, PAL.frameDk);
+    box(ctx, 12, PAGE.bodyY, W - 24, 204, PAL.feltDk, PAL.frameDk);
     for (const row of pages[page]) {
-      text(ctx, termWord(row.id), 24, row.y, PAL.gold, { bold: true });
+      text(ctx, termWord(row.id), 20, row.y, PAL.gold, { bold: true });
       row.lines.forEach((l, k) => text(ctx, l, TERM_DEF_X, row.y + k * 13, PAL.ink));
     }
-    if (pages.length > 1) {
-      button(ctx, ui, 'terms:prev', 16, 240, 40, 18, '‹', { enabled: page > 0, onClick: () => { this.termPage = page - 1; } });
-      text(ctx, `${page + 1}/${pages.length}`, 76, 243, PAL.dim, { align: 'center' });
-      button(ctx, ui, 'terms:next', 96, 240, 40, 18, '›', { enabled: page < pages.length - 1, onClick: () => { this.termPage = page + 1; } });
-    }
-    button(ctx, ui, 'lessons:back', W / 2 - 42, 240, 84, 18, '돌아가기', { onClick: () => { this.terms = false; } });
+    if (pages.length > 1) pageButtons(ctx, ui, 'terms', page, pages.length, (p) => { this.termPage = p; });
+    button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => { this.terms = false; } });
   }
   // 한 묶음의 낱말을 쪽으로 나눈다(풀이는 두 줄까지 줄바꿈, 쪽 높이 180)
   termPages(tab) {
     const pages = [[]];
-    let y = 50;
+    let y = PAGE.bodyY + 6;
     for (const t of TERMS.filter((q) => q.group === tab)) {
-      const lines = wrap(termSay(t.id), W - 32 - (TERM_DEF_X - 16) - 8);
+      const lines = wrap(termSay(t.id), W - 24 - (TERM_DEF_X - 12) - 8);
       const h = lines.length * 13 + 5;
-      if (y + h > 228 && pages[pages.length - 1].length) { pages.push([]); y = 50; }
+      if (y + h > PAGE.bodyY + 200 && pages[pages.length - 1].length) { pages.push([]); y = PAGE.bodyY + 6; }
       pages[pages.length - 1].push({ id: t.id, y, lines });
       y += h;
     }

@@ -19,11 +19,10 @@ import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 
-// 말풍선 내용(제목 · 줄들)을 너비에 맞게
+// 말풍선 내용: 제목 · 글(body) · 덧줄(extra: [글, 빛깔] · { chips }). 줄바꿈은 그릴 때 자리 규칙의 폭으로(ui.js tipRows).
+// w는 옛 호출과 맞추려고 남긴 값(말풍선 폭은 placement.js가 정한다)
 export function tipLines(title, body, w = 150, extra = []) {
-  const lines = [];
-  for (const s of [].concat(body)) if (s) for (const l of wrap(s, w - 10)) lines.push(l);
-  return { title, lines: [...lines, ...extra], w };
+  return { title, body: [].concat(body).filter(Boolean), extra, w };
 }
 
 export function maximTip(m) {
@@ -35,16 +34,14 @@ export function maximTip(m) {
   }
   const fams = maximFamilies(m.id);
   if (fams.length) extra.push({ chips: fams });
-  if (info.rarity === 'legendary' && info.story) for (const l of wrap(`${info.year ? info.year + ' · ' : ''}${info.story}`, 140)) extra.push([l, PAL.goldDk]);
+  if (info.rarity === 'legendary' && info.story) extra.push([`${info.year ? info.year + ' · ' : ''}${L(info.story)}`, PAL.goldDk]);
   return tipLines(info.name, [info.text, info.more], 150, extra);
 }
 
 // 기물 말풍선: 행마 글 옆에 작은 행마 그림(diagram.js). dir −1은 적(적 폰은 아래로 먹는다)
 export function moveTip(title, t, body = [], { w = 212, dir = 1, extra = [] } = {}) {
-  const d = hasDiagram(t);
-  const tip = tipLines(title, body, w - (d ? DIAG_W : 0), extra);
-  tip.w = w;
-  if (d) tip.diagram = { t, dir };
+  const tip = tipLines(title, body, w, extra);
+  if (hasDiagram(t)) tip.diagram = { t, dir };
   return tip;
 }
 export function pieceTip(p) {
@@ -162,6 +159,23 @@ export function maximColumn(ctx, ui, run, x, y, w, hTotal, { idPrefix = 'maxim',
     if (maxims[i]) maximCard(ctx, maxims[i], ui.mouse.x - Math.floor(w / 2), ui.mouse.y - Math.floor(h / 2), w, h, { hot: true, t: ui.time });
   }
   return { spots, h, gap, slots, count: maximCount(run), cap };
+}
+
+// 격언 칸 격자(금빛 꾸러미): cols 칸씩 줄을 이어, 칸 하나는 cw × ch. 산 격언만 칸(빈 칸은 점선). 돌려주는 값: 칸 자리들
+export function maximGrid(ctx, ui, run, x, y, cols, cw, ch, gapX, gapY, { idPrefix = 'maxim', onClick = null, hotIndex = -1 } = {}) {
+  const maxims = run.maxims;
+  const slots = Math.max(maximCapacity(run) + maxims.filter((m) => m.legendary).length, maxims.length);
+  const spots = [];
+  for (let i = 0; i < slots; i++) {
+    const xx = x + (i % cols) * (cw + gapX), yy = y + Math.floor(i / cols) * (ch + gapY);
+    const m = maxims[i];
+    if (!m) { dots(ctx, xx, yy, cw, ch, PAL.feltHi, 3); continue; }
+    const id = `${idPrefix}:${i}`;
+    ui.region(id, xx, yy, cw, ch, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null });
+    maximCard(ctx, m, xx, yy, cw, ch, { hot: ui.isHover(id) || hotIndex === i, t: ui.time + i * 0.37 });
+    spots.push({ i, x: xx, y: yy, w: cw, h: ch });
+  }
+  return spots;
 }
 
 // 손 기물 카드: 각인은 기물 몸의 톤으로, 카드는 안쪽 테만 각인 색. tier: 그 종류의 기보 단계
@@ -376,7 +390,7 @@ export function itemExtraTip(it) {
   else if (CUT.has(it) || more) lines.push(itemEffect(it));
   if (more) lines.push(more);
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보가 적용된다`);
-  if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${info.story}`); }
+  if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${L(info.story)}`); }
   if (it.kind === 'evolve') lines.push('폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존');
   if (it.kind === 'fragment') lines.push(LEGEND_BY_ID[it.legend].story);
   if (it.kind === 'piece') return moveTip(itemName(it), it.t, lines);

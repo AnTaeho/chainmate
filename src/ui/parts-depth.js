@@ -37,7 +37,7 @@ export function familyTip(id, n, drop = 0) {
   const f = FAMILY_BY_ID[id];
   const lines = [];
   // 문턱과 효과: 「2개: …」. 효과 글에 「 · 」가 들어 있어 영어로 옮길 때 쪼개지지 않게 먼저 옮긴다
-  THRESHOLDS.forEach((th, i) => { for (const l of wrap(`${L(`${Math.max(1, th - drop)}개`)}: ${L(f.text[i])}`, 190)) lines.push([l, n >= th - drop ? PAL.goldDk : PAL.cardDim]); });
+  THRESHOLDS.forEach((th, i) => lines.push([`${L(`${Math.max(1, th - drop)}개`)}: ${L(f.text[i])}`, n >= th - drop ? PAL.goldDk : PAL.cardDim]));
   return tipLines(`${setName(id)} ${n}`, [], 200, lines);
 }
 
@@ -73,7 +73,8 @@ export const chipText = (fams) => fams.map((f) => chipLabel(f)).join(' · ');
 // 시너지 띠: 하나라도 모인 시너지를 많은 순으로 칩 하나씩(「기사 2/4」, 자리가 넉넉하면 문양도). 켜진 시너지는 제 빛깔 테.
 // 칩 너비는 글에 맞추고, 너비 w를 넘는 칩은 놓지 않는다(대국 오른쪽 칸은 둘쯤).
 // fx: { [id]: 문턱을 막 넘은 때(초) } — 넘은 시너지 칩이 빛나며 커진다
-export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max = 4, idPrefix = 'fam', counts = null, glyph = true } = {}) {
+// rows: 줄 수(넘치면 다음 줄, 줄 사이 14)
+export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max = 4, idPrefix = 'fam', counts = null, glyph = true, rows = 1 } = {}) {
   const n = counts || familyCounts(build);
   const list = FAMILIES.filter((f) => n[f.id] > 0).sort((a, b) => levelOf(n[b.id]) - levelOf(n[a.id]) || n[b.id] - n[a.id]).slice(0, max);
   let cx = x;
@@ -82,7 +83,7 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
     const next = THRESHOLDS[lv];
     const label = `${f.name} ${next ? `${n[f.id]}/${next}` : n[f.id]}`;
     const cw = measure(label) + (glyph ? 14 : 4);
-    if (cx + cw > x + w) break;
+    if (cx + cw > x + w) { if (--rows <= 0 || cx === x) break; cx = x; y += 14; }
     const id = `${idPrefix}:${f.id}`;
     // 칩 자체가 그 시너지라 말풍선 하나만(같은 풀이를 상자로 또 띄우지 않는다)
     ui.region(id, cx, y, cw, 13, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
@@ -98,6 +99,31 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
     cx += cw + 2;
   }
   return n;
+}
+
+// 시너지 세로 줄(판 틀 왼쪽 칸): 한 줄에 하나(문양 + 「기사 5/6」), 많은 순. 켜진 시너지는 제 빛깔 테.
+// 줄이 모자라면 마지막 줄은 「+N」. 그린 줄 수를 돌려준다. 구역 id는 띠와 같다(fam:기사 …)
+export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = null, idPrefix = 'fam' } = {}) {
+  const n = familyCounts(build);
+  const all = FAMILIES.filter((f) => n[f.id] > 0).sort((a, b) => levelOf(n[b.id]) - levelOf(n[a.id]) || n[b.id] - n[a.id]);
+  // 다 안 들어가면 마지막 줄은 「+N」(남은 시너지 수)
+  const list = all.length > maxRows ? all.slice(0, Math.max(0, maxRows - 1)) : all;
+  list.forEach((f, k) => {
+    const yy = y + k * 15;
+    const lv = levelOf(n[f.id]);
+    const next = THRESHOLDS[lv];
+    const id = `${idPrefix}:${f.id}`;
+    ui.region(id, x, yy, w, 13, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
+    const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
+    const glow = since < 1.2 ? 1 - since / 1.2 : 0;
+    box(ctx, x, yy, w, 13, lv ? '#132019' : PAL.feltDk, ui.isHover(id) ? PAL.gold : lv ? f.col : PAL.frameDk);
+    if (glow > 0) { ctx.globalAlpha = glow * 0.6; rect(ctx, x - 2, yy - 2, w + 4, 17, f.col); ctx.globalAlpha = 1; }
+    familyGlyph(ctx, f.id, x + 3, yy + 4, lv ? f.col : PAL.dim);
+    text(ctx, f.name, x + 11, yy, lv ? PAL.ink : PAL.dim);
+    text(ctx, next ? `${n[f.id]}/${next}` : `${n[f.id]}`, x + w - 3, yy, lv ? PAL.ink : PAL.dim, { align: 'right' });
+  });
+  if (all.length > list.length && maxRows > 0) { text(ctx, `+${all.length - list.length}`, x + 3, y + list.length * 15, PAL.dim); return list.length + 1; }
+  return list.length;
 }
 
 // 가족 단계가 올랐나(이전 수 → 지금 수). 오른 가족 id 목록

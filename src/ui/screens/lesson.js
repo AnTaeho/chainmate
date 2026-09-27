@@ -208,9 +208,9 @@ export class LessonScreen extends BattleScreen {
     panel(ctx, LX, 8, LW, 58);
     const g = LESSON_GROUPS.find((x) => x.id === this.L.group);
     const inGroup = LESSONS.filter((x) => x.group === this.L.group);
-    text(ctx, `${g ? g.name : ''} ${inGroup.indexOf(this.L) + 1}/${inGroup.length}`, LX + 5, 11, PAL.dim);
-    wrap(this.L.title, LW - 10, true).slice(0, 2).forEach((l, k) => text(ctx, l, LX + 5, 25 + k * 13, PAL.gold, { bold: true }));
-    text(ctx, this.L.target < 99999 ? `목표 ${this.L.target}` : '목표 외통', LX + 5, 51, PAL.ink);
+    text(ctx, `${g ? g.name : ''} ${inGroup.indexOf(this.L) + 1}/${inGroup.length}`, LX + 6, 11, PAL.dim);
+    wrap(this.L.title, LW - 12, true).slice(0, 2).forEach((l, k) => text(ctx, l, LX + 6, 24 + k * 13, PAL.gold, { bold: true }));
+    text(ctx, this.L.target < 99999 ? `목표 ${this.L.target}` : '목표 외통', LX + 6, 50, PAL.ink);
   }
   // 흐린 도트 손가락(1배에서도 보이게 테두리 · 흰 몸)
   drawFinger(ctx) {

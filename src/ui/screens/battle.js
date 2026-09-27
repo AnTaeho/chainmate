@@ -23,8 +23,9 @@ import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
 import { maximColumn, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fragmentStrip, itemTip, tacticIcon } from '../parts.js';
-import { KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
+import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton } from './common.js';
+import { TOP } from '../frame.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
 
@@ -65,14 +66,10 @@ function dashLine(ctx, x0, y0, x1, y1, col, off = 0) {
 function dropMark(ctx, x, y, col) {
   rect(ctx, x, y, 5, 1, col); rect(ctx, x + 1, y + 1, 3, 1, col); rect(ctx, x + 2, y + 2, 1, 1, col);
 }
-// 칸 말풍선을 그 칸 바로 아래(넘치면 위)에: 옆 칸의 미리 보기와 오른쪽 패널을 덜 가리게
+// 칸 말풍선: 자리는 설명 자리 규칙(판 틀 = 왼쪽 칸, 그 칸의 줄 높이 — placement.js)
 // diag: 적 기물의 행마 그림(적 폰은 아래로 먹는다)
-function sqTip(x, y, title, body, w = 130, diag = null) {
-  const tip = diag ? moveTip(title, diag, body, { dir: -1 }) : tipLines(title, body, w);
-  w = tip.w;
-  const h = 10 + 14 + Math.max(tip.lines.length * 13, diag ? 35 : 0);
-  const ty = y + S + 2 + h > 268 ? y - h - 2 : y + S + 2;
-  return { tip, tipAt: { x: x + S / 2 - w / 2, y: ty } };
+function sqTip(title, body, diag = null) {
+  return { tip: diag ? moveTip(title, diag, body, { dir: -1 }) : tipLines(title, body) };
 }
 // 칸 위의 판 사물(정석이 까는 것): [이름, 풀이]. 풀이는 정석 글 그대로(「언제 → 무엇」)
 export function objectsAt(rules, sq) {
@@ -146,7 +143,7 @@ export class BattleScreen {
     this.banner = null;
     this.stamp = null;
     this.lastEnd = null;
-    this.boardRect = { x: BX - 6, y: BY - 6, w: S * 8 + 12, h: S * 8 + 12 }; // 처음 안내가 비켜 설 판 자리(테두리 포함)
+    this.notes = 'side'; // 설명 자리: 왼쪽 칸(placement.js). 판 위의 기물 · 손을 가리지 않는다
     this.sync();
     const info = events.find((e) => e.type === 'battleStart');
     const b = this.bRef;
@@ -846,7 +843,7 @@ export class BattleScreen {
       // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
       if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
-      const tipOpt = tip ? sqTip(x, y, tip[0], tip[1], 130, diag) : null;
+      const tipOpt = tip ? sqTip(tip[0], tip[1], diag) : null;
       // 낱말 상자: 말풍선 제목이 곧 낱말인 것(증원 · 지키는 적 · 특성 · 벽 · 보석 · 특수 기물)
       if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }].filter(Boolean);
       ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
@@ -975,7 +972,7 @@ export class BattleScreen {
     let k = 0;
     run.consumables.forEach((c, i) => {
       if (c.kind !== 'tactic') return;
-      const x = RX + 16 + k * 17, y = 202;
+      const x = RX + measure('손') + 6 + k * 17, y = 209;
       k++;
       const ok = !this.busy && live && live.status === 'play';
       const id = `tactic:${i}`;
@@ -1097,20 +1094,17 @@ export class BattleScreen {
   drawLeft(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, run = this.run;
     const master = b.mods.find((s) => MASTER_BY_ID[s.id]);
+    // 머리 칸(판 틀 공통): 관 → 화면 이름(대국 종류) → 목표 → 명인 · 보상
     panel(ctx, LX, 8, LW, 58);
-    // 판의 대국이면 몇 관째인지 전체(8관) 중에 보인다
-    const hall = run && !run.endless ? `${b.ante}/${ANTES}관` : `${b.ante}관`;
-    // 영어처럼 길어지면 「관」 낱말을 빼고 숫자만(판 가장자리에 닿지 않게)
-    let head = `${hall} · ${KIND_SHORT[b.kind]} 대국`;
-    if (measure(head) > LW - 12) head = `${run && !run.endless ? `${b.ante}/${ANTES}` : b.ante} · ${KIND_SHORT[b.kind]} 대국`;
-    text(ctx, head, LX + 6, 12, PAL.dim);
-    text(ctx, '목표', LX + 6, 27, PAL.dim);
-    text(ctx, num(v.target), LX + LW - 6, 27, PAL.ink, { align: 'right', bold: true });
+    text(ctx, run && !run.endless ? `${b.ante}/${ANTES}관` : `${b.ante}관`, LX + 6, 11, PAL.dim);
+    text(ctx, KIND_NAME[b.kind], LX + 6, 24, b.kind === 'master' ? PAL.red : PAL.gold, { bold: true });
+    text(ctx, '목표', LX + 6, 37, PAL.dim);
+    text(ctx, num(v.target), LX + LW - 6, 37, PAL.ink, { align: 'right', bold: true });
     if (master) {
       const m = MASTER_BY_ID[master.id];
-      ui.region('master', LX + 2, 40, LW - 4, 16, { tip: () => tipLines(`명인 ${m.name}`, m.text) });
-      text(ctx, `명인 ${m.name}`, LX + 6, 42, PAL.red, { bold: true });
-    } else text(ctx, `이기면 $${REWARD.base[b.kind]}`, LX + 6, 42, PAL.goldDk);
+      ui.region('master', LX + 2, 49, LW - 4, 15, { tip: () => tipLines(`명인 ${m.name}`, m.text) });
+      text(ctx, `명인 ${m.name}`, LX + 6, 50, PAL.red, { bold: true });
+    } else text(ctx, `이기면 $${REWARD.base[b.kind]}`, LX + 6, 50, PAL.goldDk);
     // 점수(목표를 넘기면 불붙는다)
     const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
     const hot = v.target && score >= v.target;
@@ -1190,27 +1184,31 @@ export class BattleScreen {
 
   drawRight(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, run = this.run;
-    pauseButton(ctx, ui, app, RX + RW - 12, 6);
+    pauseButton(ctx, ui, app);
     if (run) {
-      text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
-      josekiBadges(ctx, ui, run, RX + 56, 9);
-      fragmentStrip(ctx, ui, run, RX + RW - 18, 8, { align: 'right' });
+      // 이름표 줄: 「격언 5/5」 뒤에 정석 표(글 폭만큼 띄워 — 영어 「Maxims」가 표 밑에 깔리지 않게) · 명국 조각은 멈춤 단추 왼쪽
+      const label = `격언 ${maximCount(run)}/${maximCapacity(run)}`;
+      text(ctx, label, RX, 8, PAL.dim);
+      const bx = RX + measure(label) + 4;
+      const bw = josekiBadges(ctx, ui, run, bx, 9);
+      fragmentStrip(ctx, ui, run, Math.max(bx + bw + 16, RX + RW - 18), 8, { align: 'right' });
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
-      maximColumn(ctx, ui, run, RX, 22, RW, 164, { offUids: off });
-      familyStrip(ctx, ui, run, RX, 188, RW, { time: this.app.time, max: 3, glyph: false });
+      maximColumn(ctx, ui, run, RX, TOP, RW, 156, { offUids: off });
+      // 시너지: 두 줄까지(한 줄에 둘 — 셋째부터 둘째 줄)
+      familyStrip(ctx, ui, run, RX, 181, RW, { time: this.app.time, max: 4, glyph: false, rows: 2 });
     }
     this.drawPreviewPanel(ctx);
     // 손
-    text(ctx, '손', RX, 206, PAL.dim);
+    text(ctx, '손', RX, 212, PAL.dim);
     this.drawTactics(ctx, ui);
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    button(ctx, ui, 'btn:discard', RX + RW - 62, 203, 62, 16, '버리기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
+    button(ctx, ui, 'btn:discard', RX + RW - 62, 210, 62, 16, '버리기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
     const n = Math.max(1, v.hand.length);
     const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
     const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;
     v.hand.forEach((p, i) => {
-      const x = RX + i * (w + Math.min(gap, 4)), y = 224;
+      const x = RX + i * (w + Math.min(gap, 4)), y = 230;
       const id = `hand:${i}`;
       const selected = this.sel.includes(i);
       ui.region(id, x, y - 4, w, 40, { onClick: () => this.toggle(i), tip: () => pieceTip(p) });

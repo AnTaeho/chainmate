@@ -102,7 +102,7 @@ test('낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고
 });
 
 test('낱말 상자: 기본 낱말은 글에서 찾아도 상자를 띄우지 않고, 카드 하나에 둘까지', async () => {
-  const { termsIn, layoutKeyBoxes, TERM_BY_ID } = await import('../src/ui/glossary.js');
+  const { termsIn, keyList, TERM_BY_ID } = await import('../src/ui/glossary.js');
   // 상자 높이는 글 너비로 잰다: 연기 시험의 가짜 캔버스(글자 너비만 흉내)를 꽂는다
   const { makeFakeDom } = await import('../tools/fakedom.mjs');
   const { setCanvasFactory } = await import('../src/render/surface.js');
@@ -113,11 +113,38 @@ test('낱말 상자: 기본 낱말은 글에서 찾아도 상자를 띄우지 �
   // 그 낱말 자체를 가리킨 것({ id })은 기본 낱말이어도 남는다(값 · 배수 칸)
   assert.deepEqual(termsIn([{ id: 'links' }]), ['links']);
   for (const id of ['drop', 'chain', 'value', 'links', 'form', 'hand', 'bag', 'move', 'goal', 'money']) assert.ok(TERM_BY_ID[id].basic, id);
-  const lay = layoutKeyBoxes(['fam_leap', 'fairy', 'threat', 'cut'], [{ x: 10, y: 40, w: 100, h: 116 }]);
-  assert.equal(lay.list.length, 2);
-  // 다른 카드를 덮어야 하면 덮는 넓이가 적은 쪽으로
-  const card = { x: 180, y: 40, w: 100, h: 116 };
-  const right = layoutKeyBoxes(['fam_leap'], [card], { others: [{ x: 290, y: 0, w: 100, h: 270 }] });
-  assert.ok(right.x < card.x, '오른쪽 카드를 덮지 않게 왼쪽으로');
+  assert.equal(keyList(['fam_leap', 'fairy', 'threat', 'cut']).length, 2);
+  // 가리킨 낱말은 둘 안에 꼭 든다
+  assert.deepEqual(keyList(['fam_leap', 'fairy', 'threat'], 'threat'), ['fam_leap', 'threat']);
   setCanvasFactory(null);
+});
+
+test('설명 자리: 판 틀은 왼쪽 칸에 가리킨 것의 윗변 높이로, 판 밖은 가리킨 것 바로 아래(모자라면 위)', async () => {
+  const { placeNotes, placeBubble, SIDE_X, SIDE_W, NOTE_W } = await import('../src/ui/placement.js');
+  // 판 틀: 어디를 가리키든 x · 폭이 같고 윗변만 따라간다
+  for (const card of [{ x: 128, y: 22, w: 108, h: 150 }, { x: 246, y: 22, w: 108, h: 150 }, { x: 364, y: 22, w: 108, h: 150 }]) {
+    const p = placeNotes('side', card, [40, 45]);
+    assert.deepEqual([p.x, p.w, p.y, p.n], [SIDE_X, SIDE_W, 22, 2]);
+  }
+  // 아래 끝의 것은 화면 안으로 당긴다
+  const low = placeNotes('side', { x: 364, y: 230, w: 26, h: 36 }, [60]);
+  assert.equal(low.y + 60, 268);
+  // 왼쪽 칸 안의 것은 그 아래(모자라면 위) — 가리킨 것을 덮지 않는다
+  const inside = placeNotes('side', { x: 8, y: 98, w: 48, h: 22 }, [40]);
+  assert.equal(inside.y, 123);
+  const bag = placeNotes('side', { x: 8, y: 240, w: 112, h: 22 }, [40]);
+  assert.equal(bag.y + 40, 237);
+  // 판 밖: 바로 아래 왼끝 맞춤, 오른쪽 끝이면 오른끝 맞춤
+  const a = placeNotes('below', { x: 12, y: 32, w: 88, h: 24 }, [50]);
+  assert.deepEqual([a.x, a.y, a.w], [12, 59, NOTE_W]);
+  const b = placeNotes('below', { x: 380, y: 32, w: 88, h: 24 }, [50]);
+  assert.equal(b.x + b.w, 468);
+  // 아래에 누를 것이 있으면 위로
+  const c = placeNotes('below', { x: 12, y: 200, w: 88, h: 24 }, [30], { avoid: [{ x: 12, y: 244, w: 80, h: 18 }] });
+  assert.equal(c.y + 30, 197);
+  // 다 안 들어가면 뒤의 것부터 뺀다
+  assert.equal(placeNotes('side', { x: 200, y: 50, w: 28, h: 28 }, [120, 100, 90]).n, 2);
+  // 처음 안내도 같은 자리(판 틀은 왼쪽 칸, 화살표는 오른쪽)
+  const h = placeBubble('side', { x: 300, y: 100, w: 28, h: 28 }, 40);
+  assert.deepEqual([h.x, h.y, h.arrow], [SIDE_X, 100, 'right']);
 });

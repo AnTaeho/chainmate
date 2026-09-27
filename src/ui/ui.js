@@ -5,6 +5,7 @@ import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
 import { box, rect, text, frame, measure } from '../render/gfx.js';
 import { familyChips, chipRows, chipText } from './parts-depth.js';
+import { wrap } from '../render/text.js';
 
 export class UI {
   constructor() {
@@ -98,39 +99,65 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
   return r;
 }
 
-// 말풍선: 제목 + 몇 줄. 화면 밖으로 나가지 않게. diagram { t, dir }이 있으면 제목 아래 왼쪽에 행마 그림, 글은 그 오른쪽.
-// 줄이 { chips: [시너지…] }면 카드와 같은 시너지 칩(「기사 +1」)으로 그린다
-export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk, w = 150, scale = 1, diagram = null } = {}) {
-  if (scale > 1) return bigTooltip(ctx, lines, { title, titleCol, w });
-  // 돌려주는 값: 그린 네모(낱말 상자가 피해 간다)
-  const pad = 5;
-  const dw = diagram ? DIAG_W : 0;
-  const rowsOf = (l) => (l && l.chips ? chipRows(l.chips, w - pad * 2 - dw) : 1);
-  const h = pad * 2 + (title ? 14 : 0) + Math.max(lines.reduce((n, l) => n + rowsOf(l), 0) * 13, diagram ? DIAG_SIZE + 1 : 0);
-  let tx = Math.min(480 - w - 2, Math.max(2, x));
-  let ty = y;
-  if (ty + h > 268) ty = 268 - h;
-  if (ty < 2) ty = 2;
-  box(ctx, tx, ty, w, h, PAL.card, PAL.frameDk);
-  rect(ctx, tx + 1, ty + 1, w - 2, 1, PAL.cardHi);
-  let yy = ty + pad;
-  if (title) { text(ctx, title, tx + pad, yy, titleCol, { bold: true }); yy += 14; }
-  if (diagram) moveDiagram(ctx, diagram.t, tx + pad, yy + 1, { dir: diagram.dir || 1 });
-  for (const l of lines) {
-    if (l && l.chips) { familyChips(ctx, l.chips, tx + pad + dw, yy + 1, w - pad * 2 - dw); yy += rowsOf(l) * 13; continue; }
-    if (Array.isArray(l)) text(ctx, l[0], tx + pad + dw, yy, l[1]);
-    else richText(ctx, l, tx + pad + dw, yy, PAL.cardDim, { termCol: PAL.goldDk });
+// 말풍선 내용을 폭 w에 맞춘 줄들. 말풍선은 만들 때 폭을 모른다(자리 규칙이 폭을 정한다 — placement.js):
+// tip.body(글) · tip.extra([글, 빛깔] · { chips })를 여기서 줄바꿈한다. 옛 꼴(tip.lines만)은 줄마다 다시 줄바꿈한다.
+// 행마 그림(tip.diagram)은 폭이 넉넉하면(150 이상) 제목 아래 왼쪽, 좁으면 제목 아래 한 줄을 다 쓰고 글은 그 아래.
+const PAD = 5;
+const diagSide = (tip, w) => !!tip.diagram && w >= 150;
+export function tipRows(tip, w) {
+  const tw = w - PAD * 2 - (diagSide(tip, w) ? DIAG_W : 0);
+  const src = tip.body ? [...tip.body, ...(tip.extra || [])] : tip.lines || [];
+  const out = [];
+  for (const l of src) {
+    if (!l) continue;
+    if (l.chips) { out.push(l); continue; }
+    if (Array.isArray(l)) { for (const q of wrap(String(l[0]), tw)) out.push([q, l[1]]); continue; }
+    for (const q of wrap(String(l), tw)) out.push(q);
+  }
+  return out;
+}
+const rowH = (l, tw) => (l && l.chips ? chipRows(l.chips, tw) * 13 : 13);
+export function tipHeight(tip, w) {
+  const side = diagSide(tip, w);
+  const tw = w - PAD * 2 - (side ? DIAG_W : 0);
+  const body = tipRows(tip, w).reduce((n, l) => n + rowH(l, tw), 0);
+  const diag = tip.diagram ? DIAG_SIZE + 1 : 0;
+  return PAD * 2 + (tip.title ? 14 : 0) + (side ? Math.max(body, diag) : body + (diag ? diag + 3 : 0));
+}
+// 말풍선 하나를 (x, y)에 폭 w로 그린다(자리는 placement.js가 정해 넘긴다). 그린 네모를 돌려준다
+export function tooltip(ctx, x, y, tip, w) {
+  const side = diagSide(tip, w);
+  const dw = side ? DIAG_W : 0;
+  const tw = w - PAD * 2 - dw;
+  const h = tipHeight(tip, w);
+  box(ctx, x, y, w, h, PAL.card, PAL.frameDk);
+  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
+  let yy = y + PAD;
+  if (tip.title) { text(ctx, tip.title, x + PAD, yy, tip.titleCol || PAL.cardInk, { bold: true }); yy += 14; }
+  if (tip.diagram) {
+    moveDiagram(ctx, tip.diagram.t, x + PAD, yy + 1, { dir: tip.diagram.dir || 1 });
+    if (!side) yy += DIAG_SIZE + 4;
+  }
+  for (const l of tipRows(tip, w)) {
+    if (l && l.chips) { familyChips(ctx, l.chips, x + PAD + dw, yy + 1, tw); yy += rowH(l, tw); continue; }
+    if (Array.isArray(l)) text(ctx, l[0], x + PAD + dw, yy, l[1]);
+    else richText(ctx, l, x + PAD + dw, yy, PAL.cardDim, { termCol: PAL.goldDk });
     yy += 13;
   }
-  frame(ctx, tx, ty, w, h, PAL.frameDk);
-  return { x: tx, y: ty, w, h };
+  frame(ctx, x, y, w, h, PAL.frameDk);
+  return { x, y, w, h };
+}
+// 말풍선 글(낱말 상자가 찾을 낱말): 줄바꿈 앞의 글이라 줄에 잘린 낱말(「기사 / 시너지」)도 찾는다. 글 조각마다 하나씩
+export function tipTexts(tip) {
+  const src = tip.body ? [...tip.body, ...(tip.extra || [])] : tip.lines || [];
+  return src.filter((l) => l && !l.chips).map((l) => String(Array.isArray(l) ? l[0] : l));
 }
 
-// 큰 글자 설정: 말풍선을 두 배 글자로 화면 아래 가운데에
-function bigTooltip(ctx, lines, { title, titleCol, w }) {
+// 큰 글자 설정: 말풍선 하나를 두 배 글자로 화면 아래 가운데에(고정 자리, 낱말 상자 없음)
+export function bigTooltip(ctx, tip) {
   const all = [];
-  if (title) all.push([title, titleCol, true]);
-  for (const l of lines) { const [s, col] = l && l.chips ? [chipText(l.chips), PAL.cardDim] : Array.isArray(l) ? l : [l, PAL.cardDim]; all.push([s, col, false]); }
+  if (tip.title) all.push([tip.title, tip.titleCol || PAL.cardInk, true]);
+  for (const l of tipRows(tip, 236)) { const [s, col] = l && l.chips ? [chipText(l.chips), PAL.cardDim] : Array.isArray(l) ? l : [l, PAL.cardDim]; all.push([s, col, false]); }
   const bw = Math.min(472, Math.max(...all.map(([s, , b]) => measure(s, b))) * 2 + 16);
   const bh = all.length * 26 + 10;
   const x = Math.floor((480 - bw) / 2), y = 268 - bh;
