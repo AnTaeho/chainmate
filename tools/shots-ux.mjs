@@ -36,10 +36,12 @@ page.on('pageerror', (e) => errors.push(String(e)));
 fs.mkdirSync(OUT, { recursive: true });
 const settle = (ms = 300) => page.waitForTimeout(ms);
 const ev = (fn, arg) => page.evaluate(fn, arg);
-let n = 0;
+// 번호: 고치기 전(before-NN-이름)과 같은 이름이면 그 번호를 써서 짝을 맞추고, 새 장면은 그 뒤 번호로
+const beforeNo = new Map(fs.readdirSync(OUT).map((f) => f.match(/^before-(\d+)-(.+)\.png$/)).filter(Boolean).map((m) => [m[2], Number(m[1])]));
+let n = PREFIX === 'before' ? 0 : Math.max(0, ...beforeNo.values());
 async function shot(name) {
-  n++;
-  const file = `${PREFIX}-${String(n).padStart(2, '0')}-${name}`;
+  const no = PREFIX !== 'before' && beforeNo.has(name) ? beforeNo.get(name) : ++n;
+  const file = `${PREFIX}-${String(no).padStart(2, '0')}-${name}`;
   if (ONLY && !file.includes(ONLY)) return;
   const url = await ev(() => {
     const c = document.getElementById('screen');
