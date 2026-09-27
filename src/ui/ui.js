@@ -74,7 +74,9 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
   if (!enabled) { fill = PAL.feltDk; ink = PAL.dimDk; }
   const oy = pressed ? 1 : 0;
   box(ctx, x, y + oy, w, h, fill, hov ? PAL.gold : PAL.frameDk);
-  if (hov) rect(ctx, x + 1, y + 1 + oy, w - 2, 1, 'rgba(255,255,255,0.25)');
+  // 윗변 한 줄 빛 · 아랫변 한 줄 그늘(누르면 1px 내려앉고 빛이 사라진다)
+  if (!pressed) rect(ctx, x + 1, y + 1 + oy, w - 2, 1, hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)');
+  rect(ctx, x + 1, y + h - 2 + oy, w - 2, 1, 'rgba(0,0,0,0.28)');
   const tw = measure(label, true) + (icon ? 10 : 0);
   let tx = x + Math.floor((w - tw) / 2);
   const ty = y + Math.floor((h - 12) / 2) + oy;

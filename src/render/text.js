@@ -68,6 +68,13 @@ export function wrap(s, w, bold = false) {
       }
     }
     out.push(line);
+    // 외톨이 끝말(숫자 하나 같은 짧은 낱말)이 홀로 다음 줄로 떨어지지 않게 앞 줄의 끝 낱말을 함께 내린다
+    const n = out.length;
+    if (n >= 2 && out[n - 1].length <= 2 && !out[n - 1].includes(' ') && out[n - 2].includes(' ')) {
+      const prev = out[n - 2], cut = prev.lastIndexOf(' ');
+      const moved = `${prev.slice(cut + 1)} ${out[n - 1]}`;
+      if (textWidth(moved, bold) <= w) { out[n - 2] = prev.slice(0, cut); out[n - 1] = moved; }
+    }
   }
   return out;
 }

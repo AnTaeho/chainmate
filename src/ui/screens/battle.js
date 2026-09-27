@@ -4,6 +4,7 @@
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, TONE, tierOf } from '../../render/sprites.js';
+import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach } from '../../sim/board.js';
@@ -673,7 +674,7 @@ export class BattleScreen {
     const total = score + live;
     const maxMul = total <= tgt ? 1 : total <= 2 * tgt ? 2 : total <= 5 * tgt ? 5 : 10;
     const maxV = tgt * maxMul;
-    const X = BX, Y = 14, Wd = S * 8, Hh = 7;
+    const X = BX, Y = 15, Wd = S * 8, Hh = 7;
     box(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, PAL.feltDk, PAL.frameDk);
     const fill = Math.round(Wd * Math.min(1, score / maxV));
     const hot = score >= tgt;
@@ -683,7 +684,7 @@ export class BattleScreen {
     if (gw > 0) {
       ctx.fillStyle = PAL.gold;
       for (let i = 0; i < gw; i++) for (let j = 0; j < Hh; j++) if ((i + j + Math.floor(time * 8)) % 3 === 0) ctx.fillRect(X + fill + i, Y + j, 1, 1);
-      if (!this.hideGain) text(ctx, `+${num(live)}`, Math.min(X + Wd - 20, X + fill + gw / 2), 0, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
+      if (!this.hideGain) text(ctx, `+${num(live)}`, Math.max(X + 16, Math.min(X + Wd - 20, X + fill + gw / 2)), 2, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
     }
     // 눈금: 목표(×1)는 흰 막대, 넘친 층은 작은 숫자
     for (const m of [1, 2, 5, 10]) {
@@ -705,8 +706,7 @@ export class BattleScreen {
   drawBoard(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, time = app.time;
     this.drawGoalBar(ctx);
-    box(ctx, BX - 6, BY - 6, S * 8 + 12, S * 8 + 12, PAL.frame, PAL.frameDk);
-    rect(ctx, BX - 5, BY - 5, S * 8 + 10, 1, PAL.frameHi);
+    ctx.drawImage(boardFrameCanvas(S), BX - 6, BY - 6);
     // 사슬 평가의 테두리 불빛: 흰 → 금 → 붉은 금 → 무지개. 사슬이 끝나면 사그라든다
     if (this.glow) {
       const g = this.glow;
@@ -731,10 +731,10 @@ export class BattleScreen {
     // 증원 그림자: 이번 수 뒤(k 0) · 그다음 수 뒤(k 1)
     const ghosts = new Map();
     visibleIncoming(b).forEach((wave, k) => { for (const r of wave || []) if (!v.board[r.sq] && !isHidden(b, r.sq) && !ghosts.has(r.sq)) ghosts.set(r.sq, { t: r.t, k }); });
+    ctx.drawImage(boardCanvas(S), BX, BY);
     for (let sq = 0; sq < 64; sq++) {
       const { x, y } = sqXY(sq);
-      const f = sq & 7, r = sq >> 3;
-      rect(ctx, x, y, S, S, (r + f) % 2 ? PAL.light : PAL.dark);
+      const r = sq >> 3;
       if (isHidden(b, sq)) {
         rect(ctx, x, y, S, S, PAL.fog);
         for (let k = 0; k < S; k += 4) rect(ctx, x + ((k + (r * 2)) % S), y + k, 2, 1, PAL.fogHi);
@@ -922,7 +922,10 @@ export class BattleScreen {
     panel(ctx, LX, 8, LW, 58);
     // 판의 대국이면 몇 관째인지 전체(8관) 중에 보인다
     const hall = run && !run.endless ? `${b.ante}/${ANTES}관` : `${b.ante}관`;
-    text(ctx, `${hall} · ${KIND_SHORT[b.kind]} 대국`, LX + 6, 12, PAL.dim);
+    // 영어처럼 길어지면 「관」 낱말을 빼고 숫자만(판 가장자리에 닿지 않게)
+    let head = `${hall} · ${KIND_SHORT[b.kind]} 대국`;
+    if (measure(head) > LW - 12) head = `${run && !run.endless ? `${b.ante}/${ANTES}` : b.ante} · ${KIND_SHORT[b.kind]} 대국`;
+    text(ctx, head, LX + 6, 12, PAL.dim);
     text(ctx, '목표', LX + 6, 27, PAL.dim);
     text(ctx, num(v.target), LX + LW - 6, 27, PAL.ink, { align: 'right', bold: true });
     if (master) {
@@ -984,9 +987,14 @@ export class BattleScreen {
     // 수 · 무르기
     panel(ctx, LX, 180, LW, 28);
     text(ctx, '수', LX + 6, 181, PAL.dim);
-    for (let i = 0; i < v.moves; i++) rect(ctx, LX + 52 + i * 14, 184, 10, 7, i < v.movesLeft ? PAL.gold : PAL.frame);
+    // 구슬은 두 이름표 중 긴 것 뒤에서(영어 「Redraw」가 붉은 구슬과 붙지 않게), 칸이 모자라면 간격을 줄인다
+    const pipX = Math.max(52, Math.max(measure('수'), measure('무르기')) + 12);
+    const pipN = Math.max(v.moves, v.discards, 1);
+    const pipStep = Math.min(14, Math.floor((LW - 4 - pipX) / pipN));
+    const pipW = Math.max(4, pipStep - 4);
+    for (let i = 0; i < v.moves; i++) rect(ctx, LX + pipX + i * pipStep, 184, pipW, 7, i < v.movesLeft ? PAL.gold : PAL.frame);
     text(ctx, '무르기', LX + 6, 194, PAL.dim);
-    for (let i = 0; i < v.discards; i++) rect(ctx, LX + 52 + i * 14, 197, 10, 7, i < v.discardsLeft ? PAL.red : PAL.frame);
+    for (let i = 0; i < v.discards; i++) rect(ctx, LX + pipX + i * pipStep, 197, pipW, 7, i < v.discardsLeft ? PAL.red : PAL.frame);
     if (run) {
       panel(ctx, LX, 212, LW, 22);
       text(ctx, '상금', LX + 6, 217, PAL.dim);

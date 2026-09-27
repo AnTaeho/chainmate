@@ -6,10 +6,14 @@ import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button } from '../ui.js';
-import { itemCard, itemTip, maximColumn } from '../parts.js';
+import { itemCard, itemTip, maximColumn, envelope } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { topBar } from './common.js';
 import { bagRow } from './shop.js';
+
+// 봉투가 열리는 시간, 카드 i가 뒤집히기 시작하는 때
+const OPEN = 0.4;
+const flipAt = (i) => OPEN + i * 0.18;
 
 export class PackScreen {
   constructor(app) {
@@ -24,11 +28,12 @@ export class PackScreen {
     const before = this.t;
     this.t += dt * this.app.speed();
     const n = this.run.pack ? this.run.pack.options.length : 0;
-    for (let i = 0; i < n; i++) { const at = 0.15 + i * 0.18 + 0.12; if (before < at && this.t >= at) this.app.sfx('flip'); }
+    if (before < 0.12 && this.t >= 0.12) this.app.sfx('engrave');
+    for (let i = 0; i < n; i++) { const at = flipAt(i) + 0.12; if (before < at && this.t >= at) this.app.sfx('flip'); }
   }
   pick(i) {
     const o = this.run.pack.options[i];
-    if (this.t < 0.15 + i * 0.18 + 0.2) { this.t = 10; return; }
+    if (this.t < flipAt(i) + 0.2) { this.t = 10; return; }
     if (o.kind === 'engraving') { this.engraveIndex = this.engraveIndex === i ? null : i; return; }
     if (o.kind === 'maxim' && !hasMaximRoom(this.run, o.edition)) { this.app.toast('격언 칸이 찼다', PAL.red); return; }
     this.finish({ type: 'pick', index: i });
@@ -56,7 +61,7 @@ export class PackScreen {
     const cw = 76, ch = 104, gap = 14;
     const x0 = Math.floor((W - n * cw - (n - 1) * gap) / 2) - (pack.options.some((o) => o.kind === 'maxim') ? 50 : 0);
     pack.options.forEach((o, i) => {
-      const at = 0.15 + i * 0.18;
+      const at = flipAt(i);
       const p = Math.max(0, Math.min(1, (this.t - at) / 0.24));
       const x = x0 + i * (cw + gap), y = 44;
       const id = `pack:pick:${i}`;
@@ -65,11 +70,21 @@ export class PackScreen {
       ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: shown ? () => itemTip(o) : null });
       if (!shown) {
         const nw = Math.max(2, Math.round(cw * scaleX));
+        if (this.t < OPEN) return;
         box(ctx, x + Math.floor((cw - nw) / 2), y, nw, ch, gold ? PAL.gold : '#c9a36a', PAL.frameDk);
         if (nw > 20) rect(ctx, x + Math.floor(cw / 2) - 6, y + 46, 12, 12, gold ? PAL.goldHi : '#e6c690');
       } else itemCard(ctx, o, x, y, cw, ch, { hover: ui.isHover(id), price: false, scaleX, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + i, run });
       if (this.engraveIndex === i) { rect(ctx, x, y + ch + 2, cw, 2, PAL.gold); }
     });
+    // 봉투: 봉랍이 깨지고 덮개가 젖혀진 뒤 카드가 솟아 나온다
+    if (this.t < OPEN + 0.25) {
+      const k = Math.min(1, this.t / OPEN);
+      const fade = this.t < OPEN ? 1 : 1 - (this.t - OPEN) / 0.25;
+      const ew = 96, eh = 66, ex = Math.floor(x0 + (n * cw + (n - 1) * gap) / 2 - ew / 2), ey = 70 + Math.round(Math.max(0, this.t - OPEN) * 60);
+      ctx.globalAlpha = Math.max(0, fade);
+      envelope(ctx, ex, ey, ew, eh, pack.kind, { open: k });
+      ctx.globalAlpha = 1;
+    }
     if (this.engraveIndex != null) {
       text(ctx, '새길 기물', 12, 172, PAL.gold, { bold: true });
       bagRow(ctx, ui, run, 12, 188, 330, { pick: (p) => this.finish({ type: 'pick', index: this.engraveIndex, target: p.id }), glow: true });

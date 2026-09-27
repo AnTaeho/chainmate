@@ -75,7 +75,7 @@ export class SelectScreen {
         const m = MASTER_BY_ID[info.master];
         box(ctx, x + w - 44, y + 68, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + w - 42, y + 70, 1, cur ? 1 : 0.6);
-        text(ctx, `명인 ${m.name}`, x + 10, y + 72, PAL.red, { bold: true });
+        wrap(`명인 ${m.name}`, w - 60, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + 10, y + 72 + k * 13, PAL.red, { bold: true }));
         wrap(m.text, w - 20).slice(0, 4).forEach((l, k) => text(ctx, l, x + 10, y + 108 + k * 13, ink));
       } else {
         text(ctx, '건너뛰면', x + 10, y + 72, PAL.dim);

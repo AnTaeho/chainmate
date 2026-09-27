@@ -1,4 +1,5 @@
 // 앱: 화면 전환 · 판 상태 · 저장 · 입력 · 프레임. DOM을 모른다(main.js가 캔버스와 입력을 넘긴다).
+import { feltCanvas } from '../render/texture.js';
 import { createRun, applyRun } from '../sim/run.js';
 import { PAL } from '../render/palette.js';
 import { context } from '../render/surface.js';
@@ -217,7 +218,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       const a = Math.round(app.shakeAmt * Math.min(1, app.shakeT * 6));
       ctx.translate(Math.round((Math.random() * 2 - 1) * a), Math.round((Math.random() * 2 - 1) * a));
     }
-    rect(ctx, -8, -8, W + 16, H + 16, PAL.felt);
+    ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8);
     if (app.screen) app.screen.draw(ctx, ui);
     app.fx.draw(ctx, 1);
     ctx.restore();

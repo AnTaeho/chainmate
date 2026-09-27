@@ -1,6 +1,6 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, frame, dots, sprite, measure } from '../render/gfx.js';
+import { box, rect, text, frame, dots, sprite, measure, line } from '../render/gfx.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
@@ -83,6 +83,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
     const k = Math.floor(t * 8) % 20;
     if (k < 4) rect(ctx, x + 10 + k * 22, y + 2 + (k % 2) * 3, 1, 1, PAL.white);
   }
+  rarityTrim(ctx, info.rarity, x, y, w, h);
   editionShine(ctx, m.edition, x, y, w, h, t);
   if (hot) frame(ctx, x, y, w, h, PAL.gold);
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
@@ -93,6 +94,20 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
     text(ctx, sub, x + 6, y + 16, off ? PAL.red : obsidian ? '#b89ad8' : PAL.cardDim);
   }
   if (off) { rect(ctx, x + 4, y + Math.floor(h / 2), w - 8, 1, PAL.red); }
+}
+
+// 등급별 테두리 무늬: 흔함 단색 · 드묾 점선 · 귀함 이중 테 · 전설 금박 모서리
+export function rarityTrim(ctx, rarity, x, y, w, h) {
+  const col = RARITY[rarity] || PAL.dim;
+  if (rarity === 'uncommon') dots(ctx, x + 1, y + 1, w - 2, h - 2, col, 2);
+  else if (rarity === 'rare') { frame(ctx, x + 1, y + 1, w - 2, h - 2, col); if (h > 10) frame(ctx, x + 3, y + 3, w - 6, h - 6, col); }
+  else if (rarity === 'legendary') {
+    const n = Math.min(5, Math.floor(h / 3));
+    for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1], [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
+      for (let k = 0; k < n; k++) { rect(ctx, cx + sx * k, cy, 1, 1, k % 2 ? PAL.goldHi : PAL.gold); rect(ctx, cx, cy + sy * k, 1, 1, k % 2 ? PAL.goldHi : PAL.gold); }
+      rect(ctx, cx + sx, cy + sy, 1, 1, PAL.goldDk);
+    }
+  } else frame(ctx, x, y, w, h, '#5d4a33');
 }
 
 // 격언 칸 목록(오른쪽 판). 칸 수에 맞춰 카드 높이를 줄인다. 돌려주는 값: 카드 자리들
@@ -163,9 +178,58 @@ export function discardIcon(ctx, x, y, col) {
   rect(ctx, x + 6, y + 4, 1, 2, col); rect(ctx, x + 5, y - 1, 1, 3, col); rect(ctx, x + 6, y, 1, 1, col);
 }
 
-export function panel(ctx, x, y, w, h) { box(ctx, x, y, w, h, PAL.feltDk, PAL.frameDk); }
+// 패널: 윗변 한 줄 빛, 아랫변 한 줄 그늘
+export function panel(ctx, x, y, w, h) {
+  box(ctx, x, y, w, h, PAL.feltDk, PAL.frameDk);
+  rect(ctx, x + 1, y + 1, w - 2, 1, '#1f302a');
+  rect(ctx, x + 1, y + h - 2, w - 2, 1, '#0e1813');
+}
 
 export const labelW = (s) => measure(s);
+
+// ── 꾸러미 봉투: 접힌 덮개 · 봉랍(기물 상아 · 기보 청록 · 각인 자줏빛 · 금빛 금별).
+// open 0 → 1: 봉랍이 금 가며 깨지고(0~0.4) 덮개가 젖혀진다(0.4~1)
+export const SEAL = { piece: ['#c8b48a', '#efe3c7', '#6b5132'], chart: ['#3f8f86', '#8fd3c6', '#1d4a45'], engraving: ['#8a4a6a', '#d690b4', '#4a2438'], golden: ['#c8902c', '#fff1b8', '#6b4410'] };
+export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}) {
+  const gold = kind === 'golden';
+  const paper = gold ? PAL.gold : '#c9a36a', paperHi = gold ? PAL.goldHi : '#e6c690', paperDk = gold ? PAL.goldDk : '#8a6a3a';
+  box(ctx, x, y, w, h, paper, hover ? PAL.white : PAL.frameDk);
+  rect(ctx, x + 1, y + 1, w - 2, 1, paperHi);
+  rect(ctx, x + 1, y + h - 2, w - 2, 1, paperDk);
+  // 아래 접힌 두 날개(대각선)
+  const cy = y + Math.floor(h * 0.62);
+  line(ctx, x + 1, y + h - 2, x + Math.floor(w / 2), cy, paperDk);
+  line(ctx, x + w - 2, y + h - 2, x + Math.floor(w / 2), cy, paperDk);
+  // 위 덮개: 닫히면 아래로 뾰족, 열리면 위로 젖혀진다
+  const flap = Math.max(0, (open - 0.4) / 0.6);
+  const tipY = Math.round(cy + (y - 12 - cy) * flap);
+  for (let i = 0; i <= w - 2; i++) {
+    const k = 1 - Math.abs(i - (w - 2) / 2) / ((w - 2) / 2);
+    const yy = Math.round(y + 1 + (tipY - y - 1) * k);
+    if (flap < 0.5) { rect(ctx, x + 1 + i, y + 1, 1, Math.max(0, yy - y - 1), paper); rect(ctx, x + 1 + i, yy, 1, 1, paperDk); }
+    else { rect(ctx, x + 1 + i, yy, 1, Math.max(0, y + 1 - yy), paperHi); rect(ctx, x + 1 + i, yy, 1, 1, paperDk); }
+  }
+  // 봉랍
+  const [col, hi, dk] = SEAL[kind] || SEAL.piece;
+  const sx = x + Math.floor(w / 2), sy = cy - 2;
+  const crack = Math.min(1, open / 0.4);
+  if (flap < 0.3) {
+    const R = 6;
+    for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
+      const d = i * i + j * j;
+      if (d > R * R) continue;
+      const half = i < 0 ? -1 : 1;
+      const off = crack > 0.3 ? Math.round(half * crack * 3) : 0;
+      const drop = crack > 0.3 ? Math.round(crack * crack * 4) : 0;
+      rect(ctx, sx + i + off, sy + j + drop, 1, 1, d > (R - 1) * (R - 1) ? dk : (i + j < -3 ? hi : col));
+    }
+    // 봉랍 무늬: 금빛은 별, 나머지는 작은 기물 머리
+    if (crack < 0.3) {
+      if (gold) { for (const [i, j] of [[0, -3], [-1, -1], [0, -1], [1, -1], [-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [-1, 1], [0, 1], [1, 1], [-2, 3], [2, 3], [-1, 2], [1, 2]]) rect(ctx, sx + i, sy + j, 1, 1, dk); }
+      else { rect(ctx, sx - 1, sy - 3, 2, 2, dk); rect(ctx, sx - 2, sy - 1, 4, 1, dk); rect(ctx, sx - 1, sy, 2, 2, dk); rect(ctx, sx - 3, sy + 2, 6, 1, dk); }
+    } else rect(ctx, sx, sy - 5, 1, 11, dk);
+  }
+}
 
 // ── 상점 · 꾸러미 물건 카드
 export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명국 조각' };

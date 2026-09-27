@@ -7,7 +7,7 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, engravingEmblem, cornerTicks } from '../parts.js';
+import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { PACK_NAME, PIECE_NAME, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
@@ -163,18 +163,13 @@ export class ShopScreen {
   }
 
   packCard(ctx, pk, x, y, w, h, hover) {
-    const gold = pk.kind === 'golden';
-    box(ctx, x, y, w, h, gold ? PAL.gold : '#c9a36a', hover ? PAL.white : PAL.frameDk);
-    rect(ctx, x + 1, y + 1, w - 2, 1, gold ? PAL.goldHi : '#e6c690');
-    for (let k = 0; k < 3; k++) rect(ctx, x + 6, y + 30 + k * 10, w - 12, 1, gold ? PAL.goldDk : '#8a6a3a');
-    rect(ctx, x + w / 2 - 6, y + 40, 12, 12, gold ? PAL.goldHi : '#e6c690');
+    envelope(ctx, x, y + 12, w, h - 30, pk.kind, { hover });
     const name = PACK_NAME[pk.kind].split(' ');
-    text(ctx, name[0], x + w / 2, y + 8, PAL.linkInk, { align: 'center', bold: true });
-    text(ctx, name[1] || '', x + w / 2, y + 62, PAL.linkInk, { align: 'center' });
+    text(ctx, name[0], x + w / 2, y - 1, PAL.ink, { align: 'center', bold: true });
     if (pk.sold) {
-      ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
+      ctx.globalAlpha = 0.7; rect(ctx, x, y + 12, w, h - 30, PAL.feltDk); ctx.globalAlpha = 1;
       text(ctx, '열었다', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
-    } else text(ctx, pk.price ? `$${pk.price}` : '공짜', x + w / 2, y + h - 15, PAL.linkInk, { align: 'center', bold: true });
+    } else text(ctx, pk.price ? `$${pk.price}` : '공짜', x + w / 2, y + h - 15, PAL.gold, { align: 'center', bold: true });
   }
 
   drawMenu(ctx, ui) {
