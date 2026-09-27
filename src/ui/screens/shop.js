@@ -16,7 +16,7 @@ import { SOUL_BY_ID } from '../../data/souls.js';
 import { TACTIC_BY_ID, evolveTo } from '../../data/tactics.js';
 const ENG_NAME = (id) => engravingInfo(id).name;
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
-import { PACK_NAME, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
+import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
 
 const RX = 360, RW = 112;
@@ -34,7 +34,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     const col = i % per, row = Math.floor(i / per);
     const px = x + col * (cw + 3), py = y + row * step;
     const id = `${idPrefix}:${p.id}`;
-    ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: p.eng || FAIRY_MOVE(p.t) ? () => pieceTip(p) : null });
+    ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: () => pieceTip(p) });
     const hov = ui.isHover(id);
     const fl = flash && flash.id === p.id ? 1 - flash.p : 0;
     pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick ? 1 : 0, selected: selectedId === p.id, hover: hov, tier: tierOf(run.charts[p.t]), time: ui.time + i, flash: fl });

@@ -9,7 +9,7 @@ import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { EDITIONS } from '../../data/editions.js';
 import { button } from '../ui.js';
-import { tipLines, miniShard } from '../parts.js';
+import { tipLines, miniShard, moveTip } from '../parts.js';
 import { drawIcon } from '../../render/icons.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
 
@@ -21,7 +21,7 @@ export class CodexScreen {
     const c = this.app.records.codex;
     if (this.tab === 'maxims') return MAXIMS.map((m) => ({ id: m.id, seen: !!c.maxims[m.id], name: m.name, tip: () => tipLines(m.name, [m.text, `${m.verb} · $${m.price}`]), col: RARITY[m.rarity] }));
     // 기물: 체스 여섯과 이형 아홉(이형은 행마 한 줄)
-    if (this.tab === 'pieces') return Object.values(PIECES).map((p) => ({ id: p.id, seen: true, name: PIECE_NAME[p.id], piece: p.id, tip: () => tipLines(PIECE_NAME[p.id], [PIECE_MOVE[p.id] || '', `값 ${p.value}`]), col: p.fairy ? PAL.gold : PAL.dim }));
+    if (this.tab === 'pieces') return Object.values(PIECES).map((p) => ({ id: p.id, seen: true, name: PIECE_NAME[p.id], piece: p.id, tip: () => moveTip(PIECE_NAME[p.id], p.id, [PIECE_MOVE[p.id] || '', `값 ${p.value}`]), col: p.fairy ? PAL.gold : PAL.dim }));
     if (this.tab === 'masters') return MASTERS.map((m) => ({ id: m.id, seen: !!c.masters[m.id], name: m.name, tip: () => tipLines(`명인 ${m.name}`, m.text), col: PAL.red }));
     if (this.tab === 'legends') return LEGENDS.map((l) => ({ id: l.id, seen: (c.legends[l.id] || 0) > 0 || !!c.legendsDone[l.id], name: l.name, parts: c.legends[l.id] || 0, done: !!c.legendsDone[l.id], tip: () => tipLines(l.name, [l.story, `전설: ${l.text}`, (c.legends[l.id] || 0) >= 1 ? `재현: ${l.feat}` : '']), col: PAL.gold }));
     if (this.tab === 'openings') return OPENING_ORDER.map((id) => { const o = OPENINGS[id]; const u = UNLOCKS.find((x) => x.id === id); const open = this.app.records.unlocked.openings.includes(id); return { id, seen: open, name: o.name, tip: () => (open ? tipLines(o.name, o.text) : tipLines('잠김', u.text)), col: PAL.gold }; });

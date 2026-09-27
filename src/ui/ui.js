@@ -1,6 +1,7 @@
 // 즉시 모드 화면 조작: 그리는 동안 누를 수 있는 구역(region)을 적어 두고, 입력은 지난 프레임의 구역에 맞춘다.
 // 구역 id는 연기 시험(tools/smoke.mjs)이 찾아 누르는 이름표이기도 하다.
 import { richText } from './glossary.js';
+import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
 import { box, rect, text, frame, measure } from '../render/gfx.js';
 
@@ -96,12 +97,13 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
   return r;
 }
 
-// 말풍선: 제목 + 몇 줄. 화면 밖으로 나가지 않게.
-export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk, w = 150, scale = 1 } = {}) {
+// 말풍선: 제목 + 몇 줄. 화면 밖으로 나가지 않게. diagram { t, dir }이 있으면 제목 아래 왼쪽에 행마 그림, 글은 그 오른쪽.
+export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk, w = 150, scale = 1, diagram = null } = {}) {
   if (scale > 1) return bigTooltip(ctx, lines, { title, titleCol, w });
   // 돌려주는 값: 그린 네모(낱말 상자가 피해 간다)
   const pad = 5;
-  const h = pad * 2 + (title ? 14 : 0) + lines.length * 13;
+  const dw = diagram ? DIAG_W : 0;
+  const h = pad * 2 + (title ? 14 : 0) + Math.max(lines.length * 13, diagram ? DIAG_SIZE + 1 : 0);
   let tx = Math.min(480 - w - 2, Math.max(2, x));
   let ty = y;
   if (ty + h > 268) ty = 268 - h;
@@ -110,9 +112,10 @@ export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk
   rect(ctx, tx + 1, ty + 1, w - 2, 1, PAL.cardHi);
   let yy = ty + pad;
   if (title) { text(ctx, title, tx + pad, yy, titleCol, { bold: true }); yy += 14; }
+  if (diagram) moveDiagram(ctx, diagram.t, tx + pad, yy + 1, { dir: diagram.dir || 1 });
   for (const l of lines) {
-    if (Array.isArray(l)) text(ctx, l[0], tx + pad, yy, l[1]);
-    else richText(ctx, l, tx + pad, yy, PAL.cardDim, { termCol: PAL.goldDk });
+    if (Array.isArray(l)) text(ctx, l[0], tx + pad + dw, yy, l[1]);
+    else richText(ctx, l, tx + pad + dw, yy, PAL.cardDim, { termCol: PAL.goldDk });
     yy += 13;
   }
   frame(ctx, tx, ty, w, h, PAL.frameDk);

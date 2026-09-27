@@ -13,10 +13,11 @@ import { familyGlyphs } from './parts-depth.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
-import { PIECE_NAME, PIECE_MOVE, FAIRY_MOVE } from './words.js';
+import { PIECE_NAME, PIECE_MOVE } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
+import { hasDiagram, DIAG_W } from './diagram.js';
 
 // 말풍선 내용(제목 · 줄들)을 너비에 맞게
 export function tipLines(title, body, w = 150, extra = []) {
@@ -38,12 +39,20 @@ export function maximTip(m) {
   return tipLines(info.name, info.text, 150, extra);
 }
 
+// 기물 말풍선: 행마 글 옆에 작은 행마 그림(diagram.js). dir −1은 적(적 폰은 아래로 먹는다)
+export function moveTip(title, t, body = [], { w = 212, dir = 1, extra = [] } = {}) {
+  const d = hasDiagram(t);
+  const tip = tipLines(title, body, w - (d ? DIAG_W : 0), extra);
+  tip.w = w;
+  if (d) tip.diagram = { t, dir };
+  return tip;
+}
 export function pieceTip(p) {
   const lines = [];
-  if (FAIRY_MOVE(p.t)) lines.push(PIECE_MOVE[p.t]);
+  if (PIECE_MOVE[p.t]) lines.push(PIECE_MOVE[p.t]);
   if (p.eng) { const e = engravingInfo(p.eng.id); lines.push(`${e.name} 각인 · ${e.text}`); }
   if (p.soul && SOUL_BY_ID[p.soul]) { const s = SOUL_BY_ID[p.soul]; lines.push(`${s.name}의 혼 · ${L(s.text)}`); }
-  return tipLines(PIECE_NAME[p.t], lines);
+  return moveTip(PIECE_NAME[p.t], p.t, lines);
 }
 
 export function chartTip(form, level = null) {
@@ -335,7 +344,7 @@ export function itemTip(it) {
   }
   if (it.kind === 'chart') return chartTip(it.form);
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '주머니의 기물 하나에 새긴다']); }
-  if (it.kind === 'piece') return tipLines(PIECE_NAME[it.t], [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '주머니에 들어온다']);
+  if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '주머니에 들어온다']);
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '주머니의 기물 하나에 깃든다']); }
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '주머니의 아무 기물에 아무 혼이나 각인이 붙는다' : '주머니의 아무 기물이 아무 특수 기물이 된다');
   if (it.kind === 'evolve') return tipLines('진화', ['주머니의 체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
@@ -360,11 +369,14 @@ export function itemKeys(it) {
 export function itemExtraTip(it) {
   const lines = [];
   const fams = itemFams(it);
+  // 기물 카드: 카드에 다 못 적은 행마 글 전부를 그림과 함께
+  if (it.kind === 'piece' && PIECE_MOVE[it.t]) lines.push(PIECE_MOVE[it.t]);
   if (fams.length) lines.push(setLine(it.kind === 'maxim' ? '격언' : it.kind === 'soul' ? '혼' : 'piece', fams));
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`기보는 ${PIECE_NAME[chartForm(it.t)]} 모습을 따른다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${info.story}`); }
   if (it.kind === 'evolve') lines.push('폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존');
   if (it.kind === 'fragment') lines.push(LEGEND_BY_ID[it.legend].story);
+  if (it.kind === 'piece') return moveTip(itemName(it), it.t, lines);
   return lines.length ? tipLines(itemName(it), lines, 170) : null;
 }
 

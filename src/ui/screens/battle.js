@@ -22,7 +22,7 @@ import { MASTER_BY_ID } from '../../data/masters.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
-import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines, fragmentStrip, itemTip, tacticIcon } from '../parts.js';
+import { maximColumn, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fragmentStrip, itemTip, tacticIcon } from '../parts.js';
 import { KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton } from './common.js';
 import { drawPortrait } from '../../render/portraits.js';
@@ -66,9 +66,11 @@ function dropMark(ctx, x, y, col) {
   rect(ctx, x, y, 5, 1, col); rect(ctx, x + 1, y + 1, 3, 1, col); rect(ctx, x + 2, y + 2, 1, 1, col);
 }
 // 칸 말풍선을 그 칸 바로 아래(넘치면 위)에: 옆 칸의 미리 보기와 오른쪽 패널을 덜 가리게
-function sqTip(x, y, title, body, w = 130) {
-  const tip = tipLines(title, body, w);
-  const h = 10 + 14 + tip.lines.length * 13;
+// diag: 적 기물의 행마 그림(적 폰은 아래로 먹는다)
+function sqTip(x, y, title, body, w = 130, diag = null) {
+  const tip = diag ? moveTip(title, diag, body, { dir: -1 }) : tipLines(title, body, w);
+  w = tip.w;
+  const h = 10 + 14 + Math.max(tip.lines.length * 13, diag ? 35 : 0);
   const ty = y + S + 2 + h > 268 ? y - h - 2 : y + S + 2;
   return { tip, tipAt: { x: x + S / 2 - w / 2, y: ty } };
 }
@@ -837,12 +839,14 @@ export class BattleScreen {
       let tip = g ? [`증원 · ${PIECE_NAME[g.t]}`, [g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다']] : null;
       if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['지키는 적', [t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다']];
       const cell = v.board[sq];
-      if (!tip && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tip = [`${tr.name} · ${PIECE_NAME[cell.t]}`, [[L(tr.text), L(FAIRY_MOVE(cell.t) || '')].filter(Boolean).join(' · ')]]; }
-      if (!tip && cell && !cell.mine && FAIRY_MOVE(cell.t) && !isHidden(b, sq)) tip = [PIECE_NAME[cell.t], [PIECE_MOVE[cell.t]]];
+      // 적 기물: 특성 · 특수 기물은 늘, 체스 기물은 지금 누를 칸이 아닐 때만(누를 칸은 먹기 미리 보기가 말한다). 행마 그림을 곁들인다
+      let diag = null;
+      if (!tip && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tip = [`${tr.name} · ${PIECE_NAME[cell.t]}`, [tr.text, PIECE_MOVE[cell.t] || '']]; diag = cell.t; }
+      if (!tip && cell && !cell.mine && (FAIRY_MOVE(cell.t) || (PIECE_MOVE[cell.t] && !tset.has(sq))) && !isHidden(b, sq)) { tip = [PIECE_NAME[cell.t], [PIECE_MOVE[cell.t]]]; diag = cell.t; }
       // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
       if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
-      const tipOpt = tip ? sqTip(x, y, tip[0], tip[1]) : null;
+      const tipOpt = tip ? sqTip(x, y, tip[0], tip[1], 130, diag) : null;
       // 낱말 상자: 말풍선 제목이 곧 낱말인 것(증원 · 지키는 적 · 특성 · 벽 · 보석 · 특수 기물)
       if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }].filter(Boolean);
       ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
@@ -1209,7 +1213,7 @@ export class BattleScreen {
       const x = RX + i * (w + Math.min(gap, 4)), y = 224;
       const id = `hand:${i}`;
       const selected = this.sel.includes(i);
-      ui.region(id, x, y - 4, w, 40, { onClick: () => this.toggle(i), tip: p.eng || FAIRY_MOVE(p.t) ? () => pieceTip(p) : null });
+      ui.region(id, x, y - 4, w, 40, { onClick: () => this.toggle(i), tip: () => pieceTip(p) });
       const hov = ui.isHover(id);
       const usable = live && live.status === 'play' && !this.busy;
       // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)
