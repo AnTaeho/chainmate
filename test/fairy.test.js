@@ -127,7 +127,7 @@ test('적 이형은 4관부터 섞인다', () => {
 
 test('상점 기물 칸과 기물 꾸러미에 이형이 나온다(관이 오를수록 자주)', () => {
   assert.ok(fairyChance(1) < fairyChance(6));
-  const run = createRun({ seed: 3 });
+  const run = createRun({ draft: false, seed: 3 });
   run.shop = { rng: createRng(4) };
   let fairy = 0;
   for (let i = 0; i < 4000; i++) { const it = rollItem(run, run.shop.rng, []); if (it.kind === 'piece' && PIECES[it.t].fairy) fairy++; }
@@ -162,7 +162,7 @@ test('판에 이형 적이 있어도 풀이기는 예산 안에서 수를 찾는
 test('명인의 상자에서 이형 기물이 주머니로 들어온다', () => {
   let got = false;
   for (let seed = 1; seed <= 400 && !got; seed++) {
-    const run = createRun({ seed });
+    const run = createRun({ draft: false, seed });
     applyRun(run, { type: 'skip' });
     applyRun(run, { type: 'skip' });
     applyRun(run, { type: 'play' });

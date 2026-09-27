@@ -299,12 +299,16 @@ function endMove(b, events) {
     b.deckSize--;
     events.push({ type: 'shatter', piece: b.chainPiece.t, id: b.chainPiece.id });
   } else b.used.push(b.chainPiece);
+  // 정석 「결사」 · 「왕좌」: 판(런)이 대국 뒤 주머니에 옮긴다
+  if (c.pact) (b.exiled || (b.exiled = [])).push(b.chainPiece.id);
+  if (c.throne) (b.crowned || (b.crowned = [])).push(b.chainPiece.id);
   b.history.push(chainSummary(c, b.movesUsed - 1));
   b.golden += c.golden;
   b.chain = null;
   b.chainPiece = null;
   b.status = 'play';
   if (c.reason === 'mate') { refreshHints(b); return finishBattle(b, 'won', 'mate', events); }
+  if (c.flags.gomoku) return finishBattle(b, 'won', 'gomoku', events);
   if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
   if (b.movesLeft <= 0) return finishBattle(b, 'lost', 'moves', events);
   arrive(b, events);

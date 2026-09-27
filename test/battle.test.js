@@ -158,7 +158,7 @@ test('판의 첫 대국(1관 연습)은 시작 손으로 셋 잇는 사슬이 �
   const { hasChainOf } = await import('../src/sim/battle.js');
   let ok = 0;
   for (let seed = 1; seed <= 60; seed++) {
-    const run = createRun({ seed });
+    const run = createRun({ draft: false, seed });
     applyRun(run, { type: 'play' });
     const best = bestMove(run.battle, { preferMate: 'avoid' });
     if (best.captures >= 3 || hasChainOf(run.battle, 3)) ok++;

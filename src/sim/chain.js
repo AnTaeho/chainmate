@@ -17,8 +17,8 @@ import { generateBoard } from './setup.js';
 const NO_OPTS = {};
 export const boardOpts = (t) => {
   const r = t.rules;
-  if (!r || (!r.pawnSides && !r.openKings)) return NO_OPTS;
-  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings };
+  if (!r || (!r.pawnSides && !r.openKings && !r.highways)) return NO_OPTS;
+  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings, highways: r.highways || null };
 };
 
 // 사슬 평가(기보 표기). 먹은 수가 이 값에 닿는 순간 「grade」 이벤트.
@@ -57,6 +57,8 @@ export function chainCaptures(t) {
   let list = captures(t.board, c.form, c.sq, boardOpts(t));
   // 「변신」 문턱 6: 지나온 모습 전부의 행마로(한 번)
   if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, boardOpts(t))) if (!list.includes(s)) list.push(s);
+  // 흡수: 먹은 행마가 더해진다(모습은 그대로)
+  if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, boardOpts(t))) if (!list.includes(s)) list.push(s);
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
   if (list.length && ((t.mods && t.mods.length) || c.engraving)) {
     list = list.filter((s) => runHook(t, 'allowCapture', { from: c.sq, to: s, piece: t.board[s].t, form: c.form }));
@@ -115,8 +117,13 @@ export function chainCapture(t, sq) {
     refill(t, events);
   }
 
-  // 갈아입기
-  if (target.t !== c.form) {
+  // 흡수(정석 「흡수의 비전」 · 혼 「흡수」): 모습은 그대로, 먹은 행마를 더한다
+  if (c.flags.absorb && target.t !== 'K') {
+    if (target.t !== c.form && !(c.absorbed || []).includes(target.t)) {
+      (c.absorbed || (c.absorbed = [])).push(target.t);
+      events.push({ type: 'absorb', piece: target.t, sq: at, forms: [c.form, ...c.absorbed] });
+    }
+  } else if (target.t !== c.form) {
     const prev = c.form;
     c.form = target.t;
     c.transforms++;
@@ -134,6 +141,18 @@ export function chainCapture(t, sq) {
     events.push({ type: 'promote', sq: at });
     runHook(t, 'onPromote', { sq }, events);
     if (!c.forms.includes('Q')) c.forms.push('Q');
+  }
+
+  // 판의 문(정석 「판의 문」): 문 위의 적을 먹으면 다른 문(비었으면)으로 나온다
+  const gates = t.rules && t.rules.gates;
+  if (gates && gates.includes(c.sq)) {
+    const other = gates[0] === c.sq ? gates[1] : gates[0];
+    if (!t.board[other]) {
+      t.board[other] = t.board[c.sq];
+      t.board[c.sq] = null;
+      events.push({ type: 'gate', from: c.sq, to: other });
+      c.sq = other;
+    }
   }
 
   resolveReply(t, events);

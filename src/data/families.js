@@ -5,6 +5,7 @@ import { defineModifier } from '../sim/scoring.js';
 import { PIECES } from './pieces.js';
 import { MAXIM_BY_ID } from './maxims.js';
 import { LEGEND_BY_ID } from './legends.js';
+import { JOSEKI_BY_ID } from './josekis.js';
 
 export const THRESHOLDS = [2, 4, 6];
 export const FAMILIES = [
@@ -44,7 +45,7 @@ export function familyCounts(build, extra = []) {
     if (p.soul && build.soulFamilies) add(build.soulFamilies(p.soul));
   }
   for (const t of fairy) add(PIECES[t].families);
-  for (const j of build.josekiFamilies || []) add(j);
+  for (const id of build.josekis || []) if (JOSEKI_BY_ID[id]) add(JOSEKI_BY_ID[id].families);
   add(extra);
   return n;
 }

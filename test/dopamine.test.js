@@ -96,7 +96,7 @@ test('넘친 목표 상금: ×5 +1 · ×10 +2, 보상 내역에 overflow', () =>
   assert.deepEqual(REWARD.overflow, { 5: 1, 10: 2 });
   let checked = 0;
   for (let seed = 1; seed <= 12; seed++) {
-    const run = createRun({ seed });
+    const run = createRun({ draft: false, seed });
     applyRun(run, { type: 'play' });
     while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
     if (run.phase !== 'shop') continue;
@@ -138,7 +138,7 @@ test('판본: 값에 판본 값이 붙고(팔면 절반), 흑요는 격언 칸 +
   assert.deepEqual(EDITIONS.map((e) => [e.id, e.name]), [['foil', '은박'], ['pearl', '자개'], ['rainbow', '무지개'], ['obsidian', '흑요']]);
   assert.equal(maximPrice('edge', null), MAXIM_BY_ID.edge.price);
   assert.equal(maximPrice('edge', 'rainbow'), MAXIM_BY_ID.edge.price + EDITION_BY_ID.rainbow.price);
-  const run = createRun({ seed: 1 });
+  const run = createRun({ draft: false, seed: 1 });
   applyRun(run, { type: 'play' });
   while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
   assert.equal(run.phase, 'shop');
@@ -159,7 +159,7 @@ test('판본: 값에 판본 값이 붙고(팔면 절반), 흑요는 격언 칸 +
 });
 
 test('판본: 진열 격언에 약 4%(칸당 ~2%), 무게는 은박 > 자개 > 무지개 > 흑요', () => {
-  const run = createRun({ seed: 1 });
+  const run = createRun({ draft: false, seed: 1 });
   const counts = {}; let maxims = 0, slots = 0;
   for (let i = 0; i < 8000; i++) {
     run.shop = { rng: createRng(1000 + i), display: [], packs: [], rerolls: 0 };
@@ -183,7 +183,7 @@ test('판본: 진열 격언에 약 4%(칸당 ~2%), 무게는 은박 > 자개 > �
 function toMasterWin(seed) {
   // 1관 명인 대국 직전까지 건너뛰고(연습 · 정식), 명인 대국을 목표 0으로 이긴다(첫 수가 끝나면 이긴다 —
   // 명인 「앙갚음」은 끊긴 사슬 점수가 0이라 목표 1로는 질 수 있다)
-  const run = createRun({ seed });
+  const run = createRun({ draft: false, seed });
   applyRun(run, { type: 'skip' });
   applyRun(run, { type: 'skip' });
   applyRun(run, { type: 'play' });
@@ -209,7 +209,7 @@ test('명인의 상자: 명인 대국을 이기면 1 · 3 · 5개, 칸 다섯에
   const again = toMasterWin(3).events.find((e) => e.type === 'chest');
   assert.deepEqual(again, chest);
   // 연습 대국을 이기면 상자는 없다
-  const r2 = createRun({ seed: 3 });
+  const r2 = createRun({ draft: false, seed: 3 });
   applyRun(r2, { type: 'play' });
   r2.battle.target = 1;
   let ev2 = [];
@@ -233,7 +233,7 @@ test('명인의 상자: 개수 분포 1 ≈ 77% · 3 ≈ 20% · 5 ≈ 3% (판 �
 test('명인의 상자: 물건 넷(상금 · 기보 · 각인 · 이형 기물)이 판에 그대로 들어간다', () => {
   const kinds = new Set();
   for (let seed = 1; seed <= 400 && kinds.size < 4; seed++) {
-    const run = createRun({ seed });
+    const run = createRun({ draft: false, seed });
     run.maxims.push({ uid: 50, id: 'edge', data: {}, edition: null, paid: 4 });
     applyRun(run, { type: 'skip' });
     applyRun(run, { type: 'skip' });
@@ -285,7 +285,7 @@ test('재현 판정: 명국마다 조건', () => {
 });
 
 function shopAt(seed = 1) {
-  const run = createRun({ seed });
+  const run = createRun({ draft: false, seed });
   applyRun(run, { type: 'play' });
   while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
   assert.equal(run.phase, 'shop');
@@ -308,7 +308,7 @@ test('첫 조각: 진열에서 사거나 꾸러미에서 고른다', () => {
 });
 
 test('첫 조각 확률: 진열 칸 3% · 꾸러미 4%, 나오는 곳이 맞는 명국만, 가진 첫 조각은 다시 안 나온다', () => {
-  const run = createRun({ seed: 1 });
+  const run = createRun({ draft: false, seed: 1 });
   let frag = 0, slots = 0;
   for (let i = 0; i < 6000; i++) {
     run.shop = { rng: createRng(7 + i), display: [], packs: [], rerolls: 0 };
@@ -348,12 +348,12 @@ test('재현(둘째 조각): 첫 조각을 가진 판에서만, 해낸 사슬 �
     for (const sq of ['b8', 'e8']) ev = ev.concat(applyRun(run, { type: 'capture', sq: S(sq) }));
     return ev;
   };
-  const r1 = createRun({ seed: 1 });
+  const r1 = createRun({ draft: false, seed: 1 });
   const ev1 = drive(r1);
   assert.equal(r1.battle.history.at(-1).promotions, 2);
   assert.ok(!ev1.some((e) => e.type === 'fragment'), '첫 조각이 없으면 재현해도 조각이 안 나온다');
   assert.equal(r1.fragments.eight_pawns, undefined);
-  const r2 = createRun({ seed: 1 });
+  const r2 = createRun({ draft: false, seed: 1 });
   r2.fragments.eight_pawns = { first: true, feat: false, gold: false };
   const ev2 = drive(r2);
   assert.deepEqual(ev2.find((e) => e.type === 'fragment'), { type: 'fragment', legend: 'eight_pawns', part: 'feat', have: { first: true, feat: true, gold: false } });
@@ -362,7 +362,7 @@ test('재현(둘째 조각): 첫 조각을 가진 판에서만, 해낸 사슬 �
 });
 
 test('셋째 조각: 황금 기물을 먹고 이기면 재현까지 해낸 명국의 금빛 조각 + 금빛 꾸러미', () => {
-  const run = createRun({ seed: 2 });
+  const run = createRun({ draft: false, seed: 2 });
   run.fragments.century = { first: true, feat: false, gold: false };
   run.fragments.evergreen = { first: true, feat: true, gold: false };
   applyRun(run, { type: 'play' });
@@ -400,7 +400,7 @@ test('셋째 조각: 황금 기물을 먹고 이기면 재현까지 해낸 명�
 });
 
 test('금빛의 부름: 재현까지 모은 명국이 금빛만 기다리면 그 판의 대국에 황금 기물이 10%로', () => {
-  const run = createRun({ seed: 1 });
+  const run = createRun({ draft: false, seed: 1 });
   assert.equal(awaitingGold(run), false);
   run.fragments.century = { first: true, feat: false, gold: false };
   assert.equal(awaitingGold(run), false);
@@ -408,7 +408,7 @@ test('금빛의 부름: 재현까지 모은 명국이 금빛만 기다리면 그
   assert.equal(awaitingGold(run), true);
   let n = 0;
   for (let seed = 1; seed <= 400; seed++) {
-    const r = createRun({ seed });
+    const r = createRun({ draft: false, seed });
     r.fragments.opera = { first: true, feat: true, gold: false };
     applyRun(r, { type: 'play' });
     if (r.battle.board.some((c) => c && c.gold)) n++;
@@ -417,7 +417,7 @@ test('금빛의 부름: 재현까지 모은 명국이 금빛만 기다리면 그
 });
 
 test('셋째 조각: 조각은 첫 → 재현 → 금빛 차례, 재현 전의 황금 기물은 조각을 주지 않는다', () => {
-  const run = createRun({ seed: 2 });
+  const run = createRun({ draft: false, seed: 2 });
   run.fragments.century = { first: true, feat: false, gold: false };
   applyRun(run, { type: 'play' });
   const b = run.battle;
@@ -436,7 +436,7 @@ test('셋째 조각: 조각은 첫 → 재현 → 금빛 차례, 재현 전의 �
 test('셋째 조각: 첫 조각이 없으면 금빛 꾸러미에 첫 조각이 끼어 나올 기회', () => {
   let withFrag = 0, N = 0;
   for (let seed = 1; seed <= 60; seed++) {
-    const run = createRun({ seed });
+    const run = createRun({ draft: false, seed });
     applyRun(run, { type: 'play' });
     const b = run.battle;
     b.board = boardFrom({ e5: 'B', a8: 'K', b7: 'P', h7: 'N' });
@@ -595,7 +595,7 @@ function legalCommandsOf(b) {
 }
 
 test('저장: 조각 · 전설 · 판본 · 금빛 꾸러미가 든 판이 JSON 왕복 뒤 같은 결과를 낸다', () => {
-  const run = createRun({ seed: 9 });
+  const run = createRun({ draft: false, seed: 9 });
   run.fragments.opera = { first: true, feat: true, gold: false };
   run.maxims.push({ uid: 40, id: 'edge', data: {}, edition: 'rainbow', paid: 9 });
   run.legends.push('century');

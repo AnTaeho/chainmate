@@ -3,6 +3,7 @@
 // 대국은 run.battle에 들어 있고 대국 명령(drop · capture · discard)은 그대로 넘긴다.
 //
 // 국면(run.phase)과 명령
+//   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
 //   select  다음 대국 앞.   play | skip(연습 · 정식만) | use | moveMaxim
 //   battle  대국 중.        drop | capture | discard
 //   shop    대국을 이긴 뒤. buy | buyPack | reroll | sell | use | promote | remove | moveMaxim | leave
@@ -22,6 +23,7 @@ import { OPENINGS, DEFAULT_OPENING } from '../data/openings.js';
 import { EDITION_BY_ID, editionSpec, editionSlots } from '../data/editions.js';
 import { LEGENDS, LEGEND_BY_ID } from '../data/legends.js';
 import { familyCounts, familyMods } from '../data/families.js';
+import { JOSEKIS, JOSEKI_BY_ID, DRAFT_ANTES, DRAFT_TIERS } from '../data/josekis.js';
 
 // ── 수치
 // 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. tools/run.mjs(smart 봇)로 맞춤:
@@ -105,7 +107,7 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
   const kind = KINDS[blind];
   const master = kind === 'master' ? masterFor(run, ante) : null;
   const st = run.stake;
-  const mult = st ? st.target * (master === FINAL_MASTER ? st.finalTarget : 1) : 1;
+  const mult = (st ? st.target * (master === FINAL_MASTER ? st.finalTarget : 1) : 1) * josekiTargetMult(run);
   return {
     ante, blind, kind,
     target: targetFor(ante, kind, mult),
@@ -114,7 +116,8 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
   };
 }
 
-export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0 } = {}) {
+// draft: false면 정석 드래프트 없이(깊이 E 이전 규칙 — 시험 · 하네스 비교용)
+export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true } = {}) {
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
   const conf = { ...RUN_DEFAULTS, ...op.run };
@@ -138,6 +141,8 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0 } = {})
     deck: op.bag.map((t, i) => ({ id: i + 1, t, eng: null, edition: null })),
     nextPieceId: op.bag.length + 1,
     maxims: [],               // [{ uid, id, data, edition, paid }] 왼쪽부터
+    josekis: [],              // 고른 정석 id(깊이 E)
+    draft: null,              // { ante, options: [id…] } 정석을 고르는 중
     maximSlots: conf.maximSlots,
     consumables: [],          // [{ kind: 'chart', form } | { kind: 'engraving', id }]
     consumableSlots: conf.consumableSlots,
@@ -152,7 +157,33 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0 } = {})
     last: null,               // 마지막 대국 결과와 보상 내역(화면용)
     log: [],                  // 대국마다 한 줄(하네스 · 결과 화면용)
   };
+  if (!draft) run.noDraft = true;
+  openDraft(run);
   return run;
+}
+
+// ── 정석 드래프트(깊이 E): 1 · 3 · 5관의 첫 대국 앞에 셋 중 하나
+function openDraft(run) {
+  if (run.noDraft || run.endless || run.blind !== 0 || !DRAFT_ANTES.includes(run.ante) || (run.drafted || []).includes(run.ante)) return;
+  const r = fork(root(run), `draft:${run.ante}`);
+  const pool = JOSEKIS.filter((j) => !run.josekis.includes(j.id));
+  const options = [];
+  for (let i = 0; i < 3 && pool.length; i++) {
+    const tier = weighted(r, DRAFT_TIERS[run.ante]);
+    let cand = pool.filter((j) => j.tier === tier);
+    if (!cand.length) cand = pool;
+    const j = cand[int(r, cand.length)];
+    options.push(j.id);
+    pool.splice(pool.indexOf(j), 1);
+  }
+  run.draft = { ante: run.ante, options };
+  run.phase = 'draft';
+}
+// 정석이 바꾸는 목표 배율(「하이랜더」)
+export function josekiTargetMult(run) {
+  let k = 1;
+  for (const id of run.josekis || []) { const j = JOSEKI_BY_ID[id]; if (j && j.targetMult) k *= j.targetMult(run); }
+  return k;
 }
 
 // ── 대국 만들기
@@ -161,8 +192,13 @@ export function battleMods(build, master = null) {
   const mods = [];
   if (master) mods.push({ id: master });
   mods.push({ id: 'charts', data: { table: CHART_TABLE, levels: { ...build.charts } } });
-  // 가족(깊이 B): 문턱을 넘은 가족마다 하나
-  mods.push(...familyMods(familyCounts(build)));
+  // 가족(깊이 B): 문턱을 넘은 가족마다 하나(정석 「복제」면 가장 많이 모은 가족의 문턱이 하나 낮다)
+  const counts = familyCounts(build);
+  let dropFor = null;
+  if ((build.josekis || []).includes('clone')) { const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]; if (top && top[1] > 0) dropFor = top[0]; }
+  mods.push(...familyMods(counts, dropFor));
+  // 정석(깊이 E)
+  for (const id of build.josekis || []) mods.push({ id: `joseki:${id}` });
   for (const m of build.maxims) {
     mods.push({ id: m.id, uid: m.uid, data: clone(m.data || {}) });
     const ed = editionSpec(m);
@@ -201,6 +237,9 @@ function endBattle(run, events) {
   const won = b.status === 'won';
   // 깨진 기물(유리)은 주머니에서 빠진다
   if (b.shattered.length) run.deck = run.deck.filter((p) => !b.shattered.includes(p.id));
+  // 정석 「결사」: 첫 사슬을 푼 기물은 판에서 사라진다(주머니 여섯은 남긴다) · 「왕좌」: 승급한 폰은 퀸으로
+  for (const id of b.exiled || []) if (run.deck.length > SHOP.deckMin) { run.deck = run.deck.filter((p) => p.id !== id); events.push({ type: 'exile', pieceId: id }); }
+  for (const id of b.crowned || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t === 'P') { p.t = 'Q'; events.push({ type: 'evolve', pieceId: id, from: 'P', to: 'Q' }); } }
   const grades = {};
   for (const h of b.history) { const g = gradeOf(h.captures); if (g) grades[g.mark] = (grades[g.mark] || 0) + 1; }
   const row = {
@@ -364,6 +403,7 @@ function advance(run) {
   if (run.blind < 2) run.blind++;
   else { run.blind = 0; run.ante++; }
   run.phase = 'select';
+  openDraft(run);
 }
 
 function useChart(run, form, events) {
@@ -421,6 +461,19 @@ export function applyRun(run, cmd) {
   const ph = run.phase;
   const need = (...ok) => { if (!ok.includes(ph)) throw new Error(`${cmd.type} not allowed in ${ph}`); };
   switch (cmd.type) {
+    case 'joseki': {
+      need('draft');
+      const id = run.draft.options[cmd.index];
+      if (!id) throw new Error('bad joseki');
+      run.josekis.push(id);
+      (run.drafted || (run.drafted = [])).push(run.draft.ante);
+      const j = JOSEKI_BY_ID[id];
+      events.push({ type: 'joseki', id });
+      if (j.pick) j.pick(run, events);
+      run.draft = null;
+      run.phase = 'select';
+      break;
+    }
     case 'play': {
       need('select');
       startBattle(run);
@@ -574,6 +627,7 @@ export function legalRunCommands(run) {
   const ph = run.phase;
   if (ph === 'battle') return battleCommands(run.battle);
   if (ph === 'won') return [{ type: 'endless' }];
+  if (ph === 'draft') return run.draft.options.map((_, index) => ({ type: 'joseki', index }));
   if (ph === 'lost') return [];
   if (ph === 'pack') {
     run.pack.options.forEach((o, index) => {

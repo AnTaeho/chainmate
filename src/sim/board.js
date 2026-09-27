@@ -180,9 +180,15 @@ export function kingTakeable(board, ksq, from, opts = {}) {
 
 // 모습 form으로 sq에서 먹을 수 있는 적 칸. 응수 제한은 chain.js가 건다.
 // opts.openKings: 지켜진 킹도 먹을 수 있다(전설 「오페라 대국」).
+// opts.highways: 이 줄(file)들에서는 어떤 모습이든 세로로 룩처럼도 미끄러진다(정석 「고속도로」)
 export function captures(board, form, sq, opts = {}) {
   const out = [];
-  for (const s of reach(board, form, sq, 1)) {
+  let list = reach(board, form, sq, 1);
+  if (opts.highways && opts.highways.includes(sq & 7)) {
+    list = list.slice();
+    for (const ray of RAY_O[sq]) { if ((ray[0] & 7) !== (sq & 7)) continue; for (const s of ray) { if (!list.includes(s)) list.push(s); if (board[s]) break; } }
+  }
+  for (const s of list) {
     const c = board[s];
     if (!isEnemy(c)) continue;
     if (c.t === 'K' && !opts.openKings && !kingTakeable(board, s, sq, opts)) continue;

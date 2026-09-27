@@ -25,7 +25,7 @@ test('세기: 격언의 가족 + 주머니 이형 종류(같은 종류 여럿은
 });
 
 test('판(런)의 대국에 켜진 가족이 들어간다', () => {
-  const r = createRun({ seed: 1 });
+  const r = createRun({ draft: false, seed: 1 });
   r.maxims.push({ uid: 1, id: 'diagonal', data: {} }, { uid: 2, id: 'center', data: {} });
   assert.ok(battleMods(r).some((m) => m.id === 'family:diag' && m.data.level === 1));
 });
