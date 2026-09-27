@@ -63,6 +63,9 @@ function hover(id) {
   return true;
 }
 const pvSeen = { capture: 0, drop: 0, cut: 0, kb: 0, touch: 0 };
+// 칸 말풍선: 증원 그림자 · 노림수
+const tipSeen = { incoming: 0 };
+const hoverTip = () => { const h = app.ui.hover; return !!(h && h.tip && (typeof h.tip === 'function' ? h.tip() : h.tip)); };
 const screen = () => (app.overlay ? app.overlay.name : app.screen.name);
 function idle(max = 3000) {
   let n = 0;
@@ -111,6 +114,9 @@ function battleStep() {
   }
   s.seq.total = 0;
   s.seq.trace = [];
+  // 증원 그림자 위에 올리면 말풍선
+  const ghost = (b.incoming || []).find((r) => !b.board[r.sq]);
+  if (ghost && tipSeen.incoming < 20) { hover(`sq:${ghost.sq}`); if (hoverTip()) tipSeen.incoming++; }
   click(`hand:${d.play.handIndex}`);
   // 미리 보기: 떨굴 칸 위에 올리면 첫 먹이 고리
   hover(`sq:${d.play.sq}`);
@@ -352,6 +358,7 @@ console.log(`방문 화면: ${[...visited].join(' ')}`);
 console.log(`끝없는 대국: ${endless ? `${app.records.bestEndless}관` : '못 감'}`);
 console.log(`첫 수업: ${lessonLog.join(' · ')}`);
 console.log(`미리 보기: 먹기 ${pvSeen.capture} · 끊김 ${pvSeen.cut} · 떨구기 ${pvSeen.drop} · 화살표 ${pvSeen.kb} · 터치 ${pvSeen.touch}`);
+console.log(`칸 말풍선: 증원 ${tipSeen.incoming}`);
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
@@ -366,6 +373,7 @@ if (missing.length) { console.log(`못 간 화면: ${missing.join(' ')}`); fail 
 if (!reloaded) fail = true;
 if (lessonLog.length !== 4) fail = true;
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
+if (!tipSeen.incoming) { console.log('증원 그림자 말풍선을 보지 못했다'); fail = true; }
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }
 if (mt.length && mt[mt.length - 1] > 4) { console.log('한 수 연출이 4초를 넘는다'); fail = true; }
 if (pct(0.99) > 16) { console.log('프레임 p99가 16ms를 넘는다'); fail = true; }

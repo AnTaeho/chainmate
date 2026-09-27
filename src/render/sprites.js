@@ -70,6 +70,28 @@ export function spriteCanvas(type, side) {
   return c;
 }
 
+// 테두리만 남긴 빈 윤곽(증원 그림자). 격자 밖 1px까지 둘러 18×24, (x-1, y-1)에 그린다.
+// 속은 네 칸에 한 점만 찍어(성긴 그물) 밝은 칸에서 상아(내 기물)로, 어두운 칸에서 흑단으로 읽히지 않게.
+// dotted: 윤곽도 한 칸 걸러, 속은 비운다(두 수 앞 증원)
+export function outlineCanvas(type, col, dotted = false) {
+  const key = `o:${type}:${col}:${dotted ? 1 : 0}`;
+  let c = CACHE.get(key);
+  if (c) return c;
+  const rows = SPR[type];
+  const body = (x, y) => x >= 0 && y >= 0 && x < SW && y < SH && rows[y][x] !== '.';
+  c = makeCanvas(SW + 2, SH + 2);
+  const ctx = context(c);
+  ctx.fillStyle = col;
+  for (let y = -1; y <= SH; y++) for (let x = -1; x <= SW; x++) {
+    if (body(x, y)) { if (!dotted && x % 2 === 0 && y % 2 === 0) ctx.fillRect(x + 1, y + 1, 1, 1); continue; }
+    if (!(body(x - 1, y) || body(x + 1, y) || body(x, y - 1) || body(x, y + 1))) continue;
+    if (dotted && (x + y) % 2) continue;
+    ctx.fillRect(x + 1, y + 1, 1, 1);
+  }
+  CACHE.set(key, c);
+  return c;
+}
+
 // 조각으로 부서질 때 쓰는 몸 색 점들(테두리 빼고)
 export function spriteChips(type, side) {
   const tone = TONE[side];

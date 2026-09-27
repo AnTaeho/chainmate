@@ -3,7 +3,7 @@
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure } from '../../render/gfx.js';
-import { spriteChips, spriteCanvas } from '../../render/sprites.js';
+import { spriteChips, spriteCanvas, outlineCanvas, TONE } from '../../render/sprites.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach } from '../../sim/board.js';
@@ -46,6 +46,19 @@ function dotLine(ctx, x0, y0, x1, y1, col, step = 3) {
   ctx.fillStyle = col;
   for (let i = 0; i <= n; i += step) ctx.fillRect(Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), 1, 1);
 }
+// 증원 그림자의 떨어질 표(▼ 5×3)
+function dropMark(ctx, x, y, col) {
+  rect(ctx, x, y, 5, 1, col); rect(ctx, x + 1, y + 1, 3, 1, col); rect(ctx, x + 2, y + 2, 1, 1, col);
+}
+// 칸 말풍선을 그 칸 바로 아래(넘치면 위)에: 옆 칸의 미리 보기와 오른쪽 패널을 덜 가리게
+function sqTip(x, y, title, body, w = 130) {
+  const tip = tipLines(title, body, w);
+  const h = 10 + 14 + tip.lines.length * 13;
+  const ty = y + S + 2 + h > 268 ? y - h - 2 : y + S + 2;
+  return { tip, tipAt: { x: x + S / 2 - w / 2, y: ty } };
+}
+const FALL = 0.2, FALL_PX = 14; // 증원이 위에서 떨어지는 시간(×1) · 높이
+
 // 칸 안의 둥근 고리(다음에 먹을 적)
 function ringAt(ctx, x, y, col, thick = 1) {
   for (let k = 0; k < thick; k++) {
@@ -386,8 +399,14 @@ export class BattleScreen {
           },
         }); break;
         case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${josa(PIECE_NAME[e.piece], '이/가')} 깨졌다`, PAL.sky); this.snd('glass'); } }); break;
+        // 증원은 위에서 떨어져 들어온다. 떨어지는 시간은 한 수 연출 길이에 넣지 않는다(update가 따로 센다)
         case 'reinforce': add(0.1, {
-          begin: () => { v.board[e.sq] = post[e.sq] || { t: e.piece, id: -1 }; if (!post[e.sq]) v.board[e.sq] = { t: e.piece, id: -1 }; this.flash(e.sq, PAL.dim); this.snd('reinforce'); },
+          begin: () => {
+            v.board[e.sq] = post[e.sq] || { t: e.piece, id: -1 };
+            if (this.app.reducedMotion) this.flash(e.sq, PAL.dim);
+            else (this.falls || (this.falls = new Map())).set(e.sq, 0);
+            this.snd('reinforce');
+          },
         }); break;
         case 'regrip': add(0.45, {
           begin: () => { this.word('손을 새로 쥔다', PAL.gold, 1.2, 1); this.snd('discard'); },
@@ -612,6 +631,10 @@ export class BattleScreen {
     // 판 전체의 처음 세 사슬과 첫 수업은 연출 속도 설정과 상관없이 ×1(눈이 규칙을 따라잡을 때까지)
     const sp = (this.slow ? 1 : this.app.speed()) * (this.fast ? 5 : 1);
     this.seq.update(dt * sp);
+    if (this.falls) for (const [sq, t] of this.falls) {
+      const nt = t + dt * sp;
+      if (nt >= FALL) { this.falls.delete(sq); this.flash(sq, PAL.dim); } else this.falls.set(sq, nt);
+    }
     if (this.glow && this.glow.fading) { this.glow.fade += dt * this.app.speed(); if (this.glow.fade > 0.6) this.glow = null; }
     if (this.ring) { this.ring.t += dt * this.app.speed(); if (this.ring.t > this.ring.life) this.ring = null; }
     this.updateFlames(dt);
@@ -693,6 +716,9 @@ export class BattleScreen {
     const tset = new Set(t.list);
     const forced = v.chain && v.chain.forced ? new Set(v.chain.forced) : null;
     const openKings = b.hints && b.hints.openKings ? new Set(b.hints.openKings) : null;
+    // 증원 그림자: 이번 수 뒤(k 0) · 그다음 수 뒤(k 1)
+    const ghosts = new Map();
+    visibleIncoming(b).forEach((wave, k) => { for (const r of wave || []) if (!v.board[r.sq] && !isHidden(b, r.sq) && !ghosts.has(r.sq)) ghosts.set(r.sq, { t: r.t, k }); });
     for (let sq = 0; sq < 64; sq++) {
       const { x, y } = sqXY(sq);
       const f = sq & 7, r = sq >> 3;
@@ -702,7 +728,9 @@ export class BattleScreen {
         for (let k = 0; k < S; k += 4) rect(ctx, x + ((k + (r * 2)) % S), y + k, 2, 1, PAL.fogHi);
       }
       const id = `sq:${sq}`;
-      ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq) });
+      const g = ghosts.get(sq);
+      const tipOpt = g ? sqTip(x, y, `증원 · ${PIECE_NAME[g.t]}`, g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다') : null;
+      ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
         const pulse = 0.22 + 0.12 * Math.sin(time * 5);
         ctx.globalAlpha = pulse; rect(ctx, x, y, S, S, PAL.gold); ctx.globalAlpha = 1;
@@ -710,16 +738,16 @@ export class BattleScreen {
       }
       if (ui.isHover(id) && tset.has(sq)) frame(ctx, x, y, S, S, PAL.white);
     }
-    // 증원 그림자
-    const inc = visibleIncoming(b);
-    inc.forEach((wave, k) => {
-      for (const r of wave || []) {
-        if (v.board[r.sq] || isHidden(b, r.sq)) continue;
-        const { x, y } = sqXY(r.sq);
-        dots(ctx, x, y, S, S, k ? PAL.dimDk : PAL.shadow, 2);
-        sprite(ctx, r.t, 'b', x + 6, y + 3, { alpha: k ? 0.3 : 0.55 });
-      }
-    });
+    // 증원 그림자: 점선 테 안에 빈 윤곽(속이 비어 판 위의 적과 섞이지 않는다)과 흔들리는 ▼. 두 수 앞은 윤곽도 점선
+    for (const [sq, g] of ghosts) {
+      const { x, y } = sqXY(sq);
+      dots(ctx, x, y, S, S, g.k ? PAL.dimDk : PAL.shadow, 2);
+      ctx.drawImage(outlineCanvas(g.t, TONE.b.o, g.k > 0), x + 5, y + 5);
+      const bob = Math.floor(time * 3 + sq * 0.37) % 2;
+      ctx.globalAlpha = g.k ? 0.5 : 1;
+      dropMark(ctx, x + 12, y + 1 + bob, TONE.b.o);
+      ctx.globalAlpha = 1;
+    }
     // 사슬 길
     if (v.chain) {
       const path = v.chain.path;
@@ -753,6 +781,7 @@ export class BattleScreen {
       }
       let dy = 0;
       if (t.kind === 'capture' && tset.has(sq)) dy = Math.floor(time * 4 + sq * 0.37) % 2 ? -2 : -1;
+      if (this.falls && this.falls.has(sq)) { const p = this.falls.get(sq) / FALL; dy -= Math.round((1 - p * p) * FALL_PX); }
       if (openKings && openKings.has(sq) && c.t === 'K') {
         const a = 0.5 + 0.3 * Math.sin(time * 4);
         ctx.globalAlpha = a; frame(ctx, x + 2, y + 2, S - 4, S - 4, PAL.gold); ctx.globalAlpha = 1;
