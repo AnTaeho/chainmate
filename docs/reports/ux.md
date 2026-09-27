@@ -163,7 +163,7 @@ SMOKE OK
 
 `node tools/video.mjs --first` → `docs/media/first-play.mp4`(960×540), 장면 시각 `docs/media/first-play.md`. 빈 저장소로 켜서 수업 열을 사람 손 빠르기로(글 읽는 틈을 두고) 두고, 처음 안내를 읽으며 첫 판을 이어 둔다(10분 상한). 대국의 수는 봇이 고르고, 누르기는 화면 구역을 마우스로.
 
-VIDEO_RESULT
+녹화 결과: 575초(9분 35초), 5.66MB, 페이지 오류 0 — 클라우드에서는 만들지 못해 로컬 맥에서 다시 녹화했다(2026-09-27). 장면 시각은 `docs/media/first-play.md`.
 
 ## 남은 헷갈림
 
