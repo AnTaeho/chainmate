@@ -214,12 +214,14 @@ async function reload() {
   // 새로 부팅한 것처럼: 같은 저장소로 앱을 다시 만든다
   const phase = app.run.phase, ante = app.run.ante, money = app.run.money;
   seen();
+  // 앞 앱은 같은 가짜 창에 듣개가 남아 있다: 누르기가 앞 앱 화면에도 닿지 않게 끊는다
+  app.pointer = () => {}; app.key = () => {};
   app = await boot({ window: dom.window, document: dom.document });
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
   click('title:continue');
-  if (app.run.phase !== phase || app.run.ante !== ante || app.run.money !== money) throw new Error('continue restored a different run');
+  if (app.run.phase !== phase || app.run.ante !== ante || app.run.money !== money) throw new Error(`continue restored a different run ${JSON.stringify([phase, ante, money, app.run.phase, app.run.ante, app.run.money, app.screen.name])}`);
   reloaded = true;
   log('  이어 하기 확인', phase, ante);
 }

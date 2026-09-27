@@ -790,7 +790,7 @@ export class BattleScreen {
         let alpha = 1;
         if (v.cut && v.cut.sq === sq) alpha = 1 - v.cut.p;
         const lk = side === 'w' ? this.look(c.t, time) : {};
-        sprite(ctx, c.t, side, x + 6, y + 3 + dy, { sx, alpha, ...lk });
+        this.putPiece(ctx, c.t, side, x + 6, y + 3 + dy, { sx, alpha, ...lk });
         continue;
       }
       let dy = 0;
@@ -805,7 +805,7 @@ export class BattleScreen {
         ctx.globalAlpha = 0.25; rect(ctx, x, y, S, S, PAL.red); ctx.globalAlpha = 1;
         hatch(ctx, x, y, PAL.redDk);
       }
-      sprite(ctx, c.t, c.gold ? 'g' : 'b', x + 6, y + 3 + dy);
+      this.putPiece(ctx, c.t, c.gold ? 'g' : 'b', x + 6, y + 3 + dy);
       if (c.gold) {
         const k = Math.floor(time * 8 + sq) % 12;
         if (k < 3) rect(ctx, x + 8 + k * 4, y + 4 + k * 3, 1, 1, PAL.goldHi);
@@ -815,7 +815,7 @@ export class BattleScreen {
     // 움직이는 내 기물
     if (v.mover) {
       const m = moverXY(v.mover.form, v.mover.from, v.mover.to, v.mover.p);
-      sprite(ctx, v.mover.form, 'w', m.x + 6, m.y + 3, this.look(v.mover.form, time));
+      this.putPiece(ctx, v.mover.form, 'w', m.x + 6, m.y + 3, this.look(v.mover.form, time));
     }
     // 노림수: 내 기물을 노리는 적에서 붉은 끊어진 선이 내 기물 쪽으로 흐른다(먹을 수 없는 적은 어두운 붉은색).
     // 붙어 있는 적이 많아 기물 위에 긋되, 양 끝은 기물 몸을 비켜 칸 가장자리 쪽만
@@ -845,6 +845,12 @@ export class BattleScreen {
       const { x, y } = sqXY(v.chain.sq);
       if (Math.floor(time * 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
     }
+  }
+
+  // 판 위 기물 하나. pieceSink가 있으면 그리지 않고 모은다(타이틀이 눕힌 판 위에 세워 그린다)
+  putPiece(ctx, type, side, x, y, opts = {}) {
+    if (this.pieceSink) this.pieceSink.push({ type, side, x, y, opts });
+    else sprite(ctx, type, side, x, y, opts);
   }
 
   drawReach(ctx, form, from) {

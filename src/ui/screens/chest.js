@@ -19,7 +19,7 @@ export function chestItemText(it) {
 function drawItem(ctx, it, x, y) {
   if (it.kind === 'money') { rect(ctx, x + 4, y + 4, 12, 12, PAL.gold); rect(ctx, x + 6, y + 6, 8, 8, PAL.goldDk); text(ctx, '$', x + 10, y + 3, PAL.goldHi, { align: 'center', bold: true }); }
   else if (it.kind === 'chart') sprite(ctx, it.form, 'b', x + 2, y - 2);
-  else if (it.kind === 'engrave') sprite(ctx, it.piece, 'w', x + 2, y - 2);
+  else if (it.kind === 'engrave') sprite(ctx, it.piece, 'w', x + 2, y - 2, { eng: it.eng });
   else shardIcon(ctx, x + 2, y + 2);
 }
 const SPIN = [{ kind: 'money', money: 2 }, { kind: 'chart', form: 'N' }, { kind: 'engrave', piece: 'P', eng: 'gold' }, { kind: 'chart', form: 'Q' }, { kind: 'chart', form: 'R' }];
