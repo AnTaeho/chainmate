@@ -13,10 +13,10 @@ function soul(id, name, col, families, text, def) {
 export const SOUL_PRICE = 4;
 export const UP = { P: 'N', N: 'B', B: 'R', R: 'Q', Q: 'Z' };
 
-soul('absorb', '흡수', '#d27fd6', ['change'], '처음 세 먹기는 모습이 바뀌지 않고 마지막에 먹은 행마가 더해진다', {
+soul('absorb', '흡수', '#d27fd6', ['change'], '처음 세 번 먹는 동안 모습은 그대로이고, 마지막에 먹은 적의 행마를 더 쓴다', {
   onDrop(ctx) { ctx.flags.absorb = true; },
 });
-soul('echo', '메아리', '#9fb8ff', ['change'], '막히면 한 번, 떨군 모습으로 돌아가 그 자리에서 잇는다', {
+soul('echo', '메아리', '#9fb8ff', ['change'], '사슬이 막히면 한 번 떨군 모습으로 돌아가 그 자리에서 잇는다', {
   onBlocked(ctx) {
     const c = ctx.chain;
     if (ctx.flags.echoUsed || c.form === c.dropType) return;
@@ -28,7 +28,7 @@ soul('echo', '메아리', '#9fb8ff', ['change'], '막히면 한 번, 떨군 모�
     ctx.keepGoing();
   },
 });
-soul('transcend', '초월', '#fff1b8', ['change', 'crown'], '먹을 때마다 먹힌 모습 대신 한 단계 위로(폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존)', {
+soul('transcend', '초월', '#fff1b8', ['change', 'crown'], '먹을 때마다 먹은 적 대신 한 단계 위 모습이 된다 — 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존', {
   onDrop(ctx) { ctx.flags.transcend = true; },
 });
 soul('hunger', '굶주림', '#df8a45', ['hunt'], '먹을 때마다 이 사슬의 먹기 값이 10씩 커진다', {
@@ -40,7 +40,7 @@ soul('hunter', '사냥꾼', '#8ec07c', ['hunt'], '같은 종류를 잇달아 먹
     if (caps.length >= 2 && caps[caps.length - 2].piece === ctx.event.piece) ctx.mulMult(2);
   },
 });
-soul('martyr', '순교자', '#df5a45', ['sacrifice'], '끊기는 순간 둘레 여덟 칸의 적(킹 빼고)을 모두 먹은 것으로 친다', {
+soul('martyr', '순교자', '#df5a45', ['sacrifice'], '끊기는 순간 둘레 여덟 칸의 적을 킹만 빼고 모두 먹는다', {
   onCut(ctx) {
     const sq = ctx.event.sq, board = ctx.t.board;
     for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
@@ -55,10 +55,10 @@ soul('martyr', '순교자', '#df5a45', ['sacrifice'], '끊기는 순간 둘레 �
     }
   },
 });
-soul('crown', '왕관', '#efbd55', ['crown', 'march'], '승급 칸이 두 줄 앞당겨지고, 승급하면 아마존이 된다', {
+soul('crown', '왕관', '#efbd55', ['crown', 'march'], '승급하면 아마존이 되고, 승급 칸도 두 줄 앞당겨진다', {
   onDrop(ctx) { ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, 5); ctx.flags.promoteTo = 'Z'; },
 });
-soul('shade', '그림자', '#8a5cc8', ['sacrifice', 'leap'], '노림수가 이 기물을 못 본다(응수 없이 이어진다) · 사슬 끝 연쇄 −1', {
+soul('shade', '그림자', '#8a5cc8', ['sacrifice', 'leap'], '노림수가 이 기물을 못 봐 응수 없이 이어진다 — 대신 사슬이 끝나면 연쇄 −1', {
   onThreat(ctx) { ctx.ignoreThreat(); },
   onChainEnd(ctx) { if (ctx.chain.mult > 1) ctx.addMult(-1); },
 });
