@@ -5,6 +5,7 @@ import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf } from '../da
 import { tipLines } from './parts.js';
 import { L } from './lang.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
+import { TRAIT_BY_ID } from '../data/traits.js';
 import { wrap } from '../render/text.js';
 
 // 5×5 문양
@@ -81,4 +82,20 @@ export function josekiBadges(ctx, ui, run, x, y) {
     else rect(ctx, bx + 4, y + 4, 3, 3, TIER_COL[j.tier]);
   });
   return (run.josekis || []).length * 12;
+}
+
+// 적 특성 문양(발밑 왼쪽 5×5): 방패 · 폭약 · 거울 · 성채 · 배신자
+const TRAIT_GLYPH = {
+  shield: ['#####', '#####', '#####', '.###.', '..#..'],
+  bomb: ['...#.', '..#..', '.###.', '#####', '.###.'],
+  mirror: ['#####', '#...#', '#.#.#', '#...#', '#####'],
+  fort: ['#.#.#', '#####', '#...#', '#.#.#', '#####'],
+  traitor: ['..#..', '.##..', '#####', '.##..', '..#..'],
+};
+export function traitMark(ctx, id, x, y) {
+  const rows = TRAIT_GLYPH[id];
+  const tr = TRAIT_BY_ID[id];
+  if (!rows || !tr) return;
+  rect(ctx, x - 1, y - 1, 7, 7, '#0e1513');
+  rows.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, tr.col); });
 }

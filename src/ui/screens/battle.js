@@ -10,7 +10,9 @@ import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES, chartForm } from '../../data/pieces.js';
 import { FAMILY_BY_ID } from '../../data/families.js';
-import { familyStrip, josekiBadges } from '../parts-depth.js';
+import { familyStrip, josekiBadges, traitMark } from '../parts-depth.js';
+import { TRAIT_BY_ID } from '../../data/traits.js';
+import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
@@ -395,7 +397,13 @@ export class BattleScreen {
         case 'cutIgnored': add(0.2, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('넘겼다', PAL.silver); } }); break;
         // 가족(깊이 B): 도약 뒤 노림 무시 · 직선 꿰뚫기 · 변신 한 번 더
         case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('노림을 피했다', PAL.silver); } }); break;
-        case 'pierce': add(0.12, { begin: () => { const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b'); this.flash(e.sq, FAMILY_BY_ID.line.col); this.word('꿰뚫었다', FAMILY_BY_ID.line.col); this.snd('capture', 2); } }); break;
+        case 'pierce': add(0.12, { begin: () => {
+          const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b');
+          const bomb = e.src === 'bomb', col = bomb ? PAL.red : e.src && e.src.includes('martyr') ? PAL.red : FAMILY_BY_ID.line.col;
+          this.flash(e.sq, col); this.word(bomb ? '폭발' : e.src && e.src.includes('martyr') ? '순교' : '꿰뚫었다', col); this.snd(bomb ? 'cut' : 'capture', 2); if (bomb) this.shake(2, 0.12);
+        } }); break;
+        case 'mirrored': add(0.1, { begin: () => { this.sparkle(e.sq, '#9fd3e0', 8); this.word('거울', '#9fd3e0'); } }); break;
+        case 'traitor': add(0.1, { begin: () => { this.word('배신자가 넘어온다', '#8ec07c'); this.snd('coin'); } }); break;
         case 'absorb': add(0.15, { begin: () => { if (v.chain) v.chain.absorbed = e.forms.slice(1); this.sparkle(e.sq, FAMILY_BY_ID.change.col, 12); this.word(`+${PIECE_NAME[e.piece]}`, FAMILY_BY_ID.change.col); this.snd('transform'); } }); break;
         case 'gate': add(0.22, {
           begin: () => { this.sparkle(e.from, '#6fd1bf', 10); this.snd('transform'); },
@@ -765,6 +773,7 @@ export class BattleScreen {
       let tipOpt = g ? sqTip(x, y, `증원 · ${PIECE_NAME[g.t]}`, g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다') : null;
       if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tipOpt = sqTip(x, y, '노림수', t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다');
       const cell = v.board[sq];
+      if (!tipOpt && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tipOpt = sqTip(x, y, `${tr.name} · ${PIECE_NAME[cell.t]}`, [L(tr.text), L(PIECE_MOVE[cell.t] || '')].filter(Boolean).join(' · ')); }
       if (!tipOpt && cell && !cell.mine && PIECE_MOVE[cell.t] && !isHidden(b, sq)) tipOpt = sqTip(x, y, PIECE_NAME[cell.t], PIECE_MOVE[cell.t]);
       ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
@@ -841,6 +850,7 @@ export class BattleScreen {
         hatch(ctx, x, y, PAL.redDk);
       }
       this.putPiece(ctx, c.t, c.gold ? 'g' : 'b', x + 6, y + 3 + dy);
+      if (c.trait) traitMark(ctx, c.trait, x + 2, y + S - 8);
       // 얼린 적(묘수 「빙결」): 얼음빛 덮개 · 이번 수 동안 아무것도 지키지 못한다
       if (c.frozen) { ctx.globalAlpha = 0.35; rect(ctx, x + 2, y + 2, S - 4, S - 4, '#9fd3e0'); ctx.globalAlpha = 1; frame(ctx, x + 1, y + 1, S - 2, S - 2, '#9fd3e0'); }
       if (c.gold) {
