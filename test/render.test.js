@@ -81,3 +81,18 @@ test('영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · �
   ];
   assert.deepEqual(missing(all), []);
 });
+
+test('낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고, 모음(가족)마다 낱말이 있다', async () => {
+  const { TERMS, TERM_GROUPS, splitTerms } = await import('../src/ui/glossary.js');
+  const { FAMILIES } = await import('../src/data/families.js');
+  const ids = TERMS.map((t) => t.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const t of TERMS) {
+    assert.ok(t.word && t.enWord && t.say && t.enSay, t.id);
+    assert.ok(TERM_GROUPS.some(([g]) => g === t.group), t.id);
+    assert.ok(!/엔진|스폰|버프|트리거|시뮬/.test(t.say), t.id);
+  }
+  for (const f of FAMILIES) assert.ok(ids.includes(`fam_${f.id}`), f.id);
+  // 모음 이름은 같은 자리에서 시작하는 짧은 낱말(끊김 · 승급)보다 먼저 잡힌다
+  assert.deepEqual(splitTerms('끊김 모음 · 승급 모음').filter(([, id]) => id).map(([, id]) => id), ['fam_sacrifice', 'fam_crown']);
+});

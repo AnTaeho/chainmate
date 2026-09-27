@@ -331,6 +331,8 @@ export const EN = {
   '가로 · 세로로 기물 하나를 뛰어넘어, 그 너머 처음 만나는 적을 먹는다': 'Hops over one piece in a straight line and takes the first enemy beyond it',
   '딱 두 칸 떨어진 적을 제자리에서 쏘아 먹는다 — 궁수는 움직이지 않는다': 'Shoots an enemy exactly two squares away without moving',
   '룩처럼 가로 · 세로로 가되, 사이의 기물을 뚫고 지나간다': 'Moves straight like a rook, passing right through pieces in between',
+  '물건': 'Items',
+  '모음': 'Sets',
 };
 
 // 틀: 숫자나 이름이 끼는 글. fn(m, tr) — tr로 끼인 말을 다시 옮긴다.

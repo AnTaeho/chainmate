@@ -7,7 +7,9 @@ import { createRun } from '../../sim/run.js';
 import { createRng, fork } from '../../sim/rng.js';
 import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide } from '../coach.js';
-import { TERMS, termWord, termSay } from '../glossary.js';
+import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
+
+const TERM_DEF_X = 120; // 낱말 풀이: 풀이 글이 시작하는 x
 import { wrap } from '../../render/text.js';
 import { L } from '../lang.js';
 
@@ -115,16 +117,43 @@ export class LessonsScreen {
     button(ctx, ui, 'lessons:terms', W / 2 - 88, 240, 84, 18, '낱말 풀이', { onClick: () => { this.terms = true; } });
     button(ctx, ui, 'lessons:back', W / 2 + 4, 240, 84, 18, '돌아가기', { onClick: () => app.toTitle() });
   }
-  // 낱말 풀이: 글 안에서 빛나는 낱말 열한 개를 한곳에
+  // 낱말 풀이: 카드 옆 낱말 상자와 같은 표(glossary.js TERMS)를 묶음 탭(대국 · 판 · 물건 · 모음)과 쪽으로
   drawTerms(ctx, ui) {
-    text(ctx, '낱말 풀이', W / 2, 10, PAL.gold, { align: 'center', bold: true });
-    box(ctx, 16, 28, W - 32, 206, PAL.feltDk, PAL.frameDk);
-    TERMS.forEach((t, k) => {
-      const y = 34 + k * 18;
-      text(ctx, termWord(t.id), 24, y, PAL.gold, { bold: true });
-      text(ctx, wrap(termSay(t.id), W - 32 - 84)[0], 96, y, PAL.ink);
+    text(ctx, '낱말 풀이', W / 2, 8, PAL.gold, { align: 'center', bold: true });
+    const tab = this.termTab || 'battle';
+    const tw = 70, tx0 = Math.floor((W - TERM_GROUPS.length * (tw + 4) + 4) / 2);
+    TERM_GROUPS.forEach(([id, name], k) => {
+      button(ctx, ui, `terms:tab:${id}`, tx0 + k * (tw + 4), 24, tw, 16, name, { tone: id === tab ? 'gold' : 'plain', onClick: () => { this.termTab = id; this.termPage = 0; } });
     });
+    const pages = this.termPages(tab);
+    const page = Math.min(this.termPage || 0, pages.length - 1);
+    box(ctx, 16, 44, W - 32, 188, PAL.feltDk, PAL.frameDk);
+    for (const row of pages[page]) {
+      text(ctx, termWord(row.id), 24, row.y, PAL.gold, { bold: true });
+      row.lines.forEach((l, k) => text(ctx, l, TERM_DEF_X, row.y + k * 13, PAL.ink));
+    }
+    if (pages.length > 1) {
+      button(ctx, ui, 'terms:prev', 16, 240, 40, 18, '‹', { enabled: page > 0, onClick: () => { this.termPage = page - 1; } });
+      text(ctx, `${page + 1}/${pages.length}`, 76, 243, PAL.dim, { align: 'center' });
+      button(ctx, ui, 'terms:next', 96, 240, 40, 18, '›', { enabled: page < pages.length - 1, onClick: () => { this.termPage = page + 1; } });
+    }
     button(ctx, ui, 'lessons:back', W / 2 - 42, 240, 84, 18, '돌아가기', { onClick: () => { this.terms = false; } });
   }
-  key(k) { if (k === 'Escape') { if (this.terms) this.terms = false; else this.app.toTitle(); } }
+  // 한 묶음의 낱말을 쪽으로 나눈다(풀이는 두 줄까지 줄바꿈, 쪽 높이 180)
+  termPages(tab) {
+    const pages = [[]];
+    let y = 50;
+    for (const t of TERMS.filter((q) => q.group === tab)) {
+      const lines = wrap(termSay(t.id), W - 32 - (TERM_DEF_X - 16) - 8);
+      const h = lines.length * 13 + 5;
+      if (y + h > 228 && pages[pages.length - 1].length) { pages.push([]); y = 50; }
+      pages[pages.length - 1].push({ id: t.id, y, lines });
+      y += h;
+    }
+    return pages;
+  }
+  key(k) {
+    if (this.terms && (k === 'ArrowLeft' || k === 'ArrowRight')) { const n = this.termPages(this.termTab || 'battle').length; this.termPage = Math.max(0, Math.min(n - 1, (this.termPage || 0) + (k === 'ArrowLeft' ? -1 : 1))); return; }
+    if (k === 'Escape') { if (this.terms) this.terms = false; else this.app.toTitle(); }
+  }
 }
