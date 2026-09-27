@@ -17,7 +17,7 @@ import { MASTER_BY_ID } from '../../data/masters.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
-import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines, fragmentStrip } from '../parts.js';
+import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines, fragmentStrip, itemTip, tacticIcon } from '../parts.js';
 import { KIND_SHORT, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton } from './common.js';
 import { drawPortrait } from '../../render/portraits.js';
@@ -841,6 +841,8 @@ export class BattleScreen {
         hatch(ctx, x, y, PAL.redDk);
       }
       this.putPiece(ctx, c.t, c.gold ? 'g' : 'b', x + 6, y + 3 + dy);
+      // 얼린 적(묘수 「빙결」): 얼음빛 덮개 · 이번 수 동안 아무것도 지키지 못한다
+      if (c.frozen) { ctx.globalAlpha = 0.35; rect(ctx, x + 2, y + 2, S - 4, S - 4, '#9fd3e0'); ctx.globalAlpha = 1; frame(ctx, x + 1, y + 1, S - 2, S - 2, '#9fd3e0'); }
       if (c.gold) {
         const k = Math.floor(time * 8 + sq) % 12;
         if (k < 3) rect(ctx, x + 8 + k * 4, y + 4 + k * 3, 1, 1, PAL.goldHi);
@@ -879,6 +881,33 @@ export class BattleScreen {
     if (v.chain && v.chain.forced && !v.cut) {
       const { x, y } = sqXY(v.chain.sq);
       if (Math.floor(time * 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
+    }
+  }
+
+  // 묘수(깊이 F): 손 이름표 옆의 작은 칸. 떨구기 전에 눌러 쓴다
+  drawTactics(ctx, ui) {
+    const run = this.run, live = this.live();
+    if (!run) return;
+    let k = 0;
+    run.consumables.forEach((c, i) => {
+      if (c.kind !== 'tactic') return;
+      const x = RX + 16 + k * 17, y = 202;
+      k++;
+      const ok = !this.busy && live && live.status === 'play';
+      const id = `tactic:${i}`;
+      ui.region(id, x, y, 15, 15, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c) });
+      box(ctx, x, y, 15, 15, '#132019', ui.isHover(id) && ok ? PAL.gold : PAL.frameDk);
+      ctx.save(); ctx.translate(x + 1, y + 2); ctx.scale(0.8, 0.8); tacticIcon(ctx, c.id, 0, 0); ctx.restore();
+    });
+  }
+  useTactic(i) {
+    let ev;
+    try { ev = this.app.cmd({ type: 'tactic', index: i }); } catch { this.toast('할 수 없다', PAL.red); return; }
+    this.sync();
+    for (const e of ev) {
+      if (e.type === 'freeze') { for (const sq of e.squares) this.sparkle(sq, '#9fd3e0', 8); this.word('빙결', '#9fd3e0', 1.2, 1); this.snd('glass'); }
+      if (e.type === 'reload') { this.word('수 +1', PAL.gold, 1.2, 1); this.snd('coin'); }
+      if (e.type === 'taunt') { for (const sq of e.squares) this.sparkle(sq, '#df8a45', 8); this.word('도발', '#df8a45', 1.2, 1); this.snd('reinforce'); }
     }
   }
 
@@ -1085,6 +1114,7 @@ export class BattleScreen {
     this.drawPreviewPanel(ctx);
     // 손
     text(ctx, '손', RX, 206, PAL.dim);
+    this.drawTactics(ctx, ui);
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
     button(ctx, ui, 'btn:discard', RX + RW - 62, 203, 62, 16, '무르기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });

@@ -39,6 +39,11 @@ export const ENG_EDGE = { gold: '#efbd55', silver: '#d8dee6', ivory: '#f2d6c4', 
 export const TIER = [null, { o: null, d: '#b8733a' }, { o: '#6f7f8a', d: '#dfe6ec' }, { o: '#9c6f24', d: '#efbd55' }];
 export const tierOf = (level) => (!level ? 0 : level <= 2 ? 1 : level <= 4 ? 2 : 3);
 
+// 판 위 사물은 편과 상관없이 제 빛깔(벽 = 돌 회색, 보석 = 청록 반짝)
+export const THING_TONE = {
+  X: { o: '#1a1d1c', s: '#4e5754', f: '#6f7a76', h: '#9aa6a1', d: '#353c3a' },
+  J: { o: '#0d3a40', s: '#2f9fb0', f: '#6fd8e6', h: '#e8fffc', d: '#1f7280' },
+};
 export const TYPES = Object.keys(SPR);
 
 const SPRPIX = {};
@@ -96,7 +101,7 @@ export function spriteCanvas(type, side, eng = null, tier = 0) {
   if (c) return c;
   c = makeCanvas(SW, SH);
   const ctx = context(c);
-  const tone = { ...(eng && ENG_TONE[eng] ? ENG_TONE[eng] : TONE[side]) };
+  const tone = { ...(THING_TONE[type] || (eng && ENG_TONE[eng] ? ENG_TONE[eng] : TONE[side])) };
   tone.x = tone.f;
   if (tier) { const tr = TIER[tier]; if (tr.o) tone.o = tr.o; tone.d = tr.d; }
   ctx.globalAlpha = 0.35;
@@ -164,7 +169,7 @@ export function outlineCanvas(type, col, dotted = false) {
 
 // 조각으로 부서질 때 쓰는 몸 색 점들(테두리 빼고)
 export function spriteChips(type, side, eng = null) {
-  const tone = { ...(eng && ENG_TONE[eng] ? ENG_TONE[eng] : TONE[side]) };
+  const tone = { ...(THING_TONE[type] || (eng && ENG_TONE[eng] ? ENG_TONE[eng] : TONE[side])) };
   tone.x = tone.f;
   return (SPRPIX[type] || SPRPIX.P).filter(([, , t]) => t !== 'o').map(([x, y, t]) => ({ x, y, col: tone[t] }));
 }

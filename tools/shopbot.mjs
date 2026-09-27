@@ -16,6 +16,7 @@ import { FINAL_MASTER } from '../src/data/masters.js';
 import { stepBattle } from './bot.mjs';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
+import { evolveTo } from '../src/data/tactics.js';
 
 export const SMART = {
   K: 8,            // 짜임 하나를 재는 대국판 수
@@ -129,6 +130,21 @@ function bestEngraveTarget(run, build, engId, ctx, soul = false) {
   return best;
 }
 
+// 진화 두루마리를 쓸 가장 좋은 기물(종류마다 한 번)
+function bestEvolveTarget(run, build, ctx) {
+  let best = null;
+  const seen = new Set();
+  for (const p of build.deck) {
+    const to = evolveTo(run.seed, p);
+    if (!to || seen.has(p.t + to)) continue;
+    seen.add(p.t + to);
+    const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? { ...q, t: to } : q)) };
+    const score = ctx.score(v);
+    if (!best || score > best.score) best = { target: p.id, score, build: v };
+  }
+  return best;
+}
+
 function makeCtx(run) {
   const seeds = evalSeeds(run, SMART.K);
   const ante = nextAnte(run);
@@ -161,6 +177,8 @@ function useConsumables(run, ctx) {
   while (run.consumables.length) {
     const c = run.consumables[0];
     if (c.kind === 'chart') act(run, { type: 'use', index: 0 });
+    else if (c.kind === 'tactic') break;
+    else if (c.kind === 'evolve') { const t = bestEvolveTarget(run, buildOf(run), ctx); if (t) act(run, { type: 'use', index: 0, target: t.target }); else break; }
     else {
       const t = bestEngraveTarget(run, buildOf(run), c.id, ctx, c.kind === 'soul');
       act(run, { type: 'use', index: 0, target: t ? t.target : run.deck[0].id });
@@ -194,6 +212,11 @@ function variantFor(run, build, it, ctx) {
   }
   if (it.kind === 'chart') return { build: { ...build, charts: { ...build.charts, [it.form]: build.charts[it.form] + 1 } } };
   if (it.kind === 'piece') return { build: { ...build, deck: [...build.deck, { id: -1, t: it.t, eng: null, ...(it.soul ? { soul: it.soul } : {}) }] } };
+  if (it.kind === 'evolve') {
+    const t = bestEvolveTarget(run, build, ctx);
+    if (!t) return null;
+    return { build: t.build, target: t.target };
+  }
   if (it.kind === 'soul') {
     const t = bestEngraveTarget(run, build, it.id, ctx, true);
     if (!t) return null;
@@ -248,7 +271,8 @@ function smartShop(run, hunt = false) {
     };
     run.shop.display.forEach((it, slot) => {
       if (it.sold || run.money < it.price) return;
-      if ((it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul') && run.consumables.length >= run.consumableSlots) return;
+      if (it.kind === 'tactic') return;
+      if ((it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve') && run.consumables.length >= run.consumableSlots) return;
       const v = variantFor(run, build, it, ctx);
       if (!v) return;
       const refund = v.sell != null ? sellPrice(run.maxims[v.sell]) : 0;

@@ -7,10 +7,11 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope } from '../parts.js';
+import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
+import { TACTIC_BY_ID } from '../../data/tactics.js';
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
@@ -60,6 +61,13 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
     sprite(ctx, c.form, 'b', x + 3, y + Math.floor((h - 22) / 2)); text(ctx, '기보', x + 22, y + Math.floor(h / 2) - 6, PAL.cardInk, { bold: true });
     return;
   }
+  if (c.kind === 'evolve' || c.kind === 'tactic') {
+    box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
+    if (c.kind === 'evolve') sprite(ctx, 'N', 'w', x + 3, y + Math.floor((h - 22) / 2), { tier: 3 });
+    else tacticIcon(ctx, c.id, x + 3, y + Math.floor((h - 11) / 2));
+    text(ctx, c.kind === 'evolve' ? '진화' : TACTIC_BY_ID[c.id].name, x + 20 + Math.floor((w - 20) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
+    return;
+  }
   if (c.kind === 'soul') {
     const s = SOUL_BY_ID[c.id];
     box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
@@ -77,7 +85,7 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
 }
 // 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
 const TIP_AT = { x: 196, y: 174 };
-export const consumableTip = (c) => (c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, '주머니의 기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
+export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, '주머니의 기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
   constructor(app) {
@@ -99,6 +107,7 @@ export class ShopScreen {
   }
   // 기보로 한 단계 자라면 빛 기둥, 각인을 새기면 반짝
   fx(e) {
+    if (e.type === 'evolve') { this.grow = { form: e.to, t0: this.app.time }; this.app.sfx('grow'); }
     if (e.type === 'chart' && tierOf(e.level) > tierOf(e.level - 1)) { this.grow = { form: e.form, t0: this.app.time }; this.app.sfx('grow'); }
     if (e.type === 'engrave' || e.type === 'ensoul') this.flash = { id: e.pieceId, t0: this.app.time };
   }
@@ -155,7 +164,8 @@ export class ShopScreen {
     button(ctx, ui, 'shop:leave', 244, 150, 68, 18, '나가기', { onClick: () => this.leave(), tone: 'gold' });
     // 주머니
     text(ctx, `주머니 ${run.deck.length}`, 12, 178, PAL.dim);
-    const hint = this.target ? (run.consumables[this.target.index] && run.consumables[this.target.index].kind === 'soul' ? '깃들 기물' : '새길 기물') : null;
+    const tk = this.target && run.consumables[this.target.index] ? run.consumables[this.target.index].kind : null;
+    const hint = tk ? (tk === 'soul' ? '깃들 기물' : tk === 'evolve' ? '자랄 기물' : '새길 기물') : null;
     if (hint) text(ctx, hint, 100, 178, PAL.gold, { bold: true });
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
     const fp = since(this.flash, 0.3), gp = since(this.grow, 0.5);
@@ -235,7 +245,8 @@ export class ShopScreen {
     const c = this.run.consumables[i];
     if (!c) return;
     this.menu = null;
-    if (c.kind === 'engraving' || c.kind === 'soul') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
+    if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
+    if (c.kind === 'tactic') { this.app.toast('대국 중에 쓴다', PAL.dim); return; }
     this.act({ type: 'use', index: i }, 'chart');
   }
 

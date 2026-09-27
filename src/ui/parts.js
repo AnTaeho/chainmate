@@ -5,6 +5,7 @@ import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies, FAMILY_BY_ID } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID } from '../data/souls.js';
+import { TACTIC_BY_ID } from '../data/tactics.js';
 import { L } from './lang.js';
 import { familyGlyphs } from './parts-depth.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
@@ -240,7 +241,7 @@ export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}
 }
 
 // ── 상점 · 꾸러미 물건 카드
-export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명국 조각', soul: '혼' };
+export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명국 조각', soul: '혼', evolve: '진화', tactic: '묘수' };
 
 export function itemName(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).name;
@@ -248,6 +249,8 @@ export function itemName(it) {
   if (it.kind === 'engraving') return `${engravingInfo(it.id).name} 각인`;
   if (it.kind === 'piece') return PIECE_NAME[it.t];
   if (it.kind === 'soul') return `${SOUL_BY_ID[it.id].name}의 혼`;
+  if (it.kind === 'evolve') return '진화';
+  if (it.kind === 'tactic') return TACTIC_BY_ID[it.id].name;
   if (it.kind === 'fragment') return LEGEND_BY_ID[it.legend].name;
   return '';
 }
@@ -261,6 +264,8 @@ export function itemTip(it) {
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '주머니의 기물 하나에 새긴다']); }
   if (it.kind === 'piece') return tipLines(PIECE_NAME[it.t], [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '주머니에 들어온다']);
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '주머니의 기물 하나에 깃든다']); }
+  if (it.kind === 'evolve') return tipLines('진화', ['주머니의 기물 하나가 그 종류의 이형으로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
+  if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`묘수 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(`${l.name} · 첫 조각`, [l.story, `전설: ${l.text}`]); }
   return null;
 }
@@ -318,6 +323,11 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
     const e = engravingInfo(it.id);
     text(ctx, e.name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
     rect(ctx, cx - 10, y + 63, 20, 1, col);
+  } else if (it.kind === 'evolve' || it.kind === 'tactic') {
+    rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
+    if (it.kind === 'evolve') { sprite(ctx, 'N', 'w', cx - 8, y + 22, { tier: 3, time: t }); }
+    else tacticIcon(ctx, it.id, cx - 8, y + 25);
+    text(ctx, it.kind === 'evolve' ? '진화' : TACTIC_BY_ID[it.id].name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'soul') {
     const s = SOUL_BY_ID[it.id];
     frame(ctx, x + 1, y + 1, w - 2, h - 2, s.col);
@@ -365,4 +375,15 @@ export function fragmentStrip(ctx, ui, run, x, y, { align = 'left' } = {}) {
     xx += w;
   }
   return list.length * w;
+}
+
+// 묘수 그림 16×16: 빙결 = 눈송이 · 재장전 = 수 구슬 더하기 · 도발 = 손짓하는 폰
+export function tacticIcon(ctx, id, x, y) {
+  const G = {
+    freeze: ['.......#........', '...#...#...#....', '....#..#..#.....', '.....#.#.#......', '......###.......', '.#############..', '......###.......', '.....#.#.#......', '....#..#..#.....', '...#...#...#....', '.......#........'],
+    reload: ['................', '..##########....', '..#........#....', '..##########....', '................', '.......##.......', '.......##.......', '....########....', '....########....', '.......##.......', '.......##.......'],
+    taunt: ['......##........', '.....####....#..', '.....####...#...', '......##...#....', '....######......', '......##........', '......##........', '.....####.......', '....######......', '...########.....', '................'],
+  }[id] || [];
+  const col = { freeze: '#9fd3e0', reload: '#efbd55', taunt: '#df8a45' }[id] || '#ffffff';
+  G.forEach((r, j) => { for (let i = 0; i < 16; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, col); });
 }
