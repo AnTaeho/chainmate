@@ -199,7 +199,7 @@ export class TitleScreen {
     ctx.drawImage(logo.c, lx, ly);
     const cyc = time % 5;
     if (cyc < 0.9) ctx.drawImage(logoGlint(cyc / 0.9), lx, ly);
-    text(ctx, '잡으면 그것이 된다', W / 2, 92, PAL.ink, { align: 'center', shadow: PAL.shadow });
+    text(ctx, '적을 삼켜, 적이 되어라', W / 2, 92, PAL.ink, { align: 'center', shadow: PAL.shadow });
     // 메뉴(왼쪽 아래): 고른 단추는 금빛 + 「›」, 나머지는 반투명 어두운 판
     const items = this.items();
     const hot = items.findIndex(([id]) => ui.isHover(id));
