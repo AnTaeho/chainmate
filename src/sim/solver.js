@@ -100,3 +100,32 @@ export function bestMove(b, opts = {}) {
 export function bestPerPiece(b, opts = {}) {
   return b.hand.map((_, i) => bestMove(b, { ...opts, handIndices: [i] }));
 }
+
+// ── 화면용 미리 보기(규칙 그대로, 복사본에서 — 원래 대국은 바뀌지 않는다)
+// 지금 사슬에서 sq를 먹으면: 바뀐 모습 · 얻는 값 · 연쇄(조정자 반응까지) · 다음에 먹을 수 있는 적 · 응수 · 끊김 · 외통.
+export function previewCapture(t, sq) {
+  const u = cloneTable(t);
+  const c0 = u.chain;
+  const value0 = c0.value, mult0 = c0.mult;
+  const events = chainCapture(u, sq);
+  const c = u.chain;
+  const cut = events.find((e) => e.type === 'cut');
+  const forced = events.find((e) => e.type === 'forced');
+  return {
+    sq, form: c.form, value: c.value - value0, mult: c.mult - mult0,
+    done: c.done, reason: c.reason, score: c.done ? c.score : null,
+    next: c.done || c.awaiting ? [] : chainCaptures(u),
+    forced: forced ? forced.attackers.slice() : null,
+    cut: cut ? cut.attackers.slice() : null,
+    mate: events.some((e) => e.type === 'mate'),
+    redrop: !!c.awaiting,
+  };
+}
+
+// 손 기물 handIndex를 sq에 떨구면 처음 먹을 수 있는 적
+export function previewDrop(b, handIndex, sq) {
+  const piece = b.hand[handIndex];
+  const t = cloneTable({ ...b, chain: null });
+  startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng) });
+  return { sq, form: piece.t, next: t.chain.done ? [] : chainCaptures(t) };
+}

@@ -188,3 +188,39 @@ test('막히면 대국마다 한 번 손을 새로 쥔다(손 · 쓴 기물을 �
   assert.equal(b.status, 'lost');
   assert.equal(b.result.reason, 'stuck');
 });
+
+test('미리 보기: 먹기 전에 바뀐 모습 · 값 · 연쇄 · 다음 적 · 끊김이 실제와 같고 대국은 그대로', async () => {
+  const { previewCapture, previewDrop } = await import('../src/sim/solver.js');
+  const { chainCaptures } = await import('../src/sim/chain.js');
+  for (let seed = 1; seed <= 40; seed++) {
+    const b = createBattle({ seed, ante: 3, mods: [{ id: 'quick_change' }, { id: 'center' }] });
+    const drop = legalCommands(b).find((c) => c.type === 'drop');
+    if (!drop) continue;
+    const pd = previewDrop(b, drop.handIndex, drop.sq);
+    const before = JSON.stringify(b);
+    apply(b, drop);
+    if (b.status !== 'chain') continue;
+    assert.deepEqual(pd.next.slice().sort(), chainCaptures(b).slice().sort());
+    for (let k = 0; k < 6 && b.status === 'chain' && !b.chain.awaiting; k++) {
+      const sq = chainCaptures(b)[0];
+      const snap = JSON.stringify(b);
+      const pv = previewCapture(b, sq);
+      assert.equal(JSON.stringify(b), snap, '미리 보기가 대국을 바꾸지 않는다');
+      const v0 = b.chain.value, m0 = b.chain.mult;
+      const ev = apply(b, { type: 'capture', sq });
+      const end = ev.find((e) => e.type === 'end');
+      if (end) {
+        assert.equal(pv.done, true);
+        assert.equal(pv.reason, end.reason);
+        assert.equal(pv.score, end.score);
+        assert.equal(!!pv.cut, end.reason === 'cut');
+        break;
+      }
+      assert.equal(pv.form, b.chain.form);
+      assert.equal(pv.value, b.chain.value - v0);
+      assert.equal(pv.mult, b.chain.mult - m0);
+      assert.deepEqual(pv.next.slice().sort(), chainCaptures(b).slice().sort());
+    }
+    assert.ok(before);
+  }
+});
