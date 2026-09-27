@@ -76,7 +76,8 @@ export class DraftScreen {
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, y, CW, CH, PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     });
-    if (!this.chosen && this.t > 1.2) hint(this.app, 'draft', 'draft:1');
+    // 안내는 왼쪽 칸에서 오른쪽을 가리키므로 바로 옆 첫 카드에(정석 고르기 전체에 대한 한 줄)
+    if (!this.chosen && this.t > 1.2) hint(this.app, 'draft', 'draft:0');
   }
   key(k) {
     if (/^[1-3]$/.test(k)) this.pick(Number(k) - 1);
