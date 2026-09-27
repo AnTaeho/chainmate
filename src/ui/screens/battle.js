@@ -15,6 +15,7 @@ import { FAIRIES, chartForm } from '../../data/pieces.js';
 import { FAMILY_BY_ID } from '../../data/families.js';
 import { familyStrip, josekiBadges, traitMark } from '../parts-depth.js';
 import { TRAIT_BY_ID } from '../../data/traits.js';
+import { JOSEKI_BY_ID } from '../../data/josekis.js';
 import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
@@ -71,6 +72,15 @@ function sqTip(x, y, title, body, w = 130) {
   const h = 10 + 14 + tip.lines.length * 13;
   const ty = y + S + 2 + h > 268 ? y - h - 2 : y + S + 2;
   return { tip, tipAt: { x: x + S / 2 - w / 2, y: ty } };
+}
+// 칸 위의 판 사물(정석이 까는 것): [이름, 풀이]. 풀이는 정석 글 그대로(「언제 → 무엇」)
+export function objectsAt(rules, sq) {
+  const out = [];
+  if (!rules) return out;
+  if ((rules.steps || []).includes(sq)) out.push(['발판', JOSEKI_BY_ID.stepping.text]);
+  if ((rules.gates || []).includes(sq)) out.push(['문', JOSEKI_BY_ID.gates.text]);
+  if ((rules.highways || []).includes(sq & 7)) out.push(['고속도로', JOSEKI_BY_ID.highway.text]);
+  return out;
 }
 const FALL = 0.2, FALL_PX = 14; // 증원이 위에서 떨어지는 시간(×1) · 높이
 
@@ -796,11 +806,15 @@ export class BattleScreen {
       }
       const id = `sq:${sq}`;
       const g = ghosts.get(sq);
-      let tipOpt = g ? sqTip(x, y, `증원 · ${PIECE_NAME[g.t]}`, g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다') : null;
-      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tipOpt = sqTip(x, y, '노림수', t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다');
+      let tip = g ? [`증원 · ${PIECE_NAME[g.t]}`, [g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다']] : null;
+      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['노림수', [t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다']];
       const cell = v.board[sq];
-      if (!tipOpt && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tipOpt = sqTip(x, y, `${tr.name} · ${PIECE_NAME[cell.t]}`, [L(tr.text), L(PIECE_MOVE[cell.t] || '')].filter(Boolean).join(' · ')); }
-      if (!tipOpt && cell && !cell.mine && PIECE_MOVE[cell.t] && !isHidden(b, sq)) tipOpt = sqTip(x, y, PIECE_NAME[cell.t], PIECE_MOVE[cell.t]);
+      if (!tip && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tip = [`${tr.name} · ${PIECE_NAME[cell.t]}`, [[L(tr.text), L(PIECE_MOVE[cell.t] || '')].filter(Boolean).join(' · ')]]; }
+      if (!tip && cell && !cell.mine && PIECE_MOVE[cell.t] && !isHidden(b, sq)) tip = [PIECE_NAME[cell.t], [PIECE_MOVE[cell.t]]];
+      // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
+      const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
+      if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
+      const tipOpt = tip ? sqTip(x, y, tip[0], tip[1]) : null;
       ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
         const pulse = 0.22 + 0.12 * Math.sin(time * 5);
