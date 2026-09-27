@@ -1,0 +1,2236 @@
+{
+ "after-01-en-select": {
+  "tip": null,
+  "keys": [],
+  "hint": null
+ },
+ "after-01-en-select~fam_hunt": {
+  "region": {
+   "id": "fam:hunt",
+   "x": 14,
+   "y": 62,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 78,
+   "w": 116,
+   "h": 154
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-01-en-select~joseki_stepping": {
+  "region": {
+   "id": "joseki:stepping",
+   "x": 12,
+   "y": 94,
+   "w": 104,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 110,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-01-en-select~select_path": {
+  "region": {
+   "id": "select:path",
+   "x": 214,
+   "y": 244,
+   "w": 173,
+   "h": 16
+  },
+  "tip": {
+   "x": 6,
+   "y": 218,
+   "w": 116,
+   "h": 50
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-02-en-draft": {
+  "tip": null,
+  "keys": [],
+  "hint": null
+ },
+ "after-02-en-draft~draft_0": {
+  "region": {
+   "id": "draft:0",
+   "x": 128,
+   "y": 22,
+   "w": 108,
+   "h": 150
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "fam_hunt",
+    "x": 6,
+    "y": 22,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-02-en-draft~draft_1": {
+  "region": {
+   "id": "draft:1",
+   "x": 246,
+   "y": 22,
+   "w": 108,
+   "h": 150
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "fam_diag",
+    "x": 6,
+    "y": 22,
+    "w": 116,
+    "h": 58
+   },
+   {
+    "id": "fam_leap",
+    "x": 6,
+    "y": 82,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-02-en-draft~draft_2": {
+  "region": {
+   "id": "draft:2",
+   "x": 364,
+   "y": 22,
+   "w": 108,
+   "h": 150
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "fam_line",
+    "x": 6,
+    "y": 22,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-03-en-battle": {
+  "tip": null,
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~goal": {
+  "region": {
+   "id": "goal",
+   "x": 127,
+   "y": 12,
+   "w": 226,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 102
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~sq_22": {
+  "region": {
+   "id": "sq:22",
+   "x": 296,
+   "y": 170,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 170,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~sq_25": {
+  "region": {
+   "id": "sq:25",
+   "x": 156,
+   "y": 142,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 142,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~sq_28": {
+  "region": {
+   "id": "sq:28",
+   "x": 240,
+   "y": 142,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 142,
+   "w": 116,
+   "h": 114
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~sq_34": {
+  "region": {
+   "id": "sq:34",
+   "x": 184,
+   "y": 114,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 114,
+   "w": 116,
+   "h": 50
+  },
+  "keys": [
+   {
+    "id": "reinforce",
+    "x": 6,
+    "y": 166,
+    "w": 116,
+    "h": 84
+   }
+  ],
+  "hint": null
+ },
+ "after-03-en-battle~sq_36": {
+  "region": {
+   "id": "sq:36",
+   "x": 240,
+   "y": 114,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 114,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~sq_45": {
+  "region": {
+   "id": "sq:45",
+   "x": 268,
+   "y": 86,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 86,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~sq_46": {
+  "region": {
+   "id": "sq:46",
+   "x": 296,
+   "y": 86,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 55,
+   "w": 116,
+   "h": 127
+  },
+  "keys": [
+   {
+    "id": "threat",
+    "x": 6,
+    "y": 184,
+    "w": 116,
+    "h": 84
+   }
+  ],
+  "hint": null
+ },
+ "after-03-en-battle~sq_53": {
+  "region": {
+   "id": "sq:53",
+   "x": 268,
+   "y": 58,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 58,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~sq_55": {
+  "region": {
+   "id": "sq:55",
+   "x": 324,
+   "y": 58,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 58,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~sq_61": {
+  "region": {
+   "id": "sq:61",
+   "x": 268,
+   "y": 30,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 30,
+   "w": 116,
+   "h": 114
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~box_value": {
+  "region": {
+   "id": "box:value",
+   "x": 8,
+   "y": 98,
+   "w": 48,
+   "h": 22
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "value",
+    "x": 6,
+    "y": 123,
+    "w": 116,
+    "h": 84
+   }
+  ],
+  "hint": null
+ },
+ "after-03-en-battle~box_links": {
+  "region": {
+   "id": "box:links",
+   "x": 72,
+   "y": 98,
+   "w": 48,
+   "h": 22
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "links",
+    "x": 6,
+    "y": 123,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-03-en-battle~pips_moves": {
+  "region": {
+   "id": "pips:moves",
+   "x": 8,
+   "y": 180,
+   "w": 112,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 88,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~pips_discards": {
+  "region": {
+   "id": "pips:discards",
+   "x": 8,
+   "y": 193,
+   "w": 112,
+   "h": 15
+  },
+  "tip": {
+   "x": 6,
+   "y": 114,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~bag": {
+  "region": {
+   "id": "bag",
+   "x": 8,
+   "y": 240,
+   "w": 112,
+   "h": 22
+  },
+  "tip": {
+   "x": 6,
+   "y": 187,
+   "w": 116,
+   "h": 50
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~joseki_stepping": {
+  "region": {
+   "id": "joseki:stepping",
+   "x": 444,
+   "y": 9,
+   "w": 11,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 9,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~fam_hunt": {
+  "region": {
+   "id": "fam:hunt",
+   "x": 360,
+   "y": 181,
+   "w": 58,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 114,
+   "w": 116,
+   "h": 154
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~hand_0": {
+  "region": {
+   "id": "hand:0",
+   "x": 360,
+   "y": 226,
+   "w": 25,
+   "h": 40
+  },
+  "tip": {
+   "x": 6,
+   "y": 167,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~hand_1": {
+  "region": {
+   "id": "hand:1",
+   "x": 389,
+   "y": 226,
+   "w": 25,
+   "h": 40
+  },
+  "tip": {
+   "x": 6,
+   "y": 180,
+   "w": 116,
+   "h": 88
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~hand_2": {
+  "region": {
+   "id": "hand:2",
+   "x": 418,
+   "y": 226,
+   "w": 25,
+   "h": 40
+  },
+  "tip": {
+   "x": 6,
+   "y": 154,
+   "w": 116,
+   "h": 114
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-03-en-battle~hand_3": {
+  "region": {
+   "id": "hand:3",
+   "x": 447,
+   "y": 226,
+   "w": 25,
+   "h": 40
+  },
+  "tip": {
+   "x": 6,
+   "y": 167,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full": {
+  "tip": null,
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~goal": {
+  "region": {
+   "id": "goal",
+   "x": 127,
+   "y": 12,
+   "w": 226,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 102
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_23": {
+  "region": {
+   "id": "sq:23",
+   "x": 324,
+   "y": 170,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 68,
+   "w": 116,
+   "h": 140
+  },
+  "keys": [
+   {
+    "id": "trait",
+    "x": 6,
+    "y": 210,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_26": {
+  "region": {
+   "id": "sq:26",
+   "x": 184,
+   "y": 142,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 142,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_29": {
+  "region": {
+   "id": "sq:29",
+   "x": 268,
+   "y": 142,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 142,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_35": {
+  "region": {
+   "id": "sq:35",
+   "x": 212,
+   "y": 114,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 114,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_37": {
+  "region": {
+   "id": "sq:37",
+   "x": 268,
+   "y": 114,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 102,
+   "w": 116,
+   "h": 166
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_39": {
+  "region": {
+   "id": "sq:39",
+   "x": 324,
+   "y": 114,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 114,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_48": {
+  "region": {
+   "id": "sq:48",
+   "x": 128,
+   "y": 58,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 58,
+   "w": 116,
+   "h": 127
+  },
+  "keys": [
+   {
+    "id": "trait",
+    "x": 6,
+    "y": 187,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_55": {
+  "region": {
+   "id": "sq:55",
+   "x": 324,
+   "y": 58,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 58,
+   "w": 116,
+   "h": 166
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_60": {
+  "region": {
+   "id": "sq:60",
+   "x": 240,
+   "y": 30,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 30,
+   "w": 116,
+   "h": 153
+  },
+  "keys": [
+   {
+    "id": "trait",
+    "x": 6,
+    "y": 185,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~sq_63": {
+  "region": {
+   "id": "sq:63",
+   "x": 324,
+   "y": 30,
+   "w": 28,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 30,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~box_value": {
+  "region": {
+   "id": "box:value",
+   "x": 8,
+   "y": 98,
+   "w": 48,
+   "h": 22
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "value",
+    "x": 6,
+    "y": 123,
+    "w": 116,
+    "h": 84
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~box_links": {
+  "region": {
+   "id": "box:links",
+   "x": 72,
+   "y": 98,
+   "w": 48,
+   "h": 22
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "links",
+    "x": 6,
+    "y": 123,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~pips_moves": {
+  "region": {
+   "id": "pips:moves",
+   "x": 8,
+   "y": 180,
+   "w": 112,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 88,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~pips_discards": {
+  "region": {
+   "id": "pips:discards",
+   "x": 8,
+   "y": 193,
+   "w": 112,
+   "h": 15
+  },
+  "tip": {
+   "x": 6,
+   "y": 114,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~frag_opera": {
+  "region": {
+   "id": "frag:opera",
+   "x": 55,
+   "y": 216,
+   "w": 12,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 128
+  },
+  "keys": [
+   {
+    "id": "fragment",
+    "x": 6,
+    "y": 142,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~frag_century": {
+  "region": {
+   "id": "frag:century",
+   "x": 68,
+   "y": 216,
+   "w": 12,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 128
+  },
+  "keys": [
+   {
+    "id": "fragment",
+    "x": 6,
+    "y": 142,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~bag": {
+  "region": {
+   "id": "bag",
+   "x": 8,
+   "y": 240,
+   "w": 112,
+   "h": 22
+  },
+  "tip": {
+   "x": 6,
+   "y": 161,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~joseki_gates": {
+  "region": {
+   "id": "joseki:gates",
+   "x": 432,
+   "y": 9,
+   "w": 11,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 9,
+   "w": 116,
+   "h": 115
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~joseki_stepping": {
+  "region": {
+   "id": "joseki:stepping",
+   "x": 444,
+   "y": 9,
+   "w": 11,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 9,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~maxim_0": {
+  "region": {
+   "id": "maxim:0",
+   "x": 360,
+   "y": 22,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 22,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [
+   {
+    "id": "fam_leap",
+    "x": 6,
+    "y": 100,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~maxim_1": {
+  "region": {
+   "id": "maxim:1",
+   "x": 360,
+   "y": 54,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 54,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [
+   {
+    "id": "fam_change",
+    "x": 6,
+    "y": 132,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~maxim_2": {
+  "region": {
+   "id": "maxim:2",
+   "x": 360,
+   "y": 86,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 86,
+   "w": 116,
+   "h": 63
+  },
+  "keys": [
+   {
+    "id": "fam_leap",
+    "x": 6,
+    "y": 151,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~maxim_3": {
+  "region": {
+   "id": "maxim:3",
+   "x": 360,
+   "y": 118,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 118,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [
+   {
+    "id": "fam_change",
+    "x": 6,
+    "y": 209,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~maxim_4": {
+  "region": {
+   "id": "maxim:4",
+   "x": 360,
+   "y": 150,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 59,
+   "w": 116,
+   "h": 63
+  },
+  "keys": [
+   {
+    "id": "fam_sacrifice",
+    "x": 6,
+    "y": 124,
+    "w": 116,
+    "h": 45
+   },
+   {
+    "id": "cut",
+    "x": 6,
+    "y": 171,
+    "w": 116,
+    "h": 97
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~fam_leap": {
+  "region": {
+   "id": "fam:leap",
+   "x": 360,
+   "y": 181,
+   "w": 65,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 127,
+   "w": 116,
+   "h": 141
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~fam_change": {
+  "region": {
+   "id": "fam:change",
+   "x": 360,
+   "y": 195,
+   "w": 62,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 88,
+   "w": 116,
+   "h": 180
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~tactic_3": {
+  "region": {
+   "id": "tactic:3",
+   "x": 396,
+   "y": 209,
+   "w": 15,
+   "h": 15
+  },
+  "tip": {
+   "x": 6,
+   "y": 67,
+   "w": 116,
+   "h": 115
+  },
+  "keys": [
+   {
+    "id": "threat",
+    "x": 6,
+    "y": 184,
+    "w": 116,
+    "h": 84
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~hand_0": {
+  "region": {
+   "id": "hand:0",
+   "x": 360,
+   "y": 226,
+   "w": 25,
+   "h": 40
+  },
+  "tip": {
+   "x": 6,
+   "y": 167,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~hand_1": {
+  "region": {
+   "id": "hand:1",
+   "x": 389,
+   "y": 226,
+   "w": 25,
+   "h": 40
+  },
+  "tip": {
+   "x": 6,
+   "y": 167,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-04-en-battle-full~hand_2": {
+  "region": {
+   "id": "hand:2",
+   "x": 418,
+   "y": 226,
+   "w": 25,
+   "h": 40
+  },
+  "tip": {
+   "x": 6,
+   "y": 68,
+   "w": 116,
+   "h": 140
+  },
+  "keys": [
+   {
+    "id": "engraving",
+    "x": 6,
+    "y": 210,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-04-en-battle-full~hand_3": {
+  "region": {
+   "id": "hand:3",
+   "x": 447,
+   "y": 226,
+   "w": 25,
+   "h": 40
+  },
+  "tip": {
+   "x": 6,
+   "y": 180,
+   "w": 116,
+   "h": 88
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop": {
+  "tip": null,
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~fam_leap": {
+  "region": {
+   "id": "fam:leap",
+   "x": 14,
+   "y": 62,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 78,
+   "w": 116,
+   "h": 141
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~fam_change": {
+  "region": {
+   "id": "fam:change",
+   "x": 14,
+   "y": 77,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 88,
+   "w": 116,
+   "h": 180
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~fam_hunt": {
+  "region": {
+   "id": "fam:hunt",
+   "x": 14,
+   "y": 92,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 108,
+   "w": 116,
+   "h": 154
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~fam_line": {
+  "region": {
+   "id": "fam:line",
+   "x": 14,
+   "y": 107,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 101,
+   "w": 116,
+   "h": 167
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~fam_diag": {
+  "region": {
+   "id": "fam:diag",
+   "x": 14,
+   "y": 122,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 138,
+   "w": 116,
+   "h": 102
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~fam_sacrifice": {
+  "region": {
+   "id": "fam:sacrifice",
+   "x": 14,
+   "y": 137,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 153,
+   "w": 116,
+   "h": 102
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~joseki_gates": {
+  "region": {
+   "id": "joseki:gates",
+   "x": 12,
+   "y": 169,
+   "w": 104,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 51,
+   "w": 116,
+   "h": 115
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~joseki_stepping": {
+  "region": {
+   "id": "joseki:stepping",
+   "x": 12,
+   "y": 182,
+   "w": 104,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 90,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~frag_opera": {
+  "region": {
+   "id": "frag:opera",
+   "x": 55,
+   "y": 216,
+   "w": 12,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 128
+  },
+  "keys": [
+   {
+    "id": "fragment",
+    "x": 6,
+    "y": 142,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~frag_century": {
+  "region": {
+   "id": "frag:century",
+   "x": 68,
+   "y": 216,
+   "w": 12,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 128
+  },
+  "keys": [
+   {
+    "id": "fragment",
+    "x": 6,
+    "y": 142,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~shop_buy_0": {
+  "region": {
+   "id": "shop:buy:0",
+   "x": 128,
+   "y": 22,
+   "w": 108,
+   "h": 116
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "fam_leap",
+    "x": 6,
+    "y": 22,
+    "w": 116,
+    "h": 71
+   },
+   {
+    "id": "fam_march",
+    "x": 6,
+    "y": 95,
+    "w": 116,
+    "h": 45
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~shop_buy_1": {
+  "region": {
+   "id": "shop:buy:1",
+   "x": 244,
+   "y": 22,
+   "w": 108,
+   "h": 116
+  },
+  "tip": {
+   "x": 6,
+   "y": 22,
+   "w": 116,
+   "h": 140
+  },
+  "keys": [
+   {
+    "id": "fam_line",
+    "x": 6,
+    "y": 164,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~deck_1": {
+  "region": {
+   "id": "deck:1",
+   "x": 128,
+   "y": 210,
+   "w": 20,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 167,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~deck_4": {
+  "region": {
+   "id": "deck:4",
+   "x": 197,
+   "y": 210,
+   "w": 20,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 167,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~deck_8": {
+  "region": {
+   "id": "deck:8",
+   "x": 289,
+   "y": 210,
+   "w": 20,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 180,
+   "w": 116,
+   "h": 88
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-05-en-shop~deck_82": {
+  "region": {
+   "id": "deck:82",
+   "x": 151,
+   "y": 240,
+   "w": 20,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 68,
+   "w": 116,
+   "h": 140
+  },
+  "keys": [
+   {
+    "id": "engraving",
+    "x": 6,
+    "y": 210,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~maxim_0": {
+  "region": {
+   "id": "maxim:0",
+   "x": 360,
+   "y": 22,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 22,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [
+   {
+    "id": "fam_leap",
+    "x": 6,
+    "y": 100,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~maxim_1": {
+  "region": {
+   "id": "maxim:1",
+   "x": 360,
+   "y": 54,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 54,
+   "w": 116,
+   "h": 76
+  },
+  "keys": [
+   {
+    "id": "fam_change",
+    "x": 6,
+    "y": 132,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~maxim_2": {
+  "region": {
+   "id": "maxim:2",
+   "x": 360,
+   "y": 86,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 86,
+   "w": 116,
+   "h": 63
+  },
+  "keys": [
+   {
+    "id": "fam_leap",
+    "x": 6,
+    "y": 151,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~maxim_3": {
+  "region": {
+   "id": "maxim:3",
+   "x": 360,
+   "y": 118,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 118,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [
+   {
+    "id": "fam_change",
+    "x": 6,
+    "y": 209,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~maxim_4": {
+  "region": {
+   "id": "maxim:4",
+   "x": 360,
+   "y": 150,
+   "w": 112,
+   "h": 28
+  },
+  "tip": {
+   "x": 6,
+   "y": 59,
+   "w": 116,
+   "h": 63
+  },
+  "keys": [
+   {
+    "id": "fam_sacrifice",
+    "x": 6,
+    "y": 124,
+    "w": 116,
+    "h": 45
+   },
+   {
+    "id": "cut",
+    "x": 6,
+    "y": 171,
+    "w": 116,
+    "h": 97
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~cons_0": {
+  "region": {
+   "id": "cons:0",
+   "x": 360,
+   "y": 198,
+   "w": 55,
+   "h": 32
+  },
+  "tip": {
+   "x": 6,
+   "y": 119,
+   "w": 116,
+   "h": 50
+  },
+  "keys": [
+   {
+    "id": "cut",
+    "x": 6,
+    "y": 171,
+    "w": 116,
+    "h": 97
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~cons_1": {
+  "region": {
+   "id": "cons:1",
+   "x": 417,
+   "y": 198,
+   "w": 55,
+   "h": 32
+  },
+  "tip": {
+   "x": 6,
+   "y": 119,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [
+   {
+    "id": "fam_change",
+    "x": 6,
+    "y": 210,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~cons_2": {
+  "region": {
+   "id": "cons:2",
+   "x": 360,
+   "y": 232,
+   "w": 55,
+   "h": 32
+  },
+  "tip": {
+   "x": 6,
+   "y": 28,
+   "w": 116,
+   "h": 180
+  },
+  "keys": [
+   {
+    "id": "fairy",
+    "x": 6,
+    "y": 210,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-05-en-shop~cons_3": {
+  "region": {
+   "id": "cons:3",
+   "x": 417,
+   "y": 232,
+   "w": 55,
+   "h": 32
+  },
+  "tip": {
+   "x": 6,
+   "y": 67,
+   "w": 116,
+   "h": 115
+  },
+  "keys": [
+   {
+    "id": "threat",
+    "x": 6,
+    "y": 184,
+    "w": 116,
+    "h": 84
+   }
+  ],
+  "hint": null
+ },
+ "after-06-en-pack-piece": {
+  "tip": null,
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~fam_leap": {
+  "region": {
+   "id": "fam:leap",
+   "x": 14,
+   "y": 62,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 78,
+   "w": 116,
+   "h": 141
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~fam_change": {
+  "region": {
+   "id": "fam:change",
+   "x": 14,
+   "y": 77,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 88,
+   "w": 116,
+   "h": 180
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~fam_hunt": {
+  "region": {
+   "id": "fam:hunt",
+   "x": 14,
+   "y": 92,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 108,
+   "w": 116,
+   "h": 154
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~fam_line": {
+  "region": {
+   "id": "fam:line",
+   "x": 14,
+   "y": 107,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 101,
+   "w": 116,
+   "h": 167
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~fam_diag": {
+  "region": {
+   "id": "fam:diag",
+   "x": 14,
+   "y": 122,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 138,
+   "w": 116,
+   "h": 102
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~fam_sacrifice": {
+  "region": {
+   "id": "fam:sacrifice",
+   "x": 14,
+   "y": 137,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 153,
+   "w": 116,
+   "h": 102
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~joseki_gates": {
+  "region": {
+   "id": "joseki:gates",
+   "x": 12,
+   "y": 169,
+   "w": 104,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 51,
+   "w": 116,
+   "h": 115
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~joseki_stepping": {
+  "region": {
+   "id": "joseki:stepping",
+   "x": 12,
+   "y": 182,
+   "w": 104,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 90,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-06-en-pack-piece~frag_opera": {
+  "region": {
+   "id": "frag:opera",
+   "x": 55,
+   "y": 216,
+   "w": 12,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 128
+  },
+  "keys": [
+   {
+    "id": "fragment",
+    "x": 6,
+    "y": 142,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-06-en-pack-piece~frag_century": {
+  "region": {
+   "id": "frag:century",
+   "x": 68,
+   "y": 216,
+   "w": 12,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 128
+  },
+  "keys": [
+   {
+    "id": "fragment",
+    "x": 6,
+    "y": 142,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-06-en-pack-piece~pack_pick_0": {
+  "region": {
+   "id": "pack:pick:0",
+   "x": 128,
+   "y": 22,
+   "w": 108,
+   "h": 124
+  },
+  "tip": {
+   "x": 6,
+   "y": 8,
+   "w": 116,
+   "h": 127
+  },
+  "keys": [
+   {
+    "id": "fam_leap",
+    "x": 6,
+    "y": 137,
+    "w": 116,
+    "h": 71
+   },
+   {
+    "id": "fairy",
+    "x": 6,
+    "y": 210,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-06-en-pack-piece~pack_pick_1": {
+  "region": {
+   "id": "pack:pick:1",
+   "x": 246,
+   "y": 22,
+   "w": 108,
+   "h": 124
+  },
+  "tip": {
+   "x": 6,
+   "y": 22,
+   "w": 116,
+   "h": 140
+  },
+  "keys": [
+   {
+    "id": "fam_line",
+    "x": 6,
+    "y": 164,
+    "w": 116,
+    "h": 58
+   }
+  ],
+  "hint": null
+ },
+ "after-06-en-pack-piece~pack_pick_2": {
+  "region": {
+   "id": "pack:pick:2",
+   "x": 364,
+   "y": 22,
+   "w": 108,
+   "h": 124
+  },
+  "tip": {
+   "x": 6,
+   "y": 22,
+   "w": 116,
+   "h": 101
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving": {
+  "tip": null,
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~fam_leap": {
+  "region": {
+   "id": "fam:leap",
+   "x": 14,
+   "y": 62,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 78,
+   "w": 116,
+   "h": 141
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~fam_change": {
+  "region": {
+   "id": "fam:change",
+   "x": 14,
+   "y": 77,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 88,
+   "w": 116,
+   "h": 180
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~fam_hunt": {
+  "region": {
+   "id": "fam:hunt",
+   "x": 14,
+   "y": 92,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 108,
+   "w": 116,
+   "h": 154
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~fam_line": {
+  "region": {
+   "id": "fam:line",
+   "x": 14,
+   "y": 107,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 101,
+   "w": 116,
+   "h": 167
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~fam_diag": {
+  "region": {
+   "id": "fam:diag",
+   "x": 14,
+   "y": 122,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 138,
+   "w": 116,
+   "h": 102
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~fam_sacrifice": {
+  "region": {
+   "id": "fam:sacrifice",
+   "x": 14,
+   "y": 137,
+   "w": 100,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 153,
+   "w": 116,
+   "h": 102
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~joseki_gates": {
+  "region": {
+   "id": "joseki:gates",
+   "x": 12,
+   "y": 169,
+   "w": 104,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 51,
+   "w": 116,
+   "h": 115
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~joseki_stepping": {
+  "region": {
+   "id": "joseki:stepping",
+   "x": 12,
+   "y": 182,
+   "w": 104,
+   "h": 13
+  },
+  "tip": {
+   "x": 6,
+   "y": 90,
+   "w": 116,
+   "h": 89
+  },
+  "keys": [],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~frag_opera": {
+  "region": {
+   "id": "frag:opera",
+   "x": 55,
+   "y": 216,
+   "w": 12,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 128
+  },
+  "keys": [
+   {
+    "id": "fragment",
+    "x": 6,
+    "y": 142,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~frag_century": {
+  "region": {
+   "id": "frag:century",
+   "x": 68,
+   "y": 216,
+   "w": 12,
+   "h": 11
+  },
+  "tip": {
+   "x": 6,
+   "y": 12,
+   "w": 116,
+   "h": 128
+  },
+  "keys": [
+   {
+    "id": "fragment",
+    "x": 6,
+    "y": 142,
+    "w": 116,
+    "h": 71
+   }
+  ],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~pack_pick_0": {
+  "region": {
+   "id": "pack:pick:0",
+   "x": 128,
+   "y": 22,
+   "w": 108,
+   "h": 124
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "cut",
+    "x": 6,
+    "y": 22,
+    "w": 116,
+    "h": 97
+   }
+  ],
+  "hint": null
+ },
+ "after-07-en-pack-engraving~pack_pick_2": {
+  "region": {
+   "id": "pack:pick:2",
+   "x": 364,
+   "y": 22,
+   "w": 108,
+   "h": 124
+  },
+  "tip": null,
+  "keys": [
+   {
+    "id": "threat",
+    "x": 6,
+    "y": 22,
+    "w": 116,
+    "h": 84
+   }
+  ],
+  "hint": null
+ }
+}
