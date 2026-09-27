@@ -37,6 +37,8 @@ export const GRADES = [
 export const gradeOf = (n) => GRADES.reduce((g, x) => (n >= x.n ? x : g), null);
 
 export const PROMOTE_RANK = 7;
+// 흡수(정석 · 혼)는 사슬의 처음 세 먹기까지만: 센 떨군 모습(퀸 · 대주교)을 사슬 내내 지키면 판을 쓸어 첫 수 외통이 3관부터 20~50%였다(하네스 30판)
+export const ABSORB_TAKES = 3;
 
 export function startChain(t, { type, sq, engraving = null, soul = null }) {
   const events = [];
@@ -133,7 +135,7 @@ export function chainCapture(t, sq) {
   } else if (target.t === 'J') {
     c.money = (c.money || 0) + 2;
     events.push({ type: 'money', src: 'gem', money: 2 });
-  } else if (c.flags.absorb && target.t !== 'K') {
+  } else if (c.flags.absorb && target.t !== 'K' && c.captures.length <= ABSORB_TAKES) {
     // 흡수는 가장 최근에 먹은 행마 하나만 더한다(쌓이게 두면 모든 응수를 받아 첫 수 외통이 판의 절반이 됐다 — 하네스 30판)
     if (target.t !== c.form && (c.absorbed || [])[0] !== target.t) {
       c.absorbed = [target.t];
