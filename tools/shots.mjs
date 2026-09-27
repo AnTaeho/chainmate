@@ -35,6 +35,7 @@ const srv = await serve();
 const port = srv.address().port;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 480, height: 270 }, deviceScaleFactor: 1 });
+await page.addInitScript(() => { window.__autoDraft = true; });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });

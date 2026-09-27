@@ -8,7 +8,7 @@ import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
-import { FAIRIES } from '../../data/pieces.js';
+import { FAIRIES, chartForm } from '../../data/pieces.js';
 import { FAMILY_BY_ID } from '../../data/families.js';
 import { familyStrip, josekiBadges } from '../parts-depth.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
@@ -168,7 +168,7 @@ export class BattleScreen {
         path: [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.to)],
         shots: c.captures.filter((x) => x.stay).map((x) => [x.from, x.to]),
         forced: c.forced ? c.forced.slice() : null, awaiting: c.awaiting ? chainRedrops(b) : null,
-        cut: false, eng: c.engraving ? c.engraving.id : null,
+        cut: false, eng: c.engraving ? c.engraving.id : null, soul: c.soul ? c.soul.id.replace('soul:', '') : null, absorbed: c.absorbed ? c.absorbed.slice() : null,
       };
     } else v.chain = null;
     this.targets = null;
@@ -267,7 +267,7 @@ export class BattleScreen {
     const v = this.view;
     const run = this.run;
     if (cmd.type === 'drop') this.slow = this.src.kind === 'lesson' || (!!run && !run.log.some((x) => !x.skipped) && bRef.history.length < 3);
-    if (cmd.type === 'drop') { const hp = bRef.hand[cmd.handIndex]; this.dropEng = hp && hp.eng ? hp.eng.id : null; }
+    if (cmd.type === 'drop') { const hp = bRef.hand[cmd.handIndex]; this.dropEng = hp && hp.eng ? hp.eng.id : null; this.dropSoul = hp && hp.soul ? hp.soul : null; }
     if (cmd.type === 'drop' && run) this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
     const events = this.src.cmd(cmd);
     if (run) this.record(events, run);
@@ -320,7 +320,7 @@ export class BattleScreen {
         case 'drop': add(0.14, {
           begin: () => {
             v.board[e.sq] = { t: e.piece, mine: true };
-            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], forced: null, awaiting: null, cut: false, eng: this.dropEng || null };
+            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], forced: null, awaiting: null, cut: false, eng: this.dropEng || null, soul: this.dropSoul || null };
             v.dropIn = { sq: e.sq, p: 0 };
             this.snd('drop');
           },
@@ -387,14 +387,14 @@ export class BattleScreen {
         { const d = 0.25 * pace(); this.moveT = (this.moveT || 0) + d; seq.add({ dur: d, label: 'hold' }); } break;
         case 'promote': add(0.3, {
           begin: () => { v.lift = { sq: e.sq, p: 0 }; this.snd('promote'); },
-          tick: (p) => { v.lift.p = p; if (p >= 0.5 && v.chain) { v.chain.form = 'Q'; v.chain.steps[v.chain.steps.length - 1] = 'Q'; if (v.board[e.sq]) v.board[e.sq].t = 'Q'; } },
+          tick: (p) => { const to = e.to || 'Q'; v.lift.p = p; if (p >= 0.5 && v.chain) { v.chain.form = to; v.chain.steps[v.chain.steps.length - 1] = to; if (v.board[e.sq]) v.board[e.sq].t = to; } },
           done: () => { v.lift = null; this.sparkle(e.sq, PAL.gold, 12); this.word('승급', PAL.gold); },
         }); break;
         case 'grade': add(0.2, { begin: () => this.gradeStamp(e) }); break;
         case 'forced': add(0.1, { begin: () => { if (v.chain) v.chain.forced = e.attackers.slice(); this.snd('forced'); } }); break;
         case 'cutIgnored': add(0.2, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('넘겼다', PAL.silver); } }); break;
         // 가족(깊이 B): 도약 뒤 노림 무시 · 직선 꿰뚫기 · 변신 한 번 더
-        case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, FAMILY_BY_ID.leap.col, 10); this.word('뛰어넘었다', FAMILY_BY_ID.leap.col); } }); break;
+        case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('노림을 피했다', PAL.silver); } }); break;
         case 'pierce': add(0.12, { begin: () => { const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b'); this.flash(e.sq, FAMILY_BY_ID.line.col); this.word('꿰뚫었다', FAMILY_BY_ID.line.col); this.snd('capture', 2); } }); break;
         case 'absorb': add(0.15, { begin: () => { if (v.chain) v.chain.absorbed = e.forms.slice(1); this.sparkle(e.sq, FAMILY_BY_ID.change.col, 12); this.word(`+${PIECE_NAME[e.piece]}`, FAMILY_BY_ID.change.col); this.snd('transform'); } }); break;
         case 'gate': add(0.22, {
@@ -516,7 +516,7 @@ export class BattleScreen {
   // 내 기물의 모습: 떨군 기물의 각인 톤 + 지금 모습의 기보 단계
   look(form, time = null) {
     const run = this.run, v = this.view;
-    return { eng: v.chain ? v.chain.eng || null : null, tier: run ? tierOf(run.charts[form]) : 0, time };
+    return { eng: v.chain ? v.chain.eng || null : null, soul: v.chain ? v.chain.soul || null : null, tier: run ? tierOf(run.charts[chartForm(form)]) : 0, time };
   }
   shatter(sq, type, side) {
     const { x, y } = sqXY(sq);
@@ -1100,7 +1100,7 @@ export class BattleScreen {
       const usable = live && live.status === 'play' && !this.busy;
       // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)
       const nudge = usable && !this.sel.length && this.idleT > 2.5 && Math.floor(app.time * 3) % v.hand.length === i ? 2 : 0;
-      pieceCard(ctx, p, x, y, w, 36, { lift: selected ? 4 : hov && usable ? 1 : nudge, selected, hover: hov || nudge > 0, dim: !usable, tier: run ? tierOf(run.charts[p.t]) : 0, time: app.time + i });
+      pieceCard(ctx, p, x, y, w, 36, { lift: selected ? 4 : hov && usable ? 1 : nudge, selected, hover: hov || nudge > 0, dim: !usable, tier: run ? tierOf(run.charts[chartForm(p.t)]) : 0, time: app.time + i });
     });
   }
 

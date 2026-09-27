@@ -92,6 +92,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (daily) app.run.daily = daily;
     app.fresh = [];
     observe(app.records, app.run, [], app.fresh);
+    // 스크린샷 · 영상 도구(window.__autoDraft): 정석 첫째를 곧바로 골라 예전 흐름으로
+    if (globalThis.__autoDraft && app.run.phase === 'draft') applyRun(app.run, { type: 'joseki', index: 0 });
     app.save();
     app.goPhase();
   };

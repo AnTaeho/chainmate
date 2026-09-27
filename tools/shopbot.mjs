@@ -76,7 +76,7 @@ export function evalBuild(run, build, seeds, ante, master = null) {
   seeds.forEach((seed, k) => {
     const b = createBattle({
       seed, ante, kind: 'practice', target: null, golden: false,
-      bag: build.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng })),
+      bag: build.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
       rules: run.rules, mods,
     });
     const m = Math.min(k % b.rules.moves, b.rules.moves - 1);
@@ -110,17 +110,19 @@ export function famBonus(before, after) {
 
 const RANK = { P: 0, N: 1, B: 1, R: 2, Q: 3, L: 1, S: 1, G: 2, O: 2, H: 2, A: 2, W: 2, C: 3, Z: 4 };
 // 두루마리(각인)를 붙일 가장 좋은 기물: 종류 · 각인이 같은 기물은 한 번만 잰다
-function bestEngraveTarget(run, build, engId, ctx) {
+// soul: 혼 두루마리(깊이 C)면 기물의 soul을 바꿔 본다
+function bestEngraveTarget(run, build, engId, ctx, soul = false) {
   let best = null;
   const seen = new Set();
   // 무거운 기물부터 서로 다른 셋만 본다(재는 값을 아끼려고)
-  const order = [...build.deck].sort((a, b) => RANK[b.t] - RANK[a.t] || (a.eng ? 1 : 0) - (b.eng ? 1 : 0));
+  const has = (p) => (soul ? p.soul : p.eng);
+  const order = [...build.deck].sort((a, b) => RANK[b.t] - RANK[a.t] || (has(a) ? 1 : 0) - (has(b) ? 1 : 0));
   for (const p of order) {
-    const key = p.t + (p.eng ? p.eng.id : '');
-    if (seen.has(key) || (p.eng && p.eng.id === engId)) continue;
+    const key = p.t + (p.eng ? p.eng.id : '') + (p.soul || '');
+    if (seen.has(key) || (soul ? p.soul === engId : p.eng && p.eng.id === engId)) continue;
     if (seen.size >= 3) break;
     seen.add(key);
-    const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? { ...q, eng: { id: engId } } : q)) };
+    const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? (soul ? { ...q, soul: engId } : { ...q, eng: { id: engId } }) : q)) };
     const score = ctx.score(v);
     if (!best || score > best.score) best = { target: p.id, score };
   }
@@ -160,7 +162,7 @@ function useConsumables(run, ctx) {
     const c = run.consumables[0];
     if (c.kind === 'chart') act(run, { type: 'use', index: 0 });
     else {
-      const t = bestEngraveTarget(run, buildOf(run), c.id, ctx);
+      const t = bestEngraveTarget(run, buildOf(run), c.id, ctx, c.kind === 'soul');
       act(run, { type: 'use', index: 0, target: t ? t.target : run.deck[0].id });
     }
   }
@@ -191,7 +193,12 @@ function variantFor(run, build, it, ctx) {
     return { build: { ...build, maxims: [...build.maxims.filter((_, j) => j !== w.index), m] }, sell: w.index };
   }
   if (it.kind === 'chart') return { build: { ...build, charts: { ...build.charts, [it.form]: build.charts[it.form] + 1 } } };
-  if (it.kind === 'piece') return { build: { ...build, deck: [...build.deck, { id: -1, t: it.t, eng: null }] } };
+  if (it.kind === 'piece') return { build: { ...build, deck: [...build.deck, { id: -1, t: it.t, eng: null, ...(it.soul ? { soul: it.soul } : {}) }] } };
+  if (it.kind === 'soul') {
+    const t = bestEngraveTarget(run, build, it.id, ctx, true);
+    if (!t) return null;
+    return { build: { ...build, deck: build.deck.map((q) => (q.id === t.target ? { ...q, soul: it.id } : q)) }, target: t.target };
+  }
   if (it.kind === 'engraving') {
     const t = bestEngraveTarget(run, build, it.id, ctx);
     if (!t) return null;
@@ -241,7 +248,7 @@ function smartShop(run, hunt = false) {
     };
     run.shop.display.forEach((it, slot) => {
       if (it.sold || run.money < it.price) return;
-      if ((it.kind === 'chart' || it.kind === 'engraving') && run.consumables.length >= run.consumableSlots) return;
+      if ((it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul') && run.consumables.length >= run.consumableSlots) return;
       const v = variantFor(run, build, it, ctx);
       if (!v) return;
       const refund = v.sell != null ? sellPrice(run.maxims[v.sell]) : 0;

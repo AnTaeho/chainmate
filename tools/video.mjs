@@ -52,6 +52,7 @@ await prep.close();
 
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, recordVideo: { dir: RAW, size: { width: W, height: H } } });
 const page = await ctx.newPage();
+await page.addInitScript(() => { window.__autoDraft = true; });
 const t0 = Date.now();
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));

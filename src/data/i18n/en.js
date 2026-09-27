@@ -4,6 +4,16 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명국 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 export const EN = {
   // ── 화면
+  // 혼(깊이 C)
+  '혼': 'Soul', '깃들 기물': 'Choose a piece', '노림을 피했다': 'Slipped the threat', '주머니의 기물 하나에 깃든다': 'Dwells in one piece of your bag',
+  '먹어도 모습이 바뀌지 않고 먹은 행마가 더해진다': 'Keeps its form when taking, adding the moves it takes',
+  '막히면 한 번, 떨군 모습으로 돌아가 그 자리에서 잇는다': 'Once when blocked, returns to its dropped form and goes on',
+  '먹을 때마다 먹힌 모습 대신 한 단계 위로(폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존)': 'Each take climbs one step instead (pawn › knight › bishop › rook › queen › amazon)',
+  '먹을 때마다 이 사슬의 먹기 값이 10씩 커진다': 'Each take in this chain is worth 10 more than the last',
+  '같은 종류를 잇달아 먹으면 연쇄 ×2': 'Taking the same kind in a row: links ×2',
+  '승급 칸이 두 줄 앞당겨지고, 승급하면 아마존이 된다': 'Promotes two ranks sooner, into an amazon',
+  '노림수가 이 기물을 못 본다(응수 없이 이어진다) · 사슬 끝 연쇄 −1': 'Threats never see it (no replies needed) · links −1 at chain end',
+  '메아리': 'Echo', '초월': 'Transcend', '굶주림': 'Hunger', '사냥꾼': 'Hunter', '순교자': 'Martyr', '그림자': 'Shade',
   // 정석(깊이 E)
   '정석': 'Joseki', '은': 'Silver', '무지개': 'Rainbow', '주머니가 바뀌었다': 'Your bag changed',
   '기사 서약': "Knight's Oath", '주머니의 나이트 둘이 야간기사가 된다': 'Two knights in your bag become nightriders',
@@ -220,4 +230,6 @@ export const TEMPLATES = [
   [/^(도약|직선|대각|변신|희생|왕관|행진|사냥) (\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}`],
   [/^정석 · (\d+)관$/, (m) => `Joseki · Hall ${m[1]}`],
   [/^\+(폰|나이트|비숍|룩|퀸|대주교|재상|아마존|낙타|야간기사|메뚜기|포|궁수|유령)$/, (m, tr) => `+${tr(m[1])}`],
+  [/^(.+)의 혼$/, (m, tr) => `${tr(m[1])} Soul`],
+  [/^(.+)의 혼 · (.+)$/, (m, tr) => `${tr(m[1])} Soul · ${m[2]}`],
 ];

@@ -10,6 +10,7 @@ import { button } from '../ui.js';
 import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
+import { SOUL_BY_ID } from '../../data/souls.js';
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
@@ -59,6 +60,14 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
     sprite(ctx, c.form, 'b', x + 3, y + Math.floor((h - 22) / 2)); text(ctx, '기보', x + 22, y + Math.floor(h / 2) - 6, PAL.cardInk, { bold: true });
     return;
   }
+  if (c.kind === 'soul') {
+    const s = SOUL_BY_ID[c.id];
+    box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
+    frame(ctx, x + 1, y + 1, w - 2, h - 2, s.col);
+    sprite(ctx, 'N', 'w', x + 3, y + Math.floor((h - 22) / 2), { soul: c.id });
+    text(ctx, s.name, x + 20 + Math.floor((w - 20) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
+    return;
+  }
   const col = ENG_EDGE[c.id] || PAL.gold;
   box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
   frame(ctx, x + 1, y + 1, w - 2, h - 2, col);
@@ -68,7 +77,7 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
 }
 // 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
 const TIP_AT = { x: 196, y: 174 };
-export const consumableTip = (c) => (c.kind === 'chart' ? chartTip(c.form) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
+export const consumableTip = (c) => (c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, '주머니의 기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
   constructor(app) {
@@ -91,7 +100,7 @@ export class ShopScreen {
   // 기보로 한 단계 자라면 빛 기둥, 각인을 새기면 반짝
   fx(e) {
     if (e.type === 'chart' && tierOf(e.level) > tierOf(e.level - 1)) { this.grow = { form: e.form, t0: this.app.time }; this.app.sfx('grow'); }
-    if (e.type === 'engrave') this.flash = { id: e.pieceId, t0: this.app.time };
+    if (e.type === 'engrave' || e.type === 'ensoul') this.flash = { id: e.pieceId, t0: this.app.time };
   }
   get run() { return this.app.run; }
 
@@ -146,7 +155,7 @@ export class ShopScreen {
     button(ctx, ui, 'shop:leave', 244, 150, 68, 18, '나가기', { onClick: () => this.leave(), tone: 'gold' });
     // 주머니
     text(ctx, `주머니 ${run.deck.length}`, 12, 178, PAL.dim);
-    const hint = this.target ? '새길 기물' : null;
+    const hint = this.target ? (run.consumables[this.target.index] && run.consumables[this.target.index].kind === 'soul' ? '깃들 기물' : '새길 기물') : null;
     if (hint) text(ctx, hint, 100, 178, PAL.gold, { bold: true });
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
     const fp = since(this.flash, 0.3), gp = since(this.grow, 0.5);
@@ -226,7 +235,7 @@ export class ShopScreen {
     const c = this.run.consumables[i];
     if (!c) return;
     this.menu = null;
-    if (c.kind === 'engraving') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
+    if (c.kind === 'engraving' || c.kind === 'soul') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
     this.act({ type: 'use', index: i }, 'chart');
   }
 

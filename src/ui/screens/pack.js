@@ -50,7 +50,7 @@ export class PackScreen {
       if (e.type === 'chart') this.app.toast(`${CHARTS[e.form].name} ${e.level}`, PAL.gold);
     }
     // 상점으로 돌아가 주머니에서 자라는 · 새겨지는 모습을 보인다
-    this.app.shopFx = ev.filter((e) => e.type === 'chart' || e.type === 'engrave');
+    this.app.shopFx = ev.filter((e) => e.type === 'chart' || e.type === 'engrave' || e.type === 'ensoul');
     if (legend) this.app.flow([['legend', { legend: legend.legend }]]);
     else if (this.run.phase !== 'pack') this.app.goPhase();
   }

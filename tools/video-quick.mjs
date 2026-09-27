@@ -21,6 +21,7 @@ const W = 1440, H = 810;
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, recordVideo: { dir: OUT, size: { width: W, height: H } } });
 const page = await ctx.newPage();
+await page.addInitScript(() => { window.__autoDraft = true; });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 const t0 = Date.now();

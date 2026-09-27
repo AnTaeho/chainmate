@@ -3,7 +3,9 @@ import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, frame, dots, sprite, measure, line } from '../render/gfx.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies, FAMILY_BY_ID } from '../data/families.js';
-import { PIECES } from '../data/pieces.js';
+import { PIECES, chartForm } from '../data/pieces.js';
+import { SOUL_BY_ID } from '../data/souls.js';
+import { L } from './lang.js';
 import { familyGlyphs } from './parts-depth.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
@@ -12,7 +14,6 @@ import { PIECE_NAME, PIECE_MOVE } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
-import { L } from './lang.js';
 
 // 말풍선 내용(제목 · 줄들)을 너비에 맞게
 export function tipLines(title, body, w = 150, extra = []) {
@@ -38,6 +39,7 @@ export function pieceTip(p) {
   const lines = [];
   if (PIECE_MOVE[p.t]) lines.push(PIECE_MOVE[p.t]);
   if (p.eng) { const e = engravingInfo(p.eng.id); lines.push(`${e.name} 각인 · ${e.text}`); }
+  if (p.soul && SOUL_BY_ID[p.soul]) { const s = SOUL_BY_ID[p.soul]; lines.push(`${s.name}의 혼 · ${L(s.text)}`); }
   return tipLines(PIECE_NAME[p.t], lines);
 }
 
@@ -156,7 +158,7 @@ export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hove
   rect(ctx, x + 1, yy + 1, w - 2, 1, PAL.cardHi);
   if (selected) frame(ctx, x - 1, yy - 1, w + 2, h + 2, PAL.gold);
   if (p.eng && ENG_EDGE[p.eng.id]) { frame(ctx, x + 1, yy + 1, w - 2, h - 2, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
-  sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time });
+  sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null });
   if (flash > 0) { ctx.globalAlpha = flash * 0.8; rect(ctx, x + 1, yy + 1, w - 2, h - 2, PAL.white); ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = 1;
 }
@@ -238,13 +240,14 @@ export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}
 }
 
 // ── 상점 · 꾸러미 물건 카드
-export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명국 조각' };
+export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명국 조각', soul: '혼' };
 
 export function itemName(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).name;
   if (it.kind === 'chart') return CHARTS[it.form].name;
   if (it.kind === 'engraving') return `${engravingInfo(it.id).name} 각인`;
   if (it.kind === 'piece') return PIECE_NAME[it.t];
+  if (it.kind === 'soul') return `${SOUL_BY_ID[it.id].name}의 혼`;
   if (it.kind === 'fragment') return LEGEND_BY_ID[it.legend].name;
   return '';
 }
@@ -256,7 +259,8 @@ export function itemTip(it) {
   }
   if (it.kind === 'chart') return chartTip(it.form);
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '주머니의 기물 하나에 새긴다']); }
-  if (it.kind === 'piece') return tipLines(PIECE_NAME[it.t], [PIECE_MOVE[it.t], '주머니에 들어온다']);
+  if (it.kind === 'piece') return tipLines(PIECE_NAME[it.t], [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '주머니에 들어온다']);
+  if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '주머니의 기물 하나에 깃든다']); }
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(`${l.name} · 첫 조각`, [l.story, `전설: ${l.text}`]); }
   return null;
 }
@@ -268,6 +272,7 @@ export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
 }
 
 export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null } = {}) {
+  const t0 = t;
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
@@ -303,7 +308,7 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
         sprite(ctx, t, 'w', cx - 8, y + 24, { tier: tierOf(lv + 1) });
         text(ctx, `${lv} › ${lv + 1}`, cx, y + 66, PAL.cardDim, { align: 'center' });
       } else sprite(ctx, t, 'b', cx - 8, y + 24);
-    } else sprite(ctx, t, 'w', cx - 8, y + 24, { tier: run ? tierOf(run.charts[t]) : 0 });
+    } else sprite(ctx, t, 'w', cx - 8, y + 24, { tier: run ? tierOf(run.charts[chartForm(t)]) : 0, soul: it.soul || null, time: t0 });
     text(ctx, PIECE_NAME[t], cx, y + 54, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'engraving') {
     const col = ENG_EDGE[it.id] || PAL.gold;
@@ -313,6 +318,12 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
     const e = engravingInfo(it.id);
     text(ctx, e.name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
     rect(ctx, cx - 10, y + 63, 20, 1, col);
+  } else if (it.kind === 'soul') {
+    const s = SOUL_BY_ID[it.id];
+    frame(ctx, x + 1, y + 1, w - 2, h - 2, s.col);
+    rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
+    sprite(ctx, 'N', 'w', cx - 8, y + 22, { soul: it.id, time: t });
+    text(ctx, s.name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'fragment') {
     shardIcon(ctx, cx - 8, y + 22);
     const lines = wrap(LEGEND_BY_ID[it.legend].name, w - 8, true);
