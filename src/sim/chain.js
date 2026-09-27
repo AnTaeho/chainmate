@@ -16,11 +16,16 @@ import { generateBoard } from './setup.js';
 import { UP } from '../data/souls.js';
 
 const NO_OPTS = {};
+// 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
+const NO_FAIRY = { fairy: false };
 export const boardOpts = (t) => {
   const r = t.rules;
-  if (!r || (!r.pawnSides && !r.openKings && !r.highways)) return NO_OPTS;
-  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings, highways: r.highways || null };
+  if (!r || (!r.pawnSides && !r.openKings && !r.highways)) return t.fairyFree ? NO_FAIRY : NO_OPTS;
+  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings, highways: r.highways || null, fairy: t.fairyFree ? false : undefined };
 };
+// 판의 적 중 이형이 하나라도 있나(판이 바뀌어 적이 들어올 때마다 다시 잰다: 대국 시작 · 증원 · 다시 채움 · 도발)
+export const markFairy = (t) => { t.fairyFree = !t.board.some((c) => c && !c.mine && FAIRY_SET.has(c.t)); };
+const FAIRY_SET = new Set(['A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W']);
 
 // 사슬 평가(기보 표기). 먹은 수가 이 값에 닿는 순간 「grade」 이벤트.
 export const GRADES = [
@@ -129,8 +134,9 @@ export function chainCapture(t, sq) {
     c.money = (c.money || 0) + 2;
     events.push({ type: 'money', src: 'gem', money: 2 });
   } else if (c.flags.absorb && target.t !== 'K') {
-    if (target.t !== c.form && !(c.absorbed || []).includes(target.t)) {
-      (c.absorbed || (c.absorbed = [])).push(target.t);
+    // 흡수는 가장 최근에 먹은 행마 하나만 더한다(쌓이게 두면 모든 응수를 받아 첫 수 외통이 판의 절반이 됐다 — 하네스 30판)
+    if (target.t !== c.form && (c.absorbed || [])[0] !== target.t) {
+      c.absorbed = [target.t];
       events.push({ type: 'absorb', piece: target.t, sq: at, forms: [c.form, ...c.absorbed] });
     }
   } else if (c.flags.transcend && target.t !== 'K') {
@@ -228,6 +234,7 @@ function refill(t, events) {
   board[c.sq] = { t: c.form, mine: true };
   t.nextId = base + hit.ids;
   t.board = board;
+  markFairy(t);
   events.push({ type: 'refill', sq: c.sq, count: c.refills, enemies: board.filter(isEnemy).length });
 }
 

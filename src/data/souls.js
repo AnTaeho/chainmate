@@ -13,7 +13,7 @@ function soul(id, name, col, families, text, def) {
 export const SOUL_PRICE = 4;
 export const UP = { P: 'N', N: 'B', B: 'R', R: 'Q', Q: 'Z' };
 
-soul('absorb', '흡수', '#d27fd6', ['change'], '먹어도 모습이 바뀌지 않고 먹은 행마가 더해진다', {
+soul('absorb', '흡수', '#d27fd6', ['change'], '먹어도 모습이 바뀌지 않고 마지막에 먹은 행마가 더해진다', {
   onDrop(ctx) { ctx.flags.absorb = true; },
 });
 soul('echo', '메아리', '#9fb8ff', ['change'], '막히면 한 번, 떨군 모습으로 돌아가 그 자리에서 잇는다', {

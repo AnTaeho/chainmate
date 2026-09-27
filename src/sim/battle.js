@@ -3,7 +3,7 @@
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }
 import { createRng, fork, next, shuffle } from './rng.js';
 import { dropSquares, fileOf, rankOf, reach } from './board.js';
-import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts } from './chain.js';
+import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts, markFairy } from './chain.js';
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js';
 import { soulSpec } from '../data/souls.js';
@@ -73,6 +73,7 @@ export function arrive(b, events = []) {
     events.push({ type: 'reinforce', sq, planned: r.sq, piece: r.t });
   }
   telegraph(b);
+  markFairy(b);
   refreshHints(b);
 }
 
@@ -156,6 +157,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     if (cand.length) b.board[cand[Math.floor(next(gr) * cand.length)]].gold = true;
   }
   telegraph(b);
+  markFairy(b);
   refreshHints(b);
   return b;
 }
@@ -234,6 +236,7 @@ export function apply(b, cmd) {
       if (b.status !== 'play') throw new Error('not expecting a drop');
       const piece = b.hand[cmd.handIndex];
       if (!piece) throw new Error('bad hand index');
+      markFairy(b);
       if (!dropSquaresFor(b, piece).includes(cmd.sq)) throw new Error(`illegal drop ${piece.t}@${cmd.sq}`);
       b.hand.splice(cmd.handIndex, 1);
       b.chainPiece = piece;
