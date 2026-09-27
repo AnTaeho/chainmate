@@ -133,9 +133,27 @@ await clickId(`sq:${plan3.line[0]}`);
 await idle();
 await settle(90);
 await shot('05b-battle-forced');
+// 노림수 칸에 올리면 말풍선
+const atk = await ev(() => { const s = window.__app.screen; return s.view.chain.forced.find((q) => s.clickable().list.includes(q)); });
+await hoverId(`sq:${atk}`);
+await settle(120);
+await shot('27-forced-tip');
 await hoverId(`sq:${plan3.line[1]}`);
 await settle(120);
 await shot('20-preview-reply');
+// 사슬이 끝나면 증원이 위에서 떨어져 들어온다(한가운데 한 장). 한 수로 이기지 않게 목표를 올려 둔다
+await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.cmd({ type: 'play' }); a.run.battle.target = 99999; a.go('battle', { events: [] }); });
+await settle(2600);
+const plan4 = await ev(async () => {
+  const { bestMove } = await import('/src/sim/solver.js');
+  const d = bestMove(window.__app.run.battle, { preferMate: 'avoid' });
+  return { hand: d.handIndex, sq: d.sq, line: d.line };
+});
+await clickId(`hand:${plan4.hand}`);
+await clickId(`sq:${plan4.sq}`);
+for (const q of plan4.line) { await idle(); await clickId(`sq:${q}`); }
+await page.waitForFunction(() => { const s = window.__app.screen; return s.falls && [...s.falls.values()].some((t) => t > 0.07); }, null, { timeout: 8000, polling: 'raf' }).catch(() => {});
+await shot('27d-reinforce-fall');
 // 명인 규칙 글이 카드와 띠에 들어가는지: 가장 긴 글(안개)
 await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.run.masters[0] = 'fog'; a.goPhase(); });
 await settle(200);
@@ -154,9 +172,16 @@ await shot('02-master-banner');
 await ev(() => { localStorage.clear(); window.__app.newRun({ seed: 7 }); });
 await settle(200);
 await shot('02-select');
+// 판의 길(8관 왕관)에 올리면 말풍선
+await hoverId('select:path');
+await settle(120);
+await shot('27c-select-path-tip');
 await clickId('select:play');
 await settle(2400);
 await shot('03-battle');
+// 증원 그림자에 올리면 말풍선
+const gsq = await ev(() => { const b = window.__app.run.battle; const r = b.incoming.find((x) => !b.board[x.sq]); return r ? r.sq : null; });
+if (gsq != null) { await hoverId(`sq:${gsq}`); await settle(120); await shot('27b-incoming-tip'); }
 // 가장 좋은 수를 찾아 기물을 들고, 한 칸씩 먹는다
 const plan = await ev(async () => {
   const { bestMove } = await import('/src/sim/solver.js');
@@ -360,6 +385,11 @@ await ev(() => window.__app.go('lesson', { index: 3 }));
 await inLesson(() => { const v = window.__app.screen.view; return v.cut && v.cut.p > 0.5; });
 await shot('21-lesson-4');
 
+// 끝없는 대국의 관 선택(판의 길 대신 「끝없는 대국 N관」)
+await ev(() => { localStorage.removeItem('chainmate.run.v1'); const a = window.__app; a.newRun({ seed: 7 }); a.run.endless = true; a.run.ante = 9; a.goPhase(); });
+await settle(200);
+await shot('02e-select-endless');
+
 // 타이틀 시연: 흐린 판에서 풀이기가 사슬을 두는 중
 await ev(() => window.__app.go('title'));
 await page.waitForFunction(() => { const c = window.__app.screen.demo.view.chain; return c && c.path.length >= 4 && !window.__app.screen.demo.view.mover; }, null, { timeout: 30000 });
@@ -381,6 +411,9 @@ await shot('25-en-setup');
 await ev(() => window.__app.go('lesson', { index: 1, phase: 'play' }));
 await settle(200);
 await shot('25b-en-lesson');
+await ev(() => { const a = window.__app; localStorage.removeItem('chainmate.run.v1'); a.newRun({ seed: 7 }); a.run.ante = 3; a.goPhase(); });
+await settle(200);
+await shot('25c-en-select');
 await ev(() => { const a = window.__app; a.settings.lang = 'ko'; a.saveSettings(); });
 
 console.log(errors.length ? `페이지 오류 ${errors.length}\n${errors.join('\n')}` : '페이지 오류 0');
