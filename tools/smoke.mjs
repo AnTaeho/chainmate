@@ -23,6 +23,8 @@ globalThis.window = dom.window;
 const { boot } = await import('../src/main.js');
 const lessonMod = await import('../src/ui/lessons.js');
 const { termsIn, TERM_BY_ID, KEY_MAX } = await import('../src/ui/glossary.js');
+const { tipTexts } = await import('../src/ui/ui.js');
+const P = await import('../src/ui/placement.js');
 
 const errors = [];
 const apps = [];
@@ -41,7 +43,7 @@ const seen = () => { for (const v of app.visited) visited.add(v); };
 // 처음 안내: 떠 본 안내 id
 const hintsShown = new Set();
 const previewSeen = { scroll: 0, pack: 0 };
-function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); if (app && app.hintShown) hintsShown.add(app.hintShown.id); } }
+function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); } } }
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
 function click(id) {
   const r = region(id);
@@ -98,7 +100,7 @@ function keyBoxesAt(id, kind) {
   const r = region(id), boxes = app.keyBoxes || [];
   // 카드 글 · 말풍선 글에 낱말이 있는데 상자가 없으면 따로 센다(체스 기물 카드처럼 낱말이 없는 카드는 빼고)
   const h = app.ui.hover, tip = h && h.tip ? h.tip() : null;
-  const expect = termsIn([...(h && h.keys ? h.keys() : []), tip ? tip.lines.filter((l) => !(l && l.chips)).map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null]).length;
+  const expect = termsIn([...(h && h.keys ? h.keys() : []), ...(tip ? tipTexts(tip) : [])]).length;
   if (boxes.length) keySeen[kind]++; else if (expect) { keySeen.none = (keySeen.none || 0) + 1; if (VERBOSE) console.log('상자 없음', id); }
   if (boxes.length > KEY_MAX) keySeen.many++;
   const own = ownKind(id);
@@ -109,6 +111,69 @@ function keyBoxesAt(id, kind) {
     if (b.x < 0 || b.y < 0 || b.x + b.w > 480 || b.y + b.h > 270) keySeen.off++;
   }
 }
+// ── 자리 규칙(docs/design-notes/layout.md 「설명 자리 규칙」): 화면의 말풍선 · 낱말 상자가 뜨는 구역을 모두 가리켜 보고
+//   판 틀(screen.notes 'side')은 왼쪽 칸(x 6 · 폭 116)에 가리킨 것의 윗변 높이로(왼쪽 칸 안의 것은 그 아래 · 위),
+//   판 밖 틀은 가리킨 것 바로 아래(왼끝 · 오른끝 맞춤) 또는 바로 위. 묶음은 같은 x · 폭, 2px 틈으로 이어진다.
+//   화면 밖 · 가리킨 것 · 누를 수 있는 다른 구역(켜진 단추 · 카드 · 칸)을 덮으면 어긴 것.
+const place = { n: 0, side: 0, below: 0, rule: 0, chain: 0, off: 0, self: 0, cover: 0, hint: 0, hintBad: 0, screens: new Set(), kinds: new Map(), bad: [] };
+const CAP_KIND = { sq: 14, deck: 6, codex: 8, hand: 4 };
+const kindOf = (id) => id.replace(/:[^:]*$/, '');
+function placeBad(what, id, detail = '') { place[what]++; if (place.bad.length < 12) place.bad.push(`${screen()} ${id} ${what} ${detail}`); }
+function checkStack(id) {
+  const st = app.noteStack;
+  if (!st || !st.rects.length) return false;
+  const a = st.anchor, rs = st.rects;
+  place.n++; place[st.mode === 'side' ? 'side' : 'below']++; place.screens.add(screen());
+  const top = rs[0].y, bot = rs[rs.length - 1].y + rs[rs.length - 1].h, total = bot - top;
+  // 묶음: 같은 x · 폭, 2px 틈
+  rs.forEach((r, k) => { if (r.x !== rs[0].x || r.w !== rs[0].w || (k && r.y !== rs[k - 1].y + rs[k - 1].h + P.NOTE_GAP)) placeBad('chain', id); });
+  let rel = null;
+  if (st.mode === 'side') {
+    if (rs[0].x !== P.SIDE_X || rs[0].w !== P.SIDE_W) placeBad('rule', id, `x ${rs[0].x} w ${rs[0].w}`);
+    if (P.inSide(a)) rel = top === a.y + a.h + P.NOTE_OFF ? 'side-below' : bot === a.y - P.NOTE_OFF ? 'side-above' : null;
+    else rel = top === a.y ? 'side-row' : top === Math.max(2, Math.min(268 - total, a.y)) ? 'side-row(당김)' : null;
+  } else {
+    const hx = rs[0].x === a.x ? 'left' : rs[0].x + rs[0].w === a.x + a.w ? 'right' : rs[0].x === 2 || rs[0].x + rs[0].w === 478 ? 'edge' : null;
+    const vy = top === a.y + a.h + P.NOTE_OFF ? 'below' : bot === a.y - P.NOTE_OFF ? 'above' : null;
+    rel = hx && vy ? `${vy}-${hx}` : null;
+  }
+  if (!rel) placeBad('rule', id, `${st.mode} top ${top} anchor ${a.x},${a.y},${a.w},${a.h}`);
+  const k = `${screen()} ${kindOf(id)}`;
+  if (!place.kinds.has(k)) place.kinds.set(k, new Set());
+  if (rel) place.kinds.get(k).add(rel.replace('(당김)', ''));
+  if (top < 0 || bot > 270 || rs[0].x < 0 || rs[0].x + rs[0].w > 480) placeBad('off', id);
+  const stack = { x: rs[0].x, y: top, w: rs[0].w, h: total };
+  if (cross(stack, a)) placeBad('self', id);
+  const inA = (r) => r.x >= a.x && r.y >= a.y && r.x + r.w <= a.x + a.w && r.y + r.h <= a.y + a.h;
+  for (const r of app.ui.regions) if (r.onClick && r.enabled && r.id !== id && !inA(r) && cross(stack, r)) { placeBad('cover', id, r.id); break; }
+  return true;
+}
+// 지금 화면에서 가리킬 수 있는 것을 모두(같은 종류가 많으면 고루 몇 개만)
+function notesCheck() {
+  const byKind = new Map();
+  for (const r of app.ui.regions) { if (!r.tip && !r.keys) continue; const k = kindOf(r.id); if (!byKind.has(k)) byKind.set(k, []); byKind.get(k).push(r.id); }
+  for (const [k, ids] of byKind) {
+    const cap = CAP_KIND[k] || 99;
+    const pick = ids.length <= cap ? ids : Array.from({ length: cap }, (_, i) => ids[Math.round((i * (ids.length - 1)) / (cap - 1))]);
+    for (const id of pick) if (hover(id)) checkStack(id);
+  }
+  dom.mouse('mousemove', -10, -10); pump(1);
+}
+// 처음 안내 말풍선도 같은 자리(판 틀은 왼쪽 칸)
+const hintChecked = new Set();
+function hintCheck() {
+  const h = app.hintShown, r = app.hintRect;
+  if (!h || !r || hintChecked.has(h.id)) return;
+  hintChecked.add(h.id); place.hint++;
+  const s = app.overlay || app.screen;
+  const side = s && s.notes === 'side';
+  if (side ? r.x !== P.SIDE_X || r.w !== P.SIDE_W : r.w !== P.NOTE_W) { place.hintBad++; if (place.bad.length < 12) place.bad.push(`${screen()} 안내 ${h.id} x ${r.x} w ${r.w}`); }
+  if (r.y < 0 || r.y + r.h > 270) place.hintBad++;
+}
+// 화면 종류마다 몇 번까지(판마다 짜임이 달라 여러 번)
+const notesCount = {};
+function notesOnce(key, n = 3) { if ((notesCount[key] || 0) >= n) return; notesCount[key] = (notesCount[key] || 0) + 1; notesCheck(); }
+
 // 손가락: 진열 카드를 처음 누르면 사지 않고 보이기만, 한 번 더 누르면 산다
 function touchBuy(i) {
   const it = app.run.shop.display[i], money = app.run.money;
@@ -154,6 +219,7 @@ function battleStep() {
   // 대국 첫 띠의 「새로」 줄(이번 판에서 처음 나온 것)
   if (s.banner && s.banner.news && !s.newsCounted) { s.newsCounted = true; newsSeen.battles++; newsSeen.icons += s.banner.news.length; }
   if (!paused) { dom.key('Escape'); pump(1); if (screen() !== 'pause') throw new Error('pause did not open'); click('pause:settings'); click('set:speed4'); click('set:shake'); click('set:big'); click('set:big'); click('set:back'); click('pause:resume'); paused = true; settingsSeen = true; }
+  if (!s.busy) notesOnce(b.status === 'chain' ? 'battle-chain' : 'battle', 6);
   if (b.status === 'chain') {
     // 사슬 한가운데서 이어 하기(드묾): 먹을 칸 하나
     const t = s.clickable();
@@ -231,6 +297,7 @@ function battleStep() {
 
 function shopStep() {
   const run = app.run;
+  notesOnce('shop', 6);
   // 격언 끌어 순서 바꾸기(한 번)
   if (!draggedMaxim && run.maxims.length >= 2) {
     const a = region('maxim:0'), b = region('maxim:1');
@@ -280,8 +347,10 @@ function packStep() {
   if (i < 0 || rnd() < 0.15) { click('pack:skip'); return; }
   pump(60);
   pump(40);
+  notesOnce('pack', 6);
   keyBoxesAt(`pack:pick:${i}`, 'pack');
   click(`pack:pick:${i}`);
+  if (app.screen.name === 'pack' && app.screen.engraveIndex != null) notesOnce('pack-target', 2);
   if (pack.options[i].kind === 'engraving' && app.screen.name === 'pack') {
     click(`deck:${app.run.deck[0].id}`);
     if (app.run.phase !== 'pack' || !region('target:ok')) throw new Error('engraved without a preview');
@@ -324,9 +393,10 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
   while (steps++ < 4000) {
     const name = screen();
     if (name === 'result') break;
-    if (name === 'draft') { pump(40); for (let k = 0; k < app.run.draft.options.length; k++) keyBoxesAt(`draft:${k}`, 'draft'); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
+    if (name === 'draft') { pump(40); notesOnce('draft', 4); for (let k = 0; k < app.run.draft.options.length; k++) keyBoxesAt(`draft:${k}`, 'draft'); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
     if (name === 'select' && !tipSeen.path) { hover('select:path'); if (hoverTip()) tipSeen.path++; }
-    if (name === 'select') { if (app.run.blind < 2 && rnd() < 0.15) click('select:skip'); else click('select:play'); pump(2); continue; }
+    if (name === 'select') { notesOnce('select', 4); if (app.run.blind < 2 && rnd() < 0.15) click('select:skip'); else click('select:play'); pump(2); continue; }
+    if (name === 'chest') { click('next'); pump(2); notesOnce('chest', 4); click('next'); pump(1); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
     if (name === 'reward' || name === 'chest' || name === 'legend') { click('next'); pump(1); if (screen() === name) click('next'); continue; }
     if (name === 'shop') { if (!reloaded && !inject) { await reload(); continue; } shopStep(); continue; }
@@ -343,6 +413,7 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
 // 걸음대로 두면 다음 수업 → 수업 ⑩(상점 길: 가리키는 곳만 눌린다) → 1관 첫 대국
 function playLesson(i) {
   const s = app.screen;
+  if (i === 2) notesOnce('lesson', 1);
   if (s.name !== 'lesson' || s.index !== i || s.phase !== 'demo') throw new Error(`lesson ${i} not in demo`);
   for (let n = 0; n < 4000 && app.screen === s; n++) pump(1);
   const p = app.screen;
@@ -411,7 +482,7 @@ for (let k = 0; k < RUNS; k++) results.push(await playOne(SEED + k));
 // 판 밖: 도감 · 기록 화면, 오프닝과 단을 모두 연 뒤 시실리안 3단 판, 오늘의 대국
 click('result:title');
 click('title:codex');
-for (const t of ['masters', 'legends', 'openings', 'editions', 'maxims']) click(`codex:tab:${t}`);
+for (const t of ['masters', 'legends', 'openings', 'editions', 'pieces', 'maxims']) { click(`codex:tab:${t}`); notesCheck(); if (region('codex:next') && region('codex:next').enabled) { click('codex:next'); notesCheck(); click('codex:prev'); } }
 click('codex:back');
 click('title:records');
 click('records:back');
@@ -462,6 +533,33 @@ app.run = results[results.length - 1];
 app.flow([['legend', { legend: 'century' }]]);
 pump(30);
 click('next');
+
+// 자리 규칙: 판이 우연히 만들지 않을 수도 있는 장면을 세워서(격언 다섯 · 시너지 넷 · 정석 둘 · 두루마리 넷 · 금빛 꾸러미 · 각인 새기기 · 5관 대국)
+{
+  const { createRng, fork } = await import('../src/sim/rng.js');
+  const fill = (r) => {
+    const add = (id, edition = null) => r.maxims.push({ uid: r.nextUid++, id, data: {}, edition, paid: 5 });
+    for (const [id, ed] of [['chivalry'], ['quick_change', 'foil'], ['first_move'], ['whim', 'rainbow'], ['sacrifice']]) add(id, ed);
+    r.josekis = ['gates', 'stepping'];
+    r.fragments.century = { first: true, feat: false, gold: false };
+    r.deck.push({ id: 80, t: 'O', eng: null }, { id: 81, t: 'S', eng: null, soul: 'echo' }, { id: 82, t: 'L', eng: { id: 'glass' } });
+    r.consumableSlots = 4;
+    r.consumables = [{ kind: 'engraving', id: 'glass' }, { kind: 'soul', id: 'echo' }, { kind: 'evolve' }, { kind: 'tactic', id: 'freeze' }];
+    r.money = 30;
+  };
+  const stock = (r) => { r.shop = { rng: fork(createRng(3), 'layout'), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'C', price: 6, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false }; };
+  const scene = (setup) => { app.overlay = null; app.nextSeed = 11; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 }); fill(app.run); setup(app.run); pump(90); notesCheck(); };
+  scene((r) => { r.phase = 'shop'; stock(r); app.go('shop'); });
+  scene((r) => { r.phase = 'shop'; stock(r); app.go('shop'); pump(2); click('cons:0'); click(`deck:${r.deck[1].id}`); });
+  scene((r) => { r.phase = 'pack'; stock(r); r.pack = { kind: 'golden', options: [{ kind: 'maxim', id: 'chivalry', edition: 'foil' }, { kind: 'maxim', id: 'light_step', edition: 'pearl' }, { kind: 'fragment', legend: 'immortal' }] }; app.go('pack'); });
+  scene((r) => { r.phase = 'pack'; stock(r); r.pack = { kind: 'engraving', options: [{ kind: 'engraving', id: 'glass' }, { kind: 'engraving', id: 'gold' }, { kind: 'engraving', id: 'feather' }] }; app.go('pack'); pump(90); click('pack:pick:1'); click(`deck:${r.deck[2].id}`); });
+  scene((r) => { r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; app.go('draft'); });
+  scene((r) => { r.masters[0] = 'fog'; app.cmd({ type: 'skip' }); app.cmd({ type: 'skip' }); app.goPhase(); });
+  scene((r) => { r.ante = 5; r.blind = 0; app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(200); });
+  app.go('chest', { chest: { count: 3, tier: 'uncommon', cells: [{ lit: false, item: null }, { lit: true, item: { kind: 'money', money: 2 } }, { lit: true, item: { kind: 'chart', form: 'N' } }, { lit: true, item: { kind: 'engrave', piece: 'P', pieceId: 1, eng: 'ivory' } }, { lit: false, item: null }] } });
+  pump(200); notesCheck();
+  app.toTitle(); pump(1);
+}
 
 // 처음 켠 사람이 수업을 건너뛴다 → 곧바로 1관 · 처음 안내를 끄면 뜨지 않는다
 let skipOk = false;
@@ -534,5 +632,10 @@ if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다
 if (mt.length && mt[mt.length - 1] > 4) { console.log('한 수 연출이 4초를 넘는다'); fail = true; }
 if (pct(0.99) > 16) { console.log('프레임 p99가 16ms를 넘는다'); fail = true; }
 if (ims.length && ims[Math.floor(ims.length * 0.99)] > 50) { console.log('누르기 처리 p99가 50ms를 넘는다'); fail = true; }
+const kinds = [...place.kinds].map(([k, v]) => `${k}=${[...v].join('/')}`);
+console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · 판 밖 ${place.below}, 화면 ${place.screens.size}) · 어김 ${place.rule} · 묶음 끊김 ${place.chain} · 화면 밖 ${place.off} · 가리킨 것 덮음 ${place.self} · 누를 것 덮음 ${place.cover} · 처음 안내 ${place.hint}(어김 ${place.hintBad})`);
+if (VERBOSE) console.log('종류별 자리: ' + kinds.join(' · '));
+if (place.bad.length) console.log('어긴 곳: ' + place.bad.join(' | '));
+if (place.n < 100 || place.rule || place.chain || place.off || place.self || place.cover || place.hintBad) { console.log('설명이 규약의 자리에 뜨지 않았거나 누를 것 · 화면 밖을 덮었다'); fail = true; }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);
