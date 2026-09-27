@@ -9,6 +9,9 @@ import { maximCard } from '../parts.js';
 import { REPLAYS, sqOf } from '../replays.js';
 
 const Q = 20, MX = 24, MY = 58; // 작은 판: 칸 20px
+// 작은 판의 기물은 칸(20px) 안에 들게 줄여 그린다(16×22 → 14×19)
+const MK = 19 / 22;
+const mini = (ctx, t, side, x, y) => sprite(ctx, t, side, x + 2, y - 2, { sx: MK, sy: MK });
 const STEP = 0.6, T_FREEZE = 0.5;
 
 export class LegendScreen {
@@ -63,16 +66,16 @@ export class LegendScreen {
       const gold = this.rp.end === 'promote' && done >= n && pc.t === 'P' && sqOf(sq).r === 7;
       if (falling) {
         const k = Math.min(1, (t - n * STEP) / 0.5);
-        ctx.save(); ctx.translate(x + 2 + 14, y - 3 + 21); ctx.rotate(k * k * Math.PI / 2); ctx.globalAlpha = 1 - k * 0.4;
-        sprite(ctx, 'K', pc.side, -14, -21); ctx.restore(); ctx.globalAlpha = 1;
+        ctx.save(); ctx.translate(x + 10, y + Q); ctx.rotate(k * k * Math.PI / 2); ctx.globalAlpha = 1 - k * 0.4;
+        ctx.scale(MK, MK); sprite(ctx, 'K', pc.side, -8, -21); ctx.restore(); ctx.globalAlpha = 1;
         continue;
       }
-      sprite(ctx, gold ? 'Q' : pc.t, gold ? 'q' : pc.side, x + 2, y - 3);
+      mini(ctx, gold ? 'Q' : pc.t, gold ? 'q' : pc.side, x, y);
     }
     if (moving) {
       const pc = this.board(cur).get(moving[0]);
       const a = this.xy(moving[0]), b = this.xy(moving[1]);
-      if (pc) sprite(ctx, pc.t, pc.side, a.x + (b.x - a.x) * p + 2, a.y + (b.y - a.y) * p - 3);
+      if (pc) mini(ctx, pc.t, pc.side, a.x + (b.x - a.x) * p, a.y + (b.y - a.y) * p);
       if (p >= 1) frame(ctx, b.x, b.y, Q, Q, PAL.gold);
     }
     if (done >= n && this.rp.end) {
