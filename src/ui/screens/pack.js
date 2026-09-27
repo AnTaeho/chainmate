@@ -65,12 +65,15 @@ export class PackScreen {
     runSide(ctx, ui, this.app, PACK_NAME[pack.kind]);
     pauseButton(ctx, ui, this.app);
     const n = pack.options.length;
-    const cw = CARD.w, ch = 124;
-    const x0 = MAIN.x + Math.floor((MAIN.w - n * cw - (n - 1) * CARD.gap) / 2);
+    // 카드 넷(금빛 꾸러미 + 명국 조각)은 폭 108로 본 칸에 안 들어가 왼쪽 칸을 덮었다: 본 칸 폭에 맞춰 좁히고 사이 4(넓은 카드 그대로)
+    const fit = n * CARD.w + (n - 1) * CARD.gap <= MAIN.w;
+    const gap = fit ? CARD.gap : 4, ch = 124;
+    const cw = fit ? CARD.w : Math.floor((MAIN.w - (n - 1) * gap) / n);
+    const x0 = MAIN.x + Math.floor((MAIN.w - n * cw - (n - 1) * gap) / 2);
     pack.options.forEach((o, i) => {
       const at = flipAt(i);
       const p = Math.max(0, Math.min(1, (this.t - at) / 0.24));
-      const x = x0 + i * (cw + CARD.gap), y = TOP;
+      const x = x0 + i * (cw + gap), y = TOP;
       const id = `pack:pick:${i}`;
       const scaleX = Math.abs(1 - 2 * p);
       const shown = p >= 0.5;
@@ -82,14 +85,14 @@ export class PackScreen {
         if (this.t < OPEN) return;
         box(ctx, x + Math.floor((cw - nw) / 2), y, nw, ch, gold ? PAL.gold : '#c9a36a', PAL.frameDk);
         if (nw > 20) rect(ctx, x + Math.floor(cw / 2) - 6, y + 46, 12, 12, gold ? PAL.goldHi : '#e6c690');
-      } else itemCard(ctx, o, x, y, cw, ch, { hover: ui.isHover(id), price: false, scaleX, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + i, run, ui, under: { onClick: () => this.pick(i) } });
+      } else itemCard(ctx, o, x, y, cw, ch, { hover: ui.isHover(id), price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + i, run, ui, under: { onClick: () => this.pick(i) } });
       if (this.engraveIndex === i) { rect(ctx, x, y + ch + 2, cw, 2, PAL.gold); }
     });
     // 봉투: 봉랍이 깨지고 덮개가 젖혀진 뒤 카드가 솟아 나온다
     if (this.t < OPEN + 0.25) {
       const k = Math.min(1, this.t / OPEN);
       const fade = this.t < OPEN ? 1 : 1 - (this.t - OPEN) / 0.25;
-      const ew = 96, eh = 66, ex = Math.floor(x0 + (n * cw + (n - 1) * CARD.gap) / 2 - ew / 2), ey = 50 + Math.round(Math.max(0, this.t - OPEN) * 60);
+      const ew = 96, eh = 66, ex = Math.floor(x0 + (n * cw + (n - 1) * gap) / 2 - ew / 2), ey = 50 + Math.round(Math.max(0, this.t - OPEN) * 60);
       ctx.globalAlpha = Math.max(0, fade);
       envelope(ctx, ex, ey, ew, eh, pack.kind, { open: k });
       ctx.globalAlpha = 1;

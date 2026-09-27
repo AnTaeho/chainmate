@@ -425,14 +425,15 @@ export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
   rows.forEach((r, j) => { for (let i = 0; i < 8; i++) if (r[i] === '#') rect(ctx, x + i * 2, y + j * 2, 2, 2, (i + j) % 4 === 0 ? PAL.goldHi : j > 3 ? dk : col); });
 }
 
-export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null } = {}) {
+// wide: 폭이 88보다 좁아도 넓은 카드로(꾸러미 카드 넷 — 효과 글을 카드에 그대로 적는다)
+export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false } = {}) {
   const t0 = t;
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
     x += Math.floor((w - nw) / 2); w = nw;
   }
-  if (w >= 88) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under });
+  if (w >= 88 || (wide && scaleX === 1)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under });
   const back = scaleX < 1 && it._back;
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   cardBase(ctx, x, y, w, h, { fill, hover });
