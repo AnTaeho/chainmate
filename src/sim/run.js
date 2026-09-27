@@ -212,7 +212,7 @@ function startBattle(run) {
   const seed = fork(root(run), `battle:${run.ante}:${run.blind}`).s;
   run.battle = createBattle({
     seed, ante: run.ante, kind: info.kind, target: info.target,
-    bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng })),
+    bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
     rules: run.rules, mods: battleMods(run, info.master),
     goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
   });
@@ -419,8 +419,16 @@ function engrave(run, pieceId, id, events) {
   events.push({ type: 'engrave', piece: p.t, pieceId, eng: id });
 }
 
-function addPiece(run, t, events) {
-  const p = { id: run.nextPieceId++, t, eng: null, edition: null };
+// 혼 새기기(깊이 C): 기물 하나에 혼 하나(있으면 바뀐다)
+function ensoul(run, pieceId, id, events) {
+  const p = run.deck.find((x) => x.id === pieceId);
+  if (!p) throw new Error(`no piece ${pieceId}`);
+  p.soul = id;
+  events.push({ type: 'ensoul', piece: p.t, pieceId, soul: id });
+}
+
+function addPiece(run, t, events, soul = null) {
+  const p = { id: run.nextPieceId++, t, eng: null, edition: null, ...(soul ? { soul } : {}) };
   run.deck.push(p);
   events.push({ type: 'piece', piece: t, pieceId: p.id });
 }
@@ -448,7 +456,7 @@ const pay = (run, n) => {
 export function canBuy(run, it) {
   if (!it || it.sold || run.money < it.price) return false;
   if (it.kind === 'maxim') return hasMaximRoom(run, it.edition);
-  if (it.kind === 'chart' || it.kind === 'engraving') return run.consumables.length < run.consumableSlots;
+  if (it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul') return run.consumables.length < run.consumableSlots;
   return true;
 }
 
@@ -507,9 +515,9 @@ export function applyRun(run, cmd) {
       pay(run, it.price);
       it.sold = true;
       if (it.kind === 'maxim') addMaxim(run, it.id, it.price, events, it.edition || null);
-      else if (it.kind === 'piece') addPiece(run, it.t, events);
+      else if (it.kind === 'piece') addPiece(run, it.t, events, it.soul || null);
       else if (it.kind === 'fragment') grantFragment(run, it.legend, 'first', events);
-      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : { kind: 'engraving', id: it.id });
+      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : { kind: it.kind, id: it.id });
       events.push({ type: 'buy', item: { ...it } });
       break;
     }
@@ -568,6 +576,7 @@ export function applyRun(run, cmd) {
       const c = run.consumables[cmd.index];
       if (!c) throw new Error('no consumable');
       if (c.kind === 'engraving') engrave(run, cmd.target, c.id, events);
+      else if (c.kind === 'soul') ensoul(run, cmd.target, c.id, events);
       else useChart(run, c.form, events);
       run.consumables.splice(cmd.index, 1);
       break;
@@ -641,7 +650,7 @@ export function legalRunCommands(run) {
   }
   // select · shop 공통
   run.consumables.forEach((c, index) => {
-    if (c.kind === 'engraving') for (const p of run.deck) out.push({ type: 'use', index, target: p.id });
+    if (c.kind === 'engraving' || c.kind === 'soul') for (const p of run.deck) out.push({ type: 'use', index, target: p.id });
     else out.push({ type: 'use', index });
   });
   run.maxims.forEach((m, index) => { if (canSell(m)) out.push({ type: 'sell', index }); });

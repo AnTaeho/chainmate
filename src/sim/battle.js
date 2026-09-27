@@ -6,6 +6,7 @@ import { dropSquares, fileOf, rankOf, reach } from './board.js';
 import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts } from './chain.js';
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js';
+import { soulSpec } from '../data/souls.js';
 
 export { enemyCount, kingGuards, reinforceCount, enemyWeights, kingDefended } from './setup.js';
 
@@ -96,7 +97,7 @@ function draw(b) {
   while (b.hand.length < b.rules.hand && b.bag.length) b.hand.push(b.bag.shift());
 }
 
-const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null });
+const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null, ...(p.soul ? { soul: p.soul } : {}) });
 
 // 황금 기물: 대국 시작 판에서 킹이 아닌 적 하나가 이 확률로 금빛(HOOKS 「드문 것들의 사다리」 대국당 ~4%).
 // 먹으면 값을 한 번 더 받고(chain.js), 판(런)이 대국 뒤 금빛 꾸러미와 조각 기회로 바꾼다.
@@ -161,9 +162,9 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
 export function dropSquaresFor(b, piece) {
   if (b.rules.noHeavyDrop && (piece.t === 'Q' || piece.t === 'R')) return [];
   const allow = { attacked: false };
-  if ((b.mods && b.mods.length) || piece.eng) {
+  if ((b.mods && b.mods.length) || piece.eng || piece.soul) {
     // 조회일 뿐이라 조정자 state가 새지 않게 복사본으로 돌린다
-    const t = { ...b, mods: forkSpecs(b.mods), chain: piece.eng ? { engraving: forkSpec(piece.eng) } : null };
+    const t = { ...b, mods: forkSpecs(b.mods), chain: piece.eng || piece.soul ? { engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) } : null };
     const ctxEvent = { type: piece.t, engraving: piece.eng };
     // onDropCheck: ctx.event.allow.attacked = true 로 노려진 칸 허용
     ctxEvent.allow = allow;
@@ -236,7 +237,7 @@ export function apply(b, cmd) {
       b.hand.splice(cmd.handIndex, 1);
       b.chainPiece = piece;
       b.status = 'chain';
-      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng }));
+      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng, soul: soulSpec(piece.soul) }));
       reveal(b);
       if (b.chain.done) endMove(b, events);
       break;

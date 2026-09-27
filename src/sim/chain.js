@@ -13,6 +13,7 @@ import { PIECES } from '../data/pieces.js';
 import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
+import { UP } from '../data/souls.js';
 
 const NO_OPTS = {};
 export const boardOpts = (t) => {
@@ -32,10 +33,10 @@ export const gradeOf = (n) => GRADES.reduce((g, x) => (n >= x.n ? x : g), null);
 
 export const PROMOTE_RANK = 7;
 
-export function startChain(t, { type, sq, engraving = null }) {
+export function startChain(t, { type, sq, engraving = null, soul = null }) {
   const events = [];
   t.chain = {
-    dropType: type, dropSq: sq, engraving: engraving || null,
+    dropType: type, dropSq: sq, engraving: engraving || null, soul: soul || null,
     sq, form: type,
     value: 0, mult: 0, scoreMul: 1, money: 0,
     captures: [], forms: [type],
@@ -60,7 +61,7 @@ export function chainCaptures(t) {
   // 흡수: 먹은 행마가 더해진다(모습은 그대로)
   if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, boardOpts(t))) if (!list.includes(s)) list.push(s);
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
-  if (list.length && ((t.mods && t.mods.length) || c.engraving)) {
+  if (list.length && ((t.mods && t.mods.length) || c.engraving || c.soul)) {
     list = list.filter((s) => runHook(t, 'allowCapture', { from: c.sq, to: s, piece: t.board[s].t, form: c.form }));
   }
   return list;
@@ -123,6 +124,17 @@ export function chainCapture(t, sq) {
       (c.absorbed || (c.absorbed = [])).push(target.t);
       events.push({ type: 'absorb', piece: target.t, sq: at, forms: [c.form, ...c.absorbed] });
     }
+  } else if (c.flags.transcend && target.t !== 'K') {
+    // 혼 「초월」: 먹힌 모습 대신 한 단계 위로
+    const up = UP[c.form];
+    if (up) {
+      const prev = c.form;
+      c.form = up;
+      c.transforms++;
+      t.board[at] = { t: c.form, mine: true };
+      events.push({ type: 'transform', from: prev, to: c.form, sq: at });
+      runHook(t, 'onTransform', { from: prev, to: c.form }, events);
+    }
   } else if (target.t !== c.form) {
     const prev = c.form;
     c.form = target.t;
@@ -135,12 +147,13 @@ export function chainCapture(t, sq) {
 
   // 승급: 폰 모습으로 끝줄(조정자가 flags.promoteFrom으로 당길 수 있다 — 전설 「폰 여덟의 행진」)
   if (c.form === 'P' && rankOf(at) >= (c.flags.promoteFrom ?? PROMOTE_RANK)) {
-    c.form = 'Q';
+    // 혼 「왕관」은 아마존으로(flags.promoteTo)
+    c.form = c.flags.promoteTo || 'Q';
     c.promotions++;
-    t.board[at] = { t: 'Q', mine: true };
-    events.push({ type: 'promote', sq: at });
+    t.board[at] = { t: c.form, mine: true };
+    events.push({ type: 'promote', sq: at, to: c.form });
     runHook(t, 'onPromote', { sq }, events);
-    if (!c.forms.includes('Q')) c.forms.push('Q');
+    if (!c.forms.includes(c.form)) c.forms.push(c.form);
   }
 
   // 판의 문(정석 「판의 문」): 문 위의 적을 먹으면 다른 문(비었으면)으로 나온다

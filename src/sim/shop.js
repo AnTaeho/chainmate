@@ -6,6 +6,7 @@ import { CHARTS, CHART_FORMS, CHART_PRICE } from '../data/charts.js';
 import { ENGRAVINGS, ENGRAVING_PRICE } from '../data/engravings.js';
 import { EDITIONS, EDITION_BY_ID } from '../data/editions.js';
 import { LEGENDS } from '../data/legends.js';
+import { SOULS } from '../data/souls.js';
 
 // 수치(내가 정한 것 — DESIGN에 없는 값)
 export const SHOP = {
@@ -18,7 +19,9 @@ export const SHOP = {
   removePrice: 3,     // 기물 버리기(상점마다 한 번)
   deckMin: 6,         // 주머니는 여섯 밑으로 줄일 수 없다(손 4 + 무르기 여유. 4까지 줄이면 대국 끝에 손이 비어 막힌다)
   // 진열 칸에 무엇이 나오나(무게)
-  kindWeights: [['maxim', 55], ['chart', 20], ['engraving', 12], ['piece', 13]],
+  kindWeights: [['maxim', 55], ['chart', 20], ['engraving', 12], ['piece', 13], ['soul', 6]],
+  soulOnPiece: 0.12, // 진열 기물에 혼이 깃들어 나올 확률(값 + soulPrice)
+  soulPrice: 4,
   // 격언 등급(무게). 전설은 상점에 나오지 않는다(step 2b)
   rarityWeights: [['common', 70], ['uncommon', 25], ['rare', 5]],
   // 낱개 기물 값과 기물 꾸러미의 무게
@@ -99,7 +102,9 @@ export function rollItem(run, rng, exclude) {
   }
   if (kind === 'chart') return { kind: 'chart', form: CHART_FORMS[int(rng, CHART_FORMS.length)], price: CHART_PRICE };
   if (kind === 'engraving') return { kind: 'engraving', id: rollEngravingId(rng), price: ENGRAVING_PRICE };
+  if (kind === 'soul') return { kind: 'soul', id: SOULS[int(rng, SOULS.length)].id, price: SHOP.soulPrice };
   const t = rollPiece(run, rng);
+  if (next(rng) < SHOP.soulOnPiece) return { kind: 'piece', t, soul: SOULS[int(rng, SOULS.length)].id, price: SHOP.piecePrice[t] + SHOP.soulPrice };
   return { kind: 'piece', t, price: SHOP.piecePrice[t] };
 }
 

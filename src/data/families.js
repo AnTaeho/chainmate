@@ -6,6 +6,7 @@ import { PIECES } from './pieces.js';
 import { MAXIM_BY_ID } from './maxims.js';
 import { LEGEND_BY_ID } from './legends.js';
 import { JOSEKI_BY_ID } from './josekis.js';
+import { SOUL_BY_ID } from './souls.js';
 
 export const THRESHOLDS = [2, 4, 6];
 export const FAMILIES = [
@@ -42,7 +43,7 @@ export function familyCounts(build, extra = []) {
   const fairy = new Set();
   for (const p of build.deck || []) {
     if (PIECES[p.t] && PIECES[p.t].fairy) fairy.add(p.t);
-    if (p.soul && build.soulFamilies) add(build.soulFamilies(p.soul));
+    if (p.soul && SOUL_BY_ID[p.soul]) add(SOUL_BY_ID[p.soul].families);
   }
   for (const t of fairy) add(PIECES[t].families);
   for (const id of build.josekis || []) if (JOSEKI_BY_ID[id]) add(JOSEKI_BY_ID[id].families);
