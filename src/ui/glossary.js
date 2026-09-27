@@ -119,34 +119,38 @@ export function termsIn(list) {
   return out;
 }
 export const KEY_W = 176;
+const KEY_WS = [KEY_W, 150, 128]; // 옆자리가 좁으면 더 좁은 상자로(줄이 늘어난다)
 const KEY_GAP = 2;
-const keyLines = (id) => wrap(termSay(id), KEY_W - 10);
-const keyH = (id) => 16 + keyLines(id).length * 13 + 3;
+const keyLines = (id, w = KEY_W) => wrap(termSay(id), w - 10);
+const keyH = (id, w = KEY_W) => 16 + keyLines(id, w).length * 13 + 3;
 // 자리 잡기: 피할 네모들(avoid[0] = 카드, 그다음 말풍선) 어느 것과도 겹치지 않는 세로 줄을 찾는다.
-// 카드 오른쪽 → 왼쪽 → 말풍선 오른쪽 → 왼쪽 차례로, 카드 윗변에 가깝게. 다 안 들어가면 뒤에서부터 상자를 뺀다.
+// 카드 오른쪽 → 왼쪽 → 말풍선 오른쪽 → 왼쪽 차례로, 카드 윗변에 가깝게. 상자가 많을수록 · 넓을수록 먼저,
+// 다 안 들어가면 뒤에서부터 상자를 뺀다.
 export function layoutKeyBoxes(ids, avoid, { max = 4, hot = null, W = 480, H = 270 } = {}) {
   let list = ids.slice(0, max);
   if (hot && ids.includes(hot) && !list.includes(hot)) list = [...list.slice(0, max - 1), hot];
   if (!list.length || !avoid.length) return null;
-  const heights = list.map(keyH);
   const pref = avoid[0].y;
-  const xs = [];
-  for (const a of avoid) xs.push(a.x + a.w + 3, a.x - KEY_W - 3);
   for (let n = list.length; n >= 1; n--) {
-    const total = heights.slice(0, n).reduce((u, v) => u + v, 0) + KEY_GAP * (n - 1);
-    if (total > H - 4) continue;
-    for (const x of xs) {
-      if (x < 2 || x + KEY_W > W - 2) continue;
-      const blocks = avoid.filter((a) => a.x < x + KEY_W && a.x + a.w > x).map((a) => [a.y - 2, a.y + a.h + 2]).sort((u, v) => u[0] - v[0]);
-      let cur = 2, best = null;
-      const tryIv = (lo, hi) => {
-        if (hi - lo < total) return;
-        const y = Math.max(lo, Math.min(hi - total, pref));
-        if (!best || Math.abs(y - pref) < Math.abs(best - pref)) best = y;
-      };
-      for (const [lo, hi] of blocks) { if (lo > cur) tryIv(cur, lo); cur = Math.max(cur, hi); }
-      tryIv(cur, H - 2);
-      if (best != null) return { x, y: best, list: list.slice(0, n), heights: heights.slice(0, n) };
+    for (const bw of KEY_WS) {
+      const heights = list.slice(0, n).map((id) => keyH(id, bw));
+      const total = heights.reduce((u, v) => u + v, 0) + KEY_GAP * (n - 1);
+      if (total > H - 4) continue;
+      const xs = [];
+      for (const a of avoid) xs.push(a.x + a.w + 3, a.x - bw - 3);
+      for (const x of xs) {
+        if (x < 2 || x + bw > W - 2) continue;
+        const blocks = avoid.filter((a) => a.x < x + bw && a.x + a.w > x).map((a) => [a.y - 2, a.y + a.h + 2]).sort((u, v) => u[0] - v[0]);
+        let cur = 2, best = null;
+        const tryIv = (lo, hi) => {
+          if (hi - lo < total) return;
+          const y = Math.max(lo, Math.min(hi - total, pref));
+          if (best == null || Math.abs(y - pref) < Math.abs(best - pref)) best = y;
+        };
+        for (const [lo, hi] of blocks) { if (lo > cur) tryIv(cur, lo); cur = Math.max(cur, hi); }
+        tryIv(cur, H - 2);
+        if (best != null) return { x, y: best, w: bw, list: list.slice(0, n), heights };
+      }
     }
   }
   return null;
@@ -158,12 +162,12 @@ export function drawKeyBoxes(ctx, ids, avoid, opts = {}) {
   const out = [];
   let y = lay.y;
   lay.list.forEach((id, i) => {
-    const h = lay.heights[i], x = lay.x;
-    box(ctx, x, y, KEY_W, h, '#16231f', id === opts.hot ? PAL.gold : PAL.frameDk);
-    rect(ctx, x + 1, y + 1, KEY_W - 2, 1, '#2a3a33');
+    const h = lay.heights[i], x = lay.x, w = lay.w;
+    box(ctx, x, y, w, h, '#16231f', id === opts.hot ? PAL.gold : PAL.frameDk);
+    rect(ctx, x + 1, y + 1, w - 2, 1, '#2a3a33');
     text(ctx, termWord(id), x + 5, y + 2, PAL.gold, { bold: true });
-    keyLines(id).forEach((l, k) => text(ctx, l, x + 5, y + 16 + k * 13, PAL.ink));
-    out.push({ id, x, y, w: KEY_W, h });
+    keyLines(id, w).forEach((l, k) => text(ctx, l, x + 5, y + 16 + k * 13, PAL.ink));
+    out.push({ id, x, y, w, h });
     y += h + KEY_GAP;
   });
   return out;
