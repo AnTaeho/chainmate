@@ -12,6 +12,7 @@ import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
 import { TACTIC_BY_ID } from '../../data/tactics.js';
+const ENG_NAME = (id) => engravingInfo(id).name;
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
@@ -107,6 +108,12 @@ export class ShopScreen {
   }
   // 기보로 한 단계 자라면 빛 기둥, 각인을 새기면 반짝
   fx(e) {
+    if (e.type === 'gamble') {
+      this.flash = { id: e.pieceId, t0: this.app.time };
+      const what = e.to ? `${PIECE_NAME[e.from]} › ${PIECE_NAME[e.to]}` : e.soul ? `${PIECE_NAME[e.piece]} · ${SOUL_BY_ID[e.soul].name}의 혼` : `${PIECE_NAME[e.piece]} · ${ENG_NAME(e.eng)} 각인`;
+      this.app.toast(what, PAL.gold, 2.2);
+      this.app.sfx('sparkle');
+    }
     if (e.type === 'evolve') { this.grow = { form: e.to, t0: this.app.time }; this.app.sfx('grow'); }
     if (e.type === 'chart' && tierOf(e.level) > tierOf(e.level - 1)) { this.grow = { form: e.form, t0: this.app.time }; this.app.sfx('grow'); }
     if (e.type === 'engrave' || e.type === 'ensoul') this.flash = { id: e.pieceId, t0: this.app.time };
