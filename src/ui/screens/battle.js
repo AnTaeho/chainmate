@@ -2,10 +2,11 @@
 // 오른쪽(격언 칸 · 손).
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, dots, line, sprite, num, digits } from '../../render/gfx.js';
+import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas } from '../../render/sprites.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
+import { reach } from '../../sim/board.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
@@ -53,6 +54,24 @@ function ringAt(ctx, x, y, col, thick = 1) {
     for (const [px, py] of [[8, 5], [9, 4], [18, 4], [19, 5], [5, 8], [4, 9], [22, 8], [23, 9], [4, 18], [5, 19], [23, 18], [22, 19], [8, 22], [9, 23], [18, 23], [19, 22]]) rect(ctx, x + px, y + py, 1, 1, col);
     for (const [px, py] of [[6, 6], [7, 6], [6, 7], [20, 6], [21, 6], [21, 7], [6, 20], [6, 21], [7, 21], [21, 20], [20, 21], [21, 21]]) rect(ctx, x + px, y + py, 1, 1, col);
   }
+}
+// 먹으러 가는 시간: 미끄러지는 기물은 지나는 칸 수만큼, 나이트는 L자로 한 번 튀고, 폰 · 킹은 한 칸
+const dist = (a, b) => Math.max(Math.abs((a & 7) - (b & 7)), Math.abs((a >> 3) - (b >> 3)));
+function moveDur(form, from, to) {
+  if (form === 'N') return 0.2;
+  if (form === 'P' || form === 'K') return 0.12;
+  return 0.08 + 0.035 * Math.min(7, dist(from, to));
+}
+// 움직이는 기물의 자리(p 0→1): 나이트는 긴 다리 → 짧은 다리, 작은 포물선
+export function moverXY(form, from, to, p) {
+  const a = sqXY(from), c = sqXY(to);
+  if (form !== 'N') return { x: lerp(a.x, c.x, p), y: lerp(a.y, c.y, p) };
+  const df = (to & 7) - (from & 7);
+  const mid = Math.abs(df) === 2 ? { x: c.x, y: a.y } : { x: a.x, y: c.y };
+  const q = ease.inOut(p);
+  const k = q < 2 / 3 ? q * 1.5 : (q - 2 / 3) * 3;
+  const pt = q < 2 / 3 ? { x: lerp(a.x, mid.x, k), y: lerp(a.y, mid.y, k) } : { x: lerp(mid.x, c.x, k), y: lerp(mid.y, c.y, k) };
+  return { x: pt.x, y: pt.y - Math.sin(p * Math.PI) * 9 };
 }
 const bagTip = (b) => {
   const counts = {};
@@ -216,6 +235,7 @@ export class BattleScreen {
     this.bRef = bRef;
     const v = this.view;
     const run = this.run;
+    if (cmd.type === 'drop') this.slow = this.src.kind === 'lesson' || (!!run && !run.log.some((x) => !x.skipped) && bRef.history.length < 3);
     if (cmd.type === 'drop' && run) this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
     const events = this.src.cmd(cmd);
     if (run) this.record(events, run);
@@ -244,10 +264,10 @@ export class BattleScreen {
   // ── 사건 → 연출
   play(events, post, cmd) {
     const app = this.app, v = this.view, seq = this.seq;
-    // 한 수의 연출이 쌓인 시간(moveT)이 1.1초를 넘으면 뒤 걸음을 줄여 간다: 한 수 연출이 4초(×1) 안에 들게.
+    // 한 수의 연출이 쌓인 시간(moveT)이 1.3초를 넘으면 뒤 걸음을 줄여 간다: 한 수 연출이 4초(×1) 안에 들게.
     // 사슬 끝의 곱 · 외통은 줄이지 않는다(그 순간이 보상이라서).
     if (cmd && cmd.type === 'drop') { this.moveT = 0; this.matesInMove = 0; }
-    const pace = () => { const T = this.moveT || 0; return T < 1.1 ? 1 : Math.max(0.01, (2.1 - T) / 1.0); };
+    const pace = () => { const T = this.moveT || 0; return T < 1.3 ? 1 : Math.max(0.01, (2.3 - T) / 1.0); };
     let label = '';
     const add = (dur, o = {}) => {
       const d = label === 'mate' && !this.matesInMove++ ? dur : dur * pace();
@@ -285,14 +305,14 @@ export class BattleScreen {
           tick: (p) => { v.dropIn.p = p; },
           done: () => { v.dropIn = null; },
         }); break;
-        case 'capture': add(0.12, {
+        case 'capture': add(moveDur(v.chain ? v.chain.form : 'N', e.from, e.to), {
           begin: () => {
             const c = v.chain;
             v.board[e.from] = null;
             v.mover = { from: e.from, to: e.to, form: c.form, p: 0 };
             c.forced = null;
           },
-          tick: (p) => { v.mover.p = ease.out(p); },
+          tick: (p) => { v.mover.p = v.mover.form === 'N' ? p : ease.out(p); },
           done: () => {
             const c = v.chain;
             const victim = v.board[e.to];
@@ -326,10 +346,12 @@ export class BattleScreen {
         }); break;
         case 'money': if (e.src !== 'chest') add(0.05, { begin: () => { this.pop(`$${e.money}`, 'money'); this.snd('coin'); } }); break;
         case 'transform': add(this.bigFlip ? 0.4 : 0.1, {
-          begin: () => { v.flip = { sq: e.sq, p: 0, from: e.from, to: e.to, big: this.bigFlip }; this.snd('transform'); if (this.bigFlip) { this.hitstop(0.2); this.shake(2, 0.15); } },
+          begin: () => { v.flip = { sq: e.sq, p: 0, from: e.from, to: e.to, big: this.bigFlip }; this.snd('transform'); this.formName(e.sq, e.to); if (this.bigFlip) { this.hitstop(0.2); this.shake(2, 0.15); } },
           tick: (p) => { v.flip.p = p; if (p >= 0.5 && v.chain) { v.chain.form = e.to; v.chain.steps[v.chain.steps.length - 1] = e.to; if (v.board[e.sq] && v.board[e.sq].mine) v.board[e.sq].t = e.to; } },
           done: () => { if (v.flip && v.flip.big) this.burst(e.sq, PAL.gold, 18); v.flip = null; this.sparkle(e.sq, PAL.silver, 6); },
-        }); break;
+        });
+        // 모습이 바뀐 순간 한 박자 멈춘다(새 이름을 읽을 틈). 긴 사슬 뒤쪽에서는 다른 걸음처럼 줄어든다
+        { const d = 0.25 * pace(); this.moveT = (this.moveT || 0) + d; seq.add({ dur: d, label: 'hold' }); } break;
         case 'promote': add(0.3, {
           begin: () => { v.lift = { sq: e.sq, p: 0 }; this.snd('promote'); },
           tick: (p) => { v.lift.p = p; if (p >= 0.5 && v.chain) { v.chain.form = 'Q'; v.chain.steps[v.chain.steps.length - 1] = 'Q'; if (v.board[e.sq]) v.board[e.sq].t = 'Q'; } },
@@ -498,6 +520,26 @@ export class BattleScreen {
       },
     });
   }
+  // 모습이 바뀐 칸 위로 새 모습 이름이 떠오르며 사라진다(「룩!」)
+  formName(sq, t) {
+    const c = this.center(sq);
+    const s = `${PIECE_NAME[t]}!`;
+    this.fx.add({
+      life: 0.9, layer: 1,
+      draw: (ctx, e) => {
+        const k = e.t / e.life;
+        const w = measure(s, true) * 2 + 10, h = 27;
+        const rise = Math.round(ease.out(Math.min(1, k * 1.6)) * 6);
+        const above = c.y - 14 - h - 2 >= BY;
+        const y = above ? c.y - 14 - h - rise : c.y + 14 + 2 + rise;
+        const x = Math.round(Math.max(BX + 2, Math.min(BX + S * 8 - w - 2, c.x - w / 2)));
+        ctx.globalAlpha = k > 0.6 ? (1 - k) / 0.4 : 1;
+        box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
+        text(ctx, s, x + w / 2, y + 2, PAL.gold, { align: 'center', bold: true, scale: 2 });
+        ctx.globalAlpha = 1;
+      },
+    });
+  }
   // 먹힌 킹이 천천히 쓰러진다
   topple(sq) {
     const { x, y } = sqXY(sq);
@@ -565,7 +607,8 @@ export class BattleScreen {
   pointerDown() { this.idleT = 0; }
   update(dt) {
     this.idleT = (this.idleT || 0) + dt;
-    const sp = this.app.speed() * (this.fast ? 5 : 1);
+    // 판 전체의 처음 세 사슬과 첫 수업은 연출 속도 설정과 상관없이 ×1(눈이 규칙을 따라잡을 때까지)
+    const sp = (this.slow ? 1 : this.app.speed()) * (this.fast ? 5 : 1);
     this.seq.update(dt * sp);
     if (this.glow && this.glow.fading) { this.glow.fade += dt * this.app.speed(); if (this.glow.fade > 0.6) this.glow = null; }
     if (this.ring) { this.ring.t += dt * this.app.speed(); if (this.ring.t > this.ring.life) this.ring = null; }
@@ -687,6 +730,8 @@ export class BattleScreen {
         frame(ctx, x, y, S, S, PAL.gold);
       }
     }
+    // 지금 모습의 행마선: 다음 먹기를 기다릴 때 갈 수 있는 칸을 흐리게(막히면 끊긴다)
+    if (v.chain && !this.busy && !v.chain.awaiting && !v.cut && b.status === 'chain') this.drawReach(ctx, v.chain.form, v.chain.sq);
     // 기물
     for (let sq = 0; sq < 64; sq++) {
       const c = v.board[sq];
@@ -724,8 +769,8 @@ export class BattleScreen {
     }
     // 움직이는 내 기물
     if (v.mover) {
-      const a = sqXY(v.mover.from), c = sqXY(v.mover.to);
-      sprite(ctx, v.mover.form, 'w', lerp(a.x, c.x, v.mover.p) + 6, lerp(a.y, c.y, v.mover.p) + 3);
+      const m = moverXY(v.mover.form, v.mover.from, v.mover.to, v.mover.p);
+      sprite(ctx, v.mover.form, 'w', m.x + 6, m.y + 3);
     }
     this.drawPreview(ctx, ui);
     // 끊김: 노린 적에서 붉은 선 · 금
@@ -742,6 +787,18 @@ export class BattleScreen {
       const { x, y } = sqXY(v.chain.sq);
       if (Math.floor(time * 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
     }
+  }
+
+  drawReach(ctx, form, from) {
+    const v = this.view, o = this.center(from);
+    const slide = form === 'R' || form === 'B' || form === 'Q';
+    ctx.globalAlpha = 0.4;
+    for (const s of reach(v.board, form, from, 1)) {
+      const c = this.center(s);
+      if (slide) dotLine(ctx, o.x, o.y, c.x, c.y, PAL.goldHi, 2);
+      if (!v.board[s]) { if (slide) rect(ctx, c.x - 1, c.y - 1, 2, 2, PAL.goldHi); else frame(ctx, c.x - 3, c.y - 3, 6, 6, PAL.goldHi); }
+    }
+    ctx.globalAlpha = 1;
   }
 
   // 먹기 전에 「그것」이 보인다: 겨눈 적 칸에 바뀐 모습, 다음에 먹을 적에 고리(응수면 붉은 빗금), 끊기면 붉은 금
@@ -842,21 +899,26 @@ export class BattleScreen {
       text(ctx, short(mul), LX + 88 - dx, 103, PAL.linkInk, { align: 'center', bold: true });
     }
     // 사슬 모습 줄
-    panel(ctx, LX, 126, LW, 30);
+    // 지나온 모습은 작게, 지금 모습은 크게(2배)
+    panel(ctx, LX, 124, LW, 52);
     const steps = c ? c.steps : this.lastEnd ? this.lastEnd.steps : [];
-    const shown = steps.slice(-5);
-    shown.forEach((tp, i) => {
-      const last = i === shown.length - 1;
-      if (last && c && c.cut) { ctx.globalAlpha = 0.35; rect(ctx, LX + 4 + i * 21, 128, 20, 26, PAL.red); ctx.globalAlpha = 1; }
-      sprite(ctx, tp, 'w', LX + 6 + i * 21, 130, { alpha: c ? 1 : 0.45 });
-    });
-    if (steps.length > 5) text(ctx, `+${steps.length - 5}`, LX + LW - 4, 128, PAL.dim, { align: 'right' });
+    const a = c ? 1 : 0.45;
+    const past = steps.slice(Math.max(0, steps.length - 4), -1);
+    past.forEach((tp, i) => sprite(ctx, tp, 'w', LX + 5 + i * 19, 148, { alpha: a }));
+    if (steps.length > 4) text(ctx, `+${steps.length - 4}`, LX + 5, 127, PAL.dim);
+    const cur = steps[steps.length - 1];
+    if (cur) {
+      if (c && c.cut) { ctx.globalAlpha = 0.35; rect(ctx, LX + LW - 40, 126, 36, 48, PAL.red); ctx.globalAlpha = 1; }
+      ctx.globalAlpha = a;
+      ctx.drawImage(spriteCanvas(cur, 'w'), LX + LW - 38, 128, 32, 44);
+      ctx.globalAlpha = 1;
+    }
     // 수 · 무르기
-    panel(ctx, LX, 162, LW, 44);
-    text(ctx, '수', LX + 6, 168, PAL.dim);
-    for (let i = 0; i < v.moves; i++) rect(ctx, LX + 52 + i * 14, 170, 10, 8, i < v.movesLeft ? PAL.gold : PAL.frame);
-    text(ctx, '무르기', LX + 6, 186, PAL.dim);
-    for (let i = 0; i < v.discards; i++) rect(ctx, LX + 52 + i * 14, 188, 10, 8, i < v.discardsLeft ? PAL.red : PAL.frame);
+    panel(ctx, LX, 180, LW, 28);
+    text(ctx, '수', LX + 6, 181, PAL.dim);
+    for (let i = 0; i < v.moves; i++) rect(ctx, LX + 52 + i * 14, 184, 10, 7, i < v.movesLeft ? PAL.gold : PAL.frame);
+    text(ctx, '무르기', LX + 6, 194, PAL.dim);
+    for (let i = 0; i < v.discards; i++) rect(ctx, LX + 52 + i * 14, 197, 10, 7, i < v.discardsLeft ? PAL.red : PAL.frame);
     if (run) {
       panel(ctx, LX, 212, LW, 22);
       text(ctx, '상금', LX + 6, 217, PAL.dim);
