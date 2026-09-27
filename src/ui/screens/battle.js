@@ -18,7 +18,7 @@ import { pauseButton } from './common.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
 
-export const S = 28, BX = 128, BY = 23;
+export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
 export const LX = 8, LW = 112, RX = 360, RW = 112;
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -575,8 +575,49 @@ export class BattleScreen {
     this.drawOver(ctx);
   }
 
+  // 목표는 막대로: 지금 점수는 채움, 이번 사슬로 얻을 몫(값 × 연쇄)은 빗금으로 미리 차오른다.
+  // 목표를 넘기면 막대가 ×2 · ×5 · ×10 눈금으로 늘어나고 채움 끝에 불이 붙는다.
+  drawGoalBar(ctx) {
+    const v = this.view, tgt = v.target;
+    if (!tgt) return;
+    const time = this.app.time;
+    const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
+    const live = v.chain && !v.gather ? Math.floor(v.chain.value * v.chain.mult) : v.gather && !v.count ? v.gather.score : 0;
+    const total = score + live;
+    const maxMul = total < tgt ? 1 : total < 2 * tgt ? 2 : total < 5 * tgt ? 5 : 10;
+    const maxV = tgt * maxMul;
+    const X = BX, Y = 14, Wd = S * 8, Hh = 7;
+    box(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, PAL.feltDk, PAL.frameDk);
+    const fill = Math.round(Wd * Math.min(1, score / maxV));
+    const hot = score >= tgt;
+    rect(ctx, X, Y, fill, Hh, hot ? PAL.gold : PAL.goldDk);
+    if (fill > 1) rect(ctx, X, Y, fill, 1, PAL.goldHi);
+    const gw = Math.round(Wd * Math.min(1, total / maxV)) - fill;
+    if (gw > 0) {
+      ctx.fillStyle = PAL.gold;
+      for (let i = 0; i < gw; i++) for (let j = 0; j < Hh; j++) if ((i + j + Math.floor(time * 8)) % 3 === 0) ctx.fillRect(X + fill + i, Y + j, 1, 1);
+      if (!this.hideGain) text(ctx, `+${num(live)}`, Math.min(X + Wd - 20, X + fill + gw / 2), 0, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
+    }
+    // 눈금: 목표(×1)는 흰 막대, 넘친 층은 작은 숫자
+    for (const m of [1, 2, 5, 10]) {
+      if (m > maxMul) break;
+      const tx = X + Math.round((Wd * m) / maxV * tgt) - 1;
+      rect(ctx, tx, Y - 3, 2, Hh + 6, m === 1 ? PAL.white : PAL.red);
+      if (m > 1) { rect(ctx, tx - 7, Y - 8, 1, 1, PAL.red); rect(ctx, tx - 5, Y - 6, 1, 1, PAL.red); rect(ctx, tx - 6, Y - 7, 1, 1, PAL.red); rect(ctx, tx - 7, Y - 6, 1, 1, PAL.red); rect(ctx, tx - 5, Y - 8, 1, 1, PAL.red); digits(ctx, m, tx - 3, Y - 9, PAL.red); }
+    }
+    // 불: 목표를 넘기면 채움 끝에서 불꽃이 인다
+    if (hot && !this.app.reducedMotion) {
+      const ex = X + fill;
+      for (let i = 0; i < 6; i++) {
+        const k = (time * 3 + i / 6) % 1;
+        rect(ctx, ex - 4 + ((i * 5) % 9) - Math.round(Math.sin(time * 9 + i) * 1.5), Y - 1 - Math.round(k * 9), k < 0.4 ? 2 : 1, k < 0.4 ? 2 : 1, k < 0.3 ? PAL.goldHi : k < 0.6 ? PAL.gold : PAL.red);
+      }
+    }
+  }
+
   drawBoard(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, time = app.time;
+    this.drawGoalBar(ctx);
     box(ctx, BX - 6, BY - 6, S * 8 + 12, S * 8 + 12, PAL.frame, PAL.frameDk);
     rect(ctx, BX - 5, BY - 5, S * 8 + 10, 1, PAL.frameHi);
     // 사슬 평가의 테두리 불빛: 흰 → 금 → 붉은 금 → 무지개. 사슬이 끝나면 사그라든다
