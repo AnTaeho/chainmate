@@ -8,7 +8,7 @@ import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
 import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, ENG_FILL, fragmentStrip } from '../parts.js';
-import { PACK_NAME, PIECE_NAME, PART_NAME } from '../words.js';
+import { PACK_NAME, PIECE_NAME, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
 
 const RX = 360, RW = 112;
@@ -150,10 +150,10 @@ export class ShopScreen {
       const r = ui.last.find((x) => x.id === `deck:${m.id}`) || ui.regions.find((x) => x.id === `deck:${m.id}`);
       if (!p || !r) { this.menu = null; return; }
       const opts = [];
-      if (!run.shop.promoted) for (const to of PROMOTE[p.t] || []) opts.push([`shop:promote:${to}`, `${PIECE_NAME[to]}로 $${SHOP.promotePrice}`, run.money >= SHOP.promotePrice, () => this.act({ type: 'promote', pieceId: p.id, to }, 'promote')]);
+      if (!run.shop.promoted) for (const to of PROMOTE[p.t] || []) opts.push([`shop:promote:${to}`, `${josa(PIECE_NAME[to], '으로/로')} 승급 $${SHOP.promotePrice}`, run.money >= SHOP.promotePrice, () => this.act({ type: 'promote', pieceId: p.id, to }, 'promote')]);
       if (!run.shop.removed) opts.push(['shop:remove', `버리기 $${SHOP.removePrice}`, run.money >= SHOP.removePrice && run.deck.length > SHOP.deckMin, () => this.act({ type: 'remove', pieceId: p.id }, 'discard')]);
       if (!opts.length) opts.push(['shop:none', '이번 상점에선 끝', false, null]);
-      const w = 92, h = opts.length * 20 + 4;
+      const w = 112, h = opts.length * 20 + 4;
       const x = Math.min(r.x, 340 - w), y = r.y - h - 2;
       box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
       opts.forEach(([id, label, ok, fn], k) => button(ctx, ui, id, x + 2, y + 2 + k * 20, w - 4, 18, label, { enabled: ok, onClick: () => { this.menu = null; if (fn) fn(); } }));

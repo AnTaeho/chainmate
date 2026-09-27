@@ -14,7 +14,7 @@ import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
 import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines, fragmentStrip } from '../parts.js';
-import { KIND_SHORT, PIECE_NAME, PART_NAME } from '../words.js';
+import { KIND_SHORT, PIECE_NAME, PART_NAME, josa } from '../words.js';
 import { pauseButton } from './common.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
@@ -385,7 +385,7 @@ export class BattleScreen {
             this.snd('overflow', e.tier); this.shake(big, 0.2 + big * 0.05);
           },
         }); break;
-        case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${PIECE_NAME[e.piece]}가 깨졌다`, PAL.sky); this.snd('glass'); } }); break;
+        case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${josa(PIECE_NAME[e.piece], '이/가')} 깨졌다`, PAL.sky); this.snd('glass'); } }); break;
         case 'reinforce': add(0.1, {
           begin: () => { v.board[e.sq] = post[e.sq] || { t: e.piece, id: -1 }; if (!post[e.sq]) v.board[e.sq] = { t: e.piece, id: -1 }; this.flash(e.sq, PAL.dim); this.snd('reinforce'); },
         }); break;
