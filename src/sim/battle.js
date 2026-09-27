@@ -7,6 +7,7 @@ import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, cha
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js';
 import { soulSpec } from '../data/souls.js';
+import { thaw } from '../data/tactics.js';
 
 export { enemyCount, kingGuards, reinforceCount, enemyWeights, kingDefended } from './setup.js';
 
@@ -151,7 +152,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
   const gr = fork(root, 'gold');
   if (golden ?? next(gr) < goldenChance) {
     const cand = [];
-    b.board.forEach((c, sq) => { if (c && c.t !== 'K') cand.push(sq); });
+    b.board.forEach((c, sq) => { if (c && c.t !== 'K' && c.t !== 'X' && c.t !== 'J') cand.push(sq); });
     if (cand.length) b.board[cand[Math.floor(next(gr) * cand.length)]].gold = true;
   }
   telegraph(b);
@@ -308,6 +309,7 @@ function endMove(b, events) {
   b.chain = null;
   b.chainPiece = null;
   b.status = 'play';
+  thaw(b);
   if (c.reason === 'mate') { refreshHints(b); return finishBattle(b, 'won', 'mate', events); }
   if (c.flags.gomoku) return finishBattle(b, 'won', 'gomoku', events);
   if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);

@@ -118,8 +118,11 @@ export function chainCapture(t, sq) {
     refill(t, events);
   }
 
-  // 흡수(정석 「흡수의 비전」 · 혼 「흡수」): 모습은 그대로, 먹은 행마를 더한다
-  if (c.flags.absorb && target.t !== 'K') {
+  // 보석(판 위 사물): 모습은 그대로, 상금 +2
+  if (target.t === 'J') {
+    c.money = (c.money || 0) + 2;
+    events.push({ type: 'money', src: 'gem', money: 2 });
+  } else if (c.flags.absorb && target.t !== 'K') {
     if (target.t !== c.form && !(c.absorbed || []).includes(target.t)) {
       (c.absorbed || (c.absorbed = [])).push(target.t);
       events.push({ type: 'absorb', piece: target.t, sq: at, forms: [c.form, ...c.absorbed] });

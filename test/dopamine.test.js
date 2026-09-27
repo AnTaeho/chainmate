@@ -481,14 +481,14 @@ test('전설 오페라 대국: 외통 뒤 판이 다시 채워지고 킹이 된 
   assert.ok(!t.chain.done, '사슬이 끝나지 않는다');
   assert.equal(t.chain.form, 'K', '킹을 먹었으니 킹 모습');
   assert.equal(t.chain.mates, 1);
-  assert.equal(t.board.filter((c) => c && !c.mine).length, enemyCount(2));
+  assert.equal(t.board.filter((c) => c && !c.mine && c.t !== 'X' && c.t !== 'J').length, enemyCount(2));
   assert.equal(t.board[S('a4')].mine, true);
   assert.deepEqual([t.chain.value, t.chain.mult], [340, 6], '외통까지의 값 · 연쇄는 그대로');
   const caps = chainCaptures(t);
   assert.ok(caps.length > 0, '곁에 먹을 적이 있는 판');
   const v = t.board[caps[0]].t;
   chainCapture(t, caps[0]);
-  assert.equal(t.chain.value, 340 + { P: 10, N: 30, B: 30, R: 50, Q: 90 }[v]);
+  assert.equal(t.chain.value, 340 + { P: 10, N: 30, B: 30, R: 50, Q: 90, J: 20 }[v]);
   assert.equal(t.chain.mult, 7);
   // 같은 시드 · 같은 수 = 같은 새 판(풀이기가 그려 본 판과 실제 판이 같다)
   const t2 = table(MATE, LEG('opera'), { seed: 42, ante: 2 });

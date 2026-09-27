@@ -24,6 +24,7 @@ import { EDITION_BY_ID, editionSpec, editionSlots } from '../data/editions.js';
 import { LEGENDS, LEGEND_BY_ID } from '../data/legends.js';
 import { familyCounts, familyMods } from '../data/families.js';
 import { JOSEKIS, JOSEKI_BY_ID, DRAFT_ANTES, DRAFT_TIERS } from '../data/josekis.js';
+import { useTactic, evolveTo } from '../data/tactics.js';
 
 // ── 수치
 // 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. tools/run.mjs(smart 봇)로 맞춤:
@@ -456,7 +457,7 @@ const pay = (run, n) => {
 export function canBuy(run, it) {
   if (!it || it.sold || run.money < it.price) return false;
   if (it.kind === 'maxim') return hasMaximRoom(run, it.edition);
-  if (it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul') return run.consumables.length < run.consumableSlots;
+  if (it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'tactic') return run.consumables.length < run.consumableSlots;
   return true;
 }
 
@@ -500,6 +501,15 @@ export function applyRun(run, cmd) {
       advance(run);
       break;
     }
+    // 묘수(깊이 F): 대국 중 떨구기 전에
+    case 'tactic': {
+      need('battle');
+      const c = run.consumables[cmd.index];
+      if (!c || c.kind !== 'tactic') throw new Error('no tactic');
+      events.push(...useTactic(run.battle, c.id));
+      run.consumables.splice(cmd.index, 1);
+      break;
+    }
     case 'drop': case 'capture': case 'redrop': case 'discard': {
       need('battle');
       const seen = run.battle.history.length;
@@ -517,7 +527,7 @@ export function applyRun(run, cmd) {
       if (it.kind === 'maxim') addMaxim(run, it.id, it.price, events, it.edition || null);
       else if (it.kind === 'piece') addPiece(run, it.t, events, it.soul || null);
       else if (it.kind === 'fragment') grantFragment(run, it.legend, 'first', events);
-      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : { kind: it.kind, id: it.id });
+      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : it.kind === 'evolve' ? { kind: 'evolve' } : { kind: it.kind, id: it.id });
       events.push({ type: 'buy', item: { ...it } });
       break;
     }
@@ -577,6 +587,13 @@ export function applyRun(run, cmd) {
       if (!c) throw new Error('no consumable');
       if (c.kind === 'engraving') engrave(run, cmd.target, c.id, events);
       else if (c.kind === 'soul') ensoul(run, cmd.target, c.id, events);
+      else if (c.kind === 'evolve') {
+        const p = run.deck.find((x) => x.id === cmd.target);
+        const to = p && evolveTo(run.seed, p);
+        if (!to) throw new Error('cannot evolve');
+        events.push({ type: 'evolve', pieceId: p.id, from: p.t, to });
+        p.t = to;
+      } else if (c.kind === 'tactic') throw new Error('tactics are used in a battle');
       else useChart(run, c.form, events);
       run.consumables.splice(cmd.index, 1);
       break;
@@ -634,7 +651,11 @@ export function applyRun(run, cmd) {
 export function legalRunCommands(run) {
   const out = [];
   const ph = run.phase;
-  if (ph === 'battle') return battleCommands(run.battle);
+  if (ph === 'battle') {
+    const out = battleCommands(run.battle);
+    if (run.battle.status === 'play') run.consumables.forEach((c, index) => { if (c.kind === 'tactic') out.push({ type: 'tactic', index }); });
+    return out;
+  }
   if (ph === 'won') return [{ type: 'endless' }];
   if (ph === 'draft') return run.draft.options.map((_, index) => ({ type: 'joseki', index }));
   if (ph === 'lost') return [];
@@ -651,7 +672,8 @@ export function legalRunCommands(run) {
   // select · shop 공통
   run.consumables.forEach((c, index) => {
     if (c.kind === 'engraving' || c.kind === 'soul') for (const p of run.deck) out.push({ type: 'use', index, target: p.id });
-    else out.push({ type: 'use', index });
+    else if (c.kind === 'evolve') { for (const p of run.deck) if (evolveTo(run.seed, p)) out.push({ type: 'use', index, target: p.id }); }
+    else if (c.kind !== 'tactic') out.push({ type: 'use', index });
   });
   run.maxims.forEach((m, index) => { if (canSell(m)) out.push({ type: 'sell', index }); });
   for (let i = 0; i + 1 < run.maxims.length; i++) out.push({ type: 'moveMaxim', from: i, to: i + 1 });

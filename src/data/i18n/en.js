@@ -14,6 +14,13 @@ export const EN = {
   '승급 칸이 두 줄 앞당겨지고, 승급하면 아마존이 된다': 'Promotes two ranks sooner, into an amazon',
   '노림수가 이 기물을 못 본다(응수 없이 이어진다) · 사슬 끝 연쇄 −1': 'Threats never see it (no replies needed) · links −1 at chain end',
   '메아리': 'Echo', '초월': 'Transcend', '굶주림': 'Hunger', '사냥꾼': 'Hunter', '순교자': 'Martyr', '그림자': 'Shade',
+  // 진화 · 묘수(깊이 F)
+  '진화': 'Evolve', '묘수': 'Trick', '자랄 기물': 'Choose a piece', '대국 중에 쓴다': 'Use it during a match', '대국 중 떨구기 전에 쓴다': 'Use during a match, before a drop',
+  '주머니의 기물 하나가 그 종류의 이형으로 자란다': 'One piece in your bag grows into a fairy of its kind',
+  '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존': 'Pawn › archer · knight › nightrider, camel · bishop › archbishop · rook › chancellor, cannon, ghost · queen › amazon',
+  '빙결': 'Freeze', '재장전': 'Reload', '도발': 'Taunt', '수 +1': 'Moves +1',
+  '가장 무거운 적 셋이 이번 수 동안 아무것도 지키지 못한다': 'The three heaviest foes guard nothing this move',
+  '이번 대국의 수 +1': 'This match: moves +1', '적 폰 넷을 빈칸으로 불러낸다(먹이가 늘어난다)': 'Summon four enemy pawns onto empty squares (more to take)',
   // 정석(깊이 E)
   '정석': 'Joseki', '은': 'Silver', '무지개': 'Rainbow', '주머니가 바뀌었다': 'Your bag changed',
   '기사 서약': "Knight's Oath", '주머니의 나이트 둘이 야간기사가 된다': 'Two knights in your bag become nightriders',
@@ -80,6 +87,7 @@ export const EN = {
   '폰으로 떨군 사슬 값 +40': 'Pawn-dropped chains: value +40', '폰 모습으로 먹을 때마다 연쇄 +2': 'Each take as a pawn: links +2', '폰으로 떨군 사슬 연쇄 ×3': 'Pawn-dropped chains: links ×3',
   '같은 종류를 잇달아 먹으면 값 +30': 'Taking the same kind again: value +30', '판에서 가장 비싼 적을 먹으면 연쇄 +4': 'Taking the priciest foe: links +4',
   '같은 종류를 잇달아 먹을 때마다 연쇄 ×1.5': 'Each same-kind take in a row: links ×1.5',
+  '벽': 'Wall', '보석': 'Gem', '먹을 수 없고 길을 막는다(포 · 메뚜기는 넘는다)': 'Cannot be taken; blocks lines (cannons and grasshoppers hop it)', '먹으면 상금 +2, 모습은 그대로': 'Take it for +2 purse; your form stays',
   '이형': 'Fairy', '이형 기물': 'Fairy Piece', '기물': 'Pieces',
   '첫 수업': 'First Lessons', '첫 수업 다시': 'Lessons Again', '좋은 수': 'Good Move', '끝': 'Done',
   '떨구고 먹는다': 'Drop and Take', '이을수록 곱해진다': 'Links Multiply', '노리는 놈부터': 'Guards First',
@@ -232,4 +240,5 @@ export const TEMPLATES = [
   [/^\+(폰|나이트|비숍|룩|퀸|대주교|재상|아마존|낙타|야간기사|메뚜기|포|궁수|유령)$/, (m, tr) => `+${tr(m[1])}`],
   [/^(.+)의 혼$/, (m, tr) => `${tr(m[1])} Soul`],
   [/^(.+)의 혼 · (.+)$/, (m, tr) => `${tr(m[1])} Soul · ${m[2]}`],
+  [/^묘수 (.+)$/, (m, tr) => `Trick: ${tr(m[1])}`],
 ];

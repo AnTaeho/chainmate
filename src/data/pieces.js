@@ -19,10 +19,15 @@ export const PIECES = {
   O: { id: 'O', value: 50, name: '포', chart: 'R', families: ['line'], fairy: true },
   S: { id: 'S', value: 40, name: '궁수', chart: 'P', families: ['hunt'], fairy: true },
   W: { id: 'W', value: 60, name: '유령', chart: 'R', families: ['line', 'change'], fairy: true },
+  // 판 위 사물(깊이 F): 벽은 먹을 수 없고 아무도 지키지 않으며 미끄러짐을 막는다(포 · 메뚜기의 받침은 된다).
+  // 보석은 먹을 수 있지만 모습이 바뀌지 않고 상금 +2, 아무도 지키지 않는다.
+  X: { id: 'X', value: 0, name: '벽', chart: null, families: [], thing: true },
+  J: { id: 'J', value: 20, name: '보석', chart: null, families: [], thing: true },
 };
 export const TYPES = ['P', 'N', 'B', 'R', 'Q', 'K'];
 export const FAIRIES = ['A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W'];
 export const valueOf = (t) => PIECES[t].value;
 export const isFairy = (t) => !!(PIECES[t] && PIECES[t].fairy);
+export const isThing = (t) => !!(PIECES[t] && PIECES[t].thing);
 // 먹을 때 따르는 기보의 모습(기보가 없는 킹은 null)
 export const chartForm = (t) => (PIECES[t] ? PIECES[t].chart : null);

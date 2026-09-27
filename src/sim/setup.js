@@ -63,6 +63,17 @@ export function kingDefended(board, ksq, opts = {}, guards = 2) {
   return at.length >= guards && at.some((s) => board[s].t === 'P');
 }
 
+// 판 위 사물(깊이 F): 2관부터 드물게 보석 하나 · 벽 한두 칸(연쇄를 막는 벽은 포 · 메뚜기의 받침이 된다)
+export const THINGS = { from: 2, gem: 0.3, wall: 0.25 };
+function placeThings(b, rng, board, reserve) {
+  if ((b.ante ?? 1) < THINGS.from || b.rules.things === false) return;
+  if (next(rng) < THINGS.gem) { const sq = randomEmpty(rng, board, 2, reserve); if (sq >= 0) board[sq] = { t: 'J', id: b.nextId++, born: -1 }; }
+  if (next(rng) < THINGS.wall) {
+    const n = 1 + int(rng, 2);
+    for (let i = 0; i < n; i++) { const sq = randomEmpty(rng, board, 2, reserve); if (sq >= 0) board[sq] = { t: 'X', id: b.nextId++, born: -1 }; }
+  }
+}
+
 export function generateBoard(b, rng = b.rng.board, reserve = []) {
   const count = b.rules.enemies ?? enemyCount(b.ante);
   const kings = b.rules.kings;
@@ -96,6 +107,7 @@ export function generateBoard(b, rng = b.rng.board, reserve = []) {
       if (sq < 0) break;
       put(sq, rollType(rng, b.ante));
     }
+    placeThings(b, rng, board, reserve);
     if (ksqs.every((s) => kingDefended(board, s, opts, guards))) return board;
   }
   throw new Error('board generation failed');

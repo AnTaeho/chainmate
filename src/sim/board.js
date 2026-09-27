@@ -14,6 +14,8 @@ export function parseSq(name) {
 
 export const emptyBoard = () => new Array(64).fill(null);
 export const isEnemy = (cell) => cell != null && !cell.mine;
+// 노림을 거는 적: 얼린 적(묘수 「빙결」)은 이번 수 동안 아무것도 지키지 못한다
+const threat = (cell) => cell != null && !cell.mine && !cell.frozen;
 
 const KN = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
 const KG = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
@@ -117,8 +119,8 @@ export function reach(board, t, sq, dir = 1, ignore = -1) {
 export function attackers(board, sq, opts = {}) {
   const ignore = opts.ignore ?? -1;
   const out = [];
-  const enemyAt = (s, t) => s !== ignore && isEnemy(board[s]) && board[s].t === t;
-  const enemyIn = (s, set) => s !== ignore && isEnemy(board[s]) && set.has(board[s].t);
+  const enemyAt = (s, t) => s !== ignore && threat(board[s]) && board[s].t === t;
+  const enemyIn = (s, set) => s !== ignore && threat(board[s]) && set.has(board[s].t);
   for (const s of KNIGHT[sq]) if (enemyIn(s, KNIGHTLIKE)) out.push(s);
   for (const s of KING[sq]) if (enemyAt(s, 'K')) out.push(s);
   // 적 폰은 (f±1, r−1)을 노린다 ⇒ sq를 노리는 폰은 (f±1, r+1)에 있다
@@ -126,12 +128,12 @@ export function attackers(board, sq, opts = {}) {
   if (opts.pawnSides) for (const s of PAWN_SIDE[sq]) if (enemyAt(s, 'P')) out.push(s);
   for (const ray of RAY_O[sq]) for (const s of ray) {
     if (s === ignore || !board[s]) continue;
-    if (isEnemy(board[s]) && ORTHO_T.has(board[s].t)) out.push(s);
+    if (threat(board[s]) && ORTHO_T.has(board[s].t)) out.push(s);
     break;
   }
   for (const ray of RAY_D[sq]) for (const s of ray) {
     if (s === ignore || !board[s]) continue;
-    if (isEnemy(board[s]) && DIAG_T.has(board[s].t)) out.push(s);
+    if (threat(board[s]) && DIAG_T.has(board[s].t)) out.push(s);
     break;
   }
   if (opts.fairy === false) return out;
@@ -190,7 +192,7 @@ export function captures(board, form, sq, opts = {}) {
   }
   for (const s of list) {
     const c = board[s];
-    if (!isEnemy(c)) continue;
+    if (!isEnemy(c) || c.t === 'X') continue;
     if (c.t === 'K' && !opts.openKings && !kingTakeable(board, s, sq, opts)) continue;
     out.push(s);
   }
