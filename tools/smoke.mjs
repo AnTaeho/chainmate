@@ -115,13 +115,18 @@ function keyBoxesAt(id, kind) {
 //   판 틀(screen.notes 'side')은 왼쪽 칸(x 6 · 폭 116)에 가리킨 것의 윗변 높이로(왼쪽 칸 안의 것은 그 아래 · 위),
 //   판 밖 틀은 가리킨 것 바로 아래(왼끝 · 오른끝 맞춤) 또는 바로 위. 묶음은 같은 x · 폭, 2px 틈으로 이어진다.
 //   화면 밖 · 가리킨 것 · 누를 수 있는 다른 구역(켜진 단추 · 카드 · 칸)을 덮으면 어긴 것.
-const place = { n: 0, side: 0, below: 0, rule: 0, chain: 0, off: 0, self: 0, cover: 0, hint: 0, hintBad: 0, screens: new Set(), kinds: new Map(), bad: [] };
+const place = { n: 0, side: 0, below: 0, rule: 0, chain: 0, off: 0, self: 0, cover: 0, none: 0, squeezed: 0, squeezedIds: [], hint: 0, hintBad: 0, screens: new Set(), kinds: new Map(), bad: [] };
 const CAP_KIND = { sq: 14, deck: 6, codex: 8, hand: 4 };
 const kindOf = (id) => id.replace(/:[^:]*$/, '');
 function placeBad(what, id, detail = '') { place[what]++; if (place.bad.length < 12) place.bad.push(`${screen()} ${id} ${what} ${detail}`); }
 function checkStack(id) {
   const st = app.noteStack;
+  // 말풍선이 있는 구역인데 아무것도 안 떴다(자리가 없어 버린 것)
+  const h = app.ui.hover, tip = h && h.tip ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null;
+  if (tip && (!st || !st.rects.length)) { placeBad('none', id); return false; }
   if (!st || !st.rects.length) return false;
+  // 왼쪽 칸 안의 것인데 위 · 아래 어디에도 안 들어가 당겨 놓은 것: 가리킨 것을 덮어도 어긴 것으로 치지 않고 센다
+  if (st.squeezed) { place.squeezed++; if (place.squeezedIds.length < 6) place.squeezedIds.push(`${screen()} ${id}`); return true; }
   const a = st.anchor, rs = st.rects;
   place.n++; place[st.mode === 'side' ? 'side' : 'below']++; place.screens.add(screen());
   const top = rs[0].y, bot = rs[rs.length - 1].y + rs[rs.length - 1].h, total = bot - top;
@@ -633,9 +638,9 @@ if (mt.length && mt[mt.length - 1] > 4) { console.log('한 수 연출이 4초를
 if (pct(0.99) > 16) { console.log('프레임 p99가 16ms를 넘는다'); fail = true; }
 if (ims.length && ims[Math.floor(ims.length * 0.99)] > 50) { console.log('누르기 처리 p99가 50ms를 넘는다'); fail = true; }
 const kinds = [...place.kinds].map(([k, v]) => `${k}=${[...v].join('/')}`);
-console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · 판 밖 ${place.below}, 화면 ${place.screens.size}) · 어김 ${place.rule} · 묶음 끊김 ${place.chain} · 화면 밖 ${place.off} · 가리킨 것 덮음 ${place.self} · 누를 것 덮음 ${place.cover} · 처음 안내 ${place.hint}(어김 ${place.hintBad})`);
+console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · 판 밖 ${place.below}, 화면 ${place.screens.size}) · 어김 ${place.rule} · 묶음 끊김 ${place.chain} · 화면 밖 ${place.off} · 가리킨 것 덮음 ${place.self} · 누를 것 덮음 ${place.cover} · 안 뜸 ${place.none} · 당겨 놓음 ${place.squeezed}${place.squeezedIds.length ? ` (${place.squeezedIds.join(', ')})` : ''} · 처음 안내 ${place.hint}(어김 ${place.hintBad})`);
 if (VERBOSE) console.log('종류별 자리: ' + kinds.join(' · '));
 if (place.bad.length) console.log('어긴 곳: ' + place.bad.join(' | '));
-if (place.n < 100 || place.rule || place.chain || place.off || place.self || place.cover || place.hintBad) { console.log('설명이 규약의 자리에 뜨지 않았거나 누를 것 · 화면 밖을 덮었다'); fail = true; }
+if (place.n < 100 || place.rule || place.chain || place.off || place.self || place.cover || place.none || place.hintBad) { console.log('설명이 규약의 자리에 뜨지 않았거나 누를 것 · 화면 밖을 덮었다'); fail = true; }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);

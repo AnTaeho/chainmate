@@ -133,7 +133,9 @@ async function scene(name, setup, { wait = 400, hover = true, before = null } = 
   for (const r of pickHovers(await regions())) {
     await moveTo(r.x + Math.floor(r.w / 2), r.y + Math.floor(r.h / 2));
     await settle(90);
-    const d = await drawn();
+    let d = await drawn();
+    // 글 캐시가 비어 한 프레임이 늦으면 한 번 더 기다린다
+    if (!d.tip && !d.keys.length) { await settle(250); d = await drawn(); }
     if (!d.tip && !d.keys.length) continue;
     await shot(`${base}~${safe(r.id)}`, { region: { id: r.id, x: r.x, y: r.y, w: r.w, h: r.h }, ...d });
   }
@@ -259,14 +261,14 @@ if (ko) {
   await scene('hint-pack', js(packSrc('piece', [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'C' }, { kind: 'piece', t: 'B' }])), { wait: 1800, hover: false, before: () => hintOn(['pack']) });
   await scene('hint-battle', js(battleSrc(7, '')), { wait: 2800, hover: false, before: () => hintOn(['incoming', 'family']) });
   // 새 장면(고치기 전 짝 없음): 혼 · 묘수 진열(그림자 카드 글), 수업 ⑩ 따라 하는 길의 말풍선, 도감 둘째 쪽
-  await ev(() => { const a = window.__app; a.records.coachSeen = Object.fromEntries(Object.keys(a.records.coachSeen).map((k) => [k, true])); });
+  await hintOn([]);
   await scene('shop-souls', js(shopSrc(11, "r.shop = { display: [{ kind: 'soul', id: 'shade', price: 6, sold: false }, { kind: 'tactic', id: 'freeze', price: 3, sold: false }], packs: [{ kind: 'golden', price: 0, sold: false }, { kind: 'piece', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };")), {
     wait: 500,
     before: async () => { await ev(async () => { const r = window.__app.run; const { createRng, fork } = await import('/src/sim/rng.js'); r.shop.rng = fork(createRng(3), 'layout'); }); },
   });
   await scene('lesson-guide', async () => { const a = window.__app; const { LESSONS } = await import('/src/ui/lessons.js'); const { openLesson } = await import('/src/ui/screens/lessons.js'); openLesson(a, LESSONS.findIndex((L) => L.shop), 'shots'); }, { wait: 900, hover: false });
   await scene('lesson-guide-2', null, { wait: 300, hover: false, before: async () => { await clickId('shop:buy:0'); await settle(600); } });
-  await ev(() => { const a = window.__app; a.guide = null; a.run = null; });
+  await ev(() => { const a = window.__app; a.guide = null; a.toTitle(); });
   await scene('codex-page2', () => { const a = window.__app; a.go('codex'); a.screen.page = 1; });
 }
 
