@@ -5,8 +5,7 @@ import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
-import { FAMILY_BY_ID, setName } from '../../data/families.js';
-import { familyGlyph } from '../parts-depth.js';
+import { familyChips, chipRows } from '../parts-depth.js';
 import { cornerTicks } from '../parts.js';
 import { topBar } from './common.js';
 
@@ -71,12 +70,8 @@ export class DraftScreen {
       wrap(j.name, CW - 16, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + CW / 2, yy + 26 + k * 13, PAL.cardInk, { align: 'center', bold: true }));
       rect(ctx, x + 16, yy + 54, CW - 32, 1, col);
       wrap(j.text, CW - 18).slice(0, 6).forEach((l, k) => richText(ctx, l, x + 9, yy + 60 + k * 13, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } }));
-      // 가족
-      j.families.forEach((f, k) => {
-        const fy = yy + CH - 22 - (j.families.length - 1 - k) * 13;
-        familyGlyph(ctx, f, x + 10, fy + 4);
-        text(ctx, setName(f), x + 19, fy, FAMILY_BY_ID[f].col === '#efbd55' ? PAL.goldDk : PAL.cardDim);
-      });
+      // 시너지 칩(「기사 +1」)
+      if (j.families.length) familyChips(ctx, j.families, x + 9, yy + CH - 22 - (chipRows(j.families, CW - 18) - 1) * 13, CW - 18);
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, yy, CW, CH, PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     });

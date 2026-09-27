@@ -1,8 +1,8 @@
-// 깊이 층의 화면 조각: 가족 문양 · 가족 띠(켜진 가족과 다음 문턱) · 문턱을 넘는 순간.
+// 깊이 층의 화면 조각: 시너지(옛 가족) 문양 · 칩 · 띠(켜진 시너지와 다음 문턱) · 문턱을 넘는 순간.
 import { PAL } from '../render/palette.js';
-import { rect, text, box, frame } from '../render/gfx.js';
+import { rect, text, box, frame, measure } from '../render/gfx.js';
 import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf, setName } from '../data/families.js';
-import { tipLines, setLine } from './parts.js';
+import { tipLines } from './parts.js';
 import { L } from './lang.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { TRAIT_BY_ID } from '../data/traits.js';
@@ -35,23 +35,54 @@ export function familyGlyphs(ctx, ids, x, y, { dark = true } = {}) {
 
 export function familyTip(id, n, drop = 0) {
   const f = FAMILY_BY_ID[id];
-  // 효과 글에 「 · 」가 들어 있어 영어로 옮길 때 쪼개지지 않게 먼저 옮긴다
   const lines = [];
-  // 문턱과 효과를 헷갈리지 않게 「2개 모으면: …」
-  THRESHOLDS.forEach((th, i) => { for (const l of wrap(`${L(`${Math.max(1, th - drop)}개 모으면`)}: ${L(f.text[i])}`, 160)) lines.push([l, n >= th - drop ? PAL.goldDk : PAL.cardDim]); });
-  return tipLines(`${setName(id)} ${n}`, [], 170, lines);
+  // 문턱과 효과: 「2개: …」. 효과 글에 「 · 」가 들어 있어 영어로 옮길 때 쪼개지지 않게 먼저 옮긴다
+  THRESHOLDS.forEach((th, i) => { for (const l of wrap(`${L(`${Math.max(1, th - drop)}개`)}: ${L(f.text[i])}`, 190)) lines.push([l, n >= th - drop ? PAL.goldDk : PAL.cardDim]); });
+  return tipLines(`${setName(id)} ${n}`, [], 200, lines);
 }
 
-// 가족 띠: 하나라도 모인 가족을 많은 순으로 칩 하나씩(문양 + 「3/4」). 켜진 가족은 제 빛깔 테.
-// fx: { [id]: 문턱을 막 넘은 때(초) } — 넘은 가족 칩이 빛나며 커진다
-export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max = 4, idPrefix = 'fam', counts = null } = {}) {
+// 시너지 칩: 어두운 칸 안에 문양 + 「기사 +1」(카드가 시너지를 몇 개 채우는지). 너비를 돌려준다
+export const chipLabel = (id, add = 1) => `${FAMILY_BY_ID[id].name} +${add}`;
+export const chipW = (id) => 5 + 3 + measure(chipLabel(id)) + 5;
+export function familyChip(ctx, id, x, y) {
+  const w = chipW(id);
+  rect(ctx, x, y, w, 11, '#1b2b27');
+  familyGlyph(ctx, id, x + 3, y + 3);
+  text(ctx, chipLabel(id), x + 10, y - 1, PAL.ink);
+  return w;
+}
+// 칩 여럿을 너비 안에 흘려 놓는다(넘치면 다음 줄). 쓴 줄 수를 돌려준다
+export function familyChips(ctx, fams, x, y, w) {
+  let xx = x, rows = fams.length ? 1 : 0;
+  for (const id of fams) {
+    const cw = chipW(id);
+    if (xx > x && xx + cw > x + w) { xx = x; y += 13; rows++; }
+    familyChip(ctx, id, xx, y);
+    xx += cw + 3;
+  }
+  return rows;
+}
+export function chipRows(fams, w) {
+  let xx = 0, rows = fams.length ? 1 : 0;
+  for (const id of fams) { const cw = chipW(id); if (xx > 0 && xx + cw > w) { xx = 0; rows++; } xx += cw + 3; }
+  return rows;
+}
+// 말풍선 · 좁은 곳에 적는 글 꼴: 「기사 +1 · 행진 +1」
+export const chipText = (fams) => fams.map((f) => chipLabel(f)).join(' · ');
+
+// 시너지 띠: 하나라도 모인 시너지를 많은 순으로 칩 하나씩(「기사 2/4」, 자리가 넉넉하면 문양도). 켜진 시너지는 제 빛깔 테.
+// 칩 너비는 글에 맞추고, 너비 w를 넘는 칩은 놓지 않는다(대국 오른쪽 칸은 둘쯤).
+// fx: { [id]: 문턱을 막 넘은 때(초) } — 넘은 시너지 칩이 빛나며 커진다
+export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max = 4, idPrefix = 'fam', counts = null, glyph = true } = {}) {
   const n = counts || familyCounts(build);
-  const list = FAMILIES.filter((f) => n[f.id] > 0).sort((a, b) => n[b.id] - n[a.id]).slice(0, max);
-  const cw = Math.floor((w - (max - 1) * 2) / max);
-  list.forEach((f, k) => {
-    const cx = x + k * (cw + 2);
+  const list = FAMILIES.filter((f) => n[f.id] > 0).sort((a, b) => levelOf(n[b.id]) - levelOf(n[a.id]) || n[b.id] - n[a.id]).slice(0, max);
+  let cx = x;
+  for (const f of list) {
     const lv = levelOf(n[f.id]);
     const next = THRESHOLDS[lv];
+    const label = `${f.name} ${next ? `${n[f.id]}/${next}` : n[f.id]}`;
+    const cw = measure(label) + (glyph ? 14 : 4);
+    if (cx + cw > x + w) break;
     const id = `${idPrefix}:${f.id}`;
     ui.region(id, cx, y, cw, 13, { tip: () => familyTip(f.id, n[f.id]), keys: [{ id: `fam_${f.id}` }, { id: 'set' }] });
     const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
@@ -61,9 +92,10 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
       ctx.globalAlpha = glow * 0.6; rect(ctx, cx - 2, y - 2, cw + 4, 17, f.col); ctx.globalAlpha = 1;
       frame(ctx, cx - 1 - Math.round(glow * 2), y - 1 - Math.round(glow * 2), cw + 2 + Math.round(glow * 4), 15 + Math.round(glow * 4), PAL.goldHi);
     }
-    familyGlyph(ctx, f.id, cx + 3, y + 4, lv ? f.col : PAL.dim);
-    text(ctx, next ? `${n[f.id]}/${next}` : `${n[f.id]}`, cx + cw - 3, y, lv ? PAL.ink : PAL.dim, { align: 'right' });
-  });
+    if (glyph) familyGlyph(ctx, f.id, cx + 3, y + 4, lv ? f.col : PAL.dim);
+    text(ctx, label, cx + (glyph ? 11 : 2), y, lv ? PAL.ink : PAL.dim);
+    cx += cw + 2;
+  }
   return n;
 }
 
@@ -77,7 +109,7 @@ export function josekiBadges(ctx, ui, run, x, y) {
   (run.josekis || []).forEach((id, k) => {
     const j = JOSEKI_BY_ID[id];
     const bx = x + k * 12;
-    ui.region(`joseki:${id}`, bx, y, 11, 11, { keys: [{ id: 'joseki' }], tip: () => tipLines(j.name, j.families.length ? [j.text, setLine('정석', j.families)] : j.text) });
+    ui.region(`joseki:${id}`, bx, y, 11, 11, { keys: [{ id: 'joseki' }], tip: () => tipLines(j.name, j.text, 150, j.families.length ? wrap(chipText(j.families), 140).map((l) => [l, PAL.cardDim]) : []) });
     box(ctx, bx, y, 11, 11, '#132019', TIER_COL[j.tier]);
     if (j.families[0]) familyGlyph(ctx, j.families[0], bx + 3, y + 3, TIER_COL[j.tier]);
     else rect(ctx, bx + 4, y + 4, 3, 3, TIER_COL[j.tier]);
@@ -85,7 +117,7 @@ export function josekiBadges(ctx, ui, run, x, y) {
   return (run.josekis || []).length * 12;
 }
 
-// 적 특성 문양(발밑 왼쪽 5×5): 방패 · 폭약 · 거울 · 성채 · 배신자
+// 적 특성 문양(발밑 왼쪽 5×5): 방패 · 폭약 · 거울 · 파수꾼 · 배신자
 const TRAIT_GLYPH = {
   shield: ['#####', '#####', '#####', '.###.', '..#..'],
   bomb: ['...#.', '..#..', '.###.', '#####', '.###.'],

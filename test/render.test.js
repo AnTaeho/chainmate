@@ -82,7 +82,7 @@ test('영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · �
   assert.deepEqual(missing(all), []);
 });
 
-test('낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고, 모음(가족)마다 낱말이 있다', async () => {
+test('낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고, 시너지(가족)마다 낱말이 있다', async () => {
   const { TERMS, TERM_GROUPS, splitTerms } = await import('../src/ui/glossary.js');
   const { FAMILIES } = await import('../src/data/families.js');
   const ids = TERMS.map((t) => t.id);
@@ -93,6 +93,28 @@ test('낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고
     assert.ok(!/엔진|스폰|버프|트리거|시뮬/.test(t.say), t.id);
   }
   for (const f of FAMILIES) assert.ok(ids.includes(`fam_${f.id}`), f.id);
-  // 모음 이름은 같은 자리에서 시작하는 짧은 낱말(끊김 · 승급)보다 먼저 잡힌다
-  assert.deepEqual(splitTerms('끊김 모음 · 승급 모음').filter(([, id]) => id).map(([, id]) => id), ['fam_sacrifice', 'fam_crown']);
+  // 시너지 이름은 같은 자리에서 시작하는 짧은 낱말(시너지)보다 먼저 잡히고, 「기사도」 · 「야간기사」에는 걸리지 않는다
+  assert.deepEqual(splitTerms('희생 시너지 · 왕관 시너지').filter(([, id]) => id).map(([, id]) => id), ['fam_sacrifice', 'fam_crown']);
+  assert.deepEqual(splitTerms('기사도 · 야간기사').filter(([, id]) => id), []);
+});
+
+test('낱말 상자: 기본 낱말은 글에서 찾아도 상자를 띄우지 않고, 카드 하나에 둘까지', async () => {
+  const { termsIn, layoutKeyBoxes, TERM_BY_ID } = await import('../src/ui/glossary.js');
+  // 상자 높이는 글 너비로 잰다: 연기 시험의 가짜 캔버스(글자 너비만 흉내)를 꽂는다
+  const { makeFakeDom } = await import('../tools/fakedom.mjs');
+  const { setCanvasFactory } = await import('../src/render/surface.js');
+  const dom = makeFakeDom();
+  setCanvasFactory(() => dom.document.createElement('canvas'));
+  assert.deepEqual(termsIn(['나이트로 시작: 배수 ×1.5']), []);
+  assert.deepEqual(termsIn(['끊긴 사슬: 배수 +8']), ['cut']);
+  // 그 낱말 자체를 가리킨 것({ id })은 기본 낱말이어도 남는다(값 · 배수 칸)
+  assert.deepEqual(termsIn([{ id: 'links' }]), ['links']);
+  for (const id of ['drop', 'chain', 'value', 'links', 'form', 'hand', 'bag', 'move', 'goal', 'money']) assert.ok(TERM_BY_ID[id].basic, id);
+  const lay = layoutKeyBoxes(['fam_leap', 'fairy', 'threat', 'cut'], [{ x: 10, y: 40, w: 100, h: 116 }]);
+  assert.equal(lay.list.length, 2);
+  // 다른 카드를 덮어야 하면 덮는 넓이가 적은 쪽으로
+  const card = { x: 180, y: 40, w: 100, h: 116 };
+  const right = layoutKeyBoxes(['fam_leap'], [card], { others: [{ x: 290, y: 0, w: 100, h: 270 }] });
+  assert.ok(right.x < card.x, '오른쪽 카드를 덮지 않게 왼쪽으로');
+  setCanvasFactory(null);
 });

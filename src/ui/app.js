@@ -279,7 +279,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       const tipText = tip ? tip.lines.map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null;
       const ids = termsIn([...(keys || []), tipText]).filter((id) => !(tip && tip.term === id));
       const card = h.anchor || { x: h.x, y: h.y, w: h.w, h: h.h };
-      app.keyBoxes = drawKeyBoxes(ctx, ids, tipRect ? [card, tipRect] : [card], { hot });
+      // 덮지 않으면 좋은 것: 화면의 다른 카드 · 단추 · 칸(가리킨 것과 화면을 넓게 차지하는 판넬은 빼고)
+      const others = ui.regions.filter((r) => r !== h && r.w * r.h < (W * H) / 4 && !(r.x >= card.x && r.y >= card.y && r.x + r.w <= card.x + card.w && r.y + r.h <= card.y + card.h));
+      app.keyBoxes = drawKeyBoxes(ctx, ids, tipRect ? [card, tipRect] : [card], { hot, others });
     } else if (span) {
       // 카드 밖의 글(수업 할 일 줄 등): 가리킨 낱말 하나만
       app.keyBoxes = drawKeyBoxes(ctx, [span.id], [{ x: span.x, y: span.y, w: span.w, h: span.h }], { hot });

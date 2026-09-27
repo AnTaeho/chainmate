@@ -22,7 +22,7 @@ globalThis.document = dom.document;
 globalThis.window = dom.window;
 const { boot } = await import('../src/main.js');
 const lessonMod = await import('../src/ui/lessons.js');
-const { termsIn } = await import('../src/ui/glossary.js');
+const { termsIn, TERM_BY_ID, KEY_MAX } = await import('../src/ui/glossary.js');
 
 const errors = [];
 const apps = [];
@@ -74,8 +74,9 @@ const pvSeen = { capture: 0, drop: 0, cut: 0, kb: 0, touch: 0 };
 const tipSeen = { incoming: 0, forced: 0, path: 0 };
 const newsSeen = { battles: 0, icons: 0 };
 const objTips = { step: 0, gate: 0, highway: 0, wall: 0, gem: 0 };
-// 낱말 상자: 카드를 가리키면 옆에 낱말 상자가 1개 이상, 카드 · 말풍선을 가리지 않고 화면 안에
-const keySeen = { shop: 0, pack: 0, draft: 0, overlap: 0, off: 0, touch: 0 };
+// 낱말 상자: 카드를 가리키면 옆에 낱말 상자가 1개 이상, 카드 · 말풍선을 가리지 않고 화면 안에.
+// 카드 하나에 둘까지(KEY_MAX), 기본 낱말(떨구기 · 사슬 · 값 · 배수 …)은 띄우지 않는다(docs/design-notes/voice.md)
+const keySeen = { shop: 0, pack: 0, draft: 0, overlap: 0, off: 0, touch: 0, many: 0, basic: 0 };
 const cross = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 function keyBoxesAt(id, kind) {
   if (keySeen[kind] >= 60 || !hover(id)) return;
@@ -84,7 +85,9 @@ function keyBoxesAt(id, kind) {
   const h = app.ui.hover, tip = h && h.tip ? h.tip() : null;
   const expect = termsIn([...(h && h.keys ? h.keys() : []), tip ? tip.lines.map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null]).length;
   if (boxes.length) keySeen[kind]++; else if (expect) { keySeen.none = (keySeen.none || 0) + 1; if (VERBOSE) console.log('상자 없음', id); }
+  if (boxes.length > KEY_MAX) keySeen.many++;
   for (const b of boxes) {
+    if (TERM_BY_ID[b.id].basic) { keySeen.basic++; if (VERBOSE) console.log('기본 낱말 상자', id, b.id); }
     if (cross(b, r)) keySeen.overlap++;
     if (b.x < 0 || b.y < 0 || b.x + b.w > 480 || b.y + b.h > 270) keySeen.off++;
   }
@@ -505,8 +508,8 @@ if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확�
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
-console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0}`);
-if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none) { console.log('낱말 상자를 보지 못했거나 카드를 가린다'); fail = true; }
+console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic}`);
+if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none || keySeen.many || keySeen.basic) { console.log('낱말 상자를 보지 못했거나, 카드를 가리거나, 둘을 넘거나, 기본 낱말을 띄웠다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }

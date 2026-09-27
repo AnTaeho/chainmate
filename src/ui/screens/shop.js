@@ -11,7 +11,7 @@ import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
 import { maximColumn, itemCard, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
-import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
+import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
 import { TACTIC_BY_ID, evolveTo } from '../../data/tactics.js';
 const ENG_NAME = (id) => engravingInfo(id).name;
@@ -81,7 +81,7 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
 }
 // 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
 const TIP_AT = { x: 196, y: 174 };
-export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, '주머니의 기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
+export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, '기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
   constructor(app) {
@@ -98,7 +98,7 @@ export class ShopScreen {
     const rises = familyRises(before, familyCounts(this.run));
     if (!rises.length) return;
     this.famFx = this.famFx || {};
-    for (const id of rises) { this.famFx[id] = this.app.time; this.app.toast(`${FAMILY_BY_ID[id].name} ${familyCounts(this.run)[id]}`, FAMILY_BY_ID[id].col); }
+    for (const id of rises) { this.famFx[id] = this.app.time; this.app.toast(`${setName(id)} ${familyCounts(this.run)[id]}`, FAMILY_BY_ID[id].col); }
     this.app.sfx('fanfare');
   }
   // 기보로 한 단계 자라면 빛 기둥, 각인을 새기면 반짝
@@ -247,7 +247,7 @@ export class ShopScreen {
       if (!p || !r) { this.menu = null; return; }
       const opts = [];
       if (!run.shop.promoted) for (const to of PROMOTE[p.t] || []) opts.push([`shop:promote:${to}`, `${josa(PIECE_NAME[to], '으로/로')} 승급 $${SHOP.promotePrice}`, run.money >= SHOP.promotePrice, () => this.act({ type: 'promote', pieceId: p.id, to }, 'promote')]);
-      if (!run.shop.removed) opts.push(['shop:remove', `버리기 $${SHOP.removePrice}`, run.money >= SHOP.removePrice && run.deck.length > SHOP.deckMin, () => this.act({ type: 'remove', pieceId: p.id }, 'discard')]);
+      if (!run.shop.removed) opts.push(['shop:remove', `빼기 $${SHOP.removePrice}`, run.money >= SHOP.removePrice && run.deck.length > SHOP.deckMin, () => this.act({ type: 'remove', pieceId: p.id }, 'discard')]);
       if (!opts.length) opts.push(['shop:none', '이번 상점에선 끝', false, null]);
       const w = 112, h = opts.length * 20 + 4;
       const x = Math.min(r.x, 340 - w), y = r.y - h - 2;

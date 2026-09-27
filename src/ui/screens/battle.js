@@ -1166,16 +1166,16 @@ export class BattleScreen {
     }
     // 수 · 바꾸기
     panel(ctx, LX, 180, LW, 28);
-    ui.region('pips:moves', LX, 180, LW, 13, { tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수 — 다 쓰면 대국이 끝난다') });
-    ui.region('pips:discards', LX, 193, LW, 15, { tip: () => tipLines('바꾸기', '손을 골라 버리고 주머니에서 새로 쥘 수 있는 횟수') });
+    ui.region('pips:moves', LX, 180, LW, 13, { tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다') });
+    ui.region('pips:discards', LX, 193, LW, 15, { tip: () => tipLines('버리기', '손을 골라 버리고 새로 뽑을 수 있는 횟수') });
     text(ctx, '수', LX + 6, 181, PAL.dim);
     // 구슬은 두 이름표 중 긴 것 뒤에서(영어 「Redraw」가 붉은 구슬과 붙지 않게), 칸이 모자라면 간격을 줄인다
-    const pipX = Math.max(52, Math.max(measure('수'), measure('바꾸기')) + 12);
+    const pipX = Math.max(52, Math.max(measure('수'), measure('버리기')) + 12);
     const pipN = Math.max(v.moves, v.discards, 1);
     const pipStep = Math.min(14, Math.floor((LW - 4 - pipX) / pipN));
     const pipW = Math.max(4, pipStep - 4);
     for (let i = 0; i < v.moves; i++) rect(ctx, LX + pipX + i * pipStep, 184, pipW, 7, i < v.movesLeft ? PAL.gold : PAL.frame);
-    text(ctx, '바꾸기', LX + 6, 194, PAL.dim);
+    text(ctx, '버리기', LX + 6, 194, PAL.dim);
     for (let i = 0; i < v.discards; i++) rect(ctx, LX + pipX + i * pipStep, 197, pipW, 7, i < v.discardsLeft ? PAL.red : PAL.frame);
     if (run) {
       panel(ctx, LX, 212, LW, 22);
@@ -1197,7 +1197,7 @@ export class BattleScreen {
       fragmentStrip(ctx, ui, run, RX + RW - 18, 8, { align: 'right' });
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
       maximColumn(ctx, ui, run, RX, 22, RW, 164, { offUids: off });
-      familyStrip(ctx, ui, run, RX, 188, RW, { time: this.app.time, max: 3 });
+      familyStrip(ctx, ui, run, RX, 188, RW, { time: this.app.time, max: 3, glyph: false });
     }
     this.drawPreviewPanel(ctx);
     // 손
@@ -1205,7 +1205,7 @@ export class BattleScreen {
     this.drawTactics(ctx, ui);
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    button(ctx, ui, 'btn:discard', RX + RW - 62, 203, 62, 16, '바꾸기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
+    button(ctx, ui, 'btn:discard', RX + RW - 62, 203, 62, 16, '버리기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
     const n = Math.max(1, v.hand.length);
     const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
     const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;

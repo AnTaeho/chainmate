@@ -50,7 +50,9 @@ export function textImage(s, col, bold = false) {
   return hit;
 }
 
-// 줄 바꿈: 너비 w 안에서 낱말(띄어쓰기) 단위로, 낱말이 너무 길면 글자 단위로
+// 줄 바꿈: 너비 w 안에서 낱말(띄어쓰기) 단위로, 낱말이 너무 길면 글자 단위로.
+// 효과를 잇는 「 · 」가 줄 끝 · 줄 머리에 걸리면 뺀다(줄 바꿈이 곧 나눔이다)
+const noDot = (l) => (l.endsWith(' ·') ? l.slice(0, -2) : l);
 export function wrap(s, w, bold = false) {
   s = L(String(s));
   const out = [];
@@ -59,7 +61,8 @@ export function wrap(s, w, bold = false) {
     for (const word of para.split(' ')) {
       const tryLine = line ? `${line} ${word}` : word;
       if (textWidth(tryLine, bold) <= w) { line = tryLine; continue; }
-      if (line) out.push(line);
+      if (line) out.push(noDot(line));
+      if (word === '·') { line = ''; continue; }
       if (textWidth(word, bold) <= w) { line = word; continue; }
       line = '';
       for (const ch of word) {
@@ -73,7 +76,7 @@ export function wrap(s, w, bold = false) {
     if (n >= 2 && out[n - 1].length <= 2 && !out[n - 1].includes(' ') && out[n - 2].includes(' ')) {
       const prev = out[n - 2], cut = prev.lastIndexOf(' ');
       const moved = `${prev.slice(cut + 1)} ${out[n - 1]}`;
-      if (textWidth(moved, bold) <= w) { out[n - 2] = prev.slice(0, cut); out[n - 1] = moved; }
+      if (textWidth(moved, bold) <= w) { out[n - 2] = noDot(prev.slice(0, cut)); out[n - 1] = moved; }
     }
   }
   return out;
