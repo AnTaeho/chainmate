@@ -37,6 +37,7 @@ export const EN = {
   '떨구고 먹는다': 'Drop and Take', '이을수록 곱해진다': 'Links Multiply', '노리는 놈부터': 'Guards First',
   '지금': 'Now', '먹으면': 'Take', '되잡힌다': 'Recaptured', '사슬이 끝난다': 'Chain ends',
   '이번 수 뒤에 들어온다': 'Arrives after this move', '두 수 뒤에 들어온다': 'Arrives in two moves',
+  '노림수': 'Threat', '이 적을 먹어야 사슬이 이어진다': 'Take this one to keep the chain', '지금 모습으로는 닿지 않는다': 'Out of reach in this form',
   '한국어': '한국어', 'English': 'English', '없음': 'None',
   // 동사
   '떨구기': 'Drop', '먹기': 'Capture', '갈아입기': 'Change', '끊김': 'Break', '응수': 'Reply', '증원': 'Reinforcement',

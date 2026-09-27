@@ -46,6 +46,12 @@ function dotLine(ctx, x0, y0, x1, y1, col, step = 3) {
   ctx.fillStyle = col;
   for (let i = 0; i <= n; i += step) ctx.fillRect(Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), 1, 1);
 }
+// 끊어진 굵은 선(노림수, 2px): off가 늘면 마디가 끝(x1, y1) 쪽으로 흐른다
+function dashLine(ctx, x0, y0, x1, y1, col, off = 0) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  ctx.fillStyle = col;
+  for (let i = 0; i <= n; i++) if ((((i - off) % 6) + 6) % 6 < 4) ctx.fillRect(Math.round(x0 + ((x1 - x0) * i) / n) - 1, Math.round(y0 + ((y1 - y0) * i) / n) - 1, 2, 2);
+}
 // 증원 그림자의 떨어질 표(▼ 5×3)
 function dropMark(ctx, x, y, col) {
   rect(ctx, x, y, 5, 1, col); rect(ctx, x + 1, y + 1, 3, 1, col); rect(ctx, x + 2, y + 2, 1, 1, col);
@@ -729,7 +735,8 @@ export class BattleScreen {
       }
       const id = `sq:${sq}`;
       const g = ghosts.get(sq);
-      const tipOpt = g ? sqTip(x, y, `증원 · ${PIECE_NAME[g.t]}`, g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다') : null;
+      let tipOpt = g ? sqTip(x, y, `증원 · ${PIECE_NAME[g.t]}`, g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다') : null;
+      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tipOpt = sqTip(x, y, '노림수', t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다');
       ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
         const pulse = 0.22 + 0.12 * Math.sin(time * 5);
@@ -802,6 +809,19 @@ export class BattleScreen {
     if (v.mover) {
       const m = moverXY(v.mover.form, v.mover.from, v.mover.to, v.mover.p);
       sprite(ctx, v.mover.form, 'w', m.x + 6, m.y + 3);
+    }
+    // 노림수: 내 기물을 노리는 적에서 붉은 끊어진 선이 내 기물 쪽으로 흐른다(먹을 수 없는 적은 어두운 붉은색).
+    // 붙어 있는 적이 많아 기물 위에 긋되, 양 끝은 기물 몸을 비켜 칸 가장자리 쪽만
+    if (forced && !v.cut) {
+      const c = this.center(v.chain.sq);
+      const off = this.app.reducedMotion ? 0 : Math.floor(time * 12);
+      for (const s of forced) {
+        if (isHidden(b, s)) continue;
+        const a = this.center(s);
+        const d = Math.hypot(c.x - a.x, c.y - a.y), k = 10 / d;
+        if (d < 24) continue;
+        dashLine(ctx, a.x + (c.x - a.x) * k, a.y + (c.y - a.y) * k, c.x - (c.x - a.x) * k, c.y - (c.y - a.y) * k, t.kind === 'capture' && tset.has(s) ? PAL.red : PAL.redDk, off);
+      }
     }
     this.drawPreview(ctx, ui);
     // 끊김: 노린 적에서 붉은 선 · 금
