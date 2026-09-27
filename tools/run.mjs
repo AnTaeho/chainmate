@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { createRun, B, targetFor, REWARD, CHEST } from '../src/sim/run.js';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
-import { playRun, SMART } from './shopbot.mjs';
+import { playRun, SMART, DRAFT } from './shopbot.mjs';
+import { JOSEKIS } from '../src/data/josekis.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { MASTER_BY_ID } from '../src/data/masters.js';
 import { LEGENDS, LEGEND_BY_ID } from '../src/data/legends.js';
@@ -31,14 +32,16 @@ function parseArgs(argv) {
     else if (k === '--tune') a.tune = JSON.parse(argv[++i]);
     else if (k === '--opening') a.opening = argv[++i];                  // 오프닝(판 밖 해금)
     else if (k === '--dan') a.dan = Number(argv[++i]);                   // 단(난이도) 0~8
-    else if (k === '--give') a.give = argv[++i].split(',');              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
+    else if (k === '--give') a.give = argv[++i].split(',');
+    else if (k === '--nodraft') a.nodraft = true;                          // 정석 드래프트 없이(깊이 E 이전)
+    else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
   }
   return a;
 }
 
-function one(seed, policy, opening = undefined, dan = 0, give = null) {
+function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = false) {
   const t0 = performance.now();
-  const run = createRun({ seed, opening, dan });
+  const run = createRun({ seed, opening, dan, draft: !nodraft });
   for (const id of give || []) run.maxims.push({ uid: run.nextUid++, id, data: {}, edition: null, paid: 0 });
   const { bought, editions, legendAt, seen } = playRun(run, policy);
   return {
@@ -47,14 +50,15 @@ function one(seed, policy, opening = undefined, dan = 0, give = null) {
     fragments: run.fragments, legends: run.legends, legendAt, editions, seen,
     deck: run.deck.map((p) => p.t + (p.eng ? ':' + p.eng.id : '')).sort().join(' '),
     charts: Object.values(run.charts).reduce((a, x) => a + x, 0), deckSize: run.deck.length,
-    fam: familyCounts(run), fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],
+    fam: familyCounts(run), josekis: run.josekis || [], fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],
     best: Math.max(0, ...run.log.filter((x) => !x.skipped).map((x) => x.best || 0)),
     ms: performance.now() - t0,
   };
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki } = workerData;
+  if (joseki) DRAFT.pick = joseki;
   if (tune && tune.overflow) REWARD.overflow = tune.overflow;
   if (tune && tune.chest) CHEST.counts = tune.chest;
   if (tune && tune.chestItems) CHEST.items = tune.chestItems;
@@ -67,7 +71,7 @@ if (!isMainThread) {
   if (b) b.forEach((x, i) => { B[i] = x; });
   if (shop) Object.assign(SHOP, shop);
   const out = [];
-  for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give));
+  for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft));
   parentPort.postMessage(out);
 } else {
   const args = parseArgs(process.argv.slice(2));
@@ -75,7 +79,7 @@ if (!isMainThread) {
   const t0 = performance.now();
   const chunks = Array.from({ length: args.workers }, (_, w) => seeds.filter((_, i) => i % args.workers === w));
   const results = (await Promise.all(chunks.filter((c) => c.length).map((c) => new Promise((res, rej) => {
-    const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { seeds: c, policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give } });
+    const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { seeds: c, policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki } });
     wk.on('message', res);
     wk.on('error', rej);
   })))).flat();
@@ -192,6 +196,11 @@ function report(R, args, wall) {
   const anyF = R.filter((r) => r.fairies.length);
   console.log(`이형(판 끝 주머니): 하나라도 가진 판 ${pc(anyF.length / n)} 승률 ${pc(anyF.filter((r) => r.won).length / anyF.length)} · 없는 판 승률 ${pc(R.filter((r) => !r.fairies.length && r.won).length / (n - anyF.length))} · 판 최고 한 수 p50 이형 ${pctile(anyF.map((r) => r.best), 0.5)} / 없음 ${pctile(R.filter((r) => !r.fairies.length).map((r) => r.best), 0.5)}`);
   table(['이형', '가진 판', '그 판 승률'], fr);
+  if (!args.nodraft) {
+    const jr = JOSEKIS.map((j) => { const has = R.filter((r) => r.josekis.includes(j.id)); const first = R.filter((r) => r.josekis[0] === j.id); return [j.name, j.tier, pc(has.length / n), pc(has.filter((r) => r.won).length / has.length), String(first.length), pc(first.filter((r) => r.won).length / first.length)]; });
+    console.log('정석: 고른 판 · 그 판 승률 · 첫 정석으로 고른 판 · 그 판 승률');
+    table(['정석', '등급', '고른 판', '승률', '첫 정석', '승률'], jr);
+  }
 
   // 격언
   if (args.policy !== 'none') {

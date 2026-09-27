@@ -112,6 +112,8 @@ export class LessonScreen extends BattleScreen {
     // 이어 둘 판이 있으면(설정에서 다시 본 경우) 타이틀로. 없으면 곧바로 1관 연습 대국.
     if (app.hasSave()) return app.toTitle();
     app.newRun();
+    // 정석을 고르면 곧바로 1관 연습 대국으로
+    if (app.run && app.run.phase === 'draft') app.autoPlay = true;
     if (app.run && app.run.phase === 'select') { const ev = app.cmd({ type: 'play' }); app.go('battle', { events: ev }); }
   }
 

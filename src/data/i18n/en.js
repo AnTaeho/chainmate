@@ -4,6 +4,23 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명국 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 export const EN = {
   // ── 화면
+  // 정석(깊이 E)
+  '정석': 'Joseki', '은': 'Silver', '무지개': 'Rainbow', '주머니가 바뀌었다': 'Your bag changed',
+  '기사 서약': "Knight's Oath", '주머니의 나이트 둘이 야간기사가 된다': 'Two knights in your bag become nightriders',
+  '성벽 쌓기': 'Rampart', '주머니의 룩 하나가 재상이 된다': 'A rook in your bag becomes a chancellor',
+  '주교관': 'Mitre', '주머니의 비숍 하나가 대주교가 된다': 'A bishop in your bag becomes an archbishop',
+  '활터': 'Archery', '주머니의 폰 둘이 궁수가 된다': 'Two pawns in your bag become archers',
+  '고속도로': 'Highway', 'b · g 줄에서는 어떤 모습이든 룩처럼 세로로도 미끄러져 먹는다': 'On the b and g files, any form also slides and takes vertically like a rook',
+  '발판': 'Stepping Stones', '대국마다 금빛 발판 셋, 발판 위의 적을 먹으면 연쇄 ×2': 'Three golden stones each match; taking a foe on one: links ×2',
+  '흡수의 비전': 'Art of Absorption', '대국마다 첫 사슬은 먹어도 모습이 바뀌지 않고 먹은 행마가 더해진다': "Each match's first chain keeps its form and adds the moves it takes",
+  '판의 문': 'Gates', '판에 문 두 칸 — 문 위의 적을 먹으면 다른 문으로 나와 사슬을 잇는다': 'Two gates on the board: take a foe on one and step out of the other',
+  '순교의 맹세': "Martyr's Vow", '끊기는 순간 둘레 여덟 칸의 적(킹 빼고)을 모두 먹은 것으로 친다': 'When broken, every foe around (not kings) counts as taken',
+  '결사': 'Blood Pact', '대국마다 첫 사슬 연쇄 ×3 — 그 기물은 판에서 사라진다(주머니 여섯은 남긴다)': "Each match's first chain: links ×3, and that piece leaves the run (bag keeps six)",
+  '하이랜더': 'Highlander', '주머니에 같은 종류가 둘 이상 없으면 목표가 절반': 'If no kind repeats in your bag, targets are halved',
+  '왕좌': 'Throne', '폰으로 떨군 사슬이 승급하면 그 폰은 주머니에 퀸으로 남는다': 'A pawn that drops and promotes stays a queen in your bag',
+  '오목': 'Five in a Row', '한 사슬이 한 줄에 다섯 칸을 밟으면 그 대국을 곧바로 이긴다': 'A chain landing on five squares of one line wins the match at once',
+  '복제': 'Replica', '가장 많이 모은 가족의 문턱이 하나씩 낮아진다': 'Your largest family needs one less for each threshold',
+  '문': 'Gate', '흡수': 'Absorbed', '다섯 칸': 'Five in a Row',
   '체인메이트': 'CHAINMATE', '잡으면 그것이 된다': 'Take it, be it', '적을 삼켜, 적이 되어라': 'Devour them. Become them.',
   '이어 하기': 'Continue', '새 판': 'New Run', '오늘의 대국': "Today's Match", '도감': 'Almanac', '기록': 'Records', '설정': 'Settings',
   '멈춤': 'Paused', '계속': 'Continue', '타이틀로': 'To Title', '타이틀': 'Title', '돌아가기': 'Back', '다시': 'Again', '계속 두기': 'Play On',
@@ -201,4 +218,6 @@ export const TEMPLATES = [
   [/^(.+) (\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}`],
   // 가족 이름 + 수(「도약 3」)
   [/^(도약|직선|대각|변신|희생|왕관|행진|사냥) (\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}`],
+  [/^정석 · (\d+)관$/, (m) => `Joseki · Hall ${m[1]}`],
+  [/^\+(폰|나이트|비숍|룩|퀸|대주교|재상|아마존|낙타|야간기사|메뚜기|포|궁수|유령)$/, (m, tr) => `+${tr(m[1])}`],
 ];

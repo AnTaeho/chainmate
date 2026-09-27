@@ -4,6 +4,7 @@ import { rect, text, box, frame } from '../render/gfx.js';
 import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf } from '../data/families.js';
 import { tipLines } from './parts.js';
 import { L } from './lang.js';
+import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { wrap } from '../render/text.js';
 
 // 5×5 문양
@@ -67,4 +68,17 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
 // 가족 단계가 올랐나(이전 수 → 지금 수). 오른 가족 id 목록
 export function familyRises(before, after) {
   return FAMILIES.filter((f) => levelOf(after[f.id]) > levelOf(before[f.id] || 0)).map((f) => f.id);
+}
+
+// 가진 정석 작은 표(등급 빛 테 안에 첫 가족 문양). 올리면 이름 · 글
+export function josekiBadges(ctx, ui, run, x, y) {
+  (run.josekis || []).forEach((id, k) => {
+    const j = JOSEKI_BY_ID[id];
+    const bx = x + k * 12;
+    ui.region(`joseki:${id}`, bx, y, 11, 11, { tip: () => tipLines(j.name, j.text) });
+    box(ctx, bx, y, 11, 11, '#132019', TIER_COL[j.tier]);
+    if (j.families[0]) familyGlyph(ctx, j.families[0], bx + 3, y + 3, TIER_COL[j.tier]);
+    else rect(ctx, bx + 4, y + 4, 3, 3, TIER_COL[j.tier]);
+  });
+  return (run.josekis || []).length * 12;
 }

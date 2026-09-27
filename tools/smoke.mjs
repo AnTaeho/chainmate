@@ -244,6 +244,7 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
   while (steps++ < 4000) {
     const name = screen();
     if (name === 'result') break;
+    if (name === 'draft') { pump(40); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
     if (name === 'select' && !tipSeen.path) { hover('select:path'); if (hoverTip()) tipSeen.path++; }
     if (name === 'select') { if (app.run.blind < 2 && rnd() < 0.15) click('select:skip'); else click('select:play'); pump(2); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
@@ -283,6 +284,7 @@ function lessons() {
       click(`sq:${list[0]}`);
     }
     for (let n = 0; n < 600 && app.screen === p; n++) pump(1);
+    if (screen() === 'draft') { pump(40); click('draft:0'); pump(60); }
     if (p.hold.b.score !== p.L.target || p.hold.b.status !== 'won') throw new Error(`lesson ${i} not won`);
     lessonLog.push(`${i + 1} ${p.L.title} ${p.hold.b.score}`);
   }
@@ -327,6 +329,7 @@ if (app.run.phase === 'won') {
   endless = true;
   for (let steps = 0; steps < 3000 && screen() !== 'result'; steps++) {
     const name = screen();
+    if (name === 'draft') { pump(40); click('draft:0'); pump(60); continue; }
     if (name === 'select') { click('select:play'); pump(2); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
     if (name === 'reward' || name === 'chest' || name === 'legend') { click('next'); pump(1); if (screen() === name) click('next'); continue; }

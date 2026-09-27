@@ -10,7 +10,7 @@ import { button } from '../ui.js';
 import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
-import { familyStrip, familyRises } from '../parts-depth.js';
+import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
 
@@ -158,6 +158,7 @@ export class ShopScreen {
     familyStrip(ctx, ui, run, 12, 254, 330, { time: app.time, fx: this.famFx, max: 6 });
     // 오른쪽: 격언
     text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
+    josekiBadges(ctx, ui, run, RX + 56, 33);
     fragmentStrip(ctx, ui, run, RX + RW, 32, { align: 'right' });
     const col = maximColumn(ctx, ui, run, RX, 46, RW, 150, {
       onClick: (i) => { this.menu = this.menu && this.menu.kind === 'maxim' && this.menu.index === i ? null : { kind: 'maxim', index: i }; this.target = null; },

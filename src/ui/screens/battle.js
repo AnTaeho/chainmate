@@ -10,7 +10,7 @@ import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES } from '../../data/pieces.js';
 import { FAMILY_BY_ID } from '../../data/families.js';
-import { familyStrip } from '../parts-depth.js';
+import { familyStrip, josekiBadges } from '../parts-depth.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
@@ -396,6 +396,12 @@ export class BattleScreen {
         // 가족(깊이 B): 도약 뒤 노림 무시 · 직선 꿰뚫기 · 변신 한 번 더
         case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, FAMILY_BY_ID.leap.col, 10); this.word('뛰어넘었다', FAMILY_BY_ID.leap.col); } }); break;
         case 'pierce': add(0.12, { begin: () => { const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b'); this.flash(e.sq, FAMILY_BY_ID.line.col); this.word('꿰뚫었다', FAMILY_BY_ID.line.col); this.snd('capture', 2); } }); break;
+        case 'absorb': add(0.15, { begin: () => { if (v.chain) v.chain.absorbed = e.forms.slice(1); this.sparkle(e.sq, FAMILY_BY_ID.change.col, 12); this.word(`+${PIECE_NAME[e.piece]}`, FAMILY_BY_ID.change.col); this.snd('transform'); } }); break;
+        case 'gate': add(0.22, {
+          begin: () => { this.sparkle(e.from, '#6fd1bf', 10); this.snd('transform'); },
+          done: () => { const c = v.chain; if (v.board[e.from]) { v.board[e.to] = v.board[e.from]; v.board[e.from] = null; } if (c) { c.sq = e.to; c.path.push(e.to); } this.sparkle(e.to, '#6fd1bf', 14); },
+        }); break;
+        case 'gomoku': add(0.4, { begin: () => { this.word('오목', PAL.gold, 1.6, 3); this.snd('fanfare'); this.shake(2, 0.2); } }); break;
         case 'union': add(0.3, { begin: () => { this.sparkle(e.sq, FAMILY_BY_ID.change.col, 16); this.word('모든 모습으로', FAMILY_BY_ID.change.col, 1.2, 1); this.snd('transform'); this.hitstop(0.15); } }); break;
         case 'cut':
           add(0.15, { begin: () => { v.cut = { sq: e.sq, attackers: e.attackers, p: 0 }; if (v.chain) v.chain.cut = true; this.snd('cut'); this.hitstop(0.12); this.shake(2, 0.15); } });
@@ -746,6 +752,7 @@ export class BattleScreen {
     const ghosts = new Map();
     visibleIncoming(b).forEach((wave, k) => { for (const r of wave || []) if (!v.board[r.sq] && !isHidden(b, r.sq) && !ghosts.has(r.sq)) ghosts.set(r.sq, { t: r.t, k }); });
     ctx.drawImage(boardCanvas(S), BX, BY);
+    this.drawBoardThings(ctx, b.rules, time);
     for (let sq = 0; sq < 64; sq++) {
       const { x, y } = sqXY(sq);
       const r = sq >> 3;
@@ -799,7 +806,10 @@ export class BattleScreen {
       rect(ctx, Math.round(x) - 1, Math.round(y) - 1, 2, 2, PAL.white);
     }
     // 지금 모습의 행마선: 다음 먹기를 기다릴 때 갈 수 있는 칸을 흐리게(막히면 끊긴다)
-    if (v.chain && !this.busy && !v.chain.awaiting && !v.cut && b.status === 'chain') this.drawReach(ctx, v.chain.form, v.chain.sq);
+    if (v.chain && !this.busy && !v.chain.awaiting && !v.cut && b.status === 'chain') {
+      this.drawReach(ctx, v.chain.form, v.chain.sq);
+      for (const f of v.chain.absorbed || []) this.drawReach(ctx, f, v.chain.sq);
+    }
     // 기물
     for (let sq = 0; sq < 64; sq++) {
       const c = v.board[sq];
@@ -870,6 +880,36 @@ export class BattleScreen {
       const { x, y } = sqXY(v.chain.sq);
       if (Math.floor(time * 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
     }
+  }
+
+  // 판 위 사물(정석): 고속도로 줄 · 금빛 발판 · 문
+  drawBoardThings(ctx, rules, time) {
+    if (!rules) return;
+    for (const f of rules.highways || []) {
+      const x = BX + f * S + Math.floor(S / 2);
+      ctx.globalAlpha = 0.35;
+      for (let y = BY + 2; y < BY + S * 8 - 2; y += 4) { rect(ctx, x - 4, y, 1, 2, PAL.goldDk); rect(ctx, x + 3, y, 1, 2, PAL.goldDk); }
+      ctx.globalAlpha = 1;
+    }
+    for (const sq of rules.steps || []) {
+      const { x, y } = sqXY(sq);
+      ctx.globalAlpha = 0.45; rect(ctx, x + 3, y + 3, S - 6, S - 6, PAL.gold); ctx.globalAlpha = 1;
+      frame(ctx, x + 3, y + 3, S - 6, S - 6, PAL.goldDk);
+      for (const [i, j] of [[4, 4], [S - 5, 4], [4, S - 5], [S - 5, S - 5]]) rect(ctx, x + i, y + j, 1, 1, PAL.goldHi);
+    }
+    (rules.gates || []).forEach((sq, k) => {
+      const { x, y } = sqXY(sq);
+      const col = '#6fd1bf';
+      // 아치 모양 문(두 문이 번갈아 빛난다)
+      const on = 0.55 + 0.35 * Math.sin(time * 3 + k * Math.PI);
+      ctx.globalAlpha = on;
+      for (let j = 0; j < 20; j++) {
+        const w = j < 6 ? Math.round(Math.sqrt(36 - (6 - j) * (6 - j)) * 1.4) + 4 : 12;
+        rect(ctx, x + 14 - w, y + 5 + j, 1, 1, col); rect(ctx, x + 13 + w, y + 5 + j, 1, 1, col);
+      }
+      rect(ctx, x + 2, y + 24, S - 4, 1, col);
+      ctx.globalAlpha = 1;
+    });
   }
 
   // 판 위 기물 하나. pieceSink가 있으면 그리지 않고 모은다(타이틀이 눕힌 판 위에 세워 그린다)
@@ -1036,6 +1076,7 @@ export class BattleScreen {
     pauseButton(ctx, ui, app, RX + RW - 12, 6);
     if (run) {
       text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
+      josekiBadges(ctx, ui, run, RX + 56, 9);
       fragmentStrip(ctx, ui, run, RX + RW - 18, 8, { align: 'right' });
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
       maximColumn(ctx, ui, run, RX, 22, RW, 164, { offUids: off });

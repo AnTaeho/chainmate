@@ -124,6 +124,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const ph = app.run ? app.run.phase : null;
     if (!ph) return app.go('title');
     if (ph === 'select') return app.go('select');
+    if (ph === 'draft') return app.go('draft');
     if (ph === 'battle') return app.go('battle');
     if (ph === 'shop') return app.go('shop');
     if (ph === 'pack') return app.go('pack');

@@ -8,7 +8,7 @@
 //   smart도 조각이 진열에 보이면 적립을 다 남기고도 살 수 있을 때 산다(운 좋은 판). 꾸러미에서는 나머지가 짜임을 올리지 못할 때만 조각.
 import { createRng, fork, int, next } from '../src/sim/rng.js';
 import { createBattle } from '../src/sim/battle.js';
-import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell } from '../src/sim/run.js';
+import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult } from '../src/sim/run.js';
 import { EDITION_BY_ID } from '../src/data/editions.js';
 import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
@@ -60,7 +60,7 @@ function act(run, cmd) {
 
 // ── 짜임 재기
 function buildOf(run) {
-  return { deck: clone(run.deck), maxims: clone(run.maxims), charts: { ...run.charts } };
+  return { deck: clone(run.deck), maxims: clone(run.maxims), charts: { ...run.charts }, josekis: [...(run.josekis || [])] };
 }
 function nextAnte(run) {
   return run.phase === 'shop' && run.blind === 2 ? run.ante + 1 : run.ante;
@@ -136,7 +136,7 @@ function makeCtx(run) {
   return {
     seeds, ante,
     score(build) {
-      const key = JSON.stringify([build.deck.map((p) => p.t + (p.eng ? p.eng.id : '')).sort(), build.maxims.map((m) => m.id + JSON.stringify(m.data || {})), build.charts]);
+      const key = JSON.stringify([build.deck.map((p) => p.t + (p.eng ? p.eng.id : '') + (p.soul || '')).sort(), build.maxims.map((m) => m.id + JSON.stringify(m.data || {})), build.charts, build.josekis || []]);
       if (!cache.has(key)) {
         // 다음이 명인 대국이면 그 명인을 걸고도 잰다. finalFrom관부터는 8관 「대가」(기보가 안 듣는다)도 미리 섞는다.
         const parts = [evalBuild(run, build, seeds, ante)];
@@ -328,6 +328,24 @@ function randomShop(run, r) {
   if (run.phase === 'shop') act(run, { type: 'leave' });
 }
 
+// 정석 고르기: 셋을 저마다 골라 본 판의 짜임을 그려 보고(목표 배율은 나눠서) 가장 좋은 것. random은 아무거나, none은 첫째.
+export const DRAFT = { pick: null }; // 하네스 실험: 정석 id를 정해 두면 보이면 그것을 고른다
+function pickJoseki(run, policy, r) {
+  const opts = run.draft.options;
+  if (DRAFT.pick && opts.includes(DRAFT.pick)) return opts.indexOf(DRAFT.pick);
+  if (policy === 'random') return int(r, opts.length);
+  if (policy === 'none') return 0;
+  const ctx = makeCtx({ ...run, phase: 'select' });
+  let best = 0, bs = -Infinity;
+  opts.forEach((id, i) => {
+    const copy = clone(run);
+    applyRun(copy, { type: 'joseki', index: i });
+    const s = ctx.score(buildOf(copy)) / josekiTargetMult(copy) * (1 + famBonus(buildOf(run), buildOf(copy)));
+    if (s > bs) { bs = s; best = i; }
+  });
+  return best;
+}
+
 // hunt의 줄 평가: 황금 기물을 먹는 줄은 점수 ×3, 가진 첫 조각의 재현이 되는 줄은 ×5(둘 다 목표를 넘길 만큼이면 덤이 이긴다)
 function huntRank(run) {
   const open = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && f.first && !f.feat; });
@@ -354,6 +372,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'lost') break;
     if (stopAt && stopAt(run)) break;
     if (run.phase === 'won') { if (endlessUntil > run.ante) act(run, { type: 'endless' }); else break; }
+    if (run.phase === 'draft') { act(run, { type: 'joseki', index: pickJoseki(run, policy, r) }); continue; }
     if (run.phase === 'select') {
       if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) act(run, { type: 'skip' });
       else act(run, { type: 'play' });
