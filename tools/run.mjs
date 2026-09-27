@@ -19,7 +19,7 @@ import { familyCounts, FAMILIES } from '../src/data/families.js';
 import { PIECES, FAIRIES } from '../src/data/pieces.js';
 
 function parseArgs(argv) {
-  const a = { runs: 200, policy: 'smart', seed: 1, workers: 10, k: SMART.K };
+  const a = { runs: 200, policy: 'smart', seed: 1, workers: 10, k: SMART.K, limit: 120 };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--runs') a.runs = Number(argv[++i]);
@@ -33,7 +33,9 @@ function parseArgs(argv) {
     else if (k === '--opening') a.opening = argv[++i];                  // 오프닝(판 밖 해금)
     else if (k === '--dan') a.dan = Number(argv[++i]);                   // 단(난이도) 0~8
     else if (k === '--give') a.give = argv[++i].split(',');
-    else if (k === '--nodraft') a.nodraft = true;                          // 정석 드래프트 없이(깊이 E 이전)
+    else if (k === '--nodraft') a.nodraft = true;
+    else if (k === '--limit') a.limit = Number(argv[++i]);             // 판 하나 시간 상한(초)
+    else if (k === '--quiet') a.quiet = true;                          // 정석 드래프트 없이(깊이 E 이전)
     else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
   }
   return a;
@@ -77,12 +79,26 @@ if (!isMainThread) {
   const args = parseArgs(process.argv.slice(2));
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + i * 7919) >>> 0);
   const t0 = performance.now();
-  const chunks = Array.from({ length: args.workers }, (_, w) => seeds.filter((_, i) => i % args.workers === w));
-  const results = (await Promise.all(chunks.filter((c) => c.length).map((c) => new Promise((res, rej) => {
-    const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { seeds: c, policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki } });
-    wk.on('message', res);
-    wk.on('error', rej);
-  })))).flat();
+  // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki };
+  const results = [], timeouts = [];
+  let next = 0, done = 0;
+  await new Promise((finish) => {
+    const launch = () => {
+      if (next >= seeds.length) { if (done === seeds.length) finish(); return; }
+      const seed = seeds[next++];
+      const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { ...data, seeds: [seed] } });
+      const timer = setTimeout(() => { timeouts.push(seed); wk.terminate(); }, args.limit * 1000);
+      let settled = false;
+      const end = () => { if (settled) return; settled = true; clearTimeout(timer); done++; if (!args.quiet) process.stderr.write(`\r판 ${done}/${seeds.length} · 시간 초과 ${timeouts.length}   `); launch(); };
+      wk.on('message', (m) => { results.push(...m); });
+      wk.on('error', (e) => { console.error(`seed ${seed} 오류`, e); end(); });
+      wk.on('exit', end);
+    };
+    for (let i = 0; i < Math.min(args.workers, seeds.length); i++) launch();
+  });
+  process.stderr.write('\n');
+  args.timeouts = timeouts;
   report(results, args, performance.now() - t0);
 }
 
@@ -102,6 +118,7 @@ function report(R, args, wall) {
 
   const wins = R.filter((r) => r.won).length;
   console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
+  if (args.timeouts && args.timeouts.length) console.log(`시간 초과 ${args.timeouts.length}판(${args.limit}초, 표에서 뺐다): seed ${args.timeouts.join(' ')}`);
   console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
 
   // 관별

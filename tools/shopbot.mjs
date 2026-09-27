@@ -19,18 +19,20 @@ import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
 import { evolveTo } from '../src/data/tactics.js';
 
 export const SMART = {
-  K: 8,            // 짜임 하나를 재는 대국판 수
+  K: 6,            // 짜임 하나를 재는 대국판 수(깊이 층 뒤 8 → 6: 판 하나가 2분 안에 끝나게)
   minGainPerCoin: 0.012, // 1원당 이만큼(비율) 오르지 않으면 안 산다
   reserve: (ante) => (ante <= 1 ? 0 : ante <= 6 ? 15 : 0), // 적립용으로 남길 돈(득이 크면 넘는다)
   bigGain: 0.35,   // 이만큼 오르면 reserve를 무시
   maxActions: 14,
-  finalFrom: 5,    // 이 관부터 대가 대비
+  finalFrom: 6,    // 이 관부터 대가 대비(깊이 층 뒤 5 → 6)
   finalWeight: 0.5, // 대가 판에서 잰 값의 몫
   // 상금 격언의 값(밤샘 D-2): 한 수 점수로는 보이지 않으니 대국당 기대 상금 × 남은 대국 × 1원의 몫(minGainPerCoin)의 절반으로 친다
   moneyMaxims: { vault: 4, mate_hunter: 0.25 },
   // 가족(깊이 B): 가장 많이 모은 가족 쪽으로 한 걸음 가는 물건에 덤(득 비율). famAware false = 가족을 모르는 봇(nofam)
   famAware: true,
   famStep: 0.08,
+  // 짜임 재기의 풀이기 마디 예산: 대국 결정(10000)보다 작게. 깊이 층(이형 · 가족)으로 판이 넓어져 재기 한 번이 0.6초까지 늘었다
+  evalNodes: 1000,
 };
 const battlesLeft = (run) => Math.max(0, (8 - run.ante) * 3 + (2 - run.blind));
 export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5;
@@ -87,7 +89,7 @@ export function evalBuild(run, build, seeds, ante, master = null) {
     }
     b.movesUsed = m;
     b.movesLeft = b.rules.moves - m;
-    const best = b.hand.length ? bestMove(b, { preferMate: 'avoid' }) : null;
+    const best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes }) : null;
     total += best ? best.score : 0;
   });
   return total / seeds.length;
@@ -295,10 +297,12 @@ function smartShop(run, hunt = false) {
     if (!best) {
       cands.length = 0;
       if (!run.shop.promoted && run.money >= SHOP.promotePrice) {
+        // 가벼운 기물부터 서로 다른 넷만 그려 본다(이형이 섞인 주머니는 열 가지가 넘어 상점 한 번이 수십 초 걸렸다)
         const seen = new Set();
-        for (const p of build.deck) for (const to of PROMOTE[p.t] || []) {
-          const key = p.t + to + (p.eng ? p.eng.id : '');
-          if (seen.has(key)) continue;
+        const order = [...build.deck].sort((a, b) => (RANK[a.t] ?? 5) - (RANK[b.t] ?? 5));
+        for (const p of order) for (const to of PROMOTE[p.t] || []) {
+          const key = p.t + to + (p.eng ? p.eng.id : '') + (p.soul || '');
+          if (seen.has(key) || seen.size >= 4) continue;
           seen.add(key);
           const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? { ...q, t: to } : q)) };
           consider(SHOP.promotePrice, ctx.score(v), { type: 'promote', pieceId: p.id, to });
@@ -306,9 +310,10 @@ function smartShop(run, hunt = false) {
       }
       if (!run.shop.removed && run.money >= SHOP.removePrice && build.deck.length > SHOP.deckMin) {
         const seen = new Set();
-        for (const p of build.deck) {
-          const key = p.t + (p.eng ? p.eng.id : '');
-          if (seen.has(key)) continue;
+        const order = [...build.deck].filter((q) => !q.eng && !q.soul).sort((a, b) => (RANK[a.t] ?? 5) - (RANK[b.t] ?? 5));
+        for (const p of order) {
+          const key = p.t;
+          if (seen.has(key) || seen.size >= 3) continue;
           seen.add(key);
           const v = { ...build, deck: build.deck.filter((q) => q.id !== p.id) };
           consider(SHOP.removePrice, ctx.score(v), { type: 'remove', pieceId: p.id });
