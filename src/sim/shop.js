@@ -6,6 +6,8 @@ import { CHARTS, CHART_FORMS, CHART_PRICE } from '../data/charts.js';
 import { ENGRAVINGS, ENGRAVING_PRICE } from '../data/engravings.js';
 import { EDITIONS, EDITION_BY_ID } from '../data/editions.js';
 import { LEGENDS } from '../data/legends.js';
+import { SOULS } from '../data/souls.js';
+import { TACTICS, TACTIC_PRICE, EVOLVE_PRICE } from '../data/tactics.js';
 
 // 수치(내가 정한 것 — DESIGN에 없는 값)
 export const SHOP = {
@@ -18,12 +20,18 @@ export const SHOP = {
   removePrice: 3,     // 기물 버리기(상점마다 한 번)
   deckMin: 6,         // 주머니는 여섯 밑으로 줄일 수 없다(손 4 + 무르기 여유. 4까지 줄이면 대국 끝에 손이 비어 막힌다)
   // 진열 칸에 무엇이 나오나(무게)
-  kindWeights: [['maxim', 55], ['chart', 20], ['engraving', 12], ['piece', 13]],
+  kindWeights: [['maxim', 55], ['chart', 20], ['engraving', 12], ['piece', 13], ['soul', 6], ['evolve', 5], ['tactic', 5], ['gamble', 4]],
+  gamblePrice: 2, // 도박 물건(깊이 G): 사는 순간 결과가 굴러 나온다
+  soulOnPiece: 0.12, // 진열 기물에 혼이 깃들어 나올 확률(값 + soulPrice)
+  soulPrice: 4,
   // 격언 등급(무게). 전설은 상점에 나오지 않는다(step 2b)
   rarityWeights: [['common', 70], ['uncommon', 25], ['rare', 5]],
   // 낱개 기물 값과 기물 꾸러미의 무게
-  piecePrice: { P: 2, N: 3, B: 3, R: 4, Q: 6 },
+  piecePrice: { P: 2, N: 3, B: 3, R: 4, Q: 6, A: 6, C: 7, Z: 9, L: 4, H: 6, G: 5, O: 5, S: 5, W: 6 },
   pieceWeights: [['P', 20], ['N', 25], ['B', 25], ['R', 20], ['Q', 10]],
+  // 이형(깊이 A): 기물 한 칸이 이형일 확률 = fairyBase + fairyStep × (관 − 1), 최대 fairyMax. 겹친 기물(아마존 · 재상 · 대주교)은 드물게
+  fairyBase: 0.15, fairyStep: 0.05, fairyMax: 0.5,
+  fairyWeights: [['A', 2], ['C', 2], ['Z', 1], ['L', 3], ['H', 3], ['G', 3], ['O', 3], ['S', 3], ['W', 2]],
   engravingWeights: { common: 3, uncommon: 2 },
   packKinds: ['piece', 'chart', 'engraving'],
   // 격언 판본(HOOKS 「드문 것들의 사다리」 귀함 층, 칸당 ~5%): 진열에 나온 격언에 이 확률로 판본이 붙는다.
@@ -77,6 +85,13 @@ const rollEngravingId = (rng, exclude = []) =>
 export const priceBonus = (run) => (run.stake ? run.stake.price : 0);
 export const fragmentMult = (run) => (run.stake ? run.stake.fragment : 1);
 
+// 기물 한 칸: 관이 오를수록 이형이 자주
+export const fairyChance = (ante) => Math.min(SHOP.fairyMax, SHOP.fairyBase + SHOP.fairyStep * (ante - 1));
+export function rollPiece(run, rng) {
+  if (next(rng) < fairyChance(run.ante || 1)) return weighted(rng, SHOP.fairyWeights);
+  return weighted(rng, SHOP.pieceWeights);
+}
+
 export function rollItem(run, rng, exclude) {
   if (next(rng) < SHOP.fragmentChance.display * fragmentMult(run)) {
     const f = fragmentOffer(run, rng, 'display');
@@ -89,7 +104,12 @@ export function rollItem(run, rng, exclude) {
   }
   if (kind === 'chart') return { kind: 'chart', form: CHART_FORMS[int(rng, CHART_FORMS.length)], price: CHART_PRICE };
   if (kind === 'engraving') return { kind: 'engraving', id: rollEngravingId(rng), price: ENGRAVING_PRICE };
-  const t = weighted(rng, SHOP.pieceWeights);
+  if (kind === 'soul') return { kind: 'soul', id: SOULS[int(rng, SOULS.length)].id, price: SHOP.soulPrice };
+  if (kind === 'evolve') return { kind: 'evolve', price: EVOLVE_PRICE };
+  if (kind === 'gamble') return { kind: 'gamble', id: next(rng) < 0.5 ? 'potion' : 'roulette', price: SHOP.gamblePrice };
+  if (kind === 'tactic') return { kind: 'tactic', id: TACTICS[int(rng, TACTICS.length)].id, price: TACTIC_PRICE };
+  const t = rollPiece(run, rng);
+  if (next(rng) < SHOP.soulOnPiece) return { kind: 'piece', t, soul: SOULS[int(rng, SOULS.length)].id, price: SHOP.piecePrice[t] + SHOP.soulPrice };
   return { kind: 'piece', t, price: SHOP.piecePrice[t] };
 }
 
@@ -136,7 +156,7 @@ export function rollPackOptions(run, kind) {
     return out;
   }
   for (let i = 0; i < SHOP.packSize; i++) {
-    if (kind === 'piece') out.push({ kind: 'piece', t: weighted(rng, SHOP.pieceWeights) });
+    if (kind === 'piece') out.push({ kind: 'piece', t: rollPiece(run, rng) });
     else if (kind === 'chart') {
       const pool = CHART_FORMS.filter((f) => !out.some((o) => o.form === f));
       out.push({ kind: 'chart', form: pool[int(rng, pool.length)] });

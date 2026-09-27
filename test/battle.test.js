@@ -4,7 +4,7 @@ import { attackers, boardFrom, parseSq as S, isEnemy } from '../src/sim/board.js
 import { createBattle, apply, legalCommands, arrive, nearestEmpty, hasLegalDrop, enemyCount } from '../src/sim/battle.js';
 import { bestMove } from '../src/sim/solver.js';
 
-const enemies = (b) => b.board.filter(isEnemy);
+const enemies = (b) => b.board.filter((c) => isEnemy(c) && c.t !== 'X' && c.t !== 'J'); // 판 위 사물(벽 · 보석)은 적 수에 들지 않는다
 
 // 봇: 풀이기 최선 수, 없으면 첫 칸 무르기
 function botStep(b, cmds) {
@@ -158,7 +158,7 @@ test('판의 첫 대국(1관 연습)은 시작 손으로 셋 잇는 사슬이 �
   const { hasChainOf } = await import('../src/sim/battle.js');
   let ok = 0;
   for (let seed = 1; seed <= 60; seed++) {
-    const run = createRun({ seed });
+    const run = createRun({ draft: false, seed });
     applyRun(run, { type: 'play' });
     const best = bestMove(run.battle, { preferMate: 'avoid' });
     if (best.captures >= 3 || hasChainOf(run.battle, 3)) ok++;

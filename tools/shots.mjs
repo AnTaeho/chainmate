@@ -35,6 +35,7 @@ const srv = await serve();
 const port = srv.address().port;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 480, height: 270 }, deviceScaleFactor: 1 });
+await page.addInitScript(() => { window.__autoDraft = true; });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -99,6 +100,22 @@ await ev(async () => {
 });
 await settle(200);
 await shot('00-sprites');
+// 이형 아홉을 체스 여섯과 나란히(1배에서 갈리나): 흰 · 검은 · 금빛, 밝은 칸과 어두운 칸
+await ev(async () => {
+  const { spriteCanvas } = await import('/src/render/sprites.js');
+  const c = document.getElementById('screen');
+  window.__app.draw = () => {
+    const g = c.getContext('2d');
+    g.fillStyle = '#0e1513'; g.fillRect(0, 0, 480, 270);
+    ['P', 'N', 'B', 'R', 'Q', 'K', 'A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W'].forEach((t, i) => ['w', 'b', 'g'].forEach((side, row) => [0, 1].forEach((k) => {
+      const x = 8 + i * 31, y = 30 + (row * 2 + k) * 34;
+      g.fillStyle = (i + k) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
+      g.drawImage(spriteCanvas(t, side), x + 6, y + 3);
+    })));
+  };
+});
+await settle(200);
+await shot('00-fairies');
 // 명인 초상 여덟(2배)
 await ev(async () => {
   const { portraitCanvas, PORTRAIT_IDS } = await import('/src/render/portraits.js');
@@ -461,6 +478,88 @@ await ev(async () => {
 });
 await settle(200);
 await shot('28-tiers');
+await page.reload();
+await page.waitForFunction(() => window.__app && window.__app.screen);
+
+// 깊이: 가족 띠 · 이형 사슬(대국) · 상점 카드 문양
+await ev(() => {
+  const a = window.__app;
+  localStorage.removeItem('chainmate.run.v1');
+  a.newRun({ seed: 21 });
+  const r = a.run;
+  r.ante = 5;
+  const add = (id) => r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: null, paid: 4 });
+  add('chivalry'); add('light_step'); add('first_move'); add('diagonal'); add('pawn_march');
+  r.deck.push({ id: 90, t: 'H', eng: null }, { id: 91, t: 'A', eng: null }, { id: 92, t: 'O', eng: null }, { id: 93, t: 'S', eng: null });
+  a.cmd({ type: 'play' });
+  const b = r.battle;
+  b.hand = [{ id: 90, t: 'H', eng: null }, { id: 91, t: 'A', eng: null }, { id: 92, t: 'O', eng: null }, { id: 93, t: 'S', eng: null }];
+  a.go('battle', { events: [] });
+});
+await settle(2400);
+const plan6 = await ev(async () => {
+  const { bestMove } = await import('/src/sim/solver.js');
+  const d = bestMove(window.__app.run.battle, { preferMate: 'avoid' });
+  return d && { hand: d.handIndex, sq: d.sq, line: d.line };
+});
+if (plan6) {
+  await clickId(`hand:${plan6.hand}`);
+  await clickId(`sq:${plan6.sq}`);
+  await idle();
+  for (let i = 0; i < Math.min(2, plan6.line.length - 1); i++) { if (typeof plan6.line[i] === 'number') { await clickId(`sq:${plan6.line[i]}`); await idle(); } }
+}
+await hoverId('fam:leap');
+await settle(150);
+await shot('29-families-battle');
+await ev(() => {
+  const a = window.__app, r = a.run;
+  r.money = 40; r.phase = 'shop'; r.battle = null;
+  r.shop = { rng: null, display: [{ kind: 'maxim', id: 'close_call', edition: null, price: 3 }, { kind: 'piece', t: 'L', price: 4 }], packs: [{ kind: 'piece', price: 4 }, { kind: 'chart', price: 4 }], rerolls: 0, promoted: false, removed: false };
+  a.go('shop');
+  a.screen.famFx = { leap: a.time - 0.3 };
+});
+await settle(200);
+await shot('29-families-shop');
+await page.reload();
+await page.waitForFunction(() => window.__app && window.__app.screen);
+
+// 깊이 E: 정석 고르기(자동 고르기를 끄고)
+await ev(() => { window.__autoDraft = false; const a = window.__app; localStorage.removeItem('chainmate.run.v1'); a.newRun({ seed: 33 }); });
+await settle(1400);
+await hoverId('draft:1');
+await settle(150);
+await shot('30-draft');
+await ev(() => { window.__autoDraft = true; });
+// 깊이 D · F: 적 특성 · 벽 · 보석 · 정석 발판 · 문 · 고속도로 · 묘수 칸
+await ev(() => {
+  const a = window.__app;
+  localStorage.removeItem('chainmate.run.v1');
+  a.newRun({ seed: 44 });
+  const r = a.run;
+  r.ante = 7; r.josekis = ['stepping', 'gates', 'highway'];
+  r.consumables = [{ kind: 'tactic', id: 'freeze' }, { kind: 'tactic', id: 'taunt' }];
+  r.deck[2].soul = 'echo'; r.deck[5].soul = 'hunger';
+  a.cmd({ type: 'play' });
+  a.go('battle', { events: [] });
+});
+await settle(2400);
+await page.mouse.move(1, 1);
+await shot('31-traits-things');
+await clickId('tactic:0');
+await settle(500);
+await shot('31b-freeze');
+// 깊이 C: 혼 두루마리 · 혼 깃든 기물 · 진화 · 도박이 진열된 상점
+await ev(() => {
+  const a = window.__app, r = a.run;
+  r.money = 40; r.phase = 'shop'; r.battle = null;
+  r.shop = { rng: null, display: [{ kind: 'soul', id: 'transcend', price: 4 }, { kind: 'gamble', id: 'roulette', price: 2 }], packs: [{ kind: 'piece', price: 4 }, { kind: 'engraving', price: 4 }], rerolls: 0, promoted: false, removed: false };
+  r.consumables = [{ kind: 'evolve' }, { kind: 'tactic', id: 'reload' }];
+  a.go('shop');
+});
+await settle(300);
+await hoverId('deck:3');
+await settle(150);
+await shot('32-souls-shop');
 await page.reload();
 await page.waitForFunction(() => window.__app && window.__app.screen);
 

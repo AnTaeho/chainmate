@@ -35,14 +35,17 @@
 // 최종 점수 = floor(값 × 연쇄 × scoreMul).
 
 import { attackers } from './board.js';
+import { chartForm } from '../data/pieces.js';
 
-export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onForced', 'onCut', 'onMate', 'onChainStop', 'onChainEnd', 'onBoard'];
+export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onThreat', 'onForced', 'onCut', 'onMate', 'onBlocked', 'onChainStop', 'onChainEnd', 'onBoard'];
 // ctx가 「기본 결말을 물린다」를 돌려줄 수 있는 훅: onCut(cancelCut) · onMate(keepGoing) · onChainStop(redrop)
-const CANCEL_HOOKS = new Set(['onCut', 'onMate', 'onChainStop']);
-export const KINDS = ['master', 'chart', 'engraving', 'maxim'];
-const DEFAULT_ORDER = ['master', 'chart', 'engraving', 'maxim'];
+//   · onThreat(ignoreThreat — 먹은 칸의 노림을 이번 한 번 없는 것으로, 깊이 B 「도약」) · onBlocked(keepGoing — 막혔을 때 한 번 더, 「변신」)
+const CANCEL_HOOKS = new Set(['onCut', 'onMate', 'onChainStop', 'onThreat', 'onBlocked']);
+// 종류: 명인 · 기보 · 가족(깊이 B) · 정석(E) · 각인 · 혼(C) · 격언
+export const KINDS = ['master', 'chart', 'family', 'joseki', 'engraving', 'soul', 'maxim'];
+const DEFAULT_ORDER = ['master', 'chart', 'family', 'joseki', 'engraving', 'soul', 'maxim'];
 export const KIND_ORDER = {
-  onChainEnd: ['chart', 'engraving', 'maxim', 'master'],
+  onChainEnd: ['chart', 'family', 'joseki', 'engraving', 'soul', 'maxim', 'master'],
 };
 
 const REGISTRY = new Map();
@@ -56,25 +59,42 @@ export const getModifier = (id) => REGISTRY.get(id);
 export const undefineModifier = (id) => REGISTRY.delete(id);
 
 // 켜진 명세 목록을 훅 순서대로. 훅이 없으면 빈 배열(탐색 중 가장 흔한 경우라 아무것도 만들지 않는다).
+// 돌려주는 값: [{ i, def }] — i는 (mods … , 각인, 혼) 안의 자리. 풀이기가 마디마다 mods를 복사하므로
+// 차례는 (명세 id · 꺼짐 줄 + 훅 + 각인 · 혼)을 열쇠로 한 번만 정렬해 둔다(깊이 층으로 조정자가 늘어 정렬이 탐색 시간의 18%였다).
 const NONE = [];
+const PLANS = new Map();
+function modsKey(mods) {
+  let k = mods._key;
+  if (k === undefined) {
+    k = mods.map((s) => s.id + (s.off ? '!' : '')).join(',');
+    Object.defineProperty(mods, '_key', { value: k, writable: true, enumerable: false, configurable: true });
+  }
+  return k;
+}
 function ordered(t, hook) {
   const mods = t.mods || NONE;
   const eng = t.chain && t.chain.engraving;
+  const soul = t.chain && t.chain.soul;
+  const cacheable = hook !== 'onBattleStart' && mods !== NONE;
+  const key = cacheable ? `${modsKey(mods)}|${hook}|${eng ? eng.id : ''}|${soul ? soul.id : ''}` : null;
+  if (key) { const hit = PLANS.get(key); if (hit) return hit; }
   let withKind = null;
   const order = KIND_ORDER[hook] || DEFAULT_ORDER;
-  const n = mods.length + (eng ? 1 : 0);
+  const n = mods.length + (eng ? 1 : 0) + (soul ? 1 : 0);
   for (let i = 0; i < n; i++) {
-    const spec = i < mods.length ? mods[i] : eng;
+    const spec = specAt(mods, eng, soul, i);
     if (spec.off) continue;
     const def = REGISTRY.get(spec.id);
     if (!def) throw new Error(`unknown modifier ${spec.id}`);
     if (!def[hook]) continue;
-    (withKind || (withKind = [])).push({ spec, def, k: order.indexOf(spec.kind || def.kind), i });
+    (withKind || (withKind = [])).push({ def, k: order.indexOf(spec.kind || def.kind), i });
   }
-  if (!withKind) return NONE;
-  if (withKind.length > 1) withKind.sort((a, b) => a.k - b.k || a.i - b.i);
-  return withKind;
+  let plan = NONE;
+  if (withKind) { if (withKind.length > 1) withKind.sort((a, b) => a.k - b.k || a.i - b.i); plan = withKind; }
+  if (key) { if (PLANS.size > 5000) PLANS.clear(); PLANS.set(key, plan); }
+  return plan;
 }
+const specAt = (mods, eng, soul, i) => (i < mods.length ? mods[i] : i === mods.length && eng ? eng : soul);
 
 // 훅이 받는 ctx. 메서드는 프로토타입에 두어 부를 때마다 닫힘을 만들지 않는다.
 class Ctx {
@@ -96,6 +116,7 @@ class Ctx {
   cancelCut() { this._cancel = true; }
   keepGoing() { this._cancel = true; }
   redrop() { this._cancel = true; }
+  ignoreThreat() { this._cancel = true; }
   emit(ev) { this._events.push({ ...ev, src: this.spec.id }); }
 }
 
@@ -103,13 +124,17 @@ class Ctx {
 export function runHook(t, hook, event, events = []) {
   const list = ordered(t, hook);
   let allowed = true, cancelled = false;
-  for (const { spec, def } of list) {
+  const mods = t.mods || NONE, eng = t.chain && t.chain.engraving, soul = t.chain && t.chain.soul;
+  for (const { i, def } of list) {
+    const spec = specAt(mods, eng, soul, i);
     if (spec.off) continue; // 앞선 조정자가 이번 훅 안에서 끈 경우(「침묵」)
     const ctx = new Ctx(t, spec, event, events);
     const r = def[hook](ctx);
     if (hook === 'allowCapture' && r === false) allowed = false;
     if (ctx._cancel) cancelled = true;
   }
+  // 대국 시작 훅은 명세를 끌 수 있다(「침묵」): 차례 열쇠를 다시 만든다
+  if (hook === 'onBattleStart' && t.mods && t.mods._key !== undefined) t.mods._key = undefined;
   if (hook === 'allowCapture') return allowed;
   if (CANCEL_HOOKS.has(hook)) return cancelled;
   return undefined;
@@ -118,7 +143,12 @@ export function runHook(t, hook, event, events = []) {
 // 탐색 · 조회용 가지치기: 명세 겉과 state만 새로 만들고 data는 같이 쓴다(대국 안의 훅은 data를 바꾸지 않는다).
 // 탐색 중 훅이 state를 바꿔도(또는 새로 만들어도) 원래 대국의 명세에 새지 않는다.
 export const forkSpec = (s) => (s ? (s.state ? { ...s, state: JSON.parse(JSON.stringify(s.state)) } : { ...s }) : s);
-export const forkSpecs = (mods) => (mods && mods.length ? mods.map(forkSpec) : mods);
+export const forkSpecs = (mods) => {
+  if (!mods || !mods.length) return mods;
+  const out = mods.map(forkSpec);
+  if (mods._key !== undefined) Object.defineProperty(out, '_key', { value: mods._key, writable: true, enumerable: false, configurable: true });
+  return out;
+};
 
 export const hasHook = (t, hook) => ordered(t, hook).length > 0;
 
@@ -127,10 +157,11 @@ export const finalScore = (chain) => Math.floor(chain.value * chain.mult * (chai
 // ── 기보(모습별 레벨) 조정자. 표는 step 2의 data/charts.js가 넘긴다.
 // 명세: { id: 'charts', data: { table: { P: { a: 10, b: 1 }, ... }, levels: { N: 2, ... } } }
 // 「먹을 때의 모습」(event.form) 기준으로 값 += a×레벨, 연쇄 += b×레벨.
+// 이형 모습은 바탕이 된 체스 모습의 기보를 따른다(pieces.js chart).
 defineModifier('charts', {
   kind: 'chart',
   onCapture(ctx) {
-    const form = ctx.event.form;
+    const form = chartForm(ctx.event.form);
     const lv = (ctx.data.levels || {})[form] || 0;
     const row = (ctx.data.table || {})[form];
     if (!lv || !row) return;

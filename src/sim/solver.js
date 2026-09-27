@@ -3,6 +3,7 @@
 import { startChain, chainCaptures, chainCapture, chainRedrops, chainRedrop, chainSummary } from './chain.js';
 import { dropSquaresFor } from './battle.js';
 import { forkSpec, forkSpecs } from './scoring.js';
+import { soulSpec } from '../data/souls.js';
 
 
 function cloneTable(t) {
@@ -14,8 +15,8 @@ function cloneTable(t) {
     chain: c && {
       ...c,
       captures: c.captures.slice(), forms: c.forms.slice(), flags: { ...c.flags },
-      forced: c.forced && c.forced.slice(),
-      engraving: forkSpec(c.engraving),
+      forced: c.forced && c.forced.slice(), absorbed: c.absorbed && c.absorbed.slice(), traitors: c.traitors && c.traitors.slice(),
+      engraving: forkSpec(c.engraving), soul: forkSpec(c.soul),
     },
   };
 }
@@ -80,15 +81,17 @@ export function bestMove(b, opts = {}) {
   const indices = opts.handIndices ?? b.hand.map((_, i) => i);
   for (const handIndex of indices) {
     const piece = b.hand[handIndex];
-    const key = piece.t + JSON.stringify(piece.eng);
+    const key = piece.t + JSON.stringify(piece.eng) + (piece.soul || '');
     if (seen.has(key)) continue;
     seen.add(key);
     for (const sq of dropSquaresFor(b, piece)) {
       const t = cloneTable({ ...b, chain: null });
       // 각인 명세는 복사해서 쓴다(탐색 중 조정자 state가 실제 손 기물에 새지 않게)
-      startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng) });
+      startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) });
       const r = dfs(t, stats, preferMate, rank);
       if (!r) continue;
+      // opts.collect: 떨구기마다 그 자리의 최선(재미 하네스가 「의미 있는 선택지」를 센다)
+      if (opts.collect) opts.collect.push({ handIndex, t: piece.t, sq, score: r.score, first: r.line[0] ?? null });
       if (better(r, best, preferMate, rank)) best = { ...r, handIndex, sq };
     }
   }
@@ -126,6 +129,6 @@ export function previewCapture(t, sq) {
 export function previewDrop(b, handIndex, sq) {
   const piece = b.hand[handIndex];
   const t = cloneTable({ ...b, chain: null });
-  startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng) });
+  startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) });
   return { sq, form: piece.t, next: t.chain.done ? [] : chainCaptures(t) };
 }

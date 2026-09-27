@@ -7,9 +7,14 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope } from '../parts.js';
+import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
-import { PACK_NAME, PIECE_NAME, PART_NAME, josa } from '../words.js';
+import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
+import { SOUL_BY_ID } from '../../data/souls.js';
+import { TACTIC_BY_ID } from '../../data/tactics.js';
+const ENG_NAME = (id) => engravingInfo(id).name;
+import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
+import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
 
 const RX = 360, RW = 112;
@@ -26,7 +31,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     const col = i % per, row = Math.floor(i / per);
     const px = x + col * (cw + 3), py = y + row * step;
     const id = `${idPrefix}:${p.id}`;
-    ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: p.eng ? () => pieceTip(p) : null });
+    ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: p.eng || PIECE_MOVE[p.t] ? () => pieceTip(p) : null });
     const hov = ui.isHover(id);
     const fl = flash && flash.id === p.id ? 1 - flash.p : 0;
     pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick ? 1 : 0, selected: selectedId === p.id, hover: hov, tier: tierOf(run.charts[p.t]), time: ui.time + i, flash: fl });
@@ -57,6 +62,21 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
     sprite(ctx, c.form, 'b', x + 3, y + Math.floor((h - 22) / 2)); text(ctx, '기보', x + 22, y + Math.floor(h / 2) - 6, PAL.cardInk, { bold: true });
     return;
   }
+  if (c.kind === 'evolve' || c.kind === 'tactic') {
+    box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
+    if (c.kind === 'evolve') sprite(ctx, 'N', 'w', x + 3, y + Math.floor((h - 22) / 2), { tier: 3 });
+    else tacticIcon(ctx, c.id, x + 3, y + Math.floor((h - 11) / 2));
+    text(ctx, c.kind === 'evolve' ? '진화' : TACTIC_BY_ID[c.id].name, x + 18 + Math.floor((w - 18) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
+    return;
+  }
+  if (c.kind === 'soul') {
+    const s = SOUL_BY_ID[c.id];
+    box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
+    frame(ctx, x + 1, y + 1, w - 2, h - 2, s.col);
+    sprite(ctx, 'N', 'w', x + 3, y + Math.floor((h - 22) / 2), { soul: c.id });
+    text(ctx, s.name, x + 20 + Math.floor((w - 20) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
+    return;
+  }
   const col = ENG_EDGE[c.id] || PAL.gold;
   box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
   frame(ctx, x + 1, y + 1, w - 2, h - 2, col);
@@ -66,7 +86,7 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
 }
 // 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
 const TIP_AT = { x: 196, y: 174 };
-export const consumableTip = (c) => (c.kind === 'chart' ? chartTip(c.form) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
+export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, '주머니의 기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
   constructor(app) {
@@ -76,17 +96,35 @@ export class ShopScreen {
     const fx = app.shopFx || [];
     app.shopFx = null;
     for (const e of fx) this.fx(e);
+    if (app.shopFamBefore) { this.noteFamilies(app.shopFamBefore); app.shopFamBefore = null; }
+  }
+  // 가족 문턱을 막 넘었으면 그 칩이 빛나며 커지고 한 번 울린다
+  noteFamilies(before) {
+    const rises = familyRises(before, familyCounts(this.run));
+    if (!rises.length) return;
+    this.famFx = this.famFx || {};
+    for (const id of rises) { this.famFx[id] = this.app.time; this.app.toast(`${FAMILY_BY_ID[id].name} ${familyCounts(this.run)[id]}`, FAMILY_BY_ID[id].col); }
+    this.app.sfx('fanfare');
   }
   // 기보로 한 단계 자라면 빛 기둥, 각인을 새기면 반짝
   fx(e) {
+    if (e.type === 'gamble') {
+      this.flash = { id: e.pieceId, t0: this.app.time };
+      const what = e.to ? `${PIECE_NAME[e.from]} › ${PIECE_NAME[e.to]}` : e.soul ? `${PIECE_NAME[e.piece]} · ${SOUL_BY_ID[e.soul].name}의 혼` : `${PIECE_NAME[e.piece]} · ${ENG_NAME(e.eng)} 각인`;
+      this.app.toast(what, PAL.gold, 2.2);
+      this.app.sfx('sparkle');
+    }
+    if (e.type === 'evolve') { this.grow = { form: e.to, t0: this.app.time }; this.app.sfx('grow'); }
     if (e.type === 'chart' && tierOf(e.level) > tierOf(e.level - 1)) { this.grow = { form: e.form, t0: this.app.time }; this.app.sfx('grow'); }
-    if (e.type === 'engrave') this.flash = { id: e.pieceId, t0: this.app.time };
+    if (e.type === 'engrave' || e.type === 'ensoul') this.flash = { id: e.pieceId, t0: this.app.time };
   }
   get run() { return this.app.run; }
 
   act(cmd, sound = 'click') {
     let ev;
+    const before = familyCounts(this.run);
     try { ev = this.app.cmd(cmd); } catch (e) { this.app.toast('할 수 없다', PAL.red); return null; }
+    this.noteFamilies(before);
     this.app.sfx(sound);
     for (const e of ev) {
       if (e.type === 'fragment') {
@@ -133,7 +171,8 @@ export class ShopScreen {
     button(ctx, ui, 'shop:leave', 244, 150, 68, 18, '나가기', { onClick: () => this.leave(), tone: 'gold' });
     // 주머니
     text(ctx, `주머니 ${run.deck.length}`, 12, 178, PAL.dim);
-    const hint = this.target ? '새길 기물' : null;
+    const tk = this.target && run.consumables[this.target.index] ? run.consumables[this.target.index].kind : null;
+    const hint = tk ? (tk === 'soul' ? '깃들 기물' : tk === 'evolve' ? '자랄 기물' : '새길 기물') : null;
     if (hint) text(ctx, hint, 100, 178, PAL.gold, { bold: true });
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
     const fp = since(this.flash, 0.3), gp = since(this.grow, 0.5);
@@ -141,8 +180,11 @@ export class ShopScreen {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : null,
       flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { form: this.grow.form, p: gp } : null,
     });
+    // 가족 띠(주머니 아래)
+    familyStrip(ctx, ui, run, 12, 254, 330, { time: app.time, fx: this.famFx, max: 6 });
     // 오른쪽: 격언
     text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
+    josekiBadges(ctx, ui, run, RX + 56, 33);
     fragmentStrip(ctx, ui, run, RX + RW, 32, { align: 'right' });
     const col = maximColumn(ctx, ui, run, RX, 46, RW, 150, {
       onClick: (i) => { this.menu = this.menu && this.menu.kind === 'maxim' && this.menu.index === i ? null : { kind: 'maxim', index: i }; this.target = null; },
@@ -210,7 +252,8 @@ export class ShopScreen {
     const c = this.run.consumables[i];
     if (!c) return;
     this.menu = null;
-    if (c.kind === 'engraving') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
+    if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
+    if (c.kind === 'tactic') { this.app.toast('대국 중에 쓴다', PAL.dim); return; }
     this.act({ type: 'use', index: i }, 'chart');
   }
 

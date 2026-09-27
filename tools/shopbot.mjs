@@ -8,24 +8,31 @@
 //   smart도 조각이 진열에 보이면 적립을 다 남기고도 살 수 있을 때 산다(운 좋은 판). 꾸러미에서는 나머지가 짜임을 올리지 못할 때만 조각.
 import { createRng, fork, int, next } from '../src/sim/rng.js';
 import { createBattle } from '../src/sim/battle.js';
-import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell } from '../src/sim/run.js';
+import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult } from '../src/sim/run.js';
 import { EDITION_BY_ID } from '../src/data/editions.js';
 import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { stepBattle } from './bot.mjs';
 import { bestMove } from '../src/sim/solver.js';
+import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
+import { evolveTo } from '../src/data/tactics.js';
 
 export const SMART = {
-  K: 8,            // 짜임 하나를 재는 대국판 수
+  K: 6,            // 짜임 하나를 재는 대국판 수(깊이 층 뒤 8 → 6: 판 하나가 2분 안에 끝나게)
   minGainPerCoin: 0.012, // 1원당 이만큼(비율) 오르지 않으면 안 산다
   reserve: (ante) => (ante <= 1 ? 0 : ante <= 6 ? 15 : 0), // 적립용으로 남길 돈(득이 크면 넘는다)
   bigGain: 0.35,   // 이만큼 오르면 reserve를 무시
   maxActions: 14,
-  finalFrom: 5,    // 이 관부터 대가 대비
+  finalFrom: 6,    // 이 관부터 대가 대비(깊이 층 뒤 5 → 6)
   finalWeight: 0.5, // 대가 판에서 잰 값의 몫
   // 상금 격언의 값(밤샘 D-2): 한 수 점수로는 보이지 않으니 대국당 기대 상금 × 남은 대국 × 1원의 몫(minGainPerCoin)의 절반으로 친다
   moneyMaxims: { vault: 4, mate_hunter: 0.25 },
+  // 가족(깊이 B): 가장 많이 모은 가족 쪽으로 한 걸음 가는 물건에 덤(득 비율). famAware false = 가족을 모르는 봇(nofam)
+  famAware: true,
+  famStep: 0.08,
+  // 짜임 재기의 풀이기 마디 예산: 대국 결정(10000)보다 작게. 깊이 층(이형 · 가족)으로 판이 넓어져 재기 한 번이 0.6초까지 늘었다
+  evalNodes: 1000,
 };
 const battlesLeft = (run) => Math.max(0, (8 - run.ante) * 3 + (2 - run.blind));
 export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5;
@@ -56,7 +63,7 @@ function act(run, cmd) {
 
 // ── 짜임 재기
 function buildOf(run) {
-  return { deck: clone(run.deck), maxims: clone(run.maxims), charts: { ...run.charts } };
+  return { deck: clone(run.deck), maxims: clone(run.maxims), charts: { ...run.charts }, josekis: [...(run.josekis || [])] };
 }
 function nextAnte(run) {
   return run.phase === 'shop' && run.blind === 2 ? run.ante + 1 : run.ante;
@@ -67,12 +74,13 @@ export const EVALS = { n: 0 };
 // 네 수를 끝까지 두는 것보다 6배쯤 싸고, 짜임끼리 비교하는 데는 충분하다.
 export function evalBuild(run, build, seeds, ante, master = null) {
   EVALS.n++;
+  const mods = battleMods(build, master).filter((m) => SMART.famAware || !String(m.id).startsWith('family:'));
   let total = 0;
   seeds.forEach((seed, k) => {
     const b = createBattle({
       seed, ante, kind: 'practice', target: null, golden: false,
-      bag: build.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng })),
-      rules: run.rules, mods: battleMods(build, master),
+      bag: build.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
+      rules: run.rules, mods,
     });
     const m = Math.min(k % b.rules.moves, b.rules.moves - 1);
     for (let i = 0; i < m && b.hand.length; i++) {
@@ -81,7 +89,7 @@ export function evalBuild(run, build, seeds, ante, master = null) {
     }
     b.movesUsed = m;
     b.movesLeft = b.rules.moves - m;
-    const best = b.hand.length ? bestMove(b, { preferMate: 'avoid' }) : null;
+    const best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes }) : null;
     total += best ? best.score : 0;
   });
   return total / seeds.length;
@@ -92,21 +100,49 @@ function evalSeeds(run, K) {
   return Array.from({ length: K }, () => Math.floor(next(r) * 2 ** 31));
 }
 
-const RANK = { P: 0, N: 1, B: 1, R: 2, Q: 3 };
+// 가장 많이 모은 가족(둘 이상일 때)을 한 걸음 채우면 덤. 문턱을 넘는 걸음은 그려 보기에 이미 보이니 문턱 앞 걸음만
+export function famBonus(before, after) {
+  if (!SMART.famAware) return 0;
+  const a = familyCounts(before), b = familyCounts(after);
+  const top = Math.max(...Object.values(a));
+  if (top < 1) return 0;
+  let bonus = 0;
+  for (const f of FAMILIES) if (a[f.id] === top && b[f.id] > a[f.id] && levelOf(b[f.id]) === levelOf(a[f.id])) bonus += SMART.famStep;
+  return bonus;
+}
+
+const RANK = { P: 0, N: 1, B: 1, R: 2, Q: 3, L: 1, S: 1, G: 2, O: 2, H: 2, A: 2, W: 2, C: 3, Z: 4 };
 // 두루마리(각인)를 붙일 가장 좋은 기물: 종류 · 각인이 같은 기물은 한 번만 잰다
-function bestEngraveTarget(run, build, engId, ctx) {
+// soul: 혼 두루마리(깊이 C)면 기물의 soul을 바꿔 본다
+function bestEngraveTarget(run, build, engId, ctx, soul = false) {
   let best = null;
   const seen = new Set();
   // 무거운 기물부터 서로 다른 셋만 본다(재는 값을 아끼려고)
-  const order = [...build.deck].sort((a, b) => RANK[b.t] - RANK[a.t] || (a.eng ? 1 : 0) - (b.eng ? 1 : 0));
+  const has = (p) => (soul ? p.soul : p.eng);
+  const order = [...build.deck].sort((a, b) => RANK[b.t] - RANK[a.t] || (has(a) ? 1 : 0) - (has(b) ? 1 : 0));
   for (const p of order) {
-    const key = p.t + (p.eng ? p.eng.id : '');
-    if (seen.has(key) || (p.eng && p.eng.id === engId)) continue;
+    const key = p.t + (p.eng ? p.eng.id : '') + (p.soul || '');
+    if (seen.has(key) || (soul ? p.soul === engId : p.eng && p.eng.id === engId)) continue;
     if (seen.size >= 3) break;
     seen.add(key);
-    const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? { ...q, eng: { id: engId } } : q)) };
+    const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? (soul ? { ...q, soul: engId } : { ...q, eng: { id: engId } }) : q)) };
     const score = ctx.score(v);
     if (!best || score > best.score) best = { target: p.id, score };
+  }
+  return best;
+}
+
+// 진화 두루마리를 쓸 가장 좋은 기물(종류마다 한 번)
+function bestEvolveTarget(run, build, ctx) {
+  let best = null;
+  const seen = new Set();
+  for (const p of build.deck) {
+    const to = evolveTo(run.seed, p);
+    if (!to || seen.has(p.t + to)) continue;
+    seen.add(p.t + to);
+    const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? { ...q, t: to } : q)) };
+    const score = ctx.score(v);
+    if (!best || score > best.score) best = { target: p.id, score, build: v };
   }
   return best;
 }
@@ -120,7 +156,7 @@ function makeCtx(run) {
   return {
     seeds, ante,
     score(build) {
-      const key = JSON.stringify([build.deck.map((p) => p.t + (p.eng ? p.eng.id : '')).sort(), build.maxims.map((m) => m.id + JSON.stringify(m.data || {})), build.charts]);
+      const key = JSON.stringify([build.deck.map((p) => p.t + (p.eng ? p.eng.id : '') + (p.soul || '')).sort(), build.maxims.map((m) => m.id + JSON.stringify(m.data || {})), build.charts, build.josekis || []]);
       if (!cache.has(key)) {
         // 다음이 명인 대국이면 그 명인을 걸고도 잰다. finalFrom관부터는 8관 「대가」(기보가 안 듣는다)도 미리 섞는다.
         const parts = [evalBuild(run, build, seeds, ante)];
@@ -143,8 +179,10 @@ function useConsumables(run, ctx) {
   while (run.consumables.length) {
     const c = run.consumables[0];
     if (c.kind === 'chart') act(run, { type: 'use', index: 0 });
+    else if (c.kind === 'tactic') break;
+    else if (c.kind === 'evolve') { const t = bestEvolveTarget(run, buildOf(run), ctx); if (t) act(run, { type: 'use', index: 0, target: t.target }); else break; }
     else {
-      const t = bestEngraveTarget(run, buildOf(run), c.id, ctx);
+      const t = bestEngraveTarget(run, buildOf(run), c.id, ctx, c.kind === 'soul');
       act(run, { type: 'use', index: 0, target: t ? t.target : run.deck[0].id });
     }
   }
@@ -175,7 +213,17 @@ function variantFor(run, build, it, ctx) {
     return { build: { ...build, maxims: [...build.maxims.filter((_, j) => j !== w.index), m] }, sell: w.index };
   }
   if (it.kind === 'chart') return { build: { ...build, charts: { ...build.charts, [it.form]: build.charts[it.form] + 1 } } };
-  if (it.kind === 'piece') return { build: { ...build, deck: [...build.deck, { id: -1, t: it.t, eng: null }] } };
+  if (it.kind === 'piece') return { build: { ...build, deck: [...build.deck, { id: -1, t: it.t, eng: null, ...(it.soul ? { soul: it.soul } : {}) }] } };
+  if (it.kind === 'evolve') {
+    const t = bestEvolveTarget(run, build, ctx);
+    if (!t) return null;
+    return { build: t.build, target: t.target };
+  }
+  if (it.kind === 'soul') {
+    const t = bestEngraveTarget(run, build, it.id, ctx, true);
+    if (!t) return null;
+    return { build: { ...build, deck: build.deck.map((q) => (q.id === t.target ? { ...q, soul: it.id } : q)) }, target: t.target };
+  }
   if (it.kind === 'engraving') {
     const t = bestEngraveTarget(run, build, it.id, ctx);
     if (!t) return null;
@@ -225,12 +273,13 @@ function smartShop(run, hunt = false) {
     };
     run.shop.display.forEach((it, slot) => {
       if (it.sold || run.money < it.price) return;
-      if ((it.kind === 'chart' || it.kind === 'engraving') && run.consumables.length >= run.consumableSlots) return;
+      if (it.kind === 'tactic') return;
+      if ((it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve') && run.consumables.length >= run.consumableSlots) return;
       const v = variantFor(run, build, it, ctx);
       if (!v) return;
       const refund = v.sell != null ? sellPrice(run.maxims[v.sell]) : 0;
       const econ = it.kind === 'maxim' ? moneyGain(run, it.id) : 0;
-      consider(it.price - refund, ctx.score(v.build) * (1 + econ), { type: 'buy', slot }, { sell: v.sell });
+      consider(it.price - refund, ctx.score(v.build) * (1 + econ + famBonus(build, v.build)), { type: 'buy', slot }, { sell: v.sell });
     });
     // 가장 좋은 것: 득/값
     const pickBest = () => {
@@ -248,10 +297,12 @@ function smartShop(run, hunt = false) {
     if (!best) {
       cands.length = 0;
       if (!run.shop.promoted && run.money >= SHOP.promotePrice) {
+        // 가벼운 기물부터 서로 다른 넷만 그려 본다(이형이 섞인 주머니는 열 가지가 넘어 상점 한 번이 수십 초 걸렸다)
         const seen = new Set();
-        for (const p of build.deck) for (const to of PROMOTE[p.t] || []) {
-          const key = p.t + to + (p.eng ? p.eng.id : '');
-          if (seen.has(key)) continue;
+        const order = [...build.deck].sort((a, b) => (RANK[a.t] ?? 5) - (RANK[b.t] ?? 5));
+        for (const p of order) for (const to of PROMOTE[p.t] || []) {
+          const key = p.t + to + (p.eng ? p.eng.id : '') + (p.soul || '');
+          if (seen.has(key) || seen.size >= 4) continue;
           seen.add(key);
           const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? { ...q, t: to } : q)) };
           consider(SHOP.promotePrice, ctx.score(v), { type: 'promote', pieceId: p.id, to });
@@ -259,9 +310,10 @@ function smartShop(run, hunt = false) {
       }
       if (!run.shop.removed && run.money >= SHOP.removePrice && build.deck.length > SHOP.deckMin) {
         const seen = new Set();
-        for (const p of build.deck) {
-          const key = p.t + (p.eng ? p.eng.id : '');
-          if (seen.has(key)) continue;
+        const order = [...build.deck].filter((q) => !q.eng && !q.soul).sort((a, b) => (RANK[a.t] ?? 5) - (RANK[b.t] ?? 5));
+        for (const p of order) {
+          const key = p.t;
+          if (seen.has(key) || seen.size >= 3) continue;
           seen.add(key);
           const v = { ...build, deck: build.deck.filter((q) => q.id !== p.id) };
           consider(SHOP.removePrice, ctx.score(v), { type: 'remove', pieceId: p.id });
@@ -282,7 +334,7 @@ function smartShop(run, hunt = false) {
       run.pack.options.forEach((o, index) => {
         const v = variantFor(run, build, o, ctx);
         if (!v) return;
-        const s = ctx.score(v.build);
+        const s = ctx.score(v.build) * (1 + famBonus(build, v.build));
         if (!pick || s > pick.s) pick = { s, cmd: { type: 'pick', index, target: v.target } };
       });
       const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
@@ -312,6 +364,24 @@ function randomShop(run, r) {
   if (run.phase === 'shop') act(run, { type: 'leave' });
 }
 
+// 정석 고르기: 셋을 저마다 골라 본 판의 짜임을 그려 보고(목표 배율은 나눠서) 가장 좋은 것. random은 아무거나, none은 첫째.
+export const DRAFT = { pick: null }; // 하네스 실험: 정석 id를 정해 두면 보이면 그것을 고른다
+function pickJoseki(run, policy, r) {
+  const opts = run.draft.options;
+  if (DRAFT.pick && opts.includes(DRAFT.pick)) return opts.indexOf(DRAFT.pick);
+  if (policy === 'random') return int(r, opts.length);
+  if (policy === 'none') return 0;
+  const ctx = makeCtx({ ...run, phase: 'select' });
+  let best = 0, bs = -Infinity;
+  opts.forEach((id, i) => {
+    const copy = clone(run);
+    applyRun(copy, { type: 'joseki', index: i });
+    const s = ctx.score(buildOf(copy)) / josekiTargetMult(copy) * (1 + famBonus(buildOf(run), buildOf(copy)));
+    if (s > bs) { bs = s; best = i; }
+  });
+  return best;
+}
+
 // hunt의 줄 평가: 황금 기물을 먹는 줄은 점수 ×3, 가진 첫 조각의 재현이 되는 줄은 ×5(둘 다 목표를 넘길 만큼이면 덤이 이긴다)
 function huntRank(run) {
   const open = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && f.first && !f.feat; });
@@ -338,6 +408,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'lost') break;
     if (stopAt && stopAt(run)) break;
     if (run.phase === 'won') { if (endlessUntil > run.ante) act(run, { type: 'endless' }); else break; }
+    if (run.phase === 'draft') { act(run, { type: 'joseki', index: pickJoseki(run, policy, r) }); continue; }
     if (run.phase === 'select') {
       if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) act(run, { type: 'skip' });
       else act(run, { type: 'play' });
@@ -352,7 +423,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'shop') {
       noteDisplay(run);
       const before = run.maxims.map((m) => m.uid);
-      if (policy === 'smart' || policy === 'hunt') smartShop(run, policy === 'hunt');
+      if (policy === 'smart' || policy === 'hunt' || policy === 'nofam') smartShop(run, policy === 'hunt');
       else if (policy === 'random') randomShop(run, r);
       else act(run, { type: 'leave' });
       trackBuys(before);

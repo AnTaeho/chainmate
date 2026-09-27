@@ -3,9 +3,11 @@
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }
 import { createRng, fork, next, shuffle } from './rng.js';
 import { dropSquares, fileOf, rankOf, reach } from './board.js';
-import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts } from './chain.js';
+import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts, markFairy } from './chain.js';
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js';
+import { soulSpec } from '../data/souls.js';
+import { thaw } from '../data/tactics.js';
 
 export { enemyCount, kingGuards, reinforceCount, enemyWeights, kingDefended } from './setup.js';
 
@@ -71,6 +73,7 @@ export function arrive(b, events = []) {
     events.push({ type: 'reinforce', sq, planned: r.sq, piece: r.t });
   }
   telegraph(b);
+  markFairy(b);
   refreshHints(b);
 }
 
@@ -96,7 +99,7 @@ function draw(b) {
   while (b.hand.length < b.rules.hand && b.bag.length) b.hand.push(b.bag.shift());
 }
 
-const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null });
+const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null, ...(p.soul ? { soul: p.soul } : {}) });
 
 // 황금 기물: 대국 시작 판에서 킹이 아닌 적 하나가 이 확률로 금빛(HOOKS 「드문 것들의 사다리」 대국당 ~4%).
 // 먹으면 값을 한 번 더 받고(chain.js), 판(런)이 대국 뒤 금빛 꾸러미와 조각 기회로 바꾼다.
@@ -150,10 +153,11 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
   const gr = fork(root, 'gold');
   if (golden ?? next(gr) < goldenChance) {
     const cand = [];
-    b.board.forEach((c, sq) => { if (c && c.t !== 'K') cand.push(sq); });
+    b.board.forEach((c, sq) => { if (c && c.t !== 'K' && c.t !== 'X' && c.t !== 'J') cand.push(sq); });
     if (cand.length) b.board[cand[Math.floor(next(gr) * cand.length)]].gold = true;
   }
   telegraph(b);
+  markFairy(b);
   refreshHints(b);
   return b;
 }
@@ -161,9 +165,9 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
 export function dropSquaresFor(b, piece) {
   if (b.rules.noHeavyDrop && (piece.t === 'Q' || piece.t === 'R')) return [];
   const allow = { attacked: false };
-  if ((b.mods && b.mods.length) || piece.eng) {
+  if ((b.mods && b.mods.length) || piece.eng || piece.soul) {
     // 조회일 뿐이라 조정자 state가 새지 않게 복사본으로 돌린다
-    const t = { ...b, mods: forkSpecs(b.mods), chain: piece.eng ? { engraving: forkSpec(piece.eng) } : null };
+    const t = { ...b, mods: forkSpecs(b.mods), chain: piece.eng || piece.soul ? { engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) } : null };
     const ctxEvent = { type: piece.t, engraving: piece.eng };
     // onDropCheck: ctx.event.allow.attacked = true 로 노려진 칸 허용
     ctxEvent.allow = allow;
@@ -232,11 +236,12 @@ export function apply(b, cmd) {
       if (b.status !== 'play') throw new Error('not expecting a drop');
       const piece = b.hand[cmd.handIndex];
       if (!piece) throw new Error('bad hand index');
+      markFairy(b);
       if (!dropSquaresFor(b, piece).includes(cmd.sq)) throw new Error(`illegal drop ${piece.t}@${cmd.sq}`);
       b.hand.splice(cmd.handIndex, 1);
       b.chainPiece = piece;
       b.status = 'chain';
-      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng }));
+      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng, soul: soulSpec(piece.soul) }));
       reveal(b);
       if (b.chain.done) endMove(b, events);
       break;
@@ -299,12 +304,18 @@ function endMove(b, events) {
     b.deckSize--;
     events.push({ type: 'shatter', piece: b.chainPiece.t, id: b.chainPiece.id });
   } else b.used.push(b.chainPiece);
+  // 정석 「결사」 · 「왕좌」: 판(런)이 대국 뒤 주머니에 옮긴다
+  if (c.pact) (b.exiled || (b.exiled = [])).push(b.chainPiece.id);
+  if (c.throne) (b.crowned || (b.crowned = [])).push(b.chainPiece.id);
+  if (c.traitors) (b.traitors || (b.traitors = [])).push(...c.traitors);
   b.history.push(chainSummary(c, b.movesUsed - 1));
   b.golden += c.golden;
   b.chain = null;
   b.chainPiece = null;
   b.status = 'play';
+  thaw(b);
   if (c.reason === 'mate') { refreshHints(b); return finishBattle(b, 'won', 'mate', events); }
+  if (c.flags.gomoku) return finishBattle(b, 'won', 'gomoku', events);
   if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
   if (b.movesLeft <= 0) return finishBattle(b, 'lost', 'moves', events);
   arrive(b, events);

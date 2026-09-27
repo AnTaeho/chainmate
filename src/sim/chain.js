@@ -13,13 +13,19 @@ import { PIECES } from '../data/pieces.js';
 import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
+import { UP } from '../data/souls.js';
 
 const NO_OPTS = {};
+// 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
+const NO_FAIRY = { fairy: false };
 export const boardOpts = (t) => {
   const r = t.rules;
-  if (!r || (!r.pawnSides && !r.openKings)) return NO_OPTS;
-  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings };
+  if (!r || (!r.pawnSides && !r.openKings && !r.highways)) return t.fairyFree ? NO_FAIRY : NO_OPTS;
+  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings, highways: r.highways || null, fairy: t.fairyFree ? false : undefined };
 };
+// 판의 적 중 이형이 하나라도 있나(판이 바뀌어 적이 들어올 때마다 다시 잰다: 대국 시작 · 증원 · 다시 채움 · 도발)
+export const markFairy = (t) => { t.fairyFree = !t.board.some((c) => c && !c.mine && FAIRY_SET.has(c.t)); };
+const FAIRY_SET = new Set(['A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W']);
 
 // 사슬 평가(기보 표기). 먹은 수가 이 값에 닿는 순간 「grade」 이벤트.
 export const GRADES = [
@@ -31,11 +37,13 @@ export const GRADES = [
 export const gradeOf = (n) => GRADES.reduce((g, x) => (n >= x.n ? x : g), null);
 
 export const PROMOTE_RANK = 7;
+// 흡수(정석 · 혼)는 사슬의 처음 세 먹기까지만: 센 떨군 모습(퀸 · 대주교)을 사슬 내내 지키면 판을 쓸어 첫 수 외통이 3관부터 20~50%였다(하네스 30판)
+export const ABSORB_TAKES = 3;
 
-export function startChain(t, { type, sq, engraving = null }) {
+export function startChain(t, { type, sq, engraving = null, soul = null }) {
   const events = [];
   t.chain = {
-    dropType: type, dropSq: sq, engraving: engraving || null,
+    dropType: type, dropSq: sq, engraving: engraving || null, soul: soul || null,
     sq, form: type,
     value: 0, mult: 0, scoreMul: 1, money: 0,
     captures: [], forms: [type],
@@ -54,9 +62,14 @@ export function startChain(t, { type, sq, engraving = null }) {
 export function chainCaptures(t) {
   const c = t.chain;
   if (!c || c.done || c.awaiting) return [];
-  let list = captures(t.board, c.form, c.sq, boardOpts(t));
+  const bo = c.captures.length ? boardOpts(t) : { ...boardOpts(t), first: true };
+  let list = captures(t.board, c.form, c.sq, bo);
+  // 「변신」 문턱 6: 지나온 모습 전부의 행마로(한 번)
+  if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
+  // 흡수: 먹은 행마가 더해진다(모습은 그대로)
+  if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
-  if (list.length && ((t.mods && t.mods.length) || c.engraving)) {
+  if (list.length && ((t.mods && t.mods.length) || c.engraving || c.soul)) {
     list = list.filter((s) => runHook(t, 'allowCapture', { from: c.sq, to: s, piece: t.board[s].t, form: c.form }));
   }
   return list;
@@ -72,12 +85,17 @@ export function chainCapture(t, sq) {
   const target = board[sq];
   const formBefore = c.form;
   const wasForced = !!c.forced;
+  c.flags.union = false;
 
+  // 궁수 모습은 움직이지 않고 쏜다: 먹힌 칸만 비고 내 기물은 제자리(응수도 제자리 기준)
+  const stay = formBefore === 'S';
+  const at = stay ? from : sq;
+  board[sq] = null;
   board[from] = null;
-  board[sq] = { t: c.form, mine: true };
-  c.sq = sq;
+  board[at] = { t: c.form, mine: true };
+  c.sq = at;
   const dist = Math.max(Math.abs((from & 7) - (sq & 7)), Math.abs((from >> 3) - (sq >> 3)));
-  const cap = { from, to: sq, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold };
+  const cap = { from, to: sq, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold, stay };
   c.captures.push(cap);
   if (wasForced) c.forcedReplies++;
   events.push({ type: 'capture', ...cap, value: PIECES[target.t].value });
@@ -108,29 +126,84 @@ export function chainCapture(t, sq) {
     refill(t, events);
   }
 
-  // 갈아입기
-  if (target.t !== c.form) {
+  // 적 특성(깊이 D): 폭약은 둘레 적을 함께 · 배신자는 대국 뒤 내 주머니로
+  if (target.trait === 'bomb') blast(t, sq, events);
+  if (target.trait === 'traitor' && target.t !== 'K') { (c.traitors || (c.traitors = [])).push(target.t); events.push({ type: 'traitor', sq, piece: target.t }); }
+  // 보석(판 위 사물): 모습은 그대로, 상금 +2 · 거울(적 특성): 모습이 바뀌지 않는다
+  if (target.trait === 'mirror') {
+    events.push({ type: 'mirrored', sq: at });
+  } else if (target.t === 'J') {
+    c.money = (c.money || 0) + 2;
+    events.push({ type: 'money', src: 'gem', money: 2 });
+  } else if (c.flags.absorb && target.t !== 'K' && c.captures.length <= ABSORB_TAKES) {
+    // 흡수는 가장 최근에 먹은 행마 하나만 더한다(쌓이게 두면 모든 응수를 받아 첫 수 외통이 판의 절반이 됐다 — 하네스 30판)
+    if (target.t !== c.form && (c.absorbed || [])[0] !== target.t) {
+      c.absorbed = [target.t];
+      events.push({ type: 'absorb', piece: target.t, sq: at, forms: [c.form, ...c.absorbed] });
+    }
+  } else if (c.flags.transcend && target.t !== 'K') {
+    // 혼 「초월」: 먹힌 모습 대신 한 단계 위로
+    const up = UP[c.form];
+    if (up) {
+      const prev = c.form;
+      c.form = up;
+      c.transforms++;
+      t.board[at] = { t: c.form, mine: true };
+      events.push({ type: 'transform', from: prev, to: c.form, sq: at });
+      runHook(t, 'onTransform', { from: prev, to: c.form }, events);
+    }
+  } else if (target.t !== c.form) {
     const prev = c.form;
     c.form = target.t;
     c.transforms++;
-    t.board[sq] = { t: c.form, mine: true };
-    events.push({ type: 'transform', from: prev, to: c.form, sq });
+    t.board[at] = { t: c.form, mine: true };
+    events.push({ type: 'transform', from: prev, to: c.form, sq: at });
     runHook(t, 'onTransform', { from: prev, to: c.form }, events);
   }
   if (!c.forms.includes(c.form)) c.forms.push(c.form);
 
   // 승급: 폰 모습으로 끝줄(조정자가 flags.promoteFrom으로 당길 수 있다 — 전설 「폰 여덟의 행진」)
-  if (c.form === 'P' && rankOf(sq) >= (c.flags.promoteFrom ?? PROMOTE_RANK)) {
-    c.form = 'Q';
+  if (c.form === 'P' && rankOf(at) >= (c.flags.promoteFrom ?? PROMOTE_RANK)) {
+    // 혼 「왕관」은 아마존으로(flags.promoteTo)
+    c.form = c.flags.promoteTo || 'Q';
     c.promotions++;
-    t.board[sq] = { t: 'Q', mine: true };
-    events.push({ type: 'promote', sq });
+    t.board[at] = { t: c.form, mine: true };
+    events.push({ type: 'promote', sq: at, to: c.form });
     runHook(t, 'onPromote', { sq }, events);
-    if (!c.forms.includes('Q')) c.forms.push('Q');
+    if (!c.forms.includes(c.form)) c.forms.push(c.form);
+  }
+
+  // 판의 문(정석 「판의 문」): 문 위의 적을 먹으면 다른 문(비었으면)으로 나온다
+  const gates = t.rules && t.rules.gates;
+  if (gates && gates.includes(c.sq)) {
+    const other = gates[0] === c.sq ? gates[1] : gates[0];
+    if (!t.board[other]) {
+      t.board[other] = t.board[c.sq];
+      t.board[c.sq] = null;
+      events.push({ type: 'gate', from: c.sq, to: other });
+      c.sq = other;
+    }
   }
 
   resolveReply(t, events);
   return events;
+}
+
+// 폭약: 둘레 여덟 칸의 적(킹 · 벽 빼고)을 함께 먹은 것으로(값 · 연쇄 +1씩). 폭약이 폭약을 터뜨리면 이어진다
+function blast(t, sq, events) {
+  const c = t.chain, board = t.board;
+  for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
+    const f = (sq & 7) + df, r = (sq >> 3) + dr;
+    if ((!df && !dr) || f < 0 || f > 7 || r < 0 || r > 7) continue;
+    const s = r * 8 + f, x = board[s];
+    if (!x || x.mine || x.t === 'K' || x.t === 'X') continue;
+    board[s] = null;
+    events.push({ type: 'pierce', sq: s, piece: x.t, gold: !!x.gold, src: 'bomb' });
+    c.value += PIECES[x.t].value;
+    c.mult += 1;
+    events.push({ type: 'score', src: 'bomb', value: PIECES[x.t].value, mult: 1 });
+    if (x.trait === 'bomb') blast(t, s, events);
+  }
 }
 
 // 외통 뒤 판을 새로 채운다. 판은 (대국 시드, 몇째 수, 몇째 채움)으로 정해진다 — 풀이기가 그려 봐도,
@@ -163,6 +236,7 @@ function refill(t, events) {
   board[c.sq] = { t: c.form, mine: true };
   t.nextId = base + hit.ids;
   t.board = board;
+  markFairy(t);
   events.push({ type: 'refill', sq: c.sq, count: c.refills, enemies: board.filter(isEnemy).length });
 }
 
@@ -172,8 +246,12 @@ function refill(t, events) {
 function resolveReply(t, events) {
   const c = t.chain;
   const opts = boardOpts(t);
-  const threats = attackers(t.board, c.sq, opts);
+  let threats = attackers(t.board, c.sq, opts);
   c.forced = null;
+  if (threats.length && runHook(t, 'onThreat', { sq: c.sq, attackers: threats.slice() }, events)) {
+    events.push({ type: 'threatIgnored', sq: c.sq, attackers: threats.slice() });
+    threats = [];
+  }
   if (threats.length) {
     c.forced = threats;
     // 명인 「철벽」(rules.noReply): 응수가 없다 — 노려진 칸을 먹으면 곧바로 끊긴다
@@ -198,6 +276,10 @@ function resolveReply(t, events) {
 // 사슬이 멈춘다(끊김 · 막힘). 한 번은 onChainStop이 redrop으로 떨굴 칸을 다시 고르게 할 수 있다.
 function stop(t, reason, events) {
   const c = t.chain;
+  if (reason === 'blocked' && runHook(t, 'onBlocked', { reason }, events) && chainCaptures(t).length) {
+    events.push({ type: 'union', forms: c.forms.slice(), sq: c.sq });
+    return;
+  }
   if (!c.redrops && runHook(t, 'onChainStop', { reason }, events)) {
     c.redrops++;
     c.forced = null;

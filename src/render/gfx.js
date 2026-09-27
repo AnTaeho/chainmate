@@ -3,6 +3,18 @@ import { PAL } from './palette.js';
 import { textImage, textWidth } from './text.js';
 import { spriteCanvas, tierSparkle, SW, SH } from './sprites.js';
 import { L } from '../ui/lang.js';
+import { SOUL_BY_ID } from '../data/souls.js';
+
+// 혼이 깃든 기물: 몸 뒤 왼쪽 위에 혼 빛깔 기운 한 점(천천히 떠오르며 깜빡인다)
+export function soulSpark(ctx, x, y, col, t = null) {
+  const k = t == null ? 0 : t;
+  const bob = Math.round(Math.sin(k * 2.5));
+  const a = t == null ? 1 : 0.65 + 0.35 * Math.sin(k * 3.1);
+  ctx.globalAlpha *= a;
+  ctx.fillStyle = col;
+  ctx.fillRect(x + 1, y + 6 + bob, 2, 2); ctx.fillRect(x + 2, y + 5 + bob, 1, 1); ctx.fillRect(x, y + 7 + bob, 1, 1);
+  ctx.globalAlpha /= a;
+}
 
 export const W = 480, H = 270;
 
@@ -67,11 +79,12 @@ export const measure = (s, bold = false) => textWidth(s, bold);
 
 // 기물. sx: 가로 배율(뒤집힘 1 → 0 → 1), lift: 위로 띄우기, alpha
 // eng: 각인 id(몸 톤) · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게(없으면 멈춘 모습)
-export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null } = {}) {
+export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null } = {}) {
   const c = spriteCanvas(type, side, eng, tier);
   if (alpha <= 0) return;
   if (tier === 3 && sx === 1 && sy === 1) { if (alpha !== 1) ctx.globalAlpha = alpha; tierSparkle(ctx, Math.round(x), Math.round(y), time); if (alpha !== 1) ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = alpha;
+  if (soul && sx === 1 && sy === 1) soulSpark(ctx, Math.round(x), Math.round(y), SOUL_BY_ID[soul] ? SOUL_BY_ID[soul].col : '#ffffff', time);
   if (sx === 1 && sy === 1) ctx.drawImage(c, Math.round(x), Math.round(y));
   else {
     const w = Math.max(1, Math.round(SW * Math.abs(sx)));

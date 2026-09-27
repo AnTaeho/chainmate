@@ -9,14 +9,17 @@ import { fileURLToPath } from 'node:url';
 import { createRun, B, targetFor, REWARD, CHEST } from '../src/sim/run.js';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
-import { playRun, SMART } from './shopbot.mjs';
+import { playRun, SMART, DRAFT } from './shopbot.mjs';
+import { JOSEKIS } from '../src/data/josekis.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { MASTER_BY_ID } from '../src/data/masters.js';
 import { LEGENDS, LEGEND_BY_ID } from '../src/data/legends.js';
 import { EDITIONS } from '../src/data/editions.js';
+import { familyCounts, FAMILIES } from '../src/data/families.js';
+import { PIECES, FAIRIES } from '../src/data/pieces.js';
 
 function parseArgs(argv) {
-  const a = { runs: 200, policy: 'smart', seed: 1, workers: 10, k: SMART.K };
+  const a = { runs: 200, policy: 'smart', seed: 1, workers: 10, k: SMART.K, limit: 120 };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--runs') a.runs = Number(argv[++i]);
@@ -29,14 +32,18 @@ function parseArgs(argv) {
     else if (k === '--tune') a.tune = JSON.parse(argv[++i]);
     else if (k === '--opening') a.opening = argv[++i];                  // 오프닝(판 밖 해금)
     else if (k === '--dan') a.dan = Number(argv[++i]);                   // 단(난이도) 0~8
-    else if (k === '--give') a.give = argv[++i].split(',');              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
+    else if (k === '--give') a.give = argv[++i].split(',');
+    else if (k === '--nodraft') a.nodraft = true;
+    else if (k === '--limit') a.limit = Number(argv[++i]);             // 판 하나 시간 상한(초)
+    else if (k === '--quiet') a.quiet = true;                          // 정석 드래프트 없이(깊이 E 이전)
+    else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
   }
   return a;
 }
 
-function one(seed, policy, opening = undefined, dan = 0, give = null) {
+function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = false) {
   const t0 = performance.now();
-  const run = createRun({ seed, opening, dan });
+  const run = createRun({ seed, opening, dan, draft: !nodraft });
   for (const id of give || []) run.maxims.push({ uid: run.nextUid++, id, data: {}, edition: null, paid: 0 });
   const { bought, editions, legendAt, seen } = playRun(run, policy);
   return {
@@ -45,12 +52,15 @@ function one(seed, policy, opening = undefined, dan = 0, give = null) {
     fragments: run.fragments, legends: run.legends, legendAt, editions, seen,
     deck: run.deck.map((p) => p.t + (p.eng ? ':' + p.eng.id : '')).sort().join(' '),
     charts: Object.values(run.charts).reduce((a, x) => a + x, 0), deckSize: run.deck.length,
+    fam: familyCounts(run), josekis: run.josekis || [], fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],
+    best: Math.max(0, ...run.log.filter((x) => !x.skipped).map((x) => x.best || 0)),
     ms: performance.now() - t0,
   };
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki } = workerData;
+  if (joseki) DRAFT.pick = joseki;
   if (tune && tune.overflow) REWARD.overflow = tune.overflow;
   if (tune && tune.chest) CHEST.counts = tune.chest;
   if (tune && tune.chestItems) CHEST.items = tune.chestItems;
@@ -59,21 +69,36 @@ if (!isMainThread) {
   if (tune && tune.golden != null) GOLDEN.chance = tune.golden;
   if (tune && tune.calling != null) GOLDEN.calling = tune.calling;
   SMART.K = k;
+  if (policy === 'nofam') SMART.famAware = false;
   if (b) b.forEach((x, i) => { B[i] = x; });
   if (shop) Object.assign(SHOP, shop);
   const out = [];
-  for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give));
+  for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft));
   parentPort.postMessage(out);
 } else {
   const args = parseArgs(process.argv.slice(2));
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + i * 7919) >>> 0);
   const t0 = performance.now();
-  const chunks = Array.from({ length: args.workers }, (_, w) => seeds.filter((_, i) => i % args.workers === w));
-  const results = (await Promise.all(chunks.filter((c) => c.length).map((c) => new Promise((res, rej) => {
-    const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { seeds: c, policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give } });
-    wk.on('message', res);
-    wk.on('error', rej);
-  })))).flat();
+  // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki };
+  const results = [], timeouts = [];
+  let next = 0, done = 0;
+  await new Promise((finish) => {
+    const launch = () => {
+      if (next >= seeds.length) { if (done === seeds.length) finish(); return; }
+      const seed = seeds[next++];
+      const wk = new Worker(fileURLToPath(import.meta.url), { workerData: { ...data, seeds: [seed] } });
+      const timer = setTimeout(() => { timeouts.push(seed); wk.terminate(); }, args.limit * 1000);
+      let settled = false;
+      const end = () => { if (settled) return; settled = true; clearTimeout(timer); done++; if (!args.quiet) process.stderr.write(`\r판 ${done}/${seeds.length} · 시간 초과 ${timeouts.length}   `); launch(); };
+      wk.on('message', (m) => { results.push(...m); });
+      wk.on('error', (e) => { console.error(`seed ${seed} 오류`, e); end(); });
+      wk.on('exit', end);
+    };
+    for (let i = 0; i < Math.min(args.workers, seeds.length); i++) launch();
+  });
+  process.stderr.write('\n');
+  args.timeouts = timeouts;
   report(results, args, performance.now() - t0);
 }
 
@@ -81,6 +106,7 @@ function report(R, args, wall) {
   const n = R.length;
   const pc = (x) => (Number.isFinite(x) ? (100 * x).toFixed(1) + '%' : '-');
   const f = (x, d = 0) => (Number.isFinite(x) ? x.toFixed(d) : '-');
+  const f2 = (x) => f(x, 2);
   const dw = (x) => [...String(x)].reduce((a, ch) => a + (ch.charCodeAt(0) > 0x1100 ? 2 : 1), 0);
   const table = (cols, rows) => {
     const w = cols.map((c, i) => Math.max(dw(c), ...rows.map((r) => dw(r[i]))));
@@ -92,6 +118,7 @@ function report(R, args, wall) {
 
   const wins = R.filter((r) => r.won).length;
   console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
+  if (args.timeouts && args.timeouts.length) console.log(`시간 초과 ${args.timeouts.length}판(${args.limit}초, 표에서 뺐다): seed ${args.timeouts.join(' ')}`);
   console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
 
   // 관별
@@ -172,6 +199,25 @@ function report(R, args, wall) {
   const wonB = battles.filter((b) => b.won);
   const ov = (t) => wonB.filter((b) => b.overflow === t).length;
   console.log(`넘친 목표(이긴 대국 ${wonB.length}): ×1 ${pc(ov(1) / wonB.length)} · ×2 ${pc(ov(2) / wonB.length)} · ×5 ${pc(ov(5) / wonB.length)} · ×10 ${pc(ov(10) / wonB.length)} · 목표 밑(외통) ${pc(ov(0) / wonB.length)}`);
+
+  // ── 깊이: 가족 · 이형
+  const famRows = FAMILIES.map((f) => {
+    const dom = R.filter((r) => { const top = Math.max(...Object.values(r.fam)); return top >= 2 && r.fam[f.id] === top; });
+    const on = R.filter((r) => r.fam[f.id] >= 2);
+    return [f.name, String(dom.length), pc(dom.filter((r) => r.won).length / dom.length), String(on.length), pc(on.filter((r) => r.won).length / on.length), f2(R.reduce((a, r) => a + r.fam[f.id], 0) / n)];
+  });
+  const noFam = R.filter((r) => Math.max(...Object.values(r.fam)) < 2);
+  console.log(`\n가족(판 끝): 가장 많이 모은 가족별 판 승률 · 문턱 2 이상 판 승률 — 가족 없음(모두 2 미만) ${noFam.length}판 승률 ${pc(noFam.filter((r) => r.won).length / noFam.length)}`);
+  table(['가족', '으뜸 판', '승률', '2 이상 판', '승률', '평균 수'], famRows);
+  const fr = FAIRIES.map((t) => { const has = R.filter((r) => r.fairies.includes(t)); return [PIECES[t].name, pc(has.length / n), pc(has.filter((r) => r.won).length / has.length)]; });
+  const anyF = R.filter((r) => r.fairies.length);
+  console.log(`이형(판 끝 주머니): 하나라도 가진 판 ${pc(anyF.length / n)} 승률 ${pc(anyF.filter((r) => r.won).length / anyF.length)} · 없는 판 승률 ${pc(R.filter((r) => !r.fairies.length && r.won).length / (n - anyF.length))} · 판 최고 한 수 p50 이형 ${pctile(anyF.map((r) => r.best), 0.5)} / 없음 ${pctile(R.filter((r) => !r.fairies.length).map((r) => r.best), 0.5)}`);
+  table(['이형', '가진 판', '그 판 승률'], fr);
+  if (!args.nodraft) {
+    const jr = JOSEKIS.map((j) => { const has = R.filter((r) => r.josekis.includes(j.id)); const first = R.filter((r) => r.josekis[0] === j.id); return [j.name, j.tier, pc(has.length / n), pc(has.filter((r) => r.won).length / has.length), String(first.length), pc(first.filter((r) => r.won).length / first.length)]; });
+    console.log('정석: 고른 판 · 그 판 승률 · 첫 정석으로 고른 판 · 그 판 승률');
+    table(['정석', '등급', '고른 판', '승률', '첫 정석', '승률'], jr);
+  }
 
   // 격언
   if (args.policy !== 'none') {

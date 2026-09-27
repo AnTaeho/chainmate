@@ -205,4 +205,20 @@ maxim('reinforce_hunt', '증원 사냥', '증원으로 들어온 적을 먹을 �
   onCapture(ctx) { if (ctx.event.born >= 0) ctx.addMult(2); },
 });
 
+// ── 깊이 G: 증강체스의 나머지 카드에서(뿌리의 동사를 비튼 셋)
+maxim('promotion_rush', '특진', '한 사슬에서 폰 모습으로 둘을 먹으면 곧바로 승급', '승급', 'uncommon', 5, {
+  onCapture(ctx) {
+    if (ctx.event.form !== 'P') return;
+    ctx.flags.pawnTakes = (ctx.flags.pawnTakes || 0) + 1;
+    if (ctx.flags.pawnTakes >= 2) ctx.flags.promoteFrom = 0;
+  },
+});
+maxim('mad_horse', '광마', '나이트 모습이 판 가장자리에서 먹으면 그 칸의 노림을 한 번 무시', '응수', 'common', 4, {
+  onCapture(ctx) { if (ctx.event.form === 'N' && EDGE(ctx.event.to) && !ctx.flags.madHorseUsed) ctx.flags.madHorse = true; },
+  onThreat(ctx) { if (ctx.flags.madHorse) { ctx.flags.madHorse = false; ctx.flags.madHorseUsed = true; ctx.ignoreThreat(); } },
+});
+maxim('rook_lift', '룩 리프트', '룩 모습이 네 구석에서 먹으면 연쇄 ×2', '먹기', 'common', 4, {
+  onCapture(ctx) { const s = ctx.event.to; if (ctx.event.form === 'R' && (s === 0 || s === 7 || s === 56 || s === 63)) ctx.mulMult(2); },
+});
+
 export const MAXIM_BY_ID = Object.fromEntries(MAXIMS.map((m) => [m.id, m]));

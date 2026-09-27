@@ -3,6 +3,7 @@
 // 대국은 run.battle에 들어 있고 대국 명령(drop · capture · discard)은 그대로 넘긴다.
 //
 // 국면(run.phase)과 명령
+//   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
 //   select  다음 대국 앞.   play | skip(연습 · 정식만) | use | moveMaxim
 //   battle  대국 중.        drop | capture | discard
 //   shop    대국을 이긴 뒤. buy | buyPack | reroll | sell | use | promote | remove | moveMaxim | leave
@@ -21,13 +22,21 @@ import { MASTERS, FINAL_MASTER } from '../data/masters.js';
 import { OPENINGS, DEFAULT_OPENING } from '../data/openings.js';
 import { EDITION_BY_ID, editionSpec, editionSlots } from '../data/editions.js';
 import { LEGENDS, LEGEND_BY_ID } from '../data/legends.js';
+import { familyCounts, familyMods } from '../data/families.js';
+import { JOSEKIS, JOSEKI_BY_ID, DRAFT_ANTES, DRAFT_TIERS } from '../data/josekis.js';
+import { useTactic, evolveTo } from '../data/tactics.js';
+import { TRAIT_CHANCE } from '../data/traits.js';
+import { SOULS } from '../data/souls.js';
+import { FAIRIES } from '../data/pieces.js';
 
 // ── 수치
 // 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. tools/run.mjs(smart 봇)로 맞춤:
 //   1관은 격언 없이도 넘는다(100%), 2~4관에서 첫 격언 · 기보를 못 모은 판이 떨어져 4관 도달 80%대,
 //   5~7관은 관마다 ×2.3~2.5 — 격언의 곱(×연쇄)과 기보 레벨이 붙은 짜임이라야 따라간다.
 //   8관은 명인 「대가」(기보 무시)가 벽이라 8관 연습 · 정식만 보고 잡았다(보고서 참고).
-export const B = [150, 600, 2000, 5200, 13000, 32000, 72000, 150000];
+// 깊이 층(이형 · 가족 · 정석 · 혼 …) 뒤 다시 맞춤(보고서 docs/reports/depth.md): 옛 곡선 그대로면 smart 봇 판 승률 89.7%(30판).
+//   2관 ×1.17 · 3관 ×2.5 · 4관 ×2.5 · 5관 ×3.8 · 6관 ×6.9 · 7관 ×5.8 · 8관 ×5.7 + 킹 수비 5관 다섯 · 6관부터 여섯 → 20.0%(30판).
+export const B = [150, 700, 5000, 13000, 50000, 220000, 420000, 850000];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
@@ -46,7 +55,7 @@ export const REWARD = {
 export const CHEST = {
   counts: [[1, 77], [3, 20], [5, 3]],
   // 판본은 넣지 않는다: 가진 격언에 곧바로 붙어(은박 연쇄 +5) 상자 하나가 판 봇 승률을 10%p 넘게 올렸다(보고서 2b).
-  items: [['money', 60], ['chart', 30], ['engrave', 10]],
+  items: [['money', 60], ['chart', 30], ['engrave', 10], ['fairy', 6]],
   money: 2,     // 상금 칸 하나
   cells: 5,     // 릴 칸 수. 나온 개수만큼 가운데부터 불이 켜진다(1: 가운데 · 3: 가운데 셋 · 5: 전부)
 };
@@ -104,7 +113,7 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
   const kind = KINDS[blind];
   const master = kind === 'master' ? masterFor(run, ante) : null;
   const st = run.stake;
-  const mult = st ? st.target * (master === FINAL_MASTER ? st.finalTarget : 1) : 1;
+  const mult = (st ? st.target * (master === FINAL_MASTER ? st.finalTarget : 1) : 1) * josekiTargetMult(run);
   return {
     ante, blind, kind,
     target: targetFor(ante, kind, mult),
@@ -113,7 +122,8 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
   };
 }
 
-export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0 } = {}) {
+// draft: false면 정석 드래프트 없이(깊이 E 이전 규칙 — 시험 · 하네스 비교용)
+export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true } = {}) {
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
   const conf = { ...RUN_DEFAULTS, ...op.run };
@@ -137,6 +147,8 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0 } = {})
     deck: op.bag.map((t, i) => ({ id: i + 1, t, eng: null, edition: null })),
     nextPieceId: op.bag.length + 1,
     maxims: [],               // [{ uid, id, data, edition, paid }] 왼쪽부터
+    josekis: [],              // 고른 정석 id(깊이 E)
+    draft: null,              // { ante, options: [id…] } 정석을 고르는 중
     maximSlots: conf.maximSlots,
     consumables: [],          // [{ kind: 'chart', form } | { kind: 'engraving', id }]
     consumableSlots: conf.consumableSlots,
@@ -151,7 +163,33 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0 } = {})
     last: null,               // 마지막 대국 결과와 보상 내역(화면용)
     log: [],                  // 대국마다 한 줄(하네스 · 결과 화면용)
   };
+  if (!draft) run.noDraft = true;
+  openDraft(run);
   return run;
+}
+
+// ── 정석 드래프트(깊이 E): 1 · 3 · 5관의 첫 대국 앞에 셋 중 하나
+function openDraft(run) {
+  if (run.noDraft || run.endless || run.blind !== 0 || !DRAFT_ANTES.includes(run.ante) || (run.drafted || []).includes(run.ante)) return;
+  const r = fork(root(run), `draft:${run.ante}`);
+  const pool = JOSEKIS.filter((j) => !run.josekis.includes(j.id));
+  const options = [];
+  for (let i = 0; i < 3 && pool.length; i++) {
+    const tier = weighted(r, DRAFT_TIERS[run.ante]);
+    let cand = pool.filter((j) => j.tier === tier);
+    if (!cand.length) cand = pool;
+    const j = cand[int(r, cand.length)];
+    options.push(j.id);
+    pool.splice(pool.indexOf(j), 1);
+  }
+  run.draft = { ante: run.ante, options };
+  run.phase = 'draft';
+}
+// 정석이 바꾸는 목표 배율(「하이랜더」)
+export function josekiTargetMult(run) {
+  let k = 1;
+  for (const id of run.josekis || []) { const j = JOSEKI_BY_ID[id]; if (j && j.targetMult) k *= j.targetMult(run); }
+  return k;
 }
 
 // ── 대국 만들기
@@ -160,6 +198,13 @@ export function battleMods(build, master = null) {
   const mods = [];
   if (master) mods.push({ id: master });
   mods.push({ id: 'charts', data: { table: CHART_TABLE, levels: { ...build.charts } } });
+  // 가족(깊이 B): 문턱을 넘은 가족마다 하나(정석 「복제」면 가장 많이 모은 가족의 문턱이 하나 낮다)
+  const counts = familyCounts(build);
+  let dropFor = null;
+  if ((build.josekis || []).includes('clone')) { const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]; if (top && top[1] > 0) dropFor = top[0]; }
+  mods.push(...familyMods(counts, dropFor));
+  // 정석(깊이 E)
+  for (const id of build.josekis || []) mods.push({ id: `joseki:${id}` });
   for (const m of build.maxims) {
     mods.push({ id: m.id, uid: m.uid, data: clone(m.data || {}) });
     const ed = editionSpec(m);
@@ -173,7 +218,7 @@ function startBattle(run) {
   const seed = fork(root(run), `battle:${run.ante}:${run.blind}`).s;
   run.battle = createBattle({
     seed, ante: run.ante, kind: info.kind, target: info.target,
-    bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng })),
+    bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
     rules: run.rules, mods: battleMods(run, info.master),
     goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
   });
@@ -198,6 +243,11 @@ function endBattle(run, events) {
   const won = b.status === 'won';
   // 깨진 기물(유리)은 주머니에서 빠진다
   if (b.shattered.length) run.deck = run.deck.filter((p) => !b.shattered.includes(p.id));
+  // 정석 「결사」: 첫 사슬을 푼 기물은 판에서 사라진다(주머니 여섯은 남긴다) · 「왕좌」: 승급한 폰은 퀸으로
+  for (const id of b.exiled || []) if (run.deck.length > SHOP.deckMin) { run.deck = run.deck.filter((p) => p.id !== id); events.push({ type: 'exile', pieceId: id }); }
+  // 적 특성 「배신자」: 먹은 배신자가 내 주머니로(주머니가 너무 커지지 않게 열넷까지)
+  for (const t of b.traitors || []) if (run.deck.length < TRAIT_CHANCE.traitorDeckMax) addPiece(run, t, events);
+  for (const id of b.crowned || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t === 'P') { p.t = 'Q'; events.push({ type: 'evolve', pieceId: id, from: 'P', to: 'Q' }); } }
   const grades = {};
   for (const h of b.history) { const g = gradeOf(h.captures); if (g) grades[g.mark] = (grades[g.mark] || 0) + 1; }
   const row = {
@@ -326,6 +376,7 @@ function chestItem(run, r, prev) {
       return { kind: 'engrave', pieceId: p.id, piece: p.t, eng: ids[int(r, ids.length)] };
     }
   }
+  if (kind === 'fairy') return { kind: 'piece', t: weighted(r, SHOP.fairyWeights) };
   if (kind === 'money') return { kind: 'money', money: CHEST.money };
   return { kind: 'chart', form: CHART_FORMS[int(r, CHART_FORMS.length)] };
 }
@@ -334,6 +385,7 @@ function applyChestItem(run, it, events) {
   if (it.kind === 'chart') useChart(run, it.form, events);
   else if (it.kind === 'money') { run.money += it.money; events.push({ type: 'money', src: 'chest', money: it.money }); }
   else if (it.kind === 'engrave') engrave(run, it.pieceId, it.eng, events);
+  else if (it.kind === 'piece') addPiece(run, it.t, events);
   else if (it.kind === 'edition') {
     const m = run.maxims.find((x) => x.uid === it.uid);
     m.edition = it.edition;
@@ -359,6 +411,7 @@ function advance(run) {
   if (run.blind < 2) run.blind++;
   else { run.blind = 0; run.ante++; }
   run.phase = 'select';
+  openDraft(run);
 }
 
 function useChart(run, form, events) {
@@ -374,8 +427,30 @@ function engrave(run, pieceId, id, events) {
   events.push({ type: 'engrave', piece: p.t, pieceId, eng: id });
 }
 
-function addPiece(run, t, events) {
-  const p = { id: run.nextPieceId++, t, eng: null, edition: null };
+// 도박 물건(깊이 G): 수상한 물약 = 주머니의 아무 기물에 아무 혼 또는 각인 · 룰렛 = 아무 기물(킹 빼고)을 아무 이형으로
+function gamble(run, id, slot, events) {
+  const r = fork(root(run), `gamble:${run.ante}:${run.blind}:${run.shop.rerolls}:${slot}`);
+  const p = run.deck[int(r, run.deck.length)];
+  if (id === 'potion') {
+    if (next(r) < 0.5) { const s = SOULS[int(r, SOULS.length)].id; p.soul = s; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, soul: s }); }
+    else { const ids = Object.keys(ENGRAVING_BY_ID); const e = ids[int(r, ids.length)]; p.eng = { id: e }; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, eng: e }); }
+  } else {
+    const to = FAIRIES[int(r, FAIRIES.length)];
+    events.push({ type: 'gamble', id, pieceId: p.id, from: p.t, to });
+    p.t = to;
+  }
+}
+
+// 혼 새기기(깊이 C): 기물 하나에 혼 하나(있으면 바뀐다)
+function ensoul(run, pieceId, id, events) {
+  const p = run.deck.find((x) => x.id === pieceId);
+  if (!p) throw new Error(`no piece ${pieceId}`);
+  p.soul = id;
+  events.push({ type: 'ensoul', piece: p.t, pieceId, soul: id });
+}
+
+function addPiece(run, t, events, soul = null) {
+  const p = { id: run.nextPieceId++, t, eng: null, edition: null, ...(soul ? { soul } : {}) };
   run.deck.push(p);
   events.push({ type: 'piece', piece: t, pieceId: p.id });
 }
@@ -403,7 +478,7 @@ const pay = (run, n) => {
 export function canBuy(run, it) {
   if (!it || it.sold || run.money < it.price) return false;
   if (it.kind === 'maxim') return hasMaximRoom(run, it.edition);
-  if (it.kind === 'chart' || it.kind === 'engraving') return run.consumables.length < run.consumableSlots;
+  if (it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'tactic') return run.consumables.length < run.consumableSlots;
   return true;
 }
 
@@ -416,6 +491,19 @@ export function applyRun(run, cmd) {
   const ph = run.phase;
   const need = (...ok) => { if (!ok.includes(ph)) throw new Error(`${cmd.type} not allowed in ${ph}`); };
   switch (cmd.type) {
+    case 'joseki': {
+      need('draft');
+      const id = run.draft.options[cmd.index];
+      if (!id) throw new Error('bad joseki');
+      run.josekis.push(id);
+      (run.drafted || (run.drafted = [])).push(run.draft.ante);
+      const j = JOSEKI_BY_ID[id];
+      events.push({ type: 'joseki', id });
+      if (j.pick) j.pick(run, events);
+      run.draft = null;
+      run.phase = 'select';
+      break;
+    }
     case 'play': {
       need('select');
       startBattle(run);
@@ -434,6 +522,15 @@ export function applyRun(run, cmd) {
       advance(run);
       break;
     }
+    // 묘수(깊이 F): 대국 중 떨구기 전에
+    case 'tactic': {
+      need('battle');
+      const c = run.consumables[cmd.index];
+      if (!c || c.kind !== 'tactic') throw new Error('no tactic');
+      events.push(...useTactic(run.battle, c.id));
+      run.consumables.splice(cmd.index, 1);
+      break;
+    }
     case 'drop': case 'capture': case 'redrop': case 'discard': {
       need('battle');
       const seen = run.battle.history.length;
@@ -449,9 +546,10 @@ export function applyRun(run, cmd) {
       pay(run, it.price);
       it.sold = true;
       if (it.kind === 'maxim') addMaxim(run, it.id, it.price, events, it.edition || null);
-      else if (it.kind === 'piece') addPiece(run, it.t, events);
+      else if (it.kind === 'piece') addPiece(run, it.t, events, it.soul || null);
       else if (it.kind === 'fragment') grantFragment(run, it.legend, 'first', events);
-      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : { kind: 'engraving', id: it.id });
+      else if (it.kind === 'gamble') gamble(run, it.id, cmd.slot, events);
+      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : it.kind === 'evolve' ? { kind: 'evolve' } : { kind: it.kind, id: it.id });
       events.push({ type: 'buy', item: { ...it } });
       break;
     }
@@ -510,6 +608,14 @@ export function applyRun(run, cmd) {
       const c = run.consumables[cmd.index];
       if (!c) throw new Error('no consumable');
       if (c.kind === 'engraving') engrave(run, cmd.target, c.id, events);
+      else if (c.kind === 'soul') ensoul(run, cmd.target, c.id, events);
+      else if (c.kind === 'evolve') {
+        const p = run.deck.find((x) => x.id === cmd.target);
+        const to = p && evolveTo(run.seed, p);
+        if (!to) throw new Error('cannot evolve');
+        events.push({ type: 'evolve', pieceId: p.id, from: p.t, to });
+        p.t = to;
+      } else if (c.kind === 'tactic') throw new Error('tactics are used in a battle');
       else useChart(run, c.form, events);
       run.consumables.splice(cmd.index, 1);
       break;
@@ -567,8 +673,13 @@ export function applyRun(run, cmd) {
 export function legalRunCommands(run) {
   const out = [];
   const ph = run.phase;
-  if (ph === 'battle') return battleCommands(run.battle);
+  if (ph === 'battle') {
+    const out = battleCommands(run.battle);
+    if (run.battle.status === 'play') run.consumables.forEach((c, index) => { if (c.kind === 'tactic') out.push({ type: 'tactic', index }); });
+    return out;
+  }
   if (ph === 'won') return [{ type: 'endless' }];
+  if (ph === 'draft') return run.draft.options.map((_, index) => ({ type: 'joseki', index }));
   if (ph === 'lost') return [];
   if (ph === 'pack') {
     run.pack.options.forEach((o, index) => {
@@ -582,8 +693,9 @@ export function legalRunCommands(run) {
   }
   // select · shop 공통
   run.consumables.forEach((c, index) => {
-    if (c.kind === 'engraving') for (const p of run.deck) out.push({ type: 'use', index, target: p.id });
-    else out.push({ type: 'use', index });
+    if (c.kind === 'engraving' || c.kind === 'soul') for (const p of run.deck) out.push({ type: 'use', index, target: p.id });
+    else if (c.kind === 'evolve') { for (const p of run.deck) if (evolveTo(run.seed, p)) out.push({ type: 'use', index, target: p.id }); }
+    else if (c.kind !== 'tactic') out.push({ type: 'use', index });
   });
   run.maxims.forEach((m, index) => { if (canSell(m)) out.push({ type: 'sell', index }); });
   for (let i = 0; i + 1 < run.maxims.length; i++) out.push({ type: 'moveMaxim', from: i, to: i + 1 });

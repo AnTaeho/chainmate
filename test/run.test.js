@@ -23,7 +23,7 @@ function botCommands(run, maxCmds = 100000) {
 }
 
 test('판 시작: 주머니 8, 상금 4, 명인은 1~7관이 서로 다르고 8관은 대가', () => {
-  const run = createRun({ seed: 3 });
+  const run = createRun({ draft: false, seed: 3 });
   assert.equal(run.deck.length, 8);
   assert.equal(run.money, 4);
   assert.equal(run.phase, 'select');
@@ -32,14 +32,14 @@ test('판 시작: 주머니 8, 상금 4, 명인은 1~7관이 서로 다르고 8�
   assert.equal(new Set(run.masters.slice(0, 7)).size, 7);
   assert.ok(!run.masters.slice(0, 7).includes(FINAL_MASTER));
   assert.deepEqual([...run.masters.slice(0, 7)].sort(), MASTERS.map((m) => m.id).filter((id) => id !== FINAL_MASTER).sort());
-  assert.notDeepEqual(createRun({ seed: 4 }).masters, run.masters);
+  assert.notDeepEqual(createRun({ draft: false, seed: 4 }).masters, run.masters);
 });
 
 test('목표: B × 종류 배율, 9관부터 늘어난다', () => {
   assert.equal(targetFor(1, 'practice'), B[0]);
   assert.equal(targetFor(3, 'master'), B[2] * 2);
   assert.ok(targetFor(9, 'practice') > B[7]);
-  const run = createRun({ seed: 1 });
+  const run = createRun({ draft: false, seed: 1 });
   const info = blindInfo(run);
   assert.equal(info.kind, 'practice');
   assert.equal(info.master, null);
@@ -50,7 +50,7 @@ test('목표: B × 종류 배율, 9관부터 늘어난다', () => {
 test('대국을 이기면 보상(기본 + 남은 수 + 적립 + 외통 + 대국 중 번 돈) 뒤 상점', () => {
   let checked = 0;
   for (let seed = 1; seed <= 10 && checked < 3; seed++) {
-    const run = createRun({ seed });
+    const run = createRun({ draft: false, seed });
     run.money = 12; // 적립 2
     applyRun(run, { type: 'play' });
     assert.equal(run.phase, 'battle');
@@ -71,7 +71,7 @@ test('대국을 이기면 보상(기본 + 남은 수 + 적립 + 외통 + 대국 
 });
 
 function shopRun(seed = 1) {
-  const run = createRun({ seed });
+  const run = createRun({ draft: false, seed });
   applyRun(run, { type: 'play' });
   while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
   assert.equal(run.phase, 'shop');
@@ -183,7 +183,7 @@ test('기물 조작: 승급(P→N/B→R→Q) · 버리기, 상점마다 한 번�
 });
 
 test('건너뛰기: 연습 · 정식은 패를 받고 다음 대국으로, 명인은 못 건넌다', () => {
-  const run = createRun({ seed: 5 });
+  const run = createRun({ draft: false, seed: 5 });
   const tag = blindInfo(run).tag;
   const money = run.money;
   applyRun(run, { type: 'skip' });
@@ -198,33 +198,33 @@ test('건너뛰기: 연습 · 정식은 패를 받고 다음 대국으로, 명�
 });
 
 test('격언 자리 바꾸기(침묵이 가장 왼쪽을 끈다)', () => {
-  const run = createRun({ seed: 1 });
+  const run = createRun({ draft: false, seed: 1 });
   run.maxims = [{ uid: 1, id: 'edge', data: {} }, { uid: 2, id: 'center', data: {} }];
   applyRun(run, { type: 'moveMaxim', from: 0, to: 1 });
   assert.deepEqual(run.maxims.map((m) => m.uid), [2, 1]);
 });
 
 test('결정성: 같은 시드 + 같은 명령 = 같은 JSON', () => {
-  const a = createRun({ seed: 11 });
+  const a = createRun({ draft: false, seed: 11 });
   const cmds = botCommands(a);
-  const b = createRun({ seed: 11 });
+  const b = createRun({ draft: false, seed: 11 });
   for (const c of cmds) applyRun(b, c);
   assert.equal(JSON.stringify(a), JSON.stringify(b));
   assert.ok(a.log.length >= 3);
   // 다른 시드는 다른 판
-  const c = createRun({ seed: 12 });
+  const c = createRun({ draft: false, seed: 12 });
   botCommands(c);
   assert.notEqual(JSON.stringify(c.log), JSON.stringify(a.log));
 });
 
 test('저장 왕복: 대국 중 · 상점 중에 JSON으로 저장했다 되살려 이어도 같다', () => {
-  const a = createRun({ seed: 21 });
+  const a = createRun({ draft: false, seed: 21 });
   const cmds = botCommands(a);
   // 되살릴 자리: 첫 상점 한가운데, 둘째 대국부터 사슬 한가운데
-  const replay = (n) => { const r = createRun({ seed: 21 }); for (const c of cmds.slice(0, n)) applyRun(r, c); return r; };
+  const replay = (n) => { const r = createRun({ draft: false, seed: 21 }); for (const c of cmds.slice(0, n)) applyRun(r, c); return r; };
   let midShop = -1, midBattle = -1;
   {
-    const r = createRun({ seed: 21 });
+    const r = createRun({ draft: false, seed: 21 });
     let battles = 0;
     cmds.forEach((c, i) => {
       applyRun(r, c);
@@ -244,7 +244,7 @@ test('저장 왕복: 대국 중 · 상점 중에 JSON으로 저장했다 되살�
 });
 
 test('8관 명인을 이기면 판을 이기고, 끝없는 대국으로 이어 간다', () => {
-  const run = createRun({ seed: 7 });
+  const run = createRun({ draft: false, seed: 7 });
   run.ante = 8; run.blind = 2;
   applyRun(run, { type: 'play' });
   assert.equal(run.battle.rules.kings, 2);
@@ -263,7 +263,7 @@ test('8관 명인을 이기면 판을 이기고, 끝없는 대국으로 이어 �
 
 test('유리 기물이 깨지면 판의 주머니에서도 빠진다', () => {
   for (let seed = 1; seed <= 40; seed++) {
-    const run = createRun({ seed });
+    const run = createRun({ draft: false, seed });
     for (const p of run.deck) p.eng = { id: 'glass' };
     applyRun(run, { type: 'play' });
     while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
