@@ -9,7 +9,7 @@ import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID } from '../data/souls.js';
 import { TACTIC_BY_ID } from '../data/tactics.js';
 import { L, getLang } from './lang.js';
-import { familyGlyphs, familyChips, chipRows, chipText } from './parts-depth.js';
+import { familyGlyphs, familyChips, chipRows, chipText, chipW } from './parts-depth.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
@@ -495,9 +495,12 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   const priceTxt = showPrice ? `$${it.price}` : '';
   const use = itemUse(it) ? [itemUse(it)] : [];
   // 맨 아래 줄: 값(오른쪽)과 시너지 칩(「기사 +1」, 왼쪽). 칩이 넘치면 그 위로 한 줄씩. 그 위에 흐린 쓰는 법
-  const chipAvail = w - 10 - (showPrice ? measure(priceTxt, true) + 8 : 0);
+  // 칩 하나가 값 옆에 안 들어가면(영어 「Sacrifice +1」) 값 줄을 나누지 않고 그 위 줄부터 놓는다
+  const beside = w - 10 - (showPrice ? measure(priceTxt, true) + 8 : 0);
+  const share = !showPrice || fams.every((f) => chipW(f) <= beside);
+  const chipAvail = share ? beside : w - 10;
   const rows = fams.length ? chipRows(fams, chipAvail) : 0;
-  const lastRow = y + h - (showPrice ? 15 : 14);
+  const lastRow = y + h - (showPrice ? 15 : 14) - (share ? 0 : 13);
   const chipTop = rows ? lastRow - (rows - 1) * 13 : showPrice ? y + h - 16 : y + h - 2;
   let yy = y + 48;
   const bottom = chipTop - use.length * 12;
@@ -514,7 +517,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '샀다', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
-  } else if (showPrice) text(ctx, priceTxt, rows ? x + w - 5 : x + w / 2, y + h - 14, PAL.goldDk, { align: rows ? 'right' : 'center', bold: true });
+  } else if (showPrice) text(ctx, priceTxt, rows && share ? x + w - 5 : x + w / 2, y + h - 14, PAL.goldDk, { align: rows && share ? 'right' : 'center', bold: true });
 }
 // 카드에 다 못 적은(「…」) 물건: 말풍선이 효과 글 전부를 보인다
 const CUT = new WeakSet();
