@@ -100,7 +100,7 @@ maxim('mate_hunter', '외통 사냥꾼', '킹을 지키는 적 −1 · 외통 �
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.addMoney(6); },
 });
 maxim('kings_neck', '왕의 목', '킹을 지키는 적을 먹으면 배수 +2 · 외통: 배수 ×3', '외통', 'uncommon', 6, {
-  more: '안 지켜진 킹이 빛난다',
+  more: '지켜지지 않은 킹은 빛난다',
   onCapture(ctx) {
     const { piece, to } = ctx.event;
     if (piece === 'K') return;

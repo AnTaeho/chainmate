@@ -291,7 +291,7 @@ export const EN = {
   '아무 기물에 무작위 혼이나 각인': 'A random soul or engraving on a random piece', '아무 기물이 무작위 특수 기물로': 'A random piece becomes a random special piece',
   '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존': 'Pawn › archer · knight › nightrider, camel · bishop › archbishop · rook › chancellor, cannon, ghost · queen › amazon',
   '버리기 −1': 'Discards −1', '수 2 · 버리기 1뿐': '2 moves · 1 discard only',
-  '안 지켜진 킹이 빛난다': 'Unguarded kings glow',
+  '지켜지지 않은 킹은 빛난다': 'Unguarded kings glow',
   '나이트 모습으로 가장자리 칸에서 먹을 때, 사슬마다 한 번': 'A knight-form take on an edge square, once per chain',
   '처음 세 먹기는 모습이 바뀌지 않고, 마지막에 먹은 적의 행마도 함께 쓴다': 'The first three takes keep your form, and you also use the move of the last enemy taken',
   '폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Pawn › knight › bishop › rook › queen › amazon',
@@ -354,7 +354,7 @@ export const EN = {
   // 적 특성 · 묘수 · 명인
   '사슬의 첫 먹기로는 못 먹는다': "Can't be a chain's first take", '먹으면 둘레의 적도 함께 먹는다': 'Taking it takes the enemies around it too',
   '먹어도 모습이 그대로': 'Taking it keeps your form', '먹으면 대국 뒤 내 주머니에 들어온다': 'Take it and it joins your bag after the match',
-  '이번 수 동안 값이 가장 큰 적 셋이 못 지킨다': 'This move, the three most valuable enemies guard nothing',
+  '값이 가장 큰 적 셋: 이번 수엔 못 지킨다': 'Top three enemies: no guarding this move',
   '이번 대국 수 +1': 'Moves +1 this match', '적 폰 넷이 빈칸에 나온다': 'Four enemy pawns step onto empty squares',
   '지켜진 적을 먹으면 곧바로 끊긴다': 'Taking a guarded enemy breaks the chain at once',
   '위 다섯 줄은 안개라 떨굴 수 없다 · 닿은 칸만 걷힌다': 'Fog on the top five ranks: no drops · only squares you reach clear',
