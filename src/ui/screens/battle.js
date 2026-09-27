@@ -8,7 +8,7 @@ import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../s
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach } from '../../sim/board.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
-import { REWARD, maximCapacity, maximCount } from '../../sim/run.js';
+import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
@@ -907,7 +907,9 @@ export class BattleScreen {
     const app = this.app, v = this.view, b = this.b, run = this.run;
     const master = b.mods.find((s) => MASTER_BY_ID[s.id]);
     panel(ctx, LX, 8, LW, 58);
-    text(ctx, `${b.ante}관 · ${KIND_SHORT[b.kind]} 대국`, LX + 6, 12, PAL.dim);
+    // 판의 대국이면 몇 관째인지 전체(8관) 중에 보인다
+    const hall = run && !run.endless ? `${b.ante}/${ANTES}관` : `${b.ante}관`;
+    text(ctx, `${hall} · ${KIND_SHORT[b.kind]} 대국`, LX + 6, 12, PAL.dim);
     text(ctx, '목표', LX + 6, 27, PAL.dim);
     text(ctx, num(v.target), LX + LW - 6, 27, PAL.ink, { align: 'right', bold: true });
     if (master) {
