@@ -36,7 +36,7 @@ export function maximTip(m) {
   const fams = maximFamilies(m.id);
   if (fams.length) for (const l of wrap(chipText(fams), 140)) extra.push([l, PAL.cardDim]);
   if (info.rarity === 'legendary' && info.story) for (const l of wrap(`${info.year ? info.year + ' · ' : ''}${info.story}`, 140)) extra.push([l, PAL.goldDk]);
-  return tipLines(info.name, info.text, 150, extra);
+  return tipLines(info.name, [info.text, info.more], 150, extra);
 }
 
 // 기물 말풍선: 행마 글 옆에 작은 행마 그림(diagram.js). dir −1은 적(적 폰은 아래로 먹는다)
@@ -112,7 +112,8 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   if (h >= 28) {
     // 둘째 줄: 효과의 앞머리(다 못 적으면 「…」 — 전부는 가리키면). 잠들었거나 판본 · 전설이면 그 이름
     let sub = off ? '잠듦' : m.edition ? EDITION_BY_ID[m.edition].name : legendary ? '전설' : null;
-    if (!sub) { const ls = wrap(info.text, w - 26); sub = ls.length > 1 ? `${ls[0]}…` : ls[0]; }
+    // 조건은 떼고 효과만(「나이트로 시작: 배수 ×1.5」 → 「배수 ×1.5」). 전부는 가리키면 보인다
+    if (!sub) { const ls = wrap(effectPart(info.text), w - 26); sub = ls.length > 1 ? `${ls[0]}…` : ls[0]; }
     text(ctx, sub, x + 6, y + 16, off ? PAL.red : obsidian ? '#b89ad8' : PAL.cardDim);
   }
   if (off) { rect(ctx, x + 4, y + Math.floor(h / 2), w - 8, 1, PAL.red); }
@@ -231,6 +232,15 @@ export function itemEffect(it) {
   if (it.kind === 'fragment') return `조각 셋이면 전설: ${LEGEND_BY_ID[it.legend].text}`;
   return '';
 }
+// 좁은 칸(격언 칸 둘째 줄)에 적는 효과: 첫 효과에서 조건을 뗀 것.
+// 「조건: 효과」면 콜론 뒤, 아니면 끝의 수치(「값 +60」 · 「+4 Mult」). 수치가 없으면 첫 효과 그대로
+export function effectPart(s) {
+  s = L(String(s)).split(' · ')[0];
+  const c = s.match(/^[^:]{1,60}?:\s+(.+)$/);
+  if (c) return c[1];
+  const n = s.match(/((?:값|배수|상금|버리기|수) [+×−][\d.]+)$/) || s.match(/([+×−][\d.]+ (?:Mult|Value|Purse))$/);
+  return n ? n[1] : s;
+}
 // 좁은 칸에 적는 효과 앞머리: 「언제」를 떼고 「무엇」부터(두루마리 칸). 전부는 가리키면 보인다.
 export function effectHead(s) {
   s = L(String(s));
@@ -347,14 +357,13 @@ export function itemTip(it) {
 
 // 물건이 채우는 시너지(격언 · 특수 기물 종류 · 혼)
 export const itemFams = (it) => (it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : []);
-// 카드 옆 낱말 상자에 넘길 카드 글: 시너지 → 효과 글의 낱말 → 특수 기물 → 물건 종류(격언 · 각인 …) 차례(app.draw가 둘까지)
-const KIND_TERM = { maxim: 'maxim', chart: 'chart', engraving: 'engraving', fragment: 'fragment', soul: 'soul', evolve: 'evolve', tactic: 'tactic' };
+// 카드 옆 낱말 상자에 넘길 카드 글: 시너지 → 특수 기물 → 효과 글의 드문 낱말(app.draw가 둘까지).
+// 카드의 종류(격언 · 각인 · 혼 …)는 카드 윗줄이 이미 말하고 처음 안내가 풀어 주어 상자를 띄우지 않는다
 export function itemKeys(it) {
   const out = itemFams(it).map((f) => ({ id: `fam_${f}` }));
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) out.push({ id: 'fairy' });
   out.push(itemEffect(it));
   if (it.edition) out.push({ id: 'edition' });
-  if (KIND_TERM[it.kind]) out.push({ id: KIND_TERM[it.kind] });
   return out;
 }
 // 카드에 이미 적힌 것 말고 덧붙일 것만(이야기 · 진화 갈래 · 행마 그림). 시너지는 카드의 칩이 말한다. 없으면 null
@@ -363,7 +372,9 @@ export function itemExtraTip(it) {
   // 기물 카드: 카드에 다 못 적은 행마 글 전부를 그림과 함께
   if (it.kind === 'piece' && PIECE_MOVE[it.t]) lines.push(PIECE_MOVE[it.t]);
   else if (CUT.has(it)) lines.push(itemEffect(it));
-  if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]}의 기보를 따른다`);
+  const more = it.kind === 'maxim' ? maximInfo(it.id).more : it.kind === 'soul' ? SOUL_BY_ID[it.id].more : null;
+  if (more) lines.push(more);
+  if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보가 적용된다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${info.story}`); }
   if (it.kind === 'evolve') lines.push('폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존');
   if (it.kind === 'fragment') lines.push(LEGEND_BY_ID[it.legend].story);

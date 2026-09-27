@@ -6,7 +6,7 @@ import { W, H, text, box, rect, frame } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows } from '../parts-depth.js';
-import { cornerTicks } from '../parts.js';
+import { cornerTicks, tipLines } from '../parts.js';
 import { topBar } from './common.js';
 
 const TIER_NAME = { silver: '은', gold: '금', rainbow: '무지개' };
@@ -52,7 +52,7 @@ export class DraftScreen {
       const sx = Math.abs(1 - 2 * p);
       const x = x0 + i * (CW + GAP), y = 40;
       const uid = `draft:${i}`;
-      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text, { id: 'joseki' }] });
+      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null, tipAt: { x: x + 4, y: y + CH + 4 } });
       const hov = ui.isHover(uid) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
       if (p < 0.5) { box(ctx, xx, y, nw, CH, '#2a3a33', PAL.frameDk); if (nw > 30) rect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, TIER_COL[j.tier]); return; }

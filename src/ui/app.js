@@ -273,7 +273,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       tipRect = tooltip(ctx, at.x, at.y, tip.lines, { title: tip.title, w: tip.w || 150, scale: big ? 2 : 1, diagram: tip.diagram || null });
     }
     // 큰 글자 설정에서는 말풍선이 화면 아래를 차지해 낱말 상자를 두지 않는다
-    if (big) return;
+    // 큰 글자 설정에서는 말풍선이 화면 아래를 차지해 낱말 상자를 두지 않는다. 가리킨 것이 곧 그 낱말(시너지 칩)이어도 말풍선 하나만
+    if (big || (h && h.noKeys)) return;
     if (tip || keys) {
       // 카드 글(keys) 다음에 말풍선 글. 말풍선 줄은 이어 붙여 줄바꿈에 잘린 낱말(「뛰기 / 모음」)도 찾는다
       const tipText = tip ? tip.lines.map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null;

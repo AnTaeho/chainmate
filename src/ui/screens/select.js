@@ -76,7 +76,7 @@ export class SelectScreen {
       if (master) {
         const m = MASTER_BY_ID[info.master];
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)
-        ui.region(`select:card:${i}`, x, y, w, h, { keys: [m.text, { id: 'master' }] });
+        ui.region(`select:card:${i}`, x, y, w, h, { keys: [m.text] });
         box(ctx, x + w - 44, y + 68, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + w - 42, y + 70, 1, cur ? 1 : 0.6);
         wrap(`명인 ${m.name}`, w - 60, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + 10, y + 72 + k * 13, PAL.red, { bold: true }));

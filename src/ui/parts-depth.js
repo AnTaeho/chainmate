@@ -84,7 +84,8 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
     const cw = measure(label) + (glyph ? 14 : 4);
     if (cx + cw > x + w) break;
     const id = `${idPrefix}:${f.id}`;
-    ui.region(id, cx, y, cw, 13, { tip: () => familyTip(f.id, n[f.id]), keys: [{ id: `fam_${f.id}` }, { id: 'set' }] });
+    // 칩 자체가 그 시너지라 말풍선 하나만(같은 풀이를 상자로 또 띄우지 않는다)
+    ui.region(id, cx, y, cw, 13, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
     const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
     box(ctx, cx, y, cw, 13, lv ? '#132019' : PAL.feltDk, lv ? f.col : PAL.frameDk);
@@ -109,7 +110,7 @@ export function josekiBadges(ctx, ui, run, x, y) {
   (run.josekis || []).forEach((id, k) => {
     const j = JOSEKI_BY_ID[id];
     const bx = x + k * 12;
-    ui.region(`joseki:${id}`, bx, y, 11, 11, { keys: [{ id: 'joseki' }], tip: () => tipLines(j.name, j.text, 150, j.families.length ? wrap(chipText(j.families), 140).map((l) => [l, PAL.cardDim]) : []) });
+    ui.region(`joseki:${id}`, bx, y, 11, 11, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? wrap(chipText(j.families), 140).map((l) => [l, PAL.cardDim]) : []) });
     box(ctx, bx, y, 11, 11, '#132019', TIER_COL[j.tier]);
     if (j.families[0]) familyGlyph(ctx, j.families[0], bx + 3, y + 3, TIER_COL[j.tier]);
     else rect(ctx, bx + 4, y + 4, 3, 3, TIER_COL[j.tier]);
