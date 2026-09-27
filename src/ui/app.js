@@ -77,6 +77,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.visited.add(name);
     app.ui.press = null;
     app.ui.drag = null;
+    app.ui.previewId = null; // 손가락으로 한 번 누른 카드는 화면을 옮기면 잊는다(다음 화면의 같은 구역이 곧바로 눌리지 않게)
   };
   app.openOverlay = (name, args = {}) => {
     app.overlay = new SCREENS[name](app, args);
