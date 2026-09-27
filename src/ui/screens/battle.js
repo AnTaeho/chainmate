@@ -3,7 +3,7 @@
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure } from '../../render/gfx.js';
-import { spriteChips, spriteCanvas, outlineCanvas, TONE } from '../../render/sprites.js';
+import { spriteChips, spriteCanvas, outlineCanvas, TONE, tierOf } from '../../render/sprites.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach } from '../../sim/board.js';
@@ -158,7 +158,7 @@ export class BattleScreen {
         steps: [...c.captures.map((x) => x.form), c.form],
         path: [c.dropSq, ...c.captures.map((x) => x.to)],
         forced: c.forced ? c.forced.slice() : null, awaiting: c.awaiting ? chainRedrops(b) : null,
-        cut: false,
+        cut: false, eng: c.engraving ? c.engraving.id : null,
       };
     } else v.chain = null;
     this.targets = null;
@@ -257,6 +257,7 @@ export class BattleScreen {
     const v = this.view;
     const run = this.run;
     if (cmd.type === 'drop') this.slow = this.src.kind === 'lesson' || (!!run && !run.log.some((x) => !x.skipped) && bRef.history.length < 3);
+    if (cmd.type === 'drop') { const hp = bRef.hand[cmd.handIndex]; this.dropEng = hp && hp.eng ? hp.eng.id : null; }
     if (cmd.type === 'drop' && run) this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
     const events = this.src.cmd(cmd);
     if (run) this.record(events, run);
@@ -309,7 +310,7 @@ export class BattleScreen {
         case 'drop': add(0.14, {
           begin: () => {
             v.board[e.sq] = { t: e.piece, mine: true };
-            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], forced: null, awaiting: null, cut: false };
+            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], forced: null, awaiting: null, cut: false, eng: this.dropEng || null };
             v.dropIn = { sq: e.sq, p: 0 };
             this.snd('drop');
           },
@@ -462,7 +463,7 @@ export class BattleScreen {
       done: () => {
         v.score = from + e.score;
         v.count = null;
-        this.lastEnd = { value: e.value, mult: e.mult, score: e.score, reason: e.reason, steps: v.chain ? v.chain.steps.slice() : [] };
+        this.lastEnd = { value: e.value, mult: e.mult, score: e.score, reason: e.reason, steps: v.chain ? v.chain.steps.slice() : [], eng: v.chain ? v.chain.eng : null };
         if (this.run && e.score > 0 && app.noteMove(e.score, this.lastEnd.steps) && app.records.runs + app.records.wins > 0) this.toast('최고 한 수', PAL.gold);
         v.gather = null;
         v.chain = null;
@@ -491,6 +492,11 @@ export class BattleScreen {
 
   // ── 효과
   center(sq) { const p = sqXY(sq); return { x: p.x + 14, y: p.y + 14 }; }
+  // 내 기물의 모습: 떨군 기물의 각인 톤 + 지금 모습의 기보 단계
+  look(form, time = null) {
+    const run = this.run, v = this.view;
+    return { eng: v.chain ? v.chain.eng || null : null, tier: run ? tierOf(run.charts[form]) : 0, time };
+  }
   shatter(sq, type, side) {
     const { x, y } = sqXY(sq);
     const chips = spriteChips(type, side);
@@ -783,7 +789,8 @@ export class BattleScreen {
         if (v.lift && v.lift.sq === sq) { dy = -Math.round(Math.sin(v.lift.p * Math.PI) * 8); side = 'q'; }
         let alpha = 1;
         if (v.cut && v.cut.sq === sq) alpha = 1 - v.cut.p;
-        sprite(ctx, c.t, side, x + 6, y + 3 + dy, { sx, alpha });
+        const lk = side === 'w' ? this.look(c.t, time) : {};
+        sprite(ctx, c.t, side, x + 6, y + 3 + dy, { sx, alpha, ...lk });
         continue;
       }
       let dy = 0;
@@ -808,7 +815,7 @@ export class BattleScreen {
     // 움직이는 내 기물
     if (v.mover) {
       const m = moverXY(v.mover.form, v.mover.from, v.mover.to, v.mover.p);
-      sprite(ctx, v.mover.form, 'w', m.x + 6, m.y + 3);
+      sprite(ctx, v.mover.form, 'w', m.x + 6, m.y + 3, this.look(v.mover.form, time));
     }
     // 노림수: 내 기물을 노리는 적에서 붉은 끊어진 선이 내 기물 쪽으로 흐른다(먹을 수 없는 적은 어두운 붉은색).
     // 붙어 있는 적이 많아 기물 위에 긋되, 양 끝은 기물 몸을 비켜 칸 가장자리 쪽만
@@ -865,14 +872,14 @@ export class BattleScreen {
       const fc = this.center(v.chain.sq);
       dotLine(ctx, fc.x, fc.y, tc.x, tc.y, PAL.goldHi);
       frame(ctx, T.x, T.y, S, S, PAL.gold);
-      sprite(ctx, pv.form, 'w', T.x + 6, T.y + 2, { alpha: 0.62 + 0.12 * Math.sin(time * 6) });
+      sprite(ctx, pv.form, 'w', T.x + 6, T.y + 2, { alpha: 0.62 + 0.12 * Math.sin(time * 6), ...this.look(pv.form) });
       if (pv.cut) {
         for (const s of pv.cut) { const a = this.center(s); dotLine(ctx, a.x, a.y, tc.x, tc.y, PAL.red, 2); const A = sqXY(s); ringAt(ctx, A.x, A.y, PAL.red, 2); }
         line(ctx, T.x + 5, T.y + 5, T.x + 22, T.y + 22, PAL.red); line(ctx, T.x + 22, T.y + 5, T.x + 5, T.y + 22, PAL.red);
         return;
       }
     } else if (pv.kind === 'drop') {
-      sprite(ctx, pv.form, 'w', T.x + 6, T.y + 3, { alpha: 0.5 });
+      sprite(ctx, pv.form, 'w', T.x + 6, T.y + 3, { alpha: 0.5, eng: this.sel.length === 1 && v.hand[this.sel[0]] && v.hand[this.sel[0]].eng ? v.hand[this.sel[0]].eng.id : null, tier: this.look(pv.form).tier });
     }
     for (const s of pv.next) {
       const A = sqXY(s), c = this.center(s);
@@ -891,10 +898,10 @@ export class BattleScreen {
     text(ctx, '지금', RX + 21, 26, PAL.dim, { align: 'center' });
     text(ctx, '먹으면', RX + 77, 26, PAL.dim, { align: 'center' });
     box(ctx, RX + 8, 40, 26, 34, PAL.light, PAL.frameDk);
-    sprite(ctx, v.chain.form, 'w', RX + 13, 46);
+    sprite(ctx, v.chain.form, 'w', RX + 13, 46, this.look(v.chain.form));
     text(ctx, '›', RX + 49, 49, PAL.gold, { align: 'center', bold: true, scale: 2 });
     box(ctx, RX + 64, 40, 26, 34, pv.cut ? PAL.red : PAL.gold, PAL.frameDk);
-    sprite(ctx, pv.form, 'w', RX + 69, 46);
+    sprite(ctx, pv.form, 'w', RX + 69, 46, this.look(pv.form));
     text(ctx, `+${short(pv.value)}`, RX + 8, 88, PAL.val, { bold: true });
     text(ctx, `연쇄 +${short(pv.mult)}`, RX + RW - 8, 88, PAL.gold, { align: 'right', bold: true });
     panel(ctx, RX, 114, RW, 22);
@@ -957,13 +964,15 @@ export class BattleScreen {
     const steps = c ? c.steps : this.lastEnd ? this.lastEnd.steps : [];
     const a = c ? 1 : 0.45;
     const past = steps.slice(Math.max(0, steps.length - 4), -1);
-    past.forEach((tp, i) => sprite(ctx, tp, 'w', LX + 5 + i * 19, 148, { alpha: a }));
+    const eng = c ? c.eng : this.lastEnd ? this.lastEnd.eng : null;
+    const tierAt = (tp) => (run ? tierOf(run.charts[tp]) : 0);
+    past.forEach((tp, i) => sprite(ctx, tp, 'w', LX + 5 + i * 19, 148, { alpha: a, eng, tier: tierAt(tp) }));
     if (steps.length > 4) text(ctx, `+${steps.length - 4}`, LX + 5, 127, PAL.dim);
     const cur = steps[steps.length - 1];
     if (cur) {
       if (c && c.cut) { ctx.globalAlpha = 0.35; rect(ctx, LX + LW - 40, 126, 36, 48, PAL.red); ctx.globalAlpha = 1; }
       ctx.globalAlpha = a;
-      ctx.drawImage(spriteCanvas(cur, 'w'), LX + LW - 38, 128, 32, 44);
+      ctx.drawImage(spriteCanvas(cur, 'w', eng, tierAt(cur)), LX + LW - 38, 128, 32, 44);
       ctx.globalAlpha = 1;
     }
     // 수 · 무르기
@@ -1010,7 +1019,7 @@ export class BattleScreen {
       const usable = live && live.status === 'play' && !this.busy;
       // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)
       const nudge = usable && !this.sel.length && this.idleT > 2.5 && Math.floor(app.time * 3) % v.hand.length === i ? 2 : 0;
-      pieceCard(ctx, p, x, y, w, 36, { lift: selected ? 4 : hov && usable ? 1 : nudge, selected, hover: hov || nudge > 0, dim: !usable });
+      pieceCard(ctx, p, x, y, w, 36, { lift: selected ? 4 : hov && usable ? 1 : nudge, selected, hover: hov || nudge > 0, dim: !usable, tier: run ? tierOf(run.charts[p.t]) : 0, time: app.time + i });
     });
   }
 

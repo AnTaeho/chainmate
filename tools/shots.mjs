@@ -395,6 +395,73 @@ await ev(() => window.__app.go('title'));
 await page.waitForFunction(() => { const c = window.__app.screen.demo.view.chain; return c && c.path.length >= 4 && !window.__app.screen.demo.view.mover; }, null, { timeout: 30000 });
 await shot('22-title-demo');
 
+// 각인 여섯이 손 · 판 · 상점에: 주머니 기물에 각인을 새기고 대국을 연다
+await ev(() => {
+  const a = window.__app;
+  localStorage.removeItem('chainmate.run.v1');
+  a.newRun({ seed: 11 });
+  const r = a.run;
+  ['gold', 'silver', 'ivory', 'ebony', 'glass', 'feather'].forEach((id, i) => { r.deck[i + 2].eng = { id }; });
+  r.charts.N = 3; r.charts.B = 5;
+  a.cmd({ type: 'play' });
+  const b = r.battle;
+  b.hand = r.deck.slice(2, 6).map((p) => JSON.parse(JSON.stringify(p)));
+  a.go('battle', { events: [] });
+});
+await settle(2400);
+const plan5 = await ev(async () => {
+  const { bestMove } = await import('/src/sim/solver.js');
+  const d = bestMove(window.__app.run.battle, { preferMate: 'avoid' });
+  return d && { hand: d.handIndex, sq: d.sq, line: d.line };
+});
+if (plan5) {
+  await clickId(`hand:${plan5.hand}`);
+  await clickId(`sq:${plan5.sq}`);
+  await idle();
+  if (plan5.line.length > 1) { await clickId(`sq:${plan5.line[0]}`); await idle(); }
+}
+await page.mouse.move(1, 1);
+await settle(150);
+await shot('27-engravings-battle');
+await ev(() => {
+  const a = window.__app, r = a.run;
+  r.money = 40;
+  r.phase = 'shop';
+  r.battle = null;
+  r.shop = { rng: null, display: [{ kind: 'engraving', id: 'glass', price: 4 }, { kind: 'chart', form: 'N', price: 3 }], packs: [{ kind: 'engraving', price: 4 }, { kind: 'piece', price: 4 }], rerolls: 0, promoted: false, removed: false };
+  r.consumables = [{ kind: 'engraving', id: 'feather' }, { kind: 'engraving', id: 'ebony' }];
+  a.go('shop');
+});
+await settle(300);
+await shot('27-engravings-shop');
+// 기보 단계 넷(0 · 1~2 · 3~4 · 5~), 각인과 겹친 모습
+await ev(async () => {
+  const { spriteCanvas, tierSparkle } = await import('/src/render/sprites.js');
+  const c = document.getElementById('screen');
+  window.__app.draw = () => {
+    const g = c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = '#1b2b27'; g.fillRect(0, 0, 480, 270);
+    ['P', 'N', 'B', 'R', 'Q', 'K'].forEach((t, i) => [0, 1, 2, 3].forEach((tier, row) => {
+      const x = 20 + i * 34, y = 16 + row * 34;
+      g.fillStyle = (i + row) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
+      g.drawImage(spriteCanvas(t, 'w', null, tier), x + 6, y + 3);
+      if (tier === 3) tierSparkle(g, x + 6, y + 3);
+    }));
+    ['gold', 'silver', 'ivory', 'ebony', 'glass', 'feather'].forEach((eng, i) => [0, 3].forEach((tier, row) => {
+      const x = 240 + i * 34, y = 16 + row * 34;
+      g.fillStyle = (i + row) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
+      g.drawImage(spriteCanvas('N', 'w', eng, tier), x + 6, y + 3);
+      if (tier === 3) tierSparkle(g, x + 6, y + 3);
+    }));
+    [0, 3].forEach((tier, i) => { g.drawImage(spriteCanvas('N', 'w', null, tier), 250 + i * 80, 100, 64, 88); g.drawImage(spriteCanvas('Q', 'w', null, tier), 290 + i * 80, 196, 32, 44); });
+  };
+});
+await settle(200);
+await shot('28-tiers');
+await page.reload();
+await page.waitForFunction(() => window.__app && window.__app.screen);
+
 // 영어 화면 셋(대국 · 상점 · 판 준비)
 await ev(() => { const a = window.__app; a.settings.lang = 'en'; a.saveSettings(); });
 await page.reload();

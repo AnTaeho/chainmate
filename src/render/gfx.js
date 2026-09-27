@@ -1,7 +1,7 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL } from './palette.js';
 import { textImage, textWidth } from './text.js';
-import { spriteCanvas, SW, SH } from './sprites.js';
+import { spriteCanvas, tierSparkle, SW, SH } from './sprites.js';
 import { L } from '../ui/lang.js';
 
 export const W = 480, H = 270;
@@ -66,9 +66,11 @@ export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false
 export const measure = (s, bold = false) => textWidth(s, bold);
 
 // 기물. sx: 가로 배율(뒤집힘 1 → 0 → 1), lift: 위로 띄우기, alpha
-export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1 } = {}) {
-  const c = spriteCanvas(type, side);
+// eng: 각인 id(몸 톤) · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게(없으면 멈춘 모습)
+export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null } = {}) {
+  const c = spriteCanvas(type, side, eng, tier);
   if (alpha <= 0) return;
+  if (tier === 3 && sx === 1 && sy === 1) { if (alpha !== 1) ctx.globalAlpha = alpha; tierSparkle(ctx, Math.round(x), Math.round(y), time); if (alpha !== 1) ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = alpha;
   if (sx === 1 && sy === 1) ctx.drawImage(c, Math.round(x), Math.round(y));
   else {

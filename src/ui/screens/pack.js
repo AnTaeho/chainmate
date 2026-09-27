@@ -42,6 +42,8 @@ export class PackScreen {
       if (e.type === 'fragment') this.app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6);
       if (e.type === 'chart') this.app.toast(`${CHARTS[e.form].name} ${e.level}`, PAL.gold);
     }
+    // 상점으로 돌아가 주머니에서 자라는 · 새겨지는 모습을 보인다
+    this.app.shopFx = ev.filter((e) => e.type === 'chart' || e.type === 'engrave');
     if (legend) this.app.flow([['legend', { legend: legend.legend }]]);
     else if (this.run.phase !== 'pack') this.app.goPhase();
   }
@@ -65,7 +67,7 @@ export class PackScreen {
         const nw = Math.max(2, Math.round(cw * scaleX));
         box(ctx, x + Math.floor((cw - nw) / 2), y, nw, ch, gold ? PAL.gold : '#c9a36a', PAL.frameDk);
         if (nw > 20) rect(ctx, x + Math.floor(cw / 2) - 6, y + 46, 12, 12, gold ? PAL.goldHi : '#e6c690');
-      } else itemCard(ctx, o, x, y, cw, ch, { hover: ui.isHover(id), price: false, scaleX, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + i });
+      } else itemCard(ctx, o, x, y, cw, ch, { hover: ui.isHover(id), price: false, scaleX, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + i, run });
       if (this.engraveIndex === i) { rect(ctx, x, y + ch + 2, cw, 2, PAL.gold); }
     });
     if (this.engraveIndex != null) {

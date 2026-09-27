@@ -1,6 +1,7 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, frame, dots, sprite, measure } from '../render/gfx.js';
+import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
@@ -125,22 +126,30 @@ export function maximColumn(ctx, ui, run, x, y, w, hTotal, { idPrefix = 'maxim',
   return { spots, h, gap, slots, count: maximCount(run), cap };
 }
 
-// 손 기물 카드(각인 빛깔)
+// 손 기물 카드: 각인은 기물 몸의 톤으로, 카드는 안쪽 테만 각인 색. tier: 그 종류의 기보 단계
 export const ENG_FILL = { ivory: '#f7efdb', glass: '#bfe0e6', gold: '#f3d27a', ebony: '#6b5a52', silver: '#d8dee6', feather: '#e8e0f0' };
-export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hover = false, dim = false, alpha = 1 } = {}) {
+export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hover = false, dim = false, alpha = 1, tier = 0, time = null, flash = 0 } = {}) {
   const yy = y - lift;
   if (alpha !== 1) ctx.globalAlpha = alpha;
-  const fill = p.eng ? ENG_FILL[p.eng.id] || PAL.light : PAL.light;
-  box(ctx, x, yy, w, h, fill, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk);
+  box(ctx, x, yy, w, h, PAL.light, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk);
+  rect(ctx, x + 1, yy + 1, w - 2, 1, PAL.cardHi);
   if (selected) frame(ctx, x - 1, yy - 1, w + 2, h + 2, PAL.gold);
-  if (p.eng && p.eng.id === 'glass') { rect(ctx, x + 3, yy + 3, 1, 6, '#ffffff'); rect(ctx, x + 5, yy + 3, 1, 3, '#ffffff'); }
-  if (p.eng && p.eng.id === 'ivory') rect(ctx, x + 2, yy + 2, w - 4, 1, PAL.gold);
-  if (p.eng && p.eng.id === 'gold') { rect(ctx, x + 2, yy + 2, 2, 2, PAL.goldDk); rect(ctx, x + w - 4, yy + 2, 2, 2, PAL.goldDk); }
-  if (p.eng && p.eng.id === 'ebony') rect(ctx, x + 2, yy + h - 3, w - 4, 1, '#2a1f1b');
-  if (p.eng && p.eng.id === 'silver') { rect(ctx, x + 2, yy + 2, 1, 1, '#ffffff'); rect(ctx, x + w - 3, yy + 2, 1, 1, '#ffffff'); }
-  if (p.eng && p.eng.id === 'feather') { rect(ctx, x + w - 5, yy + 2, 1, 5, '#9a86b8'); rect(ctx, x + w - 6, yy + 3, 1, 3, '#9a86b8'); }
-  sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1 });
+  if (p.eng && ENG_EDGE[p.eng.id]) { frame(ctx, x + 1, yy + 1, w - 2, h - 2, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
+  sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time });
+  if (flash > 0) { ctx.globalAlpha = flash * 0.8; rect(ctx, x + 1, yy + 1, w - 2, h - 2, PAL.white); ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = 1;
+}
+// 네 모서리 꺾쇠
+export function cornerTicks(ctx, x, y, w, h, col, n = 2) {
+  rect(ctx, x, y, n, 1, col); rect(ctx, x, y, 1, n, col);
+  rect(ctx, x + w - n, y, n, 1, col); rect(ctx, x + w - 1, y, 1, n, col);
+  rect(ctx, x, y + h - 1, n, 1, col); rect(ctx, x, y + h - n, 1, n, col);
+  rect(ctx, x + w - n, y + h - 1, n, 1, col); rect(ctx, x + w - 1, y + h - n, 1, n, col);
+}
+// 각인 그림: 그 각인이 새겨진 나이트 한 칸(상점 · 꾸러미 카드, 두루마리)
+export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
+  if (sq) { rect(ctx, x, y, 22, 26, PAL.dark); rect(ctx, x + 1, y + 1, 20, 1, PAL.light); }
+  sprite(ctx, 'N', 'w', x + 3, y + 3, { eng: id });
 }
 
 // 작은 동전 아이콘 + 상금
@@ -188,7 +197,7 @@ export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
   rows.forEach((r, j) => { for (let i = 0; i < 8; i++) if (r[i] === '#') rect(ctx, x + i * 2, y + j * 2, 2, 2, (i + j) % 4 === 0 ? PAL.goldHi : j > 3 ? dk : col); });
 }
 
-export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0 } = {}) {
+export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null } = {}) {
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
@@ -212,14 +221,24 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
     if (it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + h - 28, PAL.goldDk, { align: 'center' });
   } else if (it.kind === 'chart' || it.kind === 'piece') {
     const t = it.kind === 'chart' ? it.form : it.t;
-    if (it.kind === 'chart') { box(ctx, cx - 13, y + 20, 26, 30, '#e8dcc0', PAL.cardDim); }
-    sprite(ctx, t, it.kind === 'chart' ? 'b' : 'w', cx - 8, y + 24);
-    text(ctx, it.kind === 'chart' ? `${PIECE_NAME[t]}` : PIECE_NAME[t], cx, y + 54, PAL.cardInk, { align: 'center', bold: true });
+    if (it.kind === 'chart') {
+      box(ctx, cx - 13, y + 20, 26, 30, '#e8dcc0', PAL.cardDim);
+      // 사면 오를 단계를 작게 미리: 내 기물이 그 단계의 모습으로
+      const lv = run ? run.charts[t] || 0 : null;
+      if (lv != null) {
+        sprite(ctx, t, 'w', cx - 8, y + 24, { tier: tierOf(lv + 1) });
+        text(ctx, `${lv} › ${lv + 1}`, cx, y + 66, PAL.cardDim, { align: 'center' });
+      } else sprite(ctx, t, 'b', cx - 8, y + 24);
+    } else sprite(ctx, t, 'w', cx - 8, y + 24, { tier: run ? tierOf(run.charts[t]) : 0 });
+    text(ctx, PIECE_NAME[t], cx, y + 54, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'engraving') {
-    box(ctx, cx - 11, y + 20, 22, 30, ENG_FILL[it.id] || PAL.light, PAL.cardDim);
+    const col = ENG_EDGE[it.id] || PAL.gold;
+    frame(ctx, x + 1, y + 1, w - 2, h - 2, col);
+    cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, col, 3);
+    engravingEmblem(ctx, it.id, cx - 11, y + 20);
     const e = engravingInfo(it.id);
-    text(ctx, e.name, cx, y + 54, PAL.cardInk, { align: 'center', bold: true });
-    text(ctx, L(e.name).slice(0, 1), cx, y + 29, PAL.cardInk, { align: 'center', bold: true });
+    text(ctx, e.name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
+    rect(ctx, cx - 10, y + 63, 20, 1, col);
   } else if (it.kind === 'fragment') {
     shardIcon(ctx, cx - 8, y + 22);
     const lines = wrap(LEGEND_BY_ID[it.legend].name, w - 8, true);

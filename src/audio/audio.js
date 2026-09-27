@@ -122,6 +122,7 @@ export function createAudio(win = globalThis) {
     pack: () => noise({ dur: 0.18, vol: 0.18, freq: 3500, q: 1, sweep: 900 }),
     flip: () => noise({ dur: 0.05, vol: 0.12, freq: 2200, q: 1 }),
     chart: () => arp([79, 84], 0.06, { dur: 0.2, type: 'sine', vol: 0.12 }),
+    grow: () => { arp([72, 79, 84, 91], 0.06, { dur: 0.22, type: 'sine', vol: 0.1 }); bell(NOTE(96), { t: 0.24, dur: 0.6, vol: 0.1 }); },
     engrave: () => { noise({ dur: 0.1, vol: 0.14, freq: 5000, q: 4 }); bell(NOTE(88), { t: 0.05, dur: 0.4, vol: 0.08 }); },
     chestOpen: () => { noise({ dur: 0.4, vol: 0.12, freq: 250, q: 5, sweep: 180 }); tone(NOTE(55), { t: 0.2, dur: 0.4, type: 'triangle', vol: 0.12 }); },
     reelStop: () => { tone(700, { dur: 0.04, type: 'square', vol: 0.06 }); noise({ dur: 0.03, vol: 0.1, freq: 1500 }); },

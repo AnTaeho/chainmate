@@ -7,14 +7,16 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, ENG_FILL, fragmentStrip } from '../parts.js';
+import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, engravingEmblem, cornerTicks } from '../parts.js';
+import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { PACK_NAME, PIECE_NAME, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
 
 const RX = 360, RW = 112;
 
 // 주머니 줄: 작은 기물 카드들. pick(p)이 있으면 누를 수 있다.
-export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selectedId = null, idPrefix = 'deck' } = {}) {
+// flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝) · grow: { form, p } 기보로 자라는 모습(0.5초 빛 기둥)
+export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selectedId = null, idPrefix = 'deck', flash = null, grow = null } = {}) {
   const n = run.deck.length;
   const cw = 20, ch = 28;
   const per = Math.max(1, Math.floor((w + 3) / (cw + 3)));
@@ -26,16 +28,41 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     const id = `${idPrefix}:${p.id}`;
     ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: p.eng ? () => pieceTip(p) : null });
     const hov = ui.isHover(id);
-    pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick ? 1 : 0, selected: selectedId === p.id, hover: hov });
+    const fl = flash && flash.id === p.id ? 1 - flash.p : 0;
+    pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick ? 1 : 0, selected: selectedId === p.id, hover: hov, tier: tierOf(run.charts[p.t]), time: ui.time + i, flash: fl });
+    if (grow && grow.form === p.t) growPillar(ctx, px, py, cw, ch, grow.p);
     if (glow && pick) { const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; frame(ctx, px - 1, py - 1, cw + 2, ch + 2, PAL.gold); ctx.globalAlpha = 1; }
   });
 }
 
+// 기보로 자라는 순간: 기물 위로 빛 기둥이 솟고 반짝임이 흩어진다
+export function growPillar(ctx, x, y, w, h, p) {
+  const a = p < 0.3 ? p / 0.3 : 1 - (p - 0.3) / 0.7;
+  const cx = x + Math.floor(w / 2);
+  const top = y - Math.round(18 * Math.min(1, p * 2.5));
+  ctx.globalAlpha = 0.55 * a; rect(ctx, cx - 4, top, 8, y + h - top, PAL.goldHi);
+  ctx.globalAlpha = 0.9 * a; rect(ctx, cx - 1, top - 2, 2, y + h - top + 2, PAL.white);
+  ctx.globalAlpha = a;
+  for (let k = 0; k < 6; k++) {
+    const ang = k * 1.05 + p * 3, r = 4 + p * 14;
+    rect(ctx, Math.round(cx + Math.cos(ang) * r), Math.round(y + h / 2 + Math.sin(ang) * r * 0.8), 1, 1, PAL.goldHi);
+  }
+  ctx.globalAlpha = 1;
+}
+
 // 두루마리 한 칸
 export function consumableCard(ctx, c, x, y, w, h, hover) {
-  box(ctx, x, y, w, h, c.kind === 'chart' ? '#e8dcc0' : ENG_FILL[c.id] || PAL.light, hover ? PAL.gold : PAL.frameDk);
-  if (c.kind === 'chart') { sprite(ctx, c.form, 'b', x + 3, y + Math.floor((h - 22) / 2)); text(ctx, '기보', x + 22, y + Math.floor(h / 2) - 6, PAL.cardInk, { bold: true }); }
-  else text(ctx, `${engravingInfo(c.id).name} 각인`, x + w / 2, y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
+  if (c.kind === 'chart') {
+    box(ctx, x, y, w, h, '#e8dcc0', hover ? PAL.gold : PAL.frameDk);
+    sprite(ctx, c.form, 'b', x + 3, y + Math.floor((h - 22) / 2)); text(ctx, '기보', x + 22, y + Math.floor(h / 2) - 6, PAL.cardInk, { bold: true });
+    return;
+  }
+  const col = ENG_EDGE[c.id] || PAL.gold;
+  box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
+  frame(ctx, x + 1, y + 1, w - 2, h - 2, col);
+  cornerTicks(ctx, x + 2, y + 2, w - 4, h - 4, col);
+  sprite(ctx, 'N', 'w', x + 3, y + Math.floor((h - 22) / 2), { eng: c.id });
+  text(ctx, engravingInfo(c.id).name, x + 20 + Math.floor((w - 20) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
 }
 // 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
 const TIP_AT = { x: 196, y: 174 };
@@ -46,6 +73,14 @@ export class ShopScreen {
     this.app = app;
     this.menu = null;      // { kind: 'maxim', index } | { kind: 'piece', id }
     this.target = null;    // 각인 두루마리를 쓸 대상 고르기 { index }
+    const fx = app.shopFx || [];
+    app.shopFx = null;
+    for (const e of fx) this.fx(e);
+  }
+  // 기보로 한 단계 자라면 빛 기둥, 각인을 새기면 반짝
+  fx(e) {
+    if (e.type === 'chart' && tierOf(e.level) > tierOf(e.level - 1)) { this.grow = { form: e.form, t0: this.app.time }; this.app.sfx('grow'); }
+    if (e.type === 'engrave') this.flash = { id: e.pieceId, t0: this.app.time };
   }
   get run() { return this.app.run; }
 
@@ -61,7 +96,10 @@ export class ShopScreen {
         this.app.flyShard(r ? r.x + r.w / 2 : 240, r ? r.y + r.h / 2 : 100, RX + RW - 8, 34);
       }
       if (e.type === 'legend') { this.app.flow([['legend', { legend: e.legend, back: 'shop' }]]); return ev; }
-      if (e.type === 'chart') this.app.toast(`${CHARTS[e.form].name} ${e.level}`, PAL.gold);
+      if (e.type === 'chart') {
+        this.app.toast(`${CHARTS[e.form].name} ${e.level}`, PAL.gold);
+      }
+      this.fx(e);
     }
     if (this.run.phase === 'pack') this.app.go('pack', { events: ev });
     else if (this.run.phase !== 'shop') this.app.goPhase();
@@ -78,7 +116,7 @@ export class ShopScreen {
       const x = 12 + i * 74, y = 46, id = `shop:buy:${i}`;
       const ok = canBuy(run, it);
       ui.region(id, x, y, 68, 96, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemTip(it), tipAt: TIP_AT });
-      itemCard(ctx, it, x, y, 68, 96, { hover: ui.isHover(id) && ok, sold: it.sold, t: ui.time + i });
+      itemCard(ctx, it, x, y, 68, 96, { hover: ui.isHover(id) && ok, sold: it.sold, t: ui.time + i, run });
       if (!it.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, 68, 96, PAL.shadow); ctx.globalAlpha = 1; }
     });
     // 꾸러미
@@ -97,8 +135,11 @@ export class ShopScreen {
     text(ctx, `주머니 ${run.deck.length}`, 12, 178, PAL.dim);
     const hint = this.target ? '새길 기물' : null;
     if (hint) text(ctx, hint, 100, 178, PAL.gold, { bold: true });
+    const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
+    const fp = since(this.flash, 0.3), gp = since(this.grow, 0.5);
     bagRow(ctx, ui, run, 12, 194, 330, {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : null,
+      flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { form: this.grow.form, p: gp } : null,
     });
     // 오른쪽: 격언
     text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
