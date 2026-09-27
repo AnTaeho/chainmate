@@ -9,7 +9,7 @@ import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { EDITIONS } from '../../data/editions.js';
 import { button } from '../ui.js';
-import { tipLines, miniShard, moveTip } from '../parts.js';
+import { tipLines, miniShard, moveTip, fitText, cardBase } from '../parts.js';
 import { drawIcon } from '../../render/icons.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
 import { pageHead, pageButtons } from './common.js';
@@ -48,9 +48,9 @@ export class CodexScreen {
         text(ctx, '?', x + cw / 2, y + 6, PAL.dimDk, { align: 'center', bold: true });
         return;
       }
-      box(ctx, x, y, cw, ch, e.done ? '#f6d98a' : PAL.card, ui.isHover(id) ? PAL.gold : PAL.frameDk);
+      cardBase(ctx, x, y, cw, ch, { fill: e.done ? '#f6d98a' : PAL.card, hover: ui.isHover(id) });
       rect(ctx, x + 1, y + 2, 2, ch - 3, e.col);
-      text(ctx, e.name, x + 6, y + 6, PAL.cardInk, { bold: true });
+      fitText(ctx, e.name, x + 6, y + 6, cw - 6 - (e.piece ? 21 : this.tab === 'maxims' || this.tab === 'legends' ? 17 : e.parts != null ? 38 : 4), PAL.cardInk);
       if (this.tab === 'maxims' || this.tab === 'legends') drawIcon(ctx, e.id, x + cw - 15, y + 6, 0.9);
       if (e.piece) sprite(ctx, e.piece, 'w', x + cw - 19, y + 1);
       if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - 36 + k * 6, y + 17, PAL.goldDk); }

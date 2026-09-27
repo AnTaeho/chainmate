@@ -22,10 +22,10 @@ import { MASTER_BY_ID } from '../../data/masters.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
-import { maximColumn, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fragmentStrip, itemTip, tacticIcon } from '../parts.js';
+import { maximColumn, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
-import { pauseButton } from './common.js';
-import { TOP } from '../frame.js';
+import { pauseButton, moneyPanel } from './common.js';
+import { TOP, PAUSE, SHARD_TO } from '../frame.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
 
@@ -494,7 +494,7 @@ export class BattleScreen {
         }); break;
         case 'win': if (this.src.kind === 'lesson') break; add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); } }); break;
         case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
-        case 'fragment': add(0.05, { begin: () => { this.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); this.snd('fragment'); this.app.flyShard(BX + 112, BY + 112, RX + RW - 30, 10); } }); this.runEvents.push(e); break;
+        case 'fragment': add(0.05, { begin: () => { this.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); this.snd('fragment'); this.app.flyShard(BX + 112, BY + 112, SHARD_TO.x, SHARD_TO.y); } }); this.runEvents.push(e); break;
         default: this.runEvents.push(e);
       }
     }
@@ -1097,7 +1097,7 @@ export class BattleScreen {
     // 머리 칸(판 틀 공통): 관 → 화면 이름(대국 종류) → 목표 → 명인 · 보상
     panel(ctx, LX, 8, LW, 58);
     text(ctx, run && !run.endless ? `${b.ante}/${ANTES}관` : `${b.ante}관`, LX + 6, 11, PAL.dim);
-    text(ctx, KIND_NAME[b.kind], LX + 6, 24, b.kind === 'master' ? PAL.red : PAL.gold, { bold: true });
+    fitText(ctx, KIND_NAME[b.kind], LX + 6, 24, LW - 12, b.kind === 'master' ? PAL.red : PAL.gold);
     text(ctx, '목표', LX + 6, 37, PAL.dim);
     text(ctx, num(v.target), LX + LW - 6, 37, PAL.ink, { align: 'right', bold: true });
     if (master) {
@@ -1171,11 +1171,7 @@ export class BattleScreen {
     for (let i = 0; i < v.moves; i++) rect(ctx, LX + pipX + i * pipStep, 184, pipW, 7, i < v.movesLeft ? PAL.gold : PAL.frame);
     text(ctx, '버리기', LX + 6, 194, PAL.dim);
     for (let i = 0; i < v.discards; i++) rect(ctx, LX + pipX + i * pipStep, 197, pipW, 7, i < v.discardsLeft ? PAL.red : PAL.frame);
-    if (run) {
-      panel(ctx, LX, 212, LW, 22);
-      text(ctx, '상금', LX + 6, 217, PAL.dim);
-      text(ctx, `$${run.money}`, LX + LW - 6, 217, PAL.gold, { align: 'right', bold: true });
-    }
+    if (run) moneyPanel(ctx, ui, run);
     panel(ctx, LX, 240, LW, 22);
     ui.region('bag', LX, 240, LW, 22, { tip: () => bagTip(this.b) });
     text(ctx, '주머니', LX + 6, 245, PAL.dim);
@@ -1186,12 +1182,12 @@ export class BattleScreen {
     const app = this.app, v = this.view, b = this.b, run = this.run;
     pauseButton(ctx, ui, app);
     if (run) {
-      // 이름표 줄: 「격언 5/5」 뒤에 정석 표(글 폭만큼 띄워 — 영어 「Maxims」가 표 밑에 깔리지 않게) · 명국 조각은 멈춤 단추 왼쪽
+      // 이름표 줄: 「격언 5/5」와 정석 표(멈춤 단추 왼쪽에 붙여). 이름표가 길면(영어) 표에 닿기 전에 줄인다. 명국 조각은 상금 칸
+      const nj = (run.josekis || []).length;
+      const bx = PAUSE.x - 4 - nj * 12;
       const label = `격언 ${maximCount(run)}/${maximCapacity(run)}`;
-      text(ctx, label, RX, 8, PAL.dim);
-      const bx = RX + measure(label) + 4;
-      const bw = josekiBadges(ctx, ui, run, bx, 9);
-      fragmentStrip(ctx, ui, run, Math.max(bx + bw + 16, RX + RW - 18), 8, { align: 'right' });
+      text(ctx, measure(label) <= bx - RX - 4 ? label : `${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
+      josekiBadges(ctx, ui, run, bx, 9);
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
       maximColumn(ctx, ui, run, RX, TOP, RW, 156, { offUids: off });
       // 시너지: 두 줄까지(한 줄에 둘 — 셋째부터 둘째 줄)

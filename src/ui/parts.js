@@ -19,6 +19,28 @@ import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 
+// 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
+// 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
+export function cardBase(ctx, x, y, w, h, { fill = PAL.card, hover = false, edge = null, double = false, ticks = false, line = PAL.frameDk } = {}) {
+  box(ctx, x, y, w, h, fill, hover ? PAL.gold : line);
+  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
+  if (edge) {
+    frame(ctx, x + 1, y + 1, w - 2, h - 2, edge);
+    if (double) frame(ctx, x + 2, y + 2, w - 4, h - 4, edge);
+    if (ticks) cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, edge, 3);
+  }
+}
+
+// 좁은 칸에 이름 한 줄: 굵게 → 안 들어가면 보통 굵기 → 그래도 넘치면 끝을 「…」로(영어 이름이 칸을 넘지 않게)
+export function fitText(ctx, s, x, y, w, col, { bold = true, align = 'left' } = {}) {
+  s = L(String(s));
+  if (measure(s, bold) <= w) return text(ctx, s, x, y, col, { bold, align });
+  if (bold && measure(s, false) <= w) return text(ctx, s, x, y, col, { align });
+  let t = s;
+  while (t.length > 1 && measure(`${t}…`, false) > w) t = t.slice(0, -1);
+  return text(ctx, `${t.trimEnd()}…`, x, y, col, { align });
+}
+
 // 말풍선 내용: 제목 · 글(body) · 덧줄(extra: [글, 빛깔] · { chips }). 줄바꿈은 그릴 때 자리 규칙의 폭으로(ui.js tipRows).
 // w는 옛 호출과 맞추려고 남긴 값(말풍선 폭은 placement.js가 정한다)
 export function tipLines(title, body, w = 150, extra = []) {
@@ -413,8 +435,7 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
   if (w >= 88) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under });
   const back = scaleX < 1 && it._back;
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
-  box(ctx, x, y, w, h, fill, hover ? PAL.gold : PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
+  cardBase(ctx, x, y, w, h, { fill, hover });
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
   if (w < 30 || back) return;
@@ -502,10 +523,8 @@ function itemArt(ctx, it, x, y, t, run) {
 }
 function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under }) {
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
-  box(ctx, x, y, w, h, fill, hover ? PAL.gold : PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
   const edge = it.kind === 'engraving' ? ENG_EDGE[it.id] : it.kind === 'soul' ? SOUL_BY_ID[it.id].col : null;
-  if (edge) { frame(ctx, x + 1, y + 1, w - 2, h - 2, edge); cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, edge, 3); }
+  cardBase(ctx, x, y, w, h, { fill, hover, edge, ticks: true });
   if (it.kind === 'maxim') rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[maximInfo(it.id).rarity]);
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
@@ -571,7 +590,7 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
     text(ctx, l, x + 62, y + 21, PAL.ink);
     if (onConfirm) button(ctx, ui, `${idPrefix}:ok`, x + w - 62, y + 4, 56, 16, verb, { tone: 'gold', onClick: onConfirm });
   }
-  if (onCancel) button(ctx, ui, `${idPrefix}:cancel`, x + w - 62, y + 21, 56, 15, '그만', { onClick: onCancel });
+  if (onCancel) button(ctx, ui, `${idPrefix}:cancel`, x + w - 62, y + 21, 56, 16, '그만', { onClick: onCancel });
 }
 
 // ── 불멸의 기보 조각 띠: 조각을 하나라도 모은 명국마다 작은 조각 + 모은 수. 올리면 명국 · 조각 · 재현 조건(첫 조각 뒤에만).
@@ -587,8 +606,9 @@ export function fragmentTip(run, l) {
   if (f.first && f.feat && !f.gold) lines.push('금빛 적을 먹고 이기면 금빛 조각');
   return tipLines(l.name, lines, 170);
 }
-export function fragmentStrip(ctx, ui, run, x, y, { align = 'left' } = {}) {
-  const list = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && (f.first || f.feat || f.gold) && !run.legends.includes(l.id); });
+// max: 놓을 수 있는 조각 수(좁은 칸 — 상금 칸 안)
+export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9 } = {}) {
+  const list = LEGENDS.filter((l) => { const f = run.fragments[l.id]; return f && (f.first || f.feat || f.gold) && !run.legends.includes(l.id); }).slice(0, Math.max(0, max));
   const w = 15;
   let xx = align === 'right' ? x - list.length * w : x;
   for (const l of list) {

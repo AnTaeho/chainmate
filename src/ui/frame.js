@@ -12,6 +12,7 @@ export const CARD = { w: 108, gap: 10 };     // 판 틀 카드 줄(셋이면 128
 export const cardX = (i) => MAIN.x + i * (CARD.w + CARD.gap);
 // 왼쪽 칸 안의 칸(윗변): 머리 · 짜임 · 상금 · 주머니. 대국은 머리 칸이 넷째 줄까지(8 ~ 66)
 export const SIDE_ROWS = { head: 8, headH: 32, build: 44, buildEnd: 208, money: 212, bag: 240, rowH: 22 };
+export const SHARD_TO = { x: 52, y: 220 };  // 명국 조각이 날아드는 곳(상금 칸 안 조각 줄)
 // 판 밖 틀
 export const PAGE = { titleX: 12, titleY: 8, ruleY: 25, bodyY: 32, btnY: 244, btnH: 18 };
 export const ROW = 13;                       // 판넬 · 말풍선 글 한 줄

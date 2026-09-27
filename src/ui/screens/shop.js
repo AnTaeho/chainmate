@@ -9,7 +9,7 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { maximColumn, itemCard, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem } from '../parts.js';
+import { fitText, cardBase, maximColumn, itemCard, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
@@ -18,7 +18,7 @@ const ENG_NAME = (id) => engravingInfo(id).name;
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { runSide, pauseButton } from './common.js';
-import { RIGHT, CENTER, CARD, TOP, BTN_H } from '../frame.js';
+import { RIGHT, CENTER, CARD, TOP, BTN_H, SHARD_TO } from '../frame.js';
 
 const RX = RIGHT.x, RW = RIGHT.w;
 // 가운데 칸: 진열(22 ~ 138) · 꾸러미(142 ~ 184) · 단추(188) · 주머니(210 ~ 268). 오른쪽 칸: 격언(22 ~ 178) · 두루마리(198 ~)
@@ -64,17 +64,19 @@ export function growPillar(ctx, x, y, w, h, p) {
 // 두루마리 한 칸: 왼쪽 그림(각인 = 재료, 혼 = 기운, 진화 = 자라는 화살, 기보 = 모습 윤곽), 오른쪽 이름
 export function consumableCard(ctx, c, x, y, w, h, hover) {
   const edge = c.kind === 'engraving' ? ENG_EDGE[c.id] || PAL.gold : c.kind === 'soul' ? SOUL_BY_ID[c.id].col : null;
-  box(ctx, x, y, w, h, c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover ? PAL.gold : PAL.frameDk);
-  if (edge) frame(ctx, x + 1, y + 1, w - 2, h - 2, edge);
-  const ay = y + Math.floor((h - 18) / 2);
-  rect(ctx, x + 2, ay, 18, 18, '#1b2b27');
-  if (c.kind === 'engraving') engravingEmblem(ctx, c.id, x - 1, ay - 5, { sq: false });
-  else if (c.kind === 'soul') soulEmblem(ctx, c.id, x - 1, ay - 4, 0, { sq: false });
-  else if (c.kind === 'evolve') { rect(ctx, x + 5, ay + 11, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, x + 9 + i, ay + 10 - i, 1, 1, PAL.gold); rect(ctx, x + 12, ay + 4, 5, 6, PAL.gold); }
-  else if (c.kind === 'tactic') tacticIcon(ctx, c.id, x + 3, ay + 4);
-  else if (c.kind === 'chart') { dots(ctx, x + 2, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', x + 3, ay - 3, { alpha: 0.9 }); }
+  cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge });
+  // 좁은 칸(셋 이상): 그림은 위 가운데, 이름은 그 아래 칸 폭 전부(영어 이름이 그림 옆 32px에 들어가지 않았다)
+  const narrow = w < 80;
+  const ax = narrow ? x + Math.floor((w - 18) / 2) - 2 : x;
+  const ay = narrow ? y + 1 : y + Math.floor((h - 18) / 2);
+  rect(ctx, ax + 2, ay, 18, 18, '#1b2b27');
+  if (c.kind === 'engraving') engravingEmblem(ctx, c.id, ax - 1, ay - 5, { sq: false });
+  else if (c.kind === 'soul') soulEmblem(ctx, c.id, ax - 1, ay - 4, 0, { sq: false });
+  else if (c.kind === 'evolve') { rect(ctx, ax + 5, ay + 11, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, ax + 9 + i, ay + 10 - i, 1, 1, PAL.gold); rect(ctx, ax + 12, ay + 4, 5, 6, PAL.gold); }
+  else if (c.kind === 'tactic') tacticIcon(ctx, c.id, ax + 3, ay + 4);
+  else if (c.kind === 'chart') { dots(ctx, ax + 2, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', ax + 3, ay - 3, { alpha: 0.9 }); }
   const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
-  if (w < 80) { text(ctx, name, x + 21 + Math.floor((w - 21) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true }); return; }
+  if (narrow) { fitText(ctx, name, x + Math.floor(w / 2), y + h - 13, w - 4, PAL.cardInk, { align: 'center' }); return; }
   // 넓은 칸: 이름 아래에 효과 앞머리 한 줄(다 못 적으면 「…」)
   text(ctx, name, x + 23, y + 2, PAL.cardInk, { bold: true });
   // 「 — 」 뒤의 덧붙임(대가 · 횟수)은 칸에서 뺀다
@@ -128,7 +130,7 @@ export class ShopScreen {
         this.app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6);
         this.app.sfx('fragment');
         const r = this.app.ui.hover;
-        this.app.flyShard(r ? r.x + r.w / 2 : 240, r ? r.y + r.h / 2 : 100, RX + RW - 8, 34);
+        this.app.flyShard(r ? r.x + r.w / 2 : 240, r ? r.y + r.h / 2 : 100, SHARD_TO.x, SHARD_TO.y);
       }
       if (e.type === 'legend') { this.app.flow([['legend', { legend: e.legend, back: 'shop' }]]); return ev; }
       if (e.type === 'chart') {
@@ -187,7 +189,7 @@ export class ShopScreen {
     const wide = run.consumableSlots <= 2;
     text(ctx, '두루마리', RX, SCROLL_Y - 14, PAL.dim);
     for (let i = 0; i < run.consumableSlots; i++) {
-      const [x, y, cw, ch] = wide ? [RX, SCROLL_Y + i * 32, RW, 28] : [RX + (i % 2) * 57, SCROLL_Y + Math.floor(i / 2) * 32, 55, 28];
+      const [x, y, cw, ch] = wide ? [RX, SCROLL_Y + i * 32, RW, 28] : [RX + (i % 2) * 57, SCROLL_Y + Math.floor(i / 2) * 34, 55, 32];
       const c = run.consumables[i];
       if (!c) { frame(ctx, x, y, cw, ch, PAL.feltHi); continue; }
       const id = `cons:${i}`;
@@ -215,19 +217,19 @@ export class ShopScreen {
     }
   }
 
-  // 꾸러미 칸(가로): 왼쪽 봉투 · 이름(앞 낱말)과 값 · 봉투 속 「무엇 셋 중 하나」
+  // 꾸러미 칸(가로): 왼쪽 봉투와 그 아래 값, 오른쪽 이름(앞 낱말) · 봉투 속 「무엇 셋 중 하나」
   packCard(ctx, pk, x, y, w, h, hover) {
     box(ctx, x, y, w, h, PAL.feltDk, hover ? PAL.gold : PAL.frameDk);
-    envelope(ctx, x + 4, y + 5, 34, h - 10, pk.kind, { hover });
-    const tx = x + 44, tw = w - 48;
-    text(ctx, PACK_NAME[pk.kind].split(' ')[0], tx, y + 3, PAL.ink, { bold: true });
+    envelope(ctx, x + 4, y + 4, 30, 22, pk.kind, { hover });
+    const tx = x + 38, tw = w - 42;
+    fitText(ctx, PACK_NAME[pk.kind].split(' ')[0], tx, y + 3, tw, PAL.ink);
     const inside = { piece: '기물 셋 중 하나', chart: '기보 셋 중 하나', engraving: '각인 셋 중 하나', golden: '판본 격언 셋 중 하나' }[pk.kind] || '';
     if (pk.sold) {
       ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
       text(ctx, '열었다', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
       return;
     }
-    text(ctx, pk.price ? `$${pk.price}` : '공짜', x + w - 4, y + 3, PAL.gold, { align: 'right', bold: true });
+    text(ctx, pk.price ? `$${pk.price}` : '공짜', x + 19, y + h - 15, PAL.gold, { align: 'center', bold: true });
     wrap(inside, tw).slice(0, 2).forEach((l, k) => text(ctx, l, tx, y + 16 + k * 12, PAL.dim));
   }
 

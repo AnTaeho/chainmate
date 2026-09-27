@@ -6,7 +6,7 @@ import { W, H, text, box, rect, frame } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows } from '../parts-depth.js';
-import { cornerTicks, tipLines } from '../parts.js';
+import { cardBase, tipLines } from '../parts.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, CARD_ROW } from '../frame.js';
 
@@ -64,12 +64,7 @@ export class DraftScreen {
       const faded = this.chosen && !picked;
       if (faded) ctx.globalAlpha = 0.35;
       // 카드(물건 카드와 같은 자리): 등급 테 · 모서리 꺾쇠, 왼쪽 위 등급 → 이름 → 가로줄 → 효과 글 → 맨 아래 왼쪽 시너지 칩
-      box(ctx, xx, y, nw, CH, PAL.card, picked ? PAL.white : hov ? PAL.gold : PAL.frameDk);
-      rect(ctx, xx + 1, y + 1, nw - 2, 1, PAL.cardHi);
-      frame(ctx, xx + 1, y + 1, nw - 2, CH - 2, col);
-      if (j.tier !== 'silver') frame(ctx, xx + 2, y + 2, nw - 4, CH - 4, col);
-      cornerTicks(ctx, xx + 3, y + 3, nw - 6, CH - 6, col, 3);
-      if (hov) frame(ctx, xx, y, nw, CH, PAL.gold);
+      cardBase(ctx, xx, y, nw, CH, { hover: hov, edge: col, double: j.tier !== 'silver', ticks: true, line: picked ? PAL.white : PAL.frameDk });
       if (nw < CW - 4) { ctx.globalAlpha = 1; return; }
       text(ctx, TIER_NAME[j.tier], x + PADJ, y + 4, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
       const nl = wrap(j.name, CW - PADJ * 2, true).slice(0, 2);
