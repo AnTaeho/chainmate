@@ -60,7 +60,7 @@ async function shot(name) {
   console.log('찍음', name);
 }
 const ev = (fn, arg) => page.evaluate(fn, arg);
-const idle = () => page.waitForFunction(() => { const s = window.__app.screen; return !(s.name === 'battle' && s.busy); }, null, { timeout: 20000 });
+const idle = () => page.waitForFunction(() => { const s = window.__app.screen; return !((s.name === 'battle' || s.name === 'lesson') && s.busy); }, null, { timeout: 20000 });
 // 게임 좌표를 누른다(캔버스 CSS 크기가 480×270이면 그대로)
 async function clickAt(gx, gy) {
   const box = await page.locator('#screen').boundingBox();
@@ -322,6 +322,33 @@ await shot('22-records');
 await ev(() => window.__app.go('title'));
 await settle(300);
 await shot('01-title');
+
+// 첫 수업 넷: 1 시범 손가락 · 2 미리 보기가 처음 나오는 내 차례 · 3 넷을 이은 끝(「!」 · 막대) · 4 시범의 끊김
+const inLesson = (fn, arg) => page.waitForFunction(fn, arg, { timeout: 20000 });
+await ev(() => window.__app.go('lesson', { index: 0 }));
+await inLesson(() => { const s = window.__app.screen; return s.demo && s.demo.i === 1 && s.demo.stage === 'move' && s.demo.t > 0.4; });
+await shot('21-lesson-1');
+await ev(() => window.__app.go('lesson', { index: 1, phase: 'play' }));
+await settle(200);
+await clickId('hand:0');
+await clickId('sq:10');
+await idle();
+await hoverId('sq:27');
+await settle(200);
+await shot('21-lesson-2');
+await ev(() => window.__app.go('lesson', { index: 2, phase: 'play' }));
+await settle(200);
+await clickId('hand:0');
+await clickId('sq:52');
+for (const sq of [35, 11, 47]) { await idle(); await clickId(`sq:${sq}`); }
+await idle();
+await clickId('sq:15');
+await inLesson(() => { const v = window.__app.screen.view; return v.gather && v.gather.burst; });
+await settle(90);
+await shot('21-lesson-3');
+await ev(() => window.__app.go('lesson', { index: 3 }));
+await inLesson(() => { const v = window.__app.screen.view; return v.cut && v.cut.p > 0.5; });
+await shot('21-lesson-4');
 
 // 영어 화면 셋(대국 · 상점 · 판 준비)
 await ev(() => { const a = window.__app; a.settings.lang = 'en'; a.saveSettings(); });
