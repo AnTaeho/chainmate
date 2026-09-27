@@ -350,6 +350,11 @@ await ev(() => window.__app.go('lesson', { index: 3 }));
 await inLesson(() => { const v = window.__app.screen.view; return v.cut && v.cut.p > 0.5; });
 await shot('21-lesson-4');
 
+// 타이틀 시연: 흐린 판에서 풀이기가 사슬을 두는 중
+await ev(() => window.__app.go('title'));
+await page.waitForFunction(() => { const c = window.__app.screen.demo.view.chain; return c && c.path.length >= 4 && !window.__app.screen.demo.view.mover; }, null, { timeout: 30000 });
+await shot('22-title-demo');
+
 // 영어 화면 셋(대국 · 상점 · 판 준비)
 await ev(() => { const a = window.__app; a.settings.lang = 'en'; a.saveSettings(); });
 await page.reload();
