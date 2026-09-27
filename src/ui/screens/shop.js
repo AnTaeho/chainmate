@@ -66,7 +66,7 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
     box(ctx, x, y, w, h, PAL.card, hover ? PAL.gold : PAL.frameDk);
     if (c.kind === 'evolve') sprite(ctx, 'N', 'w', x + 3, y + Math.floor((h - 22) / 2), { tier: 3 });
     else tacticIcon(ctx, c.id, x + 3, y + Math.floor((h - 11) / 2));
-    text(ctx, c.kind === 'evolve' ? '진화' : TACTIC_BY_ID[c.id].name, x + 20 + Math.floor((w - 20) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
+    text(ctx, c.kind === 'evolve' ? '진화' : TACTIC_BY_ID[c.id].name, x + 18 + Math.floor((w - 18) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
     return;
   }
   if (c.kind === 'soul') {

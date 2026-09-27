@@ -523,6 +523,46 @@ await shot('29-families-shop');
 await page.reload();
 await page.waitForFunction(() => window.__app && window.__app.screen);
 
+// 깊이 E: 정석 고르기(자동 고르기를 끄고)
+await ev(() => { window.__autoDraft = false; const a = window.__app; localStorage.removeItem('chainmate.run.v1'); a.newRun({ seed: 33 }); });
+await settle(1400);
+await hoverId('draft:1');
+await settle(150);
+await shot('30-draft');
+await ev(() => { window.__autoDraft = true; });
+// 깊이 D · F: 적 특성 · 벽 · 보석 · 정석 발판 · 문 · 고속도로 · 묘수 칸
+await ev(() => {
+  const a = window.__app;
+  localStorage.removeItem('chainmate.run.v1');
+  a.newRun({ seed: 44 });
+  const r = a.run;
+  r.ante = 7; r.josekis = ['stepping', 'gates', 'highway'];
+  r.consumables = [{ kind: 'tactic', id: 'freeze' }, { kind: 'tactic', id: 'taunt' }];
+  r.deck[2].soul = 'echo'; r.deck[5].soul = 'hunger';
+  a.cmd({ type: 'play' });
+  a.go('battle', { events: [] });
+});
+await settle(2400);
+await page.mouse.move(1, 1);
+await shot('31-traits-things');
+await clickId('tactic:0');
+await settle(500);
+await shot('31b-freeze');
+// 깊이 C: 혼 두루마리 · 혼 깃든 기물 · 진화 · 도박이 진열된 상점
+await ev(() => {
+  const a = window.__app, r = a.run;
+  r.money = 40; r.phase = 'shop'; r.battle = null;
+  r.shop = { rng: null, display: [{ kind: 'soul', id: 'transcend', price: 4 }, { kind: 'gamble', id: 'roulette', price: 2 }], packs: [{ kind: 'piece', price: 4 }, { kind: 'engraving', price: 4 }], rerolls: 0, promoted: false, removed: false };
+  r.consumables = [{ kind: 'evolve' }, { kind: 'tactic', id: 'reload' }];
+  a.go('shop');
+});
+await settle(300);
+await hoverId('deck:3');
+await settle(150);
+await shot('32-souls-shop');
+await page.reload();
+await page.waitForFunction(() => window.__app && window.__app.screen);
+
 // 영어 화면 셋(대국 · 상점 · 판 준비)
 await ev(() => { const a = window.__app; a.settings.lang = 'en'; a.saveSettings(); });
 await page.reload();
