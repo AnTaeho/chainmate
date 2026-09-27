@@ -23,7 +23,7 @@ export const TERMS = [
   T('fam_crown', 'set', '왕관 시너지', 'Crown synergy', /왕관 시너지/, /\bCrown synergy\b/i, '승급 · 퀸 · 외통에 점수가 붙는다', 'Promotion, queens and mate score more'),
   T('fam_march', 'set', '행진 시너지', 'March synergy', /행진 시너지/, /\bMarch synergy\b/i, '폰으로 시작한 사슬이 커진다', 'Chains started by a pawn grow'),
   T('fam_hunt', 'set', '사냥 시너지', 'Hunt synergy', /사냥 시너지/, /\bHunt synergy\b/i, '같은 적을 잇달아 먹으면 커진다', 'Grows as you take the same kind in a row'),
-  T('set', 'set', '시너지', 'Synergy', /시너지/, /\bsynerg(?:y|ies)\b/i, '같은 문양을 2 · 4 · 6개 모으면 효과가 하나씩 켜진다', 'Collect 2, 4 and 6 of one mark to switch on its effects'),
+  T('set', 'set', '시너지', 'Synergy', /시너지/, /\bsynerg(?:y|ies)\b/i, '같은 시너지를 2 · 4 · 6개 모으면 효과가 하나씩 켜진다', 'Collect 2, 4 and 6 of one synergy to switch on its effects'),
   // ── 대국
   B('drop', 'battle', '떨구기', 'Drop', /떨[구군궈굴]\S*/, /\bdrop\w*/i, '먹을 적이 닿는 안전한 빈칸에 손의 기물을 놓는다', 'Put a hand piece on a safe empty square with prey in reach'),
   B('chain', 'battle', '사슬', 'Chain', /사슬/, /\bchains?\b/i, '떨군 기물이 한 수에 잇달아 먹는 줄', 'The run of takes one dropped piece makes in a move'),
@@ -44,7 +44,7 @@ export const TERMS = [
   // ── 판
   T('run', 'run', '판', 'Run', null, null, '1관부터 8관까지의 한 도전. 지면 처음부터', 'One try from Hall 1 to Hall 8. Lose and start over'),
   T('hall', 'run', '관', 'Hall', null, null, '연습 · 정식 · 명인 대국 셋. 8관까지', 'Practice, rated and master matches. Eight halls'),
-  T('match', 'run', '대국', 'Match', null, null, '목표 점수를 넘겨야 이기는 한 번의 겨루기', 'One contest you win by reaching the target'),
+  T('match', 'run', '대국', 'Match', null, null, '목표 점수에 닿아야 이기는 한 번의 겨루기', 'One contest you win by reaching the target'),
   T('master', 'run', '명인', 'Master', /명인/, null, '관마다 마지막 상대. 규칙 하나를 비튼다', 'The last opponent of each hall. Bends one rule'),
   B('money', 'run', '상금', 'Purse', null, null, '상점에서 쓰는 돈. 대국을 이기면 받는다', 'Money for the shop, earned by winning'),
   T('pack', 'run', '꾸러미', 'Bundle', /꾸러미/, /\bbundles?\b/i, '열면 셋 중 하나를 고른다', 'Open it and keep one of three'),
@@ -53,7 +53,7 @@ export const TERMS = [
   T('trait', 'run', '특성', 'Trait', /특성/, /\btraits?\b/i, '4관부터 적 발밑에 붙는 작은 문양', 'The small mark at an enemy\'s feet from Hall 4'),
   T('wall', 'run', '벽', 'Wall', null, null, '먹을 수 없는 돌. 미끄러지는 길을 막는다', 'A stone you cannot take. It blocks sliding'),
   T('gem', 'run', '보석', 'Gem', /보석/, /\bgems?\b/i, '먹으면 상금 +2. 모습은 그대로', 'Take it for purse +2. Your form stays'),
-  T('step', 'run', '발판', 'Golden step', /발판/, /\bgolden steps?\b/i, '정석 「발판」의 금빛 칸. 그 위 적을 먹으면 배수 ×2', 'Gold squares from the Stepping Stones joseki. Takes there: mult ×2'),
+  T('step', 'run', '발판', 'Golden step', /발판/, /\bgolden steps?\b/i, '정석 「발판」의 금빛 칸. 그 위 적을 먹으면 배수 ×2', 'Gold squares from the Stepping Stones joseki. Takes there: ×2 Mult'),
   // ── 물건
   T('maxim', 'item', '격언', 'Maxim', /격언/, /\bmaxims?\b/i, '사면 판 내내 효과를 낸다', 'Buy it once and it works all run'),
   T('chart', 'item', '기보', 'Study', /(?<!불멸의 )기보/, /\bstud(?:y|ies)\b|\bcharts?\b/i, '한 모습의 단계를 올린다. 그 모습으로 먹을 때 더 받는다', 'Levels up one form. Takes in that form earn more'),

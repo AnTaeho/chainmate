@@ -28,7 +28,7 @@ soul('echo', '메아리', '#9fb8ff', ['change'], '막히면 한 번, 처음 모�
     ctx.keepGoing();
   },
 });
-soul('transcend', '초월', '#fff1b8', ['change', 'crown'], '먹으면 한 단계 위 모습이 된다: 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존', {
+soul('transcend', '초월', '#fff1b8', ['change', 'crown'], '먹으면 한 단계 위 모습이 된다 · 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존', {
   onDrop(ctx) { ctx.flags.transcend = true; },
 });
 soul('hunger', '굶주림', '#df8a45', ['hunt'], '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …', {

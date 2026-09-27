@@ -5,7 +5,7 @@ import { PIECES } from './pieces.js';
 import { createRng, fork, int } from '../sim/rng.js';
 
 export const TACTICS = [
-  { id: 'freeze', name: '빙결', text: '값이 가장 큰 적 셋이 이번 수 동안 못 지킨다', families: ['sacrifice'] },
+  { id: 'freeze', name: '빙결', text: '이번 수 동안 값이 가장 큰 적 셋이 못 지킨다', families: ['sacrifice'] },
   { id: 'reload', name: '재장전', text: '이번 대국 수 +1', families: ['march'] },
   { id: 'taunt', name: '도발', text: '적 폰 넷이 빈칸에 나온다', families: ['hunt'] },
 ];

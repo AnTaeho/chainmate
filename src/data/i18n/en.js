@@ -14,8 +14,8 @@ export const EN = {
   // 글 다시 쓰기: 「언제 → 무엇」(친절 손질)
   
   
-  '세 칸 이상 미끄러져 먹을 때마다 값 +20': 'Each take after sliding 3+ squares: value +20',
-  '가운데 네 칸에서 먹을 때마다 배수 ×1.5': 'Each take on the four center squares: mult ×1.5',
+  '세 칸 이상 미끄러져 먹을 때마다 값 +20': 'Each take after sliding 3+ squares: +20 Value',
+  '가운데 네 칸에서 먹을 때마다 배수 ×1.5': 'Each take on the four center squares: ×1.5 Mult',
   
   
   
@@ -101,7 +101,7 @@ export const EN = {
   '혼': 'Soul', '깃들 기물': 'Choose a piece', '지키는 적을 피했다': 'Slipped the guard', 
   
   
-  '같은 종류를 잇달아 먹으면 배수 ×2': 'Taking the same kind in a row: mult ×2',
+  '같은 종류를 잇달아 먹으면 배수 ×2': 'Same kind in a row: ×2 Mult',
   
   '메아리': 'Echo', '초월': 'Transcend', '굶주림': 'Hunger', '사냥꾼': 'Hunter', '순교자': 'Martyr', '그림자': 'Shade',
   // 진화 · 묘수(깊이 F)
@@ -168,7 +168,7 @@ export const EN = {
   '두 칸 떨어진 적을 제자리에서 쏜다': 'Shoots foes two squares away, stays put', '가로 · 세로로 막힘 없이 미끄러진다': 'Slides through anything in a line',
   '뛰어넘었다': 'Vaulted', '꿰뚫었다': 'Pierced', '모든 모습으로': 'Every Form',
   '도약': 'Leap', '직선': 'Line', '대각': 'Diagonal', '변신': 'Shift', '희생': 'Sacrifice', '왕관': 'Crown', '행진': 'March', '사냥': 'Hunt',
-  '뛰어서 먹을 때마다 배수 ×1.5': 'Each jumping take: mult ×1.5', 
+  
   
   
   
@@ -189,17 +189,17 @@ export const EN = {
   '폰의 행진': 'Pawn March', 
   '변덕': 'Whim', 
   '한결같음': 'Steadfast', 
-  '대관식': 'Coronation', '퀸 모습이 될 때마다 값 +50': 'Value +50 each time you become a queen',
-  '낮은 자세': 'Low Stance', '폰 모습으로 먹을 때마다 배수 +3': 'Mult +3 per capture as a pawn',
-  '대각의 길': 'Diagonal Path', '비숍 모습으로 먹을 때마다 값 +25': 'Value +25 per capture as a bishop',
-  '성벽 허물기': 'Wall Breaker', '룩을 먹을 때마다 배수 +4': 'Mult +4 per rook taken',
+  '대관식': 'Coronation', '퀸 모습이 될 때마다 값 +50': 'Each time you become a queen: +50 Value',
+  '낮은 자세': 'Low Stance', '폰 모습으로 먹을 때마다 배수 +3': 'Each take as a pawn: +3 Mult',
+  '대각의 길': 'Diagonal Path', '비숍 모습으로 먹을 때마다 값 +25': 'Each take as a bishop: +25 Value',
+  '성벽 허물기': 'Wall Breaker', '룩을 먹을 때마다 배수 +4': 'Each rook taken: +4 Mult',
   '긴 사슬': 'Long Chain', 
   '먼 길': 'Long Road', 
   '가장자리': 'Edge', 
   '중앙 장악': 'Center Grip', 
   '금고': 'Vault', 
   '끝줄의 꿈': 'Back Rank Dream', 
-  '승급 잔치': 'Promotion Feast', '승급할 때마다 배수 ×2': 'Mult ×2 per promotion',
+  '승급 잔치': 'Promotion Feast', '승급할 때마다 배수 ×2': 'Each promotion: ×2 Mult',
   '희생': 'Sacrifice', 
   '되갚음': 'Payback', 
   '아슬아슬': 'Close Call', 
@@ -216,12 +216,12 @@ export const EN = {
   '상아탑': 'Ivory Tower', 
   '기보 수집가': 'Study Collector', 
   '가벼운 발': 'Light Step', 
-  '퀸 사냥': 'Queen Hunt', '퀸을 먹을 때마다 값 +60': 'Value +60 per queen taken',
+  '퀸 사냥': 'Queen Hunt', '퀸을 먹을 때마다 값 +60': 'Each queen taken: +60 Value',
   '빈 판': 'Bare Board', 
   '되돌이': 'Homecoming', 
   '모습 모으기': 'Form Collector', 
   '응수의 달인': 'Reply Master', 
-  '승급의 길': 'Road to Promotion', '승급할 때마다 값 +80': 'Value +80 per promotion',
+  '승급의 길': 'Road to Promotion', '승급할 때마다 값 +80': 'Each promotion: +80 Value',
   '증원 사냥': 'Reinforcement Hunt', 
   '특진': 'Fast Track', 
   '광마': 'Wild Horse', 
@@ -342,14 +342,14 @@ export const EN = {
   // 혼
   '처음 세 번은 먹어도 모습 그대로 · 먹은 적의 행마를 더한다': 'First three takes keep your form · adds the move of what it took',
   '막히면 한 번, 처음 모습으로 돌아가 잇는다': 'Once when stuck, goes back to its starting form and on',
-  '먹으면 한 단계 위 모습이 된다: 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Each take: one step up · pawn › knight › bishop › rook › queen › amazon',
+  '먹으면 한 단계 위 모습이 된다 · 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Each take: one step up · pawn › knight › bishop › rook › queen › amazon', '먹으면 한 단계 위 모습이 된다': 'Each take: one step up',
   '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …': 'Second take +10 Value · third +20 · fourth +30 …',
   '승급하면 아마존이 된다 · 두 줄 먼저 승급한다': 'Promotes into an amazon · two ranks sooner',
   '지키는 적을 무시한다 · 배수 −1': 'Ignores guards · −1 Mult',
   // 적 특성 · 묘수 · 명인
   '사슬의 첫 먹기로는 못 먹는다': "Can't be a chain's first take", '먹으면 둘레의 적도 함께 먹는다': 'Taking it takes the enemies around it too',
   '먹어도 모습이 그대로': 'Taking it keeps your form', '먹으면 대국 뒤 내 주머니에 들어온다': 'Take it and it joins your bag after the match',
-  '값이 가장 큰 적 셋이 이번 수 동안 못 지킨다': 'The three most valuable enemies guard nothing this move',
+  '이번 수 동안 값이 가장 큰 적 셋이 못 지킨다': 'This move, the three most valuable enemies guard nothing',
   '이번 대국 수 +1': 'Moves +1 this match', '적 폰 넷이 빈칸에 나온다': 'Four enemy pawns step onto empty squares',
   '지켜진 적을 먹으면 곧바로 끊긴다': 'Taking a guarded enemy breaks the chain at once',
   '위 다섯 줄은 안개라 떨굴 수 없다 · 닿은 칸만 걷힌다': 'Fog on the top five ranks: no drops · only squares you reach clear',
@@ -464,13 +464,13 @@ export const TEMPLATES = [
   [/^(기초|대국|판) (\d+)\/(\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}/${m[3]}`],
   [/^다음에 먹을 적 (\d+)$/, (m) => `Next prey ${m[1]}`],
   [/^지키는 적 (\d+)$/, (m) => `Guards ${m[1]}`],
-  [/^배수 \+(.+)$/, (m) => `Mult +${m[1]}`],
+  [/^배수 \+(.+)$/, (m) => `+${m[1]} Mult`],
   [/^손 (\d+)$/, (m) => `Hand ${m[1]}`],
   [/^버리기 (\d+)$/, (m) => `Discard ${m[1]}`],
   [/^수 (\d+)$/, (m) => `Moves ${m[1]}`],
   [/^격언 칸 (\d+)$/, (m) => `Maxim slots ${m[1]}`],
-  [/^(.+) 모습으로 먹을 때마다 값 \+(\d+)$/, (m, tr) => `Each take as ${tr(m[1]).toLowerCase()}: value +${m[2]}`],
-  [/^배수 \+(\d+)$/, (m) => `Mult +${m[1]}`],
+  [/^(.+) 모습으로 먹을 때마다 값 \+(\d+)$/, (m, tr) => `Each take as a ${tr(m[1]).toLowerCase()}: +${m[2]} Value`],
+  [/^배수 \+(\d+)$/, (m) => `+${m[1]} Mult`],
   [/^(.+) (\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}`],
   // 시너지 이름 + 수(「기사 시너지 3」)
   [/^(.+ 시너지) (\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}`],
