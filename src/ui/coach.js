@@ -92,6 +92,7 @@ export function drawCoach(ctx, app) {
   }
   const h = app.hintNow;
   app.hintNow = null;
+  app.hintRect = null;
   if (!h) { app.hintShown = null; return; }
   const r = ui.regions.find((q) => q.id === h.regionId);
   if (!r) return;
@@ -145,6 +146,7 @@ export function bubble(ctx, ui, app, r, say, { ok = null, at = null } = {}) {
     else { y = Math.max(2, r.y - 7 - h); side = y === 2 ? null : 'down'; }
   }
   const bob = Math.round(Math.sin(app.time * 4));
+  app.hintRect = { x, y, w, h };
   box(ctx, x, y + bob, w, h, PAL.card, PAL.gold);
   if (r && side) {
     for (let k = 0; k < 5; k++) {

@@ -258,6 +258,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     ui.end();
     // 말풍선 + 낱말 상자
     app.keyBoxes = [];
+    app.tipRect = null;
     const h = ui.hover;
     if (ui.drag || app.guide) return;
     const mx = ui.mouse.x, my = ui.mouse.y;
@@ -271,6 +272,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       // tipAt: 말풍선을 둘 빈자리(옆 카드를 가리지 않게). 없으면 구역 오른쪽(넘치면 왼쪽)
       const at = h.tipAt || { x: h.x + h.w + 4 > W - (tip.w || 150) ? h.x - (tip.w || 150) - 4 : h.x + h.w + 4, y: h.y };
       tipRect = tooltip(ctx, at.x, at.y, tip.lines, { title: tip.title, w: tip.w || 150, scale: big ? 2 : 1, diagram: tip.diagram || null });
+      app.tipRect = tipRect;
     }
     // 큰 글자 설정에서는 말풍선이 화면 아래를 차지해 낱말 상자를 두지 않는다
     // 큰 글자 설정에서는 말풍선이 화면 아래를 차지해 낱말 상자를 두지 않는다. 가리킨 것이 곧 그 낱말(시너지 칩)이어도 말풍선 하나만
