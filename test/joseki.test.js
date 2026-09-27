@@ -68,19 +68,6 @@ test('발판: 발판 위의 적을 먹으면 연쇄 ×2', () => {
   assert.equal(bt.rules.steps.length, 3);
 });
 
-test('흡수의 비전: 첫 사슬은 모습이 그대로이고 먹은 행마가 더해진다', () => {
-  const t = T({ e6: 'B', a8: 'R', g8: 'P' }, 'absorb_art');
-  startChain(t, { type: 'N', sq: S('d4') });
-  chainCapture(t, S('e6'));
-  assert.equal(t.chain.form, 'N');
-  assert.deepEqual(t.chain.absorbed, ['B']);
-  assert.ok(chainCaptures(t).includes(S('g8')), '비숍 행마로 g8');
-  const t2 = { ...T({ e6: 'B' }, 'absorb_art'), movesUsed: 1 };
-  startChain(t2, { type: 'N', sq: S('d4') });
-  chainCapture(t2, S('e6'));
-  assert.equal(t2.chain.form, 'B', '둘째 사슬부터는 보통');
-});
-
 test('판의 문: 문 위의 적을 먹으면 다른 문으로 나온다', () => {
   const t = T({ e6: 'B', a3: 'P' }, 'gates', { gates: [S('e6'), S('c1')] });
   startChain(t, { type: 'N', sq: S('d4') });

@@ -36,7 +36,7 @@ export const EN = {
   '활터': 'Archery', '주머니의 폰 둘이 궁수가 된다': 'Two pawns in your bag become archers',
   '고속도로': 'Highway', 'b · g 줄에서는 어떤 모습이든 룩처럼 세로로도 미끄러져 먹는다': 'On the b and g files, any form also slides and takes vertically like a rook',
   '발판': 'Stepping Stones', '대국마다 금빛 발판 셋, 발판 위의 적을 먹으면 연쇄 ×2': 'Three golden stones each match; taking a foe on one: links ×2',
-  '흡수의 비전': 'Art of Absorption', '대국마다 첫 사슬의 처음 세 먹기는 모습이 바뀌지 않고 마지막에 먹은 행마가 더해진다': "Each match's first chain: for its first three takes it keeps its form and adds the last move it took",
+
   '판의 문': 'Gates', '판에 문 두 칸 — 문 위의 적을 먹으면 다른 문으로 나와 사슬을 잇는다': 'Two gates on the board: take a foe on one and step out of the other',
   '순교의 맹세': "Martyr's Vow", '끊기는 순간 둘레 여덟 칸의 적(킹 빼고)을 모두 먹은 것으로 친다': 'When broken, every foe around (not kings) counts as taken',
   '결사': 'Blood Pact', '대국마다 첫 사슬 연쇄 ×3 — 그 기물은 판에서 사라진다(주머니 여섯은 남긴다)': "Each match's first chain: links ×3, and that piece leaves the run (bag keeps six)",

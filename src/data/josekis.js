@@ -70,9 +70,8 @@ joseki('stepping', '발판', 'silver', ['hunt'], '대국마다 금빛 발판 셋
 });
 
 // ── 금: 뿌리의 동사를 크게 비튼다
-joseki('absorb_art', '흡수의 비전', 'gold', ['change'], '대국마다 첫 사슬의 처음 세 먹기는 모습이 바뀌지 않고 마지막에 먹은 행마가 더해진다', {
-  onDrop(ctx) { if (!(ctx.t.movesUsed ?? 0) && !ctx.t.redropping) ctx.flags.absorb = true; },
-});
+// 버린 안: 흡수의 비전(대국마다 첫 사슬은 행마가 더해진다) — 센 떨군 모습이 판을 쓸어, 하네스 30판의 첫 수 외통(3관부터 20~50%)이
+//   모두 이 정석에서 나왔다. 처음 세 먹기로 줄여도 같았다. 한 기물에 붙는 혼 「흡수」만 남긴다.
 joseki('gates', '판의 문', 'gold', ['leap', 'change'], '판에 문 두 칸 — 문 위의 적을 먹으면 다른 문으로 나와 사슬을 잇는다', {
   rules(b, rng) {
     const free = [];
