@@ -244,7 +244,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const h = ui.hover;
     if (h && h.tip && !ui.drag) {
       const tip = typeof h.tip === 'function' ? h.tip() : h.tip;
-      if (tip) tooltip(ctx, h.x + h.w + 4 > W - (tip.w || 150) ? h.x - (tip.w || 150) - 4 : h.x + h.w + 4, h.y, tip.lines, { title: tip.title, w: tip.w || 150, scale: app.settings.big ? 2 : 1 });
+      // tipAt: 말풍선을 둘 빈자리(옆 카드를 가리지 않게). 없으면 구역 오른쪽(넘치면 왼쪽)
+      const at = h.tipAt || { x: h.x + h.w + 4 > W - (tip.w || 150) ? h.x - (tip.w || 150) - 4 : h.x + h.w + 4, y: h.y };
+      if (tip) tooltip(ctx, at.x, at.y, tip.lines, { title: tip.title, w: tip.w || 150, scale: app.settings.big ? 2 : 1 });
     }
   };
 

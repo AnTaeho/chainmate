@@ -1,6 +1,6 @@
 // 대국 승리: 보상이 한 줄씩(기본 · 남은 수 · 적립 · 외통 · 넘친 목표 · 대국 중 번 상금) 쌓인다.
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rect, num } from '../../render/gfx.js';
+import { W, text, box, rect, num, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
 
 export class RewardScreen {
@@ -39,6 +39,13 @@ export class RewardScreen {
     const x = 120, y = 24, w = 240, h = 222;
     box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
     text(ctx, last.reason === 'mate' ? '외통 승리' : '대국 승리', W / 2, y + 10, PAL.gold, { align: 'center', bold: true, scale: 2 });
+    // 넘친 목표는 제목 옆 도장으로
+    if (last.overflow >= 2) {
+      const col = last.overflow >= 5 ? PAL.red : PAL.gold, s = `목표 ×${last.overflow}`;
+      const sw = measure(s, true) + 8;
+      box(ctx, x + w - sw - 8, y + 8, sw, 16, PAL.feltDk, col);
+      text(ctx, s, x + w - 8 - sw / 2, y + 10, col, { align: 'center', bold: true });
+    }
     text(ctx, `점수 ${num(last.score || 0)} / 목표 ${num(last.target || 0)}`, W / 2, y + 40, PAL.ink, { align: 'center' });
     this.lines.forEach(([label, v], i) => {
       if (i >= this.shown) return;

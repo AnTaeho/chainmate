@@ -110,6 +110,8 @@ export class BattleScreen {
     else if (info && this.run) this.banner = { title: `${this.run.ante}관 · ${KIND_SHORT[b.kind]} 대국`, sub: `목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold };
   }
 
+  // 판 한가운데 뜨는 큰 글자는 대국 화면과 함께 사라진다(보상 화면 글자를 덮지 않게)
+  onLeave() { this.fx.list = this.fx.list.filter((e) => !e.word); }
   get run() { return this.src.run; }
   live() { return this.src.live(); }
   get b() { return this.live() || this.bRef; }
@@ -512,7 +514,7 @@ export class BattleScreen {
   }
   word(s, col, life = 1, scale = 2) {
     this.fx.add({
-      life, layer: 1,
+      life, layer: 1, word: true,
       draw: (ctx, e) => {
         const k = e.t / e.life;
         const sc = k < 0.1 ? scale + 1 : scale;

@@ -37,6 +37,8 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
   if (c.kind === 'chart') { sprite(ctx, c.form, 'b', x + 3, y + Math.floor((h - 22) / 2)); text(ctx, '기보', x + 22, y + Math.floor(h / 2) - 6, PAL.cardInk, { bold: true }); }
   else text(ctx, `${engravingInfo(c.id).name} 각인`, x + w / 2, y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true });
 }
+// 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
+const TIP_AT = { x: 196, y: 174 };
 export const consumableTip = (c) => (c.kind === 'chart' ? chartTip(c.form) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
@@ -75,7 +77,7 @@ export class ShopScreen {
     shop.display.forEach((it, i) => {
       const x = 12 + i * 74, y = 46, id = `shop:buy:${i}`;
       const ok = canBuy(run, it);
-      ui.region(id, x, y, 68, 96, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemTip(it) });
+      ui.region(id, x, y, 68, 96, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemTip(it), tipAt: TIP_AT });
       itemCard(ctx, it, x, y, 68, 96, { hover: ui.isHover(id) && ok, sold: it.sold, t: ui.time + i });
       if (!it.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, 68, 96, PAL.shadow); ctx.globalAlpha = 1; }
     });
@@ -84,7 +86,7 @@ export class ShopScreen {
     shop.packs.forEach((pk, i) => {
       const x = 170 + i * 74, y = 46, id = `shop:pack:${i}`;
       const ok = !pk.sold && run.money >= pk.price;
-      ui.region(id, x, y, 68, 96, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack'), tip: () => tipLines(PACK_NAME[pk.kind], pk.kind === 'golden' ? '판본이 붙은 격언 셋 중 하나' : '셋 중 하나를 고른다') });
+      ui.region(id, x, y, 68, 96, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack'), tip: () => tipLines(PACK_NAME[pk.kind], pk.kind === 'golden' ? '판본이 붙은 격언 셋 중 하나' : '셋 중 하나를 고른다'), tipAt: TIP_AT });
       this.packCard(ctx, pk, x, y, 68, 96, ui.isHover(id) && ok);
       if (!pk.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, 68, 96, PAL.shadow); ctx.globalAlpha = 1; }
     });
