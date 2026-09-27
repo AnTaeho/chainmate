@@ -101,7 +101,9 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   if (h >= 14) drawIcon(ctx, m.id, x + w - 15, y + Math.floor((h - 12) / 2), off ? 0.35 : 1);
   text(ctx, info.name, x + 6, y + Math.max(2, Math.min(3, h - 14)), ink, { bold: true });
   if (h >= 28) {
-    const sub = off ? '잠듦' : m.edition ? EDITION_BY_ID[m.edition].name : legendary ? '전설' : info.verb;
+    // 둘째 줄: 효과의 앞머리(다 못 적으면 「…」 — 전부는 가리키면). 잠들었거나 판본 · 전설이면 그 이름
+    let sub = off ? '잠듦' : m.edition ? EDITION_BY_ID[m.edition].name : legendary ? '전설' : null;
+    if (!sub) { const ls = wrap(info.text, w - 26); sub = ls.length > 1 ? `${ls[0]}…` : ls[0]; }
     text(ctx, sub, x + 6, y + 16, off ? PAL.red : obsidian ? '#b89ad8' : PAL.cardDim);
   }
   if (off) { rect(ctx, x + 4, y + Math.floor(h / 2), w - 8, 1, PAL.red); }
