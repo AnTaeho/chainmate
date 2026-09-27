@@ -272,7 +272,10 @@ if (ko) {
   await scene('codex-page2', () => { const a = window.__app; a.go('codex'); a.screen.page = 1; });
 }
 
-fs.writeFileSync(path.join(OUT, `${PREFIX}${LANG === 'en' ? '-en' : ''}.json`), JSON.stringify(log, null, 1));
+// --only로 몇 장만 다시 찍으면 있던 기록에 합친다
+const logFile = path.join(OUT, `${PREFIX}${LANG === 'en' ? '-en' : ''}.json`);
+const prev = ONLY && fs.existsSync(logFile) ? JSON.parse(fs.readFileSync(logFile, 'utf8')) : {};
+fs.writeFileSync(logFile, JSON.stringify({ ...prev, ...log }, null, 1));
 console.log(`찍음 ${shots}장 · 장면 ${no}`);
 console.log(errors.length ? `페이지 오류 ${errors.length}\n${errors.join('\n')}` : '페이지 오류 0');
 await browser.close();
