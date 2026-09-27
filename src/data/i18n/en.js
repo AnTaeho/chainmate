@@ -21,6 +21,10 @@ export const EN = {
   '빙결': 'Freeze', '재장전': 'Reload', '도발': 'Taunt', '수 +1': 'Moves +1',
   '가장 무거운 적 셋이 이번 수 동안 아무것도 지키지 못한다': 'The three heaviest foes guard nothing this move',
   '이번 대국의 수 +1': 'This match: moves +1', '적 폰 넷을 빈칸으로 불러낸다(먹이가 늘어난다)': 'Summon four enemy pawns onto empty squares (more to take)',
+  // 적 특성(깊이 D)
+  '방패': 'Shield', '폭약': 'Powder', '거울': 'Mirror', '성채': 'Fortress', '배신자': 'Turncoat', '폭발': 'Blast', '순교': 'Martyrdom', '배신자가 넘어온다': 'A turncoat joins you',
+  '사슬의 첫 먹이로는 먹을 수 없다': 'Cannot be the first take of a chain', '먹히면 둘레 여덟 칸의 적도 함께 먹힌다(연쇄에 든다)': 'When taken, foes all around are taken too (they count)',
+  '먹어도 내 모습이 바뀌지 않는다': 'Taking it does not change your form', '둘레 여덟 칸을 모두 지킨다': 'Guards all eight squares around it', '먹으면 대국 뒤 내 주머니에 그 종류로 들어온다': 'Take it and it joins your bag after the match',
   // 정석(깊이 E)
   '정석': 'Joseki', '은': 'Silver', '무지개': 'Rainbow', '주머니가 바뀌었다': 'Your bag changed',
   '기사 서약': "Knight's Oath", '주머니의 나이트 둘이 야간기사가 된다': 'Two knights in your bag become nightriders',

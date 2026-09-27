@@ -304,6 +304,7 @@ function endMove(b, events) {
   // 정석 「결사」 · 「왕좌」: 판(런)이 대국 뒤 주머니에 옮긴다
   if (c.pact) (b.exiled || (b.exiled = [])).push(b.chainPiece.id);
   if (c.throne) (b.crowned || (b.crowned = [])).push(b.chainPiece.id);
+  if (c.traitors) (b.traitors || (b.traitors = [])).push(...c.traitors);
   b.history.push(chainSummary(c, b.movesUsed - 1));
   b.golden += c.golden;
   b.chain = null;

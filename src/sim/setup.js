@@ -1,6 +1,7 @@
 // 대국판 짓기: 적 수 · 킹 수비 · 적의 무게. 대국 시작(battle.js)과 판을 다시 채우는 규칙(chain.js)이 같이 쓴다.
 import { int, next } from './rng.js';
 import { at, attackers, emptyBoard, fileOf, rankOf } from './board.js';
+import { TRAITS, traitChance } from '../data/traits.js';
 
 // 판 생성 수치(하네스로 맞춤, step 2a):
 //   적 수 8 + 관(최소 10) — 7 + 관이면 1~3관에서 판이 빨리 비어 폰이 떨굴 곳을 잃고 막힘 패배가 잦았다.
@@ -65,6 +66,15 @@ export function kingDefended(board, ksq, opts = {}, guards = 2) {
 
 // 판 위 사물(깊이 F): 2관부터 드물게 보석 하나 · 벽 한두 칸(연쇄를 막는 벽은 포 · 메뚜기의 받침이 된다)
 export const THINGS = { from: 2, gem: 0.3, wall: 0.25 };
+function placeTraits(b, rng, board) {
+  const p = b.rules.traits === false ? 0 : traitChance(b.ante ?? 1);
+  if (!p) return;
+  for (let sq = 0; sq < 64; sq++) {
+    const c = board[sq];
+    if (!c || c.mine || c.t === 'K' || c.t === 'X' || c.t === 'J') continue;
+    if (next(rng) < p) c.trait = TRAITS[int(rng, TRAITS.length)].id;
+  }
+}
 function placeThings(b, rng, board, reserve) {
   if ((b.ante ?? 1) < THINGS.from || b.rules.things === false) return;
   if (next(rng) < THINGS.gem) { const sq = randomEmpty(rng, board, 2, reserve); if (sq >= 0) board[sq] = { t: 'J', id: b.nextId++, born: -1 }; }
@@ -108,6 +118,7 @@ export function generateBoard(b, rng = b.rng.board, reserve = []) {
       put(sq, rollType(rng, b.ante));
     }
     placeThings(b, rng, board, reserve);
+    placeTraits(b, rng, board);
     if (ksqs.every((s) => kingDefended(board, s, opts, guards))) return board;
   }
   throw new Error('board generation failed');

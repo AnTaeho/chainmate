@@ -122,7 +122,7 @@ export function attackers(board, sq, opts = {}) {
   const enemyAt = (s, t) => s !== ignore && threat(board[s]) && board[s].t === t;
   const enemyIn = (s, set) => s !== ignore && threat(board[s]) && set.has(board[s].t);
   for (const s of KNIGHT[sq]) if (enemyIn(s, KNIGHTLIKE)) out.push(s);
-  for (const s of KING[sq]) if (enemyAt(s, 'K')) out.push(s);
+  for (const s of KING[sq]) if (enemyAt(s, 'K') || (s !== ignore && threat(board[s]) && board[s].trait === 'fort' && board[s].t !== 'K' && !out.includes(s))) out.push(s);
   // 적 폰은 (f±1, r−1)을 노린다 ⇒ sq를 노리는 폰은 (f±1, r+1)에 있다
   for (const s of PAWN_UP[sq]) if (enemyAt(s, 'P')) out.push(s);
   if (opts.pawnSides) for (const s of PAWN_SIDE[sq]) if (enemyAt(s, 'P')) out.push(s);
@@ -193,6 +193,8 @@ export function captures(board, form, sq, opts = {}) {
   for (const s of list) {
     const c = board[s];
     if (!isEnemy(c) || c.t === 'X') continue;
+    // 방패(적 특성): 사슬의 첫 먹이로는 못 먹는다(떨구기 판정도 첫 먹이)
+    if (c.trait === 'shield' && opts.first) continue;
     if (c.t === 'K' && !opts.openKings && !kingTakeable(board, s, sq, opts)) continue;
     out.push(s);
   }
@@ -207,7 +209,7 @@ export function dropSquares(board, t, opts = {}) {
     if (board[sq]) continue;
     if (t === 'P' && rankOf(sq) === 7) continue;
     if (!opts.allowAttacked && isAttacked(board, sq, opts)) continue;
-    if (captures(board, t, sq, opts).length === 0) continue;
+    if (captures(board, t, sq, { ...opts, first: true }).length === 0) continue;
     out.push(sq);
   }
   return out;

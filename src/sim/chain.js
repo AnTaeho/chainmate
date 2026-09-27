@@ -55,11 +55,12 @@ export function startChain(t, { type, sq, engraving = null, soul = null }) {
 export function chainCaptures(t) {
   const c = t.chain;
   if (!c || c.done || c.awaiting) return [];
-  let list = captures(t.board, c.form, c.sq, boardOpts(t));
+  const bo = c.captures.length ? boardOpts(t) : { ...boardOpts(t), first: true };
+  let list = captures(t.board, c.form, c.sq, bo);
   // 「변신」 문턱 6: 지나온 모습 전부의 행마로(한 번)
-  if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, boardOpts(t))) if (!list.includes(s)) list.push(s);
+  if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
   // 흡수: 먹은 행마가 더해진다(모습은 그대로)
-  if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, boardOpts(t))) if (!list.includes(s)) list.push(s);
+  if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
   if (list.length && ((t.mods && t.mods.length) || c.engraving || c.soul)) {
     list = list.filter((s) => runHook(t, 'allowCapture', { from: c.sq, to: s, piece: t.board[s].t, form: c.form }));
@@ -118,8 +119,13 @@ export function chainCapture(t, sq) {
     refill(t, events);
   }
 
-  // 보석(판 위 사물): 모습은 그대로, 상금 +2
-  if (target.t === 'J') {
+  // 적 특성(깊이 D): 폭약은 둘레 적을 함께 · 배신자는 대국 뒤 내 주머니로
+  if (target.trait === 'bomb') blast(t, sq, events);
+  if (target.trait === 'traitor' && target.t !== 'K') { (c.traitors || (c.traitors = [])).push(target.t); events.push({ type: 'traitor', sq, piece: target.t }); }
+  // 보석(판 위 사물): 모습은 그대로, 상금 +2 · 거울(적 특성): 모습이 바뀌지 않는다
+  if (target.trait === 'mirror') {
+    events.push({ type: 'mirrored', sq: at });
+  } else if (target.t === 'J') {
     c.money = (c.money || 0) + 2;
     events.push({ type: 'money', src: 'gem', money: 2 });
   } else if (c.flags.absorb && target.t !== 'K') {
@@ -173,6 +179,23 @@ export function chainCapture(t, sq) {
 
   resolveReply(t, events);
   return events;
+}
+
+// 폭약: 둘레 여덟 칸의 적(킹 · 벽 빼고)을 함께 먹은 것으로(값 · 연쇄 +1씩). 폭약이 폭약을 터뜨리면 이어진다
+function blast(t, sq, events) {
+  const c = t.chain, board = t.board;
+  for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
+    const f = (sq & 7) + df, r = (sq >> 3) + dr;
+    if ((!df && !dr) || f < 0 || f > 7 || r < 0 || r > 7) continue;
+    const s = r * 8 + f, x = board[s];
+    if (!x || x.mine || x.t === 'K' || x.t === 'X') continue;
+    board[s] = null;
+    events.push({ type: 'pierce', sq: s, piece: x.t, gold: !!x.gold, src: 'bomb' });
+    c.value += PIECES[x.t].value;
+    c.mult += 1;
+    events.push({ type: 'score', src: 'bomb', value: PIECES[x.t].value, mult: 1 });
+    if (x.trait === 'bomb') blast(t, s, events);
+  }
 }
 
 // 외통 뒤 판을 새로 채운다. 판은 (대국 시드, 몇째 수, 몇째 채움)으로 정해진다 — 풀이기가 그려 봐도,

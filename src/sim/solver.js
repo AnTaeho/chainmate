@@ -15,7 +15,7 @@ function cloneTable(t) {
     chain: c && {
       ...c,
       captures: c.captures.slice(), forms: c.forms.slice(), flags: { ...c.flags },
-      forced: c.forced && c.forced.slice(), absorbed: c.absorbed && c.absorbed.slice(),
+      forced: c.forced && c.forced.slice(), absorbed: c.absorbed && c.absorbed.slice(), traitors: c.traitors && c.traitors.slice(),
       engraving: forkSpec(c.engraving), soul: forkSpec(c.soul),
     },
   };
