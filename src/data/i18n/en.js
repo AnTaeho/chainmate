@@ -15,7 +15,7 @@ export const EN = {
   
   
   '세 칸 이상 미끄러져 먹을 때마다 값 +20': 'Each take after sliding 3+ squares: +20 Value',
-  '가운데 네 칸에서 먹을 때마다 배수 ×1.5': 'Each take on the four center squares: ×1.5 Mult',
+  '가운데 네 칸에서 먹을 때마다 배수 ×1.5': 'Center take: ×1.5 Mult',
   
   
   
@@ -43,7 +43,7 @@ export const EN = {
   // 카드에 적는 효과 · 새기기 미리 보기(친절 손질)
   '대각선 앞 한 칸의 적을 먹는다': 'Takes one square diagonally ahead', 'ㄱ자로 뛰어 먹는다': 'Leaps in an L to take', 
   '기물 셋 중 하나': 'One of three pieces', '기보 셋 중 하나': 'One of three charts', '각인 셋 중 하나': 'One of three engravings', '판본 격언 셋 중 하나': 'One of three edition maxims',
-  '기물에 새긴다': 'Engrave a piece', '기물에 깃든다': 'Binds to a piece', '기물이 자란다': 'A piece grows',
+  '기물에 새긴다': 'Onto a piece', '기물에 깃든다': 'Into a piece', '기물이 자란다': 'Grow one',
   
   '새긴다': 'Engrave', '깃든다': 'Bind', '자란다': 'Grow', '그만': 'Cancel', '이 기물은 자랄 곳이 없다': 'This piece has nothing to grow into',
   '주머니에서 새길 기물을 고른다': 'Choose a piece in your bag to engrave', '주머니에서 깃들 기물을 고른다': 'Choose a piece in your bag for the soul', '주머니에서 자랄 기물을 고른다': 'Choose a piece in your bag to grow',
@@ -105,7 +105,7 @@ export const EN = {
   
   '메아리': 'Echo', '초월': 'Transcend', '굶주림': 'Hunger', '사냥꾼': 'Hunter', '순교자': 'Martyr', '그림자': 'Shade',
   // 진화 · 묘수(깊이 F)
-  '진화': 'Evolve', '묘수': 'Trick', '자랄 기물': 'Choose a piece', '대국 중에 쓴다': 'Use it during a match', '대국 중 떨구기 전에 쓴다': 'Use during a match, before a drop',
+  '진화': 'Evolve', '묘수': 'Trick', '자랄 기물': 'Choose a piece', '대국 중에 쓴다': 'In a match', '대국 중 떨구기 전에 쓴다': 'Use during a match, before a drop',
   
   '빙결': 'Freeze', '재장전': 'Reload', '도발': 'Taunt', '수 +1': 'Moves +1',
   
@@ -291,6 +291,11 @@ export const EN = {
   '아무 기물에 무작위 혼이나 각인': 'A random soul or engraving on a random piece', '아무 기물이 무작위 특수 기물로': 'A random piece becomes a random special piece',
   '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존': 'Pawn › archer · knight › nightrider, camel · bishop › archbishop · rook › chancellor, cannon, ghost · queen › amazon',
   '버리기 −1': 'Discards −1', '수 2 · 버리기 1뿐': '2 moves · 1 discard only',
+  '안 지켜진 킹이 빛난다': 'Unguarded kings glow',
+  '나이트 모습으로 가장자리 칸에서 먹을 때, 사슬마다 한 번': 'A knight-form take on an edge square, once per chain',
+  '처음 세 먹기는 모습이 바뀌지 않고, 마지막에 먹은 적의 행마도 함께 쓴다': 'The first three takes keep your form, and you also use the move of the last enemy taken',
+  '폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Pawn › knight › bishop › rook › queen › amazon',
+  '주머니가 여섯 이하면 떠나지 않는다': 'It stays if your bag has six or fewer',
   // 격언
   '나이트로 시작: 배수 ×1.5': 'Start with a knight: ×1.5 Mult',
   '폰으로 시작: 값 +40': 'Start with a pawn: +40 Value',
@@ -299,32 +304,32 @@ export const EN = {
   '다섯째부터 먹을 때마다 배수 ×1.2': 'Each take from the fifth on: ×1.2 Mult',
   '가장자리 칸에서 먹을 때마다 배수 +2': 'Each take on an edge square: +2 Mult',
   '먹은 적 하나에 상금 +1 · 대국마다 5까지': '+1 Purse per take · up to 5 per match',
-  '승급한 사슬은 한 번 끊겨도 이어진다': 'A chain that promoted survives one break',
-  '대국마다 한 번, 끊겨도 사슬이 이어진다': 'Once per match, a break does not end the chain',
+  '승급한 사슬은 한 번 끊겨도 이어진다': 'Promoted chain: one free break',
+  '대국마다 한 번, 끊겨도 사슬이 이어진다': 'One free break per match',
   '끊긴 사슬: 배수 +8': 'Broken chain: +8 Mult',
   '끊기지 않은 사슬: 값 +30': 'Unbroken chain: +30 Value',
-  '킹을 지키는 적이 하나 적다 · 외통 승리: 상금 +6': 'Kings have one fewer guard · Win by mate: +6 Purse',
-  '킹을 지키는 적을 먹으면 배수 +2 · 외통: 배수 ×3 · 안 지켜진 킹이 빛난다': "Take a king's guard: +2 Mult · Mate: ×3 Mult · Unguarded kings glow",
-  '외통 승리마다 커진다: 배수 ×1.5 · ×2 · ×2.5 …': 'Grows with each win by mate: ×1.5 · ×2 · ×2.5 … Mult',
+  '킹을 지키는 적 −1 · 외통 승리: 상금 +6': 'King guards −1 · Mate win: +6 Purse',
+  '킹을 지키는 적을 먹으면 배수 +2 · 외통: 배수 ×3': "Take a king's guard: +2 Mult · Mate: ×3 Mult",
+  '외통 승리마다 커진다: 배수 ×1.5 · ×2 · ×2.5 …': 'Per mate win: ×1.5 · ×2 · ×2.5 … Mult',
   '대국 첫 수: 배수 ×2': "Match's first move: ×2 Mult",
   '대국 마지막 수: 배수 ×3': "Match's last move: ×3 Mult",
   '버리기를 안 쓴 대국: 배수 +4': 'No discards yet this match: +4 Mult',
-  '버리기 +1 · 이번 대국에 버린 기물마다 값 +10': 'Discards +1 · +10 Value per piece discarded this match',
+  '버리기 +1 · 이번 대국에 버린 기물마다 값 +10': 'Discards +1 · +10 Value per discard',
   '주머니에 남은 기물마다 배수 +1': '+1 Mult per piece left in the bag',
   '주머니 기물 여덟 이하: 배수 ×1.5': '8 or fewer pieces in your bag: ×1.5 Mult',
-  '막 들어온 증원을 먹으면 값 +40': 'Take a reinforcement that just landed: +40 Value',
-  '증원을 두 수 앞까지 본다 · 증원 자리에 떨구면 배수 +4': 'See reinforcements two moves ahead · Drop on one: +4 Mult',
+  '막 들어온 증원을 먹으면 값 +40': 'Fresh reinforcement: +40 Value',
+  '증원을 두 수 앞까지 본다 · 증원 자리에 떨구면 배수 +4': 'See 2 waves ahead · Drop on one: +4 Mult',
   '상아 각인 기물로 시작: 배수 +5': 'Start with an ivory piece: +5 Mult',
   '이번 판에 쓴 기보마다 배수 +1': '+1 Mult per study used this run',
-  '폰이나 나이트로 시작: 배수 +3': 'Start with a pawn or knight: +3 Mult',
+  '폰이나 나이트로 시작: 배수 +3': 'Pawn/knight start: +3 Mult',
   '판에 적이 여덟 이하: 배수 ×1.5': '8 or fewer enemies on the board: ×1.5 Mult',
-  '처음 모습으로 돌아오면 배수 ×2 · 사슬마다 한 번': 'Back in your starting form: ×2 Mult · once per chain',
+  '처음 모습으로 돌아오면 배수 ×2 · 사슬마다 한 번': 'Back to start form: ×2 Mult · once a chain',
   '새 모습이 될 때마다 값 +20': 'Each new form: +20 Value',
   '지키는 적을 먹을 때마다 배수 +2': 'Each guard you take: +2 Mult',
   '증원을 먹을 때마다 배수 +2': 'Each reinforcement taken: +2 Mult',
-  '폰 모습으로 둘을 먹으면 곧바로 승급': 'Two takes as a pawn: promote at once',
-  '가장자리에서 나이트 모습으로 먹으면 지키는 적을 한 번 무시한다': 'A knight-form take on the edge ignores its guards once',
-  '룩 모습으로 구석에서 먹을 때마다 배수 ×2': 'Each rook-form take in a corner: ×2 Mult',
+  '폰 모습으로 둘을 먹으면 곧바로 승급': '2 pawn takes: promote at once',
+  '가장자리의 나이트: 지키는 적을 한 번 무시한다': 'Knight on the edge: ignore guards once',
+  '룩 모습으로 구석에서 먹을 때마다 배수 ×2': 'Rook take in a corner: ×2 Mult',
   // 정석
   '나이트 둘이 야간기사가 된다': 'Two knights become nightriders',
   '룩 하나가 재상이 된다': 'A rook becomes a chancellor',
@@ -334,17 +339,17 @@ export const EN = {
   '대국마다 금빛 칸 셋 · 그 위 적을 먹으면 배수 ×2': 'Three gold squares per match · take on one: ×2 Mult',
   '문 위 적을 먹으면 다른 문에서 이어 간다 · 대국마다 문 둘': 'Take on a gate: go on from the other gate · two gates per match',
   '끊기는 순간 킹을 뺀 둘레의 적을 모두 먹는다': 'On a break: take every enemy around it but kings',
-  '대국 첫 수: 배수 ×3 · 주머니가 여섯을 넘으면 그 기물은 떠난다': "Match's first move: ×3 Mult · that piece leaves if your bag has more than six",
+  '대국 첫 사슬: 배수 ×3 · 시작한 기물은 주머니에서 떠난다': "Match's first chain: ×3 Mult · its piece leaves your bag",
   '주머니 기물이 모두 다른 종류: 목표 절반': 'Every piece in your bag a different kind: half the target',
   '폰으로 시작한 사슬이 승급하면 그 폰은 퀸으로 남는다': 'A pawn that starts a chain and promotes stays a queen',
   '한 사슬이 한 줄에 다섯 칸을 밟으면 곧바로 이긴다': 'A chain that lands on five squares in a line wins at once',
   '가장 많이 모은 시너지는 1 · 3 · 5개에서 켜진다': 'Your biggest synergy turns on at 1, 3 and 5',
   // 혼
-  '처음 세 번은 먹어도 모습 그대로 · 먹은 적의 행마를 더한다': 'First three takes keep your form · adds the move of what it took',
-  '막히면 한 번, 처음 모습으로 돌아가 잇는다': 'Once when stuck, goes back to its starting form and on',
+  '세 번까지 모습 그대로 · 먹은 적의 행마를 더한다': 'Form holds for 3 takes · adds their moves',
+  '막히면 한 번, 처음 모습으로 돌아가 잇는다': 'Once when stuck: back to start form',
   '먹으면 한 단계 위 모습이 된다 · 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Each take: one step up · pawn › knight › bishop › rook › queen › amazon', '먹으면 한 단계 위 모습이 된다': 'Each take: one step up',
   '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …': 'Second take +10 Value · third +20 · fourth +30 …',
-  '승급하면 아마존이 된다 · 두 줄 먼저 승급한다': 'Promotes into an amazon · two ranks sooner',
+  '승급하면 아마존 · 두 줄 먼저 승급': 'Promotes to amazon · two ranks sooner',
   '지키는 적을 무시한다 · 배수 −1': 'Ignores guards · −1 Mult',
   // 적 특성 · 묘수 · 명인
   '사슬의 첫 먹기로는 못 먹는다': "Can't be a chain's first take", '먹으면 둘레의 적도 함께 먹는다': 'Taking it takes the enemies around it too',
@@ -361,7 +366,7 @@ export const EN = {
   '폰으로 시작하면 여섯째 줄에서 승급 · 승급마다 배수 ×3': 'Start with a pawn: promote on the sixth rank · ×3 Mult per promotion',
   // 각인 · 판본
   '사슬이 끝나면 상금 +2': 'When its chain ends: +2 Purse', '값 +30': '+30 Value', '배수 ×1.5': '×1.5 Mult',
-  '배수 ×2 · 넷에 한 번 깨진다': '×2 Mult · breaks one time in four', '배수 ×2': '×2 Mult', '넷에 한 번 깨진다': 'breaks one time in four', '첫 먹기에선 끊기지 않는다': "Can't break on the first take",
+  '배수 ×2 · 4번에 1번 깨진다': '×2 Mult · breaks 1 time in 4', '배수 ×2': '×2 Mult', '4번에 1번 깨진다': 'breaks 1 time in 4', '첫 먹기에선 끊기지 않는다': "Can't break on the first take",
   '지켜진 칸에도 떨굴 수 있다': 'Can drop on guarded squares', '값 +50': '+50 Value', '배수 +5': '+5 Mult',
   // 시너지 효과(문턱마다)
   '뛰어 먹으면 값 +20': 'Jumping take: +20 Value',
@@ -403,7 +408,7 @@ export const EN = {
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
   [/^(\d+)개$/, (m) => `${m[1]}`],
-  [/^조각 셋이면 전설: (.+)$/, (m, tr) => `Three fragments make a legend: ${tr(m[1])}`],
+  [/^조각 셋이면 전설: (.+)$/, (m, tr) => `All three make a legend: ${tr(m[1])}`],
   // 시너지 이름 · 칩(「기사 시너지」 · 「기사 +1」 · 「기사 2/4」)
   [/^(기사|성채|사제|변신|희생|왕관|행진|사냥) 시너지$/, (m, tr) => `${tr(m[1])} synergy`],
   [/^(기사|성채|사제|변신|희생|왕관|행진|사냥) \+(\d+)$/, (m, tr) => `${tr(m[1])} +${m[2]}`],
@@ -416,7 +421,7 @@ export const PRE = [
 ];
 
 export const TEMPLATES = [
-  [/^(.+)의 기보를 따른다$/, (m, tr) => `Uses the ${tr(m[1]).toLowerCase()} study`],
+  [/^(.+) 기보가 적용된다$/, (m, tr) => `Uses the ${tr(m[1]).toLowerCase()} study`],
   [/^(\d+) › (\d+)단계$/, (m) => `Level ${m[1]} › ${m[2]}`],
   [/^(.+)에 (.+)의 혼$/, (m, tr) => `${tr(m[2] + '의 혼')} in ${tr(m[1])}`],
   [/^(폰|나이트|비숍|룩|퀸|킹) 모습$/, (m, tr) => `${tr(m[1])} form`],

@@ -13,8 +13,9 @@ const num = (x, d = 0) => (typeof x === 'number' ? x : d);
 
 export const MAXIMS = [];
 
-function maxim(id, name, text, verb, rarity, price, def) {
-  MAXIMS.push({ id, name, text, verb, rarity, price });
+// more: 카드에 다 적지 않고 말풍선에만 보이는 덧말(화면이 스스로 보이는 것 · 긴 조건)
+function maxim(id, name, text, verb, rarity, price, { more = null, ...def }) {
+  MAXIMS.push({ id, name, text, verb, rarity, price, more });
   defineModifier(id, { kind: 'maxim', ...def });
 }
 
@@ -94,11 +95,12 @@ maxim('close_call', '아슬아슬', '끊기지 않은 사슬: 값 +30', '끊김'
 
 // ── 외통
 // 밤샘 D-2: 외통 사냥꾼 · 왕의 목 · 다시 생각 · 그림자 읽기는 판 시작에 쥐여 줘도 통과한 관이 +0.25(보통 격언 +1.1)라 효과를 올렸다.
-maxim('mate_hunter', '외통 사냥꾼', '킹을 지키는 적이 하나 적다 · 외통 승리: 상금 +6', '외통', 'common', 4, {
+maxim('mate_hunter', '외통 사냥꾼', '킹을 지키는 적 −1 · 외통 승리: 상금 +6', '외통', 'common', 4, {
   onBattleStart(ctx) { ctx.rules.guards = Math.max(1, (ctx.rules.guards ?? kingGuards(ctx.t.ante ?? 1)) - 1); },
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.addMoney(6); },
 });
-maxim('kings_neck', '왕의 목', '킹을 지키는 적을 먹으면 배수 +2 · 외통: 배수 ×3 · 안 지켜진 킹이 빛난다', '외통', 'uncommon', 6, {
+maxim('kings_neck', '왕의 목', '킹을 지키는 적을 먹으면 배수 +2 · 외통: 배수 ×3', '외통', 'uncommon', 6, {
+  more: '안 지켜진 킹이 빛난다',
   onCapture(ctx) {
     const { piece, to } = ctx.event;
     if (piece === 'K') return;
@@ -213,7 +215,8 @@ maxim('promotion_rush', '특진', '폰 모습으로 둘을 먹으면 곧바로 �
     if (ctx.flags.pawnTakes >= 2) ctx.flags.promoteFrom = 0;
   },
 });
-maxim('mad_horse', '광마', '가장자리에서 나이트 모습으로 먹으면 지키는 적을 한 번 무시한다', '지키는 적', 'common', 4, {
+maxim('mad_horse', '광마', '가장자리의 나이트: 지키는 적을 한 번 무시한다', '지키는 적', 'common', 4, {
+  more: '나이트 모습으로 가장자리 칸에서 먹을 때, 사슬마다 한 번',
   onCapture(ctx) { if (ctx.event.form === 'N' && EDGE(ctx.event.to) && !ctx.flags.madHorseUsed) ctx.flags.madHorse = true; },
   onThreat(ctx) { if (ctx.flags.madHorse) { ctx.flags.madHorse = false; ctx.flags.madHorseUsed = true; ctx.ignoreThreat(); } },
 });

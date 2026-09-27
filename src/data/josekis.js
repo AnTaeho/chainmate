@@ -14,8 +14,8 @@ export const TIER_COL = { silver: '#d8dee6', gold: '#efbd55', rainbow: '#9fe0a0'
 
 export const JOSEKIS = [];
 function joseki(id, name, tier, families, text, def = {}) {
-  const { pick = null, rules = null, targetMult = null, ...hooks } = def;
-  JOSEKIS.push({ id, name, tier, families, text, pick, rules, targetMult });
+  const { pick = null, rules = null, targetMult = null, more = null, ...hooks } = def;
+  JOSEKIS.push({ id, name, tier, families, text, pick, rules, targetMult, more });
   // 판 위 사물 · 규칙은 대국 시작(판을 짓기 전)에 대국 시드에서 갈라 낸 흐름으로 정한다
   if (rules) hooks.onBattleStart = (ctx) => { const r = fork(createRng((ctx.t.seed ?? 1) >>> 0), `joseki:${id}`); rules(ctx.t, () => next(r)); };
   defineModifier(`joseki:${id}`, { kind: 'joseki', ...hooks });
@@ -96,7 +96,8 @@ joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], '끊기는 순�
     }
   },
 });
-joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 수: 배수 ×3 · 주머니가 여섯을 넘으면 그 기물은 떠난다', {
+joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬: 배수 ×3 · 시작한 기물은 주머니에서 떠난다', {
+  more: '주머니가 여섯 이하면 떠나지 않는다',
   onChainEnd(ctx) { if (!(ctx.t.movesUsed ?? 0)) { ctx.mulMult(3); ctx.chain.pact = true; } },
 });
 

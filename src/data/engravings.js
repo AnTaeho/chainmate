@@ -17,7 +17,7 @@ engraving('ivory', '상아', '값 +30', 'common', {
 engraving('ebony', '흑단', '배수 ×1.5', 'uncommon', {
   onChainEnd(ctx) { ctx.mulMult(1.5); },
 });
-engraving('glass', '유리', '배수 ×2 · 넷에 한 번 깨진다', 'common', {
+engraving('glass', '유리', '배수 ×2 · 4번에 1번 깨진다', 'common', {
   breakChance: 0.25,
   onChainEnd(ctx) { ctx.mulMult(2); },
 });
