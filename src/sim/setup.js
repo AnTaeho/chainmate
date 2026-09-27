@@ -9,7 +9,7 @@ import { TRAITS, traitChance } from '../data/traits.js';
 //   끊김 넘기기 격언이 붙으면 셋으로도 5~9%라 3관부터 넷.
 //   증원 수마다 2 — 1이면 1~3관 막힘이 두 배.
 export const enemyCount = (ante) => Math.max(10, 8 + ante);
-export const kingGuards = (ante) => (ante >= 3 ? 4 : 3);
+export const kingGuards = (ante) => (ante >= 6 ? 6 : ante >= 5 ? 5 : ante >= 3 ? 4 : 3); // 깊이 층 뒤 5관부터 다섯: 이형 · 가족으로 수비수를 다 치우기 쉬워져 외통이 대국의 15~20%였다
 export const reinforceCount = () => 2;
 
 // 관이 오를수록 무거운 적. 초안 — step 2에서 시뮬로 맞춘다.
