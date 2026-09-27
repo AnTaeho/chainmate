@@ -1,48 +1,55 @@
-// 타이틀: 큰 도트 글자, 새 판 · 이어 하기 · 설정. 뒤로 기물이 천천히 떨어지며 갈아입는다.
+// 타이틀: 큰 도트 글자, 새 판 · 이어 하기 · 첫 수업 · 설정. 뒤로 흐린 판에서 풀이기가 실제 규칙 · 실제 연출로 사슬을 계속 둔다(소리 없음).
 import { PAL } from '../../render/palette.js';
-import { W, H, text, sprite, rect } from '../../render/gfx.js';
+import { W, H, text, rect } from '../../render/gfx.js';
 import { button } from '../ui.js';
+import { createBattle, apply } from '../../sim/battle.js';
+import { bestMove } from '../../sim/solver.js';
+import { Fx } from '../anim.js';
+import { BattleScreen } from './battle.js';
 
-const TYPES = ['P', 'N', 'B', 'R', 'Q', 'K'];
+// 시연 판이 그리는 구역은 버린다(메뉴 뒤라 누를 수 없다)
+const NO_UI = { region() {}, isHover: () => false, hover: null };
 
 export class TitleScreen {
   constructor(app) {
     this.app = app;
-    this.seed = 12345;
-    this.drops = [];
-    for (let i = 0; i < 14; i++) this.drops.push(this.spawn(true));
+    this.round = 0;
+    this.newBoard();
   }
-  rnd() { this.seed = (this.seed * 1103515245 + 12345) & 0x7fffffff; return this.seed / 0x7fffffff; }
-  spawn(anywhere = false) {
-    return {
-      x: Math.floor(this.rnd() * (W - 16)),
-      y: anywhere ? Math.floor(this.rnd() * H) - 22 : -24,
-      v: 6 + this.rnd() * 10,
-      t: TYPES[Math.floor(this.rnd() * 6)],
-      side: this.rnd() < 0.5 ? 'w' : 'b',
-      flip: 0, next: 1 + this.rnd() * 4,
-    };
+  newBoard() {
+    const k = this.round++;
+    const hold = { b: createBattle({ seed: 101 + k * 7, ante: 1 + (k % 3), kind: 'practice' }) };
+    this.hold = hold;
+    this.fx = new Fx();
+    this.demo = new BattleScreen(this.app, { quiet: true, fx: this.fx, source: { kind: 'demo', live: () => hold.b, cmd: (c) => apply(hold.b, c), run: null, after: () => { this.rest = 0.9; } } });
+    this.demo.noPreview = true;
+    this.demo.boardOnly = true;   // 판만 그린다(목표 막대 · 왼쪽 숫자 없음)
+    this.line = null;
+    this.rest = 0.8;
+  }
+  step() {
+    const d = this.demo, b = this.hold.b;
+    if (d.busy) return;
+    if (this.line && this.line.length && b.status === 'chain') { d.send({ type: 'capture', sq: this.line.shift() }); return; }
+    if (b.status !== 'play') { this.newBoard(); return; }
+    const m = bestMove(b, { maxNodes: 4000 });
+    if (!m) { this.newBoard(); return; }
+    this.line = m.line.slice();
+    d.send({ type: 'drop', handIndex: m.handIndex, sq: m.sq });
   }
   update(dt) {
-    for (const d of this.drops) {
-      d.y += d.v * dt;
-      d.next -= dt;
-      if (d.flip > 0) {
-        d.flip -= dt;
-        if (d.flip <= 0.1 && !d.swapped) { d.t = d.to; d.swapped = true; }
-      } else if (d.next <= 0) {
-        d.to = TYPES[Math.floor(this.rnd() * 6)];
-        d.flip = 0.2; d.swapped = false; d.next = 2 + this.rnd() * 4;
-      }
-    }
-    this.drops = this.drops.map((d) => (d.y > H + 4 ? this.spawn() : d));
+    this.demo.update(dt);
+    this.fx.update(dt * this.app.speed());
+    if ((this.rest -= dt) <= 0 && !this.demo.busy) { this.rest = this.line && this.line.length ? 0.35 : 0; this.step(); }
   }
   draw(ctx, ui) {
     const app = this.app;
-    for (const d of this.drops) {
-      const sx = d.flip > 0 ? Math.abs(d.flip - 0.1) / 0.1 : 1;
-      sprite(ctx, d.t, d.flip > 0 ? 's' : d.side, d.x, Math.round(d.y), { alpha: 0.28, sx });
-    }
+    this.demo.drawBoard(ctx, NO_UI);
+    this.fx.draw(ctx, 1);
+    // 메뉴 뒤라 어둡게 덮는다
+    ctx.globalAlpha = 0.6;
+    rect(ctx, 0, 0, W, H, PAL.shadow);
+    ctx.globalAlpha = 1;
     text(ctx, '체인메이트', W / 2, 44, PAL.goldDk, { align: 'center', bold: true, scale: 3 });
     text(ctx, '체인메이트', W / 2, 42, PAL.gold, { align: 'center', bold: true, scale: 3, shadow: null });
     text(ctx, '잡으면 그것이 된다', W / 2, 92, PAL.ink, { align: 'center' });

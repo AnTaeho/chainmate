@@ -483,6 +483,7 @@ export class BattleScreen {
     this.fx.add({ life: 0.15, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = 0.6 * (1 - e.t / e.life); rect(ctx, x, y, S, S, col); ctx.globalAlpha = 1; } });
   }
   pop(s, where, dy = 0) {
+    if (this.boardOnly) return;
     const pos = where === 'value' ? { x: LX + 24, y: 96 - dy } : where === 'mult' ? { x: LX + 88, y: 96 - dy } : { x: LX + LW - 20, y: 210 };
     const col = where === 'value' ? PAL.val : where === 'mult' ? PAL.gold : PAL.gold;
     this.fx.add({ life: 0.6, layer: 1, draw: (ctx, e) => { const k = e.t / e.life; text(ctx, s, pos.x, pos.y - 6 - k * 10, col, { align: 'center', bold: true, alpha: 1 - k * k, shadow: PAL.shadow }); } });
@@ -585,7 +586,7 @@ export class BattleScreen {
   // 목표를 넘기면 막대가 ×2 · ×5 · ×10 눈금으로 늘어나고 채움 끝에 불이 붙는다.
   drawGoalBar(ctx) {
     const v = this.view, tgt = v.target;
-    if (!tgt) return;
+    if (!tgt || this.boardOnly) return;
     const time = this.app.time;
     const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
     const live = v.chain && !v.gather ? Math.floor(v.chain.value * v.chain.mult) : v.gather && !v.count ? v.gather.score : 0;
