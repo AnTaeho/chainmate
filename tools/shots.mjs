@@ -174,7 +174,12 @@ await idle();
 await hoverId(`sq:${plan.line[0]}`);
 await settle(150);
 await shot('20-preview');
-for (let i = 0; i < plan.line.length - 1; i++) { await clickId(`sq:${plan.line[i]}`); await idle(); }
+for (let i = 0; i < plan.line.length - 1; i++) {
+  await clickId(`sq:${plan.line[i]}`);
+  // 모습이 바뀐 순간: 새 이름이 떠오르고 한 박자 멈춘다
+  if (i === 0) { await page.waitForFunction(() => { const c = window.__app.screen.seq.cur; return c && c.label === 'hold'; }, null, { timeout: 5000 }).catch(() => {}); await shot('26-chain-name'); }
+  await idle();
+}
 await settle(200);
 await shot('05-battle-chain');
 await hoverId('maxim:0');
