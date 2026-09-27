@@ -251,12 +251,23 @@ if (ko) {
   await scene('settings', () => window.__app.openOverlay('settings', { back: 'pause' }));
   await ev(() => window.__app.closeOverlay());
   // 처음 안내(한 번에 하나): 정석 · 상점 · 꾸러미 · 대국(증원)
-  const hintOn = (ids) => ev((ids) => { const a = window.__app; for (const id of ids) delete a.records.coachSeen[id]; }, ids);
+  // 이 장면의 안내만 켠다(앞 장면에서 켠 것은 다시 본 것으로)
+  const hintOn = (ids) => ev(async (ids) => { const a = window.__app; const { HINTS } = await import('/src/ui/coach.js'); a.records.coachSeen = Object.fromEntries(Object.keys(HINTS).map((k) => [k, true])); for (const id of ids) delete a.records.coachSeen[id]; }, ids);
   await scene('hint-draft', js(fresh(7)), { wait: 1800, hover: false, before: () => hintOn(['draft']) });
   await scene('hint-shop', js(shopSrc(11, stock)), { wait: 600, hover: false, before: async () => { await ev(async () => { const r = window.__app.run; const { createRng, fork } = await import('/src/sim/rng.js'); r.shop.rng = fork(createRng(3), 'layout'); }); await hintOn(['shop']); } });
   await scene('hint-shop-family', js(shopSrc(11, stock)), { wait: 600, hover: false, before: async () => { await ev(async () => { const r = window.__app.run; const { createRng, fork } = await import('/src/sim/rng.js'); r.shop.rng = fork(createRng(3), 'layout'); }); await hintOn(['family']); } });
   await scene('hint-pack', js(packSrc('piece', [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'C' }, { kind: 'piece', t: 'B' }])), { wait: 1800, hover: false, before: () => hintOn(['pack']) });
   await scene('hint-battle', js(battleSrc(7, '')), { wait: 2800, hover: false, before: () => hintOn(['incoming', 'family']) });
+  // 새 장면(고치기 전 짝 없음): 혼 · 묘수 진열(그림자 카드 글), 수업 ⑩ 따라 하는 길의 말풍선, 도감 둘째 쪽
+  await ev(() => { const a = window.__app; a.records.coachSeen = Object.fromEntries(Object.keys(a.records.coachSeen).map((k) => [k, true])); });
+  await scene('shop-souls', js(shopSrc(11, "r.shop = { display: [{ kind: 'soul', id: 'shade', price: 6, sold: false }, { kind: 'tactic', id: 'freeze', price: 3, sold: false }], packs: [{ kind: 'golden', price: 0, sold: false }, { kind: 'piece', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };")), {
+    wait: 500,
+    before: async () => { await ev(async () => { const r = window.__app.run; const { createRng, fork } = await import('/src/sim/rng.js'); r.shop.rng = fork(createRng(3), 'layout'); }); },
+  });
+  await scene('lesson-guide', async () => { const a = window.__app; const { LESSONS } = await import('/src/ui/lessons.js'); const { openLesson } = await import('/src/ui/screens/lessons.js'); openLesson(a, LESSONS.findIndex((L) => L.shop), 'shots'); }, { wait: 900, hover: false });
+  await scene('lesson-guide-2', null, { wait: 300, hover: false, before: async () => { await clickId('shop:buy:0'); await settle(600); } });
+  await ev(() => { const a = window.__app; a.guide = null; a.run = null; });
+  await scene('codex-page2', () => { const a = window.__app; a.go('codex'); a.screen.page = 1; });
 }
 
 fs.writeFileSync(path.join(OUT, `${PREFIX}${LANG === 'en' ? '-en' : ''}.json`), JSON.stringify(log, null, 1));
