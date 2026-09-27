@@ -4,7 +4,7 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명국 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 export const EN = {
   // ── 화면
-  '체인메이트': 'CHAINMATE', '잡으면 그것이 된다': 'Take it, be it',
+  '체인메이트': 'CHAINMATE', '잡으면 그것이 된다': 'Take it, be it', '적을 삼켜, 적이 되어라': 'Devour them. Become them.',
   '이어 하기': 'Continue', '새 판': 'New Run', '오늘의 대국': "Today's Match", '도감': 'Almanac', '기록': 'Records', '설정': 'Settings',
   '멈춤': 'Paused', '계속': 'Continue', '타이틀로': 'To Title', '타이틀': 'Title', '돌아가기': 'Back', '다시': 'Again', '계속 두기': 'Play On',
   '소리': 'Sound', '음악': 'Music', '연출 속도': 'Speed', '화면 흔들림': 'Shake', '큰 글자': 'Large Text', '켬': 'On', '끔': 'Off', '언어': 'Language',

@@ -52,7 +52,7 @@ export class TitleScreen {
     ctx.globalAlpha = 1;
     text(ctx, '체인메이트', W / 2, 44, PAL.goldDk, { align: 'center', bold: true, scale: 3 });
     text(ctx, '체인메이트', W / 2, 42, PAL.gold, { align: 'center', bold: true, scale: 3, shadow: null });
-    text(ctx, '잡으면 그것이 된다', W / 2, 92, PAL.ink, { align: 'center' });
+    text(ctx, '적을 삼켜, 적이 되어라', W / 2, 92, PAL.ink, { align: 'center' });
     const has = app.hasSave();
     const items = [];
     if (has) items.push(['title:continue', '이어 하기', () => app.continueRun(), 'gold']);
