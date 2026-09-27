@@ -6,6 +6,7 @@ import { W, H, text, box, rect, frame, dots, line, sprite, num, digits } from '.
 import { spriteChips, spriteCanvas } from '../../render/sprites.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
+import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
@@ -37,6 +38,21 @@ export function short(n) {
 function hatch(ctx, x, y, col) {
   ctx.fillStyle = col;
   for (let i = 0; i < S * 2; i += 5) for (let j = 0; j < S; j++) { const k = i - j; if (k >= 0 && k < S) ctx.fillRect(x + k, y + j, 1, 1); }
+}
+// 점선(미리 보기의 길)
+function dotLine(ctx, x0, y0, x1, y1, col, step = 3) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  ctx.fillStyle = col;
+  for (let i = 0; i <= n; i += step) ctx.fillRect(Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), 1, 1);
+}
+// 칸 안의 둥근 고리(다음에 먹을 적)
+function ringAt(ctx, x, y, col, thick = 1) {
+  for (let k = 0; k < thick; k++) {
+    const o = k;
+    for (let i = 10; i < 18; i++) { rect(ctx, x + i, y + 3 + o, 1, 1, col); rect(ctx, x + i, y + 24 - o, 1, 1, col); rect(ctx, x + 3 + o, y + i, 1, 1, col); rect(ctx, x + 24 - o, y + i, 1, 1, col); }
+    for (const [px, py] of [[8, 5], [9, 4], [18, 4], [19, 5], [5, 8], [4, 9], [22, 8], [23, 9], [4, 18], [5, 19], [23, 18], [22, 19], [8, 22], [9, 23], [18, 23], [19, 22]]) rect(ctx, x + px, y + py, 1, 1, col);
+    for (const [px, py] of [[6, 6], [7, 6], [6, 7], [20, 6], [21, 6], [21, 7], [6, 20], [6, 21], [7, 21], [21, 20], [20, 21], [21, 21]]) rect(ctx, x + px, y + py, 1, 1, col);
+  }
 }
 const bagTip = (b) => {
   const counts = {};
@@ -107,6 +123,9 @@ export class BattleScreen {
     } else v.chain = null;
     this.targets = null;
     this.drops = null;
+    this.pvCache = new Map();
+    this.tapSq = null;
+    this.kbIdx = null;
     this.sel = this.sel.filter((i) => i < v.hand.length);
   }
 
@@ -126,6 +145,34 @@ export class BattleScreen {
     return this.targets;
   }
 
+  // 미리 보기: 지금 겨누는 칸(마우스 · 화살표 · 첫 누르기)과 그 결과. 규칙 조회는 칸마다 한 번.
+  aimSq(ui) {
+    const t = this.clickable();
+    if (!t.list.length || this.noPreview) return null;
+    const h = ui.hover && ui.hover.id.startsWith('sq:') ? Number(ui.hover.id.slice(3)) : null;
+    if (h != null && t.list.includes(h)) return h;
+    if (this.tapSq != null && t.list.includes(this.tapSq)) return this.tapSq;
+    if (this.kbIdx != null) return t.list[((this.kbIdx % t.list.length) + t.list.length) % t.list.length];
+    return null;
+  }
+  preview(sq) {
+    const t = this.clickable();
+    const b = this.live();
+    if (!b || sq == null) return null;
+    const key = `${t.kind}:${this.sel[0]}:${sq}`;
+    if (!this.pvCache) this.pvCache = new Map();
+    if (!this.pvCache.has(key)) {
+      let pv = null;
+      try {
+        if (t.kind === 'capture') pv = { kind: 'capture', ...previewCapture(b, sq) };
+        else if (t.kind === 'drop') pv = { kind: 'drop', ...previewDrop(b, this.sel[0], sq) };
+      } catch { pv = null; }
+      if (pv) pv.next = pv.next.filter((s) => !isHidden(b, s));
+      this.pvCache.set(key, pv);
+    }
+    return this.pvCache.get(key);
+  }
+
   toggle(i) {
     const b = this.live();
     if (this.busy || !b || b.status !== 'play' || i >= b.hand.length) return;
@@ -140,6 +187,8 @@ export class BattleScreen {
     if (!b) return;
     const t = this.clickable();
     if (t.list.includes(sq)) {
+      if (this.app.touch && !this.noPreview && (t.kind === 'capture' || t.kind === 'drop') && this.tapSq !== sq) { this.tapSq = sq; this.snd('pick'); return; }
+      this.tapSq = null;
       if (t.kind === 'capture') this.send({ type: 'capture', sq });
       else if (t.kind === 'redrop') this.send({ type: 'redrop', sq });
       else if (t.kind === 'drop') { const i = this.sel[0]; this.sel = []; this.send({ type: 'drop', handIndex: i, sq }); }
@@ -630,6 +679,7 @@ export class BattleScreen {
       const a = sqXY(v.mover.from), c = sqXY(v.mover.to);
       sprite(ctx, v.mover.form, 'w', lerp(a.x, c.x, v.mover.p) + 6, lerp(a.y, c.y, v.mover.p) + 3);
     }
+    this.drawPreview(ctx, ui);
     // 끊김: 노린 적에서 붉은 선 · 금
     if (v.cut) {
       const c = this.center(v.cut.sq);
@@ -644,6 +694,57 @@ export class BattleScreen {
       const { x, y } = sqXY(v.chain.sq);
       if (Math.floor(time * 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
     }
+  }
+
+  // 먹기 전에 「그것」이 보인다: 겨눈 적 칸에 바뀐 모습, 다음에 먹을 적에 고리(응수면 붉은 빗금), 끊기면 붉은 금
+  drawPreview(ctx, ui) {
+    const v = this.view;
+    const aim = this.busy ? null : this.aimSq(ui);
+    const pv = aim != null ? this.preview(aim) : null;
+    this.pvNow = pv;
+    if (!pv) return;
+    const time = this.app.time;
+    const T = sqXY(pv.sq), tc = this.center(pv.sq);
+    if (pv.kind === 'capture' && v.chain) {
+      const fc = this.center(v.chain.sq);
+      dotLine(ctx, fc.x, fc.y, tc.x, tc.y, PAL.goldHi);
+      frame(ctx, T.x, T.y, S, S, PAL.gold);
+      sprite(ctx, pv.form, 'w', T.x + 6, T.y + 2, { alpha: 0.62 + 0.12 * Math.sin(time * 6) });
+      if (pv.cut) {
+        for (const s of pv.cut) { const a = this.center(s); dotLine(ctx, a.x, a.y, tc.x, tc.y, PAL.red, 2); const A = sqXY(s); ringAt(ctx, A.x, A.y, PAL.red, 2); }
+        line(ctx, T.x + 5, T.y + 5, T.x + 22, T.y + 22, PAL.red); line(ctx, T.x + 22, T.y + 5, T.x + 5, T.y + 22, PAL.red);
+        return;
+      }
+    } else if (pv.kind === 'drop') {
+      sprite(ctx, pv.form, 'w', T.x + 6, T.y + 3, { alpha: 0.5 });
+    }
+    for (const s of pv.next) {
+      const A = sqXY(s), c = this.center(s);
+      const reply = pv.forced && pv.forced.includes(s);
+      dotLine(ctx, tc.x, tc.y, c.x, c.y, reply ? PAL.red : PAL.gold);
+      if (reply) { ctx.globalAlpha = 0.6; hatch(ctx, A.x, A.y, PAL.red); ctx.globalAlpha = 1; }
+      ringAt(ctx, A.x, A.y, reply ? PAL.red : PAL.gold, 2);
+    }
+  }
+
+  // 오른쪽 작은 패널: 지금 [모습] › 먹으면 [모습], 얻을 값 · 연쇄, 그다음
+  drawPreviewPanel(ctx) {
+    const pv = this.pvNow, v = this.view;
+    if (!pv || pv.kind !== 'capture' || !v.chain) return;
+    panel(ctx, RX, 22, RW, 88);
+    text(ctx, '지금', RX + 21, 26, PAL.dim, { align: 'center' });
+    text(ctx, '먹으면', RX + 77, 26, PAL.dim, { align: 'center' });
+    box(ctx, RX + 8, 40, 26, 34, PAL.light, PAL.frameDk);
+    sprite(ctx, v.chain.form, 'w', RX + 13, 46);
+    text(ctx, '›', RX + 49, 49, PAL.gold, { align: 'center', bold: true, scale: 2 });
+    box(ctx, RX + 64, 40, 26, 34, pv.cut ? PAL.red : PAL.gold, PAL.frameDk);
+    sprite(ctx, pv.form, 'w', RX + 69, 46);
+    text(ctx, `+${short(pv.value)}`, RX + 8, 88, PAL.val, { bold: true });
+    text(ctx, `연쇄 +${short(pv.mult)}`, RX + RW - 8, 88, PAL.gold, { align: 'right', bold: true });
+    panel(ctx, RX, 114, RW, 22);
+    const [msg, col] = pv.cut ? ['되잡힌다', PAL.red] : pv.mate ? ['외통', PAL.gold] : pv.redrop ? ['다시 떨군다', PAL.gold]
+      : pv.done ? ['사슬이 끝난다', PAL.dim] : pv.forced ? [`응수 ${pv.next.length}`, PAL.red] : [`다음에 먹을 적 ${pv.next.length}`, PAL.gold];
+    text(ctx, msg, RX + 8, 119, col, { bold: true });
   }
 
   drawLeft(ctx, ui) {
@@ -728,6 +829,7 @@ export class BattleScreen {
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
       maximColumn(ctx, ui, run, RX, 22, RW, 180, { offUids: off });
     }
+    this.drawPreviewPanel(ctx);
     // 손
     text(ctx, '손', RX, 206, PAL.dim);
     const live = this.live();
@@ -791,9 +893,14 @@ export class BattleScreen {
     if (this.busy) { this.fast = true; return; }
     if (/^[1-5]$/.test(k)) this.toggle(Number(k) - 1);
     else if (k === ' ') this.discard();
-    else if (k === 'Enter' && b && b.status === 'chain') {
+    else if (/^Arrow/.test(k)) {
+      // 화살표: 누를 수 있는 칸(먹을 적 · 떨굴 칸)을 차례로 겨눈다(미리 보기가 따라온다)
       const t = this.clickable();
-      if (t.list.length === 1) this.clickSq(t.list[0]);
+      if (t.list.length) this.kbIdx = (this.kbIdx ?? -1) + (k === 'ArrowRight' || k === 'ArrowDown' ? 1 : -1);
+    } else if (k === 'Enter' && b) {
+      const t = this.clickable();
+      if (this.kbIdx != null && t.list.length) this.clickSq(t.list[((this.kbIdx % t.list.length) + t.list.length) % t.list.length]);
+      else if (b.status === 'chain' && t.list.length === 1) this.clickSq(t.list[0]);
     }
   }
 }

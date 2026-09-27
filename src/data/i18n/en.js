@@ -33,6 +33,7 @@ export const EN = {
   '판': 'Runs', '이긴 판': 'Runs won', '최고 관': 'Best hall', '전설 완성': 'Legends', '신의 한 수(!!!)': 'Divine moves (!!!)', '열린 단': 'Dan unlocked', '아직': 'Not yet',
   '5관에 닿는다': 'Reach hall 5', '외통으로 다섯 번 이긴다': 'Win by mate five times', '한 사슬에 여덟을 먹는다(!!!)': 'Take eight in one chain (!!!)', '불멸의 기보 하나를 완성한다': 'Complete one immortal game',
   '폰': 'Pawn', '나이트': 'Knight', '비숍': 'Bishop', '룩': 'Rook', '퀸': 'Queen', '킹': 'King',
+  '지금': 'Now', '먹으면': 'Take', '되잡힌다': 'Recaptured', '사슬이 끝난다': 'Chain ends',
   '한국어': '한국어', 'English': 'English', '없음': 'None',
   // 동사
   '떨구기': 'Drop', '먹기': 'Capture', '갈아입기': 'Change', '끊김': 'Break', '응수': 'Reply', '증원': 'Reinforcement',
@@ -156,6 +157,9 @@ export const TEMPLATES = [
   [/^전설: (.+)$/, (m, tr) => `Legend: ${tr(m[1])}`],
   [/^([■□]) (.+)$/, (m, tr) => `${m[1]} ${tr(m[2])}`],
   [/^(\d+)판$/, (m) => `${m[1]} runs`],
+  [/^다음에 먹을 적 (\d+)$/, (m) => `Next prey ${m[1]}`],
+  [/^응수 (\d+)$/, (m) => `Reply ${m[1]}`],
+  [/^연쇄 \+(.+)$/, (m) => `Links +${m[1]}`],
   [/^손 (\d+)$/, (m) => `Hand ${m[1]}`],
   [/^무르기 (\d+)$/, (m) => `Redraw ${m[1]}`],
   [/^수 (\d+)$/, (m) => `Moves ${m[1]}`],

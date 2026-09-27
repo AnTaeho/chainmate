@@ -44,7 +44,7 @@ export async function boot(env = {}) {
   canvas.addEventListener('mousedown', (e) => { e.preventDefault(); const [x, y] = toGame(e); app.pointer('down', x, y, e.button); });
   win.addEventListener('mouseup', (e) => { const [x, y] = toGame(e); app.pointer('up', x, y, e.button); });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); const t = e.changedTouches[0]; const [x, y] = toGame(t); app.pointer('move', x, y); app.pointer('down', x, y); }, { passive: false });
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); app.touch = true; const t = e.changedTouches[0]; const [x, y] = toGame(t); app.pointer('move', x, y); app.pointer('down', x, y); }, { passive: false });
   canvas.addEventListener('touchend', (e) => { e.preventDefault(); const t = e.changedTouches[0]; const [x, y] = toGame(t); app.pointer('up', x, y); }, { passive: false });
   win.addEventListener('keydown', (e) => {
     if (e.repeat) return;

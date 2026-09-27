@@ -133,6 +133,9 @@ await clickId(`sq:${plan3.line[0]}`);
 await idle();
 await settle(90);
 await shot('05b-battle-forced');
+await hoverId(`sq:${plan3.line[1]}`);
+await settle(120);
+await shot('20-preview-reply');
 // 명인 규칙 글이 카드와 띠에 들어가는지: 가장 긴 글(안개)
 await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.run.masters[0] = 'fog'; a.goPhase(); });
 await settle(200);
@@ -163,8 +166,14 @@ const plan = await ev(async () => {
 await clickId(`hand:${plan.hand}`);
 await settle(300);
 await shot('04-battle-lift');
+await hoverId(`sq:${plan.sq}`);
+await settle(120);
+await shot('20-preview-drop');
 await clickId(`sq:${plan.sq}`);
 await idle();
+await hoverId(`sq:${plan.line[0]}`);
+await settle(150);
+await shot('20-preview');
 for (let i = 0; i < plan.line.length - 1; i++) { await clickId(`sq:${plan.line[i]}`); await idle(); }
 await settle(200);
 await shot('05-battle-chain');
