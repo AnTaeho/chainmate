@@ -6,7 +6,7 @@
 // 모음 이름(「끊김 모음」 · 「승급 모음」)은 같은 자리에서 시작하는 짧은 낱말(끊김 · 승급)보다 먼저 둔다(splitTerms는 앞의 것을 고른다).
 import { wrap } from '../render/text.js';
 import { PAL } from '../render/palette.js';
-import { text, measure } from '../render/gfx.js';
+import { text, measure, box, rect } from '../render/gfx.js';
 import { L, getLang } from './lang.js';
 
 const T = (id, group, word, enWord, re, en, say, enSay) => ({ id, group, word, enWord, re, en, say, enSay });
@@ -22,7 +22,7 @@ export const TERMS = [
   T('fam_hunt', 'set', '같은 적 모음', 'Same prey set', /같은 적 모음/, /\bSame prey set\b/i, '같은 종류의 적을 잇달아 먹을 때 점수가 붙는 모음', 'Scores when you take the same kind twice in a row'),
   T('set', 'set', '모음', 'Set', /모음/, /\bsets?\b/i, '같은 모음의 격언 · 특수 기물 · 정석 · 혼을 2 · 4 · 6개 모으면 효과가 하나씩 켜진다', 'Collect 2, 4 and 6 maxims, special pieces, joseki or souls of one set to switch on its effects'),
   // ── 대국
-  T('drop', 'battle', '떨구기', 'Drop', /떨[구군궈굴]\S*/, /\bdrop\w*/i, '손의 기물을 판에 놓는 것 — 먹을 적이 닿고, 어느 적도 지키지 않는 빈칸에만', 'Put a piece from your hand on the board — only on an empty, unguarded square that reaches prey'),
+  T('drop', 'battle', '떨구기', 'Drop', /떨[구군궈굴]\S*/, /\bdrop\w*/i, '손의 기물을 판에 놓는 것 — 먹을 적이 닿고, 어느 적도 지키지 않는 빈칸에만', 'Put a hand piece on an empty, unguarded square that reaches prey'),
   T('chain', 'battle', '사슬', 'Chain', /사슬/, /\bchains?\b/i, '떨군 기물이 한 수 안에 잇달아 먹는 줄 — 더 먹을 적이 없으면 끝난다', 'The run of takes your dropped piece makes in one move — it ends when nothing is in reach'),
   T('value', 'battle', '값', 'Value', /값/, /\bvalue\b/i, '사슬에서 먹은 적의 값을 더한 수(폰 10 · 나이트 30 · 룩 50 · 퀸 90)', 'The sum of what the chain took (pawn 10 · knight 30 · rook 50 · queen 90)'),
   T('links', 'battle', '배수', 'Mult', /배수/, /\bmult\b/i, '먹을 때마다 1씩 늘고, 사슬이 끝나면 값에 곱한다 — 점수 = 값 × 배수', 'Rises by 1 with every take and multiplies value when the chain ends — score = value × mult'),
@@ -92,15 +92,79 @@ export const termWord = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enWord : TE
 export const termSay = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enSay : TERM_BY_ID[id].say);
 export const termTip = (id) => ({ title: termWord(id), lines: wrap(termSay(id), 160).map((l) => [l, PAL.cardInk]), w: 170 });
 
-// 낱말을 두드러지게 한 줄. ui와 under(밑 구역: 누르기 · 켜짐을 물려받는다)가 있으면 낱말마다 풀이 구역을 단다.
+// 낱말을 두드러지게 한 줄. ui가 있으면 낱말 자리를 적어 둔다(ui.termSpans) — 가리키면 그 낱말 상자가 금빛 테로 켜진다.
+// 낱말 자리는 누르기 · 가리키기를 가로채지 않는다(밑의 카드가 그대로 받는다). under는 옛 호출과 맞추려고 남겼다.
 export function richText(ctx, s, x, y, col, { termCol = PAL.goldDk, ui = null, under = null, bold = false } = {}) {
   s = L(String(s));
   let xx = x;
   for (const [part, id] of splitTerms(s)) {
     const w = measure(part, bold);
     text(ctx, part, xx, y, id ? termCol : col, { bold });
-    if (id && ui) ui.region(`term:${id}:${Math.round(xx)}:${y}`, xx, y, w, 12, { onClick: under ? under.onClick : null, enabled: !(under && under.enabled === false), tip: () => termTip(id) });
+    if (id && ui && ui.termSpans) ui.termSpans.push({ id, x: xx, y, w, h: 12 });
     xx += w;
   }
   return xx - x;
+}
+
+// ── 낱말 상자(Slay the Spire의 키워드 상자처럼): 카드 · 말풍선 옆에 낱말마다 제목 + 한 문장, 위에서 아래로 쌓는다.
+// 글(한국어 글 · 옮긴 글)과 { id } 꼴의 이름을 받아 처음 나온 차례대로 낱말 id를 모은다.
+export function termsIn(list) {
+  const out = [];
+  const push = (id) => { if (id && TERM_BY_ID[id] && !out.includes(id)) out.push(id); };
+  for (const s of list) {
+    if (!s) continue;
+    if (typeof s === 'object') { push(s.id); continue; }
+    for (const [, id] of splitTerms(L(String(s)))) push(id);
+  }
+  return out;
+}
+export const KEY_W = 176;
+const KEY_GAP = 2;
+const keyLines = (id) => wrap(termSay(id), KEY_W - 10);
+const keyH = (id) => 16 + keyLines(id).length * 13 + 3;
+// 자리 잡기: 피할 네모들(avoid[0] = 카드, 그다음 말풍선) 어느 것과도 겹치지 않는 세로 줄을 찾는다.
+// 카드 오른쪽 → 왼쪽 → 말풍선 오른쪽 → 왼쪽 차례로, 카드 윗변에 가깝게. 다 안 들어가면 뒤에서부터 상자를 뺀다.
+export function layoutKeyBoxes(ids, avoid, { max = 4, hot = null, W = 480, H = 270 } = {}) {
+  let list = ids.slice(0, max);
+  if (hot && ids.includes(hot) && !list.includes(hot)) list = [...list.slice(0, max - 1), hot];
+  if (!list.length || !avoid.length) return null;
+  const heights = list.map(keyH);
+  const pref = avoid[0].y;
+  const xs = [];
+  for (const a of avoid) xs.push(a.x + a.w + 3, a.x - KEY_W - 3);
+  for (let n = list.length; n >= 1; n--) {
+    const total = heights.slice(0, n).reduce((u, v) => u + v, 0) + KEY_GAP * (n - 1);
+    if (total > H - 4) continue;
+    for (const x of xs) {
+      if (x < 2 || x + KEY_W > W - 2) continue;
+      const blocks = avoid.filter((a) => a.x < x + KEY_W && a.x + a.w > x).map((a) => [a.y - 2, a.y + a.h + 2]).sort((u, v) => u[0] - v[0]);
+      let cur = 2, best = null;
+      const tryIv = (lo, hi) => {
+        if (hi - lo < total) return;
+        const y = Math.max(lo, Math.min(hi - total, pref));
+        if (!best || Math.abs(y - pref) < Math.abs(best - pref)) best = y;
+      };
+      for (const [lo, hi] of blocks) { if (lo > cur) tryIv(cur, lo); cur = Math.max(cur, hi); }
+      tryIv(cur, H - 2);
+      if (best != null) return { x, y: best, list: list.slice(0, n), heights: heights.slice(0, n) };
+    }
+  }
+  return null;
+}
+// 그린 상자 네모들을 돌려준다(연기 시험이 센다)
+export function drawKeyBoxes(ctx, ids, avoid, opts = {}) {
+  const lay = layoutKeyBoxes(ids, avoid, opts);
+  if (!lay) return [];
+  const out = [];
+  let y = lay.y;
+  lay.list.forEach((id, i) => {
+    const h = lay.heights[i], x = lay.x;
+    box(ctx, x, y, KEY_W, h, '#16231f', id === opts.hot ? PAL.gold : PAL.frameDk);
+    rect(ctx, x + 1, y + 1, KEY_W - 2, 1, '#2a3a33');
+    text(ctx, termWord(id), x + 5, y + 2, PAL.gold, { bold: true });
+    keyLines(id).forEach((l, k) => text(ctx, l, x + 5, y + 16 + k * 13, PAL.ink));
+    out.push({ id, x, y, w: KEY_W, h });
+    y += h + KEY_GAP;
+  });
+  return out;
 }

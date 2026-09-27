@@ -7,7 +7,7 @@ import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button } from '../ui.js';
-import { itemCard, itemExtraTip, maximColumn, envelope, targetPanel } from '../parts.js';
+import { itemCard, itemKeys, itemExtraTip, maximColumn, envelope, targetPanel } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { topBar } from './common.js';
 import { bagRow } from './shop.js';
@@ -70,7 +70,7 @@ export class PackScreen {
       const id = `pack:pick:${i}`;
       const scaleX = Math.abs(1 - 2 * p);
       const shown = p >= 0.5;
-      ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: shown ? () => itemExtraTip(o) : null, tipAt: { x: Math.min(W - 176, x), y: 190 } });
+      ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: shown ? () => itemExtraTip(o) : null, tipAt: { x: Math.min(W - 176, x), y: 190 }, keys: shown ? () => itemKeys(o) : null, preview: true });
       if (!shown) {
         const nw = Math.max(2, Math.round(cw * scaleX));
         if (this.t < OPEN) return;

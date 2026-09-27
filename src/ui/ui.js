@@ -13,8 +13,11 @@ export class UI {
     this.press = null;     // 누른 구역
     this.drag = null;      // { region, x, y, moved }
     this.time = 0;
+    this.termSpans = [];   // 글 안 낱말 자리(richText가 적는다)
+    this.touch = false;    // 손가락으로 누르는 중(app이 넘긴다)
+    this.previewId = null; // 손가락: 한 번 누른 카드(한 번 더 누르면 산다 · 고른다)
   }
-  begin() { this.last = this.regions; this.regions = []; }
+  begin() { this.last = this.regions; this.regions = []; this.termSpans = []; }
   end() { this.hover = this.hitIn(this.regions, this.mouse.x, this.mouse.y); }
   region(id, x, y, w, h, opts = {}) {
     const r = { id, x, y, w, h, enabled: opts.enabled !== false, ...opts };
@@ -55,7 +58,14 @@ export class UI {
       if (d.region.onDrop) d.region.onDrop(x, y, r);
       return 'drag';
     }
-    if (r && p && r.id === p.id && r.enabled && r.onClick) { r.onClick(r); return r; }
+    if (r && p && r.id === p.id && r.enabled && r.onClick) {
+      // 손가락으로는 preview 카드를 처음 누르면 말풍선 · 낱말 상자만 보이고, 한 번 더 눌러야 산다 · 고른다
+      if (this.touch && r.preview && this.previewId !== r.id) { this.previewId = r.id; return r; }
+      this.previewId = null;
+      r.onClick(r);
+      return r;
+    }
+    if (!r || r.id !== this.previewId) this.previewId = null;
     return null;
   }
 }
@@ -89,6 +99,7 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
 // 말풍선: 제목 + 몇 줄. 화면 밖으로 나가지 않게.
 export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk, w = 150, scale = 1 } = {}) {
   if (scale > 1) return bigTooltip(ctx, lines, { title, titleCol, w });
+  // 돌려주는 값: 그린 네모(낱말 상자가 피해 간다)
   const pad = 5;
   const h = pad * 2 + (title ? 14 : 0) + lines.length * 13;
   let tx = Math.min(480 - w - 2, Math.max(2, x));
@@ -105,6 +116,7 @@ export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk
     yy += 13;
   }
   frame(ctx, tx, ty, w, h, PAL.frameDk);
+  return { x: tx, y: ty, w, h };
 }
 
 // 큰 글자 설정: 말풍선을 두 배 글자로 화면 아래 가운데에
@@ -117,4 +129,5 @@ function bigTooltip(ctx, lines, { title, titleCol, w }) {
   const x = Math.floor((480 - bw) / 2), y = 268 - bh;
   box(ctx, x, y, bw, bh, PAL.card, PAL.frameDk);
   all.forEach(([s, col, b], i) => text(ctx, s, x + 8, y + 5 + i * 26, col, { bold: b, scale: 2 }));
+  return { x, y, w: bw, h: bh };
 }

@@ -1,7 +1,6 @@
 // 대국 화면(mockup 배치). 가운데 8×8 판, 왼쪽 판(관 · 목표 · 점수 · 값 × 배수 · 사슬 모습 줄 · 수 · 바꾸기 · 상금 · 주머니),
 // 오른쪽(격언 칸 · 손).
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
-import { termTip } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
@@ -11,7 +10,7 @@ import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
-import { FAIRIES, chartForm } from '../../data/pieces.js';
+import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
 import { FAMILY_BY_ID } from '../../data/families.js';
 import { familyStrip, josekiBadges, traitMark } from '../parts-depth.js';
 import { TRAIT_BY_ID } from '../../data/traits.js';
@@ -844,6 +843,8 @@ export class BattleScreen {
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
       if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
       const tipOpt = tip ? sqTip(x, y, tip[0], tip[1]) : null;
+      // 낱말 상자: 말풍선 제목이 곧 낱말인 것(증원 · 지키는 적 · 특성 · 벽 · 보석 · 특수 기물)
+      if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }].filter(Boolean);
       ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
         const pulse = 0.22 + 0.12 * Math.sin(time * 5);
@@ -1134,8 +1135,8 @@ export class BattleScreen {
       box(ctx, LX, 98, LW, 22, PAL.gold, PAL.frameDk);
       text(ctx, num(g.score), LX + LW / 2, 103, PAL.linkInk, { align: 'center', bold: true });
     } else {
-      ui.region('box:value', LX, 98, 48, 22, { tip: () => termTip('value') });
-      ui.region('box:links', LX + 64, 98, 48, 22, { tip: () => termTip('links') });
+      ui.region('box:value', LX, 98, 48, 22, { keys: [{ id: 'value' }] });
+      ui.region('box:links', LX + 64, 98, 48, 22, { keys: [{ id: 'links' }] });
       box(ctx, LX + dx, 98, 48, 22, PAL.val, PAL.frameDk);
       text(ctx, short(val), LX + dx + 24, 103, PAL.valInk, { align: 'center', bold: true });
       if (!g) text(ctx, '×', LX + 56, 103, PAL.ink, { align: 'center', bold: true });

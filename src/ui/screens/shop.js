@@ -9,7 +9,7 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { maximColumn, itemCard, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem } from '../parts.js';
+import { maximColumn, itemCard, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
@@ -149,7 +149,7 @@ export class ShopScreen {
     shop.display.forEach((it, i) => {
       const x = 12 + i * 104, y = 40, id = `shop:buy:${i}`;
       const ok = canBuy(run, it);
-      ui.region(id, x, y, CARD_W, CARD_H, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemExtraTip(it), tipAt: TIP_AT });
+      ui.region(id, x, y, CARD_W, CARD_H, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemExtraTip(it), tipAt: TIP_AT, keys: () => itemKeys(it), preview: true });
       itemCard(ctx, it, x, y, CARD_W, CARD_H, { hover: ui.isHover(id) && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok } });
       if (!it.sold && !ok) { ctx.globalAlpha = 0.35; rect(ctx, x, y, CARD_W, CARD_H, PAL.shadow); ctx.globalAlpha = 1; }
     });
@@ -195,7 +195,7 @@ export class ShopScreen {
       const c = run.consumables[i];
       if (!c) { frame(ctx, x, y, cw, ch, PAL.feltHi); continue; }
       const id = `cons:${i}`;
-      ui.region(id, x, y, cw, ch, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c) });
+      ui.region(id, x, y, cw, ch, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c) });
       consumableCard(ctx, c, x, y, cw, ch, ui.isHover(id) || (this.target && this.target.index === i));
     }
     this.drawMenu(ctx, ui);

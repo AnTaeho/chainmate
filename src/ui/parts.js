@@ -344,10 +344,22 @@ export function itemTip(it) {
   return null;
 }
 
-// 카드에 이미 적힌 것 말고 덧붙일 것만(가족 · 이야기 · 진화 갈래). 없으면 null
+// 물건이 채우는 모음(격언 · 특수 기물 종류 · 혼)
+export const itemFams = (it) => (it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : []);
+// 카드 옆 낱말 상자에 넘길 카드 글: 모음 → 효과 글의 낱말 → 물건 종류(격언 · 각인 …) 차례(app.draw가 4개까지)
+const KIND_TERM = { maxim: 'maxim', chart: 'chart', engraving: 'engraving', fragment: 'fragment', soul: 'soul', evolve: 'evolve', tactic: 'tactic' };
+export function itemKeys(it) {
+  const out = itemFams(it).map((f) => ({ id: `fam_${f}` }));
+  out.push(itemEffect(it));
+  if (it.edition) out.push({ id: 'edition' });
+  if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) out.push({ id: 'fairy' });
+  if (KIND_TERM[it.kind]) out.push({ id: KIND_TERM[it.kind] });
+  return out;
+}
+// 카드에 이미 적힌 것 말고 덧붙일 것만(모음 · 이야기 · 진화 갈래). 없으면 null
 export function itemExtraTip(it) {
   const lines = [];
-  const fams = it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : [];
+  const fams = itemFams(it);
   if (fams.length) lines.push(setLine(it.kind === 'maxim' ? '격언' : it.kind === 'soul' ? '혼' : 'piece', fams));
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`기보는 ${PIECE_NAME[chartForm(it.t)]} 모습을 따른다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${info.story}`); }
@@ -469,7 +481,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
   text(ctx, ITEM_KIND[it.kind], x + 5, y + 4, PAL.cardDim);
-  const fams = it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : [];
+  const fams = itemFams(it);
   if (fams.length) familyGlyphs(ctx, fams, x + w - 8 * fams.length - 3, y + 6);
   const aw = itemArt(ctx, it, x + 5, y + 16, t, run);
   const nx = x + 5 + aw + 4, nw = x + w - 4 - nx;

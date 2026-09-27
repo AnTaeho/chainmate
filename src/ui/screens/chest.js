@@ -67,6 +67,7 @@ export class ChestScreen {
         ctx.globalAlpha = 1;
         rect(ctx, x + 1, y + 1, cw - 2, 6, PAL.feltDk); rect(ctx, x + 1, y + ch - 7, cw - 2, 6, PAL.feltDk);
       } else if (lit) {
+        ui.region(`chest:cell:${i}`, x, y, cw, ch, { keys: [chestItemText(cell.item)] });
         drawItem(ctx, cell.item, x + 18, y + 16);
         frame(ctx, x - 1, y - 1, cw + 2, ch + 2, PAL.gold);
       } else {

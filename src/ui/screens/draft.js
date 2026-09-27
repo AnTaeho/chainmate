@@ -53,7 +53,7 @@ export class DraftScreen {
       const sx = Math.abs(1 - 2 * p);
       const x = x0 + i * (CW + GAP), y = 40;
       const uid = `draft:${i}`;
-      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i) });
+      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text, { id: 'joseki' }] });
       const hov = ui.isHover(uid) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
       if (p < 0.5) { box(ctx, xx, y, nw, CH, '#2a3a33', PAL.frameDk); if (nw > 30) rect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, TIER_COL[j.tier]); return; }

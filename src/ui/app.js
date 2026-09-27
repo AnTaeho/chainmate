@@ -7,6 +7,7 @@ import { W, H, text, box, rect } from '../render/gfx.js';
 import { UI, tooltip } from './ui.js';
 import { miniShard } from './parts.js';
 import { setLang } from './lang.js';
+import { termsIn, drawKeyBoxes } from './glossary.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
@@ -188,6 +189,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       if (s && s.pointerDown) s.pointerDown(x, y);
     } else if (type === 'up') {
       if (button === 2) return;
+      app.ui.touch = !!app.touch;
       app.ui.up(x, y);
     }
     app.lastInputMs = now() - t0;
@@ -253,14 +255,33 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (!app.overlay) drawCoach(ctx, app);
     else { app.hintNow = null; app.hintShown = null; }
     ui.end();
-    // 말풍선
+    // 말풍선 + 낱말 상자
+    app.keyBoxes = [];
     const h = ui.hover;
-    if (h && h.tip && !ui.drag && !app.guide) {
-      const tip = typeof h.tip === 'function' ? h.tip() : h.tip;
-      if (!tip) return;
+    if (ui.drag || app.guide) return;
+    const mx = ui.mouse.x, my = ui.mouse.y;
+    const span = ui.termSpans.find((q) => mx >= q.x && my >= q.y && mx < q.x + q.w && my < q.y + q.h);
+    const hot = span ? span.id : null;
+    const tip = h && h.tip ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null;
+    const keys = h && h.keys ? (typeof h.keys === 'function' ? h.keys() : h.keys) : null;
+    const big = !!app.settings.big;
+    let tipRect = null;
+    if (tip) {
       // tipAt: 말풍선을 둘 빈자리(옆 카드를 가리지 않게). 없으면 구역 오른쪽(넘치면 왼쪽)
       const at = h.tipAt || { x: h.x + h.w + 4 > W - (tip.w || 150) ? h.x - (tip.w || 150) - 4 : h.x + h.w + 4, y: h.y };
-      if (tip) tooltip(ctx, at.x, at.y, tip.lines, { title: tip.title, w: tip.w || 150, scale: app.settings.big ? 2 : 1 });
+      tipRect = tooltip(ctx, at.x, at.y, tip.lines, { title: tip.title, w: tip.w || 150, scale: big ? 2 : 1, diagram: tip.diagram || null });
+    }
+    // 큰 글자 설정에서는 말풍선이 화면 아래를 차지해 낱말 상자를 두지 않는다
+    if (big) return;
+    if (tip || keys) {
+      // 카드 글(keys) 다음에 말풍선 글. 말풍선 줄은 이어 붙여 줄바꿈에 잘린 낱말(「뛰기 / 모음」)도 찾는다
+      const tipText = tip ? tip.lines.map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null;
+      const ids = termsIn([...(keys || []), tipText]).filter((id) => !(tip && tip.term === id));
+      const card = h.anchor || { x: h.x, y: h.y, w: h.w, h: h.h };
+      app.keyBoxes = drawKeyBoxes(ctx, ids, tipRect ? [card, tipRect] : [card], { hot });
+    } else if (span) {
+      // 카드 밖의 글(수업 할 일 줄 등): 가리킨 낱말 하나만
+      app.keyBoxes = drawKeyBoxes(ctx, [span.id], [{ x: span.x, y: span.y, w: span.w, h: span.h }], { hot });
     }
   };
 
