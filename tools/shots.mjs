@@ -378,6 +378,9 @@ await shot('24-en-battle');
 await ev(() => { const a = window.__app; a.go('setup'); });
 await settle(200);
 await shot('25-en-setup');
+await ev(() => window.__app.go('lesson', { index: 1, phase: 'play' }));
+await settle(200);
+await shot('25b-en-lesson');
 await ev(() => { const a = window.__app; a.settings.lang = 'ko'; a.saveSettings(); });
 
 console.log(errors.length ? `페이지 오류 ${errors.length}\n${errors.join('\n')}` : '페이지 오류 0');
