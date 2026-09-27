@@ -1,4 +1,5 @@
 // 관 선택: 연습 · 정식 · 명인 세 장. 목표 · 보상 · 명인 규칙 · 건너뛰면 받는 패. 「두기」 / 「건너뛰기」.
+import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, num, frame, measure } from '../../render/gfx.js';
 import { blindInfo, REWARD, ANTES } from '../../sim/run.js';
@@ -84,7 +85,7 @@ export class SelectScreen {
       if (past) {
         text(ctx, log && log.skipped ? '건너뜀' : '이김', x + w / 2, y + h - 26, PAL.dim, { align: 'center', bold: true });
       } else if (cur) {
-        if (master) button(ctx, ui, 'select:play', x + 20, y + h - 30, w - 40, 20, '두기', { onClick: () => this.play(), tone: 'red' });
+        if (master) { button(ctx, ui, 'select:play', x + 20, y + h - 30, w - 40, 20, '두기', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
         else {
           button(ctx, ui, 'select:play', x + 8, y + h - 30, 60, 20, '두기', { onClick: () => this.play(), tone: 'gold' });
           button(ctx, ui, 'select:skip', x + 72, y + h - 30, 60, 20, '건너뛰기', { onClick: () => this.skip() });

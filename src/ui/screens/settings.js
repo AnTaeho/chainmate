@@ -8,7 +8,7 @@ export class SettingsScreen {
   constructor(app, { back = null } = {}) { this.app = app; this.back = back; }
   draw(ctx, ui) {
     const app = this.app, s = app.settings;
-    const x = 130, y = 26, w = 220, h = 224;
+    const x = 130, y = 8, w = 220, h = 256;
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
     text(ctx, '설정', W / 2, y + 8, PAL.gold, { align: 'center', bold: true });
     const row = (i, label) => { text(ctx, label, x + 12, y + 34 + i * 26, PAL.ink); return y + 30 + i * 26; };
@@ -29,7 +29,10 @@ export class SettingsScreen {
     button(ctx, ui, 'set:lang', x + 110, yy, 64, 18, s.lang === 'en' ? 'English' : '한국어', { onClick: () => { set('lang', s.lang === 'en' ? 'ko' : 'en'); setLang(s.lang); } });
     yy = row(4, '큰 글자');
     button(ctx, ui, 'set:big', x + 110, yy, 64, 18, s.big ? '켬' : '끔', { onClick: () => set('big', !s.big), tone: s.big ? 'gold' : 'plain' });
-    button(ctx, ui, 'set:lessons', W / 2 - 92, y + h - 26, 88, 18, '첫 수업 다시', { onClick: () => { app.closeOverlay(); app.run = null; app.fx.clear(); app.go('lesson'); } });
+    yy = row(6, '처음 안내');
+    button(ctx, ui, 'set:coach', x + 110, yy, 30, 18, s.coach === false ? '끔' : '켬', { onClick: () => set('coach', s.coach === false), tone: s.coach === false ? 'plain' : 'gold' });
+    button(ctx, ui, 'set:coachReset', x + 144, yy, 66, 18, '다시 보기', { onClick: () => { app.records.coachSeen = {}; app.saveRecords(); set('coach', true); app.toast('처음 안내를 다시 보인다', PAL.gold); } });
+    button(ctx, ui, 'set:lessons', W / 2 - 92, y + h - 26, 88, 18, '첫 수업', { onClick: () => { app.closeOverlay(); app.guide = null; if (app.run && app.run.scratch) app.run = null; app.fx.clear(); app.go('lessons'); } });
     button(ctx, ui, 'set:back', W / 2 + 4, y + h - 26, 80, 18, '돌아가기', { onClick: () => this.close() });
   }
   close() { if (this.back) this.app.openOverlay(this.back); else this.app.closeOverlay(); }

@@ -23,7 +23,9 @@ export function emptyRecords() {
     danWins: {},
     bestEndless: 0,            // 끝없는 대국에서 닿은 가장 깊은 관
     daily: null,               // { date, ante, blind, won, score, runs }
-    lessonsDone: false,        // 첫 수업을 끝까지 두었나
+    lessonsDone: false,        // 첫 수업을 끝까지 두었나(건너뛰어도)
+    lessonsSeen: {},           // { [수업 id]: true } 끝낸 수업(목록의 표)
+    coachSeen: {},             // { [안내 id]: true } 본 처음 안내
   };
 }
 

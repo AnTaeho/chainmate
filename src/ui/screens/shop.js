@@ -1,5 +1,6 @@
 // 상점: 진열 2 + 꾸러미 2 + 다시 진열 + 나가기. 오른쪽 격언 칸(끌어서 순서 바꾸기 · 눌러 팔기), 두루마리 칸(눌러 쓰기),
 // 아래 주머니(눌러 승급 · 버리기).
+import { hint as coachHint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, frame, sprite } from '../../render/gfx.js';
 import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } from '../../sim/run.js';
@@ -202,6 +203,14 @@ export class ShopScreen {
       consumableCard(ctx, c, x, y, 54, 28, ui.isHover(id) || (this.target && this.target.index === i));
     }
     this.drawMenu(ctx, ui);
+    // 처음 안내(한 번에 하나, 앞의 것부터)
+    if (!this.menu && !this.target) {
+      coachHint(app, 'shop', 'shop:buy:0');
+      if (run.consumables.length) coachHint(app, 'scroll', 'cons:0');
+      const fam = ui.regions.find((r) => r.id.startsWith('fam:'));
+      if (fam) coachHint(app, 'family', fam.id);
+      if (run.maxims.length) coachHint(app, 'maximSell', 'maxim:0');
+    }
   }
 
   packCard(ctx, pk, x, y, w, h, hover) {

@@ -1,4 +1,5 @@
 // 정석 고르기(깊이 E): 1 · 3 · 5관의 첫 대국 앞. 카드 셋이 차례로 뒤집히며 나오고(등급 빛: 은 · 금 · 무지개) 하나를 고른다.
+import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
@@ -83,6 +84,7 @@ export class DraftScreen {
       text(ctx, '정석', 12, H - 26, PAL.dim);
       run.josekis.forEach((id, k) => text(ctx, JOSEKI_BY_ID[id].name, 50 + k * 110, H - 26, TIER_COL[JOSEKI_BY_ID[id].tier], { bold: true }));
     }
+    if (!this.chosen && this.t > 1.2) hint(this.app, 'draft', 'draft:1');
   }
   key(k) {
     if (/^[1-3]$/.test(k)) this.pick(Number(k) - 1);

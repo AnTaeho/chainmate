@@ -1,5 +1,6 @@
 // 꾸러미 열기: 카드가 차례로 뒤집히며 나오고 하나를 고른다(건너뛰기 가능). 금빛 꾸러미는 금빛.
 // 각인이면 고른 뒤 주머니에서 새길 기물을 누른다. 금빛 꾸러미의 격언을 칸이 찬 채로 받으려면 격언을 먼저 판다.
+import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect } from '../../render/gfx.js';
 import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../../sim/run.js';
@@ -104,6 +105,7 @@ export class PackScreen {
         else this.sellMenu = null;
       }
     }
+    if (this.t > 1.2 && this.engraveIndex == null) hint(this.app, 'pack', 'pack:pick:0');
   }
   key(k) {
     if (k === 'Escape') { if (this.engraveIndex != null) this.engraveIndex = null; else this.finish({ type: 'skipPack' }); }

@@ -1,42 +1,76 @@
+// 첫 수업: 걸음마다 실제 규칙으로 둘 수 있고, 끝까지 가면 이긴다
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apply, legalCommands } from '../src/sim/battle.js';
-import { LESSONS, lessonBattle, lessonSq, lessonDrops } from '../src/ui/lessons.js';
-import { sqName } from '../src/sim/board.js';
+import { apply, dropSquaresFor } from '../src/sim/battle.js';
+import { chainCaptures } from '../src/sim/chain.js';
+import { previewDrop } from '../src/sim/solver.js';
+import { LESSONS, LESSON_GROUPS, lessonBattle, lessonSq } from '../src/ui/lessons.js';
 
-const clone = (x) => JSON.parse(JSON.stringify(x));
-const walk = (b, route) => {
-  const all = [];
-  all.push(...apply(b, { type: 'drop', handIndex: 0, sq: lessonSq(route[0]) }));
-  for (const s of route.slice(1)) {
-    assert.ok(legalCommands(b).some((c) => c.type === 'capture' && c.sq === lessonSq(s)), `capture ${s}`);
-    all.push(...apply(b, { type: 'capture', sq: lessonSq(s) }));
-  }
-  return all;
-};
-test('수업 판: 내 차례 길은 규칙대로 두어지고 목표에 딱 닿는다', () => {
-  for (const L of LESSONS) {
-    const b0 = lessonBattle(L);
-    assert.equal(JSON.parse(JSON.stringify(b0)).lesson, L.id);
-    const drops = lessonDrops(b0, L);
-    assert.ok(drops.length > 0, L.id);
-    for (const d of drops) {
-      const b = clone(b0);
-      const ev = walk(b, [sqName(d), ...L.path.slice(1)]);
-      assert.ok(!ev.some((e) => e.type === 'cut' || e.type === 'forced'), `${L.id} ${d}`);
-      assert.equal(b.score, L.target, `${L.id} drop ${d}`);
-      assert.equal(b.status, 'won');
+// 수업 화면과 같은 방식으로 걸음을 밟는다
+export function walk(L, steps) {
+  const b = lessonBattle(L);
+  let sel = null;
+  steps.forEach((st, k) => {
+    const where = `${L.id} 걸음 ${k}`;
+    if (st.pick != null) { assert.equal(b.status, 'play', where); assert.ok(b.hand[st.pick], where); sel = st.pick; return; }
+    if (st.discard) { assert.equal(b.status, 'play', where); apply(b, { type: 'discard', handIndices: [sel] }); sel = null; return; }
+    if ('drop' in st) {
+      const list = dropSquaresFor(b, b.hand[sel]);
+      let sq = lessonSq(st.drop);
+      if (sq == null) {
+        const next = steps[k + 1];
+        sq = list.find((s) => previewDrop(b, sel, s).next.includes(lessonSq(next.cap)));
+      }
+      assert.ok(list.includes(sq), `${where}: 떨굴 수 있는 칸`);
+      apply(b, { type: 'drop', handIndex: sel, sq });
+      sel = null;
+      return;
     }
-  }
+    if (st.cap) {
+      assert.equal(b.status, 'chain', where);
+      assert.ok(chainCaptures(b).includes(lessonSq(st.cap)), `${where}: 먹을 수 있는 적 ${st.cap}`);
+      apply(b, { type: 'capture', sq: lessonSq(st.cap) });
+    }
+  });
+  return b;
+}
+
+test('수업은 열, 묶음 셋', () => {
+  assert.equal(LESSONS.length, 10);
+  for (const L of LESSONS) assert.ok(LESSON_GROUPS.some((g) => g.id === L.group), L.id);
 });
 
-test('수업 3은 넷을 잇고 「!」, 수업 4 시범은 끊긴다', () => {
-  const L3 = LESSONS[2], L4 = LESSONS[3];
-  const ev3 = walk(lessonBattle(L3), L3.path);
-  assert.equal(ev3.filter((e) => e.type === 'capture').length, 4);
-  assert.ok(ev3.some((e) => e.type === 'grade' && e.mark === '!'));
-  const ev4 = walk(lessonBattle(L4), L4.demo);
-  assert.ok(ev4.some((e) => e.type === 'cut'));
-  // 시범 길도 모두 규칙대로
-  for (const L of LESSONS.slice(0, 3)) { const b = lessonBattle(L); walk(b, L.demo); assert.equal(b.score, L.target, L.id); }
+for (const L of LESSONS.filter((x) => !x.shop)) {
+  test(`수업 ${L.id}: 걸음대로 두면 이긴다`, () => {
+    const b = walk(L, L.steps);
+    assert.equal(b.status, 'won', `${L.id}: ${b.status} 점수 ${b.score}/${b.target}`);
+  });
+  if (L.demo) test(`수업 ${L.id}: 시범은 끊긴다`, () => {
+    const b = walk(L, L.demo);
+    assert.notEqual(b.status, 'won');
+  });
+}
+
+test('떨굴 칸을 열어 둔 걸음은 빛나는 칸 어디서든 이긴다', () => {
+  for (const L of LESSONS.filter((x) => !x.shop)) {
+    L.steps.forEach((st, k) => {
+      if (!('drop' in st) || st.drop) return;
+      const pre = walk(L, L.steps.slice(0, k));
+      const sel = L.steps[k - 1].pick;
+      const want = lessonSq(L.steps[k + 1].cap);
+      const list = dropSquaresFor(pre, pre.hand[sel]).filter((s) => previewDrop(pre, sel, s).next.includes(want));
+      assert.ok(list.length > 0, L.id);
+      for (const s of list) {
+        const steps = L.steps.map((x, j) => (j === k ? { drop: null, force: s } : x));
+        const b = lessonBattle(L);
+        let h = null;
+        for (const x of steps) {
+          if (x.pick != null) h = x.pick;
+          else if ('drop' in x) apply(b, { type: 'drop', handIndex: h, sq: x.force ?? lessonSq(x.drop) });
+          else if (x.cap) { assert.ok(chainCaptures(b).includes(lessonSq(x.cap)), `${L.id} ${s} ${x.cap}`); apply(b, { type: 'capture', sq: lessonSq(x.cap) }); }
+        }
+        assert.equal(b.status, 'won', `${L.id} ${s}`);
+      }
+    });
+  }
 });

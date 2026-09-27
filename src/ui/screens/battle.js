@@ -1,6 +1,8 @@
 // 대국 화면(mockup 배치). 가운데 8×8 판, 왼쪽 판(관 · 목표 · 점수 · 값 × 연쇄 · 사슬 모습 줄 · 수 · 무르기 · 상금 · 주머니),
 // 오른쪽(격언 칸 · 손).
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
+import { hint } from '../coach.js';
+import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, TONE, tierOf } from '../../render/sprites.js';
@@ -689,6 +691,24 @@ export class BattleScreen {
     this.drawLeft(ctx, ui);
     this.drawRight(ctx, ui);
     this.drawOver(ctx);
+    if (this.src.kind === 'run') this.coachHints();
+  }
+  // 처음 안내: 판 위에서 처음 만나는 것(증원 · 금빛 적 · 특성 · 벽과 보석 · 이형 기물)
+  coachHints() {
+    const b = this.live();
+    if (!b || this.busy || this.banner || b.status !== 'play') return;
+    const app = this.app, v = this.view;
+    const ghost = (b.incoming || []).find((r) => !v.board[r.sq] && !isHidden(b, r.sq));
+    if (ghost) hint(app, 'incoming', `sq:${ghost.sq}`);
+    const find = (f) => v.board.findIndex((c, sq) => c && !c.mine && !isHidden(b, sq) && f(c));
+    let sq = find((c) => c.gold);
+    if (sq >= 0) hint(app, 'golden', `sq:${sq}`);
+    sq = find((c) => c.trait);
+    if (sq >= 0) hint(app, 'trait', `sq:${sq}`);
+    sq = find((c) => PIECES[c.t] && PIECES[c.t].thing);
+    if (sq >= 0) hint(app, 'things', `sq:${sq}`);
+    const f = v.hand.findIndex((p) => PIECES[p.t] && PIECES[p.t].fairy);
+    if (f >= 0) hint(app, 'fairy', `hand:${f}`);
   }
 
   // 목표는 막대로: 지금 점수는 채움, 이번 사슬로 얻을 몫(값 × 연쇄)은 빗금으로 미리 차오른다.

@@ -14,6 +14,7 @@ import { CodexScreen } from './codex.js';
 import { RecordsScreen } from './records.js';
 import { LessonScreen } from './lesson.js';
 import { DraftScreen } from './draft.js';
+import { LessonsScreen } from './lessons.js';
 
 export const SCREENS = {
   title: TitleScreen,
@@ -32,4 +33,5 @@ export const SCREENS = {
   records: RecordsScreen,
   lesson: LessonScreen,
   draft: DraftScreen,
+  lessons: LessonsScreen,
 };

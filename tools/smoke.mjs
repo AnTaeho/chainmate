@@ -19,6 +19,7 @@ const dom = makeFakeDom({ width: 1366, height: 700, dpr: 1.25 });
 globalThis.document = dom.document;
 globalThis.window = dom.window;
 const { boot } = await import('../src/main.js');
+const lessonMod = await import('../src/ui/lessons.js');
 
 const errors = [];
 const apps = [];
@@ -34,7 +35,9 @@ async function start() {
   pump(2);
 }
 const seen = () => { for (const v of app.visited) visited.add(v); };
-function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); } }
+// 처음 안내: 떠 본 안내 id
+const hintsShown = new Set();
+function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); if (app && app.hintShown) hintsShown.add(app.hintShown.id); } }
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
 function click(id) {
   const r = region(id);
@@ -259,36 +262,65 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
   return run;
 }
 
-// 첫 수업 넷: 처음 켜서 새 판을 누르면 수업으로 간다. 시범을 끝까지 보고, 누를 수 없는 칸은 반응이 없고, 길대로 두면 다음 판 → 1관 대국
-function lessons() {
-  click('title:new');
-  if (screen() !== 'lesson') throw new Error('first new run did not open lessons');
-  for (let i = 0; i < 4; i++) {
-    const s = app.screen;
-    if (s.index !== i || s.phase !== 'demo') throw new Error(`lesson ${i} not in demo`);
-    for (let n = 0; n < 3000 && app.screen === s; n++) pump(1);
-    const p = app.screen;
-    if (p.index !== i || p.phase !== 'play') throw new Error(`lesson ${i} demo did not end`);
-    if (i === 3 ? s.hold.b.score >= s.L.target : s.hold.b.score !== s.L.target) throw new Error(`lesson ${i} demo scored ${s.hold.b.score}`);
-    click('hand:0');
-    const drops = p.clickable().list;
-    const off = [...Array(64).keys()].find((sq) => !drops.includes(sq));
-    click(`sq:${off}`);
-    if (p.busy || p.hold.b.status !== 'play') throw new Error('lesson reacted to a wrong square');
-    if (!p.sel.length) click('hand:0');
-    click(`sq:${drops[drops.length - 1]}`);
-    for (let k = 1; k < p.L.path.length; k++) {
-      idle();
+// 첫 수업 열: 처음 켜면 타이틀 없이 수업 1의 시범. 시범을 끝까지 보고, 누를 수 없는 칸은 반응이 없고,
+// 걸음대로 두면 다음 수업 → 수업 ⑩(상점 길: 가리키는 곳만 눌린다) → 1관 첫 대국
+function playLesson(i) {
+  const s = app.screen;
+  if (s.name !== 'lesson' || s.index !== i || s.phase !== 'demo') throw new Error(`lesson ${i} not in demo`);
+  for (let n = 0; n < 4000 && app.screen === s; n++) pump(1);
+  const p = app.screen;
+  if (p.index !== i || p.phase !== 'play') throw new Error(`lesson ${i} demo did not end`);
+  let wrongTried = false;
+  for (let k = 0; k < p.steps.length; k++) {
+    idle();
+    const st = p.steps[k];
+    if (p.si !== k) throw new Error(`lesson ${i} at step ${p.si}, expected ${k}`);
+    if (st.pick != null) {
+      if (st.pick > 0 || p.view.hand.length > 1) { click(`hand:${p.view.hand.length - 1 === st.pick ? 0 : p.view.hand.length - 1}`); if (p.sel.length) throw new Error('lesson picked a wrong piece'); }
+      click(`hand:${st.pick}`);
+    } else if (st.discard) click('btn:discard');
+    else {
       const list = p.clickable().list;
-      if (list.length !== 1) throw new Error(`lesson ${i} step ${k} shows ${list.length} targets`);
-      click(`sq:${list[0]}`);
+      if (!list.length) throw new Error(`lesson ${i} step ${k} has nothing to press`);
+      if ('drop' in st && !wrongTried) {
+        wrongTried = true;
+        const off = [...Array(64).keys()].find((sq) => !list.includes(sq) && !p.view.board[sq]);
+        click(`sq:${off}`);
+        if (p.busy || p.hold.b.status !== 'play') throw new Error('lesson reacted to a wrong square');
+        if (!p.sel.length) click(`hand:${p.steps[k - 1].pick}`);
+      }
+      if (st.cap && list.length !== 1) throw new Error(`lesson ${i} step ${k} shows ${list.length} targets`);
+      click(`sq:${list[list.length - 1]}`);
     }
-    for (let n = 0; n < 600 && app.screen === p; n++) pump(1);
-    if (screen() === 'draft') { pump(40); click('draft:0'); pump(60); }
-    if (p.hold.b.score !== p.L.target || p.hold.b.status !== 'won') throw new Error(`lesson ${i} not won`);
-    lessonLog.push(`${i + 1} ${p.L.title} ${p.hold.b.score}`);
   }
-  if (screen() !== 'battle' || !app.run || app.run.ante !== 1 || !app.records.lessonsDone) throw new Error('lessons did not lead to the first battle');
+  for (let n = 0; n < 900 && app.screen === p; n++) pump(1);
+  if (p.hold.b.status !== 'won') throw new Error(`lesson ${i} not won`);
+  lessonLog.push(`${i + 1} ${p.L.title} ${p.hold.b.score}`);
+}
+function playShopLesson(i) {
+  if (!app.guide || app.screen.name !== 'shop') throw new Error('shop lesson did not open');
+  // 가리키지 않은 곳은 눌리지 않는다
+  const money = app.run.money;
+  click('shop:buy:1');
+  if (app.run.money !== money) throw new Error('guide let a wrong press through');
+  for (let n = 0; n < 40 && app.guide; n++) {
+    const st = app.guide.steps[app.guide.i];
+    pump(30);
+    if (st.ok) click('guide:ok'); else click(st.target);
+    pump(30);
+  }
+  if (app.guide) throw new Error('shop lesson guide stuck');
+  lessonLog.push(`${i + 1} 상점`);
+}
+function lessons() {
+  if (screen() !== 'lesson' || app.screen.index !== 0) throw new Error('first launch did not open the first lesson');
+  const { LESSONS } = lessonMod;
+  for (let i = 0; i < LESSONS.length; i++) {
+    if (LESSONS[i].shop) playShopLesson(i); else playLesson(i);
+  }
+  for (let n = 0; n < 200 && screen() === 'draft' && app.run.phase === 'draft'; n++) { pump(90); click('draft:0'); pump(60); }
+  if (screen() !== 'battle' || !app.run || app.run.ante !== 1 || !app.records.lessonsDone) throw new Error(`lessons did not lead to the first battle (${screen()})`);
+  if (app.run.scratch) throw new Error('lesson run leaked');
   app.toTitle();
   pump(1);
 }
@@ -306,6 +338,9 @@ for (const t of ['masters', 'legends', 'openings', 'editions', 'maxims']) click(
 click('codex:back');
 click('title:records');
 click('records:back');
+click('title:lesson');
+if (!region('lessons:9')) throw new Error('lesson list incomplete');
+click('lessons:back');
 if (app.records.runs < RUNS) throw new Error('records did not count runs');
 app.records.unlocked.openings = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 app.records.unlocked.dan = 8;
@@ -347,8 +382,32 @@ app.flow([['legend', { legend: 'century' }]]);
 pump(30);
 click('next');
 
+// 처음 켠 사람이 수업을 건너뛴다 → 곧바로 1관 · 처음 안내를 끄면 뜨지 않는다
+let skipOk = false;
+const hintFail = ['shop', 'pack', 'draft', 'family'].filter((id) => !hintsShown.has(id) || !app.records.coachSeen[id]);
+const mainApp = app;
+{
+  seen();
+  app.pointer = () => {}; app.key = () => {};
+  for (const k of [...dom.store.keys()]) dom.store.delete(k);
+  app = await boot({ window: dom.window, document: dom.document });
+  apps.push(app);
+  app.onError = (e) => { errors.push(e); console.error(e); };
+  pump(2);
+  if (screen() !== 'lesson') throw new Error('fresh boot did not open lessons');
+  click('lesson:skip');
+  pump(2);
+  if (!app.records.lessonsDone || !app.run || app.run.ante !== 1) throw new Error('skip did not start the first run');
+  app.settings.coach = false;
+  for (let n = 0; n < 200 && screen() === 'draft'; n++) { pump(40); if (app.hintShown) throw new Error('hint shown while off'); if (region('draft:0')) click('draft:0'); pump(60); }
+  if (app.hintShown) throw new Error('hint shown while off');
+  skipOk = true;
+  log('  수업 건너뛰기 · 안내 끄기 확인');
+  seen();
+  app = mainApp;
+}
 seen();
-const need = ['title', 'lesson', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records'];
+const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records'];
 const missing = need.filter((n) => !visited.has(n));
 const ms = app.stats.drawMs.slice().sort((a, b) => a - b);
 const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;
@@ -379,7 +438,10 @@ if (LANG !== 'ko') {
 if (errors.length) fail = true;
 if (missing.length) { console.log(`못 간 화면: ${missing.join(' ')}`); fail = true; }
 if (!reloaded) fail = true;
-if (lessonLog.length !== 4) fail = true;
+if (lessonLog.length !== lessonMod.LESSONS.length) fail = true;
+if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확인하지 못했다'); fail = true; }
+if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
+console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }

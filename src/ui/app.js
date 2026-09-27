@@ -11,6 +11,8 @@ import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
 import { SCREENS } from './screens/index.js';
+import { coachDown, updateGuide, drawCoach } from './coach.js';
+import { firstLaunch } from './screens/lessons.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -106,7 +108,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
   app.save = () => {
     const r = app.run;
-    if (!r) return;
+    if (!r || r.scratch) return;   // 수업용 판은 남기지 않는다
     if (r.phase === 'lost' || r.phase === 'won') store.del(KEYS.run);
     else store.set(KEYS.run, r);
   };
@@ -115,6 +117,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.cmd = (cmd) => {
     const ev = applyRun(app.run, cmd);
     app.save();
+    if (app.run.scratch) { if (app.onCommand) app.onCommand(cmd, ev); return ev; }
     const before = app.fresh.length;
     observe(app.records, app.run, ev, app.fresh);
     if (app.fresh.length !== before || ev.some((e) => e.type === 'win' || e.type === 'grade' || e.type === 'legend')) app.saveRecords();
@@ -177,7 +180,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const t0 = now();
     if (type === 'move') app.ui.move(x, y);
     else if (type === 'down') {
-      if (button === 2) { app.key('Escape'); return; }
+      if (button === 2) { if (!app.guide) app.key('Escape'); return; }
+      // 처음 안내: 떠 있는 안내는 사라지고, 따라 하는 길이면 가리키는 곳만 눌린다
+      if (!coachDown(app, x, y)) { app.ui.move(x, y); return; }
       app.ui.down(x, y);
       const s = app.overlay || app.screen;
       if (s && s.pointerDown) s.pointerDown(x, y);
@@ -192,6 +197,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
   app.key = (k) => {
     if (app.audio) app.audio.unlock();
+    if (app.guide) return;
     const s = app.overlay || app.screen;
     if (s && s.key) s.key(k);
   };
@@ -210,6 +216,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (app.shakeT > 0) { app.shakeT -= dt; if (app.shakeT <= 0) app.shakeAmt = 0; }
     if (app.overlay && app.overlay.update) app.overlay.update(dt);
     else if (app.screen && app.screen.update) app.screen.update(dt);
+    updateGuide(app, dt);
     if (app.audio) app.audio.update(dt, app);
   };
 
@@ -243,10 +250,12 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       text(ctx, t.msg, W / 2, y + 2, t.col, { align: 'center', bold: true });
       ctx.globalAlpha = 1;
     });
+    if (!app.overlay) drawCoach(ctx, app);
+    else { app.hintNow = null; app.hintShown = null; }
     ui.end();
     // 말풍선
     const h = ui.hover;
-    if (h && h.tip && !ui.drag) {
+    if (h && h.tip && !ui.drag && !app.guide) {
       const tip = typeof h.tip === 'function' ? h.tip() : h.tip;
       // tipAt: 말풍선을 둘 빈자리(옆 카드를 가리지 않게). 없으면 구역 오른쪽(넘치면 왼쪽)
       const at = h.tipAt || { x: h.x + h.w + 4 > W - (tip.w || 150) ? h.x - (tip.w || 150) - 4 : h.x + h.w + 4, y: h.y };
@@ -273,6 +282,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
 
   app.clone = clone;
-  app.go('title');
+  // 처음 켠 사람(기록이 비었다)은 타이틀을 건너뛰고 첫 수업으로
+  if (!firstLaunch(app)) app.go('title');
   return app;
 }
