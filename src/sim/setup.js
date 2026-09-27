@@ -12,14 +12,22 @@ export const kingGuards = (ante) => (ante >= 3 ? 4 : 3);
 export const reinforceCount = () => 2;
 
 // 관이 오를수록 무거운 적. 초안 — step 2에서 시뮬로 맞춘다.
+// 깊이 A: 4관부터 이형 적이 섞인다(관마다 무게 +FAIRY_ENEMY.step, 겹친 기물은 반). 먹으면 그 이형이 된다.
+export const FAIRY_ENEMY = { from: 4, step: 0.12 };
+const FAIRY_ENEMY_W = { A: 0.5, C: 0.5, Z: 0.25, L: 1, H: 1, G: 1, O: 1, S: 1, W: 0.5 };
 export function enemyWeights(ante) {
-  return [
+  const w = [
     ['P', Math.max(2, 7 - 0.6 * ante)],
     ['N', 2 + 0.1 * ante],
     ['B', 2 + 0.1 * ante],
     ['R', 1 + 0.25 * ante],
     ['Q', 0.3 + 0.2 * ante],
   ];
+  if (ante >= FAIRY_ENEMY.from) {
+    const k = FAIRY_ENEMY.step * (ante - FAIRY_ENEMY.from + 1);
+    for (const [t, x] of Object.entries(FAIRY_ENEMY_W)) w.push([t, k * x]);
+  }
+  return w;
 }
 export function rollType(rng, ante) {
   const w = enemyWeights(ante);

@@ -89,6 +89,8 @@ export function bestMove(b, opts = {}) {
       startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng) });
       const r = dfs(t, stats, preferMate, rank);
       if (!r) continue;
+      // opts.collect: 떨구기마다 그 자리의 최선(재미 하네스가 「의미 있는 선택지」를 센다)
+      if (opts.collect) opts.collect.push({ handIndex, t: piece.t, sq, score: r.score, first: r.line[0] ?? null });
       if (better(r, best, preferMate, rank)) best = { ...r, handIndex, sq };
     }
   }

@@ -46,7 +46,7 @@ export const REWARD = {
 export const CHEST = {
   counts: [[1, 77], [3, 20], [5, 3]],
   // 판본은 넣지 않는다: 가진 격언에 곧바로 붙어(은박 연쇄 +5) 상자 하나가 판 봇 승률을 10%p 넘게 올렸다(보고서 2b).
-  items: [['money', 60], ['chart', 30], ['engrave', 10]],
+  items: [['money', 60], ['chart', 30], ['engrave', 10], ['fairy', 6]],
   money: 2,     // 상금 칸 하나
   cells: 5,     // 릴 칸 수. 나온 개수만큼 가운데부터 불이 켜진다(1: 가운데 · 3: 가운데 셋 · 5: 전부)
 };
@@ -326,6 +326,7 @@ function chestItem(run, r, prev) {
       return { kind: 'engrave', pieceId: p.id, piece: p.t, eng: ids[int(r, ids.length)] };
     }
   }
+  if (kind === 'fairy') return { kind: 'piece', t: weighted(r, SHOP.fairyWeights) };
   if (kind === 'money') return { kind: 'money', money: CHEST.money };
   return { kind: 'chart', form: CHART_FORMS[int(r, CHART_FORMS.length)] };
 }
@@ -334,6 +335,7 @@ function applyChestItem(run, it, events) {
   if (it.kind === 'chart') useChart(run, it.form, events);
   else if (it.kind === 'money') { run.money += it.money; events.push({ type: 'money', src: 'chest', money: it.money }); }
   else if (it.kind === 'engrave') engrave(run, it.pieceId, it.eng, events);
+  else if (it.kind === 'piece') addPiece(run, it.t, events);
   else if (it.kind === 'edition') {
     const m = run.maxims.find((x) => x.uid === it.uid);
     m.edition = it.edition;

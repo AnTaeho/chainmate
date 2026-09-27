@@ -35,6 +35,7 @@
 // 최종 점수 = floor(값 × 연쇄 × scoreMul).
 
 import { attackers } from './board.js';
+import { chartForm } from '../data/pieces.js';
 
 export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onForced', 'onCut', 'onMate', 'onChainStop', 'onChainEnd', 'onBoard'];
 // ctx가 「기본 결말을 물린다」를 돌려줄 수 있는 훅: onCut(cancelCut) · onMate(keepGoing) · onChainStop(redrop)
@@ -127,10 +128,11 @@ export const finalScore = (chain) => Math.floor(chain.value * chain.mult * (chai
 // ── 기보(모습별 레벨) 조정자. 표는 step 2의 data/charts.js가 넘긴다.
 // 명세: { id: 'charts', data: { table: { P: { a: 10, b: 1 }, ... }, levels: { N: 2, ... } } }
 // 「먹을 때의 모습」(event.form) 기준으로 값 += a×레벨, 연쇄 += b×레벨.
+// 이형 모습은 바탕이 된 체스 모습의 기보를 따른다(pieces.js chart).
 defineModifier('charts', {
   kind: 'chart',
   onCapture(ctx) {
-    const form = ctx.event.form;
+    const form = chartForm(ctx.event.form);
     const lv = (ctx.data.levels || {})[form] || 0;
     const row = (ctx.data.table || {})[form];
     if (!lv || !row) return;

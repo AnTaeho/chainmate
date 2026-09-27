@@ -73,11 +73,15 @@ export function chainCapture(t, sq) {
   const formBefore = c.form;
   const wasForced = !!c.forced;
 
+  // 궁수 모습은 움직이지 않고 쏜다: 먹힌 칸만 비고 내 기물은 제자리(응수도 제자리 기준)
+  const stay = formBefore === 'S';
+  const at = stay ? from : sq;
+  board[sq] = null;
   board[from] = null;
-  board[sq] = { t: c.form, mine: true };
-  c.sq = sq;
+  board[at] = { t: c.form, mine: true };
+  c.sq = at;
   const dist = Math.max(Math.abs((from & 7) - (sq & 7)), Math.abs((from >> 3) - (sq >> 3)));
-  const cap = { from, to: sq, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold };
+  const cap = { from, to: sq, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold, stay };
   c.captures.push(cap);
   if (wasForced) c.forcedReplies++;
   events.push({ type: 'capture', ...cap, value: PIECES[target.t].value });
@@ -113,18 +117,18 @@ export function chainCapture(t, sq) {
     const prev = c.form;
     c.form = target.t;
     c.transforms++;
-    t.board[sq] = { t: c.form, mine: true };
-    events.push({ type: 'transform', from: prev, to: c.form, sq });
+    t.board[at] = { t: c.form, mine: true };
+    events.push({ type: 'transform', from: prev, to: c.form, sq: at });
     runHook(t, 'onTransform', { from: prev, to: c.form }, events);
   }
   if (!c.forms.includes(c.form)) c.forms.push(c.form);
 
   // 승급: 폰 모습으로 끝줄(조정자가 flags.promoteFrom으로 당길 수 있다 — 전설 「폰 여덟의 행진」)
-  if (c.form === 'P' && rankOf(sq) >= (c.flags.promoteFrom ?? PROMOTE_RANK)) {
+  if (c.form === 'P' && rankOf(at) >= (c.flags.promoteFrom ?? PROMOTE_RANK)) {
     c.form = 'Q';
     c.promotions++;
-    t.board[sq] = { t: 'Q', mine: true };
-    events.push({ type: 'promote', sq });
+    t.board[at] = { t: 'Q', mine: true };
+    events.push({ type: 'promote', sq: at });
     runHook(t, 'onPromote', { sq }, events);
     if (!c.forms.includes('Q')) c.forms.push('Q');
   }

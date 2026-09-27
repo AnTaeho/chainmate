@@ -230,9 +230,9 @@ test('명인의 상자: 개수 분포 1 ≈ 77% · 3 ≈ 20% · 5 ≈ 3% (판 �
   assert.ok(n[5] / N > 0.01 && n[5] / N < 0.06, JSON.stringify(n));
 });
 
-test('명인의 상자: 물건 셋(상금 · 기보 · 각인)이 판에 그대로 들어간다', () => {
+test('명인의 상자: 물건 넷(상금 · 기보 · 각인 · 이형 기물)이 판에 그대로 들어간다', () => {
   const kinds = new Set();
-  for (let seed = 1; seed <= 150 && kinds.size < 3; seed++) {
+  for (let seed = 1; seed <= 400 && kinds.size < 4; seed++) {
     const run = createRun({ seed });
     run.maxims.push({ uid: 50, id: 'edge', data: {}, edition: null, paid: 4 });
     applyRun(run, { type: 'skip' });
@@ -249,10 +249,11 @@ test('명인의 상자: 물건 셋(상금 · 기보 · 각인)이 판에 그대�
       if (it.kind === 'engrave') assert.equal(run.deck.find((p) => p.id === it.pieceId).eng.id, it.eng);
       if (it.kind === 'edition') assert.equal(run.maxims.find((m) => m.uid === it.uid).edition, it.edition);
       if (it.kind === 'money') assert.ok(events.some((e) => e.type === 'money' && e.src === 'chest'));
+      if (it.kind === 'piece') assert.ok(run.deck.some((p) => p.t === it.t) && run.deck.length > before.deck.length);
     }
   }
-  assert.deepEqual([...kinds].sort(), ['chart', 'engrave', 'money']);
-  assert.deepEqual(CHEST.items.map((x) => x[0]), ['money', 'chart', 'engrave']);
+  assert.deepEqual([...kinds].sort(), ['chart', 'engrave', 'money', 'piece']);
+  assert.deepEqual(CHEST.items.map((x) => x[0]), ['money', 'chart', 'engrave', 'fairy']);
 });
 
 // ── 불멸의 기보: 조각
