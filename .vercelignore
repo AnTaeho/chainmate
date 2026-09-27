@@ -1,0 +1,8 @@
+docs/
+tools/
+test/
+CLAUDE.md
+README.md
+.claude/
+node_modules/
+*.md
