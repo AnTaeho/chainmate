@@ -3,7 +3,7 @@
 //           설정 「처음 안내」로 끄고, 「안내 다시 보기」로 본 기록을 지운다.
 //   guide — 수업(상점과 가족)처럼 차례로 따라 하는 길. 지금 가리키는 구역만 누를 수 있다.
 import { PAL } from '../render/palette.js';
-import { W, H, text, box, rect } from '../render/gfx.js';
+import { W, H, text, box, rect, frame } from '../render/gfx.js';
 import { wrap } from '../render/text.js';
 
 // 처음 만나는 것마다 한 줄. 글은 「언제 → 무엇」, 한 문장.
@@ -96,17 +96,47 @@ export function drawCoach(ctx, app) {
   const r = ui.regions.find((q) => q.id === h.regionId);
   if (!r) return;
   app.hintShown = h;
-  bubble(ctx, ui, app, r, HINTS[h.id]);
+  const board = app.screen && app.screen.boardRect;
+  if (board) sideBubble(ctx, ui, app, r, HINTS[h.id], board);
+  else bubble(ctx, ui, app, r, HINTS[h.id]);
+}
+
+// 판이 있는 화면(대국): 말풍선은 판 밖 옆 판(왼쪽 · 오른쪽)에만 둔다 — 판 위의 기물을 가리지 않게.
+//   판 위를 가리키면 가까운 쪽 옆 판에 그 줄 높이로 두고 화살표는 판 테두리까지, 가리키는 칸엔 금빛 테가 깜박인다.
+//   옆 판을 가리키면 그 판 안에서 위나 아래에.
+const SIDE_W = 112;
+function sideBubble(ctx, ui, app, r, say, board) {
+  const w = SIDE_W;
+  const lines = wrap(say, w - 12);
+  const h = 8 + lines.length * 13;
+  const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  const onBoard = cx >= board.x && cx < board.x + board.w && cy >= board.y && cy < board.y + board.h;
+  const left = cx < board.x + board.w / 2;
+  // 옆 판 자리: 왼쪽은 판 테두리 왼쪽 6px, 오른쪽은 테두리 오른쪽 6px 너머
+  const x = left ? board.x - 6 - w : board.x + board.w + 6;
+  let y, side;
+  if (onBoard) { y = Math.round(cy - h / 2); side = left ? 'right' : 'left'; }
+  else if (r.y + r.h + 8 + h <= H - 2) { y = r.y + r.h + 7; side = 'up'; }
+  else { y = r.y - 7 - h; side = 'down'; }
+  y = Math.max(2, Math.min(H - h - 2, y));
+  if (onBoard) {
+    // 가리키는 칸: 금빛 테(1px)가 깜박인다 — 판 위에 닿는 것은 이 테뿐
+    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(app.time * 6);
+    frame(ctx, r.x, r.y, r.w, r.h, PAL.goldHi);
+    ctx.globalAlpha = 1;
+  }
+  bubble(ctx, ui, app, r, say, { at: { x, y, side, w, lines, h, rowY: onBoard ? Math.round(cy) : null } });
 }
 
 // 말풍선 + 화살표: 구역 아래(자리가 없으면 위)에 한 줄. ok가 있으면 「알았다」 단추.
-export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
-  const w = 240;
-  const lines = wrap(say, w - 12);
-  const h = 8 + lines.length * 13 + (ok ? 20 : 0);
-  // 자리: 구역 아래 → 위 → 오른쪽 → 가운데. side: 화살표가 나가는 쪽
+export function bubble(ctx, ui, app, r, say, { ok = null, at = null } = {}) {
+  const w = at ? at.w : 240;
+  const lines = at ? at.lines : wrap(say, w - 12);
+  const h = at ? at.h : 8 + lines.length * 13 + (ok ? 20 : 0);
+  // 자리: 구역 아래 → 위 → 오른쪽 → 가운데. side: 화살표가 나가는 쪽(at이 있으면 그 자리 그대로)
   let x, y, side = null;
-  if (!r) { x = Math.floor((W - w) / 2); y = 110; }
+  if (at) ({ x, y, side } = at);
+  else if (!r) { x = Math.floor((W - w) / 2); y = 110; }
   else {
     x = Math.max(4, Math.min(W - w - 4, Math.round(r.x + r.w / 2 - w / 2)));
     if (r.y + r.h + 8 + h <= H - 2) { y = r.y + r.h + 7; side = 'up'; }
@@ -119,7 +149,10 @@ export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
   if (r && side) {
     for (let k = 0; k < 5; k++) {
       const n = (4 - k) * 2 + 1, c = k === 0 ? PAL.gold : PAL.card;
-      if (side === 'left') { const ay = Math.max(y + 4, Math.min(y + h - 5, Math.round(r.y + r.h / 2))) + bob; rect(ctx, x - 1 - k, ay - (4 - k), 1, n, c); }
+      if (side === 'left' || side === 'right') {
+        const ay = Math.max(y + 4, Math.min(y + h - 5, at && at.rowY != null ? at.rowY - bob : Math.round(r.y + r.h / 2))) + bob;
+        rect(ctx, side === 'left' ? x - 1 - k : x + w + k, ay - (4 - k), 1, n, c);
+      }
       else {
         const ax = Math.max(x + 6, Math.min(x + w - 7, Math.round(r.x + r.w / 2)));
         rect(ctx, ax - (4 - k), side === 'up' ? y + bob - 1 - k : y + bob + h + k, n, 1, c);

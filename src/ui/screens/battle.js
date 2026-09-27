@@ -145,6 +145,7 @@ export class BattleScreen {
     this.banner = null;
     this.stamp = null;
     this.lastEnd = null;
+    this.boardRect = { x: BX - 6, y: BY - 6, w: S * 8 + 12, h: S * 8 + 12 }; // 처음 안내가 비켜 설 판 자리(테두리 포함)
     this.sync();
     const info = events.find((e) => e.type === 'battleStart');
     const b = this.bRef;
