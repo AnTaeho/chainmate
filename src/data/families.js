@@ -32,6 +32,7 @@ export const MAXIM_FAMILIES = {
   small_bag: ['hunt'], welcome: ['hunt'], shadow_reading: ['march'], ivory_tower: ['diag'], collector: ['change'],
   light_step: ['leap', 'march'], queen_hunt: ['hunt', 'crown'], bare_board: ['sacrifice'], homecoming: ['change'],
   collector_forms: ['change'], reply_master: ['sacrifice'], promotion_road: ['crown', 'march'], reinforce_hunt: ['hunt'],
+  promotion_rush: ['crown', 'march'], mad_horse: ['leap'], rook_lift: ['line'],
 };
 export const maximFamilies = (id) => MAXIM_FAMILIES[id] || (MAXIM_BY_ID[id] && MAXIM_BY_ID[id].families) || (LEGEND_BY_ID[id] && LEGEND_BY_ID[id].families) || [];
 

@@ -25,6 +25,9 @@ export const EN = {
   '방패': 'Shield', '폭약': 'Powder', '거울': 'Mirror', '성채': 'Fortress', '배신자': 'Turncoat', '폭발': 'Blast', '순교': 'Martyrdom', '배신자가 넘어온다': 'A turncoat joins you',
   '사슬의 첫 먹이로는 먹을 수 없다': 'Cannot be the first take of a chain', '먹히면 둘레 여덟 칸의 적도 함께 먹힌다(연쇄에 든다)': 'When taken, foes all around are taken too (they count)',
   '먹어도 내 모습이 바뀌지 않는다': 'Taking it does not change your form', '둘레 여덟 칸을 모두 지킨다': 'Guards all eight squares around it', '먹으면 대국 뒤 내 주머니에 그 종류로 들어온다': 'Take it and it joins your bag after the match',
+  // 도박(깊이 G)
+  '도박': 'Gamble', '수상한 물약': 'Dubious Potion', '룰렛': 'Roulette', '물약': 'Potion',
+  '주머니의 아무 기물에 아무 혼이나 각인이 붙는다': 'A random piece gets a random soul or engraving', '주머니의 아무 기물이 아무 이형이 된다': 'A random piece becomes a random fairy',
   // 정석(깊이 E)
   '정석': 'Joseki', '은': 'Silver', '무지개': 'Rainbow', '주머니가 바뀌었다': 'Your bag changed',
   '기사 서약': "Knight's Oath", '주머니의 나이트 둘이 야간기사가 된다': 'Two knights in your bag become nightriders',
@@ -142,6 +145,9 @@ export const EN = {
   '응수의 달인': 'Reply Master', '응수로 먹을 때마다 연쇄 +2': 'Links +2 per reply capture',
   '승급의 길': 'Road to Promotion', '승급할 때마다 값 +80': 'Value +80 per promotion',
   '증원 사냥': 'Reinforcement Hunt', '증원으로 들어온 적을 먹을 때마다 연쇄 +2': 'Links +2 per reinforcement taken',
+  '특진': 'Fast Track', '한 사슬에서 폰 모습으로 둘을 먹으면 곧바로 승급': 'Two takes as a pawn in one chain: promote at once',
+  '광마': 'Wild Horse', '나이트 모습이 판 가장자리에서 먹으면 그 칸의 노림을 한 번 무시': 'A knight taking on the edge ignores the threat there once',
+  '룩 리프트': 'Rook Lift', '룩 모습이 네 구석에서 먹으면 연쇄 ×2': 'A rook taking in a corner: links ×2',
   // ── 명인
   '철벽': 'Iron Wall', '적 폰이 좌우 옆 칸도 지킨다': 'Enemy pawns also guard the squares beside them', '적 폰이 옆 칸과 뒤 대각도 지킨다': 'Enemy pawns also guard beside and behind them',
   '안개': 'Fog', '위 세 줄이 안개에 덮인다': 'Fog covers the top three ranks', '내 기물이 닿은 칸만 걷힌다': 'Only squares your piece reaches clear', '안개 속에는 떨굴 수 없다': 'No drops into the fog',
@@ -245,4 +251,5 @@ export const TEMPLATES = [
   [/^(.+)의 혼$/, (m, tr) => `${tr(m[1])} Soul`],
   [/^(.+)의 혼 · (.+)$/, (m, tr) => `${tr(m[1])} Soul · ${m[2]}`],
   [/^묘수 (.+)$/, (m, tr) => `Trick: ${tr(m[1])}`],
+  [/^(\S+) › (\S+)$/, (m, tr) => `${tr(m[1])} › ${tr(m[2])}`],
 ];

@@ -12,8 +12,8 @@ function chain(map, drop, at, caps, mods, extra = {}) {
   return t.chain;
 }
 
-test('격언은 마흔 · 새 여덟은 동사가 겹치지 않게 퍼졌다', () => {
-  assert.equal(MAXIMS.length, 40);
+test('격언은 마흔셋(밤샘 여덟 · 깊이 G 셋) · 새 여덟은 동사가 겹치지 않게 퍼졌다', () => {
+  assert.equal(MAXIMS.length, 43);
   const ids = ['light_step', 'queen_hunt', 'bare_board', 'homecoming', 'collector_forms', 'reply_master', 'promotion_road', 'reinforce_hunt'];
   for (const id of ids) assert.ok(MAXIMS.find((m) => m.id === id), id);
 });
@@ -111,4 +111,22 @@ test('그림자 읽기: 증원이 올 칸에 떨구면 연쇄 +4', () => {
   startChain(u, { type: 'N', sq: S('d3') });
   chainCapture(u, S('e5'));
   assert.equal(u.chain.mult, 1);
+});
+
+// ── 깊이 G
+test('특진: 폰 모습으로 둘을 먹으면 곧바로 승급', () => {
+  const c = chain({ c4: 'P', d5: 'P', a8: 'R' }, 'P', 'b3', ['c4', 'd5'], ['promotion_rush']);
+  assert.equal(c.promotions, 1);
+  assert.equal(c.form, 'Q');
+});
+test('광마: 나이트 모습이 가장자리에서 먹으면 노림을 한 번 무시', () => {
+  const t = { board: boardFrom({ a6: 'N', a8: 'R', c7: 'P' }), rules: {}, mods: [{ id: 'mad_horse' }], chain: null, movesUsed: 0 };
+  startChain(t, { type: 'N', sq: S('b4') });
+  const ev = chainCapture(t, S('a6'));
+  assert.ok(ev.some((e) => e.type === 'threatIgnored'));
+  assert.equal(t.chain.forced, null);
+});
+test('룩 리프트: 룩 모습이 구석에서 먹으면 연쇄 ×2', () => {
+  const c = chain({ a8: 'P' }, 'R', 'a2', ['a8'], ['rook_lift']);
+  assert.equal(c.mult, 2);
 });

@@ -69,3 +69,20 @@ test('진화: 주머니 기물 하나를 그 종류의 이형으로(결정적)',
   assert.equal(p.t, to);
   assert.ok(PIECES[to].fairy);
 });
+
+test('도박 물건: 사는 순간 결과가 정해진다(같은 판 · 같은 칸이면 같은 결과)', () => {
+  const buy = (id) => {
+    const run = createRun({ seed: 9, draft: false });
+    run.phase = 'shop'; run.money = 20;
+    run.shop = { rng: null, display: [{ kind: 'gamble', id, price: 2 }], packs: [], rerolls: 0 };
+    const ev = applyRun(run, { type: 'buy', slot: 0 });
+    return { run, g: ev.find((e) => e.type === 'gamble') };
+  };
+  const a = buy('roulette'), b = buy('roulette');
+  assert.deepEqual(a.g, b.g);
+  assert.ok(PIECES[a.g.to].fairy);
+  assert.equal(a.run.deck.find((p) => p.id === a.g.pieceId).t, a.g.to);
+  const c = buy('potion');
+  const p = c.run.deck.find((x) => x.id === c.g.pieceId);
+  assert.ok(p.soul || p.eng);
+});

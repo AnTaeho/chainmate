@@ -26,6 +26,8 @@ import { familyCounts, familyMods } from '../data/families.js';
 import { JOSEKIS, JOSEKI_BY_ID, DRAFT_ANTES, DRAFT_TIERS } from '../data/josekis.js';
 import { useTactic, evolveTo } from '../data/tactics.js';
 import { TRAIT_CHANCE } from '../data/traits.js';
+import { SOULS } from '../data/souls.js';
+import { FAIRIES } from '../data/pieces.js';
 
 // ── 수치
 // 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. tools/run.mjs(smart 봇)로 맞춤:
@@ -423,6 +425,20 @@ function engrave(run, pieceId, id, events) {
   events.push({ type: 'engrave', piece: p.t, pieceId, eng: id });
 }
 
+// 도박 물건(깊이 G): 수상한 물약 = 주머니의 아무 기물에 아무 혼 또는 각인 · 룰렛 = 아무 기물(킹 빼고)을 아무 이형으로
+function gamble(run, id, slot, events) {
+  const r = fork(root(run), `gamble:${run.ante}:${run.blind}:${run.shop.rerolls}:${slot}`);
+  const p = run.deck[int(r, run.deck.length)];
+  if (id === 'potion') {
+    if (next(r) < 0.5) { const s = SOULS[int(r, SOULS.length)].id; p.soul = s; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, soul: s }); }
+    else { const ids = Object.keys(ENGRAVING_BY_ID); const e = ids[int(r, ids.length)]; p.eng = { id: e }; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, eng: e }); }
+  } else {
+    const to = FAIRIES[int(r, FAIRIES.length)];
+    events.push({ type: 'gamble', id, pieceId: p.id, from: p.t, to });
+    p.t = to;
+  }
+}
+
 // 혼 새기기(깊이 C): 기물 하나에 혼 하나(있으면 바뀐다)
 function ensoul(run, pieceId, id, events) {
   const p = run.deck.find((x) => x.id === pieceId);
@@ -530,6 +546,7 @@ export function applyRun(run, cmd) {
       if (it.kind === 'maxim') addMaxim(run, it.id, it.price, events, it.edition || null);
       else if (it.kind === 'piece') addPiece(run, it.t, events, it.soul || null);
       else if (it.kind === 'fragment') grantFragment(run, it.legend, 'first', events);
+      else if (it.kind === 'gamble') gamble(run, it.id, cmd.slot, events);
       else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : it.kind === 'evolve' ? { kind: 'evolve' } : { kind: it.kind, id: it.id });
       events.push({ type: 'buy', item: { ...it } });
       break;
