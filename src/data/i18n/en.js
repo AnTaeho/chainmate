@@ -4,7 +4,7 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명국 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 export const EN = {
   // ── 화면
-  '체인메이트': 'CHAINMATE', '잡으면 그것이 된다': 'You become what you take',
+  '체인메이트': 'CHAINMATE', '잡으면 그것이 된다': 'Take it, be it',
   '이어 하기': 'Continue', '새 판': 'New Run', '오늘의 대국': "Today's Match", '도감': 'Almanac', '기록': 'Records', '설정': 'Settings',
   '멈춤': 'Paused', '계속': 'Continue', '타이틀로': 'To Title', '타이틀': 'Title', '돌아가기': 'Back', '다시': 'Again', '계속 두기': 'Play On',
   '소리': 'Sound', '음악': 'Music', '연출 속도': 'Speed', '화면 흔들림': 'Shake', '큰 글자': 'Large Text', '켬': 'On', '끔': 'Off', '언어': 'Language',
@@ -34,7 +34,7 @@ export const EN = {
   '5관에 닿는다': 'Reach hall 5', '외통으로 다섯 번 이긴다': 'Win by mate five times', '한 사슬에 여덟을 먹는다(!!!)': 'Take eight in one chain (!!!)', '불멸의 기보 하나를 완성한다': 'Complete one immortal game',
   '폰': 'Pawn', '나이트': 'Knight', '비숍': 'Bishop', '룩': 'Rook', '퀸': 'Queen', '킹': 'King',
   '첫 수업': 'First Lessons', '첫 수업 다시': 'Lessons Again', '좋은 수': 'Good Move', '끝': 'Done',
-  '떨구고 먹는다': 'Drop and Take', '잡으면 그것이 된다': 'Take It, Become It', '이을수록 곱해진다': 'Links Multiply', '노리는 놈부터': 'Guards First',
+  '떨구고 먹는다': 'Drop and Take', '이을수록 곱해진다': 'Links Multiply', '노리는 놈부터': 'Guards First',
   '지금': 'Now', '먹으면': 'Take', '되잡힌다': 'Recaptured', '사슬이 끝난다': 'Chain ends',
   '한국어': '한국어', 'English': 'English', '없음': 'None',
   // 동사

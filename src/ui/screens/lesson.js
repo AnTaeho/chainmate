@@ -142,8 +142,7 @@ export class LessonScreen extends BattleScreen {
     panel(ctx, LX, 8, LW, 58);
     LESSONS.forEach((L, i) => {
       const col = i === this.index ? PAL.gold : i < this.index ? PAL.dim : PAL.dimDk;
-      if (i === this.index) rect(ctx, LX + 2, 14 + i * 13, 2, 7, PAL.gold);
-      text(ctx, L.title, LX + 8, 11 + i * 13, col, { bold: i === this.index });
+      text(ctx, L.title, LX + 5, 11 + i * 13, col, { bold: i === this.index });
     });
     // 주머니 · 수 칸은 수업에서 뜻이 없어 덮는다
     rect(ctx, LX, 240, LW, 22, PAL.felt);
