@@ -1,8 +1,8 @@
 // 깊이 층의 화면 조각: 가족 문양 · 가족 띠(켜진 가족과 다음 문턱) · 문턱을 넘는 순간.
 import { PAL } from '../render/palette.js';
 import { rect, text, box, frame } from '../render/gfx.js';
-import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf } from '../data/families.js';
-import { tipLines } from './parts.js';
+import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf, setName } from '../data/families.js';
+import { tipLines, setLine } from './parts.js';
 import { L } from './lang.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { TRAIT_BY_ID } from '../data/traits.js';
@@ -39,7 +39,7 @@ export function familyTip(id, n, drop = 0) {
   const lines = [];
   // 문턱과 효과를 헷갈리지 않게 「2개 모으면: …」
   THRESHOLDS.forEach((th, i) => { for (const l of wrap(`${L(`${Math.max(1, th - drop)}개 모으면`)}: ${L(f.text[i])}`, 160)) lines.push([l, n >= th - drop ? PAL.goldDk : PAL.cardDim]); });
-  return tipLines(`${f.name} ${n}`, [], 170, lines);
+  return tipLines(`${setName(id)} ${n}`, [], 170, lines);
 }
 
 // 가족 띠: 하나라도 모인 가족을 많은 순으로 칩 하나씩(문양 + 「3/4」). 켜진 가족은 제 빛깔 테.
@@ -77,7 +77,7 @@ export function josekiBadges(ctx, ui, run, x, y) {
   (run.josekis || []).forEach((id, k) => {
     const j = JOSEKI_BY_ID[id];
     const bx = x + k * 12;
-    ui.region(`joseki:${id}`, bx, y, 11, 11, { tip: () => tipLines(j.name, j.text) });
+    ui.region(`joseki:${id}`, bx, y, 11, 11, { tip: () => tipLines(j.name, j.families.length ? [j.text, setLine('정석', j.families)] : j.text) });
     box(ctx, bx, y, 11, 11, '#132019', TIER_COL[j.tier]);
     if (j.families[0]) familyGlyph(ctx, j.families[0], bx + 3, y + 3, TIER_COL[j.tier]);
     else rect(ctx, bx + 4, y + 4, 3, 3, TIER_COL[j.tier]);

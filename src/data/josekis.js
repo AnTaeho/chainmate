@@ -60,7 +60,7 @@ joseki('archery', '활터', 'silver', ['hunt'], '고르면 주머니의 폰 둘�
 joseki('highway', '고속도로', 'silver', ['line'], 'b · g 줄에서는 어떤 모습이든 룩처럼 세로로도 미끄러져 먹는다', {
   rules(b) { b.rules.highways = [1, 6]; },
 });
-joseki('stepping', '발판', 'silver', ['hunt'], '금빛 발판 위의 적을 먹으면 연쇄 ×2 — 발판은 대국마다 셋', {
+joseki('stepping', '발판', 'silver', ['hunt'], '금빛 발판 위의 적을 먹으면 배수 ×2 — 발판은 대국마다 셋', {
   rules(b, rng) {
     const free = [];
     for (let sq = 16; sq < 56; sq++) free.push(sq);
@@ -96,7 +96,7 @@ joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], '사슬이 끊�
     }
   },
 });
-joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬이 끝나면 연쇄 ×3 — 대신 그 기물은 주머니가 여섯보다 많으면 떠난다', {
+joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬이 끝나면 배수 ×3 — 대신 그 기물은 주머니가 여섯보다 많으면 떠난다', {
   onChainEnd(ctx) { if (!(ctx.t.movesUsed ?? 0)) { ctx.mulMult(3); ctx.chain.pact = true; } },
 });
 
@@ -114,7 +114,7 @@ joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 사슬이 한 줄�
     if (!c.flags.gomoku && collinear5(sqs)) { c.flags.gomoku = true; ctx.emit({ type: 'gomoku', squares: sqs }); }
   },
 });
-joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 가족은 2 · 4 · 6 대신 1 · 3 · 5개에서 효과가 켜진다');
+joseki('clone', '복제', 'rainbow', [], '가장 많이 채운 모음은 2 · 4 · 6 대신 1 · 3 · 5개에서 효과가 켜진다');
 
 export const JOSEKI_BY_ID = Object.fromEntries(JOSEKIS.map((j) => [j.id, j]));
 export const josekiFamilies = (ids) => (ids || []).flatMap((id) => (JOSEKI_BY_ID[id] ? [JOSEKI_BY_ID[id].families] : []));

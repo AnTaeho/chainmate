@@ -14,17 +14,17 @@ engraving('gold', '금', '떨군 사슬이 끝나면 상금 +2', 'common', {
 engraving('ivory', '상아', '떨군 사슬이 끝나면 값 +30', 'common', {
   onChainEnd(ctx) { ctx.addValue(30); },
 });
-engraving('ebony', '흑단', '떨군 사슬이 끝나면 연쇄 ×1.5', 'uncommon', {
+engraving('ebony', '흑단', '떨군 사슬이 끝나면 배수 ×1.5', 'uncommon', {
   onChainEnd(ctx) { ctx.mulMult(1.5); },
 });
-engraving('glass', '유리', '떨군 사슬이 끝나면 연쇄 ×2 — 네 번에 한 번 깨진다', 'common', {
+engraving('glass', '유리', '떨군 사슬이 끝나면 배수 ×2 — 네 번에 한 번 깨진다', 'common', {
   breakChance: 0.25,
   onChainEnd(ctx) { ctx.mulMult(2); },
 });
 engraving('silver', '은', '떨군 사슬은 첫 먹기에서 끊기지 않는다', 'uncommon', {
   onCut(ctx) { if (ctx.chain.captures.length === 1) ctx.cancelCut(); },
 });
-engraving('feather', '깃', '노려지는 칸에도 떨굴 수 있다', 'common', {
+engraving('feather', '깃', '적이 지키는 칸에도 떨굴 수 있다', 'common', {
   onDropCheck(ctx) { ctx.event.allow.attacked = true; },
 });
 

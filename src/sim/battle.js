@@ -1,4 +1,4 @@
-// 대국 하나: 손 · 주머니 · 수 · 무르기 · 증원 · 승패.
+// 대국 하나: 손 · 주머니 · 수 · 바꾸기 · 증원 · 승패.
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 apply(b, cmd) 하나뿐.
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }
 import { createRng, fork, next, shuffle } from './rng.js';
@@ -17,7 +17,7 @@ export const BASE_REWARD = { practice: 3, official: 4, master: 5 };
 export const DEFAULT_RULES = {
   hand: 4,          // 손
   moves: 4,         // 수
-  discards: 3,      // 무르기
+  discards: 3,      // 바꾸기
   maxDiscard: 4,    // 한 번에 버리는 최대 수
   kings: 1,         // 킹 수(명인 「대가」 2)
   enemies: null,    // null이면 enemyCount(관)
@@ -101,7 +101,7 @@ function draw(b) {
 
 const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null, ...(p.soul ? { soul: p.soul } : {}) });
 
-// 황금 기물: 대국 시작 판에서 킹이 아닌 적 하나가 이 확률로 금빛(HOOKS 「드문 것들의 사다리」 대국당 ~4%).
+// 금빛 적: 대국 시작 판에서 킹이 아닌 적 하나가 이 확률로 금빛(HOOKS 「드문 것들의 사다리」 대국당 ~4%).
 // 먹으면 값을 한 번 더 받고(chain.js), 판(런)이 대국 뒤 금빛 꾸러미와 조각 기회로 바꾼다.
 // calling: 재현까지 해낸 명국이 금빛 조각만 기다릴 때(판(런)이 goldenChance로 넘긴다). 조각 셋이 한 판에 모이는 몫을
 // 노리는 판 쪽으로 기울이려고 — 기본 4%에서는 첫 조각 · 재현을 모은 판의 14%만 금빛을 먹었다(보고서 2b).
@@ -130,12 +130,12 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     nextId: 100,
     money: 0,          // 대국 중에 번 상금(격언 「금고」 · 각인 「금」 …). 판(런)이 보상에 더한다
     deckSize: bag.length,
-    discarded: 0,      // 무르기로 버린 기물 수
+    discarded: 0,      // 바꾸기로 버린 기물 수
     shattered: [],     // 깨진 기물 id(각인 「유리」). 판(런)이 주머니에서 뺀다
     regrip: false,     // 막혀서 손을 새로 쥐었나(대국마다 한 번)
     revealed: [],      // 명인 「안개」로 드러난 칸
     hints: {},         // 화면용 표시(격언 「왕의 목」: openKings)
-    golden: 0,         // 이번 대국에서 먹은 황금 기물 수
+    golden: 0,         // 이번 대국에서 먹은 금빛 적 수
     overflow: 0,       // 목표를 넘긴 층(0 · 1 · 2 · 5 · 10)
   };
   runHook(b, 'onBattleStart', {}, []);
@@ -265,7 +265,7 @@ export function apply(b, cmd) {
     case 'discard': {
       if (b.status !== 'play') throw new Error('not expecting a discard');
       if (b.discardsLeft <= 0) throw new Error('no discards left');
-      // 주머니가 비면 무르기는 손만 줄인다: legalCommands · 막힘 판정과 같이 막는다
+      // 주머니가 비면 바꾸기는 손만 줄인다: legalCommands · 막힘 판정과 같이 막는다
       if (b.bag.length === 0) throw new Error('bag is empty');
       const idx = [...new Set(cmd.handIndices)].sort((x, y) => y - x);
       if (!idx.length || idx.length > b.rules.maxDiscard || idx.some((i) => !b.hand[i])) throw new Error('bad discard');
@@ -327,7 +327,7 @@ export function checkStuck(b, events) {
   if (b.status !== 'play') return;
   if (hasLegalDrop(b)) return;
   if (b.discardsLeft > 0 && b.bag.length > 0) return;
-  // 손을 새로 쥔다(대국마다 한 번): 떨굴 곳도 무를 것도 없으면 손과 쓴 기물을 주머니에 섞어 넣고 다시 뽑는다.
+  // 손을 새로 쥔다(대국마다 한 번): 떨굴 곳도 바꿀 것도 없으면 손과 쓴 기물을 주머니에 섞어 넣고 다시 뽑는다.
   // 막힘 패배는 둘 수 없어 지는 것이라 아프기만 하다 — 명인 「안개」 · 「무거운 손」을 세게 하며 판의 13%가 막힘으로 끝나서 넣었다(밤샘 D-1).
   if (!b.regrip) {
     b.regrip = true;

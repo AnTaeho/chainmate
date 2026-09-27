@@ -1,4 +1,4 @@
-// 점수 파이프라인. 값 × 연쇄.
+// 점수 파이프라인. 값 × 배수.
 //
 // 조정자(modifier)는 두 조각으로 나뉜다.
 //   정의(def)  — defineModifier(id, def)로 등록하는 함수 묶음. 코드에만 있고 저장되지 않는다.
@@ -11,7 +11,7 @@
 //   onDropCheck    떨굴 칸을 셀 때. ctx.event = { type, engraving, allow }. ctx.event.allow.attacked = true 로 노려진 칸 허용(각인 「깃」).
 //   onDrop         떨군 직후. ctx.event = { type, sq }. ctx.flags로 사슬 규칙 깃발을 세울 수 있다.
 //   allowCapture   먹을 칸을 걸러 낼 때. ctx.event = { from, to, piece, form }. false를 돌려주면 금지.
-//   onCapture      먹을 때마다(기본 값·연쇄를 더한 뒤). ctx.event = { from, to, piece(먹힌 종류), form(먹을 때의 모습), dist, index, forced, born }
+//   onCapture      먹을 때마다(기본 값·배수를 더한 뒤). ctx.event = { from, to, piece(먹힌 종류), form(먹을 때의 모습), dist, index, forced, born }
 //   onTransform    모습이 바뀔 때. ctx.event = { from, to }  (종류가 같으면 안 불림)
 //   onPromote      승급. ctx.event = { sq }
 //   onForced       응수가 걸렸을 때(이어짐). ctx.event = { sq, attackers }
@@ -19,8 +19,8 @@
 //   onMate         외통 직후(마지막 킹을 먹음). ctx.keepGoing()을 부르면 대국을 끝내는 대신 판이 다시 채워지고
 //                  내 기물은 킹 모습으로 사슬을 잇는다(전설 「오페라 대국」). ctx.event = { sq, mates }
 //   onChainStop    사슬이 멈출 때, 점수를 매기기 전(끊김 · 막힘. 외통은 빼고). ctx.event = { reason }.
-//                  ctx.redrop()을 부르면 기물을 들어 지금 모습 그대로 떨굴 칸을 다시 고른다 — 값 · 연쇄를 이어받는 두 번째 사슬(사슬당 한 번, 전설 「상록의 대국」).
-//   onChainEnd     사슬이 끝날 때(끊김 · 막힘 · 외통). ctx.event = { reason }. ×연쇄는 여기서.
+//                  ctx.redrop()을 부르면 기물을 들어 지금 모습 그대로 떨굴 칸을 다시 고른다 — 값 · 배수를 이어받는 두 번째 사슬(사슬당 한 번, 전설 「상록의 대국」).
+//   onChainEnd     사슬이 끝날 때(끊김 · 막힘 · 외통). ctx.event = { reason }. ×배수는 여기서.
 //                  ctx.chain.scoreMul(기본 1)을 곱하면 최종 점수 배율(예: 명인 「앙갚음」 0.5).
 //   onBoard        대국판이 바뀐 뒤(시작 · 먹기 · 증원). 화면용 표시를 ctx.t.hints에 적는다. 점수와 무관, 풀이기는 부르지 않는다.
 //
@@ -32,7 +32,7 @@
 // 순서: 기본 규칙이 먼저, 그다음 종류 순서(KIND_ORDER) — 같은 종류 안에서는 t.mods의 배열 순서.
 //   먹기 훅: 명인 → 기보 → 각인 → 격언   (DESIGN 「점수」 1~3)
 //   사슬 끝: (기보) → 각인 → 격언 → 명인  (DESIGN 「점수」 4, 명인은 마지막에 판을 비튼다)
-// 최종 점수 = floor(값 × 연쇄 × scoreMul).
+// 최종 점수 = floor(값 × 배수 × scoreMul).
 
 import { attackers } from './board.js';
 import { chartForm } from '../data/pieces.js';
@@ -156,7 +156,7 @@ export const finalScore = (chain) => Math.floor(chain.value * chain.mult * (chai
 
 // ── 기보(모습별 레벨) 조정자. 표는 step 2의 data/charts.js가 넘긴다.
 // 명세: { id: 'charts', data: { table: { P: { a: 10, b: 1 }, ... }, levels: { N: 2, ... } } }
-// 「먹을 때의 모습」(event.form) 기준으로 값 += a×레벨, 연쇄 += b×레벨.
+// 「먹을 때의 모습」(event.form) 기준으로 값 += a×레벨, 배수 += b×레벨.
 // 이형 모습은 바탕이 된 체스 모습의 기보를 따른다(pieces.js chart).
 defineModifier('charts', {
   kind: 'chart',

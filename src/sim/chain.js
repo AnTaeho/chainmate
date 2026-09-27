@@ -100,10 +100,10 @@ export function chainCapture(t, sq) {
   if (wasForced) c.forcedReplies++;
   events.push({ type: 'capture', ...cap, value: PIECES[target.t].value });
 
-  // 1. 기본: 값 += 먹힌 기물 값, 연쇄 += 1
+  // 1. 기본: 값 += 먹힌 기물 값, 배수 += 1
   c.value += PIECES[target.t].value;
   c.mult += 1;
-  // 황금 기물: 값을 한 번 더 받는다. 판(런)이 대국 뒤 금빛 꾸러미 · 조각으로 바꾼다
+  // 금빛 적: 값을 한 번 더 받는다. 판(런)이 대국 뒤 금빛 꾸러미 · 조각으로 바꾼다
   if (target.gold) {
     c.golden++;
     c.value += PIECES[target.t].value;
@@ -189,7 +189,7 @@ export function chainCapture(t, sq) {
   return events;
 }
 
-// 폭약: 둘레 여덟 칸의 적(킹 · 벽 빼고)을 함께 먹은 것으로(값 · 연쇄 +1씩). 폭약이 폭약을 터뜨리면 이어진다
+// 폭약: 둘레 여덟 칸의 적(킹 · 벽 빼고)을 함께 먹은 것으로(값 · 배수 +1씩). 폭약이 폭약을 터뜨리면 이어진다
 function blast(t, sq, events) {
   const c = t.chain, board = t.board;
   for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {

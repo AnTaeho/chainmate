@@ -7,7 +7,7 @@ import { createRun } from '../../sim/run.js';
 import { createRng, fork } from '../../sim/rng.js';
 import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide } from '../coach.js';
-import { TERMS } from '../glossary.js';
+import { TERMS, termWord, termSay } from '../glossary.js';
 import { wrap } from '../../render/text.js';
 import { L } from '../lang.js';
 
@@ -85,8 +85,8 @@ export function startLessonShop(app, i) {
         run.pack.options = [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'O' }, { kind: 'piece', t: 'B' }];
         return true;
       } },
-    { screen: 'pack', target: 'pack:pick:0', say: '낙타를 고른다 — 나이트처럼 뛰는 체스 밖의 기물', done: () => run.phase === 'shop' && on('shop') && run.deck.some((p) => p.t === 'L') },
-    { screen: 'shop', target: 'fam:leap', say: '기사도와 낙타는 둘 다 도약 가족 — 둘이 모여 도약 효과가 켜졌다(2 · 4 · 6마다 하나씩)', ok: true },
+    { screen: 'pack', target: 'pack:pick:0', say: '낙타를 고른다 — 나이트처럼 뛰는 특수 기물', done: () => run.phase === 'shop' && on('shop') && run.deck.some((p) => p.t === 'L') },
+    { screen: 'shop', target: 'fam:leap', say: '기사도와 낙타가 뛰기 모음을 한 칸씩 채워 두 칸 — 첫 효과가 켜졌다(2 · 4 · 6칸마다 하나씩)', ok: true },
   ], () => lessonDone(app, i));
 }
 
@@ -121,8 +121,8 @@ export class LessonsScreen {
     box(ctx, 16, 28, W - 32, 206, PAL.feltDk, PAL.frameDk);
     TERMS.forEach((t, k) => {
       const y = 34 + k * 18;
-      text(ctx, t.word, 24, y, PAL.gold, { bold: true });
-      text(ctx, wrap(L(t.say), W - 32 - 84)[0], 96, y, PAL.ink);
+      text(ctx, termWord(t.id), 24, y, PAL.gold, { bold: true });
+      text(ctx, wrap(termSay(t.id), W - 32 - 84)[0], 96, y, PAL.ink);
     });
     button(ctx, ui, 'lessons:back', W / 2 - 42, 240, 84, 18, '돌아가기', { onClick: () => { this.terms = false; } });
   }

@@ -192,7 +192,7 @@ export class LessonScreen extends BattleScreen {
     text(ctx, this.phase === 'demo' ? '보기' : '할 일', RX + 6, 26, this.phase === 'demo' ? PAL.dim : PAL.gold, { bold: true });
     wrap(say, RW - 12).slice(0, 10).forEach((l, k) => richText(ctx, l, RX + 6, 42 + k * 13, PAL.ink, { termCol: PAL.gold, ui }));
     if (this.phase === 'demo') text(ctx, '누르면 내 차례', RX + RW - 6, 156, PAL.dimDk, { align: 'right' });
-    // 누를 곳이 손이면 그 카드에 숨 쉬는 테, 무르기면 단추에
+    // 누를 곳이 손이면 그 카드에 숨 쉬는 테, 바꾸기면 단추에
     const st = this.step;
     if (this.phase === 'play' && st && !this.busy) {
       const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : null;

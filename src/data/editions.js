@@ -5,9 +5,9 @@
 import { defineModifier } from '../sim/scoring.js';
 
 export const EDITIONS = [
-  { id: 'foil', name: '은박', text: '사슬이 끝날 때마다 연쇄 +5', price: 2, weight: 45 },
+  { id: 'foil', name: '은박', text: '사슬이 끝날 때마다 배수 +5', price: 2, weight: 45 },
   { id: 'pearl', name: '자개', text: '사슬이 끝날 때마다 값 +50', price: 3, weight: 30 },
-  { id: 'rainbow', name: '무지개', text: '사슬이 끝날 때마다 연쇄 ×1.5', price: 5, weight: 15 },
+  { id: 'rainbow', name: '무지개', text: '사슬이 끝날 때마다 배수 ×1.5', price: 5, weight: 15 },
   { id: 'obsidian', name: '흑요', text: '격언 칸 +1', price: 5, weight: 10, slots: 1 },
 ];
 export const EDITION_BY_ID = Object.fromEntries(EDITIONS.map((e) => [e.id, e]));

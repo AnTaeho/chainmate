@@ -23,7 +23,7 @@ function cloneTable(t) {
 
 // 결과 비교: 외통 우선(opts.preferMate), 그다음 점수(opts.rank가 있으면 그 값), 그다음 짧은 줄.
 // preferMate: true = 외통 우선, false = 점수만, 'avoid' = 외통 줄은 다른 수가 없을 때만.
-// rank(r): 줄 결과(r.h = chainSummary 꼴 요약)를 받아 비교할 수를 돌려준다(봇이 황금 기물 · 재현을 노릴 때).
+// rank(r): 줄 결과(r.h = chainSummary 꼴 요약)를 받아 비교할 수를 돌려준다(봇이 금빛 적 · 재현을 노릴 때).
 function better(a, b, preferMate, rank) {
   if (!b) return true;
   if (preferMate && a.mate !== b.mate) return preferMate === 'avoid' ? b.mate : a.mate;
@@ -99,13 +99,13 @@ export function bestMove(b, opts = {}) {
   return best;
 }
 
-// 손 기물마다 최선 수(무르기 판단용).
+// 손 기물마다 최선 수(바꾸기 판단용).
 export function bestPerPiece(b, opts = {}) {
   return b.hand.map((_, i) => bestMove(b, { ...opts, handIndices: [i] }));
 }
 
 // ── 화면용 미리 보기(규칙 그대로, 복사본에서 — 원래 대국은 바뀌지 않는다)
-// 지금 사슬에서 sq를 먹으면: 바뀐 모습 · 얻는 값 · 연쇄(조정자 반응까지) · 다음에 먹을 수 있는 적 · 응수 · 끊김 · 외통.
+// 지금 사슬에서 sq를 먹으면: 바뀐 모습 · 얻는 값 · 배수(조정자 반응까지) · 다음에 먹을 수 있는 적 · 응수 · 끊김 · 외통.
 export function previewCapture(t, sq) {
   const u = cloneTable(t);
   const c0 = u.chain;

@@ -13,7 +13,7 @@ function soul(id, name, col, families, text, def) {
 export const SOUL_PRICE = 4;
 export const UP = { P: 'N', N: 'B', B: 'R', R: 'Q', Q: 'Z' };
 
-soul('absorb', '흡수', '#d27fd6', ['change'], '처음 세 번 먹는 동안 모습은 그대로이고, 마지막에 먹은 적의 행마를 더 쓴다', {
+soul('absorb', '흡수', '#d27fd6', ['change'], '처음 세 번은 먹어도 모습이 그대로 — 대신 마지막에 먹은 적의 행마도 함께 쓴다', {
   onDrop(ctx) { ctx.flags.absorb = true; },
 });
 soul('echo', '메아리', '#9fb8ff', ['change'], '사슬이 막히면 한 번 떨군 모습으로 돌아가 그 자리에서 잇는다', {
@@ -31,10 +31,10 @@ soul('echo', '메아리', '#9fb8ff', ['change'], '사슬이 막히면 한 번 �
 soul('transcend', '초월', '#fff1b8', ['change', 'crown'], '먹을 때마다 먹은 적 대신 한 단계 위 모습이 된다 — 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존', {
   onDrop(ctx) { ctx.flags.transcend = true; },
 });
-soul('hunger', '굶주림', '#df8a45', ['hunt'], '먹을 때마다 이 사슬의 먹기 값이 10씩 커진다', {
+soul('hunger', '굶주림', '#df8a45', ['hunt'], '먹을수록 값이 더 붙는다 — 둘째 먹기 +10, 셋째 +20, 넷째 +30 …', {
   onCapture(ctx) { ctx.addValue(10 * ctx.event.index); },
 });
-soul('hunter', '사냥꾼', '#8ec07c', ['hunt'], '같은 종류를 잇달아 먹으면 연쇄 ×2', {
+soul('hunter', '사냥꾼', '#8ec07c', ['hunt'], '같은 종류를 잇달아 먹으면 배수 ×2', {
   onCapture(ctx) {
     const caps = ctx.chain.captures;
     if (caps.length >= 2 && caps[caps.length - 2].piece === ctx.event.piece) ctx.mulMult(2);
@@ -58,7 +58,7 @@ soul('martyr', '순교자', '#df5a45', ['sacrifice'], '끊기는 순간 둘레 �
 soul('crown', '왕관', '#efbd55', ['crown', 'march'], '승급하면 아마존이 되고, 승급 칸도 두 줄 앞당겨진다', {
   onDrop(ctx) { ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, 5); ctx.flags.promoteTo = 'Z'; },
 });
-soul('shade', '그림자', '#8a5cc8', ['sacrifice', 'leap'], '노림수가 이 기물을 못 봐 응수 없이 이어진다 — 대신 사슬이 끝나면 연쇄 −1', {
+soul('shade', '그림자', '#8a5cc8', ['sacrifice', 'leap'], '지키는 적이 이 기물을 못 봐 지켜진 칸을 먹어도 사슬이 이어진다 — 대신 사슬이 끝나면 배수 −1', {
   onThreat(ctx) { ctx.ignoreThreat(); },
   onChainEnd(ctx) { if (ctx.chain.mult > 1) ctx.addMult(-1); },
 });

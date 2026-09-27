@@ -4,7 +4,7 @@ import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, frame, dots, sprite, measure, line } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
-import { maximFamilies, FAMILY_BY_ID } from '../data/families.js';
+import { maximFamilies, setName } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID } from '../data/souls.js';
 import { TACTIC_BY_ID } from '../data/tactics.js';
@@ -13,7 +13,7 @@ import { familyGlyphs } from './parts-depth.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
-import { PIECE_NAME, PIECE_MOVE } from './words.js';
+import { PIECE_NAME, PIECE_MOVE, FAIRY_MOVE } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
@@ -33,14 +33,14 @@ export function maximTip(m) {
     extra.push([`${e.name} · ${e.text}`, PAL.goldDk]);
   }
   const fams = maximFamilies(m.id);
-  if (fams.length) extra.push([fams.map((f) => FAMILY_BY_ID[f].name).join(' · '), FAMILY_BY_ID[fams[0]].col === '#efbd55' ? PAL.goldDk : PAL.cardDim]);
+  if (fams.length) for (const l of wrap(setLine('격언', fams), 140)) extra.push([l, PAL.cardDim]);
   if (info.rarity === 'legendary' && info.story) for (const l of wrap(`${info.year ? info.year + ' · ' : ''}${info.story}`, 140)) extra.push([l, PAL.goldDk]);
   return tipLines(info.name, info.text, 150, extra);
 }
 
 export function pieceTip(p) {
   const lines = [];
-  if (PIECE_MOVE[p.t]) lines.push(PIECE_MOVE[p.t]);
+  if (FAIRY_MOVE(p.t)) lines.push(PIECE_MOVE[p.t]);
   if (p.eng) { const e = engravingInfo(p.eng.id); lines.push(`${e.name} 각인 · ${e.text}`); }
   if (p.soul && SOUL_BY_ID[p.soul]) { const s = SOUL_BY_ID[p.soul]; lines.push(`${s.name}의 혼 · ${L(s.text)}`); }
   return tipLines(PIECE_NAME[p.t], lines);
@@ -209,24 +209,30 @@ export function evolveArt(ctx, x, y, t = 0) {
   sprite(ctx, 'H', 'w', x + 26, y + 2, { tier: 1 });
 }
 
+// 모음을 몇 칸 채우나: 「이 격언은 뛰기 모음을 한 칸 채운다」(특수 기물은 종류마다 한 번 센다)
+export function setLine(kind, fams) {
+  const names = fams.map(setName).join(' · ');
+  const each = fams.length > 1 ? '씩' : '';
+  if (kind === 'piece') return `주머니에 이 기물이 있으면 ${names}이 한 칸${each} 찬다`;
+  return `이 ${kind}은 ${names}을 한 칸${each} 채운다`;
+}
 // 카드에 적는 효과 한 줄(말풍선은 덧붙임만)
-export const CHESS_MOVE = { P: '대각선 앞 한 칸의 적을 먹는다', N: 'ㄱ자로 뛰어 먹는다', B: '대각선으로 미끄러져 먹는다', R: '가로 · 세로로 미끄러져 먹는다', Q: '여덟 방향으로 미끄러져 먹는다' };
 export function itemEffect(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).text;
   if (it.kind === 'chart') return chartText(it.form);
   if (it.kind === 'engraving') return engravingInfo(it.id).text;
-  if (it.kind === 'piece') return (it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼: ${L(SOUL_BY_ID[it.soul].text)}` : PIECE_MOVE[it.t] || CHESS_MOVE[it.t] || '');
+  if (it.kind === 'piece') return (it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼: ${L(SOUL_BY_ID[it.soul].text)}` : PIECE_MOVE[it.t] || '');
   if (it.kind === 'soul') return SOUL_BY_ID[it.id].text;
-  if (it.kind === 'evolve') return '주머니 기물 하나가 그 종류의 이형으로 자란다';
+  if (it.kind === 'evolve') return '주머니의 체스 기물 하나가 특수 기물로 자란다';
   if (it.kind === 'tactic') return TACTIC_BY_ID[it.id].text;
-  if (it.kind === 'gamble') return it.id === 'potion' ? '주머니의 아무 기물에 아무 혼이나 각인이 붙는다' : '주머니의 아무 기물이 아무 이형이 된다';
+  if (it.kind === 'gamble') return it.id === 'potion' ? '주머니의 아무 기물에 아무 혼이나 각인이 붙는다' : '주머니의 아무 기물이 아무 특수 기물이 된다';
   if (it.kind === 'fragment') return `조각 셋을 모으면 전설: ${LEGEND_BY_ID[it.legend].text}`;
   return '';
 }
 // 좁은 칸에 적는 효과 앞머리: 「언제」를 떼고 「무엇」부터(두루마리 칸). 전부는 가리키면 보인다.
 export function effectHead(s) {
   s = L(String(s));
-  // 「언제」는 첫 마디(「 — 」 앞)에서만 찾는다: 뒤에 붙은 대가(「대신 사슬이 끝나면 연쇄 −1」)를 앞머리로 올리지 않게
+  // 「언제」는 첫 마디(「 — 」 앞)에서만 찾는다: 뒤에 붙은 대가(「대신 사슬이 끝나면 배수 −1」)를 앞머리로 올리지 않게
   const cut = s.indexOf(' — ');
   const first = cut >= 0 ? s.slice(0, cut) : s;
   const m = getLang() === 'en' ? first.match(/^[^:]{1,60}?:\s+(.+)$/) : first.match(/^.*?(?:면|마다|순간|동안)\s+(.+)$/);
@@ -247,7 +253,7 @@ export function moneyText(ctx, n, x, y, align = 'left') {
   return text(ctx, `$${n}`, x, y, PAL.gold, { bold: true, align });
 }
 
-// 무르기 아이콘(돌아가는 화살)
+// 바꾸기 아이콘(돌아가는 화살)
 export function discardIcon(ctx, x, y, col) {
   rect(ctx, x + 1, y, 5, 1, col); rect(ctx, x, y + 1, 1, 5, col); rect(ctx, x + 1, y + 6, 5, 1, col);
   rect(ctx, x + 6, y + 4, 1, 2, col); rect(ctx, x + 5, y - 1, 1, 3, col); rect(ctx, x + 6, y, 1, 1, col);
@@ -331,8 +337,8 @@ export function itemTip(it) {
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '주머니의 기물 하나에 새긴다']); }
   if (it.kind === 'piece') return tipLines(PIECE_NAME[it.t], [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '주머니에 들어온다']);
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '주머니의 기물 하나에 깃든다']); }
-  if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '주머니의 아무 기물에 아무 혼이나 각인이 붙는다' : '주머니의 아무 기물이 아무 이형이 된다');
-  if (it.kind === 'evolve') return tipLines('진화', ['주머니의 기물 하나가 그 종류의 이형으로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
+  if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '주머니의 아무 기물에 아무 혼이나 각인이 붙는다' : '주머니의 아무 기물이 아무 특수 기물이 된다');
+  if (it.kind === 'evolve') return tipLines('진화', ['주머니의 체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
   if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`묘수 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(`${l.name} · 첫 조각`, [l.story, `전설: ${l.text}`]); }
   return null;
@@ -342,11 +348,10 @@ export function itemTip(it) {
 export function itemExtraTip(it) {
   const lines = [];
   const fams = it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : [];
-  if (fams.length) lines.push(`가족: ${fams.map((f) => FAMILY_BY_ID[f].name).join(' · ')} — 같은 가족을 2 · 4 · 6 모으면 효과`);
+  if (fams.length) lines.push(setLine(it.kind === 'maxim' ? '격언' : it.kind === 'soul' ? '혼' : 'piece', fams));
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`기보는 ${PIECE_NAME[chartForm(it.t)]} 모습을 따른다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${info.story}`); }
   if (it.kind === 'evolve') lines.push('폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존');
-  if (it.kind === 'chart') lines.push('모습: 사슬 한가운데 내 기물이 지금 입은 기물');
   if (it.kind === 'fragment') lines.push(LEGEND_BY_ID[it.legend].story);
   return lines.length ? tipLines(itemName(it), lines, 170) : null;
 }
@@ -498,7 +503,7 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
   ui.region(`${idPrefix}:panel`, x, y, w, h, {});
   box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
   const verb = what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : '자란다';
-  const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 그 종류의 이형으로 자란다';
+  const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
   if (!p) {
     text(ctx, what.kind === 'engraving' ? '주머니에서 새길 기물을 고른다' : what.kind === 'soul' ? '주머니에서 깃들 기물을 고른다' : '주머니에서 자랄 기물을 고른다', x + 6, y + 4, PAL.gold, { bold: true });
     const l = wrap(eff, w - 70)[0];
@@ -527,7 +532,7 @@ export function fragmentTip(run, l) {
   const parts = [['first', '첫 조각'], ['feat', '재현'], ['gold', '금빛']].map(([k, n]) => `${f[k] ? '■' : '□'} ${n}`).join('  ');
   const lines = [parts];
   if (f.first && !f.feat) lines.push(`재현: ${l.feat}`);
-  if (f.first && f.feat && !f.gold) lines.push('황금 기물을 먹고 이기면 금빛 조각');
+  if (f.first && f.feat && !f.gold) lines.push('금빛 적을 먹고 이기면 금빛 조각');
   return tipLines(l.name, lines, 170);
 }
 export function fragmentStrip(ctx, ui, run, x, y, { align = 'left' } = {}) {

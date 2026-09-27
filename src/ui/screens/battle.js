@@ -1,4 +1,4 @@
-// 대국 화면(mockup 배치). 가운데 8×8 판, 왼쪽 판(관 · 목표 · 점수 · 값 × 연쇄 · 사슬 모습 줄 · 수 · 무르기 · 상금 · 주머니),
+// 대국 화면(mockup 배치). 가운데 8×8 판, 왼쪽 판(관 · 목표 · 점수 · 값 × 배수 · 사슬 모습 줄 · 수 · 바꾸기 · 상금 · 주머니),
 // 오른쪽(격언 칸 · 손).
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
 import { termTip } from '../glossary.js';
@@ -24,7 +24,7 @@ import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
 import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines, fragmentStrip, itemTip, tacticIcon } from '../parts.js';
-import { KIND_SHORT, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
+import { KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton } from './common.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
@@ -34,7 +34,7 @@ export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S
 export const LX = 8, LW = 112, RX = 360, RW = 112;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
-// 값 · 연쇄 상자에 들어가는 짧은 숫자
+// 값 · 배수 상자에 들어가는 짧은 숫자
 export function short(n) {
   if (!isFinite(n)) return '∞';
   const a = Math.abs(n);
@@ -438,7 +438,7 @@ export class BattleScreen {
         case 'forced': add(0.1, { begin: () => { if (v.chain) v.chain.forced = e.attackers.slice(); this.snd('forced'); } }); break;
         case 'cutIgnored': add(0.2, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('넘겼다', PAL.silver); } }); break;
         // 가족(깊이 B): 도약 뒤 노림 무시 · 직선 꿰뚫기 · 변신 한 번 더
-        case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('노림을 피했다', PAL.silver); } }); break;
+        case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('지키는 적을 피했다', PAL.silver); } }); break;
         case 'pierce': add(0.12, { begin: () => {
           const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b');
           const bomb = e.src === 'bomb', col = bomb ? PAL.red : e.src && e.src.includes('martyr') ? PAL.red : FAMILY_BY_ID.line.col;
@@ -755,7 +755,7 @@ export class BattleScreen {
     if (reg('tactic:')) hint(app, 'tactic', reg('tactic:').id);
   }
 
-  // 목표는 막대로: 지금 점수는 채움, 이번 사슬로 얻을 몫(값 × 연쇄)은 빗금으로 미리 차오른다.
+  // 목표는 막대로: 지금 점수는 채움, 이번 사슬로 얻을 몫(값 × 배수)은 빗금으로 미리 차오른다.
   // 목표를 넘기면 막대가 ×2 · ×5 · ×10 눈금으로 늘어나고 채움 끝에 불이 붙는다.
   drawGoalBar(ctx) {
     const v = this.view, tgt = v.target;
@@ -836,10 +836,10 @@ export class BattleScreen {
       const id = `sq:${sq}`;
       const g = ghosts.get(sq);
       let tip = g ? [`증원 · ${PIECE_NAME[g.t]}`, [g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다']] : null;
-      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['노림수', [t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다']];
+      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['지키는 적', [t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다']];
       const cell = v.board[sq];
-      if (!tip && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tip = [`${tr.name} · ${PIECE_NAME[cell.t]}`, [[L(tr.text), L(PIECE_MOVE[cell.t] || '')].filter(Boolean).join(' · ')]]; }
-      if (!tip && cell && !cell.mine && PIECE_MOVE[cell.t] && !isHidden(b, sq)) tip = [PIECE_NAME[cell.t], [PIECE_MOVE[cell.t]]];
+      if (!tip && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tip = [`${tr.name} · ${PIECE_NAME[cell.t]}`, [[L(tr.text), L(FAIRY_MOVE(cell.t) || '')].filter(Boolean).join(' · ')]]; }
+      if (!tip && cell && !cell.mine && FAIRY_MOVE(cell.t) && !isHidden(b, sq)) tip = [PIECE_NAME[cell.t], [PIECE_MOVE[cell.t]]];
       // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
       if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
@@ -1069,7 +1069,7 @@ export class BattleScreen {
     }
   }
 
-  // 오른쪽 작은 패널: 지금 [모습] › 먹으면 [모습], 얻을 값 · 연쇄, 그다음
+  // 오른쪽 작은 패널: 지금 [모습] › 먹으면 [모습], 얻을 값 · 배수, 그다음
   drawPreviewPanel(ctx) {
     const pv = this.pvNow, v = this.view;
     if (!pv || pv.kind !== 'capture' || !v.chain) return;
@@ -1082,10 +1082,10 @@ export class BattleScreen {
     box(ctx, RX + 64, 40, 26, 34, pv.cut ? PAL.red : PAL.gold, PAL.frameDk);
     sprite(ctx, pv.form, 'w', RX + 69, 46, this.look(pv.form));
     text(ctx, `+${short(pv.value)}`, RX + 8, 88, PAL.val, { bold: true });
-    text(ctx, `연쇄 +${short(pv.mult)}`, RX + RW - 8, 88, PAL.gold, { align: 'right', bold: true });
+    text(ctx, `배수 +${short(pv.mult)}`, RX + RW - 8, 88, PAL.gold, { align: 'right', bold: true });
     panel(ctx, RX, 114, RW, 22);
-    const [msg, col] = pv.cut ? ['되잡힌다', PAL.red] : pv.mate ? ['외통', PAL.gold] : pv.redrop ? ['다시 떨군다', PAL.gold]
-      : pv.done ? ['사슬이 끝난다', PAL.dim] : pv.forced ? [`응수 ${pv.next.length}`, PAL.red] : [`다음에 먹을 적 ${pv.next.length}`, PAL.gold];
+    const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['외통', PAL.gold] : pv.redrop ? ['다시 떨군다', PAL.gold]
+      : pv.done ? ['사슬이 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red] : [`다음에 먹을 적 ${pv.next.length}`, PAL.gold];
     text(ctx, msg, RX + 8, 119, col, { bold: true });
   }
 
@@ -1117,7 +1117,7 @@ export class BattleScreen {
     this.drawFlames(ctx);
     text(ctx, '점수', LX + 6, 75, PAL.dim);
     text(ctx, num(score), LX + LW - 6, 75, hot ? PAL.gold : PAL.ink, { align: 'right', bold: true });
-    // 값 × 연쇄
+    // 값 × 배수
     const c = v.chain;
     const g = v.gather;
     const val = g ? g.value : c ? c.value : 0;
@@ -1159,18 +1159,18 @@ export class BattleScreen {
       ctx.drawImage(spriteCanvas(cur, 'w', eng, tierAt(cur)), LX + LW - 38, 128, 32, 44);
       ctx.globalAlpha = 1;
     }
-    // 수 · 무르기
+    // 수 · 바꾸기
     panel(ctx, LX, 180, LW, 28);
     ui.region('pips:moves', LX, 180, LW, 13, { tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수 — 다 쓰면 대국이 끝난다') });
-    ui.region('pips:discards', LX, 193, LW, 15, { tip: () => tipLines('무르기', '손을 골라 버리고 주머니에서 새로 쥘 수 있는 횟수') });
+    ui.region('pips:discards', LX, 193, LW, 15, { tip: () => tipLines('바꾸기', '손을 골라 버리고 주머니에서 새로 쥘 수 있는 횟수') });
     text(ctx, '수', LX + 6, 181, PAL.dim);
     // 구슬은 두 이름표 중 긴 것 뒤에서(영어 「Redraw」가 붉은 구슬과 붙지 않게), 칸이 모자라면 간격을 줄인다
-    const pipX = Math.max(52, Math.max(measure('수'), measure('무르기')) + 12);
+    const pipX = Math.max(52, Math.max(measure('수'), measure('바꾸기')) + 12);
     const pipN = Math.max(v.moves, v.discards, 1);
     const pipStep = Math.min(14, Math.floor((LW - 4 - pipX) / pipN));
     const pipW = Math.max(4, pipStep - 4);
     for (let i = 0; i < v.moves; i++) rect(ctx, LX + pipX + i * pipStep, 184, pipW, 7, i < v.movesLeft ? PAL.gold : PAL.frame);
-    text(ctx, '무르기', LX + 6, 194, PAL.dim);
+    text(ctx, '바꾸기', LX + 6, 194, PAL.dim);
     for (let i = 0; i < v.discards; i++) rect(ctx, LX + pipX + i * pipStep, 197, pipW, 7, i < v.discardsLeft ? PAL.red : PAL.frame);
     if (run) {
       panel(ctx, LX, 212, LW, 22);
@@ -1200,7 +1200,7 @@ export class BattleScreen {
     this.drawTactics(ctx, ui);
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    button(ctx, ui, 'btn:discard', RX + RW - 62, 203, 62, 16, '무르기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
+    button(ctx, ui, 'btn:discard', RX + RW - 62, 203, 62, 16, '바꾸기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
     const n = Math.max(1, v.hand.length);
     const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
     const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;
@@ -1208,7 +1208,7 @@ export class BattleScreen {
       const x = RX + i * (w + Math.min(gap, 4)), y = 224;
       const id = `hand:${i}`;
       const selected = this.sel.includes(i);
-      ui.region(id, x, y - 4, w, 40, { onClick: () => this.toggle(i), tip: p.eng || PIECE_MOVE[p.t] ? () => pieceTip(p) : null });
+      ui.region(id, x, y - 4, w, 40, { onClick: () => this.toggle(i), tip: p.eng || FAIRY_MOVE(p.t) ? () => pieceTip(p) : null });
       const hov = ui.isHover(id);
       const usable = live && live.status === 'play' && !this.busy;
       // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)

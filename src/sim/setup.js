@@ -64,7 +64,7 @@ export function kingDefended(board, ksq, opts = {}, guards = 2) {
   return at.length >= guards && at.some((s) => board[s].t === 'P');
 }
 
-// 판 위 사물(깊이 F): 2관부터 드물게 보석 하나 · 벽 한두 칸(연쇄를 막는 벽은 포 · 메뚜기의 받침이 된다)
+// 판 위 사물(깊이 F): 2관부터 드물게 보석 하나 · 벽 한두 칸(배수를 막는 벽은 포 · 메뚜기의 받침이 된다)
 export const THINGS = { from: 2, gem: 0.3, wall: 0.25 };
 function placeTraits(b, rng, board) {
   const p = b.rules.traits === false ? 0 : traitChance(b.ante ?? 1);

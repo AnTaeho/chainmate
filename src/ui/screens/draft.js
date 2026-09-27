@@ -5,7 +5,7 @@ import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
-import { FAMILY_BY_ID } from '../../data/families.js';
+import { FAMILY_BY_ID, setName } from '../../data/families.js';
 import { familyGlyph } from '../parts-depth.js';
 import { cornerTicks } from '../parts.js';
 import { topBar } from './common.js';
@@ -75,7 +75,7 @@ export class DraftScreen {
       j.families.forEach((f, k) => {
         const fy = yy + CH - 22 - (j.families.length - 1 - k) * 13;
         familyGlyph(ctx, f, x + 10, fy + 4);
-        text(ctx, FAMILY_BY_ID[f].name, x + 19, fy, FAMILY_BY_ID[f].col === '#efbd55' ? PAL.goldDk : PAL.cardDim);
+        text(ctx, setName(f), x + 19, fy, FAMILY_BY_ID[f].col === '#efbd55' ? PAL.goldDk : PAL.cardDim);
       });
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, yy, CW, CH, PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
