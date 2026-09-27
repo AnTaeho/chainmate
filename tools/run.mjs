@@ -14,6 +14,8 @@ import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { MASTER_BY_ID } from '../src/data/masters.js';
 import { LEGENDS, LEGEND_BY_ID } from '../src/data/legends.js';
 import { EDITIONS } from '../src/data/editions.js';
+import { familyCounts, FAMILIES } from '../src/data/families.js';
+import { PIECES, FAIRIES } from '../src/data/pieces.js';
 
 function parseArgs(argv) {
   const a = { runs: 200, policy: 'smart', seed: 1, workers: 10, k: SMART.K };
@@ -45,6 +47,8 @@ function one(seed, policy, opening = undefined, dan = 0, give = null) {
     fragments: run.fragments, legends: run.legends, legendAt, editions, seen,
     deck: run.deck.map((p) => p.t + (p.eng ? ':' + p.eng.id : '')).sort().join(' '),
     charts: Object.values(run.charts).reduce((a, x) => a + x, 0), deckSize: run.deck.length,
+    fam: familyCounts(run), fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],
+    best: Math.max(0, ...run.log.filter((x) => !x.skipped).map((x) => x.best || 0)),
     ms: performance.now() - t0,
   };
 }
@@ -59,6 +63,7 @@ if (!isMainThread) {
   if (tune && tune.golden != null) GOLDEN.chance = tune.golden;
   if (tune && tune.calling != null) GOLDEN.calling = tune.calling;
   SMART.K = k;
+  if (policy === 'nofam') SMART.famAware = false;
   if (b) b.forEach((x, i) => { B[i] = x; });
   if (shop) Object.assign(SHOP, shop);
   const out = [];
@@ -81,6 +86,7 @@ function report(R, args, wall) {
   const n = R.length;
   const pc = (x) => (Number.isFinite(x) ? (100 * x).toFixed(1) + '%' : '-');
   const f = (x, d = 0) => (Number.isFinite(x) ? x.toFixed(d) : '-');
+  const f2 = (x) => f(x, 2);
   const dw = (x) => [...String(x)].reduce((a, ch) => a + (ch.charCodeAt(0) > 0x1100 ? 2 : 1), 0);
   const table = (cols, rows) => {
     const w = cols.map((c, i) => Math.max(dw(c), ...rows.map((r) => dw(r[i]))));
@@ -172,6 +178,20 @@ function report(R, args, wall) {
   const wonB = battles.filter((b) => b.won);
   const ov = (t) => wonB.filter((b) => b.overflow === t).length;
   console.log(`넘친 목표(이긴 대국 ${wonB.length}): ×1 ${pc(ov(1) / wonB.length)} · ×2 ${pc(ov(2) / wonB.length)} · ×5 ${pc(ov(5) / wonB.length)} · ×10 ${pc(ov(10) / wonB.length)} · 목표 밑(외통) ${pc(ov(0) / wonB.length)}`);
+
+  // ── 깊이: 가족 · 이형
+  const famRows = FAMILIES.map((f) => {
+    const dom = R.filter((r) => { const top = Math.max(...Object.values(r.fam)); return top >= 2 && r.fam[f.id] === top; });
+    const on = R.filter((r) => r.fam[f.id] >= 2);
+    return [f.name, String(dom.length), pc(dom.filter((r) => r.won).length / dom.length), String(on.length), pc(on.filter((r) => r.won).length / on.length), f2(R.reduce((a, r) => a + r.fam[f.id], 0) / n)];
+  });
+  const noFam = R.filter((r) => Math.max(...Object.values(r.fam)) < 2);
+  console.log(`\n가족(판 끝): 가장 많이 모은 가족별 판 승률 · 문턱 2 이상 판 승률 — 가족 없음(모두 2 미만) ${noFam.length}판 승률 ${pc(noFam.filter((r) => r.won).length / noFam.length)}`);
+  table(['가족', '으뜸 판', '승률', '2 이상 판', '승률', '평균 수'], famRows);
+  const fr = FAIRIES.map((t) => { const has = R.filter((r) => r.fairies.includes(t)); return [PIECES[t].name, pc(has.length / n), pc(has.filter((r) => r.won).length / has.length)]; });
+  const anyF = R.filter((r) => r.fairies.length);
+  console.log(`이형(판 끝 주머니): 하나라도 가진 판 ${pc(anyF.length / n)} 승률 ${pc(anyF.filter((r) => r.won).length / anyF.length)} · 없는 판 승률 ${pc(R.filter((r) => !r.fairies.length && r.won).length / (n - anyF.length))} · 판 최고 한 수 p50 이형 ${pctile(anyF.map((r) => r.best), 0.5)} / 없음 ${pctile(R.filter((r) => !r.fairies.length).map((r) => r.best), 0.5)}`);
+  table(['이형', '가진 판', '그 판 승률'], fr);
 
   // 격언
   if (args.policy !== 'none') {

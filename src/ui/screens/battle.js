@@ -9,6 +9,8 @@ import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../s
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES } from '../../data/pieces.js';
+import { FAMILY_BY_ID } from '../../data/families.js';
+import { familyStrip } from '../parts-depth.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
@@ -391,6 +393,10 @@ export class BattleScreen {
         case 'grade': add(0.2, { begin: () => this.gradeStamp(e) }); break;
         case 'forced': add(0.1, { begin: () => { if (v.chain) v.chain.forced = e.attackers.slice(); this.snd('forced'); } }); break;
         case 'cutIgnored': add(0.2, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('넘겼다', PAL.silver); } }); break;
+        // 가족(깊이 B): 도약 뒤 노림 무시 · 직선 꿰뚫기 · 변신 한 번 더
+        case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, FAMILY_BY_ID.leap.col, 10); this.word('뛰어넘었다', FAMILY_BY_ID.leap.col); } }); break;
+        case 'pierce': add(0.12, { begin: () => { const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b'); this.flash(e.sq, FAMILY_BY_ID.line.col); this.word('꿰뚫었다', FAMILY_BY_ID.line.col); this.snd('capture', 2); } }); break;
+        case 'union': add(0.3, { begin: () => { this.sparkle(e.sq, FAMILY_BY_ID.change.col, 16); this.word('모든 모습으로', FAMILY_BY_ID.change.col, 1.2, 1); this.snd('transform'); this.hitstop(0.15); } }); break;
         case 'cut':
           add(0.15, { begin: () => { v.cut = { sq: e.sq, attackers: e.attackers, p: 0 }; if (v.chain) v.chain.cut = true; this.snd('cut'); this.hitstop(0.12); this.shake(2, 0.15); } });
           add(0.3, { tick: (p) => { v.cut.p = p; } });
@@ -1032,7 +1038,8 @@ export class BattleScreen {
       text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
       fragmentStrip(ctx, ui, run, RX + RW - 18, 8, { align: 'right' });
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
-      maximColumn(ctx, ui, run, RX, 22, RW, 180, { offUids: off });
+      maximColumn(ctx, ui, run, RX, 22, RW, 164, { offUids: off });
+      familyStrip(ctx, ui, run, RX, 188, RW, { time: this.app.time, max: 3 });
     }
     this.drawPreviewPanel(ctx);
     // 손

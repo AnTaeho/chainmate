@@ -15,6 +15,7 @@ import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { stepBattle } from './bot.mjs';
 import { bestMove } from '../src/sim/solver.js';
+import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
 
 export const SMART = {
   K: 8,            // 짜임 하나를 재는 대국판 수
@@ -26,6 +27,9 @@ export const SMART = {
   finalWeight: 0.5, // 대가 판에서 잰 값의 몫
   // 상금 격언의 값(밤샘 D-2): 한 수 점수로는 보이지 않으니 대국당 기대 상금 × 남은 대국 × 1원의 몫(minGainPerCoin)의 절반으로 친다
   moneyMaxims: { vault: 4, mate_hunter: 0.25 },
+  // 가족(깊이 B): 가장 많이 모은 가족 쪽으로 한 걸음 가는 물건에 덤(득 비율). famAware false = 가족을 모르는 봇(nofam)
+  famAware: true,
+  famStep: 0.08,
 };
 const battlesLeft = (run) => Math.max(0, (8 - run.ante) * 3 + (2 - run.blind));
 export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5;
@@ -67,12 +71,13 @@ export const EVALS = { n: 0 };
 // 네 수를 끝까지 두는 것보다 6배쯤 싸고, 짜임끼리 비교하는 데는 충분하다.
 export function evalBuild(run, build, seeds, ante, master = null) {
   EVALS.n++;
+  const mods = battleMods(build, master).filter((m) => SMART.famAware || !String(m.id).startsWith('family:'));
   let total = 0;
   seeds.forEach((seed, k) => {
     const b = createBattle({
       seed, ante, kind: 'practice', target: null, golden: false,
       bag: build.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng })),
-      rules: run.rules, mods: battleMods(build, master),
+      rules: run.rules, mods,
     });
     const m = Math.min(k % b.rules.moves, b.rules.moves - 1);
     for (let i = 0; i < m && b.hand.length; i++) {
@@ -92,7 +97,18 @@ function evalSeeds(run, K) {
   return Array.from({ length: K }, () => Math.floor(next(r) * 2 ** 31));
 }
 
-const RANK = { P: 0, N: 1, B: 1, R: 2, Q: 3 };
+// 가장 많이 모은 가족(둘 이상일 때)을 한 걸음 채우면 덤. 문턱을 넘는 걸음은 그려 보기에 이미 보이니 문턱 앞 걸음만
+export function famBonus(before, after) {
+  if (!SMART.famAware) return 0;
+  const a = familyCounts(before), b = familyCounts(after);
+  const top = Math.max(...Object.values(a));
+  if (top < 1) return 0;
+  let bonus = 0;
+  for (const f of FAMILIES) if (a[f.id] === top && b[f.id] > a[f.id] && levelOf(b[f.id]) === levelOf(a[f.id])) bonus += SMART.famStep;
+  return bonus;
+}
+
+const RANK = { P: 0, N: 1, B: 1, R: 2, Q: 3, L: 1, S: 1, G: 2, O: 2, H: 2, A: 2, W: 2, C: 3, Z: 4 };
 // 두루마리(각인)를 붙일 가장 좋은 기물: 종류 · 각인이 같은 기물은 한 번만 잰다
 function bestEngraveTarget(run, build, engId, ctx) {
   let best = null;
@@ -230,7 +246,7 @@ function smartShop(run, hunt = false) {
       if (!v) return;
       const refund = v.sell != null ? sellPrice(run.maxims[v.sell]) : 0;
       const econ = it.kind === 'maxim' ? moneyGain(run, it.id) : 0;
-      consider(it.price - refund, ctx.score(v.build) * (1 + econ), { type: 'buy', slot }, { sell: v.sell });
+      consider(it.price - refund, ctx.score(v.build) * (1 + econ + famBonus(build, v.build)), { type: 'buy', slot }, { sell: v.sell });
     });
     // 가장 좋은 것: 득/값
     const pickBest = () => {
@@ -282,7 +298,7 @@ function smartShop(run, hunt = false) {
       run.pack.options.forEach((o, index) => {
         const v = variantFor(run, build, o, ctx);
         if (!v) return;
-        const s = ctx.score(v.build);
+        const s = ctx.score(v.build) * (1 + famBonus(build, v.build));
         if (!pick || s > pick.s) pick = { s, cmd: { type: 'pick', index, target: v.target } };
       });
       const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
@@ -352,7 +368,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'shop') {
       noteDisplay(run);
       const before = run.maxims.map((m) => m.uid);
-      if (policy === 'smart' || policy === 'hunt') smartShop(run, policy === 'hunt');
+      if (policy === 'smart' || policy === 'hunt' || policy === 'nofam') smartShop(run, policy === 'hunt');
       else if (policy === 'random') randomShop(run, r);
       else act(run, { type: 'leave' });
       trackBuys(before);

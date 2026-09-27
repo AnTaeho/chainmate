@@ -21,6 +21,7 @@ import { MASTERS, FINAL_MASTER } from '../data/masters.js';
 import { OPENINGS, DEFAULT_OPENING } from '../data/openings.js';
 import { EDITION_BY_ID, editionSpec, editionSlots } from '../data/editions.js';
 import { LEGENDS, LEGEND_BY_ID } from '../data/legends.js';
+import { familyCounts, familyMods } from '../data/families.js';
 
 // ── 수치
 // 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. tools/run.mjs(smart 봇)로 맞춤:
@@ -160,6 +161,8 @@ export function battleMods(build, master = null) {
   const mods = [];
   if (master) mods.push({ id: master });
   mods.push({ id: 'charts', data: { table: CHART_TABLE, levels: { ...build.charts } } });
+  // 가족(깊이 B): 문턱을 넘은 가족마다 하나
+  mods.push(...familyMods(familyCounts(build)));
   for (const m of build.maxims) {
     mods.push({ id: m.id, uid: m.uid, data: clone(m.data || {}) });
     const ed = editionSpec(m);

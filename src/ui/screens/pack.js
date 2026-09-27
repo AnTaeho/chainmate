@@ -10,6 +10,7 @@ import { itemCard, itemTip, maximColumn, envelope } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { topBar } from './common.js';
 import { bagRow } from './shop.js';
+import { familyCounts } from '../../data/families.js';
 
 // 봉투가 열리는 시간, 카드 i가 뒤집히기 시작하는 때
 const OPEN = 0.4;
@@ -40,6 +41,7 @@ export class PackScreen {
   }
   finish(cmd) {
     let ev;
+    this.app.shopFamBefore = familyCounts(this.run);
     try { ev = this.app.cmd(cmd); } catch { this.app.toast('할 수 없다', PAL.red); return; }
     this.app.sfx('pick');
     const legend = ev.find((e) => e.type === 'legend');

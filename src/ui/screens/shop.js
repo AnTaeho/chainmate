@@ -9,6 +9,8 @@ import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
 import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
+import { familyCounts, FAMILY_BY_ID } from '../../data/families.js';
+import { familyStrip, familyRises } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
 
@@ -76,6 +78,15 @@ export class ShopScreen {
     const fx = app.shopFx || [];
     app.shopFx = null;
     for (const e of fx) this.fx(e);
+    if (app.shopFamBefore) { this.noteFamilies(app.shopFamBefore); app.shopFamBefore = null; }
+  }
+  // 가족 문턱을 막 넘었으면 그 칩이 빛나며 커지고 한 번 울린다
+  noteFamilies(before) {
+    const rises = familyRises(before, familyCounts(this.run));
+    if (!rises.length) return;
+    this.famFx = this.famFx || {};
+    for (const id of rises) { this.famFx[id] = this.app.time; this.app.toast(`${FAMILY_BY_ID[id].name} ${familyCounts(this.run)[id]}`, FAMILY_BY_ID[id].col); }
+    this.app.sfx('fanfare');
   }
   // 기보로 한 단계 자라면 빛 기둥, 각인을 새기면 반짝
   fx(e) {
@@ -86,7 +97,9 @@ export class ShopScreen {
 
   act(cmd, sound = 'click') {
     let ev;
+    const before = familyCounts(this.run);
     try { ev = this.app.cmd(cmd); } catch (e) { this.app.toast('할 수 없다', PAL.red); return null; }
+    this.noteFamilies(before);
     this.app.sfx(sound);
     for (const e of ev) {
       if (e.type === 'fragment') {
@@ -141,6 +154,8 @@ export class ShopScreen {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : null,
       flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { form: this.grow.form, p: gp } : null,
     });
+    // 가족 띠(주머니 아래)
+    familyStrip(ctx, ui, run, 12, 254, 330, { time: app.time, fx: this.famFx, max: 6 });
     // 오른쪽: 격언
     text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
     fragmentStrip(ctx, ui, run, RX + RW, 32, { align: 'right' });

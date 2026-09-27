@@ -2,6 +2,9 @@
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, frame, dots, sprite, measure, line } from '../render/gfx.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
+import { maximFamilies, FAMILY_BY_ID } from '../data/families.js';
+import { PIECES } from '../data/pieces.js';
+import { familyGlyphs } from './parts-depth.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
@@ -25,6 +28,8 @@ export function maximTip(m) {
     const e = EDITION_BY_ID[m.edition];
     extra.push([`${e.name} · ${e.text}`, PAL.goldDk]);
   }
+  const fams = maximFamilies(m.id);
+  if (fams.length) extra.push([fams.map((f) => FAMILY_BY_ID[f].name).join(' · '), FAMILY_BY_ID[fams[0]].col === '#efbd55' ? PAL.goldDk : PAL.cardDim]);
   if (info.rarity === 'legendary' && info.story) for (const l of wrap(`${info.year ? info.year + ' · ' : ''}${info.story}`, 140)) extra.push([l, PAL.goldDk]);
   return tipLines(info.name, info.text, 150, extra);
 }
@@ -277,6 +282,10 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
   if (w < 30 || back) return;
   text(ctx, ITEM_KIND[it.kind], x + w / 2, y + 4, PAL.cardDim, { align: 'center' });
   const cx = x + Math.floor(w / 2);
+  if (it.kind === 'maxim' || (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy)) {
+    const fams = it.kind === 'maxim' ? maximFamilies(it.id) : PIECES[it.t].families;
+    familyGlyphs(ctx, fams, x + w - 8 * fams.length - 1, y + 4);
+  }
   if (it.kind === 'maxim') {
     const info = maximInfo(it.id);
     rect(ctx, x + 6, y + 19, w - 12, 2, RARITY[info.rarity]);

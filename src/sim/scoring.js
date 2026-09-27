@@ -37,13 +37,15 @@
 import { attackers } from './board.js';
 import { chartForm } from '../data/pieces.js';
 
-export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onForced', 'onCut', 'onMate', 'onChainStop', 'onChainEnd', 'onBoard'];
+export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onThreat', 'onForced', 'onCut', 'onMate', 'onBlocked', 'onChainStop', 'onChainEnd', 'onBoard'];
 // ctx가 「기본 결말을 물린다」를 돌려줄 수 있는 훅: onCut(cancelCut) · onMate(keepGoing) · onChainStop(redrop)
-const CANCEL_HOOKS = new Set(['onCut', 'onMate', 'onChainStop']);
-export const KINDS = ['master', 'chart', 'engraving', 'maxim'];
-const DEFAULT_ORDER = ['master', 'chart', 'engraving', 'maxim'];
+//   · onThreat(ignoreThreat — 먹은 칸의 노림을 이번 한 번 없는 것으로, 깊이 B 「도약」) · onBlocked(keepGoing — 막혔을 때 한 번 더, 「변신」)
+const CANCEL_HOOKS = new Set(['onCut', 'onMate', 'onChainStop', 'onThreat', 'onBlocked']);
+// 종류: 명인 · 기보 · 가족(깊이 B) · 정석(E) · 각인 · 혼(C) · 격언
+export const KINDS = ['master', 'chart', 'family', 'joseki', 'engraving', 'soul', 'maxim'];
+const DEFAULT_ORDER = ['master', 'chart', 'family', 'joseki', 'engraving', 'soul', 'maxim'];
 export const KIND_ORDER = {
-  onChainEnd: ['chart', 'engraving', 'maxim', 'master'],
+  onChainEnd: ['chart', 'family', 'joseki', 'engraving', 'soul', 'maxim', 'master'],
 };
 
 const REGISTRY = new Map();
@@ -61,11 +63,12 @@ const NONE = [];
 function ordered(t, hook) {
   const mods = t.mods || NONE;
   const eng = t.chain && t.chain.engraving;
+  const soul = t.chain && t.chain.soul;
   let withKind = null;
   const order = KIND_ORDER[hook] || DEFAULT_ORDER;
-  const n = mods.length + (eng ? 1 : 0);
+  const n = mods.length + (eng ? 1 : 0) + (soul ? 1 : 0);
   for (let i = 0; i < n; i++) {
-    const spec = i < mods.length ? mods[i] : eng;
+    const spec = i < mods.length ? mods[i] : i === mods.length && eng ? eng : soul;
     if (spec.off) continue;
     const def = REGISTRY.get(spec.id);
     if (!def) throw new Error(`unknown modifier ${spec.id}`);
@@ -97,6 +100,7 @@ class Ctx {
   cancelCut() { this._cancel = true; }
   keepGoing() { this._cancel = true; }
   redrop() { this._cancel = true; }
+  ignoreThreat() { this._cancel = true; }
   emit(ev) { this._events.push({ ...ev, src: this.spec.id }); }
 }
 

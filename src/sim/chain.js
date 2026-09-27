@@ -55,6 +55,8 @@ export function chainCaptures(t) {
   const c = t.chain;
   if (!c || c.done || c.awaiting) return [];
   let list = captures(t.board, c.form, c.sq, boardOpts(t));
+  // 「변신」 문턱 6: 지나온 모습 전부의 행마로(한 번)
+  if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, boardOpts(t))) if (!list.includes(s)) list.push(s);
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
   if (list.length && ((t.mods && t.mods.length) || c.engraving)) {
     list = list.filter((s) => runHook(t, 'allowCapture', { from: c.sq, to: s, piece: t.board[s].t, form: c.form }));
@@ -72,6 +74,7 @@ export function chainCapture(t, sq) {
   const target = board[sq];
   const formBefore = c.form;
   const wasForced = !!c.forced;
+  c.flags.union = false;
 
   // 궁수 모습은 움직이지 않고 쏜다: 먹힌 칸만 비고 내 기물은 제자리(응수도 제자리 기준)
   const stay = formBefore === 'S';
@@ -176,8 +179,12 @@ function refill(t, events) {
 function resolveReply(t, events) {
   const c = t.chain;
   const opts = boardOpts(t);
-  const threats = attackers(t.board, c.sq, opts);
+  let threats = attackers(t.board, c.sq, opts);
   c.forced = null;
+  if (threats.length && runHook(t, 'onThreat', { sq: c.sq, attackers: threats.slice() }, events)) {
+    events.push({ type: 'threatIgnored', sq: c.sq, attackers: threats.slice() });
+    threats = [];
+  }
   if (threats.length) {
     c.forced = threats;
     // 명인 「철벽」(rules.noReply): 응수가 없다 — 노려진 칸을 먹으면 곧바로 끊긴다
@@ -202,6 +209,10 @@ function resolveReply(t, events) {
 // 사슬이 멈춘다(끊김 · 막힘). 한 번은 onChainStop이 redrop으로 떨굴 칸을 다시 고르게 할 수 있다.
 function stop(t, reason, events) {
   const c = t.chain;
+  if (reason === 'blocked' && runHook(t, 'onBlocked', { reason }, events) && chainCaptures(t).length) {
+    events.push({ type: 'union', forms: c.forms.slice(), sq: c.sq });
+    return;
+  }
   if (!c.redrops && runHook(t, 'onChainStop', { reason }, events)) {
     c.redrops++;
     c.forced = null;

@@ -480,6 +480,48 @@ await shot('28-tiers');
 await page.reload();
 await page.waitForFunction(() => window.__app && window.__app.screen);
 
+// 깊이: 가족 띠 · 이형 사슬(대국) · 상점 카드 문양
+await ev(() => {
+  const a = window.__app;
+  localStorage.removeItem('chainmate.run.v1');
+  a.newRun({ seed: 21 });
+  const r = a.run;
+  r.ante = 5;
+  const add = (id) => r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: null, paid: 4 });
+  add('chivalry'); add('light_step'); add('first_move'); add('diagonal'); add('pawn_march');
+  r.deck.push({ id: 90, t: 'H', eng: null }, { id: 91, t: 'A', eng: null }, { id: 92, t: 'O', eng: null }, { id: 93, t: 'S', eng: null });
+  a.cmd({ type: 'play' });
+  const b = r.battle;
+  b.hand = [{ id: 90, t: 'H', eng: null }, { id: 91, t: 'A', eng: null }, { id: 92, t: 'O', eng: null }, { id: 93, t: 'S', eng: null }];
+  a.go('battle', { events: [] });
+});
+await settle(2400);
+const plan6 = await ev(async () => {
+  const { bestMove } = await import('/src/sim/solver.js');
+  const d = bestMove(window.__app.run.battle, { preferMate: 'avoid' });
+  return d && { hand: d.handIndex, sq: d.sq, line: d.line };
+});
+if (plan6) {
+  await clickId(`hand:${plan6.hand}`);
+  await clickId(`sq:${plan6.sq}`);
+  await idle();
+  for (let i = 0; i < Math.min(2, plan6.line.length - 1); i++) { if (typeof plan6.line[i] === 'number') { await clickId(`sq:${plan6.line[i]}`); await idle(); } }
+}
+await hoverId('fam:leap');
+await settle(150);
+await shot('29-families-battle');
+await ev(() => {
+  const a = window.__app, r = a.run;
+  r.money = 40; r.phase = 'shop'; r.battle = null;
+  r.shop = { rng: null, display: [{ kind: 'maxim', id: 'close_call', edition: null, price: 3 }, { kind: 'piece', t: 'L', price: 4 }], packs: [{ kind: 'piece', price: 4 }, { kind: 'chart', price: 4 }], rerolls: 0, promoted: false, removed: false };
+  a.go('shop');
+  a.screen.famFx = { leap: a.time - 0.3 };
+});
+await settle(200);
+await shot('29-families-shop');
+await page.reload();
+await page.waitForFunction(() => window.__app && window.__app.screen);
+
 // 영어 화면 셋(대국 · 상점 · 판 준비)
 await ev(() => { const a = window.__app; a.settings.lang = 'en'; a.saveSettings(); });
 await page.reload();
