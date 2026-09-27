@@ -6,3 +6,4 @@
 - 설명 자리 한 곳(`placement.js`) · 판 틀(`frame.js`, 상점 · 꾸러미 · 정석 · 관 선택이 대국의 틀) · 판 밖 틀(머리줄 · 단추 줄 · 도감 쪽) · `5ffd9b1`
 - 연기 시험 자리 규칙 검사 · `7ef833b`
 - 좁은 칸 넘침(fitText · 조각은 상금 칸 · 꾸러미 칸 값 · 두루마리 좁은 칸) · 카드 바탕 cardBase · (이 다음 커밋들) · 다음: 모든 화면 after 스크린샷 검수 → 보고서
+- 모든 화면 after 스크린샷(`after-*`, 짝 343) · 규약 · CLAUDE.md 한 줄 · 보고서 `docs/reports/layout.md` · 원문 `docs/reports/raw/layout-*` · (이 커밋) · 끝

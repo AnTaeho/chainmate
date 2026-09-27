@@ -1,0 +1,159 @@
+가리킨 것의 종류마다: 고치기 전 설명 자리(가리킨 것에서 본 첫 네모의 상대 위치 · 폭)의 가짓수 → 고친 뒤 규칙
+(판 틀의 「왼쪽 칸」은 x 6 · 폭 116 한 자리, 윗변은 가리킨 것의 윗변 — 화면 끝에서 당긴 것 · 왼쪽 칸 안의 것은 그 아래 · 위)
+
+== 한국어
+battle                   bag        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle                   box        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle                   fam        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle                   goal       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle                   hand       전 1가지 (4장) → 뒤 왼쪽 칸 4장
+battle                   joseki     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle                   pips       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+battle                   sq         전 2가지 (10장) → 뒤 왼쪽 칸 10장
+battle-chain             bag        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-chain             box        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle-chain             fam        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle-chain             goal       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-chain             hand       전 1가지 (3장) → 뒤 왼쪽 칸 3장
+battle-chain             joseki     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-chain             pips       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+battle-chain             sq         전 2가지 (10장) → 뒤 왼쪽 칸 10장
+battle-fog               bag        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-fog               box        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle-fog               fam        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle-fog               goal       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-fog               hand       전 1가지 (4장) → 뒤 왼쪽 칸 4장
+battle-fog               joseki     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-fog               master     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-fog               pips       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+battle-full              bag        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-full              box        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle-full              fam        전 2가지 (2장) → 뒤 왼쪽 칸 4장
+battle-full              frag       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+battle-full              goal       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-full              hand       전 2가지 (4장) → 뒤 왼쪽 칸 4장
+battle-full              joseki     전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle-full              maxim      전 1가지 (5장) → 뒤 왼쪽 칸 5장
+battle-full              pips       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+battle-full              sq         전 3가지 (10장) → 뒤 왼쪽 칸 10장
+battle-full              tactic     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-master            bag        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-master            box        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle-master            fam        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+battle-master            goal       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-master            hand       전 1가지 (4장) → 뒤 왼쪽 칸 4장
+battle-master            joseki     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-master            master     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+battle-master            pips       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+battle-master            sq         전 2가지 (10장) → 뒤 왼쪽 칸 10장
+chest                    chest_cell 전 2가지 (2장) → 뒤 바로 아래 · 위 2장
+codex                    codex      전 1가지 (3장) → 뒤 바로 아래 · 위 3장
+codex                    codex_first 전 1가지 (1장) → 뒤 바로 아래 · 위 1장
+codex-pieces             codex      전 1가지 (4장) → 뒤 바로 아래 · 위 4장
+draft                    draft      전 3가지 (3장) → 뒤 왼쪽 칸 3장
+draft-ante3              draft      전 3가지 (3장) → 뒤 왼쪽 칸 3장
+draft-ante3              fam        전 0가지 (0장) → 뒤 왼쪽 칸 1장
+draft-ante3              joseki     전 0가지 (0장) → 뒤 왼쪽 칸 1장
+lesson                   bag        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+lesson                   box        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+lesson                   goal       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+lesson                   hand       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+lesson                   pips       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+lesson                   sq         전 2가지 (4장) → 뒤 왼쪽 칸 4장
+pack-chart               fam        전 0가지 (0장) → 뒤 왼쪽 칸 6장
+pack-chart               frag       전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-chart               joseki     전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-engraving           fam        전 0가지 (0장) → 뒤 왼쪽 칸 6장
+pack-engraving           frag       전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-engraving           joseki     전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-engraving           pack_pick  전 1가지 (1장) → 뒤 왼쪽 칸 1장
+pack-engraving-target    deck       전 2가지 (4장) → 뒤 왼쪽 칸 4장
+pack-engraving-target    fam        전 0가지 (0장) → 뒤 왼쪽 칸 6장
+pack-engraving-target    frag       전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-engraving-target    joseki     전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-engraving-target    pack_pick  전 1가지 (1장) → 뒤 (말풍선 뺌)
+pack-golden              fam        전 0가지 (0장) → 뒤 왼쪽 칸 6장
+pack-golden              frag       전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-golden              joseki     전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-golden              maxim      전 1가지 (5장) → 뒤 왼쪽 칸 5장
+pack-golden              pack_pick  전 3가지 (3장) → 뒤 왼쪽 칸 3장
+pack-piece               fam        전 0가지 (0장) → 뒤 왼쪽 칸 6장
+pack-piece               frag       전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-piece               joseki     전 0가지 (0장) → 뒤 왼쪽 칸 2장
+pack-piece               pack_pick  전 2가지 (3장) → 뒤 왼쪽 칸 3장
+select                   fam        전 0가지 (0장) → 뒤 왼쪽 칸 1장
+select                   joseki     전 0가지 (0장) → 뒤 왼쪽 칸 1장
+select                   select     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+select-master            fam        전 0가지 (0장) → 뒤 왼쪽 칸 2장
+select-master            joseki     전 0가지 (0장) → 뒤 왼쪽 칸 1장
+select-master            select     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+setup                    setup_op   전 1가지 (1장) → 뒤 (말풍선 뺌)
+setup                    setup_op_rook 전 1가지 (1장) → 뒤 (말풍선 뺌)
+shop                     cons       전 4가지 (4장) → 뒤 왼쪽 칸 4장
+shop                     deck       전 2가지 (4장) → 뒤 왼쪽 칸 4장
+shop                     fam        전 5가지 (5장) → 뒤 왼쪽 칸 6장
+shop                     frag       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+shop                     joseki     전 1가지 (2장) → 뒤 왼쪽 칸 2장
+shop                     maxim      전 1가지 (5장) → 뒤 왼쪽 칸 5장
+shop                     shop_buy   전 2가지 (2장) → 뒤 왼쪽 칸 2장
+shop-few                 deck       전 1가지 (4장) → 뒤 왼쪽 칸 4장
+shop-few                 fam        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+shop-few                 joseki     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+shop-few                 shop_buy   전 2가지 (2장) → 뒤 왼쪽 칸 2장
+shop-scroll-target       cons       전 4가지 (4장) → 뒤 왼쪽 칸 4장
+shop-scroll-target       deck       전 2가지 (4장) → 뒤 왼쪽 칸 4장
+shop-scroll-target       fam        전 5가지 (5장) → 뒤 왼쪽 칸 6장
+shop-scroll-target       frag       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+shop-scroll-target       joseki     전 1가지 (2장) → 뒤 왼쪽 칸 2장
+shop-scroll-target       maxim      전 1가지 (5장) → 뒤 왼쪽 칸 5장
+shop-scroll-target       shop_buy   전 2가지 (2장) → 뒤 왼쪽 칸 2장
+shop-souls               cons       전 0가지 (0장) → 뒤 왼쪽 칸 4장
+shop-souls               deck       전 0가지 (0장) → 뒤 왼쪽 칸 4장
+shop-souls               fam        전 0가지 (0장) → 뒤 왼쪽 칸 6장
+shop-souls               frag       전 0가지 (0장) → 뒤 왼쪽 칸 2장
+shop-souls               joseki     전 0가지 (0장) → 뒤 왼쪽 칸 2장
+shop-souls               maxim      전 0가지 (0장) → 뒤 왼쪽 칸 5장
+shop-souls               shop_buy   전 0가지 (0장) → 뒤 왼쪽 칸 1장
+종류 112 · 고치기 전 자리가 둘 이상으로 갈린 종류 32 · 고친 뒤 규칙이 둘 이상인 종류 0
+
+== 영어
+en-battle                bag        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+en-battle                box        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+en-battle                fam        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+en-battle                goal       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+en-battle                hand       전 2가지 (4장) → 뒤 왼쪽 칸 4장
+en-battle                joseki     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+en-battle                pips       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+en-battle                sq         전 3가지 (10장) → 뒤 왼쪽 칸 10장
+en-battle-full           bag        전 1가지 (1장) → 뒤 왼쪽 칸 1장
+en-battle-full           box        전 2가지 (2장) → 뒤 왼쪽 칸 2장
+en-battle-full           fam        전 1가지 (1장) → 뒤 왼쪽 칸 2장
+en-battle-full           frag       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+en-battle-full           goal       전 1가지 (1장) → 뒤 왼쪽 칸 1장
+en-battle-full           hand       전 2가지 (4장) → 뒤 왼쪽 칸 4장
+en-battle-full           joseki     전 2가지 (2장) → 뒤 왼쪽 칸 2장
+en-battle-full           maxim      전 1가지 (5장) → 뒤 왼쪽 칸 5장
+en-battle-full           pips       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+en-battle-full           sq         전 3가지 (10장) → 뒤 왼쪽 칸 10장
+en-battle-full           tactic     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+en-draft                 draft      전 3가지 (3장) → 뒤 왼쪽 칸 3장
+en-pack-engraving        fam        전 0가지 (0장) → 뒤 왼쪽 칸 6장
+en-pack-engraving        frag       전 0가지 (0장) → 뒤 왼쪽 칸 2장
+en-pack-engraving        joseki     전 0가지 (0장) → 뒤 왼쪽 칸 2장
+en-pack-engraving        pack_pick  전 2가지 (2장) → 뒤 왼쪽 칸 2장
+en-pack-piece            fam        전 0가지 (0장) → 뒤 왼쪽 칸 6장
+en-pack-piece            frag       전 0가지 (0장) → 뒤 왼쪽 칸 2장
+en-pack-piece            joseki     전 0가지 (0장) → 뒤 왼쪽 칸 2장
+en-pack-piece            pack_pick  전 2가지 (3장) → 뒤 왼쪽 칸 3장
+en-select                fam        전 0가지 (0장) → 뒤 왼쪽 칸 1장
+en-select                joseki     전 0가지 (0장) → 뒤 왼쪽 칸 1장
+en-select                select     전 1가지 (1장) → 뒤 왼쪽 칸 1장
+en-shop                  cons       전 4가지 (4장) → 뒤 왼쪽 칸 4장
+en-shop                  deck       전 2가지 (4장) → 뒤 왼쪽 칸 4장
+en-shop                  fam        전 4가지 (4장) → 뒤 왼쪽 칸 6장
+en-shop                  frag       전 1가지 (2장) → 뒤 왼쪽 칸 2장
+en-shop                  joseki     전 1가지 (2장) → 뒤 왼쪽 칸 2장
+en-shop                  maxim      전 1가지 (5장) → 뒤 왼쪽 칸 5장
+en-shop                  shop_buy   전 2가지 (2장) → 뒤 왼쪽 칸 2장
+종류 38 · 고치기 전 자리가 둘 이상으로 갈린 종류 14 · 고친 뒤 규칙이 둘 이상인 종류 0
+
