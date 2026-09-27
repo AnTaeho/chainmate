@@ -277,7 +277,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (big || (h && h.noKeys)) return;
     if (tip || keys) {
       // 카드 글(keys) 다음에 말풍선 글. 말풍선 줄은 이어 붙여 줄바꿈에 잘린 낱말(「뛰기 / 모음」)도 찾는다
-      const tipText = tip ? tip.lines.map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null;
+      const tipText = tip ? tip.lines.filter((l) => !(l && l.chips)).map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null;
       const ids = termsIn([...(keys || []), tipText]).filter((id) => !(tip && tip.term === id));
       const card = h.anchor || { x: h.x, y: h.y, w: h.w, h: h.h };
       // 덮지 않으면 좋은 것: 화면의 다른 카드 · 단추 · 칸(가리킨 것과 화면을 넓게 차지하는 판넬은 빼고)

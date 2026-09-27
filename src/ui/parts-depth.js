@@ -110,7 +110,7 @@ export function josekiBadges(ctx, ui, run, x, y) {
   (run.josekis || []).forEach((id, k) => {
     const j = JOSEKI_BY_ID[id];
     const bx = x + k * 12;
-    ui.region(`joseki:${id}`, bx, y, 11, 11, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? wrap(chipText(j.families), 140).map((l) => [l, PAL.cardDim]) : []) });
+    ui.region(`joseki:${id}`, bx, y, 11, 11, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [{ chips: j.families }] : []) });
     box(ctx, bx, y, 11, 11, '#132019', TIER_COL[j.tier]);
     if (j.families[0]) familyGlyph(ctx, j.families[0], bx + 3, y + 3, TIER_COL[j.tier]);
     else rect(ctx, bx + 4, y + 4, 3, 3, TIER_COL[j.tier]);

@@ -4,6 +4,7 @@ import { richText } from './glossary.js';
 import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
 import { box, rect, text, frame, measure } from '../render/gfx.js';
+import { familyChips, chipRows, chipText } from './parts-depth.js';
 
 export class UI {
   constructor() {
@@ -98,12 +99,14 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
 }
 
 // 말풍선: 제목 + 몇 줄. 화면 밖으로 나가지 않게. diagram { t, dir }이 있으면 제목 아래 왼쪽에 행마 그림, 글은 그 오른쪽.
+// 줄이 { chips: [시너지…] }면 카드와 같은 시너지 칩(「기사 +1」)으로 그린다
 export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk, w = 150, scale = 1, diagram = null } = {}) {
   if (scale > 1) return bigTooltip(ctx, lines, { title, titleCol, w });
   // 돌려주는 값: 그린 네모(낱말 상자가 피해 간다)
   const pad = 5;
   const dw = diagram ? DIAG_W : 0;
-  const h = pad * 2 + (title ? 14 : 0) + Math.max(lines.length * 13, diagram ? DIAG_SIZE + 1 : 0);
+  const rowsOf = (l) => (l && l.chips ? chipRows(l.chips, w - pad * 2 - dw) : 1);
+  const h = pad * 2 + (title ? 14 : 0) + Math.max(lines.reduce((n, l) => n + rowsOf(l), 0) * 13, diagram ? DIAG_SIZE + 1 : 0);
   let tx = Math.min(480 - w - 2, Math.max(2, x));
   let ty = y;
   if (ty + h > 268) ty = 268 - h;
@@ -114,6 +117,7 @@ export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk
   if (title) { text(ctx, title, tx + pad, yy, titleCol, { bold: true }); yy += 14; }
   if (diagram) moveDiagram(ctx, diagram.t, tx + pad, yy + 1, { dir: diagram.dir || 1 });
   for (const l of lines) {
+    if (l && l.chips) { familyChips(ctx, l.chips, tx + pad + dw, yy + 1, w - pad * 2 - dw); yy += rowsOf(l) * 13; continue; }
     if (Array.isArray(l)) text(ctx, l[0], tx + pad + dw, yy, l[1]);
     else richText(ctx, l, tx + pad + dw, yy, PAL.cardDim, { termCol: PAL.goldDk });
     yy += 13;
@@ -126,7 +130,7 @@ export function tooltip(ctx, x, y, lines, { title = null, titleCol = PAL.cardInk
 function bigTooltip(ctx, lines, { title, titleCol, w }) {
   const all = [];
   if (title) all.push([title, titleCol, true]);
-  for (const l of lines) { const [s, col] = Array.isArray(l) ? l : [l, PAL.cardDim]; all.push([s, col, false]); }
+  for (const l of lines) { const [s, col] = l && l.chips ? [chipText(l.chips), PAL.cardDim] : Array.isArray(l) ? l : [l, PAL.cardDim]; all.push([s, col, false]); }
   const bw = Math.min(472, Math.max(...all.map(([s, , b]) => measure(s, b))) * 2 + 16);
   const bh = all.length * 26 + 10;
   const x = Math.floor((480 - bw) / 2), y = 268 - bh;

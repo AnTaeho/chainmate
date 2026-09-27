@@ -98,7 +98,7 @@ function keyBoxesAt(id, kind) {
   const r = region(id), boxes = app.keyBoxes || [];
   // 카드 글 · 말풍선 글에 낱말이 있는데 상자가 없으면 따로 센다(체스 기물 카드처럼 낱말이 없는 카드는 빼고)
   const h = app.ui.hover, tip = h && h.tip ? h.tip() : null;
-  const expect = termsIn([...(h && h.keys ? h.keys() : []), tip ? tip.lines.map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null]).length;
+  const expect = termsIn([...(h && h.keys ? h.keys() : []), tip ? tip.lines.filter((l) => !(l && l.chips)).map((l) => (Array.isArray(l) ? l[0] : l)).join(' ') : null]).length;
   if (boxes.length) keySeen[kind]++; else if (expect) { keySeen.none = (keySeen.none || 0) + 1; if (VERBOSE) console.log('상자 없음', id); }
   if (boxes.length > KEY_MAX) keySeen.many++;
   const own = ownKind(id);

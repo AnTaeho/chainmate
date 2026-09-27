@@ -34,7 +34,7 @@ export function maximTip(m) {
     extra.push([`${e.name} · ${e.text}`, PAL.goldDk]);
   }
   const fams = maximFamilies(m.id);
-  if (fams.length) for (const l of wrap(chipText(fams), 140)) extra.push([l, PAL.cardDim]);
+  if (fams.length) extra.push({ chips: fams });
   if (info.rarity === 'legendary' && info.story) for (const l of wrap(`${info.year ? info.year + ' · ' : ''}${info.story}`, 140)) extra.push([l, PAL.goldDk]);
   return tipLines(info.name, [info.text, info.more], 150, extra);
 }
@@ -370,9 +370,10 @@ export function itemKeys(it) {
 export function itemExtraTip(it) {
   const lines = [];
   // 기물 카드: 카드에 다 못 적은 행마 글 전부를 그림과 함께
-  if (it.kind === 'piece' && PIECE_MOVE[it.t]) lines.push(PIECE_MOVE[it.t]);
-  else if (CUT.has(it)) lines.push(itemEffect(it));
   const more = it.kind === 'maxim' ? maximInfo(it.id).more : it.kind === 'soul' ? SOUL_BY_ID[it.id].more : null;
+  if (it.kind === 'piece' && PIECE_MOVE[it.t]) lines.push(PIECE_MOVE[it.t]);
+  // 덧말이 있으면 효과 글 전부 다음에(덧말만 홀로 뜨지 않게)
+  else if (CUT.has(it) || more) lines.push(itemEffect(it));
   if (more) lines.push(more);
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보가 적용된다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${info.story}`); }
