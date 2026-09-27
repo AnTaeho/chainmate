@@ -393,6 +393,8 @@ click('records:back');
 click('title:lesson');
 if (!region('lessons:9')) throw new Error('lesson list incomplete');
 click('lessons:terms');
+// 낱말 풀이: 묶음마다 쪽을 넘겨 본다(글이 옮겨지는지 · 예외가 없는지)
+for (const g of ['battle', 'run', 'item', 'set']) { click(`terms:tab:${g}`); for (let k = 0; k < 4 && region('terms:next') && region('terms:next').enabled; k++) click('terms:next'); }
 click('lessons:back');
 click('lessons:back');
 if (app.records.runs < RUNS) throw new Error('records did not count runs');
