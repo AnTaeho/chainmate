@@ -152,6 +152,34 @@ export class BattleScreen {
     const m = b.mods.find((s) => MASTER_BY_ID[s.id]);
     if (m) { this.banner = { title: `명인 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: 2.6, col: PAL.red, master: m.id }; this.snd('start'); }
     else if (info && this.run) this.banner = { title: `${this.run.ante}관 · ${KIND_SHORT[b.kind]} 대국`, sub: `목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold };
+    // 이번 판에서 처음 나온 것(이형 적 · 적 특성 · 판 위 사물 · 금빛 적): 띠 아래에 작은 그림 한 줄
+    if (this.banner && info && this.run) {
+      const news = this.newThings(b);
+      if (news.length) { this.banner.news = news; this.banner.life += 0.8; }
+    }
+  }
+
+  // 이 대국 판에 처음 나온 것들(이번 판에서 처음). 본 것은 기록(records.runNew)에 판 시드와 함께 — 판 상태는 건드리지 않는다
+  newThings(b) {
+    const run = this.run, rec = this.app.records;
+    const seen = rec.runNew && rec.runNew.seed === run.seed && run.log && run.log.length ? rec.runNew.keys : [];
+    const found = new Map();
+    const add = (key, it) => { if (!found.has(key)) found.set(key, it); };
+    b.board.forEach((c, sq) => {
+      if (!c || c.mine || isHidden(b, sq)) return;
+      const P = PIECES[c.t];
+      if (P && P.fairy) add(`fairy:${c.t}`, { t: c.t });
+      if (P && P.thing) add(`thing:${c.t}`, { t: c.t });
+      if (c.trait) add(`trait:${c.trait}`, { t: c.t, trait: c.trait });
+      if (c.gold) add('gold', { t: c.t, gold: true });
+    });
+    const r = b.rules || {};
+    if ((r.steps || []).length) add('obj:steps', { obj: 'step' });
+    if ((r.gates || []).length) add('obj:gates', { obj: 'gate' });
+    if ((r.highways || []).length) add('obj:highway', { obj: 'highway' });
+    const fresh = [...found].filter(([k]) => !seen.includes(k));
+    if (!run.scratch) { rec.runNew = { seed: run.seed, keys: [...seen, ...fresh.map(([k]) => k)] }; this.app.saveRecords(); }
+    return fresh.slice(0, 8).map(([, it]) => it);
   }
 
   // 판 한가운데 뜨는 큰 글자는 대국 화면과 함께 사라진다(보상 화면 글자를 덮지 않게)
@@ -1194,7 +1222,8 @@ export class BattleScreen {
       const bn = this.banner;
       const a = Math.min(1, bn.t * 6, (bn.life - bn.t) * 3);
       ctx.globalAlpha = Math.max(0, a) * 0.85;
-      const bh = bn.master ? 86 : 44, by = BY + 106 - bh / 2;
+      const row = bn.news ? 26 : 0;
+      const bh = (bn.master ? 86 : 44) + row, by = BY + 106 - bh / 2;
       rect(ctx, BX - 6, by, S * 8 + 12, bh, PAL.shadow);
       ctx.globalAlpha = Math.max(0, a);
       if (bn.master) {
@@ -1209,6 +1238,7 @@ export class BattleScreen {
         text(ctx, bn.title, BX + 112, by + 6, bn.col, { align: 'center', bold: true, scale: 2 });
         text(ctx, bn.sub, BX + 112, by + 30, PAL.ink, { align: 'center' });
       }
+      if (bn.news) this.drawNews(ctx, bn.news, by + bh - row - 2);
       ctx.globalAlpha = 1;
     }
     if (this.stamp) {
@@ -1217,6 +1247,37 @@ export class BattleScreen {
       const sc = k < 0.08 ? 7 : 5;
       const col = st.col || `hsl(${Math.floor(this.app.time * 400) % 360},90%,65%)`;
       text(ctx, st.mark, BX + 200, BY + 4, col, { align: 'right', bold: true, scale: sc, shadow: PAL.shadow, alpha: k > 0.75 ? (1 - k) / 0.25 : 1 });
+    }
+  }
+
+  // 띠 아래 「새로」 한 줄: 판에서 보이는 그대로의 작은 그림(적은 검은 기물, 금빛 적은 금빛, 특성은 발밑 문양)
+  drawNews(ctx, news, y) {
+    const step = 22, lw = measure('새로') + 6;
+    const x0 = Math.round(BX + 112 - (lw + news.length * step - 4) / 2);
+    text(ctx, '새로', x0, y + 7, PAL.gold, { bold: true });
+    news.forEach((it, k) => {
+      const x = x0 + lw + k * step;
+      if (it.obj) { this.newsObj(ctx, it.obj, x, y + 3); return; }
+      sprite(ctx, it.t, it.gold ? 'g' : 'b', x, y);
+      if (it.trait) traitMark(ctx, it.trait, x - 2, y + 17);
+    });
+  }
+  // 판 위 사물의 작은 그림(18×18): 발판 · 문 · 고속도로 줄
+  newsObj(ctx, obj, x, y) {
+    if (obj === 'step') {
+      ctx.globalAlpha = 0.6; rect(ctx, x, y, 18, 18, PAL.gold); ctx.globalAlpha = 1;
+      frame(ctx, x, y, 18, 18, PAL.goldDk);
+      for (const [i, j] of [[1, 1], [16, 1], [1, 16], [16, 16]]) rect(ctx, x + i, y + j, 1, 1, PAL.goldHi);
+    } else if (obj === 'gate') {
+      const col = '#6fd1bf';
+      for (let j = 0; j < 16; j++) {
+        const w = j < 5 ? Math.round(Math.sqrt(25 - (5 - j) * (5 - j)) * 1.2) + 2 : 8;
+        rect(ctx, x + 9 - w, y + 1 + j, 1, 1, col); rect(ctx, x + 8 + w, y + 1 + j, 1, 1, col);
+      }
+      rect(ctx, x, y + 17, 18, 1, col);
+    } else if (obj === 'highway') {
+      for (let j = 0; j < 18; j += 4) { rect(ctx, x + 4, y + j, 1, 2, PAL.goldDk); rect(ctx, x + 13, y + j, 1, 2, PAL.goldDk); }
+      rect(ctx, x + 8, y + 4, 2, 10, PAL.gold); rect(ctx, x + 7, y + 5, 4, 1, PAL.gold); rect(ctx, x + 7, y + 12, 4, 1, PAL.gold);
     }
   }
 

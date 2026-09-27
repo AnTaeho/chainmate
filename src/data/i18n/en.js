@@ -173,7 +173,7 @@ export const EN = {
   '고속도로': 'Highway', 'b · g 줄에서는 어떤 모습이든 룩처럼 세로로도 미끄러져 먹는다': 'On the b and g files, any form also slides and takes vertically like a rook',
   '발판': 'Stepping Stones', 
 
-  '판의 문': 'Gates', '문 위의 적을 먹으면 다른 문으로 나와 사슬을 잇는다 — 문은 대국마다 둘': 'Taking an enemy on a gate: step out of the other gate and go on — two gates each match',
+  '새로': 'New', '판의 문': 'Gates', '문 위의 적을 먹으면 다른 문으로 나와 사슬을 잇는다 — 문은 대국마다 둘': 'Taking an enemy on a gate: step out of the other gate and go on — two gates each match',
   '순교의 맹세': "Martyr's Vow", '끊기는 순간 둘레 여덟 칸의 적을 킹만 빼고 모두 먹는다': 'When it breaks: takes every enemy on the eight squares around, except kings',
   '결사': 'Blood Pact', '대국마다 첫 사슬 연쇄 ×3 — 그 기물은 판에서 사라진다(주머니 여섯은 남긴다)': "Each match's first chain: links ×3, and that piece leaves the run (bag keeps six)",
   '하이랜더': 'Highlander', 
