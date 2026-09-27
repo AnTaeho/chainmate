@@ -33,7 +33,7 @@ export const LESSONS = [
     steps: [
       { pick: 0, say: '나이트를 든다' },
       { drop: 'e7', say: '떨군다' },
-      { cap: 'd5', say: '먹을 때마다 값(왼쪽 흰 칸)이 더해지고 배수(금빛 칸)가 1씩 는다' },
+      { cap: 'd5', say: '먹을 때마다 흰 칸의 값이 더해지고, 금빛 칸의 배수가 1씩 는다' },
       { cap: 'd2' },
       { cap: 'h6', say: '점수 = 값 × 배수 — 길게 이을수록 곱이 커진다' },
       { cap: 'h2' },
@@ -43,30 +43,30 @@ export const LESSONS = [
     steps: [
       { pick: 0, say: '나이트를 든다' },
       { drop: null, say: '비숍을 먹을 수 있는 칸에 떨군다' },
-      { cap: 'f7', say: '룩을 지키는 비숍(지키는 적)부터 먹는다' },
+      { cap: 'f7', say: '룩을 지키는 비숍부터 먹는다' },
       { cap: 'd5', say: '지키던 비숍이 없으니 룩을 먹어도 끊기지 않는다' },
     ] },
   // ── 대국
   { id: 'target', group: 'battle', title: '목표와 수', target: 60, moves: 2, hand: ['N', 'B'], board: { e5: 'P', h8: 'R' },
     steps: [
-      { pick: 0, say: '판 위 막대가 목표 — 점수가 목표에 닿으면 이긴다. 수는 정해져 있다(왼쪽 금빛 구슬)' },
+      { pick: 0, say: '판 위 막대가 목표. 닿으면 이긴다. 왼쪽 금빛 구슬이 남은 수다' },
       { drop: 'd3' },
       { cap: 'e5', say: '폰을 먹고 첫 수가 끝난다 — 수 구슬이 하나 준다' },
       { pick: 0, say: '남은 수로 목표를 채운다: 비숍을 든다' },
       { drop: 'c3' },
       { cap: 'h8', say: '룩을 먹으면 목표에 닿는다' },
     ] },
-  { id: 'redraw', group: 'battle', title: '손과 바꾸기', target: 90, moves: 1, discards: 1, hand: ['P', 'P', 'P', 'P'], bag: ['N'], board: { h8: 'Q' },
+  { id: 'redraw', group: 'battle', title: '손과 버리기', target: 90, moves: 1, discards: 1, hand: ['P', 'P', 'P', 'P'], bag: ['N'], board: { h8: 'Q' },
     steps: [
       { pick: 0, say: '폰은 떨굴 곳이 없다 — 버릴 폰을 누른다' },
-      { discard: true, say: '바꾸기: 고른 기물을 버리고 주머니에서 새로 쥔다(붉은 구슬만큼)' },
+      { discard: true, say: '버리기: 고른 기물을 버리고 새로 뽑는다. 붉은 구슬만큼 쓸 수 있다' },
       { pick: 3, say: '새로 쥔 나이트를 든다' },
       { drop: 'g6' },
       { cap: 'h8', say: '퀸을 먹는다' },
     ] },
   { id: 'reinforce', group: 'battle', title: '증원', target: 60, moves: 2, hand: ['N', 'N'], board: { e5: 'P' }, incoming: [{ sq: 'c6', t: 'R' }],
     steps: [
-      { pick: 0, say: '점선 그림자(▼)는 증원 — 이 수가 끝나면 그 칸에 적이 들어온다' },
+      { pick: 0, say: '▼ 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다' },
       { drop: 'd3' },
       { cap: 'e5', say: '폰을 먹는다. 수가 끝나면 증원이 떨어진다' },
       { pick: 0, say: '들어온 룩을 먹으러 간다' },
@@ -78,17 +78,17 @@ export const LESSONS = [
       { pick: 0, say: '킹은 지키는 적이 하나라도 있으면 먹을 수 없다 — 룩이 킹을 지킨다' },
       { drop: 'b5', say: '지키는 룩을 먹을 수 있는 칸에 떨군다' },
       { cap: 'a7', say: '지키던 룩을 먹으면 내가 룩이 된다' },
-      { cap: 'e7', say: '지키는 적이 없는 킹을 먹으면(외통) 점수와 상관없이 곧바로 이긴다' },
+      { cap: 'e7', say: '지키는 적이 없는 킹을 먹으면 외통. 점수와 상관없이 이긴다' },
     ] },
   // ── 판
   { id: 'fairy', group: 'run', title: '체스 밖의 행마', target: 80, hand: ['O'], board: { d4: 'P', d7: 'R', h7: 'B' }, preview: true,
     steps: [
-      { pick: 0, say: '포(특수 기물)는 가로 · 세로로 기물 하나를 뛰어넘어 그 너머를 먹는다' },
+      { pick: 0, say: '포는 특수 기물. 기물 하나를 넘어서 먹는다' },
       { drop: 'd1', say: '폰을 받침으로 넘을 수 있는 칸에 떨군다' },
       { cap: 'd7', say: '폰을 넘어 룩을 먹는다' },
       { cap: 'h7', say: '룩이 되었으니 곧게 미끄러져 비숍까지' },
     ] },
-  { id: 'shop', group: 'run', title: '상점과 모음', shop: true },
+  { id: 'shop', group: 'run', title: '상점과 시너지', shop: true },
 ];
 
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((L) => [L.id, L]));

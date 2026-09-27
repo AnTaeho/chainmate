@@ -88,7 +88,7 @@ export function startLessonShop(app, i) {
         return true;
       } },
     { screen: 'pack', target: 'pack:pick:0', say: '낙타를 고른다 — 나이트처럼 뛰는 특수 기물', done: () => run.phase === 'shop' && on('shop') && run.deck.some((p) => p.t === 'L') },
-    { screen: 'shop', target: 'fam:leap', say: '기사도와 낙타가 뛰기 모음을 한 칸씩 채워 두 칸 — 첫 효과가 켜졌다(2 · 4 · 6칸마다 하나씩)', ok: true },
+    { screen: 'shop', target: 'fam:leap', say: '기사도와 낙타로 기사 시너지가 2개 — 첫 효과가 켜졌다. 4개 · 6개면 더 켜진다', ok: true },
   ], () => lessonDone(app, i));
 }
 
