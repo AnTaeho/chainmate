@@ -73,9 +73,11 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
   const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
   if (w < 80) { text(ctx, name, x + 21 + Math.floor((w - 21) / 2), y + Math.floor(h / 2) - 6, PAL.cardInk, { align: 'center', bold: true }); return; }
   // 넓은 칸: 이름 아래에 효과 앞머리 한 줄(다 못 적으면 「…」)
-  text(ctx, name, x + 23, y + 1, PAL.cardInk, { bold: true });
-  const ls = wrap(effectHead(itemEffect(c)), w - 26);
-  text(ctx, ls.length > 1 ? `${ls[0].replace(/\s*[·—,]$/, '')}…` : ls[0] || '', x + 23, y + 13, PAL.cardDim);
+  text(ctx, name, x + 23, y + 2, PAL.cardInk, { bold: true });
+  // 「 — 」 뒤의 덧붙임(대가 · 횟수)은 칸에서 뺀다
+  const head = effectHead(itemEffect(c)), main = head.split(' — ')[0];
+  const ls = wrap(main, w - 26);
+  text(ctx, ls.length > 1 || main !== head ? `${ls[0].replace(/\s*[·—,]$/, '')}…` : ls[0] || '', x + 23, y + 14, PAL.cardDim);
 }
 // 진열 · 꾸러미 말풍선은 주머니 오른쪽 빈자리에(옆 카드를 가리지 않게)
 const TIP_AT = { x: 196, y: 174 };
@@ -178,7 +180,7 @@ export class ShopScreen {
     text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 32, PAL.dim);
     josekiBadges(ctx, ui, run, RX + 56, 33);
     fragmentStrip(ctx, ui, run, RX + RW, 32, { align: 'right' });
-    const col = maximColumn(ctx, ui, run, RX, 46, RW, 150, {
+    const col = maximColumn(ctx, ui, run, RX, 46, RW, 146, {
       onClick: (i) => { this.menu = this.menu && this.menu.kind === 'maxim' && this.menu.index === i ? null : { kind: 'maxim', index: i }; this.target = null; },
       drag: (i, mx, my) => this.dropMaxim(i, my, col),
       hotIndex: this.menu && this.menu.kind === 'maxim' ? this.menu.index : -1,
@@ -187,9 +189,9 @@ export class ShopScreen {
     // 두루마리
     // 칸마다 한 줄씩(두 칸): 이름 아래에 효과 앞머리가 보이게 오른쪽 판 너비를 다 쓴다. 칸이 셋 이상이면 두 줄 두 칸씩 좁게
     const wide = run.consumableSlots <= 2;
-    text(ctx, '두루마리', RX, 201, PAL.dim);
+    text(ctx, '두루마리', RX, 197, PAL.dim);
     for (let i = 0; i < run.consumableSlots; i++) {
-      const [x, y, cw, ch] = wide ? [RX, 214 + i * 28, RW, 26] : [RX + (i % 2) * 57, 216 + Math.floor(i / 2) * 26, 55, 24];
+      const [x, y, cw, ch] = wide ? [RX, 210 + i * 30, RW, 28] : [RX + (i % 2) * 57, 216 + Math.floor(i / 2) * 26, 55, 24];
       const c = run.consumables[i];
       if (!c) { frame(ctx, x, y, cw, ch, PAL.feltHi); continue; }
       const id = `cons:${i}`;
