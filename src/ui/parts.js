@@ -5,7 +5,7 @@ import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
-import { PIECE_NAME } from './words.js';
+import { PIECE_NAME, PIECE_MOVE } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
@@ -31,6 +31,7 @@ export function maximTip(m) {
 
 export function pieceTip(p) {
   const lines = [];
+  if (PIECE_MOVE[p.t]) lines.push(PIECE_MOVE[p.t]);
   if (p.eng) { const e = engravingInfo(p.eng.id); lines.push(`${e.name} 각인 · ${e.text}`); }
   return tipLines(PIECE_NAME[p.t], lines);
 }
@@ -250,7 +251,7 @@ export function itemTip(it) {
   }
   if (it.kind === 'chart') return chartTip(it.form);
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '주머니의 기물 하나에 새긴다']); }
-  if (it.kind === 'piece') return tipLines(PIECE_NAME[it.t], '주머니에 들어온다');
+  if (it.kind === 'piece') return tipLines(PIECE_NAME[it.t], [PIECE_MOVE[it.t], '주머니에 들어온다']);
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(`${l.name} · 첫 조각`, [l.story, `전설: ${l.text}`]); }
   return null;
 }

@@ -33,6 +33,13 @@ export const EN = {
   '판': 'Runs', '이긴 판': 'Runs won', '최고 관': 'Best hall', '전설 완성': 'Legends', '신의 한 수(!!!)': 'Divine moves (!!!)', '열린 단': 'Dan unlocked', '아직': 'Not yet',
   '5관에 닿는다': 'Reach hall 5', '외통으로 다섯 번 이긴다': 'Win by mate five times', '한 사슬에 여덟을 먹는다(!!!)': 'Take eight in one chain (!!!)', '불멸의 기보 하나를 완성한다': 'Complete one immortal game',
   '폰': 'Pawn', '나이트': 'Knight', '비숍': 'Bishop', '룩': 'Rook', '퀸': 'Queen', '킹': 'King',
+  '대주교': 'Archbishop', '재상': 'Chancellor', '아마존': 'Amazon', '낙타': 'Camel', '야간기사': 'Nightrider', '메뚜기': 'Grasshopper', '포': 'Cannon', '궁수': 'Archer', '유령': 'Ghost',
+  '대주교!': 'Archbishop!', '재상!': 'Chancellor!', '아마존!': 'Amazon!', '낙타!': 'Camel!', '야간기사!': 'Nightrider!', '메뚜기!': 'Grasshopper!', '포!': 'Cannon!', '궁수!': 'Archer!', '유령!': 'Ghost!',
+  '비숍 + 나이트로 먹는다': 'Takes as bishop + knight', '룩 + 나이트로 먹는다': 'Takes as rook + knight', '퀸 + 나이트로 먹는다': 'Takes as queen + knight',
+  '세 칸 · 한 칸으로 뛴다(늘 같은 색 칸)': 'Leaps 3 and 1 (always the same color)', '나이트 도약을 같은 쪽으로 거듭한다': 'Repeats knight leaps in one direction',
+  '첫 기물을 넘어 바로 뒤 칸을 먹는다': 'Hops the first piece, takes just beyond', '가로 · 세로로 하나를 넘어 그 너머 첫 기물을 먹는다': 'Leaps one piece in a line, takes the next',
+  '두 칸 떨어진 적을 제자리에서 쏜다': 'Shoots foes two squares away, stays put', '가로 · 세로로 막힘 없이 미끄러진다': 'Slides through anything in a line',
+  '이형': 'Fairy', '이형 기물': 'Fairy Piece', '기물': 'Pieces',
   '첫 수업': 'First Lessons', '첫 수업 다시': 'Lessons Again', '좋은 수': 'Good Move', '끝': 'Done',
   '떨구고 먹는다': 'Drop and Take', '이을수록 곱해진다': 'Links Multiply', '노리는 놈부터': 'Guards First',
   '지금': 'Now', '먹으면': 'Take', '되잡힌다': 'Recaptured', '사슬이 끝난다': 'Chain ends',
@@ -128,6 +135,7 @@ export const PRE = [
 
 export const TEMPLATES = [
   [/^(\d+)관$/, (m) => `Hall ${m[1]}`],
+  [/^값 (\d+)$/, (m) => `Value ${m[1]}`],
   [/^(\d+)관 (.+)$/, (m, tr) => `Hall ${m[1]} ${tr(m[2])}`],
   [/^(\d+)단$/, (m) => `Dan ${m[1]}`],
   [/^(\d+)단이 열렸다$/, (m) => `Dan ${m[1]} unlocked`],

@@ -9,7 +9,7 @@ import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
 import { maximColumn, itemCard, itemTip, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope } from '../parts.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
-import { PACK_NAME, PIECE_NAME, PART_NAME, josa } from '../words.js';
+import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { topBar } from './common.js';
 
 const RX = 360, RW = 112;
@@ -26,7 +26,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     const col = i % per, row = Math.floor(i / per);
     const px = x + col * (cw + 3), py = y + row * step;
     const id = `${idPrefix}:${p.id}`;
-    ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: p.eng ? () => pieceTip(p) : null });
+    ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: p.eng || PIECE_MOVE[p.t] ? () => pieceTip(p) : null });
     const hov = ui.isHover(id);
     const fl = flash && flash.id === p.id ? 1 - flash.p : 0;
     pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick ? 1 : 0, selected: selectedId === p.id, hover: hov, tier: tierOf(run.charts[p.t]), time: ui.time + i, flash: fl });

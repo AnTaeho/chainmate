@@ -1,6 +1,7 @@
 // 기물 스프라이트 16×22. mockup의 SPR · TONE · sprite()를 옮겼다.
 // 모양 마스크(# 몸, d 새김)에서 테두리 · 빛 · 몸 · 그늘을 자동으로 만들고, 한 번 그려 오프스크린 캔버스에 둔다.
 import { makeCanvas, context } from './surface.js';
+import { FAIRY_SPR } from './fairy-sprites.js';
 
 export const SW = 16, SH = 22;
 const BASE = ['...##########...', '..############..', '..dddddddddddd..', '..############..', '................'];
@@ -70,6 +71,7 @@ export function registerSprites(masks) {
   }
 }
 registerSprites(SPR);
+registerSprites(FAIRY_SPR); // 이형 아홉(깊이 A)
 export const spritePixels = (type) => SPRPIX[type];
 
 // 머리 꼭대기(보석 자리): 가장 위 몸 줄의 가운데

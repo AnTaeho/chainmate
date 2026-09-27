@@ -7,7 +7,8 @@ import { spriteChips, spriteCanvas, outlineCanvas, TONE, tierOf } from '../../re
 import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
-import { reach } from '../../sim/board.js';
+import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
+import { FAIRIES } from '../../data/pieces.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
@@ -15,7 +16,7 @@ import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
 import { maximColumn, pieceCard, pieceTip, discardIcon, panel, tipLines, fragmentStrip } from '../parts.js';
-import { KIND_SHORT, PIECE_NAME, PART_NAME, josa } from '../words.js';
+import { KIND_SHORT, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton } from './common.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
@@ -77,15 +78,20 @@ function ringAt(ctx, x, y, col, thick = 1) {
 }
 // 먹으러 가는 시간: 미끄러지는 기물은 지나는 칸 수만큼, 나이트는 L자로 한 번 튀고, 폰 · 킹은 한 칸
 const dist = (a, b) => Math.max(Math.abs((a & 7) - (b & 7)), Math.abs((a >> 3) - (b >> 3)));
-function moveDur(form, from, to) {
-  if (form === 'N') return 0.2;
+function moveDur(form, from, to, stay = false) {
+  if (stay) return 0.16;
+  if (LEAPERS.has(form) && !isLine(from, to)) return 0.2;
   if (form === 'P' || form === 'K') return 0.12;
   return 0.08 + 0.035 * Math.min(7, dist(from, to));
 }
 // 움직이는 기물의 자리(p 0→1): 나이트는 긴 다리 → 짧은 다리, 작은 포물선
+const isLine = (a, b) => { const df = (b & 7) - (a & 7), dr = (b >> 3) - (a >> 3); return df === 0 || dr === 0 || Math.abs(df) === Math.abs(dr); };
 export function moverXY(form, from, to, p) {
   const a = sqXY(from), c = sqXY(to);
-  if (form !== 'N') return { x: lerp(a.x, c.x, p), y: lerp(a.y, c.y, p) };
+  if (!LEAPERS.has(form) || (isLine(from, to) && form !== 'G')) return { x: lerp(a.x, c.x, p), y: lerp(a.y, c.y, p) };
+  // 나이트 L자가 아닌 도약(낙타 · 야간기사 · 메뚜기)은 한 번의 높은 포물선
+  const ddf = Math.abs((to & 7) - (from & 7)), ddr = Math.abs((to >> 3) - (from >> 3));
+  if (!((ddf === 1 && ddr === 2) || (ddf === 2 && ddr === 1))) { const q = ease.inOut(p); return { x: lerp(a.x, c.x, q), y: lerp(a.y, c.y, q) - Math.sin(p * Math.PI) * 14 }; }
   const df = (to & 7) - (from & 7);
   const mid = Math.abs(df) === 2 ? { x: c.x, y: a.y } : { x: a.x, y: c.y };
   const q = ease.inOut(p);
@@ -96,7 +102,7 @@ export function moverXY(form, from, to, p) {
 const bagTip = (b) => {
   const counts = {};
   for (const p of b.bag) counts[p.t] = (counts[p.t] || 0) + 1;
-  const parts = ['P', 'N', 'B', 'R', 'Q'].filter((t) => counts[t]).map((t) => `${PIECE_NAME[t]} ${counts[t]}`);
+  const parts = ['P', 'N', 'B', 'R', 'Q', ...FAIRIES].filter((t) => counts[t]).map((t) => `${PIECE_NAME[t]} ${counts[t]}`);
   return tipLines('주머니', parts.length ? parts.join(' · ') : '비었다');
 };
 
@@ -151,13 +157,14 @@ export class BattleScreen {
     v.movesLeft = b.movesLeft; v.moves = b.rules.moves;
     v.discardsLeft = b.discardsLeft; v.discards = b.rules.discards;
     v.bag = b.bag.length; v.deckSize = b.deckSize;
-    v.mover = null; v.flip = null; v.dropIn = null; v.cut = null; v.gather = null; v.count = null; v.lift = null;
+    v.mover = null; v.arrow = null; v.flip = null; v.dropIn = null; v.cut = null; v.gather = null; v.count = null; v.lift = null;
     const c = b.chain;
     if (c && !c.done) {
       v.chain = {
         sq: c.sq, form: c.form, value: c.value, mult: c.mult,
         steps: [...c.captures.map((x) => x.form), c.form],
-        path: [c.dropSq, ...c.captures.map((x) => x.to)],
+        path: [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.to)],
+        shots: c.captures.filter((x) => x.stay).map((x) => [x.from, x.to]),
         forced: c.forced ? c.forced.slice() : null, awaiting: c.awaiting ? chainRedrops(b) : null,
         cut: false, eng: c.engraving ? c.engraving.id : null,
       };
@@ -328,20 +335,21 @@ export class BattleScreen {
           tick: (p) => { v.dropIn.p = p; },
           done: () => { v.dropIn = null; },
         }); break;
-        case 'capture': add(moveDur(v.chain ? v.chain.form : 'N', e.from, e.to), {
+        case 'capture': add(moveDur(v.chain ? v.chain.form : 'N', e.from, e.to, e.stay), {
           begin: () => {
             const c = v.chain;
+            if (e.stay) { v.arrow = { from: e.from, to: e.to, p: 0 }; c.forced = null; return; }
             v.board[e.from] = null;
             v.mover = { from: e.from, to: e.to, form: c.form, p: 0 };
             c.forced = null;
           },
-          tick: (p) => { v.mover.p = v.mover.form === 'N' ? p : ease.out(p); },
+          tick: (p) => { if (v.arrow) v.arrow.p = p; else v.mover.p = LEAPERS.has(v.mover.form) ? p : ease.out(p); },
           done: () => {
             const c = v.chain;
             const victim = v.board[e.to];
-            v.board[e.to] = { t: c.form, mine: true };
-            v.mover = null;
-            c.sq = e.to; c.path.push(e.to); c.steps.push(c.form);
+            // 궁수 모습: 제자리에서 쏜다(판 위 기물은 그대로, 먹힌 칸만 빈다)
+            if (e.stay) { v.board[e.to] = null; v.arrow = null; (c.shots || (c.shots = [])).push([e.from, e.to]); c.steps.push(c.form); }
+            else { v.board[e.to] = { t: c.form, mine: true }; v.mover = null; c.sq = e.to; c.path.push(e.to); c.steps.push(c.form); }
             c.value += e.value; c.mult += 1;
             this.shatter(e.to, victim ? victim.t : e.piece, victim && victim.gold ? 'g' : 'b');
             this.flash(e.to, PAL.white);
@@ -743,6 +751,8 @@ export class BattleScreen {
       const g = ghosts.get(sq);
       let tipOpt = g ? sqTip(x, y, `증원 · ${PIECE_NAME[g.t]}`, g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다') : null;
       if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tipOpt = sqTip(x, y, '노림수', t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다');
+      const cell = v.board[sq];
+      if (!tipOpt && cell && !cell.mine && PIECE_MOVE[cell.t] && !isHidden(b, sq)) tipOpt = sqTip(x, y, PIECE_NAME[cell.t], PIECE_MOVE[cell.t]);
       ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
         const pulse = 0.22 + 0.12 * Math.sin(time * 5);
@@ -772,6 +782,15 @@ export class BattleScreen {
         const { x, y } = sqXY(path[i]);
         frame(ctx, x, y, S, S, PAL.gold);
       }
+      for (const [a0, b0] of v.chain.shots || []) { const a = this.center(a0), c = this.center(b0); dotLine(ctx, a.x, a.y, c.x, c.y, PAL.gold, 2); const B = sqXY(b0); dots(ctx, B.x, B.y, S, S, PAL.gold, 2); }
+    }
+    // 궁수의 화살
+    if (v.arrow) {
+      const a = this.center(v.arrow.from), c = this.center(v.arrow.to), k = v.arrow.p;
+      const x = a.x + (c.x - a.x) * k, y = a.y + (c.y - a.y) * k - Math.sin(k * Math.PI) * 6;
+      const tx = a.x + (c.x - a.x) * Math.max(0, k - 0.15), ty = a.y + (c.y - a.y) * Math.max(0, k - 0.15) - Math.sin(Math.max(0, k - 0.15) * Math.PI) * 6;
+      line(ctx, tx, ty, x, y, PAL.goldHi);
+      rect(ctx, Math.round(x) - 1, Math.round(y) - 1, 2, 2, PAL.white);
     }
     // 지금 모습의 행마선: 다음 먹기를 기다릴 때 갈 수 있는 칸을 흐리게(막히면 끊긴다)
     if (v.chain && !this.busy && !v.chain.awaiting && !v.cut && b.status === 'chain') this.drawReach(ctx, v.chain.form, v.chain.sq);
@@ -855,7 +874,7 @@ export class BattleScreen {
 
   drawReach(ctx, form, from) {
     const v = this.view, o = this.center(from);
-    const slide = form === 'R' || form === 'B' || form === 'Q';
+    const slide = SLIDERS.has(form);
     ctx.globalAlpha = 0.4;
     for (const s of reach(v.board, form, from, 1)) {
       const c = this.center(s);
@@ -1028,7 +1047,7 @@ export class BattleScreen {
       const x = RX + i * (w + Math.min(gap, 4)), y = 224;
       const id = `hand:${i}`;
       const selected = this.sel.includes(i);
-      ui.region(id, x, y - 4, w, 40, { onClick: () => this.toggle(i), tip: p.eng ? () => pieceTip(p) : null });
+      ui.region(id, x, y - 4, w, 40, { onClick: () => this.toggle(i), tip: p.eng || PIECE_MOVE[p.t] ? () => pieceTip(p) : null });
       const hov = ui.isHover(id);
       const usable = live && live.status === 'play' && !this.busy;
       // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)

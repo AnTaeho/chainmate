@@ -99,6 +99,22 @@ await ev(async () => {
 });
 await settle(200);
 await shot('00-sprites');
+// 이형 아홉을 체스 여섯과 나란히(1배에서 갈리나): 흰 · 검은 · 금빛, 밝은 칸과 어두운 칸
+await ev(async () => {
+  const { spriteCanvas } = await import('/src/render/sprites.js');
+  const c = document.getElementById('screen');
+  window.__app.draw = () => {
+    const g = c.getContext('2d');
+    g.fillStyle = '#0e1513'; g.fillRect(0, 0, 480, 270);
+    ['P', 'N', 'B', 'R', 'Q', 'K', 'A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W'].forEach((t, i) => ['w', 'b', 'g'].forEach((side, row) => [0, 1].forEach((k) => {
+      const x = 8 + i * 31, y = 30 + (row * 2 + k) * 34;
+      g.fillStyle = (i + k) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
+      g.drawImage(spriteCanvas(t, side), x + 6, y + 3);
+    })));
+  };
+});
+await settle(200);
+await shot('00-fairies');
 // 명인 초상 여덟(2배)
 await ev(async () => {
   const { portraitCanvas, PORTRAIT_IDS } = await import('/src/render/portraits.js');
