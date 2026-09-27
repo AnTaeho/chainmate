@@ -5,6 +5,7 @@ import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle } from './bot.mjs';
 import { lineCommands } from '../src/sim/solver.js';
 import { canBuy } from '../src/sim/run.js';
+import { evolveTo } from '../src/data/tactics.js';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -37,6 +38,7 @@ async function start() {
 const seen = () => { for (const v of app.visited) visited.add(v); };
 // 처음 안내: 떠 본 안내 id
 const hintsShown = new Set();
+const previewSeen = { scroll: 0, pack: 0 };
 function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); if (app && app.hintShown) hintsShown.add(app.hintShown.id); } }
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
 function click(id) {
@@ -187,7 +189,16 @@ function shopStep() {
     if (run.consumables.length) {
       const c = run.consumables[0];
       click('cons:0');
-      if (c.kind === 'engraving') click(`deck:${run.deck[0].id}`);
+      if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve') {
+        const piece = c.kind === 'evolve' ? run.deck.find((x) => evolveTo(run.seed, x)) : run.deck[0];
+        if (!piece) { click('target:cancel'); break; }
+        const n = run.consumables.length;
+        click(`deck:${piece.id}`);
+        // 고르면 먼저 미리 보기, 확인해야 쓴다
+        if (run.consumables.length !== n || !region('target:ok')) throw new Error('scroll used without a preview');
+        previewSeen.scroll++;
+        click('target:ok');
+      }
       continue;
     }
     if (!shop.promoted && run.money >= 3 && rnd() < 0.3) {
@@ -210,7 +221,12 @@ function packStep() {
   if (i < 0 || rnd() < 0.15) { click('pack:skip'); return; }
   pump(60);
   click(`pack:pick:${i}`);
-  if (pack.options[i].kind === 'engraving' && app.screen.name === 'pack') click(`deck:${app.run.deck[0].id}`);
+  if (pack.options[i].kind === 'engraving' && app.screen.name === 'pack') {
+    click(`deck:${app.run.deck[0].id}`);
+    if (app.run.phase !== 'pack' || !region('target:ok')) throw new Error('engraved without a preview');
+    previewSeen.pack++;
+    click('target:ok');
+  }
 }
 
 async function reload() {
@@ -442,6 +458,7 @@ if (lessonLog.length !== lessonMod.LESSONS.length) fail = true;
 if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확인하지 못했다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
+console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }

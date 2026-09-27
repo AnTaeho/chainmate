@@ -7,7 +7,7 @@ import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button } from '../ui.js';
-import { itemCard, itemTip, maximColumn, envelope } from '../parts.js';
+import { itemCard, itemExtraTip, maximColumn, envelope, targetPanel } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { topBar } from './common.js';
 import { bagRow } from './shop.js';
@@ -36,7 +36,7 @@ export class PackScreen {
   pick(i) {
     const o = this.run.pack.options[i];
     if (this.t < flipAt(i) + 0.2) { this.t = 10; return; }
-    if (o.kind === 'engraving') { this.engraveIndex = this.engraveIndex === i ? null : i; return; }
+    if (o.kind === 'engraving') { this.engraveIndex = this.engraveIndex === i ? null : i; this.engraveTarget = null; return; }
     if (o.kind === 'maxim' && !hasMaximRoom(this.run, o.edition)) { this.app.toast('격언 칸이 찼다', PAL.red); return; }
     this.finish({ type: 'pick', index: i });
   }
@@ -61,16 +61,16 @@ export class PackScreen {
     const gold = pack.kind === 'golden';
     topBar(ctx, ui, this.app, PACK_NAME[pack.kind]);
     const n = pack.options.length;
-    const cw = 76, ch = 104, gap = 14;
-    const x0 = Math.floor((W - n * cw - (n - 1) * gap) / 2) - (pack.options.some((o) => o.kind === 'maxim') ? 50 : 0);
+    const cw = 104, ch = 112, gap = 10;
+    const x0 = Math.floor((W - n * cw - (n - 1) * gap) / 2) - (pack.options.some((o) => o.kind === 'maxim') ? 54 : 0);
     pack.options.forEach((o, i) => {
       const at = flipAt(i);
       const p = Math.max(0, Math.min(1, (this.t - at) / 0.24));
-      const x = x0 + i * (cw + gap), y = 44;
+      const x = x0 + i * (cw + gap), y = 36;
       const id = `pack:pick:${i}`;
       const scaleX = Math.abs(1 - 2 * p);
       const shown = p >= 0.5;
-      ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: shown ? () => itemTip(o) : null });
+      ui.region(id, x, y, cw, ch, { onClick: () => this.pick(i), tip: shown ? () => itemExtraTip(o) : null, tipAt: { x: Math.min(W - 176, x), y: 178 } });
       if (!shown) {
         const nw = Math.max(2, Math.round(cw * scaleX));
         if (this.t < OPEN) return;
@@ -89,10 +89,16 @@ export class PackScreen {
       ctx.globalAlpha = 1;
     }
     if (this.engraveIndex != null) {
-      text(ctx, '새길 기물', 12, 172, PAL.gold, { bold: true });
-      bagRow(ctx, ui, run, 12, 188, 330, { pick: (p) => this.finish({ type: 'pick', index: this.engraveIndex, target: p.id }), glow: true });
+      // 기물을 고르면 새긴 모습을 미리 보이고, 「새긴다」로 확인한다
+      const o = pack.options[this.engraveIndex];
+      const p = this.engraveTarget != null ? run.deck.find((x) => x.id === this.engraveTarget) : null;
+      targetPanel(ctx, ui, run, o, p, 12, 150, 330, {
+        onConfirm: () => this.finish({ type: 'pick', index: this.engraveIndex, target: this.engraveTarget }),
+        onCancel: () => { this.engraveIndex = null; this.engraveTarget = null; },
+      });
+      bagRow(ctx, ui, run, 12, 196, 330, { pick: (q) => { this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget });
     }
-    button(ctx, ui, 'pack:skip', W / 2 - 50 - (pack.options.some((o) => o.kind === 'maxim') ? 50 : 0), 160, 100, 18, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
+    if (this.engraveIndex == null) button(ctx, ui, 'pack:skip', W / 2 - 50 - (pack.options.some((o) => o.kind === 'maxim') ? 54 : 0), 154, 100, 18, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
     // 금빛 꾸러미: 격언 칸과 팔기
     if (pack.options.some((o) => o.kind === 'maxim')) {
       const RX = 360, RW = 112;

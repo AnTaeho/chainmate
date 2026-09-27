@@ -3,6 +3,16 @@
 // 값 Value · 연쇄 Links · 끊김 Break · 외통 Mate · 격언 Maxim · 기보 Study · 각인 Engraving · 상금 Purse · 단 Dan
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명국 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 export const EN = {
+  // 카드에 적는 효과 · 새기기 미리 보기(친절 손질)
+  '대각선 앞 한 칸의 적을 먹는다': 'Takes one square diagonally ahead', 'ㄱ자로 뛰어 먹는다': 'Leaps in an L to take', '대각선으로 미끄러져 먹는다': 'Slides diagonally to take',
+  '가로 · 세로로 미끄러져 먹는다': 'Slides straight to take', '여덟 방향으로 미끄러져 먹는다': 'Slides any of eight ways to take',
+  '기물 셋 중 하나': 'One of three pieces', '기보 셋 중 하나': 'One of three charts', '각인 셋 중 하나': 'One of three engravings', '판본 격언 셋 중 하나': 'One of three edition maxims',
+  '주머니 기물 하나에 새긴다': 'Engrave a piece in your bag', '주머니 기물 하나에 깃든다': 'Dwells in a piece in your bag', '주머니 기물 하나를 고른다': 'Pick a piece in your bag',
+  '주머니 기물 하나가 그 종류의 이형으로 자란다': 'A piece in your bag grows into a fairy of its kind',
+  '모습: 사슬 한가운데 내 기물이 지금 입은 기물': 'Form: the piece your chain is wearing right now',
+  '새긴다': 'Engrave', '깃든다': 'Bind', '자란다': 'Grow', '그만': 'Cancel', '자랄 이형이 없는 기물': 'This piece has nothing to grow into',
+  '주머니에서 새길 기물을 고른다': 'Choose a piece in your bag to engrave', '주머니에서 깃들 기물을 고른다': 'Choose a piece in your bag for the soul', '주머니에서 자랄 기물을 고른다': 'Choose a piece in your bag to grow',
+  '체스 기물이 그 종류의 이형으로 자란다': 'A chess piece grows into a fairy of its kind',
   // 첫 수업 열 · 처음 안내(친절 손질)
   '기초': 'Basics', '목표 외통': 'Goal: checkmate', '대국': 'Battle', '보기': 'Watch', '할 일': 'Your turn', '누르면 내 차례': 'Tap to play it yourself', '수업 건너뛰기': 'Skip lessons',
   '목표와 수': 'Goal and Moves', '손과 무르기': 'Hand and Redraw', '체스 밖의 행마': 'Beyond Chess', '상점과 가족': 'Shop and Families',
@@ -237,6 +247,9 @@ export const EN = {
 // 틀: 숫자나 이름이 끼는 글. fn(m, tr) — tr로 끼인 말을 다시 옮긴다.
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
+  [/^조각 셋을 모으면 전설: (.+)$/, (m, tr) => `Three fragments make a legend: ${tr(m[1])}`],
+  [/^가족: (.+) — 같은 가족을 2 · 4 · 6 모으면 효과$/, (m, tr) => `Family: ${m[1].split(' · ').map(tr).join(' · ')} — effects at 2, 4 and 6 of one family`],
+  [/^([^\s:\d]+(?: [^\s:\d]+)?): (.+)$/, (m, tr) => `${tr(m[1])}: ${tr(m[2])}`],
   [/^(\d+)관 · (연습|정식|명인) 대국$/, (m) => `Hall ${m[1]} · ${{ 연습: 'Practice', 정식: 'Rated', 명인: 'Master' }[m[2]]}`],
   // 왼쪽 판 제목 「3/8관 · 연습 대국」: 영어는 「Hall 3/8 · Practice」가 판 폭(112)을 넘어 「/8」을 뺀다
   [/^(\d+)\/(\d+)관 · (연습|정식|명인) 대국$/, (m) => `Hall ${m[1]} · ${{ 연습: 'Practice', 정식: 'Rated', 명인: 'Master' }[m[3]]}`],
@@ -244,6 +257,10 @@ export const PRE = [
 ];
 
 export const TEMPLATES = [
+  [/^기보는 (.+) 모습을 따른다$/, (m, tr) => `Uses the ${tr(m[1]).toLowerCase()} chart`],
+  [/^(\d+) › (\d+)단계$/, (m) => `Level ${m[1]} › ${m[2]}`],
+  [/^(.+)에 (.+)의 혼$/, (m, tr) => `${tr(m[2] + '의 혼')} in ${tr(m[1])}`],
+  [/^(폰|나이트|비숍|룩|퀸|킹) 모습$/, (m, tr) => `${tr(m[1])} form`],
   [/^(\d+)관$/, (m) => `Hall ${m[1]}`],
   [/^값 (\d+)$/, (m) => `Value ${m[1]}`],
   [/^(\d+)관 (.+)$/, (m, tr) => `Hall ${m[1]} ${tr(m[2])}`],

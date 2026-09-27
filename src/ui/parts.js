@@ -1,6 +1,7 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, frame, dots, sprite, measure, line } from '../render/gfx.js';
+import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies, FAMILY_BY_ID } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
@@ -170,10 +171,63 @@ export function cornerTicks(ctx, x, y, w, h, col, n = 2) {
   rect(ctx, x, y + h - 1, n, 1, col); rect(ctx, x, y + h - n, 1, n, col);
   rect(ctx, x + w - n, y + h - 1, n, 1, col); rect(ctx, x + w - 1, y + h - n, 1, n, col);
 }
-// 각인 그림: 그 각인이 새겨진 나이트 한 칸(상점 · 꾸러미 카드, 두루마리)
+// 각인 그림: 기물 없이 재료 하나(금화 · 은판 · 상아 조각 · 흑단 나뭇조각 · 유리 조각 · 깃털). 16×16 도트, 22×26 어두운 칸 안에.
+// 각인은 주머니의 어느 기물에나 새기므로 기물을 그리지 않는다(나이트를 그리면 나이트에만 붙는 것처럼 보였다).
+const EMBLEM = {
+  gold: { c: { o: '#6b4410', m: '#c8902c', h: '#efbd55', w: '#fff1b8' }, g: ['.....oooooo.....', '...oommmmmmoo...', '..ommhhhhhhmmo..', '.omhhwwhhhhhhmo.', '.omhwwhhhhhhhmo.', 'omhhhhmmmmhhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhhmmmmhhhhmo', '.omhhhhhhhhhhmo.', '.omhhhhhhhhhhmo.', '..ommhhhhhhmmo..', '...oommmmmmoo...', '.....oooooo.....'] },
+  silver: { c: { o: '#4a5560', m: '#9aa6b0', h: '#d8dee6', w: '#ffffff' }, g: ['................', '................', '..oooooooooooo..', '.ohhhhhhhhhhhmo.', '.ohwwhhhhhhhhmo.', '.ohwhhhhhhhhhmo.', '.ohhhhhwhhhhhmo.', '.ohhhhwhhhhhhmo.', '.ohhhwhhhhhhhmo.', '.ohhhhhhhhhwhmo.', '.ohhhhhhhhwhhmo.', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '................', '................', '................'] },
+  ivory: { c: { o: '#8a6a4a', m: '#d8c4a4', h: '#f7efdb', w: '#ffffff' }, g: ['..........oo....', '.........ohho...', '........ohwho...', '.......ohwhho...', '......ohwhhmo...', '.....ohhhhmo....', '....ohhhhmo.....', '...ohhhhmo......', '..ohhhhmo.......', '..ohhhmo........', '.ohhhmo.........', '.ohhmmo.........', '.ohmmo..........', '..oooo..........', '................', '................'] },
+  ebony: { c: { o: '#1e1612', m: '#3e2f28', h: '#6b5a52', w: '#c8902c' }, g: ['................', '................', '...ooooooooo....', '..ohhmhhhhhmoo..', '..ohmhhhmhhhhmo.', '.ohhmhhhmhhhhmo.', '.ohmhhhhmhhhhhmo', '.ommmhhhhmmhhhmo', '.ohhhmmhhhhmmmmo', '.ohhhhhmhhhhhhmo', '..ohhhhmhhhwhmo.', '..ommmmmmmmmmo..', '...oooooooooo...', '................', '................', '................'] },
+  glass: { c: { o: '#3f7f8a', m: '#6fb8c4', h: '#bfe0e6', w: '#ffffff' }, g: ['.......o........', '......owo.......', '......owho......', '.....owhho......', '.....owhhho.....', '....owhhhho.....', '....owhhhhmo....', '...owhhhhhmo....', '...owhhhhhhmo...', '..owhhhhhhhmo...', '..owhhhhhhhhmo..', '.owhhhhhhhhhmo..', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '................', '................'] },
+  feather: { c: { o: '#3a6a60', m: '#6fd1bf', h: '#e8e0f0', w: '#ffffff' }, g: ['...........ooo..', '.........oohhmo.', '........ohhhhmo.', '.......ohhhhmo..', '......ohhwhmo...', '.....ohhwhmo....', '....ohhwhmo.....', '....ohwhmo......', '...ohwhmo.......', '...owhmo........', '..owmo..........', '..omo...........', '.oo.............', 'o...............', '................', '................'] },
+};
 export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
-  if (sq) { rect(ctx, x, y, 22, 26, PAL.dark); rect(ctx, x + 1, y + 1, 20, 1, PAL.light); }
-  sprite(ctx, 'N', 'w', x + 3, y + 3, { eng: id });
+  if (sq) { rect(ctx, x, y, 22, 26, '#1b2b27'); rect(ctx, x + 1, y + 1, 20, 1, '#2a3a33'); }
+  const e = EMBLEM[id];
+  if (!e) return;
+  e.g.forEach((r, j) => { for (let i = 0; i < 16; i++) { const k = r[i]; if (k !== '.') rect(ctx, x + 3 + i, y + 5 + j, 1, 1, e.c[k]); } });
+}
+// 혼 그림: 기물 없이 혼의 빛깔로 도는 기운(혼도 주머니의 어느 기물에나 깃든다)
+export function soulEmblem(ctx, id, x, y, t = 0, { sq = true } = {}) {
+  const s = SOUL_BY_ID[id];
+  if (sq) rect(ctx, x, y, 22, 26, '#1b2b27');
+  const cx = x + 11, cy = y + 13;
+  for (let r = 8; r >= 2; r -= 2) { ctx.globalAlpha = 0.18 + (8 - r) * 0.06; for (let a = 0; a < 24; a++) { const q = (a / 24) * Math.PI * 2; rect(ctx, Math.round(cx + Math.cos(q) * r), Math.round(cy + Math.sin(q) * r), 1, 1, s.col); } }
+  ctx.globalAlpha = 1;
+  for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 6), Math.round(cy + Math.sin(q) * 6), 2, 2, s.col); }
+  rect(ctx, cx - 1, cy - 1, 3, 3, PAL.white);
+}
+// 진화 그림: 체스 기물 › 이형(나이트 › 야간기사)
+export function evolveArt(ctx, x, y, t = 0) {
+  rect(ctx, x, y, 44, 26, '#1b2b27');
+  sprite(ctx, 'N', 'w', x + 1, y + 2);
+  const k = Math.floor(t * 3) % 2;
+  for (let i = 0; i < 3; i++) rect(ctx, x + 19 + i + k, y + 11 + i, 1, 1, PAL.gold), rect(ctx, x + 19 + i + k, y + 15 - i, 1, 1, PAL.gold);
+  sprite(ctx, 'H', 'w', x + 26, y + 2, { tier: 1 });
+}
+
+// 카드에 적는 효과 한 줄(말풍선은 덧붙임만)
+export const CHESS_MOVE = { P: '대각선 앞 한 칸의 적을 먹는다', N: 'ㄱ자로 뛰어 먹는다', B: '대각선으로 미끄러져 먹는다', R: '가로 · 세로로 미끄러져 먹는다', Q: '여덟 방향으로 미끄러져 먹는다' };
+export function itemEffect(it) {
+  if (it.kind === 'maxim') return maximInfo(it.id).text;
+  if (it.kind === 'chart') return chartText(it.form);
+  if (it.kind === 'engraving') return engravingInfo(it.id).text;
+  if (it.kind === 'piece') return (it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼: ${L(SOUL_BY_ID[it.soul].text)}` : PIECE_MOVE[it.t] || CHESS_MOVE[it.t] || '');
+  if (it.kind === 'soul') return SOUL_BY_ID[it.id].text;
+  if (it.kind === 'evolve') return '주머니 기물 하나가 그 종류의 이형으로 자란다';
+  if (it.kind === 'tactic') return TACTIC_BY_ID[it.id].text;
+  if (it.kind === 'gamble') return it.id === 'potion' ? '주머니의 아무 기물에 아무 혼이나 각인이 붙는다' : '주머니의 아무 기물이 아무 이형이 된다';
+  if (it.kind === 'fragment') return `조각 셋을 모으면 전설: ${LEGEND_BY_ID[it.legend].text}`;
+  return '';
+}
+// 어떻게 쓰나(카드 아래 흐린 한 줄)
+export function itemUse(it) {
+  if (it.kind === 'engraving') return '주머니 기물 하나에 새긴다';
+  if (it.kind === 'soul') return '주머니 기물 하나에 깃든다';
+  if (it.kind === 'evolve') return '주머니 기물 하나를 고른다';
+  if (it.kind === 'tactic') return '대국 중 떨구기 전에 쓴다';
+  if (it.kind === 'piece') return '주머니에 들어온다';
+  return '';
 }
 
 // 작은 동전 아이콘 + 상금
@@ -272,6 +326,19 @@ export function itemTip(it) {
   return null;
 }
 
+// 카드에 이미 적힌 것 말고 덧붙일 것만(가족 · 이야기 · 진화 갈래). 없으면 null
+export function itemExtraTip(it) {
+  const lines = [];
+  const fams = it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : [];
+  if (fams.length) lines.push(`가족: ${fams.map((f) => FAMILY_BY_ID[f].name).join(' · ')} — 같은 가족을 2 · 4 · 6 모으면 효과`);
+  if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`기보는 ${PIECE_NAME[chartForm(it.t)]} 모습을 따른다`);
+  if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${info.story}`); }
+  if (it.kind === 'evolve') lines.push('폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존');
+  if (it.kind === 'chart') lines.push('모습: 사슬 한가운데 내 기물이 지금 입은 기물');
+  if (it.kind === 'fragment') lines.push(LEGEND_BY_ID[it.legend].story);
+  return lines.length ? tipLines(itemName(it), lines, 170) : null;
+}
+
 // 명국 조각 모양(금빛 깨진 판 조각)
 export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
   const rows = ['..####..', '.######.', '########', '#######.', '.#####..', '..###...', '...#....'];
@@ -285,6 +352,7 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
     const nw = Math.max(2, Math.round(w * scaleX));
     x += Math.floor((w - nw) / 2); w = nw;
   }
+  if (w >= 88) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run });
   const back = scaleX < 1 && it._back;
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   box(ctx, x, y, w, h, fill, hover ? PAL.gold : PAL.frameDk);
@@ -332,14 +400,14 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
     text(ctx, it.id === 'potion' ? '물약' : '룰렛', cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'evolve' || it.kind === 'tactic') {
     rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
-    if (it.kind === 'evolve') { sprite(ctx, 'N', 'w', cx - 8, y + 22, { tier: 3, time: t }); }
+    if (it.kind === 'evolve') { rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27'); rect(ctx, cx - 7, y + 33, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, cx - 3 + i, y + 32 - i, 1, 1, PAL.gold); rect(ctx, cx + 1, y + 25, 6, 8, PAL.gold); }
     else tacticIcon(ctx, it.id, cx - 8, y + 25);
     text(ctx, it.kind === 'evolve' ? '진화' : TACTIC_BY_ID[it.id].name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'soul') {
     const s = SOUL_BY_ID[it.id];
     frame(ctx, x + 1, y + 1, w - 2, h - 2, s.col);
     rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
-    sprite(ctx, 'N', 'w', cx - 8, y + 22, { soul: it.id, time: t });
+    soulEmblem(ctx, it.id, cx - 11, y + 20, t);
     text(ctx, s.name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'fragment') {
     shardIcon(ctx, cx - 8, y + 22);
@@ -352,6 +420,86 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
   } else if (price && it.price != null) {
     text(ctx, `$${it.price}`, cx, y + h - 15, PAL.goldDk, { align: 'center', bold: true });
   }
+}
+
+// 넓은 카드(상점 진열 · 꾸러미): 윗줄 종류 · 가족, 그림 옆에 이름, 그 아래 효과를 늘 적는다. 쓰는 법은 흐리게 맨 아래.
+function itemArt(ctx, it, x, y, t, run) {
+  if (it.kind === 'maxim') { rect(ctx, x, y, 22, 26, '#e3d6b8'); drawIcon(ctx, it.id, x + 5, y + 7); return 22; }
+  if (it.kind === 'piece') { rect(ctx, x, y, 22, 26, '#e3d6b8'); sprite(ctx, it.t, 'w', x + 3, y + 2, { tier: run ? tierOf(run.charts[chartForm(it.t)]) : 0, soul: it.soul || null, time: t }); return 22; }
+  if (it.kind === 'chart') {
+    // 모습 표: 점선 테 안의 흐린 윤곽 = 「이 모습일 때」
+    rect(ctx, x, y, 22, 26, '#e8dcc0');
+    dots(ctx, x, y, 22, 26, PAL.cardDim, 2);
+    const lv = run ? run.charts[it.form] || 0 : 0;
+    sprite(ctx, it.form, 'w', x + 3, y + 2, { tier: tierOf(lv + 1) });
+    return 22;
+  }
+  if (it.kind === 'engraving') { engravingEmblem(ctx, it.id, x, y); return 22; }
+  if (it.kind === 'soul') { soulEmblem(ctx, it.id, x, y, t); return 22; }
+  if (it.kind === 'evolve') { evolveArt(ctx, x, y, t); return 44; }
+  if (it.kind === 'tactic') { rect(ctx, x, y, 22, 26, '#1b2b27'); tacticIcon(ctx, it.id, x + 3, y + 7); return 22; }
+  if (it.kind === 'gamble') { rect(ctx, x, y, 22, 26, '#1b2b27'); text(ctx, '?', x + 11, y + 2, `hsl(${Math.floor(t * 200) % 360},70%,70%)`, { align: 'center', bold: true, scale: 2 }); return 22; }
+  if (it.kind === 'fragment') { shardIcon(ctx, x + 3, y + 5); return 22; }
+  return 0;
+}
+function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run }) {
+  const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
+  box(ctx, x, y, w, h, fill, hover ? PAL.gold : PAL.frameDk);
+  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
+  const edge = it.kind === 'engraving' ? ENG_EDGE[it.id] : it.kind === 'soul' ? SOUL_BY_ID[it.id].col : null;
+  if (edge) { frame(ctx, x + 1, y + 1, w - 2, h - 2, edge); cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, edge, 3); }
+  if (it.kind === 'maxim') rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[maximInfo(it.id).rarity]);
+  if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
+  if (hover) frame(ctx, x, y, w, h, PAL.gold);
+  text(ctx, ITEM_KIND[it.kind], x + 5, y + 4, PAL.cardDim);
+  const fams = it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : [];
+  if (fams.length) familyGlyphs(ctx, fams, x + w - 8 * fams.length - 3, y + 6);
+  const aw = itemArt(ctx, it, x + 5, y + 18, t, run);
+  const nx = x + 5 + aw + 4, nw = x + w - 4 - nx;
+  const name = it.kind === 'chart' ? `${PIECE_NAME[it.form]} 모습` : it.kind === 'engraving' ? engravingInfo(it.id).name : it.kind === 'soul' ? SOUL_BY_ID[it.id].name : itemName(it);
+  const nl = wrap(name, nw, true).slice(0, 2);
+  nl.forEach((l, k) => text(ctx, l, nx, y + 18 + (nl.length === 1 ? 7 : 0) + k * 13, PAL.cardInk, { bold: true }));
+  rect(ctx, x + 5, y + 47, w - 10, 1, edge || PAL.cardDim);
+  const foot = (price && it.price != null && !sold) ? 16 : 2;
+  const use = wrap(itemUse(it), w - 10).slice(0, 2);
+  let yy = y + 50;
+  const bottom = y + h - foot - use.length * 12;
+  const lines = [];
+  for (const l of wrap(itemEffect(it), w - 10)) lines.push([l, PAL.cardInk]);
+  if (it.kind === 'chart' && run) lines.push([`${run.charts[it.form] || 0} › ${(run.charts[it.form] || 0) + 1}단계`, PAL.cardDim]);
+  if (it.edition) for (const l of wrap(`${EDITION_BY_ID[it.edition].name}: ${L(EDITION_BY_ID[it.edition].text)}`, w - 10)) lines.push([l, PAL.goldDk]);
+  for (const [l, c] of lines) { if (yy + 12 > bottom) break; text(ctx, l, x + 5, yy, c); yy += 12; }
+  use.forEach((l, k) => text(ctx, l, x + 5, bottom + k * 12, PAL.cardDim));
+  if (sold) {
+    ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
+    text(ctx, '샀다', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
+  } else if (price && it.price != null) text(ctx, `$${it.price}`, x + w / 2, y + h - 14, PAL.goldDk, { align: 'center', bold: true });
+}
+
+// 새기기 · 깃들기 · 자라기 미리 보기: 고른 기물이 어떻게 되는지 보이고 확인을 받는다(기물을 누르자마자 새기지 않는다).
+// what: { kind: 'engraving'|'soul'|'evolve', id }, p: 고른 기물(없으면 고르라는 말), to: 진화 결과 종류
+export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfirm = null, onCancel = null, idPrefix = 'target' } = {}) {
+  const h = 40;
+  ui.region(`${idPrefix}:panel`, x, y, w, h, {});
+  box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
+  const verb = what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : '자란다';
+  const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 그 종류의 이형으로 자란다';
+  if (!p) {
+    text(ctx, what.kind === 'engraving' ? '주머니에서 새길 기물을 고른다' : what.kind === 'soul' ? '주머니에서 깃들 기물을 고른다' : '주머니에서 자랄 기물을 고른다', x + 6, y + 4, PAL.gold, { bold: true });
+    const l = wrap(eff, w - 70)[0];
+    text(ctx, l, x + 6, y + 21, PAL.ink);
+  } else {
+    const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
+    pieceCard(ctx, p, x + 5, y + 6, 20, 28, { tier: tierOf(run.charts[chartForm(p.t)]) });
+    for (let i = 0; i < 3; i++) { rect(ctx, x + 29 + i, y + 17 + i, 1, 1, PAL.gold); rect(ctx, x + 29 + i, y + 23 - i, 1, 1, PAL.gold); }
+    pieceCard(ctx, after, x + 35, y + 6, 20, 28, { tier: tierOf(run.charts[chartForm(after.t)]), time: ui.time, selected: true });
+    const name = what.kind === 'evolve' ? `${PIECE_NAME[p.t]} › ${PIECE_NAME[after.t]}` : `${PIECE_NAME[p.t]}에 ${what.kind === 'engraving' ? `${engravingInfo(what.id).name} 각인` : `${SOUL_BY_ID[what.id].name}의 혼`}`;
+    text(ctx, name, x + 62, y + 4, PAL.gold, { bold: true });
+    const l = wrap(what.kind === 'evolve' ? (PIECE_MOVE[after.t] || '') : eff, w - 62 - 66)[0] || '';
+    text(ctx, l, x + 62, y + 21, PAL.ink);
+    if (onConfirm) button(ctx, ui, `${idPrefix}:ok`, x + w - 62, y + 4, 56, 16, verb, { tone: 'gold', onClick: onConfirm });
+  }
+  if (onCancel) button(ctx, ui, `${idPrefix}:cancel`, x + w - 62, y + 21, 56, 15, '그만', { onClick: onCancel });
 }
 
 // ── 불멸의 기보 조각 띠: 조각을 하나라도 모은 명국마다 작은 조각 + 모은 수. 올리면 명국 · 조각 · 재현 조건(첫 조각 뒤에만).
