@@ -215,6 +215,11 @@ async function finishBattle() {
 await finishBattle();
 await settle(1500);
 await shot('07-reward');
+// 넘친 목표 도장은 제목 옆(보상 줄을 덮지 않게)
+await ev(() => { const l = window.__app.screen.last; l.overflowWas = l.overflow; l.overflow = 10; });
+await settle(60);
+await shot('07b-reward-overflow');
+await ev(() => { const l = window.__app.screen.last; l.overflow = l.overflowWas; delete l.overflowWas; });
 await clickId('next');
 await settle(300);
 await ev(() => { const r = window.__app.run; r.money = 30; });
