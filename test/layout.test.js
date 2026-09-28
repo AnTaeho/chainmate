@@ -128,6 +128,12 @@ test('꾸러미(기물 · 기보 · 각인): 카드 셋 → 건너뛰기, 새기
     for (const e of ENGRAVINGS) {
       const th = M.parts.targetPanelLayout(run, { kind: 'engraving', id: e.id }, run.deck[0], MAIN.w).h;
       assert.ok(TOP + th + GAP_GROUP + 28 <= BOTTOM, `${lang} 새기기 ${e.id} ${th}`);
+      // 바꾸기(옛 각인 › 새 각인)
+      for (const o of ENGRAVINGS) if (o.id !== e.id) {
+        const lay = M.parts.targetPanelLayout(run, { kind: 'engraving', id: e.id }, { ...run.deck[0], eng: { id: o.id } }, MAIN.w);
+        assert.equal(lay.swap, o.id);
+        assert.ok(TOP + lay.h + GAP_GROUP + 28 <= BOTTOM, `${lang} 바꾸기 ${o.id} › ${e.id} ${lay.h}`);
+      }
     }
   }
 });
@@ -185,4 +191,33 @@ test('기보 수준 표: 손 · 주머니는 그 모습의 기보 수준을 읽�
   assert.equal(M.parts.chartLevel(run, 'B'), 0);
   assert.equal(M.parts.chartLevel(null, 'N'), 0);
   for (const t of Object.keys(PIECES)) if (PIECES[t].fairy) assert.equal(M.parts.chartLevel(run, t), run.charts[chartForm(t)] || 0, t);
+});
+
+test('각인 · 혼 바꾸기: 같은 종류가 있으면 옛 것 › 새 것, 같은 것은 고를 수 없다 · 상점 두루마리 폭(224)에서도 화면 안(한국어 · 영어)', async () => {
+  const { ENGRAVINGS } = await import('../src/data/engravings.js');
+  const { SOULS } = await import('../src/data/souls.js');
+  const { TOP, GAP_GROUP, CENTER } = M.frame;
+  const run = M.run.createRun({ seed: 1, draft: false });
+  const p = run.deck[0];
+  assert.equal(M.parts.targetOk({ kind: 'engraving', id: 'glass' }, { ...p, eng: { id: 'glass' } }), false);
+  assert.equal(M.parts.targetOk({ kind: 'engraving', id: 'glass' }, { ...p, eng: { id: 'gold' } }), true);
+  assert.equal(M.parts.targetOk({ kind: 'soul', id: 'echo' }, { ...p, soul: 'echo' }), false);
+  assert.equal(M.parts.targetOk({ kind: 'soul', id: 'echo' }, { ...p, soul: 'hunger', eng: { id: 'echo' } }), true);
+  assert.equal(M.parts.targetOk({ kind: 'evolve' }, p), true);
+  // 각인만 있는 기물에 혼 · 혼만 있는 기물에 각인은 바꾸기가 아니다(한 기물에 각인 하나 + 혼 하나)
+  assert.equal(M.parts.targetPanelLayout(run, { kind: 'soul', id: 'echo' }, { ...p, eng: { id: 'gold' } }, CENTER.w).swap, null);
+  assert.equal(M.parts.targetPanelLayout(run, { kind: 'engraving', id: 'gold' }, { ...p, soul: 'echo' }, CENTER.w).swap, null);
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    const cases = [
+      ...ENGRAVINGS.flatMap((a) => ENGRAVINGS.filter((b) => b.id !== a.id).map((b) => [{ kind: 'engraving', id: a.id }, { ...p, eng: { id: b.id } }])),
+      ...SOULS.flatMap((a) => SOULS.filter((b) => b.id !== a.id).map((b) => [{ kind: 'soul', id: a.id }, { ...p, soul: b.id }])),
+    ];
+    for (const [what, q] of cases) {
+      const lay = M.parts.targetPanelLayout(run, what, q, CENTER.w);
+      assert.ok(lay.swap, `${lang} ${what.id}`);
+      // 상점: 미리 보기 → 주머니 한 줄(28)이 화면 안
+      assert.ok(TOP + lay.h + GAP_GROUP + 28 <= BOTTOM, `${lang} 상점 바꾸기 ${lay.swap} › ${what.id} ${lay.h}`);
+    }
+  }
 });

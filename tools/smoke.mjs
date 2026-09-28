@@ -7,6 +7,7 @@ import { lineCommands } from '../src/sim/solver.js';
 import { canBuy } from '../src/sim/run.js';
 import { evolveTo } from '../src/data/tactics.js';
 import { isHidden } from '../src/sim/battle.js';
+const { targetOk } = await import('../src/ui/parts.js');
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -370,7 +371,8 @@ function shopStep() {
       const c = run.consumables[0];
       click('cons:0');
       if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve') {
-        const piece = c.kind === 'evolve' ? run.deck.find((x) => evolveTo(run.seed, x)) : run.deck[0];
+        // 같은 각인 · 혼이 이미 있는 기물은 흐리고 눌리지 않는다(docs/tasks/backlog.md 6): 고를 수 있는 기물로
+        const piece = c.kind === 'evolve' ? run.deck.find((x) => evolveTo(run.seed, x)) : run.deck.find((x) => targetOk(c, x));
         if (!piece) { click('target:cancel'); break; }
         const n = run.consumables.length;
         click(`deck:${piece.id}`);
@@ -406,7 +408,7 @@ function packStep() {
   click(`pack:pick:${i}`);
   if (app.screen.name === 'pack' && app.screen.engraveIndex != null) notesOnce('pack-target', 2);
   if (pack.options[i].kind === 'engraving' && app.screen.name === 'pack') {
-    click(`deck:${app.run.deck[0].id}`);
+    click(`deck:${app.run.deck.find((x) => targetOk(pack.options[i], x)).id}`);
     if (app.run.phase !== 'pack' || !region('target:ok')) throw new Error('engraved without a preview');
     previewSeen.pack++;
     click('target:ok');
@@ -680,6 +682,53 @@ const chartSeen = { run: 0, scene: 0, grow: 0, tick: 0, growBad: 0 };
   app.toTitle(); pump(1);
 }
 
+// 각인 · 혼 덮어쓰기(docs/tasks/backlog.md 6): 이미 같은 종류가 있는 기물을 고르면 옛 것 › 새 것 확인(target:swap).
+// 「그만」이면 대상 고르기로(두루마리 · 꾸러미 · 기물 그대로), 「바꾸기」면 새 것으로. 같은 것이 새겨진 기물은 고를 수 없다
+const swapSeen = { same: 0, shopBack: 0, shopSwap: 0, soulSwap: 0, packBack: 0, packSwap: 0, bad: [] };
+{
+  const bad = (m) => swapSeen.bad.push(m);
+  const setup = (fn) => { app.overlay = null; app.nextSeed = 11; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 }); fn(app.run); pump(90); };
+  const stock = (r) => { r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; };
+  // 상점 두루마리: 유리 각인 → 유리가 있는 기물(고를 수 없다) → 금이 있는 기물(확인) → 그만 → 다시 → 바꾸기. 이어서 혼(굶주림 → 메아리)
+  setup((r) => { r.phase = 'shop'; r.battle = null; stock(r); r.deck[1].eng = { id: 'gold' }; r.deck[2].eng = { id: 'glass' }; r.deck[3].soul = 'hunger'; r.consumables = [{ kind: 'engraving', id: 'glass' }, { kind: 'soul', id: 'echo' }]; app.go('shop'); });
+  {
+    const r = app.run, s = () => app.screen;
+    const [gold, glass, hunger] = [r.deck[1], r.deck[2], r.deck[3]];
+    click('cons:0');
+    click(`deck:${glass.id}`);
+    if (s().target && s().target.pieceId == null && !region('target:ok')) swapSeen.same++; else bad('같은 각인이 있는 기물이 골라졌다');
+    click(`deck:${gold.id}`);
+    if (!region('target:swap') || !region('target:ok') || r.consumables.length !== 2 || gold.eng.id !== 'gold') bad('금 각인 기물에 확인이 뜨지 않았다');
+    click('target:cancel');
+    if (s().target && s().target.index === 0 && s().target.pieceId == null && r.consumables.length === 2 && gold.eng.id === 'gold' && !region('target:swap')) swapSeen.shopBack++; else bad('상점 「그만」이 대상 고르기로 돌아가지 않았다');
+    click(`deck:${gold.id}`);
+    click('target:ok');
+    if (gold.eng.id === 'glass' && r.consumables.length === 1 && r.consumables[0].kind === 'soul') swapSeen.shopSwap++; else bad('상점 「바꾸기」가 새 각인으로 바꾸지 않았다');
+    pump(30);
+    click('cons:0');
+    click(`deck:${hunger.id}`);
+    if (!region('target:swap')) bad('혼이 있는 기물에 확인이 뜨지 않았다');
+    click('target:ok');
+    if (hunger.soul === 'echo' && !r.consumables.length) swapSeen.soulSwap++; else bad('혼 「바꾸기」가 새 혼으로 바꾸지 않았다');
+    pump(30);
+  }
+  // 꾸러미 각인: 유리를 골라 금이 있는 기물 → 그만(꾸러미 그대로) → 다시 → 바꾸기
+  setup((r) => { r.phase = 'pack'; r.battle = null; stock(r); r.deck[1].eng = { id: 'gold' }; r.pack = { kind: 'engraving', options: [{ kind: 'engraving', id: 'glass' }, { kind: 'engraving', id: 'gold' }, { kind: 'engraving', id: 'feather' }] }; app.go('pack'); pump(90); });
+  {
+    const r = app.run, gold = r.deck[1];
+    click('pack:pick:0');
+    click(`deck:${gold.id}`);
+    if (!region('target:swap')) bad('꾸러미에서 금 각인 기물에 확인이 뜨지 않았다');
+    click('target:cancel');
+    if (screen() === 'pack' && r.phase === 'pack' && r.pack && app.screen.engraveIndex === 0 && app.screen.engraveTarget == null && gold.eng.id === 'gold') swapSeen.packBack++; else bad('꾸러미 「그만」이 대상 고르기로 돌아가지 않았다');
+    click(`deck:${gold.id}`);
+    click('target:ok');
+    if (gold.eng.id === 'glass' && r.phase === 'shop') swapSeen.packSwap++; else bad('꾸러미 「바꾸기」가 새 각인으로 바꾸지 않았다');
+    pump(30);
+  }
+  app.toTitle(); pump(1);
+}
+
 // 처음 켠 사람이 수업을 건너뛴다 → 곧바로 1관 · 처음 안내를 끄면 뜨지 않는다
 let skipOk = false;
 const hintFail = ['shop', 'pack', 'draft', 'family'].filter((id) => !hintsShown.has(id) || !app.records.coachSeen[id]);
@@ -751,6 +800,8 @@ if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확�
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
+console.log(`각인 · 혼 바꾸기: 같은 것 흐림 ${swapSeen.same} · 상점 그만 ${swapSeen.shopBack} · 바꾸기 ${swapSeen.shopSwap} · 혼 ${swapSeen.soulSwap} · 꾸러미 그만 ${swapSeen.packBack} · 바꾸기 ${swapSeen.packSwap}${swapSeen.bad.length ? ` · 어긋남: ${swapSeen.bad.join(' | ')}` : ''}`);
+if (swapSeen.bad.length || !swapSeen.same || !swapSeen.shopBack || !swapSeen.shopSwap || !swapSeen.soulSwap || !swapSeen.packBack || !swapSeen.packSwap) { console.log('각인 · 혼을 덮어쓰기 전에 확인하지 않았거나, 「그만」 · 「바꾸기」가 어긋났다'); fail = true; }
 console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 ${chartSeen.scene} · 기보를 쓴 순간 크게 ${chartSeen.grow} · 수준만 ${chartSeen.tick}(어긋남 ${chartSeen.growBad})`);
 if (!chartSeen.scene || !chartSeen.grow || !chartSeen.tick || chartSeen.growBad) { console.log('기보 몫 연출이 뜨지 않았거나 기보를 쓴 순간이 자라지 않았다'); fail = true; }
 console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);

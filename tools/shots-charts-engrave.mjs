@@ -5,7 +5,7 @@
 //   <prefix>-<lang>-2-chain-chart  기보가 붙은 모습으로 먹은 순간(값 · 배수가 튀는 때)
 //   <prefix>-<lang>-3-chart-grow   상점에서 기보 두루마리를 써서 나이트가 한 단계 자라는 순간(2 → 3, 동 → 은)
 //   <prefix>-<lang>-3b-chart-tick  단계가 그대로인 기보(3 → 4)
-//   <prefix>-<lang>-4-engrave-over 금 각인이 있는 기물에 유리 각인을 고른 때
+//   <prefix>-<lang>-4-engrave-over 금 각인이 있는 기물에 유리 각인을 고른 때(유리가 이미 있는 나이트는 흐리다)
 //   <prefix>-<lang>-4b-soul-over   혼이 있는 기물에 다른 혼을 고른 때
 import http from 'node:http';
 import fs from 'node:fs';
@@ -137,7 +137,7 @@ await clickId('cons:0'); await away(); await wait(260);
 await shot('3b-chart-tick');
 
 // ── 4: 금 각인이 있는 나이트(71)에 유리 각인 · 4b: 혼(메아리)이 있는 비숍(72)에 다른 혼
-await shopScene("r.consumables = [{ kind: 'engraving', id: 'glass' }, { kind: 'soul', id: 'transcend' }];");
+await shopScene("r.consumables = [{ kind: 'engraving', id: 'glass' }, { kind: 'soul', id: 'transcend' }]; r.deck.find((p) => p.id === 70).eng = { id: 'glass' };");
 await clickId('cons:0'); await clickId('deck:71'); await away(); await wait(200);
 await shot('4-engrave-over');
 await clickId('cons:1'); await clickId('deck:72'); await away(); await wait(200);
