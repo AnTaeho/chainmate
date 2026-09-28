@@ -338,7 +338,8 @@ export const EN = {
   'b · g 줄에선 어느 모습이든 세로로 미끄러져 먹는다': 'On the b and g files, any form slides vertically to take',
   '대국마다 금빛 칸 셋 · 그 위 적을 먹으면 배수 ×2': 'Three gold squares per match · take on one: ×2 Mult',
   '문 위 적을 먹으면 다른 문에서 이어 간다 · 대국마다 문 둘': 'Take on a gate: go on from the other gate · two gates per match',
-  '끊기는 순간 킹을 뺀 둘레의 적을 모두 먹는다': 'On a break: take every enemy around it but kings',
+  '끊길 때: 둘레의 적 둘을 먹는다': 'On a break: take 2 enemies around it',
+  '킹과 킹을 지키는 적은 남긴다 · 값이 큰 적부터': 'Spares kings and their guards · biggest first',
   '대국 첫 사슬: 배수 ×3 · 시작한 기물은 주머니에서 떠난다': "Match's first chain: ×3 Mult · its piece leaves your bag",
   '주머니 기물이 모두 다른 종류: 목표 절반': 'Every piece in your bag a different kind: half the target',
   '폰으로 시작한 사슬이 승급하면 그 폰은 퀸으로 남는다': 'A pawn that starts a chain and promotes stays a queen',
@@ -350,7 +351,7 @@ export const EN = {
   '먹으면 한 단계 위 모습이 된다 · 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Each take: one step up · pawn › knight › bishop › rook › queen › amazon', '먹으면 한 단계 위 모습이 된다': 'Each take: one step up',
   '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …': 'Second take +10 Value · third +20 · fourth +30 …',
   '승급하면 아마존 · 두 줄 먼저 승급': 'Promotes to amazon · two ranks sooner',
-  '지키는 적을 무시한다 · 배수 −1': 'Ignores guards · −1 Mult',
+  '사슬마다 한 번: 지키는 적을 무시한다': 'Once per chain: ignore a guard', '지켜진 킹은 먹을 수 없다': "A guarded king still can't be taken",
   // 적 특성 · 묘수 · 명인
   '사슬의 첫 먹기로는 못 먹는다': "Can't be a chain's first take", '먹으면 둘레의 적도 함께 먹는다': 'Taking it takes the enemies around it too',
   '먹어도 모습이 그대로': 'Taking it keeps your form', '먹으면 대국 뒤 내 주머니에 들어온다': 'Take it and it joins your bag after the match',

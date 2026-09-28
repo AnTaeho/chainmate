@@ -5,7 +5,7 @@
 //   조정자 훅           대국 안에서(defineModifier('joseki:<id>', { kind: 'joseki', … }))
 //   rules(battle, rng)  대국 규칙을 더한다(판 위 사물: 문 · 발판, 고속도로 줄) — 판을 짓기 전에
 import { defineModifier } from '../sim/scoring.js';
-import { PIECES } from './pieces.js';
+import { martyrBurst, MARTYR_TEXT, MARTYR_MORE } from './souls.js';
 import { createRng, fork, next } from '../sim/rng.js';
 
 export const DRAFT_ANTES = [1, 3, 5];
@@ -81,20 +81,9 @@ joseki('gates', '판의 문', 'gold', ['leap', 'change'], '문 위 적을 먹으
     b.rules.gates = [a, c];
   },
 });
-joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], '끊기는 순간 킹을 뺀 둘레의 적을 모두 먹는다', {
-  onCut(ctx) {
-    const sq = ctx.event.sq, board = ctx.t.board;
-    for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
-      const f = (sq & 7) + df, r = (sq >> 3) + dr;
-      if ((!df && !dr) || f < 0 || f > 7 || r < 0 || r > 7) continue;
-      const s = r * 8 + f, c = board[s];
-      if (!c || c.mine || c.t === 'K') continue;
-      board[s] = null;
-      ctx.emit({ type: 'pierce', sq: s, piece: c.t, gold: !!c.gold });
-      ctx.addValue(PIECES[c.t].value);
-      ctx.addMult(1);
-    }
-  },
+joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], MARTYR_TEXT, {
+  more: MARTYR_MORE,
+  onCut(ctx) { martyrBurst(ctx); },
 });
 joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬: 배수 ×3 · 시작한 기물은 주머니에서 떠난다', {
   more: '주머니가 여섯 이하면 떠나지 않는다',
