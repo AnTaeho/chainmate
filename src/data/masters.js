@@ -12,7 +12,7 @@ function master(id, name, text, def) {
 master('iron_wall', '철벽', '지켜진 적을 먹으면 곧바로 끊긴다', {
   onBattleStart(ctx) { ctx.rules.noReply = true; },
 });
-master('fog', '안개', '위 다섯 줄은 안개라 떨굴 수 없다 · 닿은 칸만 걷힌다', {
+master('fog', '안개', '위 다섯 줄은 안개라 떨굴 수 없다 · 내 기물의 행마가 닿으면 걷힌다', {
   onBattleStart(ctx) { ctx.rules.fog = 5; },
 });
 // 한 사슬에서 같은 종류의 적을 두 번 먹지 못한다(킹은 하나뿐이라 뺀다)
@@ -29,7 +29,7 @@ master('hourglass', '모래시계', '수 2 · 버리기 1뿐', {
 master('heavy_hand', '무거운 손', '퀸과 룩은 떨굴 수 없다', {
   onBattleStart(ctx) { ctx.rules.noHeavyDrop = true; },
 });
-master('silence', '침묵', '왼쪽 격언 둘이 잠든다', {
+master('silence', '침묵', '맨 위 격언 둘이 잠든다', {
   onBattleStart(ctx) {
     const firsts = ctx.t.mods.filter((s) => (s.kind || (getModifier(s.id) || {}).kind) === 'maxim' && !s.of).slice(0, 2);
     for (const first of firsts) {
@@ -42,7 +42,7 @@ master('silence', '침묵', '왼쪽 격언 둘이 잠든다', {
 master('grudge', '앙갚음', '끊긴 사슬은 점수가 4분의 1', {
   onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.chain.scoreMul *= 0.25; },
 });
-master('grandmaster', '대가', '킹이 둘이다', {
+master('grandmaster', '대가', '킹이 둘 · 둘 다 먹어야 외통', {
   onBattleStart(ctx) { ctx.rules.kings = 2; },
 });
 

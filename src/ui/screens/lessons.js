@@ -85,16 +85,16 @@ export function startLessonShop(app, i) {
   app.go('shop');
   const on = (name) => app.screen && app.screen.name === name;
   startGuide(app, [
-    { screen: 'shop', target: 'shop:buy:0', say: '진열의 격언 「기사도」를 산다 — 격언은 판 내내 붙어 있다', done: () => run.maxims.length > 0 },
+    { screen: 'shop', target: 'shop:buy:0', say: '진열의 격언 「기사도」를 산다. 격언은 판 내내 힘을 낸다', done: () => run.maxims.length > 0 },
     { screen: 'shop', target: 'maxim:0', say: '산 격언은 오른쪽 칸에 들어간다. 효과는 카드에 적혀 있다', ok: true },
-    { screen: 'shop', target: 'shop:pack:0', say: '기물 꾸러미를 연다 — 셋 중 하나를 고른다',
+    { screen: 'shop', target: 'shop:pack:0', say: '기물 꾸러미를 연다. 셋 중 하나를 고른다',
       done: () => {
         if (run.phase !== 'pack' || !on('pack')) return false;
         run.pack.options = [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'O' }, { kind: 'piece', t: 'B' }];
         return true;
       } },
-    { screen: 'pack', target: 'pack:pick:0', say: '낙타를 고른다 — 나이트처럼 뛰는 특수 기물', done: () => run.phase === 'shop' && on('shop') && run.deck.some((p) => p.t === 'L') },
-    { screen: 'shop', target: 'fam:leap', say: '기사도와 낙타로 기사 시너지가 2개 — 첫 효과가 켜졌다. 4개 · 6개면 더 켜진다', ok: true },
+    { screen: 'pack', target: 'pack:pick:0', say: '낙타를 고른다. 나이트처럼 뛰는 특수 기물이다', done: () => run.phase === 'shop' && on('shop') && run.deck.some((p) => p.t === 'L') },
+    { screen: 'shop', target: 'fam:leap', say: '기사도와 낙타로 기사 시너지가 2개. 첫 효과가 켜졌고, 4개 · 6개면 더 켜진다', ok: true },
   ], () => lessonDone(app, i));
 }
 

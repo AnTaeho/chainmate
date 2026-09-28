@@ -129,7 +129,7 @@ export function chainCapture(t, sq) {
   // 적 특성(깊이 D): 폭약은 둘레 적을 함께 · 배신자는 대국 뒤 내 주머니로
   if (target.trait === 'bomb') blast(t, sq, events);
   if (target.trait === 'traitor' && target.t !== 'K') { (c.traitors || (c.traitors = [])).push(target.t); events.push({ type: 'traitor', sq, piece: target.t }); }
-  // 보석(판 위 사물): 모습은 그대로, 상금 +2 · 거울(적 특성): 모습이 바뀌지 않는다
+  // 보석(판 위 사물): 모습은 그대로, 상금 +2 · 허수아비(적 특성, id mirror): 모습이 바뀌지 않는다
   if (target.trait === 'mirror') {
     events.push({ type: 'mirrored', sq: at });
   } else if (target.t === 'J') {

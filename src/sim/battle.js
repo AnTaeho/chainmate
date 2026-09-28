@@ -84,7 +84,7 @@ export function refreshHints(b) {
   runHook(b, 'onBoard', {}, []);
 }
 
-// 명인 「안개」: 위 세 줄의 적은 내 기물의 행마가 한 번이라도 닿은 칸만 드러난다(대국 동안 유지).
+// 명인 「안개」: 위 다섯 줄(rules.fog)의 적은 내 기물의 행마가 한 번이라도 닿은 칸만 드러난다(대국 동안 유지).
 function reveal(b) {
   if (!b.rules.fog || !b.chain) return;
   const c = b.chain;

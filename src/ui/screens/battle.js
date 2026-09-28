@@ -480,7 +480,7 @@ export class BattleScreen {
           const bomb = e.src === 'bomb', col = bomb ? PAL.red : e.src && e.src.includes('martyr') ? PAL.red : FAMILY_BY_ID.line.col;
           this.flash(e.sq, col); this.word(bomb ? '폭발' : e.src && e.src.includes('martyr') ? '순교' : '꿰뚫었다', col); this.snd(bomb ? 'cut' : 'capture', 2); if (bomb) this.shake(2, 0.12);
         } }); break;
-        case 'mirrored': add(0.1, { begin: () => { this.sparkle(e.sq, '#9fd3e0', 8); this.word('거울', '#9fd3e0'); } }); break;
+        case 'mirrored': add(0.1, { begin: () => { this.sparkle(e.sq, '#9fd3e0', 8); this.word('허수아비', '#9fd3e0'); } }); break;
         case 'traitor': add(0.1, { begin: () => { this.word('배신자가 넘어온다', '#8ec07c'); this.snd('coin'); } }); break;
         case 'absorb': add(0.15, { begin: () => { if (v.chain) v.chain.absorbed = e.forms.slice(1); this.sparkle(e.sq, FAMILY_BY_ID.change.col, 12); this.word(`+${PIECE_NAME[e.piece]}`, FAMILY_BY_ID.change.col); this.snd('transform'); } }); break;
         case 'gate': add(0.22, {
@@ -497,7 +497,7 @@ export class BattleScreen {
           begin: () => { this.topple(e.sq); this.word('외통', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
         }); break;
         case 'refill': add(0.35, {
-          begin: () => { this.word('판이 다시 채워진다', PAL.gold, 1.1, 1); this.snd('refill'); },
+          begin: () => { this.word('적이 다시 찬다', PAL.gold, 1.1, 1); this.snd('refill'); },
           done: () => { v.board = clone(post); if (v.chain) { v.chain.path = [e.sq]; } },
         }); break;
         case 'redropReady': add(0.15, {

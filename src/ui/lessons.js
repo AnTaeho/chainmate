@@ -19,7 +19,7 @@ export const LESSONS = [
   { id: 'drop', group: 'basic', title: '떨구고 먹는다', target: 10, hand: ['N'], board: { e5: 'P' },
     steps: [
       { pick: 0, say: '손의 나이트를 누른다' },
-      { drop: 'd3', say: '빛나는 칸에 떨군다 — 그 자리에서 먹을 적이 있는 칸만 빛난다' },
+      { drop: 'd3', say: '빛나는 칸에 떨군다. 먹을 적이 닿는 칸만 빛난다' },
       { cap: 'e5', say: '흔들리는 적을 눌러 먹는다' },
     ] },
   { id: 'become', group: 'basic', title: '잡으면 그것이 된다', target: 160, hand: ['N'], board: { d4: 'R', d8: 'B' }, preview: true, bigFlip: true,
@@ -35,11 +35,11 @@ export const LESSONS = [
       { drop: 'e7', say: '떨군다' },
       { cap: 'd5', say: '먹을 때마다 흰 칸의 값이 더해지고, 금빛 칸의 배수가 1씩 는다' },
       { cap: 'd2' },
-      { cap: 'h6', say: '점수 = 값 × 배수 — 길게 이을수록 곱이 커진다' },
+      { cap: 'h6', say: '점수 = 값 × 배수. 길게 이을수록 커진다' },
       { cap: 'h2' },
     ] },
   { id: 'guard', group: 'basic', title: '지키는 적부터', target: 160, hand: ['N'], board: { d5: 'R', f7: 'B' }, preview: true,
-    demo: [{ pick: 0 }, { drop: 'c3' }, { cap: 'd5', say: '룩을 먼저 먹으면 비숍이 그 칸을 지킨다 — 룩 모습으로는 비숍을 못 먹어 사슬이 끊긴다' }],
+    demo: [{ pick: 0 }, { drop: 'c3' }, { cap: 'd5', say: '룩을 먼저 먹으면 비숍이 그 칸을 지킨다. 룩 모습으로는 비숍을 못 먹어 끊긴다' }],
     steps: [
       { pick: 0, say: '나이트를 든다' },
       { drop: null, say: '비숍을 먹을 수 있는 칸에 떨군다' },
@@ -51,14 +51,14 @@ export const LESSONS = [
     steps: [
       { pick: 0, say: '판 위 막대가 목표. 닿으면 이긴다. 왼쪽 금빛 구슬이 남은 수다' },
       { drop: 'd3' },
-      { cap: 'e5', say: '폰을 먹고 첫 수가 끝난다 — 수 구슬이 하나 준다' },
+      { cap: 'e5', say: '폰을 먹으면 첫 수가 끝나고 수 구슬 하나가 꺼진다' },
       { pick: 0, say: '남은 수로 목표를 채운다: 비숍을 든다' },
       { drop: 'c3' },
       { cap: 'h8', say: '룩을 먹으면 목표에 닿는다' },
     ] },
   { id: 'redraw', group: 'battle', title: '손과 버리기', target: 90, moves: 1, discards: 1, hand: ['P', 'P', 'P', 'P'], bag: ['N'], board: { h8: 'Q' },
     steps: [
-      { pick: 0, say: '폰은 떨굴 곳이 없다 — 버릴 폰을 누른다' },
+      { pick: 0, say: '폰은 떨굴 곳이 없다. 버릴 폰을 누른다' },
       { discard: true, say: '버리기: 든 기물 하나를 버리고 새로 뽑는다. 붉은 구슬만큼 쓸 수 있다' },
       { pick: 3, say: '새로 쥔 나이트를 든다' },
       { drop: 'g6' },
@@ -75,7 +75,7 @@ export const LESSONS = [
     ] },
   { id: 'mate', group: 'battle', title: '외통', target: 99999, hand: ['N'], board: { e7: 'K', a7: 'R', h1: 'P' }, preview: true,
     steps: [
-      { pick: 0, say: '킹은 지키는 적이 하나라도 있으면 먹을 수 없다 — 룩이 킹을 지킨다' },
+      { pick: 0, say: '킹은 지키는 적이 있으면 못 먹는다. 지금은 룩이 지킨다' },
       { drop: 'b5', say: '지키는 룩을 먹을 수 있는 칸에 떨군다' },
       { cap: 'a7', say: '지키던 룩을 먹으면 내가 룩이 된다' },
       { cap: 'e7', say: '지키는 적이 없는 킹을 먹으면 외통. 점수와 상관없이 이긴다' },

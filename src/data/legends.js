@@ -27,7 +27,7 @@ legend('immortal', {
 export const OPERA_REFILLS = 3;
 legend('opera', {
   name: '오페라 대국', year: 1858, story: '모피가 오페라 관람석에서 17수 만에 이겼다',
-  text: '지켜진 킹도 먹는다 · 외통하면 판이 다시 차고 사슬이 이어진다', verb: '외통',
+  text: '지켜진 킹도 먹는다 · 외통하면 적이 다시 차고 사슬이 이어진다', verb: '외통',
   feat: '대국 첫 수에 외통', source: 'display',
   check: (h) => h.move === 0 && h.mates > 0,
 }, {
@@ -38,7 +38,7 @@ legend('opera', {
 
 legend('century', {
   name: '세기의 대국', year: 1956, story: '열세 살 피셔의 퀸 희생',
-  text: '퀸 모습으로 먹은 만큼, 사슬 끝에 배수 ×1.5', verb: '갈아입기',
+  text: '퀸 모습으로 먹을 때마다: 사슬 끝 배수 ×1.5', verb: '갈아입기',
   feat: '퀸을 먹고 곧바로 퀸을 또 먹는다', source: 'chart',
   check: (h) => h.caps.includes('QQ'),
 }, {
@@ -59,7 +59,7 @@ legend('evergreen', {
 
 legend('eight_pawns', {
   name: '폰 여덟의 행진', year: null, story: '여덟 폰이 모두 승급한 전설',
-  text: '폰으로 시작하면 여섯째 줄에서 승급 · 승급마다 배수 ×3', verb: '승급',
+  text: '폰으로 시작: 여섯째 줄에서 승급 · 승급마다 배수 ×3', verb: '승급',
   feat: '한 사슬에서 두 번 승급한다', source: 'piece',
   check: (h) => h.promotions >= 2,
 }, {

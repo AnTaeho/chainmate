@@ -57,7 +57,7 @@ joseki('mitre', '주교관', 'silver', ['diag', 'leap'], '비숍 하나가 대�
 joseki('archery', '활터', 'silver', ['hunt'], '폰 둘이 궁수가 된다', {
   pick(run, events) { evolve(run, 'P', 'S', 2, events); },
 });
-joseki('highway', '고속도로', 'silver', ['line'], 'b · g 줄에선 어느 모습이든 세로로 미끄러져 먹는다', {
+joseki('highway', '고속도로', 'silver', ['line'], 'b · g 세로줄: 어느 모습이든 세로로 미끄러져 먹는다', {
   rules(b) { b.rules.highways = [1, 6]; },
 });
 joseki('stepping', '발판', 'silver', ['hunt'], '대국마다 금빛 칸 셋 · 그 위 적을 먹으면 배수 ×2', {
@@ -72,7 +72,7 @@ joseki('stepping', '발판', 'silver', ['hunt'], '대국마다 금빛 칸 셋 ·
 // ── 금: 뿌리의 동사를 크게 비튼다
 // 버린 안: 흡수의 비전(대국마다 첫 사슬은 행마가 더해진다) — 센 떨군 모습이 판을 쓸어, 하네스 30판의 첫 수 외통(3관부터 20~50%)이
 //   모두 이 정석에서 나왔다. 처음 세 먹기로 줄여도 같았다. 한 기물에 붙는 혼 「흡수」만 남긴다.
-joseki('gates', '판의 문', 'gold', ['leap', 'change'], '문 위 적을 먹으면 다른 문에서 이어 간다 · 대국마다 문 둘', {
+joseki('gates', '판의 문', 'gold', ['leap', 'change'], '대국마다 문 둘 · 문 위 적을 먹으면 다른 문으로 건너가 잇는다', {
   rules(b, rng) {
     const free = [];
     for (let sq = 16; sq < 64; sq++) free.push(sq);
@@ -94,7 +94,7 @@ joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬: 배수 ×3 �
 joseki('highlander', '하이랜더', 'rainbow', ['hunt'], '주머니 기물이 모두 다른 종류: 목표 절반', {
   targetMult(run) { const seen = new Set(); for (const p of run.deck) { if (seen.has(p.t)) return 1; seen.add(p.t); } return 0.5; },
 });
-joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 시작한 사슬이 승급하면 그 폰은 퀸으로 남는다', {
+joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 시작해 승급하면: 주머니의 그 폰이 퀸이 된다', {
   onPromote(ctx) { if (ctx.chain.dropType === 'P') ctx.chain.throne = true; },
 });
 joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 사슬이 한 줄에 다섯 칸을 밟으면 곧바로 이긴다', {

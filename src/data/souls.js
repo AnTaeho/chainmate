@@ -65,11 +65,11 @@ export function martyrBurst(ctx, take = MARTYR.take) {
 }
 export const UP = { P: 'N', N: 'B', B: 'R', R: 'Q', Q: 'Z' };
 
-soul('absorb', '흡수', '#d27fd6', ['change'], '세 번까지 모습 그대로 · 먹은 적의 행마를 더한다', {
-  more: '처음 세 먹기는 모습이 바뀌지 않고, 마지막에 먹은 적의 행마도 함께 쓴다',
+soul('absorb', '흡수', '#d27fd6', ['change'], '세 번까지 모습이 안 바뀌고, 먹은 적의 행마를 얻는다', {
+  more: '행마는 마지막에 먹은 적 하나의 것만 남는다',
   onDrop(ctx) { ctx.flags.absorb = true; },
 });
-soul('echo', '메아리', '#9fb8ff', ['change'], '막히면 한 번, 처음 모습으로 돌아가 잇는다', {
+soul('echo', '메아리', '#9fb8ff', ['change'], '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 잇는다', {
   onBlocked(ctx) {
     const c = ctx.chain;
     if (ctx.flags.echoUsed || c.form === c.dropType) return;
@@ -81,7 +81,7 @@ soul('echo', '메아리', '#9fb8ff', ['change'], '막히면 한 번, 처음 모�
     ctx.keepGoing();
   },
 });
-soul('transcend', '초월', '#fff1b8', ['change', 'crown'], '먹으면 한 단계 위 모습이 된다', {
+soul('transcend', '초월', '#fff1b8', ['change', 'crown'], '먹을 때마다 한 단계 위 기물이 된다', {
   more: '폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존',
   onDrop(ctx) { ctx.flags.transcend = true; },
 });
@@ -98,7 +98,7 @@ soul('martyr', '순교자', '#df5a45', ['sacrifice'], MARTYR_TEXT, {
   more: MARTYR_MORE,
   onCut(ctx) { martyrBurst(ctx); },
 });
-soul('crown', '왕홀', '#efbd55', ['crown', 'march'], '승급하면 아마존 · 두 줄 먼저 승급', {
+soul('crown', '왕홀', '#efbd55', ['crown', 'march'], '폰 모습이면 여섯째 줄에서 아마존으로 승급', {
   onDrop(ctx) { ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, 5); ctx.flags.promoteTo = 'Z'; },
 });
 soul('shade', '그림자', '#8a5cc8', ['sacrifice', 'leap'], '사슬마다 한 번: 지키는 적을 무시한다', {

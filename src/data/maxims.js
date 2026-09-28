@@ -55,7 +55,7 @@ maxim('wall_breaker', '성벽 허물기', '룩을 먹을 때마다 배수 +4', '
 maxim('long_chain', '긴 사슬', '다섯째부터 먹을 때마다 배수 ×1.2', '먹기', 'rare', 7, {
   onCapture(ctx) { if (ctx.event.index >= 4) ctx.mulMult(1.2); },
 });
-maxim('long_road', '먼 길', '세 칸 이상 미끄러져 먹을 때마다 값 +20', '먹기', 'common', 3, {
+maxim('long_road', '먼 길', '세 칸 이상 떨어진 적을 먹을 때마다 값 +20', '먹기', 'common', 3, {
   onCapture(ctx) { if (ctx.event.dist >= 3) ctx.addValue(20); },
 });
 maxim('edge', '가장자리', '가장자리 칸에서 먹을 때마다 배수 +2', '먹기', 'common', 4, {
@@ -95,7 +95,7 @@ maxim('close_call', '아슬아슬', '끊기지 않은 사슬: 값 +30', '끊김'
 
 // ── 외통
 // 밤샘 D-2: 외통 사냥꾼 · 왕의 목 · 다시 생각 · 그림자 읽기는 판 시작에 쥐여 줘도 통과한 관이 +0.25(보통 격언 +1.1)라 효과를 올렸다.
-maxim('mate_hunter', '외통 사냥꾼', '킹을 지키는 적 −1 · 외통 승리: 상금 +6', '외통', 'common', 4, {
+maxim('mate_hunter', '외통 사냥꾼', '킹을 지키는 적이 하나 적다 · 외통 승리: 상금 +6', '외통', 'common', 4, {
   onBattleStart(ctx) { ctx.rules.guards = Math.max(1, (ctx.rules.guards ?? kingGuards(ctx.t.ante ?? 1)) - 1); },
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.addMoney(6); },
 });
@@ -208,15 +208,15 @@ maxim('reinforce_hunt', '증원 사냥', '증원을 먹을 때마다 배수 +2',
 });
 
 // ── 깊이 G: 증강체스의 나머지 카드에서(뿌리의 동사를 비튼 셋)
-maxim('promotion_rush', '특진', '폰 모습으로 둘을 먹으면 곧바로 승급', '승급', 'uncommon', 5, {
+maxim('promotion_rush', '특진', '폰 모습으로 둘을 먹은 뒤: 어느 줄에서든 승급', '승급', 'uncommon', 5, {
   onCapture(ctx) {
     if (ctx.event.form !== 'P') return;
     ctx.flags.pawnTakes = (ctx.flags.pawnTakes || 0) + 1;
     if (ctx.flags.pawnTakes >= 2) ctx.flags.promoteFrom = 0;
   },
 });
-maxim('mad_horse', '광마', '가장자리의 나이트: 지키는 적을 한 번 무시한다', '지키는 적', 'common', 4, {
-  more: '나이트 모습으로 가장자리 칸에서 먹을 때, 사슬마다 한 번',
+maxim('mad_horse', '광마', '가장자리에서 나이트 모습으로 먹으면: 지키는 적을 무시한다', '지키는 적', 'common', 4, {
+  more: '사슬마다 한 번',
   onCapture(ctx) { if (ctx.event.form === 'N' && EDGE(ctx.event.to) && !ctx.flags.madHorseUsed) ctx.flags.madHorse = true; },
   onThreat(ctx) { if (ctx.flags.madHorse) { ctx.flags.madHorse = false; ctx.flags.madHorseUsed = true; ctx.ignoreThreat(); } },
 });
