@@ -8,6 +8,8 @@ import { canBuy } from '../src/sim/run.js';
 import { evolveTo } from '../src/data/tactics.js';
 import { isHidden } from '../src/sim/battle.js';
 const { targetOk } = await import('../src/ui/parts.js');
+const { FAMILIES, familyCounts } = await import('../src/data/families.js');
+const { L } = await import('../src/ui/lang.js');
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -199,9 +201,25 @@ function notesCheck() {
   for (const [k, ids] of byKind) {
     const cap = CAP_KIND[k] || 99;
     const pick = ids.length <= cap ? ids : Array.from({ length: cap }, (_, i) => ids[Math.round((i * (ids.length - 1)) / (cap - 1))]);
-    for (const id of pick) if (hover(id)) checkStack(id);
+    for (const id of pick) if (hover(id)) { checkStack(id); if (id.endsWith(':more')) moreCheck(id); }
   }
   dom.mouse('mousemove', -10, -10); pump(1);
+}
+// 시너지 「+N」(대국 띠 · 왼쪽 칸 시너지 줄): 가리키면 줄에 못 놓은 시너지가 모두 말풍선에 있고, 말풍선이 화면 안에 다 뜬다
+const moreSeen = { n: 0, battle6: 0, screens: new Set(), bad: [] };
+function moreCheck(id) {
+  const pre = id.slice(0, -':more'.length);
+  const n = familyCounts(app.run);
+  const shown = new Set(app.ui.regions.filter((r) => r.id.startsWith(`${pre}:`) && r.id !== id).map((r) => r.id.slice(pre.length + 1)));
+  const hidden = FAMILIES.filter((f) => n[f.id] > 0 && !shown.has(f.id));
+  const h = app.ui.hover, tip = h && h.tip ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null;
+  const lines = tip ? tipTexts(tip) : [];
+  const missed = hidden.filter((f) => !lines.some((l) => l.startsWith(`${L(f.name)} `)));
+  const st = app.noteStack, rs = st && st.rects && st.rects[0];
+  const whole = rs && rs.y >= 0 && rs.y + rs.h <= 270;
+  moreSeen.n++; moreSeen.screens.add(screen());
+  if (screen() === 'battle' && FAMILIES.filter((f) => n[f.id] > 0).length >= 6) moreSeen.battle6++;
+  if (!hidden.length || missed.length || !whole || !String(tip.title).includes(`+${hidden.length}`)) moreSeen.bad.push(`${screen()} ${id} 가려짐 ${hidden.length} · 빠짐 ${missed.map((f) => f.id).join(',') || 0}${whole ? '' : ' · 화면에 다 안 뜸'}`);
 }
 // 처음 안내 말풍선도 같은 자리(판 틀은 왼쪽 칸)
 const hintChecked = new Set();
@@ -831,6 +849,8 @@ console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · �
 if (VERBOSE) console.log('종류별 자리: ' + kinds.join(' · '));
 if (place.bad.length) console.log('어긴 곳: ' + place.bad.join(' | '));
 if (place.n < 100 || place.rule || place.chain || place.off || place.self || place.cover || place.none || place.hintBad) { console.log('설명이 규약의 자리에 뜨지 않았거나 누를 것 · 화면 밖을 덮었다'); fail = true; }
+console.log(`시너지 +N 말풍선: ${moreSeen.n}번(${[...moreSeen.screens].join(' ')}) · 시너지 여섯 이상 대국 ${moreSeen.battle6} · 어긋남 ${moreSeen.bad.length}${moreSeen.bad.length ? `: ${moreSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
+if (!moreSeen.battle6 || moreSeen.bad.length) { console.log('시너지 여섯 이상 대국에서 「+N」을 가리켜 보지 못했거나, 가려진 시너지가 말풍선에 다 없다'); fail = true; }
 const flowN = flow.text + flow.pad + flow.overlap + flow.screen;
 console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held}(${Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`).join(' · ') || '없음'})`);
 if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 5000 : 40).join('\n  ')); fail = true; }

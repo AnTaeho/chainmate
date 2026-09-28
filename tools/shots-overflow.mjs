@@ -4,6 +4,7 @@
 // 찍는 것(영어는 이름 앞에 en-):
 //   battle-editions   격언 다섯(흔함 · 귀함 겹테 · 은박 점선) · 정석 둘 · 시너지 여섯 · 손 넷 — 사람이 보낸 장면
 //   battle-chip       같은 대국에서 시너지 칩을 가리킨 모습
+//   battle-more       같은 대국에서 시너지 띠의 「+N」을 가리킨 모습(가려진 시너지 전부가 말풍선에)
 //   shop              상점(위 띠 단추 · 카드 칩 · 왼쪽 칸 시너지 줄)
 //   shop-opened       연 꾸러미 칸(영어 「Opened」가 봉투에 걸치던 곳)
 //   codex · settings · reward-stamp   탭 · 단추 · 넘친 목표 도장
@@ -89,6 +90,7 @@ const SHOP = `r.phase = 'shop'; r.shop = { rng: null, display: [{ kind: 'maxim',
 const scenes = [
   ['battle-editions', `${RUN} a.cmd({ type: 'play' }); a.go('battle', { events: [] });`, 2800, null],
   ['battle-chip', `${RUN} a.cmd({ type: 'play' }); a.go('battle', { events: [] });`, 2800, 'fam:'],
+  ['battle-more', `${RUN} a.cmd({ type: 'play' }); a.go('battle', { events: [] });`, 2800, 'fam:more'],
   ['shop', `${RUN} ${SHOP.replace('SOLD', 'false')}`, 600, null],
   ['shop-opened', `${RUN} ${SHOP.replace('SOLD', 'true')}`, 600, null],
   ['codex', `const a = window.__app; a.go('codex');`, 400, null],
