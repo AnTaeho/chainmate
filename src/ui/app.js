@@ -1,4 +1,5 @@
 // 앱: 화면 전환 · 판 상태 · 저장 · 입력 · 프레임. DOM을 모른다(main.js가 캔버스와 입력을 넘긴다).
+import { logBegin, layerUp, openBox, closeBox } from '../render/layoutlog.js';
 import { feltCanvas } from '../render/texture.js';
 import { createRun, applyRun } from '../sim/run.js';
 import { PAL } from '../render/palette.js';
@@ -229,6 +230,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.draw = () => {
     const ui = app.ui;
     ui.begin();
+    logBegin();
     ctx.save();
     if (app.shakeAmt > 0) {
       const a = Math.round(app.shakeAmt * Math.min(1, app.shakeT * 6));
@@ -236,17 +238,22 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     }
     ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8);
     if (app.screen) app.screen.draw(ctx, ui);
+    // 연출(떠오르는 수 · 날아가는 조각)은 칸을 넘나든다 — 글 넘침은 재지 않는다
+    openBox('fx', 0, 0, W, H, 0, { loose: true, name: '연출' });
     app.fx.draw(ctx, 1);
+    closeBox();
     ctx.restore();
     if (app.overlay) {
       // 밑 화면의 구역은 막는다
       ui.regions = [];
+      layerUp();
       ctx.globalAlpha = 0.72;
       rect(ctx, 0, 0, W, H, PAL.shadow);
       ctx.globalAlpha = 1;
       app.overlay.draw(ctx, ui);
     }
-    // 알림
+    // 알림(화면 위에 잠깐 뜬다)
+    openBox('fx', 0, 0, W, H, 0, { loose: true, name: '알림' });
     app.toasts.forEach((t, i) => {
       const a = Math.min(1, t.t * 8, (t.life - t.t) * 4);
       ctx.globalAlpha = Math.max(0, a);
@@ -256,6 +263,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       text(ctx, t.msg, W / 2, y + 2, t.col, { align: 'center', bold: true });
       ctx.globalAlpha = 1;
     });
+    closeBox();
     if (!app.overlay) drawCoach(ctx, app);
     else { app.hintNow = null; app.hintShown = null; }
     ui.end();
@@ -303,7 +311,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       app.keyBoxes.push(r); rects.push(r);
       y += r.h + NOTE_GAP; k++;
     }
-    app.noteStack = { mode, anchor, id: h ? h.id : null, rects, side: lay.side, squeezed: !!lay.squeezed };
+    app.noteStack = { mode, anchor, id: h ? h.id : null, rects, side: lay.side, squeezed: !!lay.squeezed, dropped: hs.length - lay.n };
   };
 
   app.frame = (t) => {

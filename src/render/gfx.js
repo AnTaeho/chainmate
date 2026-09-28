@@ -3,6 +3,7 @@ import { PAL } from './palette.js';
 import { textImage, textWidth } from './text.js';
 import { spriteCanvas, tierSparkle, SW, SH } from './sprites.js';
 import { L } from '../ui/lang.js';
+import { LOG, logText } from './layoutlog.js';
 import { SOUL_BY_ID } from '../data/souls.js';
 
 // 혼이 깃든 기물: 몸 뒤 왼쪽 위에 혼 빛깔 기운 한 점(천천히 떠오르며 깜빡인다)
@@ -65,6 +66,7 @@ export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false
   if (align === 'center') dx = x - Math.floor(w / 2);
   else if (align === 'right') dx = x - w;
   dx = Math.round(dx); y = Math.round(y);
+  if (LOG.on && alpha > 0 && ctx.globalAlpha > 0) logText(s, dx, y + scale, w, 12 * scale);
   if (alpha !== 1) ctx.globalAlpha = alpha;
   if (shadow) {
     const sh = textImage(s, shadow, bold);
