@@ -18,7 +18,7 @@ export const DEFAULT_RULES = {
   hand: 4,          // 손
   moves: 4,         // 수
   discards: 3,      // 바꾸기
-  maxDiscard: 4,    // 한 번에 버리는 최대 수
+  maxDiscard: 1,    // 한 번에 버리는 최대 수(한 장씩)
   kings: 1,         // 킹 수(명인 「대가」 2)
   enemies: null,    // null이면 enemyCount(관)
   guards: null,     // 킹 하나를 지키는 적 수(폰 하나 포함). null이면 kingGuards(관)
@@ -218,12 +218,7 @@ export function legalCommands(b) {
     for (const sq of dropSquaresFor(b, p)) out.push({ type: 'drop', handIndex, sq });
   });
   if (b.discardsLeft > 0 && b.bag.length > 0) {
-    const n = b.hand.length;
-    for (let mask = 1; mask < 1 << n; mask++) {
-      const idx = [];
-      for (let i = 0; i < n; i++) if (mask & (1 << i)) idx.push(i);
-      if (idx.length <= b.rules.maxDiscard) out.push({ type: 'discard', handIndices: idx });
-    }
+    b.hand.forEach((_, i) => out.push({ type: 'discard', handIndices: [i] }));
   }
   return out;
 }
