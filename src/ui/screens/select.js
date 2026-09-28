@@ -1,9 +1,10 @@
 // 관 선택: 연습 · 정식 · 명인 세 장. 목표 · 보상 · 명인 규칙 · 건너뛰면 받는 패. 「두기」 / 「건너뛰기」.
+// 떠나온 상점이 있으면 위 띠 왼쪽에 「상점」(돌아가 더 살 수 있다 — 진열 · 꾸러미는 떠날 때 그대로).
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, num, frame, measure } from '../../render/gfx.js';
-import { blindInfo, REWARD, ANTES } from '../../sim/run.js';
+import { blindInfo, REWARD, ANTES, canReopenShop } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
 import { CHARTS } from '../../data/charts.js';
 import { wrap } from '../../render/text.js';
@@ -54,6 +55,7 @@ export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` 
 // 대국 카드 쌓기(재기와 그리기가 같이 쓴다 — PAD_CARD): 종류(제목) → 묶음 틈 → 목표 · 이기면 → 묶음 틈(가운데 가로줄) →
 // 명인(초상 옆 이름 → 묶음 안 틈 → 규칙 글) 또는 「건너뛰면」 → 받는 것 → 묶음 틈 → 단추 줄(지난 대국은 「이김」 · 「건너뜀」)
 const PORTRAIT = 36;
+const BAR = { y: 3, h: 16 }; // 본 칸 위 띠의 작은 단추(상점 화면 띠와 같다)
 // 대국 카드 셋은 본 칸을 꽉 채운다(사이 4 — 명인 규칙 글이 한 줄이라도 덜 접히게)
 const SEL = { gap: 4, get w() { return Math.floor((MAIN.w - this.gap * 2) / 3); } };
 const selX = (i) => MAIN.x + i * (SEL.w + SEL.gap);
@@ -99,7 +101,8 @@ export function blindLayout(run, i, w = SEL.w) {
 
 export class SelectScreen {
   constructor(app) { this.app = app; this.notes = 'side'; }
-  // 판 틀: 왼쪽 칸(관 선택 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(대국 카드 셋 — 가장 긴 카드에 맞춘 높이 · 판의 길)
+  // 판 틀: 왼쪽 칸(관 선택 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(대국 카드 셋 — 가장 긴 카드에 맞춘 높이 · 판의 길 ·
+  // 떠나온 상점이 있으면 판의 길 띠 왼쪽에 「상점」)
   draw(ctx, ui) {
     const app = this.app, run = app.run;
     runSide(ctx, ui, app, '관 선택');
@@ -150,6 +153,16 @@ export class SelectScreen {
       }
       closeBox();
     }
+    // 떠나온 상점으로: 본 칸 위 띠 왼쪽(상점의 「다음 대국」과 같은 띠 · 같은 높이). 카드 줄 아래는 긴 명인 카드가 다 쓴다
+    if (canReopenShop(run)) {
+      const label = '상점';
+      button(ctx, ui, 'select:shop', MAIN.x, BAR.y, measure(label, true) + 16, BAR.h, label, { onClick: () => this.toShop() });
+    }
+  }
+  toShop() {
+    this.app.cmd({ type: 'shop' });
+    this.app.sfx('click');
+    this.app.goPhase();
   }
   play() {
     const ev = this.app.cmd({ type: 'play' });
