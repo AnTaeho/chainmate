@@ -1,7 +1,7 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { richText } from './glossary.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, frame, dots, sprite, measure, line } from '../render/gfx.js';
+import { box, rect, text, frame, dots, sprite, measure, line, digits } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
@@ -214,7 +214,10 @@ export const maximGridH = (run, cols, gapY) => { const rows = Math.ceil(maximSlo
 
 // 손 기물 카드: 각인은 기물 몸의 톤으로, 카드는 안쪽 테만 각인 색. tier: 그 종류의 기보 단계
 export const ENG_FILL = { ivory: '#f7efdb', glass: '#bfe0e6', gold: '#f3d27a', ebony: '#6b5a52', silver: '#d8dee6', feather: '#e8e0f0' };
-export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hover = false, dim = false, alpha = 1, tier = 0, time = null, flash = 0 } = {}) {
+// 기보 수준: 이 기물 모습의 기보(이형은 바탕 체스 모습의 기보를 따른다 — scoring.js 'charts')
+export const chartLevel = (run, t) => (run && run.charts ? run.charts[chartForm(t)] || 0 : 0);
+// level: 기보 수준(1 이상이면 오른쪽 위 구석에 청록 표 — 동빛 단계는 1배에서 톤만으로 안 읽힌다) · glow: 표가 빛난다(0~1, 기보를 얻는 순간)
+export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hover = false, dim = false, alpha = 1, tier = 0, level = 0, glow = 0, time = null, flash = 0 } = {}) {
   const yy = y - lift;
   if (alpha !== 1) ctx.globalAlpha = alpha;
   box(ctx, x, yy, w, h, PAL.light, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk);
@@ -222,8 +225,26 @@ export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hove
   if (selected) frame(ctx, x - 1, yy - 1, w + 2, h + 2, PAL.gold);
   if (p.eng && ENG_EDGE[p.eng.id]) { frame(ctx, x + 1, yy + 1, w - 2, h - 2, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
   sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null });
+  if (level > 0) chartBadge(ctx, level, x + w - 1, yy + 1, { dim, glow });
   if (flash > 0) { ctx.globalAlpha = flash * 0.8; rect(ctx, x + 1, yy + 1, w - 2, h - 2, PAL.white); ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = 1;
+}
+// 기보 수준 표: 오른끝 right · 윗변 y에 붙는 청록 칸(숫자 3 × 5 + 둘레 1). 돌려주는 값은 폭
+export function chartBadge(ctx, level, right, y, { dim = false, glow = 0 } = {}) {
+  const [, hi, dk] = SEAL.chart;
+  const s = String(Math.min(99, level));
+  const bw = s.length * 4 + 1, bh = 7, bx = right - bw;
+  const a0 = ctx.globalAlpha;
+  if (dim) ctx.globalAlpha = a0 * 0.6;
+  rect(ctx, bx, y, bw, bh, glow > 0 ? mixHex(dk, hi, glow * 0.6) : dk);
+  digits(ctx, s, bx + 1, y + 1, glow > 0.5 ? PAL.white : hi);
+  ctx.globalAlpha = a0;
+  return bw;
+}
+function mixHex(a, b, k) {
+  const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [p(a), p(b)];
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * k)).join(',')})`;
 }
 // 네 모서리 꺾쇠
 export function cornerTicks(ctx, x, y, w, h, col, n = 2) {
@@ -645,9 +666,9 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
   const verb = what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : '자란다';
   if (p) {
     const after = lay.after;
-    pieceCard(ctx, p, x + P, y + P, 20, 28, { tier: tierOf(run.charts[chartForm(p.t)]) });
+    pieceCard(ctx, p, x + P, y + P, 20, 28, { tier: tierOf(chartLevel(run, p.t)), level: chartLevel(run, p.t) });
     for (let i = 0; i < 3; i++) { rect(ctx, x + P + 24 + i, y + P + 11 + i, 1, 1, PAL.gold); rect(ctx, x + P + 24 + i, y + P + 17 - i, 1, 1, PAL.gold); }
-    pieceCard(ctx, after, x + P + 30, y + P, 20, 28, { tier: tierOf(run.charts[chartForm(after.t)]), time: ui.time, selected: true });
+    pieceCard(ctx, after, x + P + 30, y + P, 20, 28, { tier: tierOf(chartLevel(run, after.t)), level: chartLevel(run, after.t), time: ui.time, selected: true });
   }
   for (const [l, ly] of lay.titles) text(ctx, l, x + lay.tx, y + ly, PAL.gold, { bold: true });
   for (const [l, ly] of lay.lines) text(ctx, l, x + lay.tx, y + ly, PAL.ink);

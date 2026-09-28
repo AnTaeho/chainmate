@@ -9,7 +9,8 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem } from '../parts.js';
+import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL } from '../parts.js';
+import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
@@ -27,7 +28,9 @@ const RX = RIGHT.x, RW = RIGHT.w;
 const CARD_W = CARD.w, BAR_Y = 3, BAR_H = 16, BOTTOM = 270 - 2, BAG_MIN = 28;
 
 // 주머니 줄: 작은 기물 카드들. pick(p)이 있으면 누를 수 있다.
-// flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝) · grow: { form, p } 기보로 자라는 모습(0.5초 빛 기둥)
+// flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝)
+// grow: { form, p, big, from, to, exact } 기보로 자라는 모습 — 그 모습(이형은 바탕 모습)의 기물마다 옛 톤 · 옛 수준에서 반짝이며 새 톤 · 새 수준으로,
+//   단계가 바뀌면(big) 빛 기둥까지. exact: 그 종류만(진화)
 // bottom: 줄이 여럿이면 이 아래로 넘지 않게 줄 간격을 줄인다(카드가 겹쳐 쌓인다)
 export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selectedId = null, idPrefix = 'deck', flash = null, grow = null, bottom = 268 } = {}) {
   const n = run.deck.length;
@@ -44,13 +47,34 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     const id = `${idPrefix}:${p.id}`;
     ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: () => pieceTip(p) });
     const hov = ui.isHover(id);
-    const fl = flash && flash.id === p.id ? 1 - flash.p : 0;
-    pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick ? 1 : 0, selected: selectedId === p.id, hover: hov, tier: tierOf(run.charts[p.t]), time: ui.time + i, flash: fl });
-    if (grow && grow.form === p.t) growPillar(ctx, px, py, cw, ch, grow.p);
+    let fl = flash && flash.id === p.id ? 1 - flash.p : 0;
+    let level = chartLevel(run, p.t), gl = 0;
+    const growing = grow && (grow.exact ? grow.form === p.t : grow.from != null && chartForm(p.t) === grow.form);
+    if (growing && grow.from != null) {
+      // 반짝이는 순간(GROW_TURN)에 옛 수준 → 새 수준. 흰 빛이 바뀌는 때를 덮는다
+      const g = grow.p;
+      if (g < GROW_TURN) level = grow.from;
+      fl = Math.max(fl, Math.max(0, 1 - Math.abs(g - GROW_TURN) / 0.22) * (grow.big ? 1 : 0.75));
+      gl = g < GROW_TURN ? 0 : 1 - (g - GROW_TURN) / (1 - GROW_TURN);
+    }
+    pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick ? 1 : 0, selected: selectedId === p.id, hover: hov, tier: tierOf(level), level, glow: gl, time: ui.time + i, flash: fl });
+    if (growing) { if (grow.big || grow.from == null) growPillar(ctx, px, py, cw, ch, grow.p); else growSparks(ctx, px, py, cw, ch, grow.p); }
     if (glow && pick) { const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; frame(ctx, px - 1, py - 1, cw + 2, ch + 2, PAL.gold); ctx.globalAlpha = 1; }
   });
 }
 
+// 기보로 자라는 연출 길이: 단계가 바뀌면(빛 기둥) · 수준만 오르면(청록 반짝). 옛 모습이 새 모습으로 바뀌는 때(비율)
+export const GROW_BIG = 0.8, GROW_SMALL = 0.6, GROW_TURN = 0.35;
+// 수준만 오르는 순간: 카드 둘레에서 청록 점이 솟아오른다
+export function growSparks(ctx, x, y, w, h, p) {
+  const a = p < 0.2 ? p / 0.2 : 1 - (p - 0.2) / 0.8;
+  ctx.globalAlpha = Math.max(0, a);
+  for (let k = 0; k < 6; k++) {
+    const sx = x + 2 + ((k * 7) % (w - 3)), sy = y + h - 4 - Math.round((p * 22 + (k % 3) * 5));
+    rect(ctx, sx, sy, 1, 2, k % 2 ? SEAL.chart[1] : PAL.white);
+  }
+  ctx.globalAlpha = 1;
+}
 // 기보로 자라는 순간: 기물 위로 빛 기둥이 솟고 반짝임이 흩어진다
 export function growPillar(ctx, x, y, w, h, p) {
   const a = p < 0.3 ? p / 0.3 : 1 - (p - 0.3) / 0.7;
@@ -131,8 +155,13 @@ export class ShopScreen {
       this.app.toast(what, PAL.gold, 2.2);
       this.app.sfx('sparkle');
     }
-    if (e.type === 'evolve') { this.grow = { form: e.to, t0: this.app.time }; this.app.sfx('grow'); }
-    if (e.type === 'chart' && tierOf(e.level) > tierOf(e.level - 1)) { this.grow = { form: e.form, t0: this.app.time }; this.app.sfx('grow'); }
+    if (e.type === 'evolve') { this.grow = { form: e.to, t0: this.app.time, big: true, exact: true }; this.app.sfx('grow'); }
+    // 기보: 그 모습의 기물마다 한 단계 자란다(단계 동 · 은 · 금이 바뀌면 빛 기둥, 수준만 오르면 청록 반짝)
+    if (e.type === 'chart') {
+      const big = tierOf(e.level) > tierOf(e.level - 1);
+      this.grow = { form: e.form, t0: this.app.time, big, from: e.level - 1, to: e.level };
+      this.app.sfx(big ? 'grow' : 'sparkle');
+    }
     if (e.type === 'engrave' || e.type === 'ensoul') this.flash = { id: e.pieceId, t0: this.app.time };
   }
   get run() { return this.app.run; }
@@ -226,10 +255,10 @@ export class ShopScreen {
     // 진열 카드는 ≤ 160이라 주머니 한 줄(BAG_MIN)이 늘 남는다(test/layout.test.js). 그래도 모자라면 화면 안에 붙인다(연기 시험이 겹침으로 잡는다)
     bagY = Math.min(bagY, BOTTOM - BAG_MIN);
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
-    const fp = since(this.flash, 0.3), gp = since(this.grow, 0.5);
+    const fp = since(this.flash, 0.3), gp = since(this.grow, this.grow && !this.grow.big ? GROW_SMALL : GROW_BIG);
     bagRow(ctx, ui, run, CX, bagY, CENTER.w, {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : this.target ? this.target.pieceId : null,
-      flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { form: this.grow.form, p: gp } : null, bottom: BOTTOM,
+      flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { ...this.grow, p: gp } : null, bottom: BOTTOM,
     });
     // 오른쪽 칸: 격언 → 두루마리
     const rl = this.rightLayout();

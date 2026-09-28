@@ -22,7 +22,7 @@ import { MASTER_BY_ID } from '../../data/masters.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
-import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon } from '../parts.js';
+import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton, headLayout, footLayout, sideStack, drawFoot, shardTo, hallText } from './common.js';
 import { TOP, PAUSE, PAD_BOX, LINE, GAP_IN, GAP_GROUP, LIST_GAP, flow, textY } from '../frame.js';
@@ -408,6 +408,7 @@ export class BattleScreen {
             this.shatter(e.to, victim ? victim.t : e.piece, victim && victim.gold ? 'g' : 'b');
             this.flash(e.to, PAL.white);
             this.pop(`+${e.value}`, 'value');
+            c.capPop = `+${e.value}`;
             this.snd('capture', c.path.length - 1);
             this.shake(1, 0.08);
           },
@@ -417,15 +418,18 @@ export class BattleScreen {
           begin: () => {
             const c = v.chain;
             if (!c) return;
-            let dv = 0, dm = 0, xm = 1;
+            // 기보 몫(src 'charts')은 따로 모아 청록(기보 봉랍 빛깔)으로 한 번 더 튀긴다 — 기본 몫 옆, 조금 늦게
+            let dv = 0, dm = 0, xm = 1, cv = 0, cm = 0;
             for (const x of e.list) {
-              if (x.value) { c.value += x.value; dv += x.value; }
-              if (x.mult) { c.mult += x.mult; dm += x.mult; }
+              const chart = x.src === 'charts';
+              if (x.value) { c.value += x.value; if (chart) cv += x.value; else dv += x.value; }
+              if (x.mult) { c.mult += x.mult; if (chart) cm += x.mult; else dm += x.mult; }
               if (x.xmult) { c.mult *= x.xmult; xm *= x.xmult; }
             }
             if (dv) this.pop(`+${short(dv)}`, 'value');
             if (dm) this.pop(`+${short(dm)}`, 'mult');
             if (xm !== 1) this.pop(`×${Number(xm.toFixed(2))}`, 'mult', dm ? 10 : 0);
+            if (cv || cm) this.chartShare(c.sq, cv, cm, { after: dv ? `+${short(dv)}` : c.capPop, multBusy: !!dm || xm !== 1 });
             this.snd('tick', c.mult);
           },
         }); break;
@@ -616,12 +620,27 @@ export class BattleScreen {
     const { x, y } = sqXY(sq);
     this.fx.add({ life: 0.15, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = 0.6 * (1 - e.t / e.life); rect(ctx, x, y, S, S, col); ctx.globalAlpha = 1; } });
   }
-  pop(s, where, dy = 0) {
+  // col: 빛깔(기본은 값 · 배수 빛깔) · delay: 늦게 뜨기(초) · dx · align: 가운데 대신 왼쪽 맞춤으로 옆에 붙일 때
+  pop(s, where, dy = 0, { col = null, delay = 0, dx = 0, align = 'center' } = {}) {
     if (this.boardOnly) return;
     const lay = this.leftLayout(), vy = lay.val.y - 2;
-    const pos = where === 'value' ? { x: LX + 24, y: vy - dy } : where === 'mult' ? { x: LX + 88, y: vy - dy } : { x: LX + LW - 20, y: shardTo().y - 6 };
-    const col = where === 'value' ? PAL.val : where === 'mult' ? PAL.gold : PAL.gold;
-    this.fx.add({ life: 0.6, layer: 1, draw: (ctx, e) => { const k = e.t / e.life; text(ctx, s, pos.x, pos.y - 6 - k * 10, col, { align: 'center', bold: true, alpha: 1 - k * k, shadow: PAL.shadow }); } });
+    const pos = where === 'value' ? { x: LX + 24 + dx, y: vy - dy } : where === 'mult' ? { x: LX + 88 + dx, y: vy - dy } : { x: LX + LW - 20, y: shardTo().y - 6 };
+    const c = col || (where === 'value' ? PAL.val : PAL.gold);
+    this.fx.add({ life: 0.6 + delay, layer: 1, draw: (ctx, e) => { const t = e.t - delay; if (t < 0) return; const k = t / 0.6; text(ctx, s, pos.x, pos.y - 6 - k * 10, c, { align, bold: true, alpha: 1 - k * k, shadow: PAL.shadow }); } });
+  }
+  // 기보 몫: 값 칸 위의 기본 몫(after) 바로 오른쪽에 청록 「+N」, 배수 칸 위에 청록 「+N」(배수 몫이 이미 떴으면 한 칸 위) —
+  // 기보 봉랍 빛깔, 조금 늦게. 먹은 칸에 청록 반짝. 한 수 연출 길이는 늘리지 않는다(fx만)
+  chartShare(sq, value, mult, { after = null, multBusy = false } = {}) {
+    const hi = SEAL.chart[1];
+    if (value) {
+      const s = `+${short(value)}`;
+      const half = after ? Math.ceil(measure(after, true) / 2) + 2 : -Math.floor(measure(s, true) / 2);
+      this.pop(s, 'value', 0, { col: hi, delay: 0.08, dx: half, align: 'left' });
+    }
+    if (mult) this.pop(`+${short(mult)}`, 'mult', multBusy ? 11 : 0, { col: hi, delay: 0.08 });
+    if (sq != null) this.sparkle(sq, hi, 8);
+    const st = this.app.stats;
+    if (st) st.chartPops = (st.chartPops || 0) + 1;
   }
   word(s, col, life = 1, scale = 2) {
     this.fx.add({
@@ -1303,7 +1322,7 @@ export class BattleScreen {
       const usable = live && live.status === 'play' && !this.busy;
       // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)
       const nudge = usable && !this.sel.length && this.idleT > 2.5 && Math.floor(app.time * 3) % v.hand.length === i ? 2 : 0;
-      pieceCard(ctx, p, x, y, w, lay.HAND_H, { lift: selected ? 4 : hov && usable ? 1 : nudge, selected, hover: hov || nudge > 0, dim: !usable, tier: run ? tierOf(run.charts[chartForm(p.t)]) : 0, time: app.time + i });
+      pieceCard(ctx, p, x, y, w, lay.HAND_H, { lift: selected ? 4 : hov && usable ? 1 : nudge, selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(chartLevel(run, p.t)), level: chartLevel(run, p.t), time: app.time + i });
     });
   }
 
