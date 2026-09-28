@@ -3,7 +3,7 @@
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rect, num, frame, measure } from '../../render/gfx.js';
+import { W, text, box, rect, fitNum, frame, measure } from '../../render/gfx.js';
 import { blindInfo, REWARD, ANTES, canReopenShop } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
 import { CHARTS } from '../../data/charts.js';
@@ -66,13 +66,14 @@ export function blindLayout(run, i, w = SEL.w) {
   const out = { info, master, IW };
   out.kind = f.line(true);
   f.gap(GAP_GROUP);
-  // 이름표 · 수치 한 줄(넘치면 수치를 다음 줄 오른쪽에)
+  // 이름표 · 수치 한 줄(넘치면 수치를 다음 줄 오른쪽에 — 그 줄에도 안 들어가는 큰 수는 짧은 꼴 3.1T)
   const row = (label, val, bold = true) => {
+    if (typeof val === 'number') val = fitNum(val, IW, bold);
     const two = measure(label) + 6 + measure(val, bold) > IW;
     const ly = f.line();
     return { label, val, ly, vy: two ? f.line() : ly };
   };
-  out.rows = [row('목표', num(info.target)), row('이기면', master ? `$${REWARD.base[info.kind]} + 상자` : `$${REWARD.base[info.kind]}`)];
+  out.rows = [row('목표', info.target), row('이기면', master ? `$${REWARD.base[info.kind]} + 상자` : `$${REWARD.base[info.kind]}`)];
   out.rule = f.y + Math.floor(GAP_GROUP / 2);
   f.gap(GAP_GROUP);
   if (master) {

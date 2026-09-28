@@ -1,7 +1,7 @@
 // 판 결과: 이김/짐, 도달 관, 최고 한 수(작은 판에 다시 둔다), 목표에 모자란 점수(아슬아슬), 모은 조각,
 // 새 도감 칸 · 해금 알림 · 다음 해금까지. 「다시」 / 「타이틀」.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, sprite, num, line, measure } from '../../render/gfx.js';
+import { W, H, text, box, rect, frame, sprite, num, short, fitNum, line, measure } from '../../render/gfx.js';
 import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { button } from '../ui.js';
@@ -12,7 +12,7 @@ import { lerp } from '../anim.js';
 import { PAD_BOX, LINE, GAP_GROUP, GAP_IN, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
-const Q = 16, MX = 330; // 다시 보기 판: 칸 16px. 윗변 MY는 결과 상자 자리에 따라(draw가 정한다)
+const Q = 16, MX = 330, ROW_R = 300; // 다시 보기 판: 칸 16px. 윗변 MY는 결과 상자 자리에 따라(draw가 정한다). ROW_R: 기록 줄 수치의 오른끝
 let MY = 50;
 const STEP = 0.5;
 
@@ -80,11 +80,14 @@ export class ResultScreen {
     const app = this.app, run = app.run;
     const x = 12, w = W - 24, P = PAD_BOX;
     const rows = [];
+    // 수치 줄: 이름표(x + P + 8) 오른쪽부터 오른끝(ROW_R)까지에 안 들어가면 수를 짧은 꼴로(끝없는 대국의 큰 수)
+    const room = (label) => ROW_R - (x + P + 8 + measure(label) + 6);
+    const nums = (label, f) => { const s = f(num); return measure(s, true) <= room(label) ? s : f(short); };
     if (this.last) rows.push(['도달', `${run.ante}관 ${KIND_NAME[this.last.kind]}`]);
-    rows.push(['최고 한 수', num(this.replay ? Math.max(this.best, this.replay.score) : this.best)]);
+    rows.push(['최고 한 수', fitNum(this.replay ? Math.max(this.best, this.replay.score) : this.best, room('최고 한 수'))]);
     if (!this.won && this.last) {
-      rows.push(['마지막 대국', `${num(this.last.score)} / ${num(this.last.target)}`]);
-      if (this.short > 0) rows.push(['모자란 점수', `${num(this.short)} (${this.pct}%)`]);
+      rows.push(['마지막 대국', nums('마지막 대국', (n) => `${n(this.last.score)} / ${n(this.last.target)}`)]);
+      if (this.short > 0) rows.push(['모자란 점수', nums('모자란 점수', (n) => `${n(this.short)} (${this.pct}%)`)]);
     }
     rows.push(['상금', `$${run.money}`]);
     const got = LEGENDS.filter((l) => run.fragments[l.id] && (run.fragments[l.id].first || run.fragments[l.id].feat || run.fragments[l.id].gold)).slice(0, 3);
@@ -122,12 +125,12 @@ export class ResultScreen {
     text(ctx, title, x + P + Math.floor(leftW / 2), big ? tY : tY + LINE - 7, this.won || run.endless ? PAL.gold : PAL.red, { align: 'center', bold: true, scale: big ? 2 : 1 });
     rows.forEach(([a, b], i) => {
       text(ctx, a, x + P + 8, rowYs[i], PAL.dim);
-      text(ctx, b, 300, rowYs[i], a === '모자란 점수' ? PAL.red : PAL.ink, { align: 'right', bold: true });
+      text(ctx, b, ROW_R, rowYs[i], a === '모자란 점수' ? PAL.red : PAL.ink, { align: 'right', bold: true });
     });
     // 최고 한 수 다시 보기
     text(ctx, '최고 한 수', MX + 64, MY - 4 - LINE, PAL.dim, { align: 'center' });
     this.drawReplay(ctx);
-    if (this.replay) text(ctx, num(this.replay.score), MX + 64, MY + Q * 8 + 4, PAL.gold, { align: 'center', bold: true });
+    if (this.replay) text(ctx, fitNum(this.replay.score, Q * 8 + 8), MX + 64, MY + Q * 8 + 4, PAL.gold, { align: 'center', bold: true });
     // 조각
     if (got.length) {
       text(ctx, '모은 조각', x + P + 8, fY, PAL.dim);

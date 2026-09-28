@@ -1,6 +1,6 @@
 // 기록: 판 수 · 이긴 판 · 최고 관 · 최고 한 수(점수와 사슬 모습 줄) · 외통 · 전설 완성 · 단 · 오늘의 대국.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, sprite, num } from '../../render/gfx.js';
+import { W, H, text, box, rect, sprite, fitNum, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
 import { today } from '../records.js';
 import { danName } from './setup.js';
@@ -39,7 +39,7 @@ export class RecordsScreen {
     box(ctx, bx, PAGE.bodyY, bw, bh, PAL.feltDk, PAL.frameDk);
     text(ctx, '최고 한 수', bx + P, head, PAL.dim);
     if (r.bestMove) {
-      text(ctx, num(r.bestMove.score), bx + bw - P, head, PAL.gold, { align: 'right', bold: true });
+      text(ctx, fitNum(r.bestMove.score, bw - P * 2 - measure('최고 한 수') - 6), bx + bw - P, head, PAL.gold, { align: 'right', bold: true });
       steps.forEach((t, i) => sprite(ctx, t, 'w', bx + P + (i % 8) * 22, sy + Math.floor(i / 8) * 26));
       text(ctx, `${r.bestMove.ante}관`, bx + bw - P, ay, PAL.dim, { align: 'right' });
     } else text(ctx, '아직', bx + P, textY(sy), PAL.dimDk);

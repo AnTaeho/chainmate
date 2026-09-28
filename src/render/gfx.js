@@ -135,3 +135,19 @@ export function num(n) {
   if (Math.abs(v) >= 1e15) return v.toExponential(2).replace('+', '');
   return v.toLocaleString('en-US');
 }
+// 좁은 칸에 들어가는 짧은 숫자(1.7T 꼴)
+export function short(n) {
+  if (!isFinite(n)) return '∞';
+  const a = Math.abs(n);
+  if (a < 10 && n % 1) return n.toFixed(1);
+  if (a < 100 && n % 1) return n.toFixed(1);
+  if (a < 10000) return Math.floor(n).toLocaleString('en-US');
+  const units = [[1e15, 'P'], [1e12, 'T'], [1e9, 'G'], [1e6, 'M'], [1e3, 'K']];
+  for (const [u, s] of units) if (a >= u) { const v = n / u; return (v < 100 ? v.toFixed(1) : Math.floor(v)) + s; }
+  return String(Math.floor(n));
+}
+// 수치 하나를 폭 room 안에: 1,234 꼴이 들어가면 그대로, 넘치면 짧은 꼴(끝없는 대국의 큰 수)
+export function fitNum(n, room, bold = true) {
+  const s = num(n);
+  return measure(s, bold) <= room ? s : short(n);
+}

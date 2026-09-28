@@ -4,7 +4,7 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure } from '../../render/gfx.js';
+import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, TONE, tierOf } from '../../render/sprites.js';
 import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS } from '../../sim/battle.js';
@@ -25,7 +25,7 @@ import { button } from '../ui.js';
 import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton, headLayout, footLayout, sideStack, drawFoot, shardTo, hallText } from './common.js';
-import { TOP, PAUSE, PAD_BOX, LINE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S } from '../frame.js';
+import { TOP, PAUSE, PAD_BOX, LINE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S, EDGE_PAD } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
@@ -42,17 +42,8 @@ const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 �
 export const VAL_H = 22;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
-// 값 · 배수 상자에 들어가는 짧은 숫자
-export function short(n) {
-  if (!isFinite(n)) return '∞';
-  const a = Math.abs(n);
-  if (a < 10 && n % 1) return n.toFixed(1);
-  if (a < 100 && n % 1) return n.toFixed(1);
-  if (a < 10000) return Math.floor(n).toLocaleString('en-US');
-  const units = [[1e15, 'P'], [1e12, 'T'], [1e9, 'G'], [1e6, 'M'], [1e3, 'K']];
-  for (const [u, s] of units) if (a >= u) { const v = n / u; return (v < 100 ? v.toFixed(1) : Math.floor(v)) + s; }
-  return String(Math.floor(n));
-}
+// 값 · 배수 상자에 들어가는 짧은 숫자(gfx.js — 다른 화면도 fitNum으로 쓴다)
+export { short };
 // 빗금(노림수 · 끊김): 붉은색을 못 가려도 무늬로 알아보게
 function hatch(ctx, x, y, col) {
   ctx.fillStyle = col;
@@ -1214,15 +1205,15 @@ export class BattleScreen {
     spec.titles.forEach((l, k) => fitText(ctx, l, LX + P, hy + hl.titles[k], LW - P * 2, spec.titleCol));
     if (spec.master) { const m = spec.master; ui.region('master', LX + 2, hy + hl.titles[0], LW - 4, 16, { tip: () => tipLines(`명인 ${m.name}`, m.text) }); }
     // 수치가 이름표 옆에 안 들어가면(끝없는 대국의 큰 수) 짧은 꼴(1.2G)로
-    const fitNum = (label, n) => { const room = LW - P * 2 - measure(label) - 4; const s1 = typeof n === 'number' ? num(n) : n; return measure(s1, true) <= room ? s1 : short(n); };
+    const fitRow = (label, n) => (typeof n === 'number' ? fitNum(n, LW - P * 2 - measure(label) - 4) : n);
     text(ctx, '목표', LX + P, hy + hl.rows[0], PAL.dim);
-    text(ctx, fitNum('목표', spec.targetN ?? spec.target), LX + LW - P, hy + hl.rows[0], PAL.ink, { align: 'right', bold: true });
+    text(ctx, fitRow('목표', spec.targetN ?? spec.target), LX + LW - P, hy + hl.rows[0], PAL.ink, { align: 'right', bold: true });
     if (spec.right && !spec.rightInline) { const m = spec.right.match(/^(.*?)\s*(\$\d+)$/); text(ctx, m ? m[1] : spec.right, LX + P, hy + hl.rows[1], PAL.dim); if (m) text(ctx, m[2], LX + LW - P, hy + hl.rows[1], PAL.goldDk, { align: 'right', bold: true }); }
     // 점수(목표를 넘기면 불붙는다) — 머리 칸 마지막 줄
     const sy = hy + hl.rows[hl.rows.length - 1];
     if (hot) { const k = Math.floor(app.time * 10) % 3; frame(ctx, LX + 2, sy, LW - 4, LINE, k ? PAL.gold : PAL.red); }
     text(ctx, '점수', LX + P, sy, PAL.dim);
-    text(ctx, fitNum('점수', score), LX + LW - P, sy, hot ? PAL.gold : PAL.ink, { align: 'right', bold: true });
+    text(ctx, fitRow('점수', score), LX + LW - P, sy, hot ? PAL.gold : PAL.ink, { align: 'right', bold: true });
     closeBox();
     this.drawFlames(ctx);
     // 값 × 배수
@@ -1238,13 +1229,14 @@ export class BattleScreen {
       const k = v.count.p;
       const tx = lerp(LX + LW / 2, LX + LW - 30, k), ty = lerp(VT, lay.score, k);
       openBox('fx', tx - 40, ty, 80, 14, 0, { loose: true, name: '흘러가는 수' });
-      text(ctx, num(v.count.to - v.count.from), tx, ty, PAL.gold, { align: 'center', bold: true, alpha: 1 - k * 0.8, shadow: PAL.shadow });
+      text(ctx, fitNum(v.count.to - v.count.from, LW), tx, ty, PAL.gold, { align: 'center', bold: true, alpha: 1 - k * 0.8, shadow: PAL.shadow });
       closeBox();
     }
     if (g && g.burst) {
       openBox('edge', LX, VY, LW, VAL_H, 1, { name: '값 × 배수' });
       box(ctx, LX, VY, LW, VAL_H, PAL.gold, PAL.frameDk);
-      text(ctx, num(g.score), LX + LW / 2, VT, PAL.linkInk, { align: 'center', bold: true });
+      // 곱이 칸 폭(테 1 + 틈 EDGE_PAD 양쪽)을 넘으면 짧은 꼴(끝없는 대국의 13자리 곱)
+      text(ctx, fitNum(g.score, LW - (1 + EDGE_PAD) * 2), LX + LW / 2, VT, PAL.linkInk, { align: 'center', bold: true });
       closeBox();
     } else {
       ui.region('box:value', LX, VY, 48, VAL_H, { keys: [{ id: 'value' }] });
