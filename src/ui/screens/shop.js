@@ -19,13 +19,13 @@ const ENG_NAME = (id) => engravingInfo(id).name;
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { runSide, pauseButton, shardTo } from './common.js';
-import { RIGHT, CENTER, CARD, TOP, PAD_CARD, LINE, GAP_IN, GAP_GROUP, LIST_GAP, flow, textY, rowBoxH } from '../frame.js';
+import { RIGHT, CENTER, CARD, TOP, PAD_CARD, LINE, GAP_IN, GAP_GROUP, LIST_GAP, flow, textY, inkY, rowBoxH, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 const RX = RIGHT.x, RW = RIGHT.w;
 // 판 틀(docs/design-notes/layout.md 「상점」): 가운데 칸 위 띠에 「진열」 이름표 · 다시 진열 · 다음 대국, 그 아래로 진열 카드 줄(hug) →
 // 꾸러미 줄(hug) → 주머니(남는 높이). 오른쪽 칸은 격언 칸 → 두루마리(아래에서부터). 묶음 사이 GAP_GROUP
-const CARD_W = CARD.w, BAR_Y = 3, BAR_H = 16, BOTTOM = 270 - 2, BAG_MIN = 28;
+const CARD_W = CARD.w, BAR_Y = 2, BAR_H = BTN_S, BOTTOM = 270 - 2, BAG_MIN = 28;
 
 // 주머니 줄: 작은 기물 카드들. pick(p)이 있으면 누를 수 있다.
 // flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝)
@@ -221,7 +221,7 @@ export class ShopScreen {
     const CX = CENTER.x, lay = this.centerLayout();
     text(ctx, '진열', CX, textY(BAR_Y, BAR_H), PAL.dim);
     const rc = rerollCost(run);
-    const leaveW = measure('다음 대국', true) + 12, rerollW = 80;
+    const leaveW = measure('다음 대국', true) + 12, rerollW = Math.max(80, measure(`다시 진열 $${rc}`, true) + 12);
     button(ctx, ui, 'shop:leave', CX + CENTER.w - leaveW, BAR_Y, leaveW, BAR_H, '다음 대국', { onClick: () => this.leave(), tone: 'gold' });
     button(ctx, ui, 'shop:reroll', CX + CENTER.w - leaveW - 4 - rerollW, BAR_Y, rerollW, BAR_H, `다시 진열 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
     // 두루마리를 쓰는 중: 진열 · 꾸러미 자리에 미리 보기 판(고른 기물이 어떻게 되는지 보이고 확인을 받는다), 그 아래 주머니
@@ -303,7 +303,8 @@ export class ShopScreen {
     if (lay.env != null) envelope(ctx, x + P, y + lay.env, ENV.w, ENV.h, pk.kind, { hover });
     if (pk.sold) {
       ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
-      text(ctx, '열었다', x + w / 2, y + Math.floor(h / 2) - 6, PAL.dim, { align: 'center', bold: true });
+      // 봉투가 있으면 글 칸(봉투 오른쪽) 가운데 — 영어 「Opened」가 봉투에 걸치지 않게
+      text(ctx, '열었다', x + lay.tx + Math.floor(lay.tw / 2), inkY(y, h), PAL.dim, { align: 'center', bold: true });
       closeBox();
       return;
     }

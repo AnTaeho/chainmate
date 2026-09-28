@@ -70,7 +70,7 @@ export class SetupScreen {
       box(ctx, x, y, w, h, open ? PAL.feltDk : PAL.felt, sel ? PAL.gold : ui.isHover(rid) && open ? PAL.goldDk : PAL.frameDk);
       if (sel) frame(ctx, x - 1, y - 1, w + 2, h + 2, PAL.gold);
       if (!open) {
-        text(ctx, '?', x + w / 2, y + lay.q - 3, PAL.dimDk, { align: 'center', bold: true, scale: 3 });
+        text(ctx, '?', x + w / 2, y + lay.q + 1, PAL.dimDk, { align: 'center', bold: true, scale: 3 });
         for (const [l, ly] of lay.lines) text(ctx, l, x + w / 2, y + ly, PAL.dimDk, { align: 'center' });
         closeBox();
         return;

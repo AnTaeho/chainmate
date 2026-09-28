@@ -6,7 +6,7 @@ import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, frame } from '../render/gfx.js';
 import { wrap } from '../render/text.js';
 import { placeBubble, noteMode, noteWidth } from './placement.js';
-import { PAD_BOX, GAP_GROUP, flow } from './frame.js';
+import { PAD_BOX, GAP_GROUP, flow, BTN_S, inkY } from './frame.js';
 import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 처음 만나는 것마다 한 줄. 글은 「언제 → 무엇」, 한 문장.
@@ -115,7 +115,7 @@ export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
   // 안 여백 → 글 줄들 → (묶음 틈 → 「알았다」 단추 줄) → 안 여백
   const f = flow(PAD_BOX);
   const ys = lines.map(() => f.line());
-  const okY = ok ? f.gap(GAP_GROUP).space(14) : 0;
+  const okY = ok ? f.gap(GAP_GROUP).space(BTN_S) : 0;
   const h = f.y + PAD_BOX;
   const p = placeBubble(mode, r, h, { W, H });
   const { x, y } = p;
@@ -144,10 +144,10 @@ export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
   lines.forEach((l, k) => text(ctx, l, x + PAD_BOX, y + bob + ys[k], PAL.cardInk, { bold: k === 0 && lines.length === 1 }));
   if (ok) {
     const bx = x + w - PAD_BOX - 50, by = y + bob + okY;
-    ui.region('guide:ok', bx, by, 50, 14, { onClick: ok });
-    openBox('tile', bx, by, 50, 14, 0, { name: '알았다' });
-    box(ctx, bx, by, 50, 14, ui.isHover('guide:ok') ? PAL.goldHi : PAL.gold, PAL.frameDk);
-    text(ctx, '알았다', bx + 25, by + 1, PAL.linkInk, { align: 'center', bold: true });
+    ui.region('guide:ok', bx, by, 50, BTN_S, { onClick: ok });
+    openBox('edge', bx, by, 50, BTN_S, 1, { name: '알았다' });
+    box(ctx, bx, by, 50, BTN_S, ui.isHover('guide:ok') ? PAL.goldHi : PAL.gold, PAL.frameDk);
+    text(ctx, '알았다', bx + 25, inkY(by, BTN_S), PAL.linkInk, { align: 'center', bold: true });
     closeBox();
   }
   closeBox();

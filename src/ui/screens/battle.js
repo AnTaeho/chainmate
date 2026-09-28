@@ -25,7 +25,7 @@ import { button } from '../ui.js';
 import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton, headLayout, footLayout, sideStack, drawFoot, shardTo, hallText } from './common.js';
-import { TOP, PAUSE, PAD_BOX, LINE, GAP_IN, GAP_GROUP, LIST_GAP, flow, textY } from '../frame.js';
+import { TOP, PAUSE, PAD_BOX, LINE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
@@ -849,7 +849,7 @@ export class BattleScreen {
       for (let i = 0; i < gw; i++) for (let j = 0; j < Hh; j++) if ((i + j + Math.floor(time * 8)) % 3 === 0) ctx.fillRect(X + fill + i, Y + j, 1, 1);
       // 얻을 몫: 채움 끝 위 가운데, 판 폭 안으로(왼쪽 칸 · 오른쪽 칸을 덮지 않게)
       const gs = `+${num(live)}`, gw2 = Math.ceil(measure(gs, true) / 2);
-      if (!this.hideGain) text(ctx, gs, Math.max(X + gw2, Math.min(X + Wd - gw2, X + fill + gw / 2)), 2, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
+      if (!this.hideGain) text(ctx, gs, Math.max(X + gw2, Math.min(X + Wd - gw2, X + fill + gw / 2)), 1, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
     }
     // 눈금: 목표(×1)는 흰 막대(사슬 중에 넘기면 금빛으로 깜빡인다), 넘친 층은 작은 숫자
     const passed = going && total >= tgt && Math.floor(time * 6) % 2 === 0;
@@ -1055,9 +1055,11 @@ export class BattleScreen {
       k++;
       const ok = !this.busy && live && live.status === 'play';
       const id = `tactic:${i}`;
-      ui.region(id, x, y, 15, 15, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c) });
-      box(ctx, x, y, 15, 15, '#132019', ui.isHover(id) && ok ? PAL.gold : PAL.frameDk);
-      ctx.save(); ctx.translate(x + 1, y + 2); ctx.scale(0.8, 0.8); tacticIcon(ctx, c.id, 0, 0); ctx.restore();
+      // 묘수 칸(15)은 손 이름표 줄(BTN_S) 가운데
+      const ty = y + ((BTN_S - 15) >> 1);
+      ui.region(id, x, ty, 15, 15, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c) });
+      box(ctx, x, ty, 15, 15, '#132019', ui.isHover(id) && ok ? PAL.gold : PAL.frameDk);
+      ctx.save(); ctx.translate(x + 1, ty + 2); ctx.scale(0.8, 0.8); tacticIcon(ctx, c.id, 0, 0); ctx.restore();
     });
   }
   useTactic(i) {
@@ -1240,19 +1242,19 @@ export class BattleScreen {
       closeBox();
     }
     if (g && g.burst) {
-      openBox('tile', LX, VY, LW, VAL_H, 0, { name: '값 × 배수' });
+      openBox('edge', LX, VY, LW, VAL_H, 1, { name: '값 × 배수' });
       box(ctx, LX, VY, LW, VAL_H, PAL.gold, PAL.frameDk);
       text(ctx, num(g.score), LX + LW / 2, VT, PAL.linkInk, { align: 'center', bold: true });
       closeBox();
     } else {
       ui.region('box:value', LX, VY, 48, VAL_H, { keys: [{ id: 'value' }] });
       ui.region('box:links', LX + 64, VY, 48, VAL_H, { keys: [{ id: 'links' }] });
-      openBox('tile', LX + dx, VY, 48, VAL_H, 0, { name: '값', loose: !!g });
+      openBox('edge', LX + dx, VY, 48, VAL_H, 1, { name: '값', loose: !!g });
       box(ctx, LX + dx, VY, 48, VAL_H, PAL.val, PAL.frameDk);
       text(ctx, short(val), LX + dx + 24, VT, PAL.valInk, { align: 'center', bold: true });
       closeBox();
       if (!g) text(ctx, '×', LX + 56, VT, PAL.ink, { align: 'center', bold: true });
-      openBox('tile', LX + 64 - dx, VY, 48, VAL_H, 0, { name: '배수', loose: !!g });
+      openBox('edge', LX + 64 - dx, VY, 48, VAL_H, 1, { name: '배수', loose: !!g });
       box(ctx, LX + 64 - dx, VY, 48, VAL_H, PAL.link, PAL.frameDk);
       text(ctx, short(mul), LX + 88 - dx, VT, PAL.linkInk, { align: 'center', bold: true });
       closeBox();
@@ -1295,17 +1297,23 @@ export class BattleScreen {
     drawFoot(ctx, ui, rows);
   }
 
-  // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠(두 줄까지) → 손 이름표 줄(묘수 · 버리기) → 손. 묶음 사이 GAP_GROUP
-  rightLayout() {
-    const HAND_H = 36, ROW_H = 16, STRIP = 13 + 14;
-    // 아래에서부터: 손(화면 아래 2px 위까지) → 손 이름표 줄 → 시너지 띠. 격언 칸은 TOP부터 띠 위까지(room)
-    const handY = 270 - 2 - HAND_H, rowY = handY - GAP_IN - ROW_H, stripY = rowY - GAP_GROUP - STRIP;
-    return { room: stripY - GAP_GROUP - TOP, stripY, rowY, handY, HAND_H };
+  // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠 → 손 이름표 줄(묘수 · 버리기) → 손. 묶음 사이 GAP_GROUP
+  // 시너지 띠는 칩(FAM_H) 두 줄 — 그러면 격언 칸이 한 줄로 안 들어가는 판(칸 다섯 이상)은 한 줄에 못 놓은 것을 「+N」로
+  rightLayout(run = this && this.run) {
+    const HAND_H = 36, ROW_H = BTN_S;
+    const at = (rows) => {
+      const strip = rows * FAM_H + (rows - 1) * LIST_GAP;
+      // 아래에서부터: 손(화면 아래 2px 위까지) → 손 이름표 줄 → 시너지 띠. 격언 칸은 TOP부터 띠 위까지(room)
+      const handY = 270 - 2 - HAND_H, rowY = handY - GAP_IN - ROW_H, stripY = rowY - GAP_GROUP - strip;
+      return { room: stripY - GAP_GROUP - TOP, stripY, rows, rowY, handY, HAND_H };
+    };
+    const two = at(2);
+    return run && maximColumnH(run, two.room).cols === 1 ? two : at(1);
   }
   drawRight(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, run = this.run;
     pauseButton(ctx, ui, app);
-    const lay = this.rightLayout();
+    const lay = this.rightLayout(run);
     if (run) {
       // 이름표 줄: 「격언 5/5」와 정석 표(멈춤 단추 왼쪽에 붙여). 이름표가 길면(영어) 표에 닿기 전에 줄인다. 명국 조각은 상금 줄
       const nj = (run.josekis || []).length;
@@ -1315,17 +1323,17 @@ export class BattleScreen {
       josekiBadges(ctx, ui, run, bx, 9);
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
       maximColumn(ctx, ui, run, RX, TOP, RW, lay.room, { offUids: off });
-      // 시너지: 두 줄까지(한 줄에 둘 — 셋째부터 둘째 줄)
-      familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: 2 });
+      // 시너지: 칩 줄 lay.rows개(격언 칸이 다섯이면 한 줄), 못 놓은 것은 「+N」
+      familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: lay.rows });
     }
     this.drawPreviewPanel(ctx);
     // 손
     const ry = lay.rowY;
-    text(ctx, '손', RX, ry + 2, PAL.dim);
+    text(ctx, '손', RX, inkY(ry, BTN_S), PAL.dim);
     this.drawTactics(ctx, ui, ry);
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    button(ctx, ui, 'btn:discard', RX + RW - 62, ry, 62, 16, '버리기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
+    button(ctx, ui, 'btn:discard', RX + RW - 62, ry, 62, BTN_S, '버리기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
     const n = Math.max(1, v.hand.length);
     const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
     const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;

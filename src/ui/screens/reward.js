@@ -2,7 +2,7 @@
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, num, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
-import { PAD_BOX, LINE, GAP_GROUP, flow } from '../frame.js';
+import { PAD_BOX, LINE, GAP_GROUP, flow, BTN_S, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 export class RewardScreen {
@@ -64,9 +64,9 @@ export class RewardScreen {
     if (last.overflow >= 2) {
       const col = last.overflow >= 5 ? PAL.red : PAL.gold, s = `목표 ×${last.overflow}`;
       const sw = measure(s, true) + 8;
-      openBox('tile', x + w - sw - P, y + P + 6, sw, 16, 0, { name: '넘친 목표' });
-      box(ctx, x + w - sw - P, y + P + 6, sw, 16, PAL.feltDk, col);
-      text(ctx, s, x + w - P - sw / 2, y + P + 8, col, { align: 'center', bold: true });
+      openBox('edge', x + w - sw - P, y + P + 6, sw, BTN_S, 1, { name: '넘친 목표' });
+      box(ctx, x + w - sw - P, y + P + 6, sw, BTN_S, PAL.feltDk, col);
+      text(ctx, s, x + w - P - sw / 2, inkY(y + P + 6, BTN_S), col, { align: 'center', bold: true });
       closeBox();
     }
     text(ctx, scoreLine, W / 2, y + lay.score, PAL.ink, { align: 'center' });

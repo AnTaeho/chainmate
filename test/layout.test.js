@@ -31,9 +31,9 @@ const BOTTOM = 270 - 2;
 test('토큰: 이름마다 한 값(후보 2) · 시안 덮어쓰기는 이름 하나를 바꾼다', () => {
   const F = M.frame;
   assert.deepEqual([F.PAD_BOX, F.PAD_CARD, F.LINE, F.LINE_TITLE, F.GAP_IN, F.GAP_GROUP], [8, 7, 14, 18, 3, 8]);
-  // 글자(12)는 줄 가운데: 본문 줄은 위아래 1, 제목 줄은 3(text()는 한 칸 아래에 찍는다)
-  assert.equal(F.textY(100, 14) + 1, 101);
-  assert.equal(F.textY(100, 18) + 1, 103);
+  // 잉크(11줄)는 줄 가운데: 본문 줄은 위 1 · 아래 2, 제목 줄은 위 3 · 아래 4
+  assert.equal(F.textY(100, 14), 101);
+  assert.equal(F.textY(100, 18), 103);
   F.applySpacing('line16');
   assert.equal(F.LINE, 16);
   F.applySpacing('line14');

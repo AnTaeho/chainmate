@@ -10,7 +10,7 @@ import { startGuide } from '../coach.js';
 import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
 import { pageHead, pageButtons } from './common.js';
 import { fitText } from '../parts.js';
-import { PAGE, PAD_BOX, LINE, GAP_GROUP, LIST_GAP, flow, textY } from '../frame.js';
+import { PAGE, PAD_BOX, LINE, GAP_GROUP, LIST_GAP, flow, textY, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 const TERM_DEF_X = 120; // 낱말 풀이: 풀이 글이 시작하는 x
@@ -138,7 +138,7 @@ export class LessonsScreen {
     const tab = this.termTab || 'battle';
     const tw = 62;
     TERM_GROUPS.forEach(([id, name], k) => {
-      button(ctx, ui, `terms:tab:${id}`, 90 + k * (tw + 4), 5, tw, 16, name, { tone: id === tab ? 'gold' : 'plain', onClick: () => { this.termTab = id; this.termPage = 0; } });
+      button(ctx, ui, `terms:tab:${id}`, 90 + k * (tw + 4), 5, tw, BTN_S, name, { tone: id === tab ? 'gold' : 'plain', onClick: () => { this.termTab = id; this.termPage = 0; } });
     });
     const pages = this.termPages(tab);
     const page = Math.min(this.termPage || 0, pages.length - 1);

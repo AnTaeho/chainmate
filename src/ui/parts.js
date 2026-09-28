@@ -9,7 +9,7 @@ import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID } from '../data/souls.js';
 import { TACTIC_BY_ID } from '../data/tactics.js';
 import { L, getLang } from './lang.js';
-import { familyGlyphs, familyChips, chipRows, chipText, chipW } from './parts-depth.js';
+import { familyGlyphs, familyChips, chipRows, chipBlockH, chipText, chipW } from './parts-depth.js';
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
@@ -18,7 +18,7 @@ import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
-import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, CHIP_ROW, ART_H, LIST_GAP, flow, textY, rowBoxH } from './frame.js';
+import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
@@ -567,6 +567,8 @@ function itemArt(ctx, it, x, y, t, run) {
 //   → 묶음 틈 → 시너지 칩 줄 → 안 여백. 효과 글은 자르지 않는다 — 카드가 글에 맞춰 길어진다.
 function itemNameOf(it) { return it.kind === 'chart' ? `${PIECE_NAME[it.form]} 모습` : it.kind === 'engraving' ? engravingInfo(it.id).name : it.kind === 'soul' ? SOUL_BY_ID[it.id].name : itemName(it); }
 const artW = (it) => (it.kind === 'evolve' ? 44 : 22);
+// 카드의 칩 줄 수(못 놓은 시너지는 「+N」 — 전부는 가리키면 말풍선에)
+export const CARD_CHIP_ROWS = 1;
 function itemCardLayout(it, w, { run = null, price = true } = {}) {
   const P = PAD_CARD, IW = w - P * 2;
   const f = flow(P);
@@ -598,7 +600,7 @@ function itemCardLayout(it, w, { run = null, price = true } = {}) {
   out.lines = lines.map(([l, c]) => [l, c, f.line()]);
   const fams = itemFams(it);
   out.fams = fams;
-  if (fams.length) { f.gap(GAP_GROUP); out.chips = f.space(chipRows(fams, IW) * CHIP_ROW) + 1; }
+  if (fams.length) { f.gap(GAP_GROUP); out.chips = f.space(chipBlockH(chipRows(fams, IW, CARD_CHIP_ROWS))); }
   out.h = f.y + P;
   return out;
 }
@@ -623,7 +625,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   rect(ctx, x + P, y + lay.rule, lay.IW, 1, edge || PAL.cardDim);
   for (const [l, c, ly] of lay.lines) { if (c === PAL.cardInk) richText(ctx, l, x + P, y + ly, c, { ui: sold ? null : ui, under }); else text(ctx, l, x + P, y + ly, c); }
   // 칩 줄은 카드 아랫변에 붙인다(한 줄의 카드가 같은 높이라 칩이 한 줄로 맞는다)
-  if (lay.fams.length) familyChips(ctx, lay.fams, x + P, y + lay.chips + (h - lay.h), lay.IW);
+  if (lay.fams.length) familyChips(ctx, lay.fams, x + P, y + lay.chips + (h - lay.h), lay.IW, CARD_CHIP_ROWS);
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '샀다', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
@@ -635,7 +637,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
 // what: { kind: 'engraving'|'soul'|'evolve', id }, p: 고른 기물(없으면 고르라는 말), to: 진화 결과 종류
 // 자리(재기와 그리기가 같이 쓴다): 안 여백 PAD_BOX, 왼쪽에 고른 기물 › 된 모습(기물을 골랐으면), 그 오른쪽에 이름(제목 줄) → 묶음 틈 → 효과 글.
 // 단추(「새긴다」 · 「그만」)는 폭이 넉넉하면(300 이상) 오른쪽에 세로로, 좁으면 글 아래 줄에 나란히.
-const TP_BTN = { w: 56, h: 16 };
+const TP_BTN = { w: 58, h: BTN_S }; // 영어 「Engrave」(52) + 글과 테 사이 2 × 2 + 테
 // 한 기물에 각인 하나 · 혼 하나(run.js engrave · ensoul은 있던 것을 바꾼다). 같은 종류가 이미 있으면 그 id(바꾸기), 같은 것이면 고를 수 없다
 export const heldOf = (what, p) => (!p ? null : what.kind === 'engraving' ? (p.eng ? p.eng.id : null) : what.kind === 'soul' ? p.soul || null : null);
 export const targetOk = (what, p) => !what || heldOf(what, p) !== what.id || what.kind === 'evolve';

@@ -4,9 +4,9 @@ import { richText } from './glossary.js';
 import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
 import { box, rect, text, frame, measure } from '../render/gfx.js';
-import { familyChips, chipRows, chipText } from './parts-depth.js';
+import { familyChips, chipRows, chipBlockH, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
-import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, CHIP_ROW, flow } from './frame.js';
+import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, flow, inkY } from './frame.js';
 import { openBox, closeBox } from '../render/layoutlog.js';
 
 export class UI {
@@ -89,14 +89,14 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
   let [fill, ink] = fills[tone] || fills.plain;
   if (!enabled) { fill = PAL.feltDk; ink = PAL.dimDk; }
   const oy = pressed ? 1 : 0;
-  openBox('tile', x, y + oy, w, h, 0, { name: `단추 ${id}` });
+  openBox('edge', x, y + oy, w, h, 1, { name: `단추 ${id}` });
   box(ctx, x, y + oy, w, h, fill, hov ? PAL.gold : PAL.frameDk);
   // 윗변 한 줄 빛 · 아랫변 한 줄 그늘(누르면 1px 내려앉고 빛이 사라진다)
   if (!pressed) rect(ctx, x + 1, y + 1 + oy, w - 2, 1, hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)');
   rect(ctx, x + 1, y + h - 2 + oy, w - 2, 1, 'rgba(0,0,0,0.28)');
   const tw = measure(label, true) + (icon ? 10 : 0);
   let tx = x + Math.floor((w - tw) / 2);
-  const ty = y + Math.floor((h - 12) / 2) + oy;
+  const ty = inkY(y, h) + oy;
   if (icon) { icon(ctx, tx, ty + 2, ink); tx += 10; }
   text(ctx, label, tx, ty, ink, { bold: true });
   closeBox();
@@ -138,7 +138,7 @@ function tipLayout(tip, w) {
     if (isChips(l)) {
       if (i && !isChips(rows[i - 1])) f.gap(GAP_GROUP);
       const n = chipRows(l.chips, tw);
-      out.rows.push({ l, y: f.space(n * CHIP_ROW) + 1 });
+      out.rows.push({ l, y: f.space(chipBlockH(n)) });
       return;
     }
     out.rows.push({ l, y: f.line() });

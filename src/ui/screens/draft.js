@@ -5,10 +5,10 @@ import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
-import { familyChips, chipRows } from '../parts-depth.js';
-import { cardBase, tipLines } from '../parts.js';
+import { familyChips, chipRows, chipBlockH } from '../parts-depth.js';
+import { cardBase, tipLines, CARD_CHIP_ROWS } from '../parts.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, CHIP_ROW, flow } from '../frame.js';
+import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 const TIER_NAME = { silver: '은', gold: '금', rainbow: '무지개' };
@@ -23,7 +23,7 @@ function josekiLayout(j, w = CW) {
   f.gap(GAP_GROUP);
   const lines = wrap(j.text, IW).map((l) => [l, f.line()]);
   let chips = null;
-  if (j.families.length) { f.gap(GAP_GROUP); chips = f.space(chipRows(j.families, IW) * CHIP_ROW) + 1; }
+  if (j.families.length) { f.gap(GAP_GROUP); chips = f.space(chipBlockH(chipRows(j.families, IW, CARD_CHIP_ROWS))); }
   return { IW, tier, names, rule, lines, chips, h: f.y + P };
 }
 export const josekiCardH = (ids) => Math.max(0, ...ids.map((id) => josekiLayout(JOSEKI_BY_ID[id]).h));
@@ -88,7 +88,7 @@ export class DraftScreen {
       for (const [l, ly] of lay.names) text(ctx, l, x + P, y + ly, PAL.cardInk, { bold: true });
       rect(ctx, x + P, y + lay.rule, lay.IW, 1, col);
       for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } });
-      if (lay.chips != null) familyChips(ctx, j.families, x + P, y + lay.chips + (CH - lay.h), lay.IW);
+      if (lay.chips != null) familyChips(ctx, j.families, x + P, y + lay.chips + (CH - lay.h), lay.IW, CARD_CHIP_ROWS);
       closeBox();
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, y, CW, CH, PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;

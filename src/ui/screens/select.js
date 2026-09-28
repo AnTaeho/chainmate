@@ -11,7 +11,7 @@ import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { KIND_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, GAP_IN, GAP_GROUP, flow } from '../frame.js';
+import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, GAP_IN, GAP_GROUP, flow, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { tipLines, fitText } from '../parts.js';
 import { drawPortrait } from '../../render/portraits.js';
@@ -55,7 +55,7 @@ export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` 
 // 대국 카드 쌓기(재기와 그리기가 같이 쓴다 — PAD_CARD): 종류(제목) → 묶음 틈 → 목표 · 이기면 → 묶음 틈(가운데 가로줄) →
 // 명인(초상 옆 이름 → 묶음 안 틈 → 규칙 글) 또는 「건너뛰면」 → 받는 것 → 묶음 틈 → 단추 줄(지난 대국은 「이김」 · 「건너뜀」)
 const PORTRAIT = 36;
-const BAR = { y: 3, h: 16 }; // 본 칸 위 띠의 작은 단추(상점 화면 띠와 같다)
+const BAR = { y: 2, h: BTN_S }; // 본 칸 위 띠의 작은 단추(상점 화면 띠와 같다)
 // 대국 카드 셋은 본 칸을 꽉 채운다(사이 4 — 명인 규칙 글이 한 줄이라도 덜 접히게)
 const SEL = { gap: 4, get w() { return Math.floor((MAIN.w - this.gap * 2) / 3); } };
 const selX = (i) => MAIN.x + i * (SEL.w + SEL.gap);

@@ -7,7 +7,7 @@ import { L } from './lang.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { TRAIT_BY_ID } from '../data/traits.js';
 import { wrap } from '../render/text.js';
-import { CHIP_ROW, FAM_ROW, CHIP_PAD } from './frame.js';
+import { CHIP_H, CHIP_ROW, FAM_H, FAM_ROW, CHIP_PAD, LIST_GAP, inkY } from './frame.js';
 import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 5×5 문양
@@ -45,40 +45,55 @@ export function familyTip(id, n, drop = 0) {
 
 // 시너지 칩: 어두운 칸 안에 문양 + 「기사 +1」(카드가 시너지를 몇 개 채우는지). 너비를 돌려준다
 export const chipLabel = (id, add = 1) => `${FAMILY_BY_ID[id].name} +${add}`;
-// 칩: 안 가로 여백 CHIP_PAD → 문양(5) → 3 → 글 → CHIP_PAD
+// 칩(칠한 바탕 CHIP_H, 테 없음): 안 가로 여백 CHIP_PAD → 문양(5) → 3 → 글 → CHIP_PAD. 글은 위아래 EDGE_PAD 안(잉크 11 가운데)
 export const chipW = (id) => CHIP_PAD + 5 + 3 + measure(chipLabel(id)) + CHIP_PAD;
 export function familyChip(ctx, id, x, y) {
   const w = chipW(id);
-  openBox('tile', x, y - 1, w, 13, { x: CHIP_PAD, y: 0 }, { name: `칩 ${id}` });
-  rect(ctx, x, y, w, 11, '#1b2b27');
-  familyGlyph(ctx, id, x + CHIP_PAD, y + 3);
-  text(ctx, chipLabel(id), x + CHIP_PAD + 8, y - 1, PAL.ink);
+  openBox('edge', x, y, w, CHIP_H, 0, { name: `칩 ${id}` });
+  rect(ctx, x, y, w, CHIP_H, '#1b2b27');
+  familyGlyph(ctx, id, x + CHIP_PAD, y + ((CHIP_H - 5) >> 1));
+  text(ctx, chipLabel(id), x + CHIP_PAD + 8, inkY(y, CHIP_H), PAL.ink);
   closeBox();
   return w;
 }
-// 칩 여럿을 너비 안에 흘려 놓는다(넘치면 다음 줄). 쓴 줄 수를 돌려준다
-export function familyChips(ctx, fams, x, y, w) {
-  let xx = x, rows = fams.length ? 1 : 0;
+// 칩 여럿을 너비 안에 흘려 놓는 자리(넘치면 다음 줄). maxRows 줄에 못 놓은 것은 마지막 줄 끝에 「+N」(자리가 모자라면 그 줄 마지막 칩을 뺀다)
+const plusW = (k) => measure(`+${k}`) + 3;
+function chipPlace(fams, w, maxRows = 99) {
+  const out = [];
+  let xx = 0, row = 0;
   for (const id of fams) {
     const cw = chipW(id);
-    if (xx > x && xx + cw > x + w) { xx = x; y += CHIP_ROW; rows++; }
-    familyChip(ctx, id, xx, y);
+    if (xx > 0 && xx + cw > w) { if (row + 1 >= maxRows) break; xx = 0; row++; }
+    out.push({ id, x: xx, row, w: cw });
     xx += cw + 3;
+  }
+  while (out.length < fams.length && out.length) {
+    const last = out[out.length - 1];
+    if (last.x + last.w + 3 + plusW(fams.length - out.length) <= w) break;
+    out.pop();
+  }
+  return { spots: out, rows: fams.length ? Math.max(1, ...out.map((s) => s.row + 1)) : 0, more: fams.length - out.length };
+}
+export function familyChips(ctx, fams, x, y, w, maxRows = 99) {
+  const { spots, rows, more } = chipPlace(fams, w, maxRows);
+  for (const s of spots) familyChip(ctx, s.id, x + s.x, y + s.row * CHIP_ROW);
+  if (more) {
+    const last = spots[spots.length - 1];
+    const px = last ? x + last.x + last.w + 3 : x, py = y + (last ? last.row : 0) * CHIP_ROW;
+    text(ctx, `+${more}`, px, inkY(py, CHIP_H), PAL.cardDim);
   }
   return rows;
 }
-export function chipRows(fams, w) {
-  let xx = 0, rows = fams.length ? 1 : 0;
-  for (const id of fams) { const cw = chipW(id); if (xx > 0 && xx + cw > w) { xx = 0; rows++; } xx += cw + 3; }
-  return rows;
-}
+export const chipRows = (fams, w, maxRows = 99) => chipPlace(fams, w, maxRows).rows;
+// 칩 줄 묶음의 높이(줄 사이 CHIP_ROW − CHIP_H, 마지막 줄 아래 틈은 없다)
+export const chipBlockH = (rows) => (rows ? rows * CHIP_ROW - (CHIP_ROW - CHIP_H) : 0);
 // 말풍선 · 좁은 곳에 적는 글 꼴: 「기사 +1 · 행진 +1」
 export const chipText = (fams) => fams.map((f) => chipLabel(f)).join(' · ');
 
 // 시너지 띠: 하나라도 모인 시너지를 많은 순으로 칩 하나씩(「기사 2/4」, 자리가 넉넉하면 문양도). 켜진 시너지는 제 빛깔 테.
 // 칩 너비는 글에 맞추고, 너비 w를 넘는 칩은 놓지 않는다(대국 오른쪽 칸은 둘쯤).
 // fx: { [id]: 문턱을 막 넘은 때(초) } — 넘은 시너지 칩이 빛나며 커진다
-// rows: 줄 수(넘치면 다음 줄, 줄 사이 14)
+// rows: 줄 수(넘치면 다음 줄). 칩은 테 두른 FAM_H(글과 테 사이 EDGE_PAD), 줄 사이 LIST_GAP
 export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max = 4, idPrefix = 'fam', counts = null, glyph = true, rows = 1 } = {}) {
   const n = counts || familyCounts(build);
   const all = FAMILIES.filter((f) => n[f.id] > 0).sort((a, b) => levelOf(n[b.id]) - levelOf(n[a.id]) || n[b.id] - n[a.id]);
@@ -90,7 +105,7 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
     let cx = x, cy = y, row = 1;
     for (const f of list) {
       const cw = cwOf(f);
-      if (cx + cw > x + w) { if (row >= rows || cx === x) break; row++; cx = x; cy += 14; }
+      if (cx + cw > x + w) { if (row >= rows || cx === x) break; row++; cx = x; cy += FAM_H + LIST_GAP; }
       out.push({ f, x: cx, y: cy, w: cw });
       cx += cw + 2;
     }
@@ -109,23 +124,23 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
     const lv = levelOf(n[f.id]);
     const id = `${idPrefix}:${f.id}`;
     // 칩 자체가 그 시너지라 말풍선 하나만(같은 풀이를 상자로 또 띄우지 않는다)
-    ui.region(id, cx, cy, cw, 13, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
+    ui.region(id, cx, cy, cw, FAM_H, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
     const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
-    openBox('tile', cx, cy, cw, 13, { x: CHIP_PAD, y: 0 }, { name: `띠 ${f.id}` });
-    box(ctx, cx, cy, cw, 13, lv ? '#132019' : PAL.feltDk, lv ? f.col : PAL.frameDk);
+    openBox('edge', cx, cy, cw, FAM_H, 1, { name: `띠 ${f.id}` });
+    box(ctx, cx, cy, cw, FAM_H, lv ? '#132019' : PAL.feltDk, lv ? f.col : PAL.frameDk);
     if (glow > 0) {
-      ctx.globalAlpha = glow * 0.6; rect(ctx, cx - 2, cy - 2, cw + 4, 17, f.col); ctx.globalAlpha = 1;
-      frame(ctx, cx - 1 - Math.round(glow * 2), cy - 1 - Math.round(glow * 2), cw + 2 + Math.round(glow * 4), 15 + Math.round(glow * 4), PAL.goldHi);
+      ctx.globalAlpha = glow * 0.6; rect(ctx, cx - 2, cy - 2, cw + 4, FAM_H + 4, f.col); ctx.globalAlpha = 1;
+      frame(ctx, cx - 1 - Math.round(glow * 2), cy - 1 - Math.round(glow * 2), cw + 2 + Math.round(glow * 4), FAM_H + 2 + Math.round(glow * 4), PAL.goldHi);
     }
-    if (glyph) familyGlyph(ctx, f.id, cx + CHIP_PAD, cy + 4, lv ? f.col : PAL.dim);
-    text(ctx, labelOf(f), cx + CHIP_PAD + (glyph ? 8 : 0), cy, lv ? PAL.ink : PAL.dim);
+    if (glyph) familyGlyph(ctx, f.id, cx + CHIP_PAD, cy + ((FAM_H - 5) >> 1), lv ? f.col : PAL.dim);
+    text(ctx, labelOf(f), cx + CHIP_PAD + (glyph ? 8 : 0), inkY(cy, FAM_H), lv ? PAL.ink : PAL.dim);
     closeBox();
   }
   if (spots.length < all.length) {
     const last = spots[spots.length - 1];
     const px = last ? last.x + last.w + 2 : x, py = last ? last.y : y;
-    text(ctx, `+${all.length - spots.length}`, px + 1, py, PAL.dim);
+    text(ctx, `+${all.length - spots.length}`, px + 1, inkY(py, FAM_H), PAL.dim);
   }
   return n;
 }
@@ -142,23 +157,23 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
     const lv = levelOf(n[f.id]);
     const next = THRESHOLDS[lv];
     const id = `${idPrefix}:${f.id}`;
-    ui.region(id, x, yy, w, 13, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
+    ui.region(id, x, yy, w, FAM_H, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
     const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
-    openBox('tile', x, yy, w, 13, { x: CHIP_PAD, y: 0 }, { name: `시너지 줄 ${f.id}` });
-    box(ctx, x, yy, w, 13, lv ? '#132019' : PAL.feltDk, ui.isHover(id) ? PAL.gold : lv ? f.col : PAL.frameDk);
-    if (glow > 0) { ctx.globalAlpha = glow * 0.6; rect(ctx, x - 2, yy - 2, w + 4, 17, f.col); ctx.globalAlpha = 1; }
-    familyGlyph(ctx, f.id, x + CHIP_PAD, yy + 4, lv ? f.col : PAL.dim);
+    openBox('edge', x, yy, w, FAM_H, 1, { name: `시너지 줄 ${f.id}` });
+    box(ctx, x, yy, w, FAM_H, lv ? '#132019' : PAL.feltDk, ui.isHover(id) ? PAL.gold : lv ? f.col : PAL.frameDk);
+    if (glow > 0) { ctx.globalAlpha = glow * 0.6; rect(ctx, x - 2, yy - 2, w + 4, FAM_H + 4, f.col); ctx.globalAlpha = 1; }
+    familyGlyph(ctx, f.id, x + CHIP_PAD, yy + ((FAM_H - 5) >> 1), lv ? f.col : PAL.dim);
     const cnt = next ? `${n[f.id]}/${next}` : `${n[f.id]}`;
     const nx = x + CHIP_PAD + 8, room = w - CHIP_PAD * 2 - 8 - measure(cnt) - 4;
     // 이름이 길면(영어) 줄인다
     let nm = L(f.name);
     if (measure(nm) > room) { while (nm.length > 1 && measure(`${nm}…`) > room) nm = nm.slice(0, -1); nm = `${nm}…`; }
-    text(ctx, nm, nx, yy, lv ? PAL.ink : PAL.dim);
-    text(ctx, cnt, x + w - CHIP_PAD, yy, lv ? PAL.ink : PAL.dim, { align: 'right' });
+    text(ctx, nm, nx, inkY(yy, FAM_H), lv ? PAL.ink : PAL.dim);
+    text(ctx, cnt, x + w - CHIP_PAD, inkY(yy, FAM_H), lv ? PAL.ink : PAL.dim, { align: 'right' });
     closeBox();
   });
-  if (all.length > list.length && maxRows > 0) { text(ctx, `+${all.length - list.length}`, x + 3, y + list.length * FAM_ROW, PAL.dim); return list.length + 1; }
+  if (all.length > list.length && maxRows > 0) { text(ctx, `+${all.length - list.length}`, x + 3, inkY(y + list.length * FAM_ROW, FAM_H), PAL.dim); return list.length + 1; }
   return list.length;
 }
 

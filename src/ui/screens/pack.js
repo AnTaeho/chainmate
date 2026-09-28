@@ -10,7 +10,7 @@ import { button } from '../ui.js';
 import { itemCard, itemRowH, itemKeys, itemExtraTip, maximGrid, maximGridH, envelope, targetPanel, targetOk } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, BTN_H, GAP_IN, GAP_GROUP, LIST_GAP, LINE, textY } from '../frame.js';
+import { MAIN, TOP, CARD, BTN_H, GAP_IN, GAP_GROUP, LIST_GAP, LINE, textY, BTN_S } from '../frame.js';
 import { bagRow } from './shop.js';
 import { familyCounts } from '../../data/families.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -127,7 +127,7 @@ export class PackScreen {
         const m = run.maxims[this.sellMenu];
         const spot = spots.find((q) => q.i === this.sellMenu);
         // 팔기 단추: 고른 격언 칸 오른쪽 끝에 겹쳐(칸 위에 뜬다)
-        if (m && spot && canSell(m)) { openBox('tile', spot.x + spot.w - 62, spot.y + 6, 60, 16, 0, { overlay: true, name: '팔기' }); button(ctx, ui, 'pack:sell', spot.x + spot.w - 62, spot.y + 6, 60, 16, `팔기 $${sellPrice(m)}`, { tone: 'red', onClick: () => { const i = this.sellMenu; this.sellMenu = null; this.app.cmd({ type: 'sell', index: i }); this.app.sfx('coin'); } }); closeBox(); }
+        if (m && spot && canSell(m)) { openBox('tile', spot.x + spot.w - 62, spot.y + 5, 60, BTN_S, 0, { overlay: true, name: '팔기' }); button(ctx, ui, 'pack:sell', spot.x + spot.w - 62, spot.y + 5, 60, BTN_S, `팔기 $${sellPrice(m)}`, { tone: 'red', onClick: () => { const i = this.sellMenu; this.sellMenu = null; this.app.cmd({ type: 'sell', index: i }); this.app.sfx('coin'); } }); closeBox(); }
         else this.sellMenu = null;
       }
     }

@@ -12,7 +12,7 @@ export const CARD = { w: 108, gap: 10 };     // 판 틀 카드 줄(셋이면 128
 export const cardX = (i) => MAIN.x + i * (CARD.w + CARD.gap);
 // 판 밖 틀
 export const PAGE = { titleX: 12, titleY: 8, ruleY: 25, bodyY: 32, btnY: 244, btnH: 18 };
-export const BTN_H = 18;                     // 보통 단추 높이(판넬 안 작은 단추 16)
+export const BTN_H = 18;                     // 보통 단추 높이
 
 // ── 글 간격 토큰(docs/design-notes/layout.md 「격자와 여백」): 이름 하나가 뜻 하나, 값도 하나다.
 //   PAD_BOX     상자(판넬 · 말풍선 · 낱말 상자 · 처음 안내 · 풀이 칸 · 막간 상자) 안 여백
@@ -29,9 +29,12 @@ export let LINE = 14;
 export let LINE_TITLE = 18;
 export let GAP_IN = 3;
 export let GAP_GROUP = 8;
-export const FONT_H = 12;                    // 글자 높이(Galmuri11 12px)
-// 줄 윗변 top, 줄 높이 lh일 때 text()에 넘길 y: 글자(12)가 줄 가운데에 온다(text()는 한 칸 아래에 찍는다)
-export const textY = (top, lh = LINE) => top + ((lh - FONT_H) >> 1) - 1;
+export const FONT_H = 12;                    // 글꼴 크기(Galmuri11 12px)
+export const INK_H = 11;                     // 글자 잉크 높이: text()의 y부터 11줄(한글 · 숫자 · 대문자). g j p q y , 는 2줄 더 내려간다
+// 줄 윗변 top, 줄 높이 lh일 때 text()에 넘길 y: 잉크(11)가 줄 가운데에 온다(본문 줄 위 1 · 아래 2, 제목 줄 위 3 · 아래 4)
+export const textY = (top, lh = LINE) => top + ((lh - INK_H) >> 1);
+// 테가 있는 작은 칸(단추 · 칩 · 작은 표) 높이 h 안에서 글 y: 잉크가 가운데(남는 줄이 홀수면 아래가 한 줄 더)
+export const inkY = (top, h) => top + ((h - INK_H) >> 1);
 
 // 흐름: 위에서 아래로 줄 · 묶음을 쌓는 자(재기와 그리기가 같이 쓴다). y는 다음 줄 윗변.
 //   line(title) → 그 줄의 text y를 돌려주고 줄 높이만큼 내려간다. gap(g)은 첫 줄 앞에서는 무시한다.
@@ -50,11 +53,16 @@ export function flow(y0 = 0) {
 export const rowBoxH = (pad = PAD_BOX, lines = 1) => pad * 2 + lines * LINE;
 
 // 토큰이 아닌 칸 크기(글 간격과 따로 움직이지 않는 것)
-export const CHIP_H = 11;                    // 시너지 칩(카드 · 말풍선)
-export const CHIP_ROW = 13;                  // 시너지 칩 줄(칩 11 + 2)
+// 작은 칸의 안 여백(글과 테 사이 EDGE_PAD 이상 — 연기 시험 「안 여백 검사」 src/render/layoutlog.js EDGE_CLEAR와 같다):
+//   칠한 칩 = 2 + 잉크 11 + 2 = 15, 테 두른 칩 = 1 + 2 + 11 + 2 + 1 = 17.
+//   단추는 아래로 빠지는 글자(영어 Skip · Swap)가 아래 테에 닿지 않게 한 줄 더: 18(작은 단추도 같다)
+export const EDGE_PAD = 2;                   // 작은 칸(칩 · 단추 · 작은 표) 안 여백: 글과 테(칠한 바탕 끝) 사이
+export const CHIP_H = 15;                    // 시너지 칩(카드 · 말풍선 — 칠한 바탕, 테 없음)
+export const CHIP_ROW = 17;                  // 시너지 칩 줄(칩 15 + 2)
 export const CHIP_PAD = 3;                   // 칩(시너지 칩 · 띠 · 왼쪽 칸 시너지 줄) 안 가로 여백 — 폭은 글에 맞춘다
-export const FAM_H = 13;                     // 왼쪽 칸 시너지 세로 줄 칩
-export const FAM_ROW = 15;                   // 왼쪽 칸 시너지 세로 줄(칩 13 + 2)
+export const FAM_H = 17;                     // 테 두른 시너지 칩(대국 띠 · 왼쪽 칸 시너지 세로 줄)
+export const FAM_ROW = 19;                   // 왼쪽 칸 시너지 세로 줄(칩 17 + 2)
+export const BTN_S = 18;                     // 작은 단추(판넬 안 · 위 띠 · 처음 안내 「알았다」 · 넘친 목표 도장) 높이 — 보통 단추와 같다
 export const ART_H = 26;                     // 물건 카드 그림 칸 높이
 export const LIST_GAP = 2;                   // 세로로 잇는 같은 칸(격언 칸 · 두루마리 칸) 사이
 
