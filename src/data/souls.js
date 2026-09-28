@@ -63,10 +63,22 @@ export function martyrBurst(ctx, take = MARTYR.take) {
     ctx.addMult(1);
   }
 }
-export const UP = { P: 'N', N: 'B', B: 'R', R: 'Q', Q: 'Z' };
+// 초월: every번 먹을 때마다 한 단계 위로, 룩까지. 옛 「먹을 때마다 · 아마존까지」는 퀸 · 아마존이 되어 판을 10~16번 쓸고
+// 킹을 먹었다(sim --soul transcend 외통 86~98%). 룩까지만이면 1 · 2관이 60%대(나이트 › 비숍으로 둘째 먹기에 외통),
+// 두 번마다를 더해 28~47%(2026-09-28). 룩으로 떨구면 모습이 바뀌지 않는다
+export const UP = { P: 'N', N: 'B', B: 'R' };
+export const TRANSCEND = { every: 2 };
+export const TRANSCEND_TEXT = '두 번 먹을 때마다: 한 단계 위 기물이 된다';
+export const TRANSCEND_MORE = '폰 › 나이트 › 비숍 › 룩';
+// 흡수: 처음 takes번 먹기까지 모습이 안 바뀌고 먹은 적의 행마를 얻는다. 얻은 행마는 그다음 먹기까지만.
+// 옛것은 얻은 행마가 사슬 끝까지 남아(코드가 지우지 않았다) 행마 둘로 다녀 외통이 66~80%였다(sim --soul absorb).
+// 행마를 지워도 세 번이면 48~71% · 두 번이면 36~61%, 한 번이라 25~52%(2026-09-28)
+export const ABSORB = { takes: 1 };
+export const ABSORB_TEXT = '첫 먹기: 모습 그대로 · 먹은 적의 행마를 얻는다';
+export const ABSORB_MORE = '얻은 행마는 다음 먹기까지';
 
-soul('absorb', '흡수', '#d27fd6', ['change'], '세 번까지 모습이 안 바뀌고, 먹은 적의 행마를 얻는다', {
-  more: '행마는 마지막에 먹은 적 하나의 것만 남는다',
+soul('absorb', '흡수', '#d27fd6', ['change'], ABSORB_TEXT, {
+  more: ABSORB_MORE,
   onDrop(ctx) { ctx.flags.absorb = true; },
 });
 soul('echo', '메아리', '#9fb8ff', ['change'], '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 잇는다', {
@@ -81,8 +93,8 @@ soul('echo', '메아리', '#9fb8ff', ['change'], '더 먹을 적이 없으면 �
     ctx.keepGoing();
   },
 });
-soul('transcend', '초월', '#fff1b8', ['change', 'crown'], '먹을 때마다 한 단계 위 기물이 된다', {
-  more: '폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존',
+soul('transcend', '초월', '#fff1b8', ['change', 'crown'], TRANSCEND_TEXT, {
+  more: TRANSCEND_MORE,
   onDrop(ctx) { ctx.flags.transcend = true; },
 });
 soul('hunger', '굶주림', '#df8a45', ['hunt'], '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …', {
