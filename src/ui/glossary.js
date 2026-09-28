@@ -8,7 +8,8 @@ import { wrap } from '../render/text.js';
 import { PAL } from '../render/palette.js';
 import { text, measure, box, rect } from '../render/gfx.js';
 import { L, getLang } from './lang.js';
-import { PAD_BOX, LINE, LINE_TITLE, GAP_IN } from './frame.js';
+import { PAD_BOX, GAP_GROUP, flow } from './frame.js';
+import { openBox, closeBox } from '../render/layoutlog.js';
 
 const T = (id, group, word, enWord, re, en, say, enSay, basic = false) => ({ id, group, word, enWord, re, en, say, enSay, basic });
 // 기본 낱말(basic): 첫 수업이 가르치는 말. 글 안에서 빛깔을 받지 않고 카드 옆 상자도 띄우지 않는다(docs/design-notes/voice.md).
@@ -126,11 +127,17 @@ export function termsIn(list) {
   return out;
 }
 export const KEY_MAX = 2; // 카드 하나에 상자 둘까지
-const keyLines = (id, w) => wrap(termSay(id), w - PAD_BOX.key * 2);
-// 낱말 아래 풀이 첫 줄까지(낱말 위 여백 + 낱말 줄)
-const keyBodyY = () => PAD_BOX.keyTop + LINE_TITLE.key + GAP_IN.key;
+const keyLines = (id, w) => wrap(termSay(id), w - PAD_BOX * 2);
+// 낱말 상자 자리: 낱말(제목 줄) → 묶음 틈 → 풀이 줄들. 재기와 그리기가 같이 쓴다
+function keyLayout(id, w) {
+  const f = flow(PAD_BOX);
+  const words = wrap(termWord(id), w - PAD_BOX * 2, true).map((l) => [l, f.line(true)]);
+  f.gap(GAP_GROUP);
+  const lines = keyLines(id, w).map((l) => [l, f.line()]);
+  return { words, lines, h: f.y + PAD_BOX };
+}
 // 낱말 상자 높이(폭 w). 폭은 설명 묶음이 정한다(말풍선과 같은 폭 — placement.js)
-export const keyHeight = (id, w) => keyBodyY() + keyLines(id, w).length * LINE.body + PAD_BOX.keyEnd;
+export const keyHeight = (id, w) => keyLayout(id, w).h;
 // 상자에 띄울 낱말: 앞에서 KEY_MAX개, 가리킨 낱말(hot)은 꼭 넣는다
 export function keyList(ids, hot = null, max = KEY_MAX) {
   let list = ids.slice(0, max);
@@ -140,12 +147,14 @@ export function keyList(ids, hot = null, max = KEY_MAX) {
 // 낱말 상자 하나를 (x, y)에 폭 w로. 그린 네모를 돌려준다(연기 시험이 센다).
 // note: 낱말 옆에 붙이는 지금 값(시너지 상자의 「5/6」 — 판 틀에서 설명이 왼쪽 칸의 시너지 줄을 덮으므로)
 export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null) {
-  const h = keyHeight(id, w);
+  const lay = keyLayout(id, w), h = lay.h, P = PAD_BOX;
+  openBox('note', x, y, w, h, P, { overlay: true, name: `낱말 ${id}` });
   box(ctx, x, y, w, h, '#16231f', hot ? PAL.gold : PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, '#2a3a33');
-  const P = PAD_BOX.key;
-  text(ctx, termWord(id), x + P, y + PAD_BOX.keyTop, PAL.gold, { bold: true });
-  if (note && measure(termWord(id), true) + 6 + measure(note) <= w - P * 2) text(ctx, note, x + w - P, y + PAD_BOX.keyTop, PAL.ink, { align: 'right' });
-  keyLines(id, w).forEach((l, k) => text(ctx, l, x + P, y + keyBodyY() + k * LINE.body, PAL.ink));
+  for (const [l, ly] of lay.words) text(ctx, l, x + P, y + ly, PAL.gold, { bold: true });
+  const last = lay.words[lay.words.length - 1];
+  if (note && last && measure(last[0], true) + 6 + measure(note) <= w - P * 2) text(ctx, note, x + w - P, y + last[1], PAL.ink, { align: 'right' });
+  for (const [l, ly] of lay.lines) text(ctx, l, x + P, y + ly, PAL.ink);
+  closeBox();
   return { id, x, y, w, h };
 }

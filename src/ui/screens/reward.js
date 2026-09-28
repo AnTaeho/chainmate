@@ -2,6 +2,8 @@
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, num, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
+import { PAD_BOX, LINE, GAP_GROUP, flow } from '../frame.js';
+import { openBox, closeBox } from '../../render/layoutlog.js';
 
 export class RewardScreen {
   constructor(app, { reward, events = [] }) {
@@ -34,34 +36,54 @@ export class RewardScreen {
     this.coinT = (this.coinT || 0) - dt * this.app.speed();
     if (this.coins > 0 && this.coinT <= 0) { this.coins--; this.coinT = 0.05; this.app.sfx('coin', this.coinN = (this.coinN || 0) + 1); }
   }
+  // 막간 상자 쌓기(PAD_BOX · 토큰): 큰 제목(두 배, 줄 LINE × 2) → 묶음 틈 → 점수 줄 → 묶음 틈 → 보상 줄들 → 묶음 틈(가운데 가로줄) → 합 · 상금 · 금빛 꾸러미 → 묶음 틈 → 계속
+  layout() {
+    const f = flow(PAD_BOX);
+    const title = f.space(LINE * 2);
+    f.gap(GAP_GROUP);
+    const score = f.line();
+    f.gap(GAP_GROUP);
+    const rows = this.lines.map(() => f.line());
+    const rule = f.y + Math.floor(GAP_GROUP / 2);
+    f.gap(GAP_GROUP);
+    const total = f.line(), money = f.line(), gold = this.gold ? f.line() : null;
+    f.gap(GAP_GROUP);
+    const btn = f.space(18);
+    return { title, score, rows, rule, total, money, gold, btn, h: f.y + PAD_BOX };
+  }
   draw(ctx, ui) {
     const app = this.app, last = this.last;
-    const x = 120, y = 24, w = 240, h = 222;
+    const lay = this.layout();
+    // 폭도 글에 맞춘다(끝없는 대국의 큰 점수 줄): 240 이상
+    const scoreLine = `점수 ${num(last.score || 0)} / 목표 ${num(last.target || 0)}`;
+    const w = Math.max(240, measure(scoreLine) + PAD_BOX * 2 + 8), h = lay.h, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2), P = PAD_BOX;
+    openBox('panel', x, y, w, h, P, { name: '보상' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
-    text(ctx, last.reason === 'mate' ? '외통 승리' : '대국 승리', W / 2, y + 10, PAL.gold, { align: 'center', bold: true, scale: 2 });
+    text(ctx, last.reason === 'mate' ? '외통 승리' : '대국 승리', W / 2, y + lay.title, PAL.gold, { align: 'center', bold: true, scale: 2 });
     // 넘친 목표는 제목 옆 도장으로
     if (last.overflow >= 2) {
       const col = last.overflow >= 5 ? PAL.red : PAL.gold, s = `목표 ×${last.overflow}`;
       const sw = measure(s, true) + 8;
-      box(ctx, x + w - sw - 8, y + 8, sw, 16, PAL.feltDk, col);
-      text(ctx, s, x + w - 8 - sw / 2, y + 10, col, { align: 'center', bold: true });
+      openBox('tile', x + w - sw - P, y + P + 6, sw, 16, 0, { name: '넘친 목표' });
+      box(ctx, x + w - sw - P, y + P + 6, sw, 16, PAL.feltDk, col);
+      text(ctx, s, x + w - P - sw / 2, y + P + 8, col, { align: 'center', bold: true });
+      closeBox();
     }
-    text(ctx, `점수 ${num(last.score || 0)} / 목표 ${num(last.target || 0)}`, W / 2, y + 40, PAL.ink, { align: 'center' });
+    text(ctx, scoreLine, W / 2, y + lay.score, PAL.ink, { align: 'center' });
     this.lines.forEach(([label, v], i) => {
       if (i >= this.shown) return;
-      const yy = y + 62 + i * 16;
-      text(ctx, label, x + 20, yy, PAL.dim);
-      text(ctx, `$${v}`, x + w - 20, yy, PAL.gold, { align: 'right', bold: true });
+      text(ctx, label, x + P + 12, y + lay.rows[i], PAL.dim);
+      text(ctx, `$${v}`, x + w - P - 12, y + lay.rows[i], PAL.gold, { align: 'right', bold: true });
     });
     if (this.shown > this.lines.length) {
-      const yy = y + 66 + this.lines.length * 16;
-      rect(ctx, x + 16, yy - 3, w - 32, 1, PAL.frameHi);
-      text(ctx, '합', x + 20, yy + 2, PAL.ink, { bold: true });
-      text(ctx, `$${this.total}`, x + w - 20, yy + 2, PAL.gold, { align: 'right', bold: true });
-      text(ctx, `상금 $${app.run.money}`, W / 2, yy + 22, PAL.ink, { align: 'center' });
-      if (this.gold) text(ctx, '금빛 꾸러미가 상점에 나왔다', W / 2, yy + 38, PAL.gold, { align: 'center', bold: true });
+      rect(ctx, x + P + 8, y + lay.rule, w - P * 2 - 16, 1, PAL.frameHi);
+      text(ctx, '합', x + P + 12, y + lay.total, PAL.ink, { bold: true });
+      text(ctx, `$${this.total}`, x + w - P - 12, y + lay.total, PAL.gold, { align: 'right', bold: true });
+      text(ctx, `상금 $${app.run.money}`, W / 2, y + lay.money, PAL.ink, { align: 'center' });
+      if (this.gold) text(ctx, '금빛 꾸러미가 상점에 나왔다', W / 2, y + lay.gold, PAL.gold, { align: 'center', bold: true });
     }
-    button(ctx, ui, 'next', W / 2 - 40, y + h - 26, 80, 18, '계속', { onClick: () => this.next(), tone: 'gold' });
+    button(ctx, ui, 'next', W / 2 - 40, y + lay.btn, 80, 18, '계속', { onClick: () => this.next(), tone: 'gold' });
+    closeBox();
   }
   next() {
     if (this.shown <= this.lines.length) { this.t = 99; return; }

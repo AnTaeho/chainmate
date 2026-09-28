@@ -10,8 +10,9 @@ import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { KIND_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP } from '../frame.js';
-import { tipLines } from '../parts.js';
+import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, GAP_IN, GAP_GROUP, flow } from '../frame.js';
+import { openBox, closeBox } from '../../render/layoutlog.js';
+import { tipLines, fitText } from '../parts.js';
 import { drawPortrait } from '../../render/portraits.js';
 
 // 마지막 관(대가)의 왕관 9×7
@@ -50,53 +51,94 @@ export function antePath(ctx, ui, run, cx, y, time) {
 
 export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` : tag.kind === 'chart' ? `${CHARTS[tag.form].name} 한 장` : '');
 
+// 대국 카드 쌓기(재기와 그리기가 같이 쓴다 — PAD_CARD): 종류(제목) → 묶음 틈 → 목표 · 이기면 → 묶음 틈(가운데 가로줄) →
+// 명인(초상 옆 이름 → 묶음 안 틈 → 규칙 글) 또는 「건너뛰면」 → 받는 것 → 묶음 틈 → 단추 줄(지난 대국은 「이김」 · 「건너뜀」)
+const PORTRAIT = 36;
+// 대국 카드 셋은 본 칸을 꽉 채운다(사이 4 — 명인 규칙 글이 한 줄이라도 덜 접히게)
+const SEL = { gap: 4, get w() { return Math.floor((MAIN.w - this.gap * 2) / 3); } };
+const selX = (i) => MAIN.x + i * (SEL.w + SEL.gap);
+export function blindLayout(run, i, w = SEL.w) {
+  const info = blindInfo(run, run.ante, i);
+  const master = info.kind === 'master';
+  const P = PAD_CARD, IW = w - P * 2, f = flow(P);
+  const out = { info, master, IW };
+  out.kind = f.line(true);
+  f.gap(GAP_GROUP);
+  // 이름표 · 수치 한 줄(넘치면 수치를 다음 줄 오른쪽에)
+  const row = (label, val, bold = true) => {
+    const two = measure(label) + 6 + measure(val, bold) > IW;
+    const ly = f.line();
+    return { label, val, ly, vy: two ? f.line() : ly };
+  };
+  out.rows = [row('목표', num(info.target)), row('이기면', master ? `$${REWARD.base[info.kind]} + 상자` : `$${REWARD.base[info.kind]}`)];
+  out.rule = f.y + Math.floor(GAP_GROUP / 2);
+  f.gap(GAP_GROUP);
+  if (master) {
+    const m = MASTER_BY_ID[info.master];
+    out.m = m;
+    // 초상 옆 이름: 굵게 두 줄까지, 넘치면 보통 굵기(영어 「Master Iron Wall」)
+    let names = wrap(`명인 ${m.name}`, IW - PORTRAIT - 6, true);
+    out.nameBold = names.length <= 2;
+    if (!out.nameBold) names = wrap(`명인 ${m.name}`, IW - PORTRAIT - 6, false);
+    const top = f.space(Math.max(PORTRAIT, names.length * LINE));
+    out.portrait = top;
+    const nf = flow(top + Math.max(0, Math.floor((PORTRAIT - names.length * LINE) / 2)));
+    out.names = names.map((l) => [l, nf.line()]);
+    f.gap(GAP_IN);
+    out.lines = wrap(m.text, IW).map((l) => [l, f.line()]);
+  } else {
+    out.skipLabel = f.line();
+    f.gap(GAP_IN);
+    out.lines = wrap(tagText(info.tag), IW, true).map((l) => [l, f.line()]);
+  }
+  f.gap(GAP_GROUP);
+  out.btn = f.space(BTN_H);
+  out.h = f.y + P;
+  return out;
+}
+
 export class SelectScreen {
   constructor(app) { this.app = app; this.notes = 'side'; }
-  // 판 틀: 왼쪽 칸(관 선택 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(대국 카드 셋 · 판의 길)
+  // 판 틀: 왼쪽 칸(관 선택 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(대국 카드 셋 — 가장 긴 카드에 맞춘 높이 · 판의 길)
   draw(ctx, ui) {
     const app = this.app, run = app.run;
     runSide(ctx, ui, app, '관 선택');
     pauseButton(ctx, ui, app);
-    antePath(ctx, ui, run, MAIN.x + MAIN.w / 2, 246, app.time);
+    // 판의 길은 본 칸 위 띠(카드 줄이 내용에 맞춰 길어지므로 아래를 비운다)
+    antePath(ctx, ui, run, MAIN.x + MAIN.w / 2, 5, app.time);
+    const lays = [0, 1, 2].map((i) => blindLayout(run, i));
+    const h = Math.max(...lays.map((q) => q.h));
     for (let i = 0; i < 3; i++) {
-      const info = blindInfo(run, run.ante, i);
-      const x = cardX(i), y = TOP, w = CARD.w, h = 214;
+      const lay = lays[i], info = lay.info, master = lay.master;
+      const x = selX(i), y = TOP, w = SEL.w;
       const cur = i === run.blind;
       const past = i < run.blind;
       const log = run.log.find((l) => l.ante === run.ante && l.blind === i);
-      const master = info.kind === 'master';
       const edge = cur ? (master ? PAL.red : PAL.gold) : PAL.frameDk;
-      box(ctx, x, y, w, h, cur ? PAL.feltDk : PAL.felt, edge);
       if (cur) frame(ctx, x - 1, y - 1, w + 2, h + 2, edge);
+      openBox('card', x, y, w, h, PAD_CARD, { name: `대국 카드 ${i}` });
+      box(ctx, x, y, w, h, cur ? PAL.feltDk : PAL.felt, edge);
       const ink = cur ? PAL.ink : PAL.dim;
-      const P = PAD_CARD.blind, LB = LINE.body;
-      text(ctx, KIND_NAME[info.kind], x + P, y + PAD_CARD.blindTop, master ? PAL.red : cur ? PAL.gold : PAL.dim, { bold: true });
-      // 이름표 · 수치 한 줄(넘치면 수치를 다음 줄 오른쪽에)
-      const row = (label, val, yy, col, bold = true) => {
-        text(ctx, label, x + P, yy, PAL.dim);
-        const two = measure(label) + 6 + measure(val, bold) > w - P * 2;
-        text(ctx, val, x + w - P, two ? yy + LB : yy, col, { align: 'right', bold });
-        return two ? LB * 2 : LB;
-      };
-      let yy = y + PAD_CARD.blindTop + LINE_TITLE.blind + GAP_IN.blind;
-      yy += row('목표', num(info.target), yy, ink);
-      yy += row('이기면', master ? `$${REWARD.base[info.kind]} + 상자` : `$${REWARD.base[info.kind]}`, yy, PAL.gold);
-      // 목표 · 보상 묶음 → 아래 묶음(가로줄은 틈 가운데)
-      rect(ctx, x + P, yy + Math.floor(GAP_GROUP.blind / 2) - 1, w - P * 2, 1, PAL.frameDk);
-      yy += GAP_GROUP.blind;
+      const P = PAD_CARD;
+      fitText(ctx, KIND_NAME[info.kind], x + P, y + lay.kind, w - P * 2, master ? PAL.red : cur ? PAL.gold : PAL.dim);
+      lay.rows.forEach((r, k) => {
+        text(ctx, r.label, x + P, y + r.ly, PAL.dim);
+        text(ctx, r.val, x + w - P, y + r.vy, k ? PAL.gold : ink, { align: 'right', bold: true });
+      });
+      rect(ctx, x + P, y + lay.rule, w - P * 2, 1, PAL.frameDk);
       if (master) {
-        const m = MASTER_BY_ID[info.master];
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)
-        ui.region(`select:card:${i}`, x, y, w, h, { keys: [m.text] });
-        box(ctx, x + P, yy, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
-        drawPortrait(ctx, info.master, x + P + 2, yy + 2, 1, cur ? 1 : 0.6);
-        wrap(`명인 ${m.name}`, w - P * 2 - 42, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + P + 42, yy + 4 + k * LB, PAL.red, { bold: true }));
-        wrap(m.text, w - P * 2).slice(0, 5).forEach((l, k) => richText(ctx, l, x + P, yy + 36 + GAP_GROUP.blindMaster + k * LB, ink, { termCol: PAL.gold }));
+        ui.region(`select:card:${i}`, x, y, w, h, { keys: [lay.m.text] });
+        box(ctx, x + P, y + lay.portrait, PORTRAIT, PORTRAIT, PAL.felt, cur ? PAL.red : PAL.frameDk);
+        drawPortrait(ctx, info.master, x + P + 2, y + lay.portrait + 2, 1, cur ? 1 : 0.6);
+        for (const [l, ly] of lay.names) text(ctx, l, x + P + PORTRAIT + 6, y + ly, PAL.red, { bold: lay.nameBold });
+        for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, ink, { termCol: PAL.gold });
       } else {
-        text(ctx, '건너뛰면', x + P, yy, PAL.dim);
-        wrap(tagText(info.tag), w - P * 2).forEach((l, k) => text(ctx, l, x + P, yy + LINE_TITLE.label + GAP_IN.label + k * LB, cur ? PAL.gold : PAL.dim, { bold: true }));
+        text(ctx, '건너뛰면', x + P, y + lay.skipLabel, PAL.dim);
+        for (const [l, ly] of lay.lines) text(ctx, l, x + P, y + ly, cur ? PAL.gold : PAL.dim, { bold: true });
       }
-      const by = y + h - 24;
+      // 단추 줄은 카드 아래 안 여백 위(세 카드가 같은 높이라 같은 줄)
+      const by = y + h - P - BTN_H;
       if (past) {
         text(ctx, log && log.skipped ? '건너뜀' : '이김', x + w / 2, by + 3, PAL.dim, { align: 'center', bold: true });
       } else if (cur) {
@@ -106,6 +148,7 @@ export class SelectScreen {
           button(ctx, ui, 'select:skip', x + P + 42, by, w - P * 2 - 42, BTN_H, '건너뛰기', { onClick: () => this.skip() });
         }
       }
+      closeBox();
     }
   }
   play() {

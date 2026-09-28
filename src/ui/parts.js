@@ -18,7 +18,8 @@ import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
-import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, CHIP_ROW, ART_H } from './frame.js';
+import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, CHIP_ROW, ART_H, LIST_GAP, flow, textY, rowBoxH } from './frame.js';
+import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
 // 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
@@ -109,12 +110,15 @@ export function editionShine(ctx, edition, x, y, w, h, t) {
   }
 }
 
-// 격언 카드 하나(이름 + 동사). h가 작으면 이름만.
-export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift = 0, t = 0 } = {}) {
+// 격언 칸 하나: 이름 한 줄(안 여백 PAD_CARD, 높이 = 여백 × 2 + 본문 줄 — maximCellH). 효과 · 판본 · 잠듦 까닭은 가리키면 왼쪽 칸 설명에.
+// 잠들었으면 붉은 줄을 긋는다. overlay: 끄는 중인 카드(다른 칸 위에 뜬다)
+export const maximCellH = () => rowBoxH(PAD_CARD);
+export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift = 0, t = 0, overlay = false } = {}) {
   const info = maximInfo(m.id);
   const legendary = info.rarity === 'legendary';
   const obsidian = m.edition === 'obsidian';
   y -= lift;
+  openBox('card', x, y, w, h, PAD_CARD, { overlay, name: `격언 ${m.id}` });
   const fill = legendary ? '#f6d98a' : obsidian ? '#231a2c' : PAL.card;
   box(ctx, x, y, w, h, fill, PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, legendary ? PAL.goldHi : obsidian ? '#4a3a5c' : PAL.cardHi);
@@ -127,18 +131,13 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   editionShine(ctx, m.edition, x, y, w, h, t);
   if (hot) frame(ctx, x, y, w, h, PAL.gold);
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
-  if (h >= 14) drawIcon(ctx, m.id, x + w - 15, y + Math.floor((h - 12) / 2), off ? 0.35 : 1);
-  // 이름은 안 여백만큼 아래(칸이 낮으면 위로 당긴다), 둘째 줄은 그 한 줄 아래
-  const P = PAD_CARD.maxim, top = Math.max(2, Math.min(PAD_CARD.maximTop, h - 14));
-  text(ctx, info.name, x + P, y + top, ink, { bold: true });
-  if (h >= 28) {
-    // 둘째 줄: 효과의 앞머리(다 못 적으면 「…」 — 전부는 가리키면). 잠들었거나 판본 · 전설이면 그 이름
-    let sub = off ? '잠듦' : m.edition ? EDITION_BY_ID[m.edition].name : legendary ? '전설' : null;
-    // 조건은 떼고 효과만(「나이트로 시작: 배수 ×1.5」 → 「배수 ×1.5」). 전부는 가리키면 보인다
-    if (!sub) { const ls = wrap(effectPart(info.text), w - 26); sub = ls.length > 1 ? `${ls[0]}…` : ls[0]; }
-    text(ctx, sub, x + P, y + top + LINE.body, off ? PAL.red : obsidian ? '#b89ad8' : PAL.cardDim);
-  }
+  const P = PAD_CARD;
+  // 아이콘(12)은 오른쪽 안 여백 안에, 이름은 그 왼쪽까지(넘치면 fitText가 보통 굵기 → 「…」)
+  const iconW = w >= 60 ? 12 + 3 : 0;
+  if (iconW) drawIcon(ctx, m.id, x + w - P - 12, y + Math.floor((h - 12) / 2), off ? 0.35 : 1);
+  fitText(ctx, info.name, x + P, y + textY(P), w - P * 2 - iconW, ink);
   if (off) { rect(ctx, x + 4, y + Math.floor(h / 2), w - 8, 1, PAL.red); }
+  closeBox();
 }
 
 // 등급별 테두리 무늬: 흔함 단색 · 드묾 점선 · 귀함 이중 테 · 전설 금박 모서리
@@ -155,41 +154,50 @@ export function rarityTrim(ctx, rarity, x, y, w, h) {
   } else frame(ctx, x, y, w, h, '#5d4a33');
 }
 
-// 격언 칸 목록(오른쪽 판). 칸 수에 맞춰 카드 높이를 줄인다. 돌려주는 값: 카드 자리들
+// 격언 칸 목록(오른쪽 칸): 칸 높이는 maximCellH(내용에 맞춘 높이), 칸 사이 LIST_GAP.
+// 한 줄로 hTotal 안에 다 안 들어가면(전설 · 흑요 판본으로 칸이 늘면) 두 줄로 나란히. 돌려주는 값: 칸 자리들 · 쓴 높이(used)
+export function maximColumnH(run, hTotal) {
+  const slots = maximSlotsOf(run);
+  const h = maximCellH(), one = slots * h + (slots - 1) * LIST_GAP;
+  const cols = one <= hTotal ? 1 : 2;
+  const rows = Math.ceil(slots / cols);
+  return { slots, h, cols, rows, used: rows * h + (rows - 1) * LIST_GAP };
+}
+const maximSlotsOf = (run) => Math.max(maximCapacity(run) + run.maxims.filter((m) => m.legendary).length, run.maxims.length);
 export function maximColumn(ctx, ui, run, x, y, w, hTotal, { idPrefix = 'maxim', offUids = [], onClick = null, drag = null, hotIndex = -1 } = {}) {
   const maxims = run.maxims;
   const cap = maximCapacity(run);
-  const legends = maxims.filter((m) => m.legendary).length;
-  const slots = Math.max(cap + legends, maxims.length);
-  const gap = 4;
-  const h = Math.min(32, Math.floor((hTotal + gap) / slots) - gap);
+  const { slots, h, cols, used } = maximColumnH(run, hTotal);
+  const gap = LIST_GAP;
+  const cw = cols === 1 ? w : Math.floor((w - gap) / 2);
   const spots = [];
   for (let i = 0; i < slots; i++) {
-    const yy = y + i * (h + gap);
+    const xx = x + (i % cols) * (cw + gap), yy = y + Math.floor(i / cols) * (h + gap);
     const m = maxims[i];
     if (!m) {
-      dots(ctx, x, yy, w, h, PAL.feltHi, 3);
+      dots(ctx, xx, yy, cw, h, PAL.feltHi, 3);
       continue;
     }
     const id = `${idPrefix}:${i}`;
-    const r = ui.region(id, x, yy, w, h, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null, drag: drag ? true : false, onDrop: drag ? (mx, my) => drag(i, mx, my) : null });
+    const r = ui.region(id, xx, yy, cw, h, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null, drag: drag ? true : false, onDrop: drag ? (mx, my) => drag(i, mx, my) : null });
     const dragging = ui.drag && ui.drag.region === r && ui.drag.moved;
-    if (dragging) { dots(ctx, x, yy, w, h, PAL.gold, 2); spots.push({ i, x, y: yy, w, h }); continue; }
-    maximCard(ctx, m, x, yy, w, h, { off: offUids.includes(m.uid), hot: ui.isHover(id) || hotIndex === i, lift: ui.isHover(id) && (onClick || drag) ? 1 : 0, t: ui.time + i * 0.37 });
-    spots.push({ i, x, y: yy, w, h });
+    if (dragging) { dots(ctx, xx, yy, cw, h, PAL.gold, 2); spots.push({ i, x: xx, y: yy, w: cw, h }); continue; }
+    maximCard(ctx, m, xx, yy, cw, h, { off: offUids.includes(m.uid), hot: ui.isHover(id) || hotIndex === i, lift: ui.isHover(id) && (onClick || drag) ? 1 : 0, t: ui.time + i * 0.37 });
+    spots.push({ i, x: xx, y: yy, w: cw, h });
   }
   // 끌고 있는 카드는 마우스를 따라 그린다
   if (ui.drag && ui.drag.moved && ui.drag.region.id.startsWith(idPrefix + ':')) {
     const i = Number(ui.drag.region.id.split(':')[1]);
-    if (maxims[i]) maximCard(ctx, maxims[i], ui.mouse.x - Math.floor(w / 2), ui.mouse.y - Math.floor(h / 2), w, h, { hot: true, t: ui.time });
+    if (maxims[i]) maximCard(ctx, maxims[i], ui.mouse.x - Math.floor(cw / 2), ui.mouse.y - Math.floor(h / 2), cw, h, { hot: true, t: ui.time, overlay: true });
   }
-  return { spots, h, gap, slots, count: maximCount(run), cap };
+  return { spots, h, gap, slots, used, count: maximCount(run), cap };
 }
 
-// 격언 칸 격자(금빛 꾸러미): cols 칸씩 줄을 이어, 칸 하나는 cw × ch. 산 격언만 칸(빈 칸은 점선). 돌려주는 값: 칸 자리들
-export function maximGrid(ctx, ui, run, x, y, cols, cw, ch, gapX, gapY, { idPrefix = 'maxim', onClick = null, hotIndex = -1 } = {}) {
+// 격언 칸 격자(금빛 꾸러미): cols 칸씩 줄을 이어, 칸 하나는 cw × maximCellH. 산 격언만 칸(빈 칸은 점선). 돌려주는 값: 칸 자리들
+export function maximGrid(ctx, ui, run, x, y, cols, cw, gapX, gapY, { idPrefix = 'maxim', onClick = null, hotIndex = -1 } = {}) {
   const maxims = run.maxims;
-  const slots = Math.max(maximCapacity(run) + maxims.filter((m) => m.legendary).length, maxims.length);
+  const slots = maximSlotsOf(run);
+  const ch = maximCellH();
   const spots = [];
   for (let i = 0; i < slots; i++) {
     const xx = x + (i % cols) * (cw + gapX), yy = y + Math.floor(i / cols) * (ch + gapY);
@@ -202,6 +210,7 @@ export function maximGrid(ctx, ui, run, x, y, cols, cw, ch, gapX, gapY, { idPref
   }
   return spots;
 }
+export const maximGridH = (run, cols, gapY) => { const rows = Math.ceil(maximSlotsOf(run) / cols); return rows * maximCellH() + (rows - 1) * gapY; };
 
 // 손 기물 카드: 각인은 기물 몸의 톤으로, 카드는 안쪽 테만 각인 색. tier: 그 종류의 기보 단계
 export const ENG_FILL = { ivory: '#f7efdb', glass: '#bfe0e6', gold: '#f3d27a', ebony: '#6b5a52', silver: '#d8dee6', feather: '#e8e0f0' };
@@ -412,7 +421,7 @@ export function itemExtraTip(it) {
   const more = it.kind === 'maxim' ? maximInfo(it.id).more : it.kind === 'soul' ? SOUL_BY_ID[it.id].more : null;
   if (it.kind === 'piece' && PIECE_MOVE[it.t]) lines.push(PIECE_MOVE[it.t]);
   // 덧말이 있으면 효과 글 전부 다음에(덧말만 홀로 뜨지 않게)
-  else if (CUT.has(it) || more) lines.push(itemEffect(it));
+  else if (more) lines.push(itemEffect(it));
   if (more) lines.push(more);
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보가 적용된다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${L(info.story)}`); }
@@ -430,14 +439,20 @@ export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
 
 // wide: 폭이 88보다 좁아도 넓은 카드로(꾸러미 카드 넷 — 효과 글을 카드에 그대로 적는다)
 export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false } = {}) {
-  const t0 = t;
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
     x += Math.floor((w - nw) / 2); w = nw;
   }
-  if (w >= 88 || (wide && scaleX === 1)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under });
-  const back = scaleX < 1 && it._back;
+  if (scaleX === 1 && (w >= 88 || wide)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under });
+  // 좁은 카드는 뒤집히는 순간에만 그린다(연출 — 글 넘침은 재지 않는다)
+  openBox('card', x, y, w, h, 0, { loose: true, name: '뒤집히는 카드' });
+  narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run });
+  closeBox();
+}
+function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run }) {
+  const t0 = t;
+  const back = false;
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   cardBase(ctx, x, y, w, h, { fill, hover });
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
@@ -454,7 +469,7 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
     rect(ctx, x + 6, y + 19, w - 12, 2, RARITY[info.rarity]);
     drawIcon(ctx, it.id, cx - 6, y + 25);
     const lines = wrap(info.name, w - 8, true);
-    lines.slice(0, 2).forEach((l, k) => text(ctx, l, cx, y + 40 + k * LINE.body, PAL.cardInk, { align: 'center', bold: true }));
+    lines.slice(0, 2).forEach((l, k) => text(ctx, l, cx, y + 40 + k * LINE, PAL.cardInk, { align: 'center', bold: true }));
     if (it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + h - 28, PAL.goldDk, { align: 'center' });
   } else if (it.kind === 'chart' || it.kind === 'piece') {
     const t = it.kind === 'chart' ? it.form : it.t;
@@ -495,7 +510,7 @@ export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, pri
   } else if (it.kind === 'fragment') {
     shardIcon(ctx, cx - 8, y + 22);
     const lines = wrap(LEGEND_BY_ID[it.legend].name, w - 8, true);
-    lines.slice(0, 2).forEach((l, k) => text(ctx, l, cx, y + 42 + k * LINE.body, PAL.cardInk, { align: 'center', bold: true }));
+    lines.slice(0, 2).forEach((l, k) => text(ctx, l, cx, y + 42 + k * LINE, PAL.cardInk, { align: 'center', bold: true }));
   }
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
@@ -525,87 +540,119 @@ function itemArt(ctx, it, x, y, t, run) {
   if (it.kind === 'fragment') { shardIcon(ctx, x + 3, y + 5); return 22; }
   return 0;
 }
-function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under }) {
-  const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
-  const edge = it.kind === 'engraving' ? ENG_EDGE[it.id] : it.kind === 'soul' ? SOUL_BY_ID[it.id].col : null;
-  cardBase(ctx, x, y, w, h, { fill, hover, edge, ticks: true });
-  if (it.kind === 'maxim') rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[maximInfo(it.id).rarity]);
-  if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
-  if (hover) frame(ctx, x, y, w, h, PAL.gold);
-  // 종류(머릿말) → 그림 · 이름 묶음 → 가로줄 → 효과 묶음 → 쓰는 법 → 맨 아래 칩 · 값(frame.js 토큰)
-  const P = PAD_CARD.item;
-  text(ctx, ITEM_KIND[it.kind], x + P, y + PAD_CARD.itemTop, PAL.cardDim);
-  const fams = itemFams(it);
-  const headY = y + PAD_CARD.itemTop + LINE.card + GAP_IN.item;
-  const aw = itemArt(ctx, it, x + P, headY, t, run);
-  const nx = x + P + aw + 4, nw = x + w - PAD_CARD.itemRight - nx;
-  const name = it.kind === 'chart' ? `${PIECE_NAME[it.form]} 모습` : it.kind === 'engraving' ? engravingInfo(it.id).name : it.kind === 'soul' ? SOUL_BY_ID[it.id].name : itemName(it);
-  const nl = wrap(name, nw, true).slice(0, 2);
-  // 이름이 한 줄이면 그림 높이의 가운데
-  nl.forEach((l, k) => text(ctx, l, nx, headY + (nl.length === 1 ? Math.floor((ART_H - 12) / 2) : 0) + k * LINE.body, PAL.cardInk, { bold: true }));
-  const headEnd = headY + ART_H;
-  rect(ctx, x + P, headEnd + Math.floor(GAP_GROUP.card / 2), w - P * 2, 1, edge || PAL.cardDim);
-  const showPrice = price && it.price != null && !sold;
-  const priceTxt = showPrice ? `$${it.price}` : '';
-  const use = itemUse(it) ? [itemUse(it)] : [];
-  // 맨 아래 줄: 값(오른쪽)과 시너지 칩(「기사 +1」, 왼쪽). 칩이 넘치면 그 위로 한 줄씩. 그 위에 흐린 쓰는 법
-  // 칩 하나가 값 옆에 안 들어가면(영어 「Sacrifice +1」) 값 줄을 나누지 않고 그 위 줄부터 놓는다
-  const IW = w - P * 2;
-  const beside = IW - (showPrice ? measure(priceTxt, true) + 8 : 0);
-  const share = !showPrice || fams.every((f) => chipW(f) <= beside);
-  const chipAvail = share ? beside : IW;
-  const rows = fams.length ? chipRows(fams, chipAvail) : 0;
-  // 값 줄: 글 12 + 아래 여백. 칩(11)은 그 줄 안에 1px 내려 놓는다
-  const B = PAD_CARD.itemBottom;
-  const lastRow = y + h - 12 - B - (showPrice ? 1 : 0) - (share ? 0 : CHIP_ROW);
-  const chipTop = rows ? lastRow - (rows - 1) * CHIP_ROW : showPrice ? y + h - 14 - B : y + h - B;
-  let yy = headEnd + GAP_GROUP.card;
-  const LC = LINE.card;
-  const bottom = chipTop - use.length * LC;
+// 넓은 카드 쌓기(재기와 그리기가 같이 쓴다 — PAD_CARD · 토큰):
+//   종류(머릿말, 오른쪽에 값) → 묶음 안 틈 → 그림 · 이름(제목 줄, 두 줄까지) → 묶음 틈(가운데 가로줄) → 효과 글 줄들(단계 · 판본 · 쓰는 법)
+//   → 묶음 틈 → 시너지 칩 줄 → 안 여백. 효과 글은 자르지 않는다 — 카드가 글에 맞춰 길어진다.
+function itemNameOf(it) { return it.kind === 'chart' ? `${PIECE_NAME[it.form]} 모습` : it.kind === 'engraving' ? engravingInfo(it.id).name : it.kind === 'soul' ? SOUL_BY_ID[it.id].name : itemName(it); }
+const artW = (it) => (it.kind === 'evolve' ? 44 : 22);
+function itemCardLayout(it, w, { run = null, price = true } = {}) {
+  const P = PAD_CARD, IW = w - P * 2;
+  const f = flow(P);
+  const out = { IW };
+  // 종류(머릿말)는 값 왼쪽까지(길면 줄바꿈 — 영어 「Classic Fragment」), 값은 첫 줄 오른쪽
+  const priceW = price && it.price != null ? measure(`$${it.price}`, true) + 4 : 0;
+  out.kinds = wrap(ITEM_KIND[it.kind], IW - priceW).map((l) => [l, f.line()]);
+  f.gap(GAP_IN);
+  const nx = artW(it) + 4, nw = IW - nx - (PAD_CARD > 4 ? 0 : 0);
+  out.nameX = P + nx;
+  out.names = wrap(itemNameOf(it), nw, true);
+  const headH = Math.max(ART_H, out.names.length * LINE_TITLE);
+  const headTop = f.space(headH);
+  out.art = headTop + Math.floor((headH - ART_H) / 2);
+  const nameTop = headTop + Math.floor((headH - out.names.length * LINE_TITLE) / 2);
+  out.nameYs = out.names.map((_, k) => textY(nameTop + k * LINE_TITLE, LINE_TITLE));
+  out.rule = f.y + Math.floor(GAP_GROUP / 2);
+  f.gap(GAP_GROUP);
   const lines = [];
   for (const l of wrap(itemEffect(it), IW)) lines.push([l, PAL.cardInk]);
   if (it.kind === 'chart' && run) lines.push([`${run.charts[it.form] || 0} › ${(run.charts[it.form] || 0) + 1}단계`, PAL.cardDim]);
   if (it.edition) for (const l of wrap(`${EDITION_BY_ID[it.edition].name}: ${L(EDITION_BY_ID[it.edition].text)}`, IW)) lines.push([l, PAL.goldDk]);
-  const room = Math.floor((bottom - yy) / LC);
-  // 넘치면 마지막 줄 끝에 「…」(효과 글 전부는 말풍선에 — itemExtraTip)
-  if (room > 0 && lines.length > room) { const [l, c] = lines[room - 1]; lines.length = room - 1; lines.push([`${l}…`, c]); CUT.add(it); } else CUT.delete(it);
-  for (const [l, c] of lines) { if (yy + LC > bottom) break; if (c === PAL.cardInk) richText(ctx, l, x + P, yy, c, { ui: sold ? null : ui, under }); else text(ctx, l, x + P, yy, c); yy += LC; }
-  use.forEach((l, k) => text(ctx, l, x + P, bottom + k * LC, PAL.cardDim));
-  if (rows) familyChips(ctx, fams, x + P, chipTop + 1, chipAvail);
+  if (itemUse(it)) lines.push([itemUse(it), PAL.cardDim]);
+  out.lines = lines.map(([l, c]) => [l, c, f.line()]);
+  const fams = itemFams(it);
+  out.fams = fams;
+  if (fams.length) { f.gap(GAP_GROUP); out.chips = f.space(chipRows(fams, IW) * CHIP_ROW) + 1; }
+  out.h = f.y + P;
+  return out;
+}
+// 넓은 카드 높이(폭 w). 한 줄의 카드는 가장 긴 카드에 맞춘다(itemRowH)
+export const itemCardH = (it, w, opts = {}) => itemCardLayout(it, w, opts).h;
+export const itemRowH = (items, w, opts = {}) => Math.max(0, ...items.filter(Boolean).map((it) => itemCardH(it, w, opts)));
+function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under }) {
+  const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
+  const edge = it.kind === 'engraving' ? ENG_EDGE[it.id] : it.kind === 'soul' ? SOUL_BY_ID[it.id].col : null;
+  openBox('card', x, y, w, h, PAD_CARD, { name: `카드 ${it.kind}` });
+  cardBase(ctx, x, y, w, h, { fill, hover, edge, ticks: true });
+  if (it.kind === 'maxim') rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[maximInfo(it.id).rarity]);
+  if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
+  if (hover) frame(ctx, x, y, w, h, PAL.gold);
+  const lay = itemCardLayout(it, w, { run, price });
+  const P = PAD_CARD;
+  for (const [l, ly] of lay.kinds) text(ctx, l, x + P, y + ly, PAL.cardDim);
+  const showPrice = price && it.price != null && !sold;
+  if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
+  itemArt(ctx, it, x + P, y + lay.art, t, run);
+  lay.names.forEach((l, k) => text(ctx, l, x + lay.nameX, y + lay.nameYs[k], PAL.cardInk, { bold: true }));
+  rect(ctx, x + P, y + lay.rule, lay.IW, 1, edge || PAL.cardDim);
+  for (const [l, c, ly] of lay.lines) { if (c === PAL.cardInk) richText(ctx, l, x + P, y + ly, c, { ui: sold ? null : ui, under }); else text(ctx, l, x + P, y + ly, c); }
+  // 칩 줄은 카드 아랫변에 붙인다(한 줄의 카드가 같은 높이라 칩이 한 줄로 맞는다)
+  if (lay.fams.length) familyChips(ctx, lay.fams, x + P, y + lay.chips + (h - lay.h), lay.IW);
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '샀다', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
-  } else if (showPrice) text(ctx, priceTxt, rows && share ? x + w - P : x + w / 2, y + h - 12 - B, PAL.goldDk, { align: rows && share ? 'right' : 'center', bold: true });
+  }
+  closeBox();
 }
-// 카드에 다 못 적은(「…」) 물건: 말풍선이 효과 글 전부를 보인다
-const CUT = new WeakSet();
 
 // 새기기 · 깃들기 · 자라기 미리 보기: 고른 기물이 어떻게 되는지 보이고 확인을 받는다(기물을 누르자마자 새기지 않는다).
 // what: { kind: 'engraving'|'soul'|'evolve', id }, p: 고른 기물(없으면 고르라는 말), to: 진화 결과 종류
+// 자리(재기와 그리기가 같이 쓴다): 안 여백 PAD_BOX, 왼쪽에 고른 기물 › 된 모습(기물을 골랐으면), 그 오른쪽에 이름(제목 줄) → 묶음 틈 → 효과 글.
+// 단추(「새긴다」 · 「그만」)는 폭이 넉넉하면(300 이상) 오른쪽에 세로로, 좁으면 글 아래 줄에 나란히.
+const TP_BTN = { w: 56, h: 16 };
+function targetText(run, what, p, to) {
+  const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
+  if (!p) return { title: what.kind === 'engraving' ? '주머니에서 새길 기물을 고른다' : what.kind === 'soul' ? '주머니에서 깃들 기물을 고른다' : '주머니에서 자랄 기물을 고른다', body: eff };
+  const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
+  const title = what.kind === 'evolve' ? `${PIECE_NAME[p.t]} › ${PIECE_NAME[after.t]}` : `${PIECE_NAME[p.t]}에 ${what.kind === 'engraving' ? `${engravingInfo(what.id).name} 각인` : `${SOUL_BY_ID[what.id].name}의 혼`}`;
+  return { title, body: what.kind === 'evolve' ? (PIECE_MOVE[after.t] || '') : eff, after };
+}
+export function targetPanelLayout(run, what, p, w, { to = null } = {}) {
+  const P = PAD_BOX, side = w >= 300;
+  const { title, body, after } = targetText(run, what, p, to);
+  const artW = p ? 56 : 0;
+  const tw = w - P * 2 - artW - (side ? TP_BTN.w + 8 : 0);
+  const f = flow(P);
+  const titles = wrap(title, tw, true).map((l) => [l, f.line(true)]);
+  f.gap(GAP_GROUP);
+  const lines = wrap(body, tw).map((l) => [l, f.line()]);
+  let h = Math.max(f.y, P + (p ? 28 : 0), P + (side ? TP_BTN.h * 2 + GAP_IN : 0));
+  let btnY = P;
+  if (!side) { btnY = h + GAP_GROUP; h = btnY + TP_BTN.h; }
+  return { h: h + P, titles, lines, tx: P + artW, btnY, side, after };
+}
 export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfirm = null, onCancel = null, idPrefix = 'target' } = {}) {
-  const h = 40;
+  const lay = targetPanelLayout(run, what, p, w, { to });
+  const h = lay.h, P = PAD_BOX;
   ui.region(`${idPrefix}:panel`, x, y, w, h, {});
+  openBox('panel', x, y, w, h, P, { name: '새기기 미리 보기' });
   box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
   const verb = what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : '자란다';
-  const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
-  // 글 자리: 이름(굵게) → 효과 한 줄(frame.js 토큰). 그림 · 단추는 칸 높이 40에 맞춘 자리 그대로
-  const tx = x + PAD_BOX.panel, ty = y + PAD_BOX.target, ty2 = ty + LINE_TITLE.target + GAP_IN.target;
-  if (!p) {
-    text(ctx, what.kind === 'engraving' ? '주머니에서 새길 기물을 고른다' : what.kind === 'soul' ? '주머니에서 깃들 기물을 고른다' : '주머니에서 자랄 기물을 고른다', tx, ty, PAL.gold, { bold: true });
-    const l = wrap(eff, w - 70)[0];
-    text(ctx, l, tx, ty2, PAL.ink);
-  } else {
-    const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
-    pieceCard(ctx, p, x + 5, y + 6, 20, 28, { tier: tierOf(run.charts[chartForm(p.t)]) });
-    for (let i = 0; i < 3; i++) { rect(ctx, x + 29 + i, y + 17 + i, 1, 1, PAL.gold); rect(ctx, x + 29 + i, y + 23 - i, 1, 1, PAL.gold); }
-    pieceCard(ctx, after, x + 35, y + 6, 20, 28, { tier: tierOf(run.charts[chartForm(after.t)]), time: ui.time, selected: true });
-    const name = what.kind === 'evolve' ? `${PIECE_NAME[p.t]} › ${PIECE_NAME[after.t]}` : `${PIECE_NAME[p.t]}에 ${what.kind === 'engraving' ? `${engravingInfo(what.id).name} 각인` : `${SOUL_BY_ID[what.id].name}의 혼`}`;
-    text(ctx, name, x + 62, ty, PAL.gold, { bold: true });
-    const l = wrap(what.kind === 'evolve' ? (PIECE_MOVE[after.t] || '') : eff, w - 62 - 66)[0] || '';
-    text(ctx, l, x + 62, ty2, PAL.ink);
-    if (onConfirm) button(ctx, ui, `${idPrefix}:ok`, x + w - 62, y + 4, 56, 16, verb, { tone: 'gold', onClick: onConfirm });
+  if (p) {
+    const after = lay.after;
+    pieceCard(ctx, p, x + P, y + P, 20, 28, { tier: tierOf(run.charts[chartForm(p.t)]) });
+    for (let i = 0; i < 3; i++) { rect(ctx, x + P + 24 + i, y + P + 11 + i, 1, 1, PAL.gold); rect(ctx, x + P + 24 + i, y + P + 17 - i, 1, 1, PAL.gold); }
+    pieceCard(ctx, after, x + P + 30, y + P, 20, 28, { tier: tierOf(run.charts[chartForm(after.t)]), time: ui.time, selected: true });
   }
-  if (onCancel) button(ctx, ui, `${idPrefix}:cancel`, x + w - 62, y + 21, 56, 16, '그만', { onClick: onCancel });
+  for (const [l, ly] of lay.titles) text(ctx, l, x + lay.tx, y + ly, PAL.gold, { bold: true });
+  for (const [l, ly] of lay.lines) text(ctx, l, x + lay.tx, y + ly, PAL.ink);
+  // 단추: 오른쪽 세로(넓을 때) · 아래 줄 오른쪽부터 나란히(좁을 때)
+  const bx = x + w - P - TP_BTN.w;
+  const okAt = lay.side ? [bx, y + P] : [bx - TP_BTN.w - 4, y + lay.btnY];
+  const noAt = lay.side ? [bx, y + P + TP_BTN.h + GAP_IN] : [bx, y + lay.btnY];
+  if (p && onConfirm) button(ctx, ui, `${idPrefix}:ok`, okAt[0], okAt[1], TP_BTN.w, TP_BTN.h, verb, { tone: 'gold', onClick: onConfirm });
+  if (onCancel) button(ctx, ui, `${idPrefix}:cancel`, noAt[0], noAt[1], TP_BTN.w, TP_BTN.h, '그만', { onClick: onCancel });
+  closeBox();
+  return h;
 }
 
 // ── 불멸의 기보 조각 띠: 조각을 하나라도 모은 명국마다 작은 조각 + 모은 수. 올리면 명국 · 조각 · 재현 조건(첫 조각 뒤에만).

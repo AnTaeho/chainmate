@@ -5,8 +5,9 @@ import { W, H, text, box, rect, frame, sprite, line } from '../../render/gfx.js'
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
-import { maximCard } from '../parts.js';
+import { maximCellH, maximCard } from '../parts.js';
 import { REPLAYS, sqOf } from '../replays.js';
+import { LIST_GAP } from '../frame.js';
 
 const Q = 20, MX = 24, MY = 58; // 작은 판: 칸 20px
 // 작은 판의 기물은 칸(20px) 안에 들게 줄여 그린다(16×22 → 14×19)
@@ -102,15 +103,16 @@ export class LegendScreen {
     const run = this.app.run;
     const RX = 356, RW = 112;
     const maxims = run ? run.maxims.filter((m) => m.id !== this.id) : [];
-    const slots = Math.max(6, maxims.length + 1);
-    const h = Math.min(28, Math.floor((200 + 4) / slots) - 4);
-    maxims.forEach((m, i) => maximCard(ctx, m, RX, 50 + i * (h + 4), RW, h, { t: ui.time }));
-    const slotY = 50 + maxims.length * (h + 4);
+    // 격언 칸(이름 한 줄 — maximCellH), 사이 LIST_GAP. 칸이 많으면 위로 올려 화면 안에
+    const h = maximCellH(), step = h + LIST_GAP, n = maxims.length + 1;
+    const top = Math.min(50, H - 30 - n * step);
+    maxims.forEach((m, i) => maximCard(ctx, m, RX, top + i * step, RW, h, { t: ui.time }));
+    const slotY = top + maxims.length * step;
     const k = Math.max(0, Math.min(1, (t - this.tDrop) / 0.5));
     const y = Math.round(-40 + (slotY + 40) * (k * k));
     if (k < 1) frame(ctx, RX, slotY, RW, h, PAL.goldDk);
     if (t >= this.tDrop) {
-      maximCard(ctx, { id: this.id, uid: -1, edition: null }, RX, y, RW, h, { t: ui.time });
+      maximCard(ctx, { id: this.id, uid: -1, edition: null }, RX, y, RW, h, { t: ui.time, overlay: k < 1 });
       frame(ctx, RX - 1, y - 1, RW + 2, h + 2, PAL.gold);
       if (k >= 1) {
         const r = (t - this.tDrop - 0.5) * 40;

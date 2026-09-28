@@ -7,12 +7,13 @@ import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button } from '../ui.js';
-import { itemCard, itemKeys, itemExtraTip, maximGrid, envelope, targetPanel } from '../parts.js';
+import { itemCard, itemRowH, itemKeys, itemExtraTip, maximGrid, maximGridH, envelope, targetPanel } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, BTN_H } from '../frame.js';
+import { MAIN, TOP, CARD, BTN_H, GAP_IN, GAP_GROUP, LIST_GAP, LINE, textY } from '../frame.js';
 import { bagRow } from './shop.js';
 import { familyCounts } from '../../data/families.js';
+import { openBox, closeBox } from '../../render/layoutlog.js';
 
 // 봉투가 열리는 시간, 카드 i가 뒤집히기 시작하는 때
 const OPEN = 0.4;
@@ -67,9 +68,22 @@ export class PackScreen {
     const n = pack.options.length;
     // 카드 넷(금빛 꾸러미 + 명국 조각)은 폭 108로 본 칸에 안 들어가 왼쪽 칸을 덮었다: 본 칸 폭에 맞춰 좁히고 사이 4(넓은 카드 그대로)
     const fit = n * CARD.w + (n - 1) * CARD.gap <= MAIN.w;
-    const gap = fit ? CARD.gap : 4, ch = 124;
+    const gap = fit ? CARD.gap : 4;
     const cw = fit ? CARD.w : Math.floor((MAIN.w - (n - 1) * gap) / n);
     const x0 = MAIN.x + Math.floor((MAIN.w - n * cw - (n - 1) * gap) / 2);
+    // 카드는 가장 긴 카드에 맞춘 높이(효과 글을 다 적는다)
+    const ch = itemRowH(pack.options, cw, { run });
+    // 새길 기물을 고르는 동안은 카드 줄 자리에 미리 보기 판(고른 각인 · 기물이 어떻게 되는지)과 주머니 — 「그만」이면 카드 줄로 돌아간다
+    if (this.engraveIndex != null) {
+      const o = pack.options[this.engraveIndex];
+      const p = this.engraveTarget != null ? run.deck.find((x) => x.id === this.engraveTarget) : null;
+      const th = targetPanel(ctx, ui, run, o, p, MAIN.x, TOP, MAIN.w, {
+        onConfirm: () => this.finish({ type: 'pick', index: this.engraveIndex, target: this.engraveTarget }),
+        onCancel: () => { this.engraveIndex = null; this.engraveTarget = null; },
+      });
+      bagRow(ctx, ui, run, MAIN.x, TOP + th + GAP_GROUP, MAIN.w, { pick: (q) => { this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget, bottom: 268 });
+      return;
+    }
     pack.options.forEach((o, i) => {
       const at = flipAt(i);
       const p = Math.max(0, Math.min(1, (this.t - at) / 0.24));
@@ -86,7 +100,6 @@ export class PackScreen {
         box(ctx, x + Math.floor((cw - nw) / 2), y, nw, ch, gold ? PAL.gold : '#c9a36a', PAL.frameDk);
         if (nw > 20) rect(ctx, x + Math.floor(cw / 2) - 6, y + 46, 12, 12, gold ? PAL.goldHi : '#e6c690');
       } else itemCard(ctx, o, x, y, cw, ch, { hover: ui.isHover(id), price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + i, run, ui, under: { onClick: () => this.pick(i) } });
-      if (this.engraveIndex === i) { rect(ctx, x, y + ch + 2, cw, 2, PAL.gold); }
     });
     // 봉투: 봉랍이 깨지고 덮개가 젖혀진 뒤 카드가 솟아 나온다
     if (this.t < OPEN + 0.25) {
@@ -97,31 +110,27 @@ export class PackScreen {
       envelope(ctx, ex, ey, ew, eh, pack.kind, { open: k });
       ctx.globalAlpha = 1;
     }
-    const below = TOP + ch + 6;
-    if (this.engraveIndex != null) {
-      // 기물을 고르면 새긴 모습을 미리 보이고, 「새긴다」로 확인한다
-      const o = pack.options[this.engraveIndex];
-      const p = this.engraveTarget != null ? run.deck.find((x) => x.id === this.engraveTarget) : null;
-      targetPanel(ctx, ui, run, o, p, MAIN.x, below, MAIN.w, {
-        onConfirm: () => this.finish({ type: 'pick', index: this.engraveIndex, target: this.engraveTarget }),
-        onCancel: () => { this.engraveIndex = null; this.engraveTarget = null; },
-      });
-      bagRow(ctx, ui, run, MAIN.x, below + 46, MAIN.w, { pick: (q) => { this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget, bottom: 268 });
-    } else button(ctx, ui, 'pack:skip', MAIN.x + Math.floor(MAIN.w / 2) - 50, below, 100, BTN_H, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
-    // 금빛 꾸러미: 격언 칸(세 칸씩 두 줄)과 팔기 — 칸이 찬 채로 격언을 받으려면 먼저 판다
-    if (pack.options.some((o) => o.kind === 'maxim')) {
-      const gy = below + BTN_H + 6;
-      text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, MAIN.x, gy, PAL.dim);
-      const spots = maximGrid(ctx, ui, run, MAIN.x, gy + 14, 3, CARD.w, 28, CARD.gap, 4, { onClick: (i) => { this.sellMenu = this.sellMenu === i ? null : i; }, hotIndex: this.sellMenu ?? -1 });
+    // 카드 줄 아래: 묶음 틈 → 건너뛰기(또는 새기기 미리 보기 → 주머니) → 금빛 꾸러미의 격언 칸
+    const below = TOP + ch + GAP_GROUP;
+    // 금빛 꾸러미: 격언 칸(세 칸씩)과 팔기 — 칸이 찬 채로 격언을 받으려면 먼저 판다.
+    // 이름표 줄(왼쪽 「격언 5/5」 · 오른쪽 건너뛰기) → 묶음 안 틈 → 칸. 격언이 없는 꾸러미는 건너뛰기만 가운데에
+    const grid = pack.options.some((o) => o.kind === 'maxim');
+    const skipY = grid ? Math.min(below, 270 - 2 - (BTN_H + GAP_IN + maximGridH(run, 3, LIST_GAP))) : below;
+    button(ctx, ui, 'pack:skip', grid ? MAIN.x + MAIN.w - 100 : MAIN.x + Math.floor(MAIN.w / 2) - 50, skipY, 100, BTN_H, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
+    if (grid) {
+      // 보류(docs/design-notes/layout.md 「보류」): 카드가 길어 격언 칸이 화면 아래로 넘치면 화면 안으로 올려 둔다(카드와 겹친다)
+      const gy = Math.min(below, 270 - 2 - (BTN_H + GAP_IN + maximGridH(run, 3, LIST_GAP)));
+      text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, MAIN.x, textY(gy, BTN_H), PAL.dim);
+      const spots = maximGrid(ctx, ui, run, MAIN.x, gy + BTN_H + GAP_IN, 3, CARD.w, CARD.gap, LIST_GAP, { onClick: (i) => { this.sellMenu = this.sellMenu === i ? null : i; }, hotIndex: this.sellMenu ?? -1 });
       if (this.sellMenu != null) {
         const m = run.maxims[this.sellMenu];
         const spot = spots.find((q) => q.i === this.sellMenu);
-        // 팔기 단추: 고른 격언 칸 오른쪽 끝에 겹쳐(칸 안)
-        if (m && spot && canSell(m)) button(ctx, ui, 'pack:sell', spot.x + spot.w - 62, spot.y + 5, 60, 16, `팔기 $${sellPrice(m)}`, { tone: 'red', onClick: () => { const i = this.sellMenu; this.sellMenu = null; this.app.cmd({ type: 'sell', index: i }); this.app.sfx('coin'); } });
+        // 팔기 단추: 고른 격언 칸 오른쪽 끝에 겹쳐(칸 위에 뜬다)
+        if (m && spot && canSell(m)) { openBox('tile', spot.x + spot.w - 62, spot.y + 6, 60, 16, 0, { overlay: true, name: '팔기' }); button(ctx, ui, 'pack:sell', spot.x + spot.w - 62, spot.y + 6, 60, 16, `팔기 $${sellPrice(m)}`, { tone: 'red', onClick: () => { const i = this.sellMenu; this.sellMenu = null; this.app.cmd({ type: 'sell', index: i }); this.app.sfx('coin'); } }); closeBox(); }
         else this.sellMenu = null;
       }
     }
-    if (this.t > 1.2 && this.engraveIndex == null) hint(this.app, 'pack', 'pack:pick:0');
+    if (this.t > 1.2) hint(this.app, 'pack', 'pack:pick:0');
   }
   key(k) {
     if (k === 'Escape') { if (this.engraveIndex != null) this.engraveIndex = null; else this.finish({ type: 'skipPack' }); }

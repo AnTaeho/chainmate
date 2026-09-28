@@ -5,7 +5,6 @@ import { rgb } from './palette.js';
 import { L } from '../ui/lang.js';
 
 export const FONT_PX = 12;
-export const LINE_H = 13;
 const H = 16;
 const CACHE = new Map();
 let measurer = null;

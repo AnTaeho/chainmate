@@ -9,10 +9,13 @@ import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide } from '../coach.js';
 import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
 import { pageHead, pageButtons } from './common.js';
-import { PAGE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP } from '../frame.js';
+import { fitText } from '../parts.js';
+import { PAGE, PAD_BOX, LINE, GAP_GROUP, LIST_GAP, flow, textY } from '../frame.js';
+import { openBox, closeBox } from '../../render/layoutlog.js';
 
 const TERM_DEF_X = 120; // 낱말 풀이: 풀이 글이 시작하는 x
-const TERM_BOX = { x: 12, h: 204 }; // 낱말 풀이: 본 칸 상자(왼쪽 x · 높이)
+const TERM_BOX = { x: 12, h: PAGE.btnY - 8 - PAGE.bodyY }; // 낱말 풀이: 본 칸 상자(왼쪽 x · 쪽의 가장 큰 높이 — 쪽마다 내용에 맞춘다)
+const LESSON_BTN = 32; // 수업 목록 단추 높이
 import { wrap } from '../../render/text.js';
 import { L } from '../lang.js';
 
@@ -102,22 +105,28 @@ export class LessonsScreen {
     if (this.terms) return this.drawTerms(ctx, ui);
     pageHead(ctx, '첫 수업');
     const colW = 140, x0 = Math.floor((W - colW * 3 - 16) / 2);
+    // 묶음 칸 쌓기: 묶음 이름(제목 줄) → 묶음 틈 → 수업 단추들(사이 GAP_GROUP) — 세 칸은 가장 긴 칸의 높이
+    const groups = LESSON_GROUPS.map((g) => LESSONS.map((L, i) => ({ L, i })).filter((o) => o.L.group === g.id));
+    const colH = Math.max(...groups.map((list) => PAD_BOX * 2 + 18 + GAP_GROUP + list.length * LESSON_BTN + (list.length - 1) * GAP_GROUP));
     LESSON_GROUPS.forEach((g, gi) => {
-      const x = x0 + gi * (colW + 8);
-      const list = LESSONS.map((L, i) => ({ L, i })).filter((o) => o.L.group === g.id);
-      const top = PAGE.bodyY, ny = top + PAD_BOX.lessons;
-      box(ctx, x, top, colW, 196, PAL.feltDk, PAL.frameDk);
-      text(ctx, g.name, x + colW / 2, ny, PAL.dim, { align: 'center', bold: true });
-      const by = ny + LINE_TITLE.lessons + GAP_IN.lessons + GAP_GROUP.lessons;
+      const x = x0 + gi * (colW + 8), list = groups[gi];
+      const top = PAGE.bodyY, f = flow(top + PAD_BOX);
+      openBox('panel', x, top, colW, colH, PAD_BOX, { name: `수업 묶음 ${g.id}` });
+      box(ctx, x, top, colW, colH, PAL.feltDk, PAL.frameDk);
+      text(ctx, g.name, x + colW / 2, f.line(true), PAL.dim, { align: 'center', bold: true });
+      f.gap(GAP_GROUP);
       list.forEach(({ L, i }, k) => {
-        const y = by + k * 40, id = `lessons:${i}`;
+        if (k) f.gap(GAP_GROUP);
+        const y = f.space(LESSON_BTN), id = `lessons:${i}`;
         const done = !!seen[L.id];
-        button(ctx, ui, id, x + 6, y, colW - 12, 32, '', { onClick: () => openLesson(app, i, 'list') });
+        button(ctx, ui, id, x + PAD_BOX, y, colW - PAD_BOX * 2, LESSON_BTN, '', { onClick: () => openLesson(app, i, 'list') });
         // 끝낸 수업은 번호 자리에 표
-        if (done) { rect(ctx, x + 12, y + 16, 2, 2, PAL.gold); rect(ctx, x + 14, y + 18, 2, 2, PAL.gold); for (let q = 0; q < 4; q++) rect(ctx, x + 16 + q * 2, y + 16 - q * 2, 2, 2, PAL.gold); }
-        else text(ctx, `${i + 1}`, x + 24, y + 10, PAL.dim, { bold: true, align: 'right' });
-        text(ctx, L.title, x + 30, y + 10, done ? PAL.ink : PAL.dim);
+        const ty = y + textY(0, LESSON_BTN) + 1;
+        if (done) { rect(ctx, x + 14, y + 16, 2, 2, PAL.gold); rect(ctx, x + 16, y + 18, 2, 2, PAL.gold); for (let q = 0; q < 4; q++) rect(ctx, x + 18 + q * 2, y + 16 - q * 2, 2, 2, PAL.gold); }
+        else text(ctx, `${i + 1}`, x + 26, ty, PAL.dim, { bold: true, align: 'right' });
+        fitText(ctx, L.title, x + 32, ty, colW - PAD_BOX - 4 - 32, done ? PAL.ink : PAL.dim, { bold: false });
       });
+      closeBox();
     });
     button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => app.toTitle() });
     button(ctx, ui, 'lessons:terms', W - PAGE.titleX - 100, PAGE.btnY, 100, PAGE.btnH, '낱말 풀이', { onClick: () => { this.terms = true; } });
@@ -133,25 +142,33 @@ export class LessonsScreen {
     });
     const pages = this.termPages(tab);
     const page = Math.min(this.termPage || 0, pages.length - 1);
-    box(ctx, TERM_BOX.x, PAGE.bodyY, W - TERM_BOX.x * 2, TERM_BOX.h, PAL.feltDk, PAL.frameDk);
-    for (const row of pages[page]) {
-      text(ctx, termWord(row.id), TERM_BOX.x + PAD_BOX.terms, row.y, PAL.gold, { bold: true });
-      row.lines.forEach((l, k) => text(ctx, l, TERM_DEF_X, row.y + k * LINE.body, PAL.ink));
+    const pg = pages[page];
+    const bh = pg.h;
+    openBox('panel', TERM_BOX.x, PAGE.bodyY, W - TERM_BOX.x * 2, bh, PAD_BOX, { name: '낱말 풀이' });
+    box(ctx, TERM_BOX.x, PAGE.bodyY, W - TERM_BOX.x * 2, bh, PAL.feltDk, PAL.frameDk);
+    for (const row of pg.rows) {
+      text(ctx, termWord(row.id), TERM_BOX.x + PAD_BOX, textY(row.y), PAL.gold, { bold: true });
+      row.lines.forEach((l, k) => text(ctx, l, TERM_DEF_X, textY(row.y + k * LINE), PAL.ink));
     }
+    closeBox();
     if (pages.length > 1) pageButtons(ctx, ui, 'terms', page, pages.length, (p) => { this.termPage = p; });
     button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => { this.terms = false; } });
   }
-  // 한 묶음의 낱말을 쪽으로 나눈다(풀이는 두 줄까지 줄바꿈, 쪽 높이 180)
+  // 한 묶음의 낱말을 쪽으로 나눈다: 낱말마다 풀이 줄들(본문 줄), 낱말 사이 GAP_GROUP. 쪽 높이는 상자 안 여백 안(TERM_BOX.h)
   termPages(tab) {
-    const pages = [[]];
-    const y0 = PAGE.bodyY + PAD_BOX.termsTop, yEnd = PAGE.bodyY + TERM_BOX.h - 4;
+    const pages = [{ rows: [] }];
+    const y0 = PAGE.bodyY + PAD_BOX, yEnd = PAGE.bodyY + TERM_BOX.h - PAD_BOX;
     let y = y0;
     for (const t of TERMS.filter((q) => q.group === tab)) {
-      const lines = wrap(termSay(t.id), W - TERM_BOX.x - TERM_DEF_X - PAD_BOX.terms);
-      const h = lines.length * LINE.body + GAP_GROUP.terms;
-      if (y + h > yEnd && pages[pages.length - 1].length) { pages.push([]); y = y0; }
-      pages[pages.length - 1].push({ id: t.id, y, lines });
+      const lines = wrap(termSay(t.id), W - TERM_BOX.x - PAD_BOX - TERM_DEF_X);
+      const h = lines.length * LINE;
+      const cur = pages[pages.length - 1];
+      if (cur.rows.length && y + GAP_GROUP + h > yEnd) { pages.push({ rows: [] }); y = y0; }
+      const pg = pages[pages.length - 1];
+      if (pg.rows.length) y += GAP_GROUP;
+      pg.rows.push({ id: t.id, y, lines });
       y += h;
+      pg.h = y + PAD_BOX - PAGE.bodyY;
     }
     return pages;
   }

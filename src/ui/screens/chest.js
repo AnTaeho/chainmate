@@ -6,6 +6,7 @@ import { ENGRAVING_BY_ID } from '../../data/engravings.js';
 import { button } from '../ui.js';
 import { PIECE_NAME } from '../words.js';
 import { shardIcon } from '../parts.js';
+import { LINE, GAP_GROUP, textY } from '../frame.js';
 
 export function chestItemText(it) {
   if (!it) return '';
@@ -50,7 +51,7 @@ export class ChestScreen {
   }
   draw(ctx, ui) {
     const c = this.chest;
-    const x0 = 90, y = 70, cw = 56, ch = 64, gap = 4;
+    const x0 = 90, y = 56, cw = 56, ch = 64, gap = 4;
     text(ctx, '명인의 상자', W / 2, 22, PAL.gold, { align: 'center', bold: true, scale: 2 });
     box(ctx, x0 - 8, y - 8, 5 * cw + 4 * gap + 16, ch + 16, PAL.frame, PAL.frameDk);
     c.cells.forEach((cell, i) => {
@@ -76,8 +77,11 @@ export class ChestScreen {
     });
     if (this.stopped >= c.cells.length) {
       const items = c.cells.filter((x) => x.lit).map((x) => chestItemText(x.item));
-      text(ctx, c.count >= 5 ? '다섯 칸!' : c.count >= 3 ? '세 칸' : '한 칸', W / 2, y + ch + 16, c.count >= 3 ? PAL.gold : PAL.ink, { align: 'center', bold: true, scale: c.count >= 5 ? 2 : 1 });
-      items.forEach((s, k) => text(ctx, s, W / 2, y + ch + 40 + k * 14, PAL.ink, { align: 'center' }));
+      // 칸 수(다섯이면 두 배) → 묶음 틈 → 받은 것 한 줄씩(본문 줄)
+      const cy = y + ch + 8 + GAP_GROUP, big = c.count >= 5;
+      text(ctx, c.count >= 5 ? '다섯 칸!' : c.count >= 3 ? '세 칸' : '한 칸', W / 2, big ? cy : textY(cy), c.count >= 3 ? PAL.gold : PAL.ink, { align: 'center', bold: true, scale: big ? 2 : 1 });
+      const iy = cy + (big ? LINE * 2 : LINE) + GAP_GROUP;
+      items.forEach((s, k) => text(ctx, s, W / 2, textY(iy + k * LINE), PAL.ink, { align: 'center' }));
     }
     if (this.flash > 0) {
       ctx.globalAlpha = Math.min(0.5, this.flash * 0.5);

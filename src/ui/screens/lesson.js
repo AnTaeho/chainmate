@@ -2,17 +2,29 @@
 // 대국 화면을 그대로 쓰고, 누를 곳만 걸음(lessons.js steps)으로 좁힌다. 규칙은 실제 sim.
 import { richText } from '../glossary.js';
 import { PAL } from '../../render/palette.js';
-import { text, rect, frame, box } from '../../render/gfx.js';
+import { text, rect, frame, box, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { apply } from '../../sim/battle.js';
 import { previewDrop } from '../../sim/solver.js';
-import { BattleScreen, BX, S, LX, LW, RX, RW, sqXY, headRows } from './battle.js';
-import { SIDE_ROWS, PAD_BOX, LINE, LINE_TITLE, GAP_IN } from '../frame.js';
+import { BattleScreen, BX, S, LX, LW, RX, RW, sqXY } from './battle.js';
+import { PAD_BOX, GAP_IN, GAP_GROUP, TOP, PAUSE, flow } from '../frame.js';
+import { openBox, closeBox } from '../../render/layoutlog.js';
 import { panel } from '../parts.js';
 import { button } from '../ui.js';
 import { LESSONS, LESSON_GROUPS, lessonBattle, lessonSq } from '../lessons.js';
 import { lerp } from '../anim.js';
 import { finishLessons, lessonDone } from './lessons.js';
+
+// 할 일 판넬 쌓기(오른쪽 칸 위, PAD_BOX): 이름표 「보기」 · 「할 일」(왼쪽 칸 「시너지」 · 「정석」과 같은 이름표 줄) → 묶음 안 틈 → 글
+// → 묶음 틈 → 「누르면 내 차례」(보기 때만)
+export function lessonPanelLayout(say, demo) {
+  const P = PAD_BOX, f = flow(TOP + P);
+  const ty = f.line();
+  f.gap(GAP_IN);
+  const lines = wrap(say, RW - P * 2).map((l) => [l, f.line()]);
+  const taps = demo ? wrap('누르면 내 차례', RW - P * 2).map((l, k) => [l, (k ? f : f.gap(GAP_GROUP)).line()]) : [];
+  return { ty, lines, taps, h: f.y + P - TOP };
+}
 
 export class LessonScreen extends BattleScreen {
   constructor(app, { index = 0, phase = 'demo' } = {}) {
@@ -175,7 +187,9 @@ export class LessonScreen extends BattleScreen {
   draw(ctx, ui) {
     super.draw(ctx, ui);
     const g = LESSON_GROUPS.find((x) => x.id === this.L.group);
-    const t = `첫 수업 ${this.index + 1}/${LESSONS.length} · ${this.L.title}`;
+    // 판 위 한 줄: 판 폭에 안 들어가면(영어) 수업 번호만 — 제목은 왼쪽 머리 칸에 있다
+    const full = `첫 수업 ${this.index + 1}/${LESSONS.length} · ${this.L.title}`;
+    const t = measure(full, true) <= S * 8 ? full : `첫 수업 ${this.index + 1}/${LESSONS.length}`;
     text(ctx, t, BX + S * 4, 1, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
     if (this.phase === 'demo' && this.demo && !this.demo.done) this.drawFinger(ctx);
   }
@@ -187,13 +201,14 @@ export class LessonScreen extends BattleScreen {
   }
   drawRight(ctx, ui) {
     super.drawRight(ctx, ui);
-    // 할 일 한 줄(오른쪽 격언 칸 자리 — 수업에는 격언이 없다)
-    const say = this.say;
-    const P = PAD_BOX.panel, top = 22, bottom = top + 150, ty = top + PAD_BOX.lesson;
-    panel(ctx, RX, top, RW, bottom - top);
+    // 할 일(오른쪽 격언 칸 자리 — 수업에는 격언이 없다): 「보기」 · 「할 일」(제목) → 묶음 틈 → 글 → 묶음 틈 → 「누르면 내 차례」(보기 때만)
+    const P = PAD_BOX, { ty, lines, taps, h } = lessonPanelLayout(this.say, this.phase === 'demo');
+    openBox('panel', RX, TOP, RW, h, P, { name: '할 일' });
+    panel(ctx, RX, TOP, RW, h);
     text(ctx, this.phase === 'demo' ? '보기' : '할 일', RX + P, ty, this.phase === 'demo' ? PAL.dim : PAL.gold, { bold: true });
-    wrap(say, RW - P * 2).slice(0, 10).forEach((l, k) => richText(ctx, l, RX + P, ty + LINE_TITLE.lesson + GAP_IN.lesson + k * LINE.body, PAL.ink, { termCol: PAL.gold, ui }));
-    if (this.phase === 'demo') text(ctx, '누르면 내 차례', RX + RW - P, bottom - 12 - PAD_BOX.lesson, PAL.dimDk, { align: 'right' });
+    for (const [l, ly] of lines) richText(ctx, l, RX + P, ly, PAL.ink, { termCol: PAL.gold, ui });
+    for (const [l, ly] of taps) text(ctx, l, RX + RW - P, ly, PAL.dimDk, { align: 'right' });
+    closeBox();
     // 누를 곳이 손이면 그 카드에 숨 쉬는 테, 바꾸기면 단추에
     const st = this.step;
     if (this.phase === 'play' && st && !this.busy) {
@@ -201,19 +216,21 @@ export class LessonScreen extends BattleScreen {
       const r = id && ui.regions.find((x) => x.id === id);
       if (r) { ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); frame(ctx, r.x - 2, r.y - 2 + (st.pick != null ? 4 : 0), r.w + 4, st.pick != null ? 40 : r.h + 4, PAL.goldHi, 1); ctx.globalAlpha = 1; }
     }
-    // 수업 건너뛰기(처음 켠 사람도 곧바로 판으로 갈 수 있게)
-    button(ctx, ui, 'lesson:skip', RX, 176, RW, 16, '수업 건너뛰기', { onClick: () => this.skipAll() });
+    // 수업 건너뛰기(처음 켠 사람도 곧바로 판으로 갈 수 있게): 오른쪽 칸 위 이름표 줄(수업에는 격언이 없다), 멈춤 단추 왼쪽
+    button(ctx, ui, 'lesson:skip', RX, 3, PAUSE.x - 6 - RX, 16, '수업 건너뛰기', { onClick: () => this.skipAll() });
   }
-  drawLeft(ctx, ui) {
-    super.drawLeft(ctx, ui);
-    // 맨 위 칸: 대국 제목 대신 수업 묶음과 지금 수업
-    const P = PAD_BOX.panel, [h0, h1, , h3] = headRows();
-    panel(ctx, LX, SIDE_ROWS.head, LW, SIDE_ROWS.battleHeadH);
+  // 머리 칸: 대국 제목 대신 수업 묶음과 지금 수업(제목은 두 줄까지), 목표는 점수나 외통
+  headSpec() {
     const g = LESSON_GROUPS.find((x) => x.id === this.L.group);
     const inGroup = LESSONS.filter((x) => x.group === this.L.group);
-    text(ctx, `${g ? g.name : ''} ${inGroup.indexOf(this.L) + 1}/${inGroup.length}`, LX + P, h0, PAL.dim);
-    wrap(this.L.title, LW - P * 2, true).slice(0, 2).forEach((l, k) => text(ctx, l, LX + P, h1 + k * LINE.body, PAL.gold, { bold: true }));
-    text(ctx, this.L.target < 99999 ? `목표 ${this.L.target}` : '목표 외통', LX + P, h3, PAL.ink);
+    return {
+      kicker: `${g ? g.name : ''} ${inGroup.indexOf(this.L) + 1}/${inGroup.length}`,
+      right: null,
+      titles: wrap(this.L.title, LW - PAD_BOX * 2, true),
+      titleCol: PAL.gold,
+      master: null,
+      target: this.L.target < 99999 ? `${this.L.target}` : '외통',
+    };
   }
   // 흐린 도트 손가락(1배에서도 보이게 테두리 · 흰 몸)
   drawFinger(ctx) {

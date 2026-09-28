@@ -5,7 +5,8 @@ import { button } from '../ui.js';
 import { today } from '../records.js';
 import { danName } from './setup.js';
 import { pageHead } from './common.js';
-import { PAGE } from '../frame.js';
+import { PAGE, PAD_BOX, LINE, GAP_GROUP, GAP_IN, flow, textY } from '../frame.js';
+import { openBox, closeBox } from '../../render/layoutlog.js';
 
 export class RecordsScreen {
   constructor(app) { this.app = app; }
@@ -21,19 +22,28 @@ export class RecordsScreen {
       ['오늘의 대국', d ? `${d.won ? '이김' : `${d.ante}관`} · ${d.runs}판` : '아직'],
       ['첫 수업', r.lessonsDone ? '끝' : '아직'],
     ];
+    // 목록 줄은 본문 줄(LINE), 본 칸 윗변부터
     rows.forEach(([a, b], i) => {
-      text(ctx, a, 40, 34 + i * 16, PAL.dim);
-      text(ctx, b, 240, 34 + i * 16, PAL.ink, { align: 'right', bold: true });
+      text(ctx, a, 40, textY(PAGE.bodyY + i * LINE), PAL.dim);
+      text(ctx, b, 240, textY(PAGE.bodyY + i * LINE), PAL.ink, { align: 'right', bold: true });
     });
-    // 최고 한 수
-    box(ctx, 270, 40, 196, 120, PAL.feltDk, PAL.frameDk);
-    text(ctx, '최고 한 수', 280, 46, PAL.dim);
+    // 최고 한 수(hug): 이름표 · 점수 → 묶음 틈 → 사슬 모습(여덟씩 줄) → 묶음 안 틈 → 관
+    const bx = 270, bw = 196, P = PAD_BOX, f = flow(PAGE.bodyY + P);
+    const head = f.line();
+    f.gap(GAP_GROUP);
+    const steps = r.bestMove ? r.bestMove.steps.slice(0, 16) : [];
+    const sy = f.space(r.bestMove ? Math.ceil(steps.length / 8) * 26 - 4 : LINE);
+    const ay = r.bestMove ? f.gap(GAP_IN).line() : null;
+    const bh = f.y + P - PAGE.bodyY;
+    openBox('panel', bx, PAGE.bodyY, bw, bh, P, { name: '최고 한 수' });
+    box(ctx, bx, PAGE.bodyY, bw, bh, PAL.feltDk, PAL.frameDk);
+    text(ctx, '최고 한 수', bx + P, head, PAL.dim);
     if (r.bestMove) {
-      text(ctx, num(r.bestMove.score), 456, 46, PAL.gold, { align: 'right', bold: true });
-      const steps = r.bestMove.steps.slice(0, 16);
-      steps.forEach((t, i) => sprite(ctx, t, 'w', 280 + (i % 8) * 22, 70 + Math.floor(i / 8) * 26));
-      text(ctx, `${r.bestMove.ante}관`, 456, 140, PAL.dim, { align: 'right' });
-    } else text(ctx, '아직', 280, 70, PAL.dimDk);
+      text(ctx, num(r.bestMove.score), bx + bw - P, head, PAL.gold, { align: 'right', bold: true });
+      steps.forEach((t, i) => sprite(ctx, t, 'w', bx + P + (i % 8) * 22, sy + Math.floor(i / 8) * 26));
+      text(ctx, `${r.bestMove.ante}관`, bx + bw - P, ay, PAL.dim, { align: 'right' });
+    } else text(ctx, '아직', bx + P, textY(sy), PAL.dimDk);
+    closeBox();
     button(ctx, ui, 'records:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.app.go('title') });
   }
   key(k) { if (k === 'Escape' || k === 'Enter') this.app.go('title'); }

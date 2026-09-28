@@ -2,17 +2,23 @@
 import { PAL } from '../../render/palette.js';
 import { W, text, box } from '../../render/gfx.js';
 import { button } from '../ui.js';
+import { PAD_BOX, GAP_GROUP, flow } from '../frame.js';
+import { openBox, closeBox } from '../../render/layoutlog.js';
 
 export class PauseScreen {
   constructor(app) { this.app = app; }
   draw(ctx, ui) {
     const app = this.app;
-    const x = 170, y = 70, w = 140, h = 124;
+    // 막간 상자(hug): 제목(제목 줄) → 묶음 틈 → 단추 셋(사이 묶음 틈)
+    const f = flow(PAD_BOX), ty = f.line(true);
+    const ids = [['pause:resume', '계속', () => app.closeOverlay(), 'gold'], ['pause:settings', '설정', () => app.openOverlay('settings', { back: 'pause' }), 'plain'], ['pause:title', '타이틀로', () => app.toTitle(), 'plain']];
+    const ys = ids.map(() => f.gap(GAP_GROUP).space(18));
+    const w = 140, h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
+    openBox('panel', x, y, w, h, PAD_BOX, { name: '멈춤' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
-    text(ctx, '멈춤', W / 2, y + 8, PAL.gold, { align: 'center', bold: true });
-    button(ctx, ui, 'pause:resume', x + 20, y + 32, w - 40, 18, '계속', { onClick: () => app.closeOverlay(), tone: 'gold' });
-    button(ctx, ui, 'pause:settings', x + 20, y + 58, w - 40, 18, '설정', { onClick: () => app.openOverlay('settings', { back: 'pause' }) });
-    button(ctx, ui, 'pause:title', x + 20, y + 84, w - 40, 18, '타이틀로', { onClick: () => app.toTitle() });
+    text(ctx, '멈춤', W / 2, y + ty, PAL.gold, { align: 'center', bold: true });
+    ids.forEach(([id, label, fn, tone], i) => button(ctx, ui, id, x + 20, y + ys[i], w - 40, 18, label, { onClick: fn, tone }));
+    closeBox();
   }
   key(k) { if (k === 'Escape' || k === 'Enter') this.app.closeOverlay(); }
 }

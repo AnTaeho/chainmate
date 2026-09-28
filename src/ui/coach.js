@@ -6,7 +6,8 @@ import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, frame } from '../render/gfx.js';
 import { wrap } from '../render/text.js';
 import { placeBubble, noteMode, noteWidth } from './placement.js';
-import { PAD_BOX, LINE } from './frame.js';
+import { PAD_BOX, GAP_GROUP, flow } from './frame.js';
+import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 처음 만나는 것마다 한 줄. 글은 「언제 → 무엇」, 한 문장.
 export const HINTS = {
@@ -110,8 +111,12 @@ export function drawCoach(ctx, app) {
 export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
   const mode = noteMode(app.screen);
   const w = noteWidth(mode);
-  const lines = wrap(say, w - PAD_BOX.coach * 2);
-  const h = PAD_BOX.coachTop * 2 + lines.length * LINE.body + (ok ? 20 : 0);
+  const lines = wrap(say, w - PAD_BOX * 2);
+  // 안 여백 → 글 줄들 → (묶음 틈 → 「알았다」 단추 줄) → 안 여백
+  const f = flow(PAD_BOX);
+  const ys = lines.map(() => f.line());
+  const okY = ok ? f.gap(GAP_GROUP).space(14) : 0;
+  const h = f.y + PAD_BOX;
   const p = placeBubble(mode, r, h, { W, H });
   const { x, y } = p;
   app.hintRect = { x, y, w, h };
@@ -122,6 +127,7 @@ export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
     ctx.globalAlpha = 1;
   }
   const bob = Math.round(Math.sin(app.time * 4));
+  openBox('note', x, y + bob, w, h, PAD_BOX, { overlay: true, name: '처음 안내' });
   box(ctx, x, y + bob, w, h, PAL.card, PAL.gold);
   if (r && p.arrow) {
     for (let k = 0; k < 5; k++) {
@@ -135,11 +141,14 @@ export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
       }
     }
   }
-  lines.forEach((l, k) => text(ctx, l, x + PAD_BOX.coach, y + bob + PAD_BOX.coachTop + k * LINE.body, PAL.cardInk, { bold: k === 0 && lines.length === 1 }));
+  lines.forEach((l, k) => text(ctx, l, x + PAD_BOX, y + bob + ys[k], PAL.cardInk, { bold: k === 0 && lines.length === 1 }));
   if (ok) {
-    const bx = x + w - 56, by = y + bob + h - 18;
+    const bx = x + w - PAD_BOX - 50, by = y + bob + okY;
     ui.region('guide:ok', bx, by, 50, 14, { onClick: ok });
+    openBox('tile', bx, by, 50, 14, 0, { name: '알았다' });
     box(ctx, bx, by, 50, 14, ui.isHover('guide:ok') ? PAL.goldHi : PAL.gold, PAL.frameDk);
     text(ctx, '알았다', bx + 25, by + 1, PAL.linkInk, { align: 'center', bold: true });
+    closeBox();
   }
+  closeBox();
 }
