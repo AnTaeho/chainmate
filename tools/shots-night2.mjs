@@ -44,7 +44,7 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(String(e.stack || e).split('\n').slice(0, 3).join(' ')));
 fs.mkdirSync(OUT, { recursive: true });
 const ev = (fn, arg) => page.evaluate(fn, arg);
-const until = (fn, arg) => page.waitForFunction(fn, arg, { timeout: 20000 });
+const until = (fn, arg, o = {}) => page.waitForFunction(fn, arg, { timeout: 20000, ...o });
 const wait = (ms) => page.waitForTimeout(ms);
 
 async function shot(name) {
@@ -92,23 +92,27 @@ await wait(900);
 await until(() => !window.__app.screen.busy && !window.__app.screen.banner, null);
 await wait(300);
 await shot('1-battle');
-// 진 대국: 수를 하나 남기고 목표를 멀리 둔 채 봇 한 수 → 시계를 잃는 순간
+// 진 대국: 수를 하나 남기고 목표를 멀리 둔 채 화면으로 한 수(떨구기 → 먹기를 누른다) → 시계를 잃는 순간
 await ev(async () => {
-  const a = window.__app, b = a.run.battle;
-  b.movesLeft = 1; b.target = 1e9;
-  const { bestMove, lineCommands } = await import('/src/sim/solver.js');
+  const a = window.__app, b = a.run.battle, s = a.screen;
+  b.movesLeft = 1; b.target = 1e9; s.sync();
+  const { bestMove } = await import('/src/sim/solver.js');
   const m = bestMove(b);
-  a.screen.fast = true;
-  const s = a.screen;
-  s.clickSq && null;
-  const ev = [];
-  ev.push(...a.cmd({ type: 'drop', handIndex: m.handIndex, sq: m.sq }));
-  for (const c of lineCommands(m.line)) ev.push(...a.cmd(c));
-  s.play && s.play(ev);
+  window.__line = m.line.slice();
+  s.send({ type: 'drop', handIndex: m.handIndex, sq: m.sq });
 });
-await wait(2500);
+for (let k = 0; k < 20; k++) {
+  const more = await ev(() => window.__line.length > 0);
+  if (!more) break;
+  await until(() => !window.__app.screen.busy && window.__app.run.battle && window.__app.run.battle.status === 'chain', null).catch(() => null);
+  const ok = await ev(() => { const s = window.__app.screen, sq = window.__line.shift(); if (typeof sq !== 'number' || !window.__app.run.battle || window.__app.run.battle.status !== 'chain') return false; s.clickSq(sq); return true; });
+  if (!ok) break;
+}
+await until(() => window.__app.clockFx, null, { polling: 16 });
+await wait(60);
 await shot('2-lost');
-await wait(2500);
+await until(() => window.__app.screen.name === 'select' || (window.__app.screen.constructor && window.__app.screen.constructor.name === 'SelectScreen'), null);
+await wait(300);
 await shot('3-select');
 
 // 상점 · 꾸러미 · 정석: 새것
