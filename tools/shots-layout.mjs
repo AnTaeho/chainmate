@@ -21,6 +21,7 @@ const ONLY = opt('--only', null);
 const TAG = LANG === 'en' ? 'en-' : '';
 const SPACING = opt('--spacing', null);
 const DET = args.includes('--det');
+const QUICK = args.includes('--quick'); // 가리킨 모습은 빼고 장면마다 한 장만
 
 async function loadPlaywright() {
   try { return await import('playwright'); } catch { /* 전역 */ }
@@ -91,8 +92,11 @@ function encodePng(rgba, w, h) {
   parts.push(chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0)));
   return Buffer.concat(parts);
 }
+// 글 넘침(src/render/layoutlog.js): 찍는 장마다 실제 글꼴로 잰다 — 연기 시험(가짜 글 폭)과 짝
+const overflow = new Map();
 async function shot(file, rects = null) {
   if (ONLY && !file.includes(ONLY)) return;
+  for (const q of await ev(async () => (await import('/src/render/layoutlog.js')).checkLayout())) if (!overflow.has(q.msg)) overflow.set(q.msg, file);
   const b64 = await ev(() => { const c = document.getElementById('screen'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = ''; for (let i = 0; i < d.length; i += 8192) s += String.fromCharCode.apply(null, d.subarray(i, i + 8192)); return btoa(s); });
   fs.writeFileSync(path.join(OUT, `${file}.png`), encodePng(Buffer.from(b64, 'base64'), 480, 270));
   if (rects) log[file] = rects;
@@ -144,7 +148,7 @@ async function scene(name, setup, { wait = 400, hover = true, before = null } = 
   await ev(() => window.__app.pointer('move', -10, -10));
   await settle(60);
   await shot(base, await drawn());
-  if (!hover) return;
+  if (!hover || QUICK) return;
   for (const r of pickHovers(await regions())) {
     await moveTo(r.x + Math.floor(r.w / 2), r.y + Math.floor(r.h / 2));
     await settle(90);
@@ -165,6 +169,7 @@ await ev((lang) => {
 }, LANG);
 await page.reload();
 await until(() => window.__app && window.__app.screen);
+await ev(async () => { (await import('/src/render/layoutlog.js')).LOG.on = true; });
 await ev(async () => {
   const a = window.__app;
   const { HINTS } = await import('/src/ui/coach.js');
@@ -292,6 +297,11 @@ const logFile = path.join(OUT, `${PREFIX}${LANG === 'en' ? '-en' : ''}.json`);
 const prev = ONLY && fs.existsSync(logFile) ? JSON.parse(fs.readFileSync(logFile, 'utf8')) : {};
 fs.writeFileSync(logFile, JSON.stringify({ ...prev, ...log }, null, 1));
 console.log(`찍음 ${shots}장 · 장면 ${no}`);
+// 보류(docs/design-notes/layout.md 「보류」): 상점 · 금빛 꾸러미 장면은 따로 센다(연기 시험과 같은 목록)
+const heldFile = (f) => /-shop|pack-golden|lesson-guide/.test(f);
+const bad = [...overflow].filter(([, f]) => !heldFile(f)), held = [...overflow].filter(([, f]) => heldFile(f));
+console.log(`글 넘침 ${bad.length}${bad.length ? '\n  ' + bad.map(([m, f]) => `${f}: ${m}`).join('\n  ') : ''}`);
+console.log(`보류 화면 넘침 ${held.length}${held.length ? '\n  ' + held.map(([m, f]) => `${f}: ${m}`).join('\n  ') : ''}`);
 console.log(errors.length ? `페이지 오류 ${errors.length}\n${errors.join('\n')}` : '페이지 오류 0');
 await browser.close();
 srv.close();

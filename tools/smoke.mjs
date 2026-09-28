@@ -27,6 +27,24 @@ const lessonMod = await import('../src/ui/lessons.js');
 const { termsIn, TERM_BY_ID, KEY_MAX } = await import('../src/ui/glossary.js');
 const { tipTexts } = await import('../src/ui/ui.js');
 const P = await import('../src/ui/placement.js');
+// 글 넘침(docs/design-notes/layout.md 「검사」): 프레임마다 그린 글이 제 상자(안 여백 안)를 넘는지, 상자끼리 겹치는지, 화면 밖인지
+const LL = await import('../src/render/layoutlog.js');
+LL.LOG.on = true;
+// 보류(docs/design-notes/layout.md 「보류」): 상점 · 금빛 꾸러미는 글 간격 후보 2로 480×270에 다 들어가지 않아 사람이 고를 때까지 따로 센다
+const HELD = { shop: '상점', 'pack-golden': '금빛 꾸러미' };
+const heldOf = () => { const s = screen(); if (s === 'shop') return 'shop'; if (s === 'pack' && app.run && app.run.pack && app.run.pack.kind === 'golden') return 'pack-golden'; return null; };
+const flow = { frames: 0, text: 0, overlap: 0, screen: 0, held: 0, heldBy: {}, seen: new Map() };
+function flowCheck() {
+  if (!app) return;
+  flow.frames++;
+  const held = heldOf();
+  for (const q of LL.checkLayout()) {
+    const key = `${screen()}${held ? `(${held})` : ''} ${q.msg}`;
+    if (flow.seen.has(key)) continue;
+    flow.seen.set(key, held ? 'held' : q.what);
+    if (held) { flow.held++; flow.heldBy[held] = (flow.heldBy[held] || 0) + 1; } else flow[q.what]++;
+  }
+}
 
 const errors = [];
 const apps = [];
@@ -45,7 +63,7 @@ const seen = () => { for (const v of app.visited) visited.add(v); };
 // 처음 안내: 떠 본 안내 id
 const hintsShown = new Set();
 const previewSeen = { scroll: 0, pack: 0 };
-function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); } } }
+function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); } } }
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
 function click(id) {
   const r = region(id);
@@ -113,7 +131,9 @@ function keyBoxesAt(id, kind) {
   // 카드 글 · 말풍선 글에 낱말이 있는데 상자가 없으면 따로 센다(체스 기물 카드처럼 낱말이 없는 카드는 빼고)
   const h = app.ui.hover, tip = h && h.tip ? h.tip() : null;
   const expect = termsIn([...(h && h.keys ? h.keys() : []), ...(tip ? tipTexts(tip) : [])]).length;
-  if (boxes.length) keySeen[kind]++; else if (expect) { keySeen.none = (keySeen.none || 0) + 1; if (VERBOSE) console.log('상자 없음', id); }
+  // 설명 묶음이 화면에 다 안 들어가 상자를 뺀 것(layout.md 「설명 자리 규칙」 — 뒤의 상자부터 뺀다)은 따로 센다
+  const dropped = app.noteStack ? app.noteStack.dropped : 0;
+  if (boxes.length) keySeen[kind]++; else if (expect && dropped) { keySeen.dropped = (keySeen.dropped || 0) + 1; if (VERBOSE) console.log('자리가 없어 뺀 상자', id); } else if (expect) { keySeen.none = (keySeen.none || 0) + 1; if (VERBOSE) console.log('상자 없음', id); }
   if (boxes.length > KEY_MAX) keySeen.many++;
   const own = ownKind(id);
   if (own && boxes.some((b) => b.id === own)) { keySeen.own++; if (VERBOSE) console.log('카드 종류 상자', id, own); }
@@ -669,7 +689,7 @@ if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확�
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
-console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);
+console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);
 if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none || keySeen.many || keySeen.basic || keySeen.own || !keySeen.chip || keySeen.chipBox) { console.log('낱말 상자를 보지 못했거나, 카드를 가리거나, 둘을 넘거나, 기본 낱말을 띄웠다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }
@@ -682,5 +702,9 @@ console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · �
 if (VERBOSE) console.log('종류별 자리: ' + kinds.join(' · '));
 if (place.bad.length) console.log('어긴 곳: ' + place.bad.join(' | '));
 if (place.n < 100 || place.rule || place.chain || place.off || place.self || place.cover || place.none || place.hintBad) { console.log('설명이 규약의 자리에 뜨지 않았거나 누를 것 · 화면 밖을 덮었다'); fail = true; }
+const flowN = flow.text + flow.overlap + flow.screen;
+console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held}(${Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`).join(' · ') || '없음'})`);
+if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 400 : 20).join('\n  ')); fail = true; }
+if (VERBOSE && flow.held) console.log('보류 화면에서 넘친 곳: ' + [...flow.seen].filter(([, w]) => w === 'held').map(([k]) => k).slice(0, 60).join('\n  '));
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);
