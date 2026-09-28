@@ -10,7 +10,8 @@ import { createRun, B, targetFor, REWARD, CHEST } from '../src/sim/run.js';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
 import { playRun, SMART, DRAFT } from './shopbot.mjs';
-import { JOSEKIS } from '../src/data/josekis.js';
+import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
+import { SOULS } from '../src/data/souls.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { MASTER_BY_ID } from '../src/data/masters.js';
 import { LEGENDS, LEGEND_BY_ID } from '../src/data/legends.js';
@@ -214,9 +215,24 @@ function report(R, args, wall) {
   console.log(`이형(판 끝 주머니): 하나라도 가진 판 ${pc(anyF.length / n)} 승률 ${pc(anyF.filter((r) => r.won).length / anyF.length)} · 없는 판 승률 ${pc(R.filter((r) => !r.fairies.length && r.won).length / (n - anyF.length))} · 판 최고 한 수 p50 이형 ${pctile(anyF.map((r) => r.best), 0.5)} / 없음 ${pctile(R.filter((r) => !r.fairies.length).map((r) => r.best), 0.5)}`);
   table(['이형', '가진 판', '그 판 승률'], fr);
   if (!args.nodraft) {
-    const jr = JOSEKIS.map((j) => { const has = R.filter((r) => r.josekis.includes(j.id)); const first = R.filter((r) => r.josekis[0] === j.id); return [j.name, j.tier, pc(has.length / n), pc(has.filter((r) => r.won).length / has.length), String(first.length), pc(first.filter((r) => r.won).length / first.length)]; });
-    console.log('정석: 고른 판 · 그 판 승률 · 첫 정석으로 고른 판 · 그 판 승률');
-    table(['정석', '등급', '고른 판', '승률', '첫 정석', '승률'], jr);
+    // 외통 = 정석을 고른 뒤(1 · 3 · 5관부터)의 대국 중 외통으로 이긴 몫
+    const afterJ = (r, id) => { const k = r.josekis.indexOf(id); return r.log.filter((b) => !b.skipped && b.ante >= DRAFT_ANTES[k]); };
+    const jr = JOSEKIS.map((j) => { const has = R.filter((r) => r.josekis.includes(j.id)); const first = R.filter((r) => r.josekis[0] === j.id); const bs = has.flatMap((r) => afterJ(r, j.id)); return [j.name, j.tier, pc(has.length / n), pc(has.filter((r) => r.won).length / has.length), String(bs.length), pc(bs.filter((b) => b.reason === 'mate').length / bs.length), String(first.length), pc(first.filter((r) => r.won).length / first.length)]; });
+    console.log('정석: 고른 판 · 그 판 승률 · 고른 뒤 대국 · 그중 외통 · 첫 정석으로 고른 판 · 그 판 승률');
+    table(['정석', '등급', '고른 판', '승률', '대국', '외통', '첫 정석', '승률'], jr);
+  }
+
+  // 혼: 그 혼이 주머니에 있던 대국 · 그중 외통 · 그 혼의 사슬이 낸 외통 · 그 혼을 한 번이라도 가진 판의 승률
+  {
+    const all = battles;
+    const sr = SOULS.map((s) => {
+      const bs = all.filter((b) => (b.souls || []).includes(s.id));
+      const runs = R.filter((r) => r.log.some((b) => (b.souls || []).includes(s.id)));
+      return [s.name, String(runs.length), pc(runs.filter((r) => r.won).length / runs.length), String(bs.length), pc(bs.filter((b) => b.reason === 'mate').length / bs.length), pc(bs.filter((b) => b.mateSoul === s.id).length / bs.length)];
+    });
+    const none = all.filter((b) => !(b.souls || []).length);
+    console.log(`혼: 가진 판 · 그 판 승률 · 혼이 주머니에 있던 대국 · 그중 외통 · 그 혼의 사슬이 낸 외통 — 혼 없는 대국 ${none.length} 외통 ${pc(none.filter((b) => b.reason === 'mate').length / none.length)}`);
+    table(['혼', '가진 판', '승률', '대국', '외통', '혼이 낸 외통'], sr);
   }
 
   // 격언

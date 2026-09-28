@@ -337,5 +337,6 @@ export function chainSummary(c, move = 0) {
     captures: c.captures.length, transforms: c.transforms, promotions: c.promotions, forced: c.forcedReplies,
     caps: c.captures.map((x) => x.piece).join(''), cuts: c.cuts, mates: c.mates, golden: c.golden,
     refills: c.refills, redrops: c.redrops, move,
+    ...(c.soul ? { soul: c.soul.id.replace(/^soul:/, '') } : {}),
   };
 }

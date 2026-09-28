@@ -254,6 +254,9 @@ function endBattle(run, events) {
     ante: run.ante, blind: run.blind, kind: info.kind, master: info.master, target: info.target,
     score: b.score, won, reason: b.result.reason, moves: b.movesUsed, best,
     goldenSeen: b.board.some((c) => c && c.gold) || b.golden > 0, golden: b.golden, overflow: b.overflow, grades,
+    // 하네스용: 이 대국 때 주머니에 있던 혼 · 외통을 낸 사슬의 혼
+    souls: [...new Set(run.deck.filter((p) => p.soul).map((p) => p.soul))],
+    mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
   };
   run.log.push(row);
   if (!won) {
