@@ -256,6 +256,8 @@ const packSrc = (kind, options) => shopSrc(11, `${stock} r.phase = 'pack'; r.pac
 await scene('pack-piece', js(packSrc('piece', [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'C' }, { kind: 'piece', t: 'B' }])), { wait: 1600 });
 if (ko) await scene('pack-chart', js(packSrc('chart', [{ kind: 'chart', form: 'N' }, { kind: 'chart', form: 'Q' }, { kind: 'chart', form: 'P' }])), { wait: 1600 });
 await scene('pack-engraving', js(packSrc('engraving', [{ kind: 'engraving', id: 'glass' }, { kind: 'engraving', id: 'gold' }, { kind: 'engraving', id: 'feather' }])), { wait: 1600 });
+// 영어 금빛 꾸러미(한국어는 아래 순서 그대로)
+if (!ko) await scene('pack-golden', js(packSrc('golden', [{ kind: 'maxim', id: 'chivalry', edition: 'foil' }, { kind: 'maxim', id: 'light_step', edition: 'pearl' }, { kind: 'fragment', legend: 'immortal' }])), { wait: 1600 });
 if (ko) {
   await scene('pack-engraving-target', js(packSrc('engraving', [{ kind: 'engraving', id: 'glass' }, { kind: 'engraving', id: 'gold' }, { kind: 'engraving', id: 'feather' }])), {
     wait: 200,
@@ -297,8 +299,8 @@ const logFile = path.join(OUT, `${PREFIX}${LANG === 'en' ? '-en' : ''}.json`);
 const prev = ONLY && fs.existsSync(logFile) ? JSON.parse(fs.readFileSync(logFile, 'utf8')) : {};
 fs.writeFileSync(logFile, JSON.stringify({ ...prev, ...log }, null, 1));
 console.log(`찍음 ${shots}장 · 장면 ${no}`);
-// 보류(docs/design-notes/layout.md 「보류」): 상점 · 금빛 꾸러미 장면은 따로 센다(연기 시험과 같은 목록)
-const heldFile = (f) => /-shop|pack-golden|lesson-guide/.test(f);
+// 보류(docs/design-notes/layout.md 「보류」): 따로 세는 장면(연기 시험과 같은 목록). 지금은 없다
+const heldFile = () => false;
 const bad = [...overflow].filter(([, f]) => !heldFile(f)), held = [...overflow].filter(([, f]) => heldFile(f));
 console.log(`글 넘침 ${bad.length}${bad.length ? '\n  ' + bad.map(([m, f]) => `${f}: ${m}`).join('\n  ') : ''}`);
 console.log(`보류 화면 넘침 ${held.length}${held.length ? '\n  ' + held.map(([m, f]) => `${f}: ${m}`).join('\n  ') : ''}`);

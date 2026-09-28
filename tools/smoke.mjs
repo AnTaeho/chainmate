@@ -30,9 +30,9 @@ const P = await import('../src/ui/placement.js');
 // 글 넘침(docs/design-notes/layout.md 「검사」): 프레임마다 그린 글이 제 상자(안 여백 안)를 넘는지, 상자끼리 겹치는지, 화면 밖인지
 const LL = await import('../src/render/layoutlog.js');
 LL.LOG.on = true;
-// 보류(docs/design-notes/layout.md 「보류」): 상점 · 금빛 꾸러미는 글 간격 후보 2로 480×270에 다 들어가지 않아 사람이 고를 때까지 따로 센다
-const HELD = { shop: '상점', 'pack-golden': '금빛 꾸러미' };
-const heldOf = () => { const s = screen(); if (s === 'shop') return 'shop'; if (s === 'pack' && app.run && app.run.pack && app.run.pack.kind === 'golden') return 'pack-golden'; return null; };
+// 보류: 사람이 고를 때까지 따로 세는 화면(docs/design-notes/layout.md 「보류」) — 명국 조각이 붙어 카드가 넷인 금빛 꾸러미만
+const HELD = { 'pack-golden-4': '카드 넷인 금빛 꾸러미' };
+const heldOf = () => (screen() === 'pack' && app.run && app.run.pack && app.run.pack.kind === 'golden' && app.run.pack.options.length > 3 ? 'pack-golden-4' : null);
 const flow = { frames: 0, text: 0, overlap: 0, screen: 0, held: 0, heldBy: {}, seen: new Map() };
 function flowCheck() {
   if (!app) return;

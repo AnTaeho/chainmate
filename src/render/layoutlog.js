@@ -2,7 +2,7 @@
 // 꺼져 있으면(LOG.on false) 아무것도 적지 않는다 — 게임은 늘 꺼 둔다.
 // 상자 종류(docs/design-notes/layout.md 「검사」):
 //   'panel' 'note' 'card' — 글이 안 여백(pad)을 뺀 안쪽에 있어야 한다
-//   'tile'  단추 · 칩 · 값 칸 — 글이 상자 안에만 있으면 된다(pad 0)
+//   'tile'  단추 · 칩 · 값 칸 — 글이 상자 안에만 있으면 된다(pad 0). 칩은 가로 여백만({ x: CHIP_PAD, y: 0 })
 // overlay: 다른 상자 위에 뜨는 것(말풍선 · 낱말 상자 · 처음 안내 · 차림표 · 끄는 카드). 상자끼리 겹침을 재지 않는다.
 // loose: 연출 중(뒤집히는 카드 등)이라 이번 프레임은 재지 않는다.
 export const LOG = { on: false, boxes: [], texts: [], stack: [], layer: 0 };
@@ -45,8 +45,8 @@ export function checkLayout({ W = 480, H = 270 } = {}) {
       if (hit) out.push({ what: 'text', msg: `「${t.s}」 (${t.x},${t.y} ${t.w}×${t.h}) ∩ ${where(hit)}` });
       continue;
     }
-    const p = b.pad;
-    if (!inside(t, b.x + p, b.y + p, b.x + b.w - p, b.y + b.h - p)) out.push({ what: 'text', msg: `「${t.s}」 (${t.x},${t.y} ${t.w}×${t.h}) ⊄ ${where(b)} 여백 ${p}` });
+    const px = typeof b.pad === 'object' ? b.pad.x : b.pad, py = typeof b.pad === 'object' ? b.pad.y : b.pad, p = typeof b.pad === 'object' ? `${px}·${py}` : b.pad;
+    if (!inside(t, b.x + px, b.y + py, b.x + b.w - px, b.y + b.h - py)) out.push({ what: 'text', msg: `「${t.s}」 (${t.x},${t.y} ${t.w}×${t.h}) ⊄ ${where(b)} 여백 ${p}` });
   }
   // 상자끼리: 같은 부모 아래의, 뜨지 않는 상자끼리 겹치면 어긴 것. 상자는 화면 안에
   const solid = LOG.boxes.filter((b) => !b.overlay && !b.loose);

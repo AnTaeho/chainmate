@@ -131,3 +131,48 @@ test('꾸러미(기물 · 기보 · 각인): 카드 셋 → 건너뛰기, 새기
     }
   }
 });
+
+// 상점 · 금빛 꾸러미에 나오는 물건 모두(판본 격언 · 명국 조각 포함)
+async function allItems(price = true) {
+  const D = {};
+  for (const n of ['maxims', 'souls', 'tactics', 'engravings', 'legends', 'editions', 'pieces', 'charts']) D[n] = await import(`../src/data/${n}.js`);
+  const a = [];
+  for (const m of D.maxims.MAXIMS) { a.push({ kind: 'maxim', id: m.id }); for (const e of D.editions.EDITIONS) a.push({ kind: 'maxim', id: m.id, edition: e.id }); }
+  for (const t of Object.keys(D.pieces.PIECES)) if (!D.pieces.PIECES[t].thing && t !== 'K') a.push({ kind: 'piece', t });
+  for (const s of D.souls.SOULS) a.push({ kind: 'soul', id: s.id });
+  for (const s of D.tactics.TACTICS) a.push({ kind: 'tactic', id: s.id });
+  for (const s of D.engravings.ENGRAVINGS) a.push({ kind: 'engraving', id: s.id });
+  for (const f of Object.keys(D.charts.CHARTS)) a.push({ kind: 'chart', form: f });
+  for (const l of D.legends.LEGENDS) a.push({ kind: 'fragment', legend: l.id });
+  a.push({ kind: 'evolve' }, { kind: 'gamble', id: 'potion' }, { kind: 'gamble', id: 'roulette' });
+  if (price) for (const it of a) it.price = 13;
+  return a;
+}
+
+test('상점: 모든 진열 카드(판본 · 명국 조각 포함) → 꾸러미 칸 → 주머니 한 줄이 화면 안(한국어 · 영어)', async () => {
+  const { packCellH } = await import('../src/ui/screens/shop.js');
+  const { TOP, GAP_GROUP, CARD } = M.frame;
+  const run = M.run.createRun({ seed: 1, draft: false });
+  const items = await allItems(true);
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    const pack = Math.max(...['piece', 'chart', 'engraving', 'golden'].map((kind) => Math.max(packCellH({ kind }, CARD.w), packCellH({ kind }, 72))));
+    for (const it of items) {
+      const h = M.parts.itemCardH(it, CARD.w, { run });
+      assert.ok(TOP + h + GAP_GROUP + pack + GAP_GROUP + 28 <= BOTTOM, `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend} ${it.edition || ''} ${h}`);
+    }
+  }
+});
+
+test('금빛 꾸러미(카드 셋): 판본 격언 · 명국 조각 카드 → 건너뛰기 줄 → 격언 칸 두 줄이 화면 안', async () => {
+  const { TOP, GAP_GROUP, GAP_IN, BTN_H, CARD } = M.frame;
+  const run = M.run.createRun({ seed: 1, draft: false });
+  const items = (await allItems(false)).filter((it) => it.edition || it.kind === 'fragment');
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const it of items) {
+      const h = M.parts.itemCardH(it, CARD.w, { run, price: false });
+      assert.ok(TOP + h + GAP_GROUP + BTN_H + GAP_IN + M.parts.maximGridH(run, 3, 2) <= 270, `${lang} ${it.id || it.legend} ${it.edition || ''} ${h}`);
+    }
+  }
+});
