@@ -7,6 +7,7 @@
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import { createRun, B, targetFor, REWARD, CHEST } from '../src/sim/run.js';
+import { applyNight2 } from './night2.mjs';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
 import { playRun, SMART, DRAFT } from './shopbot.mjs';
@@ -69,6 +70,8 @@ if (!isMainThread) {
   if (tune && tune.chestMoney != null) CHEST.money = tune.chestMoney;
   if (tune && tune.golden != null) GOLDEN.chance = tune.golden;
   if (tune && tune.calling != null) GOLDEN.calling = tune.calling;
+  // 밤샘 2 D4: 장치를 하나씩 켜 보며 잰다 {"clock":1,"reboard":false,"filter":0,"reboardRatio":1}
+  applyNight2(tune);
   SMART.K = k;
   if (policy === 'nofam') SMART.famAware = false;
   if (b) b.forEach((x, i) => { B[i] = x; });

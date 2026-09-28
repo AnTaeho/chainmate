@@ -23,6 +23,7 @@ import { bestMove } from '../src/sim/solver.js';
 import { PIECES, valueOf } from '../src/data/pieces.js';
 import { playRun, SMART } from './shopbot.mjs';
 import { stepBattle } from './bot.mjs';
+import { applyNight2 } from './night2.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 
@@ -39,6 +40,7 @@ function parseArgs(argv) {
     else if (x === '--policies') a.policies = Number(argv[++i]);
     else if (x === '--json') a.json = argv[++i];
     else if (x === '--limit') a.limit = Number(argv[++i]);      // 판 하나(대체 대국 빼고) 시간 상한(초)
+    else if (x === '--tune') a.tune = JSON.parse(argv[++i]);    // 밤샘 2 장치 켜고 끄기(run.mjs와 같은 꼴)
   }
   if (a.policies == null) a.policies = a.runs;
   return a;
@@ -411,6 +413,7 @@ function report(D, args, wall) {
 // ── 실행(통계 함수가 모두 선언된 뒤)
 if (!isMainThread) {
   const { mode } = workerData;
+  applyNight2(workerData.tune);
   if (mode === 'run') {
     SMART.K = workerData.shopK;
     parentPort.postMessage(oneRun(workerData.seed, workerData.policy, workerData.snaps));
@@ -419,6 +422,7 @@ if (!isMainThread) {
   }
 } else {
   const args = parseArgs(process.argv.slice(2));
+  applyNight2(args.tune);
   const t0 = performance.now();
   const say = (s) => process.stderr.write(s);
 
@@ -430,7 +434,7 @@ if (!isMainThread) {
       const launch = () => {
         if (nextI >= seeds.length) { if (done === seeds.length) finish(); return; }
         const seed = seeds[nextI++];
-        const wk = new Worker(SELF, { workerData: { mode: 'run', seed, policy, snaps, shopK: args.shopK } });
+        const wk = new Worker(SELF, { workerData: { mode: 'run', seed, policy, snaps, shopK: args.shopK, tune: args.tune } });
         const timer = setTimeout(() => { timeouts.push(seed); wk.terminate(); }, args.limit * 1000);
         let settled = false;
         const end = () => { if (settled) return; settled = true; clearTimeout(timer); done++; say(`\r${policy} 판 ${done}/${seeds.length} · 시간 초과 ${timeouts.length}   `); launch(); };
@@ -455,7 +459,7 @@ if (!isMainThread) {
       if (!n) return finish();
       let alive = n;
       for (let w = 0; w < n; w++) {
-        const wk = new Worker(SELF, { workerData: { mode: 'measure' } });
+        const wk = new Worker(SELF, { workerData: { mode: 'measure', tune: args.tune } });
         const feed = () => {
           if (nextI >= order.length) { wk.postMessage('end'); return; }
           const i = order[nextI++];
