@@ -145,7 +145,7 @@ export class TitleScreen {
   }
   newBoard() {
     const k = this.round++;
-    const hold = { b: createBattle({ seed: 101 + k * 7, ante: 1 + (k % 3), kind: 'practice' }) };
+    const hold = { b: createBattle({ seed: 101 + k * 7, ante: 1 + (k % 3), kind: 'practice', rules: { reboards: 0 } }) };
     this.hold = hold;
     this.fx = new Fx();
     this.demo = new BattleScreen(this.app, { quiet: true, fx: this.fx, source: { kind: 'demo', live: () => hold.b, cmd: (c) => apply(hold.b, c), run: null, after: () => { this.rest = 0.9; } } });

@@ -26,6 +26,7 @@ export const HINTS = {
   joseki: '고른 정석은 가리키면 무엇을 하는지 보인다',
   tactic: '묘수는 떨구기 전에 눌러 이번 대국에 한 번 쓴다',
   bigText: '창이 작아 글이 작다. 설정에서 큰 글자를 켤 수 있다',
+  clock: '대국을 지면 시계 한 칸이 준다. 시계를 다 쓰면 판이 끝난다',
 };
 
 const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id]);

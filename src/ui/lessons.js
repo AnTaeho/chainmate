@@ -94,7 +94,7 @@ export const LESSONS = [
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((L) => [L.id, L]));
 
 export function lessonBattle(L) {
-  const b = createBattle({ seed: 1, ante: 1, kind: 'practice', bag: L.hand.map((t) => ({ t })), target: L.target, rules: { moves: L.moves || 1, discards: L.discards || 0, reinforce: 0, easyStart: false }, golden: false });
+  const b = createBattle({ seed: 1, ante: 1, kind: 'practice', bag: L.hand.map((t) => ({ t })), target: L.target, rules: { moves: L.moves || 1, discards: L.discards || 0, reinforce: 0, easyStart: false, reboards: 0 }, golden: false });
   b.board = boardFrom(L.board);
   b.hand = L.hand.map((t, i) => ({ t, id: i + 1, eng: null }));
   b.bag = (L.bag || []).map((t, i) => ({ t, id: 50 + i, eng: null }));

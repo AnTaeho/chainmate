@@ -213,6 +213,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.update = (dt) => {
     dt = Math.min(dt, 0.1);
     app.time += dt;
+    if (app.clockFx) { app.clockFx.t += dt; if (app.clockFx.t > 2.4) app.clockFx = null; } // 시계 칸을 잃는 깜빡임(common.js clockPips)
     app.ui.time = app.time;
     const sp = app.speed();
     for (const t of app.toasts) t.t += dt;

@@ -126,6 +126,7 @@ joseki('gloom', '그늘', 'silver', ['diag'], '비숍 하나가 유령이 된다
 });
 joseki('river', '강', 'silver', ['line'], '가운데 두 줄을 건너 먹을 때마다 배수 +1', {
   more: '넷째 줄과 다섯째 줄 사이가 강',
+  rules(b) { b.rules.river = true; },
   onCapture(ctx) { const a = ctx.event.from >> 3, b = ctx.event.to >> 3; if ((a <= 3 && b >= 4) || (a >= 4 && b <= 3)) ctx.addMult(1); },
 });
 joseki('torch', '횃불', 'gold', ['counter'], '대국마다 값이 가장 큰 적 둘은 아무것도 지키지 못한다', {

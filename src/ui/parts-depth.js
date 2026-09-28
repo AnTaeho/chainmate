@@ -46,12 +46,14 @@ export function familyTip(id, n, drop = 0) {
 }
 
 // 「+N」 말풍선: 줄에 못 놓은 시너지 전부. 시너지마다 「변신 2/4」(켜졌으면 진하게) → 켜진 효과 한 줄씩(「2개: …」)
+// 가려진 시너지가 넷을 넘으면(시너지 열 — 밤샘 2) 이름 · 수만 적는다: 효과 줄까지 적으면 화면 아래로 넘친다
 export function familyMoreTip(fams, n) {
   const lines = [];
+  const detail = fams.length <= 4;
   for (const f of fams) {
     const lv = levelOf(n[f.id]), next = THRESHOLDS[lv];
     lines.push([`${L(f.name)} ${next ? `${n[f.id]}/${next}` : n[f.id]}`, lv ? PAL.cardInk : PAL.cardDim]);
-    THRESHOLDS.forEach((th, i) => { if (n[f.id] >= th) lines.push([`${L(`${th}개`)}: ${L(f.text[i])}`, PAL.goldDk]); });
+    if (detail) THRESHOLDS.forEach((th, i) => { if (n[f.id] >= th) lines.push([`${L(`${th}개`)}: ${L(f.text[i])}`, PAL.goldDk]); });
   }
   return tipLines(`${L('시너지')} +${fams.length}`, [], 150, lines);
 }

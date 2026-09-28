@@ -85,10 +85,39 @@ export function drawFoot(ctx, ui, rows, name = '아래 칸') {
 const familyCount = (run) => Object.values(familyCounts(run)).filter((n) => n > 0).length;
 // 판 틀의 왼쪽 칸(대국 말고): 머리 칸(관 · 화면 이름) · 짜임 칸(시너지 · 정석) · 아래 칸(상금 · 주머니).
 // 모두 가리키면 말풍선이 뜨는 것뿐이고 누를 것은 없다 — 이 칸이 판 틀의 설명 자리다(placement.js 'side').
+// 시계(밤샘 2 D1): 판의 목숨. 칸마다 작은 시계 판(9×9) — 남은 칸은 상아 판에 먹 바늘, 잃은 칸은 어둡게 꺼진다.
+// 잃는 순간(app.clockFx)에는 그 칸이 붉게 깜빡이며 금이 간다. 오른쪽 끝(x2)에 붙인다.
+// 시안(docs/shots/night2/draft-*): 1 시계 판(고름) · 2 숫자 「2 / 3」 · 3 수 · 버리기와 같은 네모 구슬
+const DIAL = ['..#####..', '.#.....#.', '#...#...#', '#...#...#', '#...##..#', '#.......#', '#.......#', '.#.....#.', '..#####..'];
+export function clockPips(ctx, run, x2, ty, time = 0, fx = null) {
+  const max = run.clockMax || run.clock || 0;
+  const step = 11;
+  for (let i = 0; i < max; i++) {
+    const x = x2 - (max - i) * step + 2, y = ty + 1;
+    const alive = i < run.clock;
+    const breaking = fx && fx.idx === i && fx.t < 2.0;
+    const blink = breaking && Math.floor(fx.t * 10) % 2;
+    const rim = blink ? PAL.red : alive ? PAL.goldDk : PAL.frame;
+    const face = blink ? PAL.redDk : alive ? PAL.ink : PAL.feltDk;
+    DIAL.forEach((row, j) => { for (let k = 0; k < 9; k++) {
+      const inside = j > 0 && j < 8 && k > 0 && k < 8 && !(row[k] === '#' && (j === 0 || j === 8 || k === 0 || k === 8));
+      if ((j === 0 || j === 8 || k === 0 || k === 8 || (j === 1 && (k === 1 || k === 7)) || (j === 7 && (k === 1 || k === 7))) && row[k] === '#') rect(ctx, x + k, y + j, 1, 1, rim);
+      else if (inside && row[k] === '#') rect(ctx, x + k, y + j, 1, 1, alive || breaking ? PAL.frameDk : PAL.frame);
+      else if (inside && row[k] === '.' && !((j === 1 || j === 7) && (k === 1 || k === 7))) rect(ctx, x + k, y + j, 1, 1, face);
+    } });
+    if (breaking && fx.t > 0.5) { rect(ctx, x + 2, y + 2, 1, 1, PAL.red); rect(ctx, x + 3, y + 3, 1, 1, PAL.red); rect(ctx, x + 5, y + 5, 1, 1, PAL.red); rect(ctx, x + 6, y + 6, 1, 1, PAL.red); }
+  }
+}
+export const clockTip = (run) => tipLines('시계', [`${run.clock} / ${run.clockMax || run.clock}`, '대국을 지면 한 칸을 잃고 다음 대국으로 간다', '다 잃으면 판이 끝난다']);
+// 아래 칸의 시계 줄(대국 · 판 틀 왼쪽 칸 공통)
+export const clockRow = (app, run) => ({ id: 'clock', label: '시계', tip: () => clockTip(run), draw: (ctx2, ty) => { text(ctx2, '시계', LEFT.x + PAD_BOX, ty, PAL.dim); clockPips(ctx2, run, LEFT.x + LEFT.w - PAD_BOX, ty, app.time, app.clockFx); } });
+export const hasClock = (run) => !!run && !run.scratch && (run.clockMax || 0) > 0;
+
 export function runSide(ctx, ui, app, title) {
   const run = app.run;
   const L = LEFT.x, LW = LEFT.w, P = PAD_BOX;
-  const head = headLayout(1, 0), foot = footLayout(2);
+  const clock = hasClock(run);
+  const head = headLayout(1, 0), foot = footLayout(clock ? 3 : 2);
   const st = sideStack(head.h, foot.h);
   openBox('panel', L, st.head.y, LW, head.h, P, { name: '머리 칸' });
   panel(ctx, L, st.head.y, LW, head.h);
@@ -123,7 +152,7 @@ export function runSide(ctx, ui, app, title) {
     });
   }
   closeBox();
-  drawFoot(ctx, ui, [{ money: run }, { label: '주머니', val: `${run.deck.length}` }]);
+  drawFoot(ctx, ui, [...(clock ? [clockRow(app, run)] : []), { money: run }, { label: '주머니', val: `${run.deck.length}` }]);
 }
 
 // 판 밖 틀의 쪽 넘기기: 맨 아래 단추 줄 오른쪽(‹ · 쪽 · ›)

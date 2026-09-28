@@ -7,7 +7,7 @@ import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, TONE, tierOf } from '../../render/sprites.js';
 import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
-import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS } from '../../sim/battle.js';
+import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
@@ -24,7 +24,7 @@ import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
 import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
-import { pauseButton, headLayout, footLayout, sideStack, drawFoot, shardTo, hallText } from './common.js';
+import { pauseButton, headLayout, footLayout, sideStack, drawFoot, shardTo, hallText, clockRow, hasClock, clockPips, clockTip } from './common.js';
 import { TOP, PAUSE, PAD_BOX, LINE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S, EDGE_PAD } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { drawPortrait } from '../../render/portraits.js';
@@ -48,6 +48,27 @@ export { short };
 function hatch(ctx, x, y, col) {
   ctx.fillStyle = col;
   for (let i = 0; i < S * 2; i += 5) for (let j = 0; j < S; j++) { const k = i - j; if (k >= 0 && k < S) ctx.fillRect(x + k, y + j, 1, 1); }
+}
+// 다시 놓기 아이콘(7×7): 판 넷 칸이 뒤집히는 모양 — 칸 둘은 먹, 둘은 비고 가운데 화살
+function reboardIcon(ctx, x, y, col) {
+  rect(ctx, x, y, 3, 3, col); rect(ctx, x + 4, y + 4, 3, 3, col);
+  rect(ctx, x + 4, y, 3, 1, col); rect(ctx, x + 6, y, 1, 3, col);
+  rect(ctx, x, y + 6, 3, 1, col); rect(ctx, x, y + 4, 1, 3, col);
+}
+// 판 위 사물 「함정」(정석): 칸 안의 어두운 구덩이 + 네 귀퉁이 말뚝. 매복 시너지 빛(회청)
+function trapPit(ctx, x, y, size) {
+  const i = size >= 24 ? 5 : 3;
+  ctx.globalAlpha = 0.55; rect(ctx, x + i, y + i, size - i * 2, size - i * 2, '#1a1512'); ctx.globalAlpha = 1;
+  frame(ctx, x + i, y + i, size - i * 2, size - i * 2, '#c0c8d0');
+  for (const [a, b] of [[i - 2, i - 2], [size - i, i - 2], [i - 2, size - i], [size - i, size - i]]) rect(ctx, x + a, y + b, 2, 2, '#c0c8d0');
+  for (let k = i + 2; k < size - i - 1; k += 3) rect(ctx, x + k, y + size - i - 3, 1, 2, '#6e767e');
+}
+// 횃불(정석): 이 적은 아무것도 지키지 못한다 — 칸 오른쪽 위의 작은 불꽃(3×5)
+function torchMark(ctx, x, y, time) {
+  const k = Math.floor(time * 6) % 2;
+  rect(ctx, x - 1, y - 1, 7, 10, '#1a1512');
+  rect(ctx, x + 2 - k, y, 1, 1, '#fff1b8'); rect(ctx, x + 1, y + 1, 3, 1, '#fff1b8'); rect(ctx, x, y + 2, 5, 2, '#efbd55'); rect(ctx, x + 1, y + 4, 3, 1, '#df8a45');
+  rect(ctx, x + 2, y + 5, 1, 3, '#8c6a3a');
 }
 // 점선(미리 보기의 길)
 function dotLine(ctx, x0, y0, x1, y1, col, step = 3) {
@@ -77,6 +98,7 @@ export function objectsAt(rules, sq) {
   if ((rules.steps || []).includes(sq)) out.push(['발판', JOSEKI_BY_ID.stepping.text]);
   if ((rules.gates || []).includes(sq)) out.push(['문', JOSEKI_BY_ID.gates.text]);
   if ((rules.highways || []).includes(sq & 7)) out.push(['고속도로', JOSEKI_BY_ID.highway.text]);
+  if ((rules.traps || []).includes(sq)) out.push(['함정', JOSEKI_BY_ID.trap.text]);
   return out;
 }
 // 판 위 사물 「문」: size×size 칸 안의 아치 문(어두운 청록 안쪽 · 굵은 테 · 문턱). glow = 문 안쪽 빛(0~1)
@@ -198,6 +220,9 @@ export class BattleScreen {
     if ((r.steps || []).length) add('obj:steps', { obj: 'step' });
     if ((r.gates || []).length) add('obj:gates', { obj: 'gate' });
     if ((r.highways || []).length) add('obj:highway', { obj: 'highway' });
+    if ((r.traps || []).length) add('obj:traps', { obj: 'trap' });
+    if (r.river) add('obj:river', { obj: 'river' });
+    b.board.forEach((c) => { if (c && c.muted && !c.mine) add('torch', { t: c.t, muted: true }); });
     const fresh = [...found].filter(([k]) => !seen.includes(k));
     if (!run.scratch) { rec.runNew = { seed: run.seed, keys: [...seen, ...fresh.map(([k]) => k)] }; this.app.saveRecords(); }
     return fresh.slice(0, 8).map(([, it]) => it);
@@ -325,6 +350,16 @@ export class BattleScreen {
     const idx = this.sel;
     this.sel = [];
     this.send({ type: 'discard', handIndices: idx });
+  }
+
+  // 다시 놓기: 판(런)의 대국에서만(수업 · 타이틀 시연은 규칙이 끈다)
+  canReboard() {
+    const b = this.live();
+    return !!this.run && !this.run.scratch && !this.busy && !!b && canReboard(b) && !this.sel.length;
+  }
+  reboard() {
+    if (!this.canReboard()) return;
+    this.send({ type: 'reboard' });
   }
 
   send(cmd) {
@@ -503,6 +538,30 @@ export class BattleScreen {
             this.snd('overflow', e.tier); this.shake(big, 0.2 + big * 0.05);
           },
         }); break;
+        // 다시 놓기: 옛 판의 적이 흩어지고 새 판이 내려앉는다
+        case 'reboard': add(0.45, {
+          begin: () => {
+            for (let sq = 0; sq < 64; sq++) if (v.board[sq] && !v.board[sq].mine) this.sparkle(sq, PAL.dim, 3);
+            this.word('다시 놓기', PAL.gold, 1.1, 1); this.snd('discard');
+          },
+          tick: (p) => { if (p >= 0.5 && !v.reboarded) { v.reboarded = true; const b = this.bRef; v.board = clone(b.board); this.news = this.newThings(b); } },
+          done: () => { v.reboarded = false; this.sync(); },
+        }); break;
+        // 함정(정석): 증원이 함정에 들어 곧바로 점수가 된다
+        case 'trapped': add(0.3, {
+          begin: () => { this.sparkle(e.sq, '#c0c8d0', 10); this.pop(`+${short(e.value)}`, 'value'); this.snd('coin'); },
+          done: () => { v.score = e.score; },
+        }); break;
+        case 'freeze': add(0.05, { begin: () => { for (const sq of e.squares) this.sparkle(sq, '#9fd3e0', 5); } }); break;
+        case 'returnHome': add(0.05, { begin: () => { this.toast(`${josa(PIECE_NAME[e.piece], '이/가')} 손으로 돌아왔다`, PAL.gold); } }); break;
+        case 'captive': add(0.05, { begin: () => { this.toast(`${PIECE_NAME[e.piece]} 포로가 주머니에 든다`, PAL.gold); } }); break;
+        // 시계를 잃는다(밤샘 2 D1): 대국은 졌지만 판은 이어진다
+        case 'clockLost': add(0.9, {
+          begin: () => {
+            this.app.clockFx = { idx: e.clock, t: 0 };
+            this.word(e.clock > 0 ? '시계 −1' : '시간이 다했다', PAL.red, 1.3, 2); this.snd('glass'); this.shake(2, 0.2);
+          },
+        }); this.runEvents.push(e); break;
         case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${josa(PIECE_NAME[e.piece], '이/가')} 깨졌다`, PAL.sky); this.snd('glass'); } }); break;
         // 증원은 위에서 떨어져 들어온다. 떨어지는 시간은 한 수 연출 길이에 넣지 않는다(update가 따로 센다)
         case 'reinforce': add(0.1, {
@@ -906,6 +965,7 @@ export class BattleScreen {
       let diag = null;
       if (!tip && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tip = [`${tr.name} · ${PIECE_NAME[cell.t]}`, [tr.text, PIECE_MOVE[cell.t] || '']]; diag = cell.t; }
       if (!tip && cell && !cell.mine && (FAIRY_MOVE(cell.t) || (PIECE_MOVE[cell.t] && !tset.has(sq))) && !isHidden(b, sq)) { tip = [PIECE_NAME[cell.t], [PIECE_MOVE[cell.t]]]; diag = cell.t; }
+      if (cell && !cell.mine && cell.muted && !isHidden(b, sq)) tip = tip ? [tip[0], [...tip[1], `횃불: ${L('아무것도 지키지 못한다')}`]] : [`횃불 · ${PIECE_NAME[cell.t]}`, ['아무것도 지키지 못한다']];
       // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
       if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
@@ -989,6 +1049,7 @@ export class BattleScreen {
       }
       this.putPiece(ctx, c.t, c.gold ? 'g' : 'b', x + 6, y + 3 + dy);
       if (c.trait) traitMark(ctx, c.trait, x + 2, y + S - 8);
+      if (c.muted) torchMark(ctx, x + S - 7, y + 2, time);
       // 얼린 적(묘수 「빙결」): 얼음빛 덮개 · 이번 수 동안 아무것도 지키지 못한다
       if (c.frozen) { ctx.globalAlpha = 0.35; rect(ctx, x + 2, y + 2, S - 4, S - 4, '#9fd3e0'); ctx.globalAlpha = 1; frame(ctx, x + 1, y + 1, S - 2, S - 2, '#9fd3e0'); }
       if (c.gold) {
@@ -1079,6 +1140,12 @@ export class BattleScreen {
       frame(ctx, x + 3, y + 3, S - 6, S - 6, PAL.goldDk);
       for (const [i, j] of [[4, 4], [S - 5, 4], [4, S - 5], [S - 5, S - 5]]) rect(ctx, x + i, y + j, 1, 1, PAL.goldHi);
     }
+    // 강(정석): 넷째 줄과 다섯째 줄 사이를 흐르는 물결
+    if (rules.river) {
+      const y = BY + S * 4;
+      for (let x = BX + 1; x < BX + S * 8 - 1; x++) { const w = Math.round(Math.sin((x + time * 12) / 3)); rect(ctx, x, y - 1 + w, 1, 1, '#6fa8d8'); if ((x & 3) === 0) rect(ctx, x, y + w, 1, 1, '#c8e0f0'); }
+    }
+    for (const sq of rules.traps || []) { const { x, y } = sqXY(sq); trapPit(ctx, x, y, S); }
     // 문: 어두운 청록 문 안쪽 + 굵은 아치 테 + 문턱. 기물이 서도 기둥 · 윗테 · 문턱이 남는다. 두 문이 번갈아 숨 쉰다
     (rules.gates || []).forEach((sq, k) => {
       const { x, y } = sqXY(sq);
@@ -1186,7 +1253,7 @@ export class BattleScreen {
     // 이기면 받는 상금: 관 줄 오른쪽에 들어가면 거기, 안 들어가면(영어 · 긴 관) 목표 줄 아래 한 줄
     spec.rightInline = !!spec.right && measure(spec.kicker) + 4 + measure(spec.right) <= LW - PAD_BOX * 2;
     const head = headLayout(spec.titles.length, spec.right && !spec.rightInline ? 3 : 2);
-    const foot = footLayout(this.run ? 4 : 3);
+    const foot = footLayout(this.run ? (hasClock(this.run) ? 5 : 4) : 3);
     const st = sideStack(head.h, foot.h);
     const val = { y: st.mid.y, h: VAL_H };
     const chainY = val.y + VAL_H + GAP_GROUP;
@@ -1284,6 +1351,7 @@ export class BattleScreen {
       { id: 'pips:moves', label: '수', tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다'), draw: (ctx2, ty) => { text(ctx2, '수', LX + P, ty, PAL.dim); pips(v.moves, v.movesLeft, PAL.gold)(ctx2, ty); } },
       { id: 'pips:discards', label: '버리기', tip: () => tipLines('버리기', '손에서 하나를 버리고 새로 뽑을 수 있는 횟수'), draw: (ctx2, ty) => { text(ctx2, '버리기', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); } },
     ];
+    if (hasClock(run)) rows.push(clockRow(app, run));
     if (run) rows.push({ money: run });
     rows.push({ id: 'bag', label: '주머니', val: `${v.bag} / ${v.deckSize}`, tip: () => bagTip(this.b) });
     drawFoot(ctx, ui, rows);
@@ -1291,13 +1359,18 @@ export class BattleScreen {
 
   // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠 → 손 이름표 줄(묘수 · 버리기) → 손. 묶음 사이 GAP_GROUP
   // 시너지 띠는 칩(FAM_H) 두 줄 — 그러면 격언 칸이 한 줄로 안 들어가는 판(칸 다섯 이상)은 한 줄에 못 놓은 것을 「+N」로
+  // 다시 놓기(밤샘 2 D2): 첫 수 전에만 손 이름표 줄 위에 단추 줄(쓰거나 첫 수를 두면 사라지고 띠 · 격언 칸이 제자리로).
+  // 시안(docs/shots/night2/draft-*): 1 왼쪽 사슬 칸 가운데(골랐다가 옮김 — 왼쪽 칸은 판 틀의 설명 자리라 말풍선이 단추를 덮었다) ·
+  // 2 사슬 칸 구석 아이콘만 · 3 사슬 칸을 채운 금빛 단추
   rightLayout(run = this && this.run) {
     const HAND_H = 36, ROW_H = BTN_S;
+    const rb = !!(this && this.canReboard && this.canReboard());
     const at = (rows) => {
       const strip = rows * FAM_H + (rows - 1) * LIST_GAP;
-      // 아래에서부터: 손(화면 아래 2px 위까지) → 손 이름표 줄 → 시너지 띠. 격언 칸은 TOP부터 띠 위까지(room)
-      const handY = 270 - 2 - HAND_H, rowY = handY - GAP_IN - ROW_H, stripY = rowY - GAP_GROUP - strip;
-      return { room: stripY - GAP_GROUP - TOP, stripY, rows, rowY, handY, HAND_H };
+      // 아래에서부터: 손(화면 아래 2px 위까지) → 손 이름표 줄 → (다시 놓기 줄) → 시너지 띠. 격언 칸은 TOP부터 띠 위까지(room)
+      const handY = 270 - 2 - HAND_H, rowY = handY - GAP_IN - ROW_H, rbY = rb ? rowY - GAP_IN - ROW_H : null;
+      const stripY = (rb ? rbY : rowY) - GAP_GROUP - strip;
+      return { room: stripY - GAP_GROUP - TOP, stripY, rows, rowY, handY, HAND_H, rbY };
     };
     const two = at(2);
     return run && maximColumnH(run, two.room).cols === 1 ? two : at(1);
@@ -1319,6 +1392,7 @@ export class BattleScreen {
       familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: lay.rows });
     }
     this.drawPreviewPanel(ctx);
+    if (lay.rbY != null) button(ctx, ui, 'btn:reboard', RX, lay.rbY, RW, BTN_S, '다시 놓기', { onClick: () => this.reboard(), icon: reboardIcon });
     // 손
     const ry = lay.rowY;
     text(ctx, '손', RX, inkY(ry, BTN_S), PAL.dim);
@@ -1389,6 +1463,7 @@ export class BattleScreen {
       if (it.obj) { this.newsObj(ctx, it.obj, x, y + 3); return; }
       sprite(ctx, it.t, it.gold ? 'g' : 'b', x, y);
       if (it.trait) traitMark(ctx, it.trait, x - 2, y + 17);
+      if (it.muted) torchMark(ctx, x + 12, y, this.app.time);
     });
   }
   // 판 위 사물의 작은 그림(18×18): 발판 · 문 · 고속도로 줄
@@ -1399,6 +1474,10 @@ export class BattleScreen {
       for (const [i, j] of [[1, 1], [16, 1], [1, 16], [16, 16]]) rect(ctx, x + i, y + j, 1, 1, PAL.goldHi);
     } else if (obj === 'gate') {
       gateArch(ctx, x, y, 18, 0.5);
+    } else if (obj === 'trap') {
+      trapPit(ctx, x, y, 18);
+    } else if (obj === 'river') {
+      for (let k = 0; k < 18; k++) { const w = Math.round(Math.sin(k / 3)); rect(ctx, x + k, y + 8 + w, 1, 1, '#6fa8d8'); rect(ctx, x + k, y + 11 + w, 1, 1, '#c8e0f0'); }
     } else if (obj === 'highway') {
       for (let j = 0; j < 18; j += 4) { rect(ctx, x + 4, y + j, 1, 2, PAL.goldDk); rect(ctx, x + 13, y + j, 1, 2, PAL.goldDk); }
       rect(ctx, x + 8, y + 4, 2, 10, PAL.gold); rect(ctx, x + 7, y + 5, 4, 1, PAL.gold); rect(ctx, x + 7, y + 12, 4, 1, PAL.gold);

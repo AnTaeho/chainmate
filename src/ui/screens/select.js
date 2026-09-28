@@ -108,6 +108,8 @@ export class SelectScreen {
     const app = this.app, run = app.run;
     runSide(ctx, ui, app, '관 선택');
     pauseButton(ctx, ui, app);
+    // 처음 시계를 잃은 뒤: 시계 줄을 가리키는 한 줄
+    if (run.log.some((x) => x.clockLost)) hint(app, 'clock', 'clock');
     // 판의 길은 본 칸 위 띠(카드 줄이 내용에 맞춰 길어지므로 아래를 비운다)
     antePath(ctx, ui, run, MAIN.x + MAIN.w / 2, 5, app.time);
     const lays = [0, 1, 2].map((i) => blindLayout(run, i));
@@ -144,7 +146,8 @@ export class SelectScreen {
       // 단추 줄은 카드 아래 안 여백 위(세 카드가 같은 높이라 같은 줄)
       const by = y + h - P - BTN_H;
       if (past) {
-        text(ctx, log && log.skipped ? '건너뜀' : '이김', x + w / 2, by + 3, PAL.dim, { align: 'center', bold: true });
+        const lost = log && !log.skipped && log.won === false;
+        text(ctx, log && log.skipped ? '건너뜀' : lost ? '짐 · 시계 −1' : '이김', x + w / 2, by + 3, lost ? PAL.red : PAL.dim, { align: 'center', bold: true });
       } else if (cur) {
         if (master) { button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '두기', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
         else {
