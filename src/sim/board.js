@@ -15,7 +15,7 @@ export function parseSq(name) {
 export const emptyBoard = () => new Array(64).fill(null);
 export const isEnemy = (cell) => cell != null && !cell.mine;
 // 노림을 거는 적: 얼린 적(묘수 「빙결」)은 이번 수 동안 아무것도 지키지 못한다
-const threat = (cell) => cell != null && !cell.mine && !cell.frozen;
+const threat = (cell) => cell != null && !cell.mine && !cell.frozen && !cell.muted; // muted: 정석 「횃불」(대국 내내)
 
 const KN = [[1, 2], [2, 1], [2, -1], [1, -2], [-1, -2], [-2, -1], [-2, 1], [-1, 2]];
 const KG = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];

@@ -84,8 +84,10 @@ export function bestMove(b, opts = {}) {
     const key = piece.t + JSON.stringify(piece.eng) + (piece.soul || '');
     if (seen.has(key)) continue;
     seen.add(key);
+    // 떨군 기물은 손에서 빠진다(실제 대국과 같게 — 손을 보는 조정자 「막내」 · 「맏이」 · 혼 「계주」)
+    const rest = b.hand.filter((_, i) => i !== handIndex);
     for (const sq of dropSquaresFor(b, piece)) {
-      const t = cloneTable({ ...b, chain: null });
+      const t = cloneTable({ ...b, hand: rest, chain: null });
       // 각인 명세는 복사해서 쓴다(탐색 중 조정자 state가 실제 손 기물에 새지 않게)
       startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) });
       const r = dfs(t, stats, preferMate, rank);
@@ -128,7 +130,7 @@ export function previewCapture(t, sq) {
 // 손 기물 handIndex를 sq에 떨구면 처음 먹을 수 있는 적
 export function previewDrop(b, handIndex, sq) {
   const piece = b.hand[handIndex];
-  const t = cloneTable({ ...b, chain: null });
+  const t = cloneTable({ ...b, hand: b.hand.filter((_, i) => i !== handIndex), chain: null });
   startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) });
   return { sq, form: piece.t, next: t.chain.done ? [] : chainCaptures(t) };
 }

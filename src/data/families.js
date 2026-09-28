@@ -18,6 +18,9 @@ export const FAMILIES = [
   { id: 'crown', name: '왕관', col: '#efbd55', text: ['승급하거나 퀸 · 아마존을 먹으면 값 +60', '일곱째 줄에서 승급한다', '외통하면 적이 다시 차고 사슬이 이어진다 · 대국마다 한 번'] },
   { id: 'march', name: '행진', col: '#c8b48a', text: ['폰으로 시작: 값 +40', '폰 모습으로 먹을 때마다 배수 +2', '폰으로 시작: 배수 ×3'] },
   { id: 'hunt', name: '사냥', col: '#8ec07c', text: ['같은 종류를 잇달아 먹으면 값 +30', '판에서 값이 가장 큰 적을 먹으면 배수 +4', '같은 종류를 잇달아 먹을 때마다 배수 ×1.5'] },
+  // 밤샘 2: 지키는 적(응수)과 증원에 하나씩
+  { id: 'counter', name: '역습', col: '#f080a8', text: ['지키는 적을 먹으면 값 +20', '지키는 적을 먹을 때마다 배수 +2', '지키는 적을 먹을 때마다 배수 ×1.3'] },
+  { id: 'ambush', name: '매복', col: '#c0c8d0', text: ['증원을 먹으면 값 +30', '증원 자리에 떨구면 배수 +3', '증원을 먹을 때마다 배수 ×1.5'] },
 ];
 export const FAMILY_BY_ID = Object.fromEntries(FAMILIES.map((f) => [f.id, f]));
 // 화면 이름: 「기사 시너지」(옛 이름 가족 · 모음 — docs/design-notes/voice.md). 칩 · 띠는 이름만(「기사 +1」 · 「기사 2/4」)
@@ -35,6 +38,12 @@ export const MAXIM_FAMILIES = {
   light_step: ['leap', 'march'], queen_hunt: ['hunt', 'crown'], bare_board: ['sacrifice'], homecoming: ['change'],
   collector_forms: ['change'], reply_master: ['sacrifice'], promotion_road: ['crown', 'march'], reinforce_hunt: ['hunt'],
   promotion_rush: ['crown', 'march'], mad_horse: ['leap'], rook_lift: ['line'],
+  // 밤샘 2
+  cavalry_charge: ['leap'], long_diagonal: ['diag'], encircle: ['hunt'], loner: ['hunt'], full_board: ['ambush'], youngest: ['march'],
+  eldest: ['crown'], second_wind: ['sacrifice'], all_in: ['sacrifice'], combo: ['hunt'], disguise: ['change'], checkerboard: ['diag'],
+  last_square: ['sacrifice'], nobility: ['crown'], farmer: ['march'], blacksmith: ['line'], soul_collector: ['change'], specialty: ['leap'],
+  thrift: ['sacrifice'], asceticism: ['crown'], gambler: ['change'], lucky_coin: ['ambush'], reversal: ['counter'], pilgrimage: ['line'],
+  kings_step: ['counter'], ambusher: ['ambush'], counter_book: ['counter'],
 };
 export const maximFamilies = (id) => MAXIM_FAMILIES[id] || (MAXIM_BY_ID[id] && MAXIM_BY_ID[id].families) || (LEGEND_BY_ID[id] && LEGEND_BY_ID[id].families) || [];
 
@@ -159,4 +168,22 @@ def('hunt', {
       if (!ctx.t.board.some((c) => c && !c.mine && c.t !== 'K' && PIECES[c.t].value > v)) ctx.addMult(4);
     }
   },
+});
+
+def('counter', {
+  onCapture(ctx) {
+    if (!ctx.event.forced) return;
+    ctx.addValue(20);
+    if (lv(ctx) >= 2) ctx.addMult(2);
+    if (lv(ctx) >= 3) ctx.mulMult(1.3);
+  },
+});
+def('ambush', {
+  onDrop(ctx) { if (lv(ctx) >= 2 && (ctx.t.incoming || []).some((r) => r.sq === ctx.event.sq)) ctx.flags.ambushSet = true; },
+  onCapture(ctx) {
+    if (!(ctx.event.born >= 0)) return;
+    ctx.addValue(30);
+    if (lv(ctx) >= 3) ctx.mulMult(1.5);
+  },
+  onChainEnd(ctx) { if (ctx.flags.ambushSet) ctx.addMult(3); },
 });

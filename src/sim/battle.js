@@ -8,6 +8,7 @@ import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { bestMove } from './solver.js';
 import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js';
 import { soulSpec } from '../data/souls.js';
+import { PIECES } from '../data/pieces.js';
 import { thaw } from '../data/tactics.js';
 
 export { enemyCount, kingGuards, reinforceCount, enemyWeights, kingDefended } from './setup.js';
@@ -76,6 +77,15 @@ export function arrive(b, events = []) {
   for (const r of b.incoming) {
     const sq = b.board[r.sq] ? nearestEmpty(b.board, r.sq) : r.sq;
     if (sq < 0) continue;
+    // onArrive(정석 「함정」): 들어오는 칸에서 붙잡히면 판에 서지 않고 값이 점수에 곧바로 든다
+    const ev = { sq, t: r.t, caught: false };
+    if (b.mods && b.mods.length) runHook(b, 'onArrive', ev, events);
+    if (ev.caught) {
+      const v = PIECES[r.t].value;
+      b.score += v;
+      events.push({ type: 'trapped', sq, planned: r.sq, piece: r.t, value: v, score: b.score });
+      continue;
+    }
     b.board[sq] = { t: r.t, id: b.nextId++, born: b.movesUsed };
     events.push({ type: 'reinforce', sq, planned: r.sq, piece: r.t });
   }
@@ -126,7 +136,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     seed, ante, kind, target,
     rules: { ...DEFAULT_RULES, ...rules },
     mods: JSON.parse(JSON.stringify(mods)),
-    rng: { board: fork(root, 'board'), bag: fork(root, 'bag'), reinf: fork(root, 'reinf'), glass: fork(root, 'glass') },
+    rng: { board: fork(root, 'board'), bag: fork(root, 'bag'), reinf: fork(root, 'reinf'), glass: fork(root, 'glass'), luck: fork(root, 'luck') },
     board: null,
     bag: bag.map(normPiece),
     hand: [], used: [],
@@ -157,6 +167,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
   layBoard(b, b.rng.board, fork(root, 'filter'));
   const gr = fork(root, 'gold');
   if (golden ?? next(gr) < goldenChance) placeGold(b, gr);
+  runHook(b, 'onSetup', {}, []);
   telegraph(b);
   markFairy(b);
   refreshHints(b);
@@ -204,6 +215,7 @@ export function reboard(b, events = []) {
   const r = fork(createRng((b.seed ?? 1) >>> 0), `reboard:${b.reboards}`);
   layBoard(b, fork(r, 'board'), fork(r, 'filter'));
   if (hadGold) placeGold(b, fork(r, 'gold'));
+  runHook(b, 'onSetup', {}, events);
   b.incomingNext = null;
   b.revealed = [];
   telegraph(b);
@@ -338,6 +350,13 @@ export function apply(b, cmd) {
 
 function endMove(b, events) {
   const c = b.chain;
+  // onChainLuck(격언 「도박사」 · 「행운의 동전」): 확률은 여기서만 굴린다(풀이기는 모른다)
+  if (b.mods && b.mods.length) {
+    const r = b.rng.luck || (b.rng.luck = fork(createRng((b.seed ?? 1) >>> 0), 'luck'));
+    b._luck = () => next(r);
+    runHook(b, 'onChainLuck', { reason: c.reason }, events);
+    delete b._luck;
+  }
   const before = b.score;
   b.score += c.score;
   if (b.target) {
@@ -355,7 +374,19 @@ function endMove(b, events) {
     b.shattered.push(b.chainPiece.id);
     b.deckSize--;
     events.push({ type: 'shatter', piece: b.chainPiece.t, id: b.chainPiece.id });
+  } else if (c.returnHome && !b.returnUsed) {
+    // 혼 「귀환」: 대국마다 한 번, 사슬을 푼 기물이 손으로 돌아온다(수는 쓴다)
+    b.returnUsed = true;
+    b.hand.push(b.chainPiece);
+    events.push({ type: 'returnHome', piece: b.chainPiece.t, id: b.chainPiece.id });
   } else b.used.push(b.chainPiece);
+  // 혼 「계주」: 이어 먹은 손 기물은 쓴 것으로
+  if (c.relay) {
+    const i = b.hand.findIndex((p) => p.id === c.relay.id);
+    if (i >= 0) b.used.push(...b.hand.splice(i, 1));
+  }
+  // 혼 「계승」: 대국 뒤 판(런)이 주머니의 그 기물을 마지막 모습으로 바꾼다
+  if (c.becomes) (b.becomes || (b.becomes = [])).push({ id: b.chainPiece.id, to: c.becomes });
   // 정석 「결사」 · 「왕좌」: 판(런)이 대국 뒤 주머니에 옮긴다
   if (c.pact) (b.exiled || (b.exiled = [])).push(b.chainPiece.id);
   if (c.throne) (b.crowned || (b.crowned = [])).push(b.chainPiece.id);
@@ -371,6 +402,7 @@ function endMove(b, events) {
   if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
   if (b.movesLeft <= 0) return finishBattle(b, 'lost', 'moves', events);
   arrive(b, events);
+  if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events); // 함정이 붙잡은 증원으로 넘길 때
   draw(b);
   checkStuck(b, events);
 }
@@ -394,6 +426,7 @@ export function checkStuck(b, events) {
 
 function finishBattle(b, status, reason, events) {
   b.status = status;
+  if (b.mods && b.mods.length) runHook(b, 'onBattleEnd', { status, reason }, events);
   b.result = { reason, score: b.score, movesLeft: b.movesLeft };
   events.push({ type: status === 'won' ? 'win' : 'lose', reason, score: b.score });
 }

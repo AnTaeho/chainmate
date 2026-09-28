@@ -6,6 +6,7 @@
 //   rules(battle, rng)  대국 규칙을 더한다(판 위 사물: 문 · 발판, 고속도로 줄) — 판을 짓기 전에
 import { defineModifier } from '../sim/scoring.js';
 import { martyrBurst, MARTYR_TEXT, MARTYR_MORE } from './souls.js';
+import { PIECES } from './pieces.js';
 import { createRng, fork, next } from '../sim/rng.js';
 
 export const DRAFT_ANTES = [1, 3, 5];
@@ -105,6 +106,60 @@ joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 사슬이 한 줄�
   },
 });
 joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 시너지는 1 · 3 · 5개에서 켜진다');
+
+
+// ── 밤샘 2: 열하나 더(docs/design-notes/content-expansion.md)
+const foeAt = (c) => c && !c.mine && c.t !== 'K' && c.t !== 'X' && c.t !== 'J';
+// 값이 큰 적 차례(같으면 칸 번호)
+const heavyFirst = (board) => board.map((c, sq) => (foeAt(c) ? sq : -1)).filter((sq) => sq >= 0).sort((x, y) => PIECES[board[y].t].value - PIECES[board[x].t].value || x - y);
+joseki('desert', '사막', 'silver', ['leap'], '나이트 둘이 낙타가 된다', {
+  pick(run, events) { evolve(run, 'N', 'L', 2, events); },
+});
+joseki('meadow', '풀밭', 'silver', ['march'], '폰 둘이 메뚜기가 된다', {
+  pick(run, events) { evolve(run, 'P', 'G', 2, events); },
+});
+joseki('battery', '포대', 'silver', ['line'], '룩 하나가 포가 된다', {
+  pick(run, events) { evolve(run, 'R', 'O', 1, events); },
+});
+joseki('gloom', '그늘', 'silver', ['diag'], '비숍 하나가 유령이 된다', {
+  pick(run, events) { evolve(run, 'B', 'W', 1, events); },
+});
+joseki('river', '강', 'silver', ['line'], '가운데 두 줄을 건너 먹을 때마다 배수 +1', {
+  more: '넷째 줄과 다섯째 줄 사이가 강',
+  onCapture(ctx) { const a = ctx.event.from >> 3, b = ctx.event.to >> 3; if ((a <= 3 && b >= 4) || (a >= 4 && b <= 3)) ctx.addMult(1); },
+});
+joseki('torch', '횃불', 'gold', ['counter'], '대국마다 값이 가장 큰 적 둘은 아무것도 지키지 못한다', {
+  onSetup(ctx) { const b = ctx.t.board; for (const sq of heavyFirst(b).slice(0, 2)) b[sq] = { ...b[sq], muted: true }; },
+});
+joseki('trap', '함정', 'gold', ['ambush'], '대국마다 빈칸 둘이 함정 · 증원이 들면 먹은 것으로 친다', {
+  more: '붙잡은 증원의 값이 곧바로 점수가 된다',
+  onSetup(ctx) {
+    const b = ctx.t.board, free = [];
+    for (let sq = 24; sq < 64; sq++) if (!b[sq]) free.push(sq);
+    const traps = [];
+    while (traps.length < 2 && free.length) traps.push(free.splice(Math.floor(ctx.rng() * free.length), 1)[0]);
+    ctx.t.rules = { ...ctx.t.rules, traps };
+  },
+  onArrive(ctx) { const tr = ctx.t.rules && ctx.t.rules.traps; if (tr && tr.includes(ctx.event.sq)) ctx.event.caught = true; },
+});
+joseki('blitz', '속기', 'gold', ['change'], '수 +1 · 손 −1', {
+  onBattleStart(ctx) { ctx.rules.moves = (ctx.rules.moves ?? 4) + 1; ctx.rules.hand = Math.max(2, (ctx.rules.hand ?? 4) - 1); },
+});
+joseki('long_think', '장고', 'gold', ['hunt'], '수 −1 · 손 +2 · 버리기 +1', {
+  onBattleStart(ctx) { ctx.rules.moves = Math.max(1, (ctx.rules.moves ?? 4) - 1); ctx.rules.hand = (ctx.rules.hand ?? 4) + 2; ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
+});
+joseki('first_mover', '선수', 'rainbow', ['crown'], '대국 시작에 값이 가장 큰 적 하나가 판에서 빠진다', {
+  onSetup(ctx) { const b = ctx.t.board; const sq = heavyFirst(b)[0]; if (sq != null) { b[sq] = null; ctx.emit({ type: 'firstMover', sq }); } },
+});
+joseki('captive', '포로', 'rainbow', ['change'], '대국 첫 사슬이 마지막에 먹은 적이 주머니에 들어온다', {
+  more: '주머니 열넷까지',
+  onChainEnd(ctx) {
+    const c = ctx.chain, last = c.captures.at(-1);
+    if ((ctx.t.movesUsed ?? 0) || !last || last.piece === 'K' || (PIECES[last.piece] && PIECES[last.piece].thing)) return;
+    (c.traitors || (c.traitors = [])).push(last.piece);
+    ctx.emit({ type: 'captive', piece: last.piece });
+  },
+});
 
 export const JOSEKI_BY_ID = Object.fromEntries(JOSEKIS.map((j) => [j.id, j]));
 export const josekiFamilies = (ids) => (ids || []).flatMap((id) => (JOSEKI_BY_ID[id] ? [JOSEKI_BY_ID[id].families] : []));

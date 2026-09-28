@@ -12,8 +12,8 @@ function chain(map, drop, at, caps, mods, extra = {}) {
   return t.chain;
 }
 
-test('격언은 마흔셋(밤샘 여덟 · 깊이 G 셋) · 새 여덟은 동사가 겹치지 않게 퍼졌다', () => {
-  assert.equal(MAXIMS.length, 43);
+test('격언은 일흔(밤샘 여덟 · 깊이 G 셋 · 밤샘 2 스물일곱) · 새 여덟은 동사가 겹치지 않게 퍼졌다', () => {
+  assert.equal(MAXIMS.length, 70);
   const ids = ['light_step', 'queen_hunt', 'bare_board', 'homecoming', 'collector_forms', 'reply_master', 'promotion_road', 'reinforce_hunt'];
   for (const id of ids) assert.ok(MAXIMS.find((m) => m.id === id), id);
 });

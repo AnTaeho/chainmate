@@ -23,6 +23,14 @@
 //   onChainEnd     사슬이 끝날 때(끊김 · 막힘 · 외통). ctx.event = { reason }. ×배수는 여기서.
 //                  ctx.chain.scoreMul(기본 1)을 곱하면 최종 점수 배율(예: 명인 「앙갚음」 0.5).
 //   onBoard        대국판이 바뀐 뒤(시작 · 먹기 · 증원). 화면용 표시를 ctx.t.hints에 적는다. 점수와 무관, 풀이기는 부르지 않는다.
+//   ── 밤샘 2(가짓수 늘리기)에서 더한 일반 훅
+//   onSetup        판을 다 깐 뒤(대국 시작 · 다시 놓기). 판 위 적 · 사물을 고칠 수 있다(정석 「횃불」 · 「함정」 · 「선수」).
+//                  ctx.rng()는 (대국 시드, 조정자 id, 몇째 다시 놓기)로 정해진 난수.
+//   onArrive       증원 하나가 들어오기 직전. ctx.event = { sq, t }. ctx.event.caught = true면 들어오지 않고 먹은 것으로(값을 점수에 곧바로).
+//   onBattleEnd    대국이 끝날 때. ctx.event = { status, reason }. ctx.addBattleMoney(n)로 상금.
+//   onChainLuck    사슬이 끝나 점수를 대국에 더하기 직전(battle.js endMove에서만 — 풀이기는 모른다, 각인 「유리」와 같은 자리).
+//                  ctx.roll()은 대국의 운 흐름에서 0~1, ctx.rescore(x)는 사슬 배수를 곱하고 점수를 다시 셈한다.
+//   onBuild(spec, build)  판(런)이 대국 조정자를 꾸릴 때(run.js battleMods). 짜임(주머니 · 격언 칸)에서 셀 값을 spec.data에 적는다.
 //
 // 사슬 밖에 남는 것: ctx.addMoney(n) — 이번 사슬에서 번 상금(chain.money). 대국이 모아 판(런)에 넘긴다.
 // 명세에 off: true가 붙으면 그 조정자는 꺼진다(명인 「침묵」 · 「대가」).
@@ -36,8 +44,9 @@
 
 import { attackers } from './board.js';
 import { chartForm } from '../data/pieces.js';
+import { createRng, fork, next } from './rng.js';
 
-export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onThreat', 'onForced', 'onCut', 'onMate', 'onBlocked', 'onChainStop', 'onChainEnd', 'onBoard'];
+export const HOOKS = ['onBattleStart', 'onDropCheck', 'onDrop', 'allowCapture', 'onCapture', 'onTransform', 'onPromote', 'onThreat', 'onForced', 'onCut', 'onMate', 'onBlocked', 'onChainStop', 'onChainEnd', 'onBoard', 'onSetup', 'onArrive', 'onBattleEnd', 'onChainLuck'];
 // ctx가 「기본 결말을 물린다」를 돌려줄 수 있는 훅: onCut(cancelCut) · onMate(keepGoing) · onChainStop(redrop)
 //   · onThreat(ignoreThreat — 먹은 칸의 노림을 이번 한 번 없는 것으로, 깊이 B 「도약」) · onBlocked(keepGoing — 막혔을 때 한 번 더, 「변신」)
 const CANCEL_HOOKS = new Set(['onCut', 'onMate', 'onChainStop', 'onThreat', 'onBlocked']);
@@ -118,6 +127,11 @@ class Ctx {
   redrop() { this._cancel = true; }
   ignoreThreat() { this._cancel = true; }
   emit(ev) { this._events.push({ ...ev, src: this.spec.id }); }
+  // ── 대국 쪽(사슬 밖에서 부르는 훅용)
+  addBattleMoney(n) { if (!n) return; this.t.money = (this.t.money || 0) + n; this._events.push({ type: 'money', src: this.spec.id, money: n }); }
+  rng() { if (!this._rng) this._rng = fork(createRng((this.t.seed ?? 1) >>> 0), `${this.spec.id}:${this.t.reboards || 0}`); return next(this._rng); }
+  roll() { return this.t._luck ? this.t._luck() : 1; }
+  rescore(x) { if (x === 1) return; this.chain.mult *= x; this.chain.score = finalScore(this.chain); this._events.push({ type: 'score', src: this.spec.id, xmult: x, luck: true }); }
 }
 
 // 훅을 차례로 부른다. 돌려주는 값: allowCapture면 허용 여부, onCut · onMate · onChainStop이면 기본 결말을 물렸나, 그 밖엔 없음.

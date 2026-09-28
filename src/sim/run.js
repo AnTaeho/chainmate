@@ -214,8 +214,14 @@ export function battleMods(build, master = null) {
   mods.push(...familyMods(counts, dropFor));
   // 정석(깊이 E)
   for (const id of build.josekis || []) mods.push({ id: `joseki:${id}` });
+  // onBuild: 짜임에서 셀 값(격언 「혼 수집가」 · 「금욕」). 격언 칸 빈자리는 판의 칸 수로(봇의 그려 보기는 기본 칸)
+  const room = maximCapacity({ maximSlots: build.maximSlots ?? RUN_DEFAULTS.maximSlots, maxims: build.maxims }) - build.maxims.filter((m) => !m.legendary).length;
+  const view = { deck: build.deck || [], maximFree: Math.max(0, room) };
   for (const m of build.maxims) {
-    mods.push({ id: m.id, uid: m.uid, data: clone(m.data || {}) });
+    const spec = { id: m.id, uid: m.uid, data: clone(m.data || {}) };
+    const def = getModifier(m.id);
+    if (def && def.onBuild) def.onBuild(spec, view);
+    mods.push(spec);
     const ed = editionSpec(m);
     if (ed) mods.push(ed);
   }
@@ -260,6 +266,8 @@ function endBattle(run, events) {
   // 적 특성 「배신자」: 먹은 배신자가 내 주머니로(주머니가 너무 커지지 않게 열넷까지)
   for (const t of b.traitors || []) if (run.deck.length < TRAIT_CHANCE.traitorDeckMax) addPiece(run, t, events);
   for (const id of b.crowned || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t === 'P') { p.t = 'Q'; events.push({ type: 'evolve', pieceId: id, from: 'P', to: 'Q' }); } }
+  // 혼 「계승」: 사슬이 끝난 모습으로(여러 번이면 마지막)
+  for (const { id, to } of b.becomes || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t !== to) { events.push({ type: 'evolve', pieceId: id, from: p.t, to }); p.t = to; } }
   const grades = {};
   for (const h of b.history) { const g = gradeOf(h.captures); if (g) grades[g.mark] = (grades[g.mark] || 0) + 1; }
   const row = {

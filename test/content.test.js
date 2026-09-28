@@ -1,6 +1,7 @@
 // 격언 32 · 각인 6 · 명인 8 · 기보: 손으로 짠 장면에서 정확한 점수 변화를 확인한다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { NEW_MAXIMS } from './expansion.test.js';
 import { boardFrom, parseSq as S, isEnemy } from '../src/sim/board.js';
 import { startChain, chainCapture, chainCaptures } from '../src/sim/chain.js';
 import { createBattle, apply, legalCommands, refreshHints, visibleIncoming, isHidden } from '../src/sim/battle.js';
@@ -121,14 +122,16 @@ for (const [id, scene, score, extra = {}, money, more] of CASES) {
   });
 }
 
-test('격언 43종 모두 장면 검사가 있다', () => {
-  assert.equal(MAXIMS.length, 43);
+test('격언 70종 모두 장면 검사가 있다', () => {
+  assert.equal(MAXIMS.length, 70);
   const covered = new Set(CASES.map((c) => c[0]));
   for (const id of ['sacrifice', 'back_rank_dream', 'memory', 'collector', 'ivory_tower', 'kings_neck', 'shadow_reading']) covered.add(id);
   // 밤샘 D-8의 여덟은 test/newmaxims.test.js
   for (const id of ['light_step', 'queen_hunt', 'bare_board', 'homecoming', 'collector_forms', 'reply_master', 'promotion_road', 'reinforce_hunt']) covered.add(id);
   // 깊이 G의 셋도 test/newmaxims.test.js
   for (const id of ['promotion_rush', 'mad_horse', 'rook_lift']) covered.add(id);
+  // 밤샘 2의 스물일곱은 test/expansion.test.js
+  for (const id of NEW_MAXIMS) covered.add(id);
   for (const m of MAXIMS) assert.ok(covered.has(m.id), m.id);
   for (const m of MAXIMS) {
     assert.ok(['common', 'uncommon', 'rare'].includes(m.rarity), m.id);
@@ -218,7 +221,7 @@ test('각인: 금 상금 +2 · 상아 값 +30 · 흑단 ×1.5 · 유리 ×2', ()
   assert.equal(play('knight', [], {}, { id: 'ivory' }).score, 60);
   assert.equal(play('knight', [], {}, { id: 'ebony' }).score, 45);
   assert.equal(play('knight', [], {}, { id: 'glass' }).score, 60);
-  assert.equal(ENGRAVINGS.length, 6);
+  assert.equal(ENGRAVINGS.length, 12);
 });
 
 test('각인 은: 첫 먹기의 끊김만 넘긴다', () => {

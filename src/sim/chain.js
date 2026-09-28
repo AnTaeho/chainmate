@@ -8,7 +8,7 @@
 // 이벤트: drop · capture · golden · grade · transform · promote · forced · cut · cutIgnored · mate · refill ·
 //         redropReady · redrop · end · score
 // 사슬이 끝나면 t.chain.done = true, 내 기물은 판에서 내려간다.
-import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy } from './board.js';
+import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy, kingTakeable, at } from './board.js';
 import { PIECES } from '../data/pieces.js';
 import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
@@ -66,11 +66,28 @@ export function chainCaptures(t) {
   if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
   // 흡수: 먹은 행마가 더해진다(모습은 그대로)
   if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
+  // 혼 「역행」: 폰 모습이면 아래 대각으로도 · 혼 「도약」: 첫 먹기는 두 칸 안의 적 어디든(밤샘 2)
+  if (c.flags.pawnBack && c.form === 'P') for (const df of [-1, 1]) { const s = at((c.sq & 7) + df, (c.sq >> 3) - 1); if (s >= 0 && takeableAt(t, s, c.sq, bo) && !list.includes(s)) list.push(s); }
+  if (c.flags.spring && !c.captures.length) {
+    for (let df = -2; df <= 2; df++) for (let dr = -2; dr <= 2; dr++) {
+      const s = at((c.sq & 7) + df, (c.sq >> 3) + dr);
+      if (s >= 0 && s !== c.sq && takeableAt(t, s, c.sq, bo) && !list.includes(s)) list.push(s);
+    }
+  }
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
   if (list.length && ((t.mods && t.mods.length) || c.engraving || c.soul)) {
     list = list.filter((s) => runHook(t, 'allowCapture', { from: c.sq, to: s, piece: t.board[s].t, form: c.form }));
   }
   return list;
+}
+
+// 행마와 상관없이 s의 적을 먹을 수 있나(벽 · 방패 · 지켜진 킹 규칙은 captures와 같다)
+function takeableAt(t, s, from, bo) {
+  const x = t.board[s];
+  if (!isEnemy(x) || x.t === 'X') return false;
+  if (x.trait === 'shield' && bo.first) return false;
+  if (x.t === 'K' && !bo.openKings && !kingTakeable(t.board, s, from, bo)) return false;
+  return true;
 }
 
 export function chainCapture(t, sq) {
