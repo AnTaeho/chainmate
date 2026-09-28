@@ -1,5 +1,5 @@
 // 화면 연기 시험: 가짜 캔버스 · 가짜 입력으로 실제 src/main.js를 부팅해, 봇 명령을 화면 누르기로 바꿔 판을 끝까지 돈다.
-//   node tools/smoke.mjs [--seed 3] [--runs 2] [--verbose]
+//   node tools/smoke.mjs [--seed 3] [--runs 2] [--verbose] [--lang en] [--spacing pad8,line14,…]
 // 확인: 예외 0 · 모든 화면 방문 · 프레임당 그리기 시간 · 한 수 연출 시간(×1) · 저장 → 이어 하기.
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle } from './bot.mjs';
@@ -14,6 +14,8 @@ const SEED = Number(opt('--seed', 3));
 const LANG = opt('--lang', 'ko');
 const RUNS = Number(opt('--runs', 2));
 const VERBOSE = args.includes('--verbose');
+// --spacing pad8,card7,line14,title18,in3,group8: 글 간격 시안으로 자리 규칙을 잰다(src/ui/frame.js applySpacing)
+if (opt('--spacing', null)) globalThis.__SPACING = opt('--spacing', null);
 const log = (...a) => { if (VERBOSE) console.log(...a); };
 
 globalThis.__CHAINMATE_NO_BOOT__ = true;

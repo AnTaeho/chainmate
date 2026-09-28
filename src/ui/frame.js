@@ -100,3 +100,18 @@ export const CHIP_ROW = 13;                  // 시너지 칩 줄(칩 11 + 2)
 export const FAM_ROW = 15;                   // 왼쪽 칸 시너지 세로 줄(칩 13 + 2)
 export const ROW_TEXT = 5;                   // 한 줄 판넬(높이 22 · 24) 안 글 높이 — 가운데에 둔다
 export const ART_H = 26;                     // 물건 카드 그림 칸 높이
+
+// ── 시안: 글 간격 토큰 덮어쓰기(화면 모습만 — 저장 · 규칙과 상관없다).
+//   「pad8,card7,line14,title18,in3,group8」 꼴: pad PAD_BOX · card PAD_CARD · line LINE · title LINE_TITLE · in GAP_IN · group GAP_GROUP.
+//   이름 하나의 모든 자리를 그 값으로 맞춘다. 브라우저는 주소 ?spacing=…, 연기 시험 · 도구는 globalThis.__SPACING(모듈을 부르기 전에).
+const SPACING_KEYS = { pad: PAD_BOX, card: PAD_CARD, line: LINE, title: LINE_TITLE, in: GAP_IN, group: GAP_GROUP };
+export function applySpacing(spec) {
+  for (const part of String(spec).split(',').map((q) => q.trim()).filter(Boolean)) {
+    const m = part.match(/^([a-z]+)(-?\d+)$/);
+    if (!m || !SPACING_KEYS[m[1]]) throw new Error(`글 간격 시안을 읽지 못했다: ${part}`);
+    const t = SPACING_KEYS[m[1]];
+    for (const k of Object.keys(t)) t[k] = Number(m[2]);
+  }
+}
+const spacingSpec = globalThis.__SPACING ?? (typeof location !== 'undefined' && location.search ? new URLSearchParams(location.search).get('spacing') : null);
+if (spacingSpec) applySpacing(spacingSpec);

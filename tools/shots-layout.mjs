@@ -1,5 +1,6 @@
 // 레이아웃 점검 스크린샷: 모든 화면과, 화면마다 가리킬 수 있는 것(말풍선 · 낱말 상자가 뜨는 구역)을 하나씩 가리킨 모습.
-//   node tools/shots-layout.mjs [--prefix before|after] [--lang ko|en] [--out docs/shots/layout] [--only 이름]
+//   node tools/shots-layout.mjs [--prefix before|after] [--lang ko|en] [--out docs/shots/layout] [--only 이름] [--spacing pad8,card7,line14,title18,in3,group8] [--det]
+//   --spacing: 글 간격 토큰을 덮어쓴 모습(src/ui/frame.js SPACING — 시안 찍기용). --det: 시계 · 무작위를 멈춰 같은 코드면 같은 그림(고치기 전후 픽셀 견주기)
 // 파일: <prefix>-<번호>-<화면>.png(가리키지 않은 모습)와 <prefix>-<번호>-<화면>~<구역>.png(그 구역을 가리킨 모습). 480×270 1배.
 // 번호는 장면 차례에 묶여 before · after가 같은 이름으로 짝이 된다. 영어(--lang en)는 대표 화면만, 이름 앞에 en-.
 // 가리킨 모습마다 그린 설명 네모(말풍선 · 낱말 상자 · 처음 안내)를 <prefix>[-en].json에 남긴다(보고서 · 견주기용).
@@ -18,6 +19,8 @@ const LANG = opt('--lang', 'ko');
 const OUT = path.resolve(ROOT, opt('--out', 'docs/shots/layout'));
 const ONLY = opt('--only', null);
 const TAG = LANG === 'en' ? 'en-' : '';
+const SPACING = opt('--spacing', null);
+const DET = args.includes('--det');
 
 async function loadPlaywright() {
   try { return await import('playwright'); } catch { /* 전역 */ }
@@ -38,7 +41,19 @@ const page = await browser.newPage({ viewport: { width: 480, height: 270 }, devi
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 fs.mkdirSync(OUT, { recursive: true });
-const settle = (ms = 300) => page.waitForTimeout(ms);
+// --det: 페이지 시계를 멈춰 두고 기다림만큼 손으로 흘린다(연출 · 반짝임이 찍는 때에 따라 달라지지 않게)
+const settle = (ms = 300) => (DET ? page.clock.runFor(ms) : page.waitForTimeout(ms));
+async function until(fn) {
+  if (!DET) return page.waitForFunction(fn, null, { timeout: 20000 });
+  for (let i = 0; i < 400; i++) { if (await ev(fn)) return; await page.clock.runFor(50); }
+  throw new Error(`기다림 초과: ${fn}`);
+}
+if (DET) {
+  // 화면 연출의 Math.random도 같은 씨앗으로
+  await page.addInitScript(() => { let a = 12345; Math.random = () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; });
+  await page.clock.install({ time: 0 });
+  await page.clock.pauseAt(1000);
+}
 const ev = (fn, arg) => page.evaluate(fn, arg);
 const log = {};
 let shots = 0;
@@ -142,14 +157,14 @@ async function scene(name, setup, { wait = 400, hover = true, before = null } = 
 }
 
 // ── 준비: 빈 저장소 · 처음 안내는 본 것으로(따로 안내 장면에서만 켠다) · 두 배 빠르기
-await page.goto(`http://localhost:${srv.address().port}/index.html`);
+await page.goto(`http://localhost:${srv.address().port}/index.html${SPACING ? `?spacing=${encodeURIComponent(SPACING)}` : ''}`);
 await ev((lang) => {
   localStorage.clear();
   localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang, speed: 2 }));
   localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, runs: 3 }));
 }, LANG);
 await page.reload();
-await page.waitForFunction(() => window.__app && window.__app.screen);
+await until(() => window.__app && window.__app.screen);
 await ev(async () => {
   const a = window.__app;
   const { HINTS } = await import('/src/ui/coach.js');
@@ -211,9 +226,9 @@ if (ko) {
       await settle(2600);
       const plan = await ev(async () => { const { bestMove } = await import('/src/sim/solver.js'); const d = bestMove(window.__app.run.battle, { preferMate: 'avoid' }); return { hand: d.handIndex, sq: d.sq, line: d.line }; });
       await clickId(`hand:${plan.hand}`); await clickId(`sq:${plan.sq}`);
-      await page.waitForFunction(() => !window.__app.screen.busy, null, { timeout: 20000 });
+      await until(() => !window.__app.screen.busy);
       await clickId(`sq:${plan.line[0]}`);
-      await page.waitForFunction(() => !window.__app.screen.busy, null, { timeout: 20000 });
+      await until(() => !window.__app.screen.busy);
     },
   });
   // 막간
