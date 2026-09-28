@@ -4,7 +4,7 @@
 //
 // 국면(run.phase)과 명령
 //   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
-//   select  다음 대국 앞.   play | skip(연습 · 정식만) | use | moveMaxim
+//   select  다음 대국 앞.   play | skip(연습 · 정식만) | use | moveMaxim | shop(떠나온 상점으로 돌아가기)
 //   battle  대국 중.        drop | capture | discard
 //   shop    대국을 이긴 뒤. buy | buyPack | reroll | sell | use | promote | remove | moveMaxim | leave
 //   pack    꾸러미를 연 뒤. pick | skipPack
@@ -397,6 +397,7 @@ function applyChestItem(run, it, events) {
 // ── 상점
 function openShop(run) {
   run.shop = {
+    ante: run.ante, blind: run.blind, // 이 상점이 열린 대국 자리(떠났다 돌아오면 여기로 되돌린다)
     rng: fork(root(run), `shop:${run.ante}:${run.blind}`),
     display: [], packs: [], rerolls: 0, promoted: false, removed: false,
   };
@@ -405,8 +406,9 @@ function openShop(run) {
   run.phase = 'shop';
 }
 
+// 다음 대국 앞으로. 상점은 지우지 않는다: 관 선택에서 떠나온 상점으로 돌아갈 수 있게(명령 shop). 두기 · 건너뛰기가 지운다.
 function advance(run) {
-  run.shop = null;
+  if (run.shop && run.shop.ante == null) { run.shop.ante = run.ante; run.shop.blind = run.blind; } // 옛 저장 · 수업(자리 없는 상점)
   run.pack = null;
   if (run.blind < 2) run.blind++;
   else { run.blind = 0; run.ante++; }
@@ -482,6 +484,9 @@ export function canBuy(run, it) {
   return true;
 }
 
+// 관 선택에서 떠나온 상점으로 돌아갈 수 있나(판의 첫 대국 앞 · 건너뛴 뒤 · 두기 뒤에는 상점이 없다)
+export const canReopenShop = (run) => run.phase === 'select' && !!run.shop && run.shop.ante != null;
+
 export const sellPrice = (m) => Math.max(1, Math.floor((m.paid || 0) / 2));
 export const canSell = (m) => !!m && !m.legendary;
 
@@ -506,6 +511,7 @@ export function applyRun(run, cmd) {
     }
     case 'play': {
       need('select');
+      run.shop = null;
       startBattle(run);
       events.push({ type: 'battleStart', ...blindInfo(run) });
       break;
@@ -519,6 +525,7 @@ export function applyRun(run, cmd) {
       else if (tag.kind === 'chart') useChart(run, tag.form, events);
       events.push({ type: 'skip', tag });
       run.log.push({ ante: run.ante, blind: run.blind, kind: info.kind, skipped: true, tag });
+      run.shop = null;
       advance(run);
       break;
     }
@@ -656,6 +663,16 @@ export function applyRun(run, cmd) {
     case 'leave': {
       need('shop');
       advance(run);
+      break;
+    }
+    // 관 선택에서 떠나온 상점으로 돌아간다. 상점이 열린 대국 자리로 되돌려, 상점 안은 떠날 때와 똑같다(진열 · 꾸러미 · 횟수).
+    // 다시 떠나면(leave) 같은 대국 앞으로 온다(정석은 이미 골라 다시 열리지 않는다). 봇에게 뜻이 없어 legalRunCommands에는 넣지 않는다.
+    case 'shop': {
+      need('select');
+      if (!canReopenShop(run)) throw new Error('no shop to return to');
+      run.ante = run.shop.ante;
+      run.blind = run.shop.blind;
+      run.phase = 'shop';
       break;
     }
     case 'endless': {
