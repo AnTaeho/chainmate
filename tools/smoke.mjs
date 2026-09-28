@@ -699,6 +699,9 @@ const swapSeen = { same: 0, shopBack: 0, shopSwap: 0, soulSwap: 0, packBack: 0, 
     if (s().target && s().target.pieceId == null && !region('target:ok')) swapSeen.same++; else bad('같은 각인이 있는 기물이 골라졌다');
     click(`deck:${gold.id}`);
     if (!region('target:swap') || !region('target:ok') || r.consumables.length !== 2 || gold.eng.id !== 'gold') bad('금 각인 기물에 확인이 뜨지 않았다');
+    // 옛 문양을 가리키면 옛 효과(설명 자리 규칙 · 영어 옮김도 같이 잰다)
+    if (!hover('target:swap') || !hoverTip()) bad('옛 문양 말풍선이 뜨지 않았다');
+    notesCheck();
     click('target:cancel');
     if (s().target && s().target.index === 0 && s().target.pieceId == null && r.consumables.length === 2 && gold.eng.id === 'gold' && !region('target:swap')) swapSeen.shopBack++; else bad('상점 「그만」이 대상 고르기로 돌아가지 않았다');
     click(`deck:${gold.id}`);
@@ -719,6 +722,7 @@ const swapSeen = { same: 0, shopBack: 0, shopSwap: 0, soulSwap: 0, packBack: 0, 
     click('pack:pick:0');
     click(`deck:${gold.id}`);
     if (!region('target:swap')) bad('꾸러미에서 금 각인 기물에 확인이 뜨지 않았다');
+    notesCheck();
     click('target:cancel');
     if (screen() === 'pack' && r.phase === 'pack' && r.pack && app.screen.engraveIndex === 0 && app.screen.engraveTarget == null && gold.eng.id === 'gold') swapSeen.packBack++; else bad('꾸러미 「그만」이 대상 고르기로 돌아가지 않았다');
     click(`deck:${gold.id}`);
