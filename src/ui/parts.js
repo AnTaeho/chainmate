@@ -636,16 +636,23 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
 // 자리(재기와 그리기가 같이 쓴다): 안 여백 PAD_BOX, 왼쪽에 고른 기물 › 된 모습(기물을 골랐으면), 그 오른쪽에 이름(제목 줄) → 묶음 틈 → 효과 글.
 // 단추(「새긴다」 · 「그만」)는 폭이 넉넉하면(300 이상) 오른쪽에 세로로, 좁으면 글 아래 줄에 나란히.
 const TP_BTN = { w: 56, h: 16 };
+// 한 기물에 각인 하나 · 혼 하나(run.js engrave · ensoul은 있던 것을 바꾼다). 같은 종류가 이미 있으면 그 id(바꾸기), 같은 것이면 고를 수 없다
+export const heldOf = (what, p) => (!p ? null : what.kind === 'engraving' ? (p.eng ? p.eng.id : null) : what.kind === 'soul' ? p.soul || null : null);
+export const targetOk = (what, p) => !what || heldOf(what, p) !== what.id || what.kind === 'evolve';
+const markName = (kind, id) => (kind === 'engraving' ? engravingInfo(id).name : SOUL_BY_ID[id].name);
 function targetText(run, what, p, to) {
   const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
   if (!p) return { title: what.kind === 'engraving' ? '주머니에서 새길 기물을 고른다' : what.kind === 'soul' ? '주머니에서 깃들 기물을 고른다' : '주머니에서 자랄 기물을 고른다', body: eff };
   const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
+  // 바꾸기: 옛 것 › 새 것(문양 둘과 이름 둘)
+  const held = heldOf(what, p);
+  if (held && held !== what.id) return { title: `${markName(what.kind, held)} › ${markName(what.kind, what.id)}`, body: eff, after, swap: held };
   const title = what.kind === 'evolve' ? `${PIECE_NAME[p.t]} › ${PIECE_NAME[after.t]}` : `${PIECE_NAME[p.t]}에 ${what.kind === 'engraving' ? `${engravingInfo(what.id).name} 각인` : `${SOUL_BY_ID[what.id].name}의 혼`}`;
   return { title, body: what.kind === 'evolve' ? (PIECE_MOVE[after.t] || '') : eff, after };
 }
 export function targetPanelLayout(run, what, p, w, { to = null } = {}) {
   const P = PAD_BOX, side = w >= 300;
-  const { title, body, after } = targetText(run, what, p, to);
+  const { title, body, after, swap = null } = targetText(run, what, p, to);
   const artW = p ? 56 : 0;
   const tw = w - P * 2 - artW - (side ? TP_BTN.w + 8 : 0);
   const f = flow(P);
@@ -655,16 +662,27 @@ export function targetPanelLayout(run, what, p, w, { to = null } = {}) {
   let h = Math.max(f.y, P + (p ? 28 : 0), P + (side ? TP_BTN.h * 2 + GAP_IN : 0));
   let btnY = P;
   if (!side) { btnY = h + GAP_GROUP; h = btnY + TP_BTN.h; }
-  return { h: h + P, titles, lines, tx: P + artW, btnY, side, after };
+  return { h: h + P, titles, lines, tx: P + artW, btnY, side, after, swap };
 }
-export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfirm = null, onCancel = null, idPrefix = 'target' } = {}) {
+// 바꾸기(고른 기물에 같은 종류가 이미 있으면): 그림 자리에 옛 문양 › 새 문양, 제목 「옛 이름 › 새 이름」, 단추 「바꾸기」 · 「그만」.
+//   이때 「그만」은 onBack(대상 고르기로 — 두루마리 · 꾸러미는 그대로)
+export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfirm = null, onCancel = null, onBack = null, idPrefix = 'target' } = {}) {
   const lay = targetPanelLayout(run, what, p, w, { to });
   const h = lay.h, P = PAD_BOX;
   ui.region(`${idPrefix}:panel`, x, y, w, h, {});
   openBox('panel', x, y, w, h, P, { name: '새기기 미리 보기' });
   box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
-  const verb = what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : '자란다';
-  if (p) {
+  const verb = lay.swap ? '바꾸기' : what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : '자란다';
+  if (p && lay.swap) {
+    // 옛 문양(가리키면 옛 효과) › 새 문양(금빛 테)
+    const mark = (id, mx, my) => (what.kind === 'engraving' ? engravingEmblem(ctx, id, mx, my) : soulEmblem(ctx, id, mx, my, ui.time));
+    const old = lay.swap;
+    ui.region(`${idPrefix}:swap`, x + P, y + P + 1, 22, 26, { tip: () => (what.kind === 'engraving' ? tipLines(`${engravingInfo(old).name} 각인`, engravingInfo(old).text) : tipLines(`${SOUL_BY_ID[old].name}의 혼`, SOUL_BY_ID[old].text)) });
+    mark(old, x + P, y + P + 1);
+    for (let i = 0; i < 3; i++) { rect(ctx, x + P + 24 + i, y + P + 11 + i, 1, 1, PAL.gold); rect(ctx, x + P + 24 + i, y + P + 17 - i, 1, 1, PAL.gold); }
+    mark(what.id, x + P + 30, y + P + 1);
+    frame(ctx, x + P + 29, y + P, 24, 28, PAL.gold);
+  } else if (p) {
     const after = lay.after;
     pieceCard(ctx, p, x + P, y + P, 20, 28, { tier: tierOf(chartLevel(run, p.t)), level: chartLevel(run, p.t) });
     for (let i = 0; i < 3; i++) { rect(ctx, x + P + 24 + i, y + P + 11 + i, 1, 1, PAL.gold); rect(ctx, x + P + 24 + i, y + P + 17 - i, 1, 1, PAL.gold); }
@@ -677,7 +695,8 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
   const okAt = lay.side ? [bx, y + P] : [bx - TP_BTN.w - 4, y + lay.btnY];
   const noAt = lay.side ? [bx, y + P + TP_BTN.h + GAP_IN] : [bx, y + lay.btnY];
   if (p && onConfirm) button(ctx, ui, `${idPrefix}:ok`, okAt[0], okAt[1], TP_BTN.w, TP_BTN.h, verb, { tone: 'gold', onClick: onConfirm });
-  if (onCancel) button(ctx, ui, `${idPrefix}:cancel`, noAt[0], noAt[1], TP_BTN.w, TP_BTN.h, '그만', { onClick: onCancel });
+  const back = lay.swap && onBack ? onBack : onCancel;
+  if (back) button(ctx, ui, `${idPrefix}:cancel`, noAt[0], noAt[1], TP_BTN.w, TP_BTN.h, '그만', { onClick: back });
   closeBox();
   return h;
 }

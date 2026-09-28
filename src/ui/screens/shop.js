@@ -9,7 +9,7 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL } from '../parts.js';
+import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk } from '../parts.js';
 import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
@@ -31,8 +31,9 @@ const CARD_W = CARD.w, BAR_Y = 3, BAR_H = 16, BOTTOM = 270 - 2, BAG_MIN = 28;
 // flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝)
 // grow: { form, p, big, from, to, exact } 기보로 자라는 모습 — 그 모습(이형은 바탕 모습)의 기물마다 옛 톤 · 옛 수준에서 반짝이며 새 톤 · 새 수준으로,
 //   단계가 바뀌면(big) 빛 기둥까지. exact: 그 종류만(진화)
+// can(p): 고를 수 있는 기물인가(아니면 흐리고 눌리지 않는다 — 같은 각인 · 혼이 이미 있는 기물)
 // bottom: 줄이 여럿이면 이 아래로 넘지 않게 줄 간격을 줄인다(카드가 겹쳐 쌓인다)
-export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selectedId = null, idPrefix = 'deck', flash = null, grow = null, bottom = 268 } = {}) {
+export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selectedId = null, idPrefix = 'deck', flash = null, grow = null, can = null, bottom = 268 } = {}) {
   const n = run.deck.length;
   const cw = 20, ch = 28;
   const per = Math.max(1, Math.floor((w + 3) / (cw + 3)));
@@ -45,7 +46,8 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     const col = i % per, row = Math.floor(i / per);
     const px = x + col * (cw + 3), py = y + row * step;
     const id = `${idPrefix}:${p.id}`;
-    ui.region(id, px, py, cw, ch, { onClick: pick ? () => pick(p) : null, tip: () => pieceTip(p) });
+    const ok = !can || can(p);
+    ui.region(id, px, py, cw, ch, { onClick: pick && ok ? () => pick(p) : null, tip: () => pieceTip(p) });
     const hov = ui.isHover(id);
     let fl = flash && flash.id === p.id ? 1 - flash.p : 0;
     let level = chartLevel(run, p.t), gl = 0;
@@ -57,9 +59,9 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
       fl = Math.max(fl, Math.max(0, 1 - Math.abs(g - GROW_TURN) / 0.22) * (grow.big ? 1 : 0.75));
       gl = g < GROW_TURN ? 0 : 1 - (g - GROW_TURN) / (1 - GROW_TURN);
     }
-    pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick ? 1 : 0, selected: selectedId === p.id, hover: hov, tier: tierOf(level), level, glow: gl, time: ui.time + i, flash: fl });
+    pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick && ok ? 1 : 0, selected: selectedId === p.id, hover: hov && ok, dim: !ok, tier: tierOf(level), level, glow: gl, time: ui.time + i, flash: fl });
     if (growing) { if (grow.big || grow.from == null) growPillar(ctx, px, py, cw, ch, grow.p); else growSparks(ctx, px, py, cw, ch, grow.p); }
-    if (glow && pick) { const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; frame(ctx, px - 1, py - 1, cw + 2, ch + 2, PAL.gold); ctx.globalAlpha = 1; }
+    if (glow && pick && ok) { const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; frame(ctx, px - 1, py - 1, cw + 2, ch + 2, PAL.gold); ctx.globalAlpha = 1; }
   });
 }
 
@@ -231,6 +233,7 @@ export class ShopScreen {
         to: p && target.kind === 'evolve' ? evolveTo(run.seed, p) : null,
         onConfirm: () => { const i = this.target.index, id = this.target.pieceId; this.target = null; this.act({ type: 'use', index: i, target: id }, 'engrave'); },
         onCancel: () => { this.target = null; },
+        onBack: () => { this.target = { index: this.target.index }; },
       });
       bagY = TOP + th + GAP_GROUP;
     } else {
@@ -259,6 +262,7 @@ export class ShopScreen {
     bagRow(ctx, ui, run, CX, bagY, CENTER.w, {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : this.target ? this.target.pieceId : null,
       flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { ...this.grow, p: gp } : null, bottom: BOTTOM,
+      can: target ? (p) => targetOk(target, p) : null,
     });
     // 오른쪽 칸: 격언 → 두루마리
     const rl = this.rightLayout();
@@ -341,6 +345,7 @@ export class ShopScreen {
     if (this.target) {
       // 고르면 미리 보기, 확인 단추로 쓴다
       const c = this.run.consumables[this.target.index];
+      if (c && !targetOk(c, p)) return;
       if (c && c.kind === 'evolve' && !evolveTo(this.run.seed, p)) { this.app.toast('이 기물은 자랄 곳이 없다', PAL.dim); return; }
       this.target = { ...this.target, pieceId: this.target.pieceId === p.id ? null : p.id };
       return;

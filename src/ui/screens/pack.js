@@ -7,7 +7,7 @@ import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button } from '../ui.js';
-import { itemCard, itemRowH, itemKeys, itemExtraTip, maximGrid, maximGridH, envelope, targetPanel } from '../parts.js';
+import { itemCard, itemRowH, itemKeys, itemExtraTip, maximGrid, maximGridH, envelope, targetPanel, targetOk } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, BTN_H, GAP_IN, GAP_GROUP, LIST_GAP, LINE, textY } from '../frame.js';
@@ -80,8 +80,9 @@ export class PackScreen {
       const th = targetPanel(ctx, ui, run, o, p, MAIN.x, TOP, MAIN.w, {
         onConfirm: () => this.finish({ type: 'pick', index: this.engraveIndex, target: this.engraveTarget }),
         onCancel: () => { this.engraveIndex = null; this.engraveTarget = null; },
+        onBack: () => { this.engraveTarget = null; },
       });
-      bagRow(ctx, ui, run, MAIN.x, TOP + th + GAP_GROUP, MAIN.w, { pick: (q) => { this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget, bottom: 268 });
+      bagRow(ctx, ui, run, MAIN.x, TOP + th + GAP_GROUP, MAIN.w, { pick: (q) => { if (targetOk(o, q)) this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget, can: (q) => targetOk(o, q), bottom: 268 });
       return;
     }
     pack.options.forEach((o, i) => {

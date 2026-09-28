@@ -45,7 +45,7 @@ export const EN = {
   '기물 셋 중 하나': 'One of three pieces', '기보 셋 중 하나': 'One of three charts', '각인 셋 중 하나': 'One of three engravings', '판본 격언 셋 중 하나': 'One of three edition maxims',
   '기물에 새긴다': 'Onto a piece', '기물에 깃든다': 'Into a piece', '기물이 자란다': 'Grow one',
   
-  '새긴다': 'Engrave', '깃든다': 'Bind', '자란다': 'Grow', '그만': 'Cancel', '이 기물은 자랄 곳이 없다': 'This piece has nothing to grow into',
+  '새긴다': 'Engrave', '깃든다': 'Bind', '자란다': 'Grow', '그만': 'Cancel', '바꾸기': 'Swap', '이 기물은 자랄 곳이 없다': 'This piece has nothing to grow into',
   '주머니에서 새길 기물을 고른다': 'Choose a piece in your bag to engrave', '주머니에서 깃들 기물을 고른다': 'Choose a piece in your bag for the soul', '주머니에서 자랄 기물을 고른다': 'Choose a piece in your bag to grow',
   '체스 기물이 특수 기물로 자란다': 'A chess piece grows into a special piece',
   // 첫 수업 열 · 처음 안내(친절 손질)
