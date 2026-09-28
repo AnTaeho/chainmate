@@ -13,7 +13,7 @@ import { PIECES } from '../data/pieces.js';
 import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
-import { UP } from '../data/souls.js';
+import { UP, TRANSCEND, ABSORB } from '../data/souls.js';
 
 const NO_OPTS = {};
 // 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
@@ -37,8 +37,6 @@ export const GRADES = [
 export const gradeOf = (n) => GRADES.reduce((g, x) => (n >= x.n ? x : g), null);
 
 export const PROMOTE_RANK = 7;
-// 흡수(정석 · 혼)는 사슬의 처음 세 먹기까지만: 센 떨군 모습(퀸 · 대주교)을 사슬 내내 지키면 판을 쓸어 첫 수 외통이 3관부터 20~50%였다(하네스 30판)
-export const ABSORB_TAKES = 3;
 
 export function startChain(t, { type, sq, engraving = null, soul = null }) {
   const events = [];
@@ -135,15 +133,15 @@ export function chainCapture(t, sq) {
   } else if (target.t === 'J') {
     c.money = (c.money || 0) + 2;
     events.push({ type: 'money', src: 'gem', money: 2 });
-  } else if (c.flags.absorb && target.t !== 'K' && c.captures.length <= ABSORB_TAKES) {
+  } else if (c.flags.absorb && target.t !== 'K' && c.captures.length <= ABSORB.takes) {
     // 흡수는 가장 최근에 먹은 행마 하나만 더한다(쌓이게 두면 모든 응수를 받아 첫 수 외통이 판의 절반이 됐다 — 하네스 30판)
     if (target.t !== c.form && (c.absorbed || [])[0] !== target.t) {
       c.absorbed = [target.t];
       events.push({ type: 'absorb', piece: target.t, sq: at, forms: [c.form, ...c.absorbed] });
     }
   } else if (c.flags.transcend && target.t !== 'K') {
-    // 혼 「초월」: 먹힌 모습 대신 한 단계 위로
-    const up = UP[c.form];
+    // 혼 「초월」: 먹힌 모습 대신, TRANSCEND.every번 먹을 때마다 한 단계 위로(그 사이엔 모습이 그대로)
+    const up = c.captures.length % TRANSCEND.every === 0 ? UP[c.form] : null;
     if (up) {
       const prev = c.form;
       c.form = up;
@@ -160,6 +158,8 @@ export function chainCapture(t, sq) {
     events.push({ type: 'transform', from: prev, to: c.form, sq: at });
     runHook(t, 'onTransform', { from: prev, to: c.form }, events);
   }
+  // 흡수로 얻은 행마는 흡수가 끝난 다음 먹기까지만 간다(남겨 두면 사슬 내내 행마 둘로 다녀 외통이 66~80%였다)
+  if (c.flags.absorb && c.absorbed && c.captures.length > ABSORB.takes) c.absorbed = null;
   if (!c.forms.includes(c.form)) c.forms.push(c.form);
 
   // 승급: 폰 모습으로 끝줄(조정자가 flags.promoteFrom으로 당길 수 있다 — 전설 「폰 여덟의 행진」)

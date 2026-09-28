@@ -293,8 +293,8 @@ export const EN = {
   '버리기 −1': 'Discards −1', '수 2 · 버리기 1뿐': '2 moves · 1 discard only',
   '지켜지지 않은 킹은 빛난다': 'Unguarded kings glow',
   '사슬마다 한 번': 'Once per chain',
-  '행마는 마지막에 먹은 적 하나의 것만 남는다': 'Only the last taken move stays',
-  '폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Pawn › knight › bishop › rook › queen › amazon',
+  '얻은 행마는 다음 먹기까지': 'The gained move lasts one more take',
+  '폰 › 나이트 › 비숍 › 룩': 'Pawn › knight › bishop › rook',
   '주머니가 여섯 이하면 떠나지 않는다': 'It stays if your bag has six or fewer',
   // 격언
   '나이트로 시작: 배수 ×1.5': 'Start with a knight: ×1.5 Mult',
@@ -348,7 +348,7 @@ export const EN = {
   // 혼
   '세 번까지 모습이 안 바뀌고, 먹은 적의 행마를 얻는다': 'Form holds for 3 takes · gains the taken move',
   '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 잇는다': 'Once, if nothing is left: back to first form',
-  '먹으면 한 단계 위 모습이 된다 · 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Each take: one step up · pawn › knight › bishop › rook › queen › amazon', '먹을 때마다 한 단계 위 기물이 된다': 'Each take: the next piece up',
+  '먹으면 한 단계 위 모습이 된다 · 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Each take: one step up · pawn › knight › bishop › rook › queen › amazon', '두 번 먹을 때마다: 한 단계 위 기물이 된다': 'Every 2nd take: the next piece up',
   '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …': 'Second take +10 Value · third +20 · fourth +30 …',
   '폰 모습이면 여섯째 줄에서 아마존으로 승급': 'As a pawn: amazon on the sixth rank',
   '사슬마다 한 번: 지키는 적을 무시한다': 'Once per chain: ignore a guard', '지켜진 킹은 먹을 수 없다': "A guarded king still can't be taken",
