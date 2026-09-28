@@ -36,7 +36,8 @@ import { FAIRIES } from '../data/pieces.js';
 //   8관은 명인 「대가」(기보 무시)가 벽이라 8관 연습 · 정식만 보고 잡았다(보고서 참고).
 // 깊이 층(이형 · 가족 · 정석 · 혼 …) 뒤 다시 맞춤(보고서 docs/reports/depth.md): 옛 곡선 그대로면 smart 봇 판 승률 89.7%(30판).
 //   2관 ×1.17 · 3관 ×2.5 · 4관 ×2.5 · 5관 ×3.8 · 6관 ×6.9 · 7관 ×5.8 · 8관 ×5.7 + 킹 수비 5관 다섯 · 6관부터 여섯 → 20.0%(30판).
-export const B = [150, 700, 5000, 13000, 50000, 220000, 420000, 850000];
+// 밤샘 2(시계 · 다시 놓기 · 나쁜 판 거르기 · 가짓수 뒤) 다시 맞춤: 옛 곡선이면 smart 50%(40판) — 4관 ×1.23 · 5관 ×1.5 · 6관 ×1.5 · 7관 ×1.55 · 8관 ×1.53 → 40%(docs/reports/night2.md)
+export const B = [150, 700, 5000, 16000, 75000, 330000, 650000, 1300000];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
