@@ -137,9 +137,11 @@ maxim('last_move', '마지막 수', '대국 마지막 수: 배수 ×3', '수', '
 maxim('no_regrets', '뽑은 대로', '버리기를 안 쓴 대국: 배수 +4', '버리기', 'common', 4, {
   onChainEnd(ctx) { if (num(ctx.t.discardsUsed) === 0) ctx.addMult(4); },
 });
-maxim('second_thought', '미련 없이', '버리기 +1 · 이번 대국에 버린 기물마다 값 +10', '버리기', 'common', 3, {
+// 미련 없이: 버리기가 한 번에 한 장이 되며(b4fdfd3) 대국당 버린 기물이 16에서 4로 줄어 옛 「값 +10」(최대 +40)은 힘이 없었다.
+// 배수 +2는 최대 +8로 되갚음(+8)과 같은 크기, 뒤 관까지 힘이 남는다. 봇이 거의 버리지 않아(대국당 0.03장) 하네스로는 재지 못했다(2026-09-28)
+maxim('second_thought', '미련 없이', '버리기 +1 · 버린 기물마다 배수 +2', '버리기', 'common', 3, {
   onBattleStart(ctx) { ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
-  onChainEnd(ctx) { ctx.addValue(10 * num(ctx.t.discarded)); },
+  onChainEnd(ctx) { ctx.addMult(2 * num(ctx.t.discarded)); },
 });
 
 // ── 주머니

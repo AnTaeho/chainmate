@@ -314,7 +314,7 @@ export const EN = {
   '대국 첫 수: 배수 ×2': "Match's first move: ×2 Mult",
   '대국 마지막 수: 배수 ×3': "Match's last move: ×3 Mult",
   '버리기를 안 쓴 대국: 배수 +4': 'No discards yet this match: +4 Mult',
-  '버리기 +1 · 이번 대국에 버린 기물마다 값 +10': 'Discards +1 · +10 Value per discard',
+  '버리기 +1 · 버린 기물마다 배수 +2': 'Discards +1 · +2 Mult per discard',
   '주머니에 남은 기물마다 배수 +1': '+1 Mult per piece left in the bag',
   '주머니 기물 여덟 이하: 배수 ×1.5': '8 or fewer pieces in your bag: ×1.5 Mult',
   '막 들어온 증원을 먹으면 값 +40': 'Fresh reinforcement: +40 Value',
