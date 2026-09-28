@@ -146,6 +146,8 @@ function report(R, args, wall) {
   table(['관', '도달', '통과', '대국', '연습', '정식', '명인', '점수/목표p10', 'p25', 'p50', 'p90', '외통', '첫수외통', '막힘', '최고수p50', 'p90', '최고', '연습목표'], rows);
   console.log(`판 끝의 평균: 기보 레벨 합 ${f(R.reduce((a, r) => a + r.charts, 0) / n, 1)}, 주머니 ${f(R.reduce((a, r) => a + r.deckSize, 0) / n, 1)}개, 격언 ${f(R.reduce((a, r) => a + r.final.length, 0) / n, 1)}개, 남은 상금 ${f(R.reduce((a, r) => a + r.money, 0) / n, 1)}`);
   const allMates = battles.filter((b) => b.reason === 'mate').length;
+  const disc = battles.map((b) => b.discarded || 0);
+  console.log(`버리기: 대국당 버린 기물 평균 ${f2(disc.reduce((a, x) => a + x, 0) / battles.length)}, 하나라도 버린 대국 ${pc(disc.filter((x) => x > 0).length / battles.length)}, 4개 이상 ${pc(disc.filter((x) => x >= 4).length / battles.length)}`);
   const lostBy = {};
   for (const r of R) if (!r.won) { const last = r.log.at(-1); lostBy[last.reason] = (lostBy[last.reason] || 0) + 1; }
   console.log(`전체 대국 ${battles.length}: 외통으로 이김 ${pc(allMates / battles.length)}, 막힘 패배 ${pc(battles.filter((b) => b.reason === 'stuck').length / battles.length)}. 판이 끝난 이유: ${Object.entries(lostBy).map(([k, v]) => `${k} ${pc(v / n)}`).join(', ')}`);

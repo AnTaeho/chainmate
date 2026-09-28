@@ -257,6 +257,7 @@ function endBattle(run, events) {
     // 하네스용: 이 대국 때 주머니에 있던 혼 · 외통을 낸 사슬의 혼
     souls: [...new Set(run.deck.filter((p) => p.soul).map((p) => p.soul))],
     mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
+    discarded: b.discarded,
   };
   run.log.push(row);
   if (!won) {
