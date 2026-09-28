@@ -102,6 +102,8 @@ function hover(id) {
 }
 const marksSeen = { board: 0, clear: false, shop: 0 };
 // 관 선택 → 상점 → 관 선택(떠나온 상점으로 돌아가기): 오간 수 · 단추가 없어야 할 때 있음 · 오가며 바뀐 것
+// 사슬 몫이 목표를 넘긴 채 사슬이 이어지는 순간: 잰 수 · 입력이 막힌 수(연출 중 · 누를 칸 없음 · 대국이 끝남)
+const passSeen = { n: 0, blocked: 0 };
 const shopBack = { trips: 0, stray: 0, changed: 0, overlap: 0 };
 const pvSeen = { capture: 0, drop: 0, cut: 0, kb: 0, touch: 0 };
 // 칸 말풍선: 증원 그림자 · 노림수
@@ -304,6 +306,10 @@ function battleStep() {
     if (c.type === 'capture') {
       // 먹을 적 위에 올려 미리 보기를 보고(바뀐 모습 = 실제로 먹은 뒤 모습), 가끔은 화살표 · 터치 두 번으로 먹는다
       const cb = app.run.battle;
+      if (cb.target && cb.status === 'chain' && cb.score + Math.floor(cb.chain.value * cb.chain.mult) >= cb.target) {
+        passSeen.n++;
+        if (s.busy || app.run.phase !== 'battle' || !s.clickable().list.includes(c.sq)) passSeen.blocked++;
+      }
       if (cb.chain && cb.chain.forced && tipSeen.forced < 20) { hover(`sq:${cb.chain.forced[0]}`); if (hoverTip()) tipSeen.forced++; }
       hover(`sq:${c.sq}`);
       const pv = s.pvNow;
@@ -696,11 +702,13 @@ console.log(`손 고르기: 둘을 차례로 ${pickSeen.swap}(둘 이상 남음 
 console.log(`판 위 사물 말풍선: 발판 ${objTips.step} · 문 ${objTips.gate} · 고속도로 ${objTips.highway} · 벽 ${objTips.wall} · 보석 ${objTips.gem}`);
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
 console.log(`판 위 표시: 칸 · 화살표 ${marksSeen.board} · 왼쪽 누르기로 지움 ${marksSeen.clear ? '확인' : '못 함'} · 상점 오른쪽 누르기 ${marksSeen.shop}(아무 일 없음)`);
+console.log(`사슬 중 목표를 넘긴 채 먹기: ${passSeen.n}번 · 입력이 막힘 ${passSeen.blocked}`);
 console.log(`관 선택 → 상점 → 관 선택: ${shopBack.trips}번 · 바뀐 것 ${shopBack.changed} · 상점 없이 단추 ${shopBack.stray} · 판의 길과 겹침 ${shopBack.overlap}`);
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 let fail = false;
 if (!pickSeen.swap || !pickSeen.off || pickSeen.swapBad || pickSeen.offBad) { console.log('손에서 기물이 하나만 들리지 않는다'); fail = true; }
+if (!passSeen.n || passSeen.blocked) { console.log('사슬 중 목표를 넘긴 장면을 못 봤거나, 그때 입력이 막혔다'); fail = true; }
 if (!shopBack.trips || shopBack.changed || shopBack.stray || shopBack.overlap) { console.log('관 선택에서 상점으로 오가지 못했거나, 오가며 상점이 바뀌었거나, 상점이 없는데 단추가 있거나, 단추가 판의 길과 겹친다'); fail = true; }
 if (marksSeen.board !== 3 || !marksSeen.clear || !marksSeen.shop) { console.log('판 위 표시(오른쪽 누르기)를 다 확인하지 못했다'); fail = true; }
 if (LANG !== 'ko') {
