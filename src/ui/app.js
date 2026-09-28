@@ -4,7 +4,7 @@ import { feltCanvas } from '../render/texture.js';
 import { createRun, applyRun } from '../sim/run.js';
 import { PAL } from '../render/palette.js';
 import { context } from '../render/surface.js';
-import { W, H, text, box, rect } from '../render/gfx.js';
+import { W, H, text, box, rect, lift } from '../render/gfx.js';
 import { UI, tooltip, bigTooltip, tipHeight, tipTexts } from './ui.js';
 import { miniShard } from './parts.js';
 import { setLang } from './lang.js';
@@ -301,6 +301,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (!lay) return;
     let y = lay.y, k = 0;
     const rects = [];
+    // 묶음 받침: 상자 사이 틈까지 한 번에 깔아 뒤 판넬이 새지 않고 한 묶음으로 읽히게
+    lift(ctx, lay.x, lay.y, lay.w, hs.slice(0, lay.n).reduce((u, v) => u + v, 0) + NOTE_GAP * Math.max(0, lay.n - 1));
     if (tip) { app.tipRect = tooltip(ctx, lay.x, y, tip, lay.w); rects.push(app.tipRect); y += app.tipRect.h + NOTE_GAP; k++; }
     // 시너지 상자: 지금 모은 수(「5/6」)를 낱말 옆에
     const counts = app.run && ids.some((id) => id.startsWith('fam_')) ? familyCounts(app.run) : null;

@@ -3,7 +3,7 @@
 import { richText } from './glossary.js';
 import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
-import { box, rect, text, frame, measure } from '../render/gfx.js';
+import { box, rect, text, frame, measure, lift } from '../render/gfx.js';
 import { familyChips, chipRows, chipBlockH, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
 import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, flow, inkY } from './frame.js';
@@ -183,6 +183,7 @@ export function bigTooltip(ctx, tip) {
   const bh = P * 2 + all.length * LH;
   const x = Math.floor((480 - bw) / 2), y = 268 - bh;
   openBox('note', x, y, bw, bh, P, { overlay: true, name: '큰 말풍선' });
+  lift(ctx, x, y, bw, bh);
   box(ctx, x, y, bw, bh, PAL.card, PAL.frameDk);
   all.forEach(([s, col, b], i) => text(ctx, s, x + P, y + P + i * LH + (LH - 24) / 2 - 2, col, { bold: b, scale: 2 }));
   closeBox();

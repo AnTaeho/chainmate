@@ -30,6 +30,14 @@ export function box(ctx, x, y, w, h, fill, edge = PAL.frameDk) {
   rect(ctx, x + 1, y + 1, w - 2, h - 2, fill);
 }
 
+// 뜨는 설명(말풍선 · 낱말 상자 · 처음 안내)의 받침: 네모 바깥 1px 어두운 테 + 아래 · 오른쪽 1px 그늘.
+// 뒤 판넬 테 · 글과 설명 상자 사이를 끊는다. 묶음은 한 번에 깔아 상자 사이 틈도 이음선이 된다(테 검사에 안 걸리게 rect만)
+export function lift(ctx, x, y, w, h) {
+  rect(ctx, x - 1, y - 1, w + 2, h + 2, PAL.shadow);
+  rect(ctx, x, y + h + 1, w + 2, 1, PAL.shadow);
+  rect(ctx, x + w + 1, y, 1, h + 1, PAL.shadow);
+}
+
 // 테두리만
 export function frame(ctx, x, y, w, h, col, t = 1) {
   rect(ctx, x, y, w, t, col); rect(ctx, x, y + h - t, w, t, col);
