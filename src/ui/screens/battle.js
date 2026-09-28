@@ -280,7 +280,8 @@ export class BattleScreen {
   toggle(i) {
     const b = this.live();
     if (this.busy || !b || b.status !== 'play' || i >= b.hand.length) return;
-    this.sel = this.sel.includes(i) ? this.sel.filter((x) => x !== i) : [...this.sel, i].sort((x, y) => x - y);
+    // 손은 하나만 든다: 다른 기물을 누르면 바꿔 들고, 든 것을 다시 누르면 놓는다
+    this.sel = this.sel.includes(i) ? [] : [i];
     this.targets = null;
     this.snd('pick');
   }
@@ -1236,7 +1237,7 @@ export class BattleScreen {
     };
     const rows = [
       { id: 'pips:moves', label: '수', tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다'), draw: (ctx2, ty) => { text(ctx2, '수', LX + P, ty, PAL.dim); pips(v.moves, v.movesLeft, PAL.gold)(ctx2, ty); } },
-      { id: 'pips:discards', label: '버리기', tip: () => tipLines('버리기', '손을 골라 버리고 새로 뽑을 수 있는 횟수'), draw: (ctx2, ty) => { text(ctx2, '버리기', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); } },
+      { id: 'pips:discards', label: '버리기', tip: () => tipLines('버리기', '손에서 하나를 버리고 새로 뽑을 수 있는 횟수'), draw: (ctx2, ty) => { text(ctx2, '버리기', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); } },
     ];
     if (run) rows.push({ money: run });
     rows.push({ id: 'bag', label: '주머니', val: `${v.bag} / ${v.deckSize}`, tip: () => bagTip(this.b) });

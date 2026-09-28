@@ -59,7 +59,7 @@ export const LESSONS = [
   { id: 'redraw', group: 'battle', title: '손과 버리기', target: 90, moves: 1, discards: 1, hand: ['P', 'P', 'P', 'P'], bag: ['N'], board: { h8: 'Q' },
     steps: [
       { pick: 0, say: '폰은 떨굴 곳이 없다 — 버릴 폰을 누른다' },
-      { discard: true, say: '버리기: 고른 기물을 버리고 새로 뽑는다. 붉은 구슬만큼 쓸 수 있다' },
+      { discard: true, say: '버리기: 든 기물 하나를 버리고 새로 뽑는다. 붉은 구슬만큼 쓸 수 있다' },
       { pick: 3, say: '새로 쥔 나이트를 든다' },
       { drop: 'g6' },
       { cap: 'h8', say: '퀸을 먹는다' },

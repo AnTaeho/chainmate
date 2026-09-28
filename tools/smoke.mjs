@@ -106,6 +106,8 @@ const pvSeen = { capture: 0, drop: 0, cut: 0, kb: 0, touch: 0 };
 const tipSeen = { incoming: 0, forced: 0, path: 0 };
 const newsSeen = { battles: 0, icons: 0 };
 const objTips = { step: 0, gate: 0, highway: 0, wall: 0, gem: 0 };
+// 손은 하나만 든다: 둘을 차례로 눌러도 든 것은 나중 것 하나, 든 것을 다시 누르면 놓인다
+const pickSeen = { swap: 0, swapBad: 0, off: 0, offBad: 0 };
 // 낱말 상자: 카드를 가리키면 옆에 낱말 상자가 1개 이상, 카드 · 말풍선을 가리지 않고 화면 안에.
 // 카드 하나에 둘까지(KEY_MAX), 기본 낱말(떨구기 · 사슬 · 값 · 배수 …)은 띄우지 않는다(docs/design-notes/voice.md)
 // 카드의 종류(격언 · 각인 · 정석 …)는 상자로 띄우지 않고, 시너지 칩 · 띠는 말풍선 하나만(상자 없음)
@@ -281,7 +283,14 @@ function battleStep() {
   for (const [k, sq] of Object.entries(objSq)) if (sq != null && sq >= 0 && objTips[k] < 5 && !isHidden(b, sq)) { hover(`sq:${sq}`); if (hoverTip()) objTips[k]++; }
   const ghost = (b.incoming || []).find((r) => !b.board[r.sq]);
   if (ghost && tipSeen.incoming < 20) { hover(`sq:${ghost.sq}`); if (hoverTip()) tipSeen.incoming++; }
-  click(`hand:${d.play.handIndex}`);
+  const other = b.hand.findIndex((_, i) => i !== d.play.handIndex);
+  if (other >= 0 && pickSeen.swap < 6) {
+    click(`hand:${other}`);
+    if (pickSeen.off < 2) { click(`hand:${other}`); pickSeen.off++; if (s.sel.length) pickSeen.offBad++; click(`hand:${other}`); }
+    click(`hand:${d.play.handIndex}`);
+    pickSeen.swap++;
+    if (s.sel.length !== 1 || s.sel[0] !== d.play.handIndex) pickSeen.swapBad++;
+  } else click(`hand:${d.play.handIndex}`);
   // 미리 보기: 떨굴 칸 위에 올리면 첫 먹이 고리
   hover(`sq:${d.play.sq}`);
   if (s.pvNow && s.pvNow.kind === 'drop' && s.pvNow.next.length) pvSeen.drop++;
@@ -669,12 +678,14 @@ console.log(`첫 수업: ${lessonLog.join(' · ')}`);
 console.log(`미리 보기: 먹기 ${pvSeen.capture} · 끊김 ${pvSeen.cut} · 떨구기 ${pvSeen.drop} · 화살표 ${pvSeen.kb} · 터치 ${pvSeen.touch}`);
 console.log(`말풍선: 증원 ${tipSeen.incoming} · 노림수 ${tipSeen.forced} · 판의 길 ${tipSeen.path}`);
 console.log(`대국 띠 「새로」: 대국 ${newsSeen.battles} · 그림 ${newsSeen.icons}`);
+console.log(`손 고르기: 둘을 차례로 ${pickSeen.swap}(둘 이상 남음 ${pickSeen.swapBad}) · 다시 눌러 놓기 ${pickSeen.off}(안 놓임 ${pickSeen.offBad})`);
 console.log(`판 위 사물 말풍선: 발판 ${objTips.step} · 문 ${objTips.gate} · 고속도로 ${objTips.highway} · 벽 ${objTips.wall} · 보석 ${objTips.gem}`);
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
 console.log(`판 위 표시: 칸 · 화살표 ${marksSeen.board} · 왼쪽 누르기로 지움 ${marksSeen.clear ? '확인' : '못 함'} · 상점 오른쪽 누르기 ${marksSeen.shop}(아무 일 없음)`);
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 let fail = false;
+if (!pickSeen.swap || !pickSeen.off || pickSeen.swapBad || pickSeen.offBad) { console.log('손에서 기물이 하나만 들리지 않는다'); fail = true; }
 if (marksSeen.board !== 3 || !marksSeen.clear || !marksSeen.shop) { console.log('판 위 표시(오른쪽 누르기)를 다 확인하지 못했다'); fail = true; }
 if (LANG !== 'ko') {
   const { untranslated } = await import('../src/ui/lang.js');

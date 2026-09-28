@@ -41,7 +41,7 @@ export const TERMS = [
   B('move', 'battle', '수', 'Move', null, null, '기물 하나를 떨궈 사슬을 푸는 한 번. 대국마다 정해져 있다', 'One drop and its chain. Each match gives a set number'),
   B('hand', 'battle', '손', 'Hand', null, null, '지금 쥔 기물. 주머니에서 뽑는다', 'The pieces you hold, drawn from your bag'),
   B('bag', 'battle', '주머니', 'Bag', /주머니/, /\bbag\b/i, '이번 판에 가진 기물 전부', 'Every piece you own this run'),
-  B('swap', 'battle', '버리기', 'Discard', /버리기/, /\bdiscards?\b/i, '손에서 고른 기물을 버리고 새로 뽑는다', 'Throw away the picked pieces and draw new ones'),
+  B('swap', 'battle', '버리기', 'Discard', /버리기/, /\bdiscards?\b/i, '손에서 고른 기물 하나를 버리고 새로 뽑는다', 'Throw away one picked piece and draw a new one'),
   B('goal', 'battle', '목표', 'Target', null, null, '대국을 이기는 점수', 'The score that wins the match'),
   // ── 판
   T('run', 'run', '판', 'Run', null, null, '1관부터 8관까지의 한 도전. 지면 처음부터', 'One try from Hall 1 to Hall 8. Lose and start over'),
