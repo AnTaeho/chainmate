@@ -277,7 +277,8 @@ export function itemEffect(it) {
   if (it.kind === 'evolve') return '체스 기물 하나가 특수 기물로 자란다';
   if (it.kind === 'tactic') return TACTIC_BY_ID[it.id].text;
   if (it.kind === 'gamble') return it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로';
-  if (it.kind === 'fragment') return `조각 셋이면 전설: ${LEGEND_BY_ID[it.legend].text}`;
+  // 명국 조각: 카드에는 한 줄(전설의 효과는 가리키면 — itemExtraTip)
+  if (it.kind === 'fragment') return '조각 셋이면 전설';
   return '';
 }
 // 좁은 칸(격언 칸 둘째 줄)에 적는 효과: 첫 효과에서 조건을 뗀 것.
@@ -426,7 +427,7 @@ export function itemExtraTip(it) {
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보가 적용된다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${L(info.story)}`); }
   if (it.kind === 'evolve') lines.push('폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존');
-  if (it.kind === 'fragment') lines.push(LEGEND_BY_ID[it.legend].story);
+  if (it.kind === 'fragment') lines.push(`전설: ${LEGEND_BY_ID[it.legend].text}`, LEGEND_BY_ID[it.legend].story);
   if (it.kind === 'piece') return moveTip(itemName(it), it.t, lines);
   return lines.length ? tipLines(itemName(it), lines, 170) : null;
 }
@@ -551,22 +552,27 @@ function itemCardLayout(it, w, { run = null, price = true } = {}) {
   const out = { IW };
   // 종류(머릿말)는 값 왼쪽까지(길면 줄바꿈 — 영어 「Classic Fragment」), 값은 첫 줄 오른쪽
   const priceW = price && it.price != null ? measure(`$${it.price}`, true) + 4 : 0;
-  out.kinds = wrap(ITEM_KIND[it.kind], IW - priceW).map((l) => [l, f.line()]);
+  // 판본 격언은 머릿말이 판본 이름(금빛, 「무지개 격언」 — 값 옆에 안 들어가면 「무지개」), 판본 효과는 효과 글 끝 줄(금빛)
+  let kind = ITEM_KIND[it.kind];
+  if (it.edition) { const ed = EDITION_BY_ID[it.edition].name; kind = measure(`${ed} ${kind}`) <= IW - priceW ? `${ed} ${kind}` : ed; }
+  out.kindCol = it.edition ? PAL.goldDk : PAL.cardDim;
+  out.kinds = wrap(kind, IW - priceW).map((l) => [l, f.line()]);
   f.gap(GAP_IN);
   const nx = artW(it) + 4, nw = IW - nx - (PAD_CARD > 4 ? 0 : 0);
   out.nameX = P + nx;
   out.names = wrap(itemNameOf(it), nw, true);
-  const headH = Math.max(ART_H, out.names.length * LINE_TITLE);
+  const nameH = out.names.length * LINE_TITLE;
+  const headH = Math.max(ART_H, nameH);
   const headTop = f.space(headH);
   out.art = headTop + Math.floor((headH - ART_H) / 2);
-  const nameTop = headTop + Math.floor((headH - out.names.length * LINE_TITLE) / 2);
+  const nameTop = headTop + Math.floor((headH - nameH) / 2);
   out.nameYs = out.names.map((_, k) => textY(nameTop + k * LINE_TITLE, LINE_TITLE));
   out.rule = f.y + Math.floor(GAP_GROUP / 2);
   f.gap(GAP_GROUP);
   const lines = [];
   for (const l of wrap(itemEffect(it), IW)) lines.push([l, PAL.cardInk]);
   if (it.kind === 'chart' && run) lines.push([`${run.charts[it.form] || 0} › ${(run.charts[it.form] || 0) + 1}단계`, PAL.cardDim]);
-  if (it.edition) for (const l of wrap(`${EDITION_BY_ID[it.edition].name}: ${L(EDITION_BY_ID[it.edition].text)}`, IW)) lines.push([l, PAL.goldDk]);
+  if (it.edition) for (const l of wrap(L(EDITION_BY_ID[it.edition].text), IW)) lines.push([l, PAL.goldDk]);
   if (itemUse(it)) lines.push([itemUse(it), PAL.cardDim]);
   out.lines = lines.map(([l, c]) => [l, c, f.line()]);
   const fams = itemFams(it);
@@ -588,7 +594,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
   const lay = itemCardLayout(it, w, { run, price });
   const P = PAD_CARD;
-  for (const [l, ly] of lay.kinds) text(ctx, l, x + P, y + ly, PAL.cardDim);
+  for (const [l, ly] of lay.kinds) text(ctx, l, x + P, y + ly, lay.kindCol);
   const showPrice = price && it.price != null && !sold;
   if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
   itemArt(ctx, it, x + P, y + lay.art, t, run);

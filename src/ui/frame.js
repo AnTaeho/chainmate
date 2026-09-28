@@ -52,6 +52,7 @@ export const rowBoxH = (pad = PAD_BOX, lines = 1) => pad * 2 + lines * LINE;
 // 토큰이 아닌 칸 크기(글 간격과 따로 움직이지 않는 것)
 export const CHIP_H = 11;                    // 시너지 칩(카드 · 말풍선)
 export const CHIP_ROW = 13;                  // 시너지 칩 줄(칩 11 + 2)
+export const CHIP_PAD = 3;                   // 칩(시너지 칩 · 띠 · 왼쪽 칸 시너지 줄) 안 가로 여백 — 폭은 글에 맞춘다
 export const FAM_H = 13;                     // 왼쪽 칸 시너지 세로 줄 칩
 export const FAM_ROW = 15;                   // 왼쪽 칸 시너지 세로 줄(칩 13 + 2)
 export const ART_H = 26;                     // 물건 카드 그림 칸 높이

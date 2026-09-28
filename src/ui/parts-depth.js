@@ -7,7 +7,8 @@ import { L } from './lang.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { TRAIT_BY_ID } from '../data/traits.js';
 import { wrap } from '../render/text.js';
-import { CHIP_ROW, FAM_ROW } from './frame.js';
+import { CHIP_ROW, FAM_ROW, CHIP_PAD } from './frame.js';
+import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 5×5 문양
 const GLYPH = {
@@ -44,12 +45,15 @@ export function familyTip(id, n, drop = 0) {
 
 // 시너지 칩: 어두운 칸 안에 문양 + 「기사 +1」(카드가 시너지를 몇 개 채우는지). 너비를 돌려준다
 export const chipLabel = (id, add = 1) => `${FAMILY_BY_ID[id].name} +${add}`;
-export const chipW = (id) => 5 + 3 + measure(chipLabel(id)) + 5;
+// 칩: 안 가로 여백 CHIP_PAD → 문양(5) → 3 → 글 → CHIP_PAD
+export const chipW = (id) => CHIP_PAD + 5 + 3 + measure(chipLabel(id)) + CHIP_PAD;
 export function familyChip(ctx, id, x, y) {
   const w = chipW(id);
+  openBox('tile', x, y - 1, w, 13, { x: CHIP_PAD, y: 0 }, { name: `칩 ${id}` });
   rect(ctx, x, y, w, 11, '#1b2b27');
-  familyGlyph(ctx, id, x + 3, y + 3);
-  text(ctx, chipLabel(id), x + 10, y - 1, PAL.ink);
+  familyGlyph(ctx, id, x + CHIP_PAD, y + 3);
+  text(ctx, chipLabel(id), x + CHIP_PAD + 8, y - 1, PAL.ink);
+  closeBox();
   return w;
 }
 // 칩 여럿을 너비 안에 흘려 놓는다(넘치면 다음 줄). 쓴 줄 수를 돌려준다
@@ -77,27 +81,51 @@ export const chipText = (fams) => fams.map((f) => chipLabel(f)).join(' · ');
 // rows: 줄 수(넘치면 다음 줄, 줄 사이 14)
 export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max = 4, idPrefix = 'fam', counts = null, glyph = true, rows = 1 } = {}) {
   const n = counts || familyCounts(build);
-  const list = FAMILIES.filter((f) => n[f.id] > 0).sort((a, b) => levelOf(n[b.id]) - levelOf(n[a.id]) || n[b.id] - n[a.id]).slice(0, max);
-  let cx = x;
-  for (const f of list) {
+  const all = FAMILIES.filter((f) => n[f.id] > 0).sort((a, b) => levelOf(n[b.id]) - levelOf(n[a.id]) || n[b.id] - n[a.id]);
+  const labelOf = (f) => { const next = THRESHOLDS[levelOf(n[f.id])]; return `${f.name} ${next ? `${n[f.id]}/${next}` : n[f.id]}`; };
+  // 칩 폭은 글에 맞춘다(안 가로 여백 CHIP_PAD). 줄 rows개 안에 놓고, 못 놓은 시너지는 끝에 「+N」(자리가 모자라면 마지막 칩을 빼고)
+  const cwOf = (f) => measure(labelOf(f)) + CHIP_PAD * 2 + (glyph ? 8 : 0);
+  const place = (list) => {
+    const out = [];
+    let cx = x, cy = y, row = 1;
+    for (const f of list) {
+      const cw = cwOf(f);
+      if (cx + cw > x + w) { if (row >= rows || cx === x) break; row++; cx = x; cy += 14; }
+      out.push({ f, x: cx, y: cy, w: cw });
+      cx += cw + 2;
+    }
+    return out;
+  };
+  let spots = place(all.slice(0, max));
+  const plusW = (k) => measure(`+${k}`) + 2;
+  // 남은 수 표시 자리: 마지막 칩 뒤(같은 줄)에 안 들어가면 마지막 칩을 뺀다
+  while (spots.length < all.length && spots.length) {
+    const last = spots[spots.length - 1];
+    if (last.x + last.w + 2 + plusW(all.length - spots.length) <= x + w) break;
+    spots = spots.slice(0, -1);
+  }
+  for (const s of spots) {
+    const { f } = s, cx = s.x, cy = s.y, cw = s.w;
     const lv = levelOf(n[f.id]);
-    const next = THRESHOLDS[lv];
-    const label = `${f.name} ${next ? `${n[f.id]}/${next}` : n[f.id]}`;
-    const cw = measure(label) + (glyph ? 14 : 4);
-    if (cx + cw > x + w) { if (--rows <= 0 || cx === x) break; cx = x; y += 14; }
     const id = `${idPrefix}:${f.id}`;
     // 칩 자체가 그 시너지라 말풍선 하나만(같은 풀이를 상자로 또 띄우지 않는다)
-    ui.region(id, cx, y, cw, 13, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
+    ui.region(id, cx, cy, cw, 13, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
     const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
-    box(ctx, cx, y, cw, 13, lv ? '#132019' : PAL.feltDk, lv ? f.col : PAL.frameDk);
+    openBox('tile', cx, cy, cw, 13, { x: CHIP_PAD, y: 0 }, { name: `띠 ${f.id}` });
+    box(ctx, cx, cy, cw, 13, lv ? '#132019' : PAL.feltDk, lv ? f.col : PAL.frameDk);
     if (glow > 0) {
-      ctx.globalAlpha = glow * 0.6; rect(ctx, cx - 2, y - 2, cw + 4, 17, f.col); ctx.globalAlpha = 1;
-      frame(ctx, cx - 1 - Math.round(glow * 2), y - 1 - Math.round(glow * 2), cw + 2 + Math.round(glow * 4), 15 + Math.round(glow * 4), PAL.goldHi);
+      ctx.globalAlpha = glow * 0.6; rect(ctx, cx - 2, cy - 2, cw + 4, 17, f.col); ctx.globalAlpha = 1;
+      frame(ctx, cx - 1 - Math.round(glow * 2), cy - 1 - Math.round(glow * 2), cw + 2 + Math.round(glow * 4), 15 + Math.round(glow * 4), PAL.goldHi);
     }
-    if (glyph) familyGlyph(ctx, f.id, cx + 3, y + 4, lv ? f.col : PAL.dim);
-    text(ctx, label, cx + (glyph ? 11 : 2), y, lv ? PAL.ink : PAL.dim);
-    cx += cw + 2;
+    if (glyph) familyGlyph(ctx, f.id, cx + CHIP_PAD, cy + 4, lv ? f.col : PAL.dim);
+    text(ctx, labelOf(f), cx + CHIP_PAD + (glyph ? 8 : 0), cy, lv ? PAL.ink : PAL.dim);
+    closeBox();
+  }
+  if (spots.length < all.length) {
+    const last = spots[spots.length - 1];
+    const px = last ? last.x + last.w + 2 : x, py = last ? last.y : y;
+    text(ctx, `+${all.length - spots.length}`, px + 1, py, PAL.dim);
   }
   return n;
 }
@@ -117,11 +145,18 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
     ui.region(id, x, yy, w, 13, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
     const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
+    openBox('tile', x, yy, w, 13, { x: CHIP_PAD, y: 0 }, { name: `시너지 줄 ${f.id}` });
     box(ctx, x, yy, w, 13, lv ? '#132019' : PAL.feltDk, ui.isHover(id) ? PAL.gold : lv ? f.col : PAL.frameDk);
     if (glow > 0) { ctx.globalAlpha = glow * 0.6; rect(ctx, x - 2, yy - 2, w + 4, 17, f.col); ctx.globalAlpha = 1; }
-    familyGlyph(ctx, f.id, x + 3, yy + 4, lv ? f.col : PAL.dim);
-    text(ctx, f.name, x + 11, yy, lv ? PAL.ink : PAL.dim);
-    text(ctx, next ? `${n[f.id]}/${next}` : `${n[f.id]}`, x + w - 3, yy, lv ? PAL.ink : PAL.dim, { align: 'right' });
+    familyGlyph(ctx, f.id, x + CHIP_PAD, yy + 4, lv ? f.col : PAL.dim);
+    const cnt = next ? `${n[f.id]}/${next}` : `${n[f.id]}`;
+    const nx = x + CHIP_PAD + 8, room = w - CHIP_PAD * 2 - 8 - measure(cnt) - 4;
+    // 이름이 길면(영어) 줄인다
+    let nm = L(f.name);
+    if (measure(nm) > room) { while (nm.length > 1 && measure(`${nm}…`) > room) nm = nm.slice(0, -1); nm = `${nm}…`; }
+    text(ctx, nm, nx, yy, lv ? PAL.ink : PAL.dim);
+    text(ctx, cnt, x + w - CHIP_PAD, yy, lv ? PAL.ink : PAL.dim, { align: 'right' });
+    closeBox();
   });
   if (all.length > list.length && maxRows > 0) { text(ctx, `+${all.length - list.length}`, x + 3, y + list.length * FAM_ROW, PAL.dim); return list.length + 1; }
   return list.length;
