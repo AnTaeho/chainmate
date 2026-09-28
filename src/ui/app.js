@@ -184,14 +184,15 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const t0 = now();
     if (type === 'move') app.ui.move(x, y);
     else if (type === 'down') {
-      if (button === 2) { if (!app.guide) app.key('Escape'); return; }
+      // 오른쪽 누르기: 판 위 표시(칸 · 화살표)만. 멈춤 · 내려놓기는 Esc 키로만(판이 없는 화면에서는 아무 일도 없다)
+      if (button === 2) { app.ui.move(x, y); const s = app.overlay || app.screen; if (s && s.rightDown) s.rightDown(x, y); return; }
       // 처음 안내: 떠 있는 안내는 사라지고, 따라 하는 길이면 가리키는 곳만 눌린다
       if (!coachDown(app, x, y)) { app.ui.move(x, y); return; }
       app.ui.down(x, y);
       const s = app.overlay || app.screen;
       if (s && s.pointerDown) s.pointerDown(x, y);
     } else if (type === 'up') {
-      if (button === 2) return;
+      if (button === 2) { app.ui.move(x, y); const s = app.overlay || app.screen; if (s && s.rightUp) s.rightUp(x, y); return; }
       app.ui.touch = !!app.touch;
       app.ui.up(x, y);
     }

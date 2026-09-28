@@ -28,9 +28,12 @@ import { pauseButton, moneyPanel } from './common.js';
 import { TOP, PAUSE, SHARD_TO } from '../frame.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
+import { Marks, drawMarkSquares, drawMarkArrows } from '../marks.js';
 
 export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
+// 게임 좌표 → 판 칸(판 밖이면 -1)
+export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -304,6 +307,7 @@ export class BattleScreen {
   }
 
   send(cmd) {
+    this.marks.clear();
     const bRef = this.live();
     this.bRef = bRef;
     const v = this.view;
@@ -706,7 +710,11 @@ export class BattleScreen {
     this.shake({ '!': 1, '!!': 2, '!!!': 3, '∞': 4 }[e.mark] || 1, 0.25);
   }
 
-  pointerDown() { this.idleT = 0; }
+  // 판 위 표시(오른쪽 누르기 · 끌기, marks.js). 왼쪽으로 판을 누르거나 수를 두면 지운다. 타이틀 시연에는 없다
+  get marks() { return this._marks || (this._marks = new Marks()); }
+  rightDown(x, y) { if (this.src.kind !== 'demo') this.marks.down(sqAt(x, y)); }
+  rightUp(x, y) { if (this.src.kind !== 'demo') this.marks.up(sqAt(x, y)); }
+  pointerDown(x, y) { this.idleT = 0; if (x != null && sqAt(x, y) >= 0) this.marks.clear(); }
   update(dt) {
     this.idleT = (this.idleT || 0) + dt;
     // 판 전체의 처음 세 사슬과 첫 수업은 연출 속도 설정과 상관없이 ×1(눈이 규칙을 따라잡을 때까지)
@@ -854,6 +862,7 @@ export class BattleScreen {
       }
       if (ui.isHover(id) && tset.has(sq)) frame(ctx, x, y, S, S, PAL.white);
     }
+    drawMarkSquares(ctx, this.marks, sqXY, S);
     // 증원 그림자: 점선 테 안에 빈 윤곽(속이 비어 판 위의 적과 섞이지 않는다)과 흔들리는 ▼. 두 수 앞은 윤곽도 점선
     for (const [sq, g] of ghosts) {
       const { x, y } = sqXY(sq);
@@ -963,6 +972,9 @@ export class BattleScreen {
       const { x, y } = sqXY(v.chain.sq);
       if (Math.floor(time * 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
     }
+    // 판 위 화살표(오른쪽으로 끌어 그은 것): 기물 위에 반투명. 끄는 중이면 가리킨 칸까지 흐리게
+    const mk = this.marks, to = mk.from >= 0 ? sqAt(ui.mouse.x, ui.mouse.y) : -1;
+    drawMarkArrows(ctx, mk, sqXY, S, to >= 0 && to !== mk.from ? { from: mk.from, to } : null);
   }
 
   // 묘수(깊이 F): 손 이름표 옆의 작은 칸. 떨구기 전에 눌러 쓴다

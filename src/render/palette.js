@@ -11,6 +11,7 @@ export const PAL = {
   silver: '#d8dee6', shadow: '#0b1210', black: '#000000', white: '#ffffff',
   fog: '#243330', fogHi: '#2e403c',
   sky: '#9fd3e0',
+  mark: '#72c24e', // 판 위 표시(오른쪽 누르기): 붉은빛 · 금빛 · 하늘빛은 규칙이 이미 쓴다
 };
 
 // 등급 테두리
