@@ -653,6 +653,33 @@ click('next');
   app.toTitle(); pump(1);
 }
 
+// 기보가 보이는 곳(docs/tasks/backlog.md 5): 기보가 붙은 모습으로 먹으면 청록 몫이 뜬다 · 기보를 쓰면 그 모습의 기물이 자란다(단계가 바뀌면 크게)
+const chartSeen = { run: 0, scene: 0, grow: 0, tick: 0, growBad: 0 };
+{
+  chartSeen.run = app.stats.chartPops || 0;
+  const setup = (fn) => { app.overlay = null; app.nextSeed = 11; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 }); fn(app.run); pump(90); };
+  setup((r) => { Object.assign(r.charts, { P: 2, N: 2, B: 2, R: 2, Q: 2 }); const e0 = app.cmd({ type: 'play' }); app.go('battle', { events: e0 }); pump(200); });
+  const before = app.stats.chartPops || 0;
+  for (let n = 0; n < 6 && app.screen.name === 'battle' && app.run.battle && app.run.battle.status === 'play' && (app.stats.chartPops || 0) === before; n++) {
+    const d = decideBattle(app.run.battle);
+    if (!d) break;
+    if (d.discard) { for (const i of d.discard) click(`hand:${i}`); click('btn:discard'); idle(); continue; }
+    click(`hand:${d.play.handIndex}`); click(`sq:${d.play.sq}`); idle();
+    for (const c of lineCommands(d.play.line)) { if (app.screen.name !== 'battle' || !app.run.battle || app.run.battle.status !== 'chain') break; click(`sq:${c.sq}`); idle(); }
+  }
+  chartSeen.scene = (app.stats.chartPops || 0) - before;
+  // 상점에서 기보 두루마리: 나이트 2 → 3(동 → 은, 크게) · 3 → 4(수준만)
+  for (const [from, big] of [[2, true], [3, false]]) {
+    setup((r) => { r.phase = 'shop'; r.battle = null; r.charts.N = from; r.consumables = [{ kind: 'chart', form: 'N' }]; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; app.go('shop'); });
+    click('cons:0');
+    const g = app.screen.grow;
+    if (!g || g.form !== 'N' || g.big !== big || g.from !== from || g.to !== from + 1) chartSeen.growBad++;
+    else if (big) chartSeen.grow++; else chartSeen.tick++;
+    pump(70);
+  }
+  app.toTitle(); pump(1);
+}
+
 // 처음 켠 사람이 수업을 건너뛴다 → 곧바로 1관 · 처음 안내를 끄면 뜨지 않는다
 let skipOk = false;
 const hintFail = ['shop', 'pack', 'draft', 'family'].filter((id) => !hintsShown.has(id) || !app.records.coachSeen[id]);
@@ -724,6 +751,8 @@ if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확�
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
+console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 ${chartSeen.scene} · 기보를 쓴 순간 크게 ${chartSeen.grow} · 수준만 ${chartSeen.tick}(어긋남 ${chartSeen.growBad})`);
+if (!chartSeen.scene || !chartSeen.grow || !chartSeen.tick || chartSeen.growBad) { console.log('기보 몫 연출이 뜨지 않았거나 기보를 쓴 순간이 자라지 않았다'); fail = true; }
 console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);
 if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none || keySeen.many || keySeen.basic || keySeen.own || !keySeen.chip || keySeen.chipBox) { console.log('낱말 상자를 보지 못했거나, 카드를 가리거나, 둘을 넘거나, 기본 낱말을 띄웠다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }

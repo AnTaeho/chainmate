@@ -176,3 +176,13 @@ test('금빛 꾸러미(카드 셋): 판본 격언 · 명국 조각 카드 → �
     }
   }
 });
+
+test('기보 수준 표: 손 · 주머니는 그 모습의 기보 수준을 읽고, 이형은 바탕 체스 모습의 기보를 따른다', async () => {
+  const { PIECES, chartForm } = await import('../src/data/pieces.js');
+  const run = M.run.createRun({ seed: 1, draft: false });
+  Object.assign(run.charts, { P: 1, N: 3, B: 0, R: 5, Q: 2 });
+  assert.equal(M.parts.chartLevel(run, 'N'), 3);
+  assert.equal(M.parts.chartLevel(run, 'B'), 0);
+  assert.equal(M.parts.chartLevel(null, 'N'), 0);
+  for (const t of Object.keys(PIECES)) if (PIECES[t].fairy) assert.equal(M.parts.chartLevel(run, t), run.charts[chartForm(t)] || 0, t);
+});
