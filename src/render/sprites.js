@@ -13,8 +13,8 @@ export const SPR = {
   R: [E, E, '...##.####.##...', '...##.####.##...', '...##########...', '...##########...', '....########....', '.....######.....', '.....##d###.....', '.....######.....', '.....###d##.....', '.....######.....', '.....##d###.....', '.....######.....', '....########....', '...##########...', '...dddddddddd...', ...BASE],
   // 퀸: mockup보다 꼭대기 구슬과 가운데 뿔을 세웠다(1배에서 룩의 성가퀴와 섞여 보였다)
   Q: ['.......##.......','..#....##....#..','..#...#..#...#..','..##..#..#..##..','...###.##.###...','....########....','.....#dddd#.....','......####......','.......##.......','......####......','.....######.....','......####......','......####......','.....######.....','....########....','...##########...','...##########...', ...BASE],
-  // 킹: 양 끝이 솟은 넓은 왕관 위 십자가(비숍과 윤곽이 갈리게, docs/mockups/graphics.html KT)
-  K: ['.......##.......','.....######.....','.......##.......','...#..####..#...','...##########...','...#d######d#...','....########....','.....#dddd#.....','......####......','.....######.....','......####......','......####......','.....######.....','.....######.....','....########....','...##########...','...##########...', ...BASE],
+  // 킹: 금 십자가를 얹은 넓은 금관 · 목 띠 · 밑동 띠만 금빛(c), 몸은 편 색. 비숍 · 퀸과 한눈에 갈리게(시안 3)
+  K: ['.......cc.......','.....cccccc.....','.......cc.......','.c....cccc....c.','.cc..cc##cc..cc.','.ccc.c####c.ccc.','.cccccccccccccc.','..cccccccccccc..','...##########...','....cccccccc....','.....######.....','......####......','......####......','.....######.....','....########....','...##########...','..############..', BASE[0], BASE[1], '..cccccccccccc..', BASE[3], BASE[4]],
 };
 // w 내 쪽(상아) · b 적(흑단) · g 황금 적(금빛 테) · s 은빛(갈아입는 순간) · q 금빛 몸(승급)
 export const TONE = {
@@ -24,6 +24,9 @@ export const TONE = {
   s: { o: '#5d6f78', s: '#b8c4cc', f: '#e4eef4', h: '#ffffff', d: '#8a9aa6' },
   q: { o: '#6b4410', s: '#c8902c', f: '#efbd55', h: '#fff1b8', d: '#9c6f24' },
 };
+// 킹의 금빛 자리(c): 편 · 각인과 상관없이 금빛. 상아 위 금빛 둘레는 짙은 금갈색(go)
+const GOLD = { cf: '#eaa92c', ch: '#ffe79a', cs: '#b27414' };
+const goldOf = (tone, light) => ({ ...GOLD, go: light ? '#5a3a0c' : tone.o });
 // 각인이 새겨진 내 기물의 톤(docs/mockups/graphics.html TONES). 흑단은 적 흑단과 갈리게 테두리가 금빛
 export const ENG_TONE = {
   gold: { o: '#8a5a12', s: '#c4ad84', f: '#efe3c7', h: '#fffcf2', d: '#efbd55' },
@@ -56,7 +59,8 @@ export function registerSprites(masks) {
     for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
       const ch = rows[y][x];
       if (ch === '.') {
-        if (body(x - 1, y) || body(x + 1, y) || body(x, y - 1) || body(x, y + 1)) px.push([x, y, 'o']);
+        const g = (a, b) => body(a, b) && rows[b][a] === 'c';
+        if (body(x - 1, y) || body(x + 1, y) || body(x, y - 1) || body(x, y + 1)) px.push([x, y, g(x - 1, y) || g(x + 1, y) || g(x, y - 1) || g(x, y + 1) ? 'go' : 'o']);
         continue;
       }
       if (ch === 'd') { px.push([x, y, 'd']); continue; }
@@ -70,6 +74,7 @@ export function registerSprites(masks) {
       else if (t >= 0.72) tone = 's';
       if (tone === 'f' && !body(x, y - 1) && t < 0.6) tone = 'h';
       if (ch === 'x') tone = 'x';
+      if (ch === 'c') tone = `c${tone}`;
       px.push([x, y, tone]);
     }
     SPRPIX[k] = px;
@@ -103,6 +108,7 @@ export function spriteCanvas(type, side, eng = null, tier = 0) {
   const ctx = context(c);
   const tone = { ...(THING_TONE[type] || (eng && ENG_TONE[eng] ? ENG_TONE[eng] : TONE[side])) };
   tone.x = tone.f;
+  Object.assign(tone, goldOf(tone, side === 'w' && !eng));
   if (tier) { const tr = TIER[tier]; if (tr.o) tone.o = tr.o; tone.d = tr.d; }
   ctx.globalAlpha = 0.35;
   ctx.fillStyle = '#000';
@@ -171,5 +177,6 @@ export function outlineCanvas(type, col, dotted = false) {
 export function spriteChips(type, side, eng = null) {
   const tone = { ...(THING_TONE[type] || (eng && ENG_TONE[eng] ? ENG_TONE[eng] : TONE[side])) };
   tone.x = tone.f;
-  return (SPRPIX[type] || SPRPIX.P).filter(([, , t]) => t !== 'o').map(([x, y, t]) => ({ x, y, col: tone[t] }));
+  Object.assign(tone, goldOf(tone, side === 'w' && !eng));
+  return (SPRPIX[type] || SPRPIX.P).filter(([, , t]) => t !== 'o' && t !== 'go').map(([x, y, t]) => ({ x, y, col: tone[t] }));
 }
