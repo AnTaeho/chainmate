@@ -78,20 +78,22 @@ const root = (run) => createRng(run.seed);
 
 // 단(난이도, 판 밖): 한 판을 이기면 다음 단이 열린다. 단 k는 1..k번 규칙을 모두 켠다(단 0 = 기본, 규칙 없음).
 export const DANS = [
-  { n: 1, text: '목표 ×1.25' },
-  { n: 2, text: '증원 +1' },
-  { n: 3, text: '상점 값 +1' },
+  { n: 1, text: '증원 +1' },
+  { n: 2, text: '상점 값 +1' },
+  { n: 3, text: '명인의 상자 다섯 칸 · 명국 첫 조각이 반' },
   { n: 4, text: '시계 −1' },
-  { n: 5, text: '버리기 −1' },
-  { n: 6, text: '명인의 상자 다섯 칸 · 명국 첫 조각이 반' },
+  { n: 5, text: '목표 ×1.1' },
+  { n: 6, text: '버리기 −1' },
   { n: 7, text: '시계 −1' },
-  { n: 8, text: '수 −1 · 대가 목표 ×1.5' },
+  { n: 8, text: '대가 목표 ×1.25' },
 ];
 // 밤샘 2: 시계가 들어오며 다시 짰다. 시계 3 → 4단 2 → 7단 1(한 번 지면 끝, 옛 규칙과 같다).
+// 옛 표(목표 ×1.25 · 수 −1 · 대가 ×1.5 …)에 시계 1을 얹으면 8단 smart 3~7%(30판)라, 목표 ×1.1 · 대가 ×1.25로 누그러뜨리고 수 −1을 뺐다 → 10%.
+// 단 0에 시계 1만 걸면 16.7%(30판) — 8단은 옛 단 0(17.5%)보다 조금 어렵다
 export function danRules(dan) {
   return {
-    target: dan >= 1 ? 1.25 : 1, reinforce: dan >= 2 ? 1 : 0, price: dan >= 3 ? 1 : 0, clock: dan >= 7 ? -2 : dan >= 4 ? -1 : 0,
-    discards: dan >= 5 ? -1 : 0, chestFive: dan >= 6 ? 0.5 : 1, fragment: dan >= 6 ? 0.5 : 1, moves: dan >= 8 ? -1 : 0, finalTarget: dan >= 8 ? 1.5 : 1,
+    reinforce: dan >= 1 ? 1 : 0, price: dan >= 2 ? 1 : 0, chestFive: dan >= 3 ? 0.5 : 1, fragment: dan >= 3 ? 0.5 : 1, clock: dan >= 7 ? -2 : dan >= 4 ? -1 : 0,
+    target: dan >= 5 ? 1.1 : 1, discards: dan >= 6 ? -1 : 0, moves: 0, finalTarget: dan >= 8 ? 1.25 : 1,
   };
 }
 
