@@ -43,6 +43,23 @@ export function familyTip(id, n, drop = 0) {
   return tipLines(`${setName(id)} ${n}`, [], 200, lines);
 }
 
+// 「+N」 말풍선: 줄에 못 놓은 시너지 전부. 시너지마다 「변신 2/4」(켜졌으면 진하게) → 켜진 효과 한 줄씩(「2개: …」)
+export function familyMoreTip(fams, n) {
+  const lines = [];
+  for (const f of fams) {
+    const lv = levelOf(n[f.id]), next = THRESHOLDS[lv];
+    lines.push([`${L(f.name)} ${next ? `${n[f.id]}/${next}` : n[f.id]}`, lv ? PAL.cardInk : PAL.cardDim]);
+    THRESHOLDS.forEach((th, i) => { if (n[f.id] >= th) lines.push([`${L(`${th}개`)}: ${L(f.text[i])}`, PAL.goldDk]); });
+  }
+  return tipLines(`${L('시너지')} +${fams.length}`, [], 150, lines);
+}
+// 「+N」 글을 그리고, 가리키면 가려진 시너지 전부가 말풍선으로 뜨는 구역을 단다
+function moreMark(ctx, ui, idPrefix, hidden, n, x, y) {
+  const s = `+${hidden.length}`;
+  ui.region(`${idPrefix}:more`, x - 1, y, measure(s) + 3, FAM_H, { tip: () => familyMoreTip(hidden, n), noKeys: true });
+  text(ctx, s, x, inkY(y, FAM_H), ui.isHover(`${idPrefix}:more`) ? PAL.gold : PAL.dim);
+}
+
 // 시너지 칩: 어두운 칸 안에 문양 + 「기사 +1」(카드가 시너지를 몇 개 채우는지). 너비를 돌려준다
 export const chipLabel = (id, add = 1) => `${FAMILY_BY_ID[id].name} +${add}`;
 // 칩(칠한 바탕 CHIP_H, 테 없음): 안 가로 여백 CHIP_PAD → 문양(5) → 3 → 글 → CHIP_PAD. 글은 위아래 EDGE_PAD 안(잉크 11 가운데)
@@ -140,7 +157,7 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
   if (spots.length < all.length) {
     const last = spots[spots.length - 1];
     const px = last ? last.x + last.w + 2 : x, py = last ? last.y : y;
-    text(ctx, `+${all.length - spots.length}`, px + 1, inkY(py, FAM_H), PAL.dim);
+    moreMark(ctx, ui, idPrefix, all.slice(spots.length), n, px + 1, py);
   }
   return n;
 }
@@ -173,7 +190,7 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
     text(ctx, cnt, x + w - CHIP_PAD, inkY(yy, FAM_H), lv ? PAL.ink : PAL.dim, { align: 'right' });
     closeBox();
   });
-  if (all.length > list.length && maxRows > 0) { text(ctx, `+${all.length - list.length}`, x + 3, inkY(y + list.length * FAM_ROW, FAM_H), PAL.dim); return list.length + 1; }
+  if (all.length > list.length && maxRows > 0) { moreMark(ctx, ui, idPrefix, all.slice(list.length), n, x + 3, y + list.length * FAM_ROW); return list.length + 1; }
   return list.length;
 }
 
