@@ -81,7 +81,7 @@ const root = (run) => createRng(run.seed);
 export const DANS = [
   { n: 1, text: '증원 +1' },
   { n: 2, text: '상점 값 +1' },
-  { n: 3, text: '명인의 상자 다섯 칸 · 명국 첫 조각이 반' },
+  { n: 3, text: '상자 다섯 칸 · 첫 조각이 반' },
   { n: 4, text: '시계 −1' },
   { n: 5, text: '목표 ×1.1' },
   { n: 6, text: '버리기 −1' },
