@@ -37,10 +37,11 @@
 
 ## 진행 상태와 다음 단계
 
-끝난 것: 1 규칙 엔진 · 2a 관·상점·격언·기보·각인·명인·목표 곡선 · 2b 도파민 규칙(보고서 `docs/reports/2b.md`, 화면이 받을 이벤트 목록 포함) · 3 화면 · 4 연출과 소리 · 5 판 밖 · 다듬기(밤샘, `docs/reports/night.md`) · 첫 만남(`docs/reports/onboarding.md`: 먹기 전 미리 보기 · 목표 막대 · 첫 수업 넷 · 타이틀 시연 · 퀸 · 킹 다시 그리기 · 사슬 따라가기 연출 · 겹침 · 소개 영상 `docs/media/`, 테스트 190) · 그래픽 손질(`docs/reports/graphics.md`: 새 킹 · 각인 톤 · 기보 단계 모습 · 달빛 타이틀 · 질감 `src/render/texture.js` · 겹침) · 깊이(`docs/reports/depth.md`: 이형 9 · 가족 8 · 정석 13 · 혼 8 · 진화 · 묘수 · 벽 · 보석 · 적 특성 5 · 격언 43, 테스트 257, smart 100판 18.0%) · 친절 손질(`docs/reports/ux.md`: 첫 실행 곧바로 수업 · 수업 열 · 처음 안내 · 카드에 효과 · 재료 그림 · 새기기 미리 보기 · 글 「언제 → 무엇」 · 낱말 풀이 · 영상 `docs/media/first-play.mp4`, 테스트 267) · 레이아웃 통일(`docs/reports/layout.md`: 설명 자리 한 곳 · 판 틀 · 판 밖 틀 · smoke 자리 규칙 · before/after `docs/shots/layout/`, 테스트 270) · 글 상자 hug(`docs/design-notes/layout.md` 「격자와 여백」: 토큰 8 · 7 · 14 · 18 · 3 · 8, smoke 「글 넘침」, before/after `docs/shots/spacing/`, 테스트 279).
+끝난 것: 1 규칙 엔진 · 2a 관·상점·격언·기보·각인·명인·목표 곡선 · 2b 도파민 규칙(보고서 `docs/reports/2b.md`, 화면이 받을 이벤트 목록 포함) · 3 화면 · 4 연출과 소리 · 5 판 밖 · 다듬기(밤샘, `docs/reports/night.md`) · 첫 만남(`docs/reports/onboarding.md`: 먹기 전 미리 보기 · 목표 막대 · 첫 수업 넷 · 타이틀 시연 · 퀸 · 킹 다시 그리기 · 사슬 따라가기 연출 · 겹침 · 소개 영상 `docs/media/`, 테스트 190) · 그래픽 손질(`docs/reports/graphics.md`: 새 킹 · 각인 톤 · 기보 단계 모습 · 달빛 타이틀 · 질감 `src/render/texture.js` · 겹침) · 깊이(`docs/reports/depth.md`: 이형 9 · 가족 8 · 정석 13 · 혼 8 · 진화 · 묘수 · 벽 · 보석 · 적 특성 5 · 격언 43, 테스트 257, smart 100판 18.0%) · 친절 손질(`docs/reports/ux.md`: 첫 실행 곧바로 수업 · 수업 열 · 처음 안내 · 카드에 효과 · 재료 그림 · 새기기 미리 보기 · 글 「언제 → 무엇」 · 낱말 풀이 · 영상 `docs/media/first-play.mp4`, 테스트 267) · 레이아웃 통일(`docs/reports/layout.md`: 설명 자리 한 곳 · 판 틀 · 판 밖 틀 · smoke 자리 규칙 · before/after `docs/shots/layout/`, 테스트 270) · 글 상자 hug(`docs/design-notes/layout.md` 「격자와 여백」: 토큰 8 · 7 · 14 · 18 · 3 · 8, smoke 「글 넘침」, before/after `docs/shots/spacing/`, 테스트 279) · 밤샘 2(`docs/reports/night2.md`: 시계 3칸 · 다시 놓기 · 나쁜 판 거르기(후보 넷) · 정석 24 · 격언 70 · 시너지 10 · 혼 16 · 각인 12 · 새 훅 onSetup · onArrive · onBattleEnd · onChainLuck · onBuild · 목표 곡선 · 단 표 다시, smart 100판 38% · 단 8 12% · none 0% · random 2%, 판을 끝낸 죽음의 판 운 몫 96% → 12.5%, 테스트 385).
 
 알아 둘 것:
-- 판 봇은 돈에 아주 민감하다: 공짜 보상을 얹을 때마다 승률이 크게 뛰었다. 새 보상은 하네스로 재고 넣는다.
+- 판 봇은 돈에 아주 민감하다: 공짜 보상을 얹을 때마다 승률이 크게 뛰었다. 새 보상은 하네스로 재고 넣는다. 목숨(시계)에도 민감하다: 시계 3만으로 17.5% → 48.7%.
+- 대국을 져도 판은 시계로 이어진다(`run.clock`). 하네스 판 하나가 길어져 smart 판당 35~90초 — 판 하네스는 `--limit 400`으로 돌린다.
 - 판 하네스는 판 하나에 2분 상한(`--limit`, 넘으면 「시간 초과」로 따로). 봇의 짜임 재기는 마디 1000 · 판 K 6(깊이 층 뒤 판이 넓어져 상점 한 번이 수십 초가 됐었다). 4코어에서 smart 100판 ≈ 11분.
 - 외통이 대국의 11%(후반 21%)로 흔하다 — 이형 사슬이 수비수를 다 치운다. `depth.md` 「아직 재미없는 곳」.
 - 화면은 대국 상태를 이벤트 뒤에 다시 읽는다(`redrop` · `refill`). 미리 보기는 `previewCapture` · `previewDrop`(풀이기 복사본)으로만 잰다.
