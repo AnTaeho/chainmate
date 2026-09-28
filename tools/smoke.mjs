@@ -33,9 +33,10 @@ const P = await import('../src/ui/placement.js');
 // 글 넘침(docs/design-notes/layout.md 「검사」): 프레임마다 그린 글이 제 상자(안 여백 안)를 넘는지, 상자끼리 겹치는지, 화면 밖인지
 const LL = await import('../src/render/layoutlog.js');
 LL.LOG.on = true;
-// 보류: 사람이 고를 때까지 따로 세는 화면(docs/design-notes/layout.md 「보류」) — 명국 조각이 붙어 카드가 넷인 금빛 꾸러미만
-const HELD = { 'pack-golden-4': '카드 넷인 금빛 꾸러미' };
-const heldOf = () => (screen() === 'pack' && app.run && app.run.pack && app.run.pack.kind === 'golden' && app.run.pack.options.length > 3 ? 'pack-golden-4' : null);
+// 보류: 사람이 고를 때까지 따로 세는 화면(docs/design-notes/layout.md 「보류」). 지금은 없다
+// (카드 넷인 금빛 꾸러미는 명국 조각을 건너뛰기 줄로 빼고 격언 칸을 접어 풀었다 — CHM-12)
+const HELD = {};
+const heldOf = () => null;
 const flow = { frames: 0, text: 0, pad: 0, overlap: 0, screen: 0, held: 0, heldBy: {}, seen: new Map() };
 function flowCheck() {
   if (!app) return;
@@ -66,6 +67,7 @@ const seen = () => { for (const v of app.visited) visited.add(v); };
 // 처음 안내: 떠 본 안내 id
 const hintsShown = new Set();
 const previewSeen = { scroll: 0, pack: 0 };
+const goldSeen = { swap: 0, sell: 0, bad: [] };
 function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); } } }
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
 function click(id) {
@@ -424,6 +426,8 @@ function packStep() {
   notesOnce('pack', 6);
   keyBoxesAt(`pack:pick:${i}`, 'pack');
   click(`pack:pick:${i}`);
+  // 칸이 찬 채로 격언을 고르면 격언 칸이 펼쳐진다(바꾸기) — 판을 도는 봇은 「그만」 뒤 건너뛴다
+  if (app.screen.name === 'pack' && app.screen.panel) { click('pack:back'); click('pack:skip'); return; }
   if (app.screen.name === 'pack' && app.screen.engraveIndex != null) notesOnce('pack-target', 2);
   if (pack.options[i].kind === 'engraving' && app.screen.name === 'pack') {
     click(`deck:${app.run.deck.find((x) => targetOk(pack.options[i], x)).id}`);
@@ -639,6 +643,39 @@ click('next');
   scene((r) => { r.phase = 'shop'; stock(r); app.go('shop'); pump(2); click('cons:0'); click(`deck:${r.deck[1].id}`); });
   scene((r) => { r.phase = 'pack'; stock(r); r.pack = { kind: 'golden', options: [{ kind: 'maxim', id: 'chivalry', edition: 'foil' }, { kind: 'maxim', id: 'light_step', edition: 'pearl' }, { kind: 'fragment', legend: 'immortal' }] }; app.go('pack'); });
   scene((r) => { r.phase = 'pack'; stock(r); r.pack = { kind: 'engraving', options: [{ kind: 'engraving', id: 'glass' }, { kind: 'engraving', id: 'gold' }, { kind: 'engraving', id: 'feather' }] }; app.go('pack'); pump(90); click('pack:pick:1'); click(`deck:${r.deck[2].id}`); });
+  // 카드 넷인 금빛 꾸러미(CHM-12): 가장 긴 판본 격언 · 명국 조각 · 격언 칸 다섯이 찬 채로 — 조각은 건너뛰기 줄, 격언 칸은 위 띠 이름표.
+  // 칸이 찬 채로 격언을 고르면 격언 칸이 펼쳐지고 옛 격언 하나와 바꾼다 · 이름표를 누르면 펼쳐 판다
+  const golden4 = [{ kind: 'maxim', id: 'shadow_reading', edition: 'obsidian' }, { kind: 'maxim', id: 'reinforce_hunt', edition: 'obsidian' }, { kind: 'maxim', id: 'memory', edition: 'foil' }, { kind: 'fragment', legend: 'immortal' }];
+  scene((r) => { r.phase = 'pack'; stock(r); r.pack = { kind: 'golden', options: golden4.map((o) => ({ ...o })) }; app.go('pack'); });
+  {
+    const r = app.run, before = r.maxims.map((m) => m.id), money = r.money;
+    if (!region('pack:maxims') || region('maxim:0') || !region('pack:pick:3') || app.screen.panel) goldSeen.bad.push('접힌 격언 칸 · 명국 조각 칸이 없다');
+    click('pack:pick:2'); pump(2);
+    if (!app.screen.panel || app.screen.panel.pick !== 2 || !region('maxim:1') || !region('pack:chosen') || region('pack:skip')) goldSeen.bad.push('칸이 찬 채로 고른 격언에 격언 칸이 펼쳐지지 않았다');
+    notesCheck();
+    click('maxim:1'); pump(2);
+    if (!region('pack:swap')) goldSeen.bad.push('바꾸기 단추가 없다');
+    notesCheck();
+    click('pack:swap'); pump(2);
+    const after = app.run.maxims.map((m) => m.id);
+    if (app.run.phase !== 'shop' || after.length !== before.length || after.includes(before[1]) || !after.includes('memory') || app.run.money <= money) goldSeen.bad.push(`바꾸기가 어긋났다 ${before.join(',')} › ${after.join(',')}`);
+    else goldSeen.swap++;
+  }
+  scene((r) => { r.phase = 'pack'; stock(r); r.pack = { kind: 'golden', options: golden4.map((o) => ({ ...o })) }; app.go('pack'); });
+  {
+    const n = app.run.maxims.length;
+    click('pack:maxims'); pump(2);
+    if (!app.screen.panel || app.screen.panel.pick != null || !region('maxim:0') || !region('pack:back')) goldSeen.bad.push('이름표를 눌러도 격언 칸이 펼쳐지지 않았다');
+    notesCheck();
+    click('maxim:0'); pump(2);
+    if (!region('pack:sell')) goldSeen.bad.push('팔기 단추가 없다');
+    else { click('pack:sell'); pump(2); if (app.run.maxims.length !== n - 1) goldSeen.bad.push('팔기가 어긋났다'); else goldSeen.sell++; }
+    click('pack:back'); pump(2);
+    if (app.screen.panel || !region('pack:pick:0') || !region('pack:skip')) goldSeen.bad.push('「그만」 뒤 카드 줄로 돌아오지 않았다');
+    // 자리가 생겼으니 은박 격언은 곧바로 받는다
+    click('pack:pick:2'); pump(2);
+    if (app.run.phase !== 'shop' || !app.run.maxims.some((m) => m.id === 'memory')) goldSeen.bad.push('자리가 생긴 뒤 격언을 곧바로 받지 못했다');
+  }
   scene((r) => { r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; app.go('draft'); });
   scene((r) => { r.masters[0] = 'fog'; app.cmd({ type: 'skip' }); app.cmd({ type: 'skip' }); app.goPhase(); });
   scene((r) => { r.ante = 5; r.blind = 0; app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(200); });
@@ -896,9 +933,12 @@ if (place.n < 100 || place.rule || place.chain || place.off || place.self || pla
 console.log(`시너지 +N 말풍선: ${moreSeen.n}번(${[...moreSeen.screens].join(' ')}) · 시너지 여섯 이상 대국 ${moreSeen.battle6} · 어긋남 ${moreSeen.bad.length}${moreSeen.bad.length ? `: ${moreSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
 if (!moreSeen.battle6 || moreSeen.bad.length) { console.log('시너지 여섯 이상 대국에서 「+N」을 가리켜 보지 못했거나, 가려진 시너지가 말풍선에 다 없다'); fail = true; }
 const flowN = flow.text + flow.pad + flow.overlap + flow.screen;
+console.log(`금빛 꾸러미 격언 칸: 바꾸기 ${goldSeen.swap} · 팔기 ${goldSeen.sell} · 어긋남 ${goldSeen.bad.length}${goldSeen.bad.length ? `: ${goldSeen.bad.join(' | ')}` : ''}`);
+if (!goldSeen.swap || !goldSeen.sell || goldSeen.bad.length) { console.log('금빛 꾸러미의 격언 칸(펼치기 · 바꾸기 · 팔기)이 어긋났다'); fail = true; }
 console.log(`큰 수 장면: 대국 ${bigSeen.battle} · 관 선택 ${bigSeen.select} · 결과 ${bigSeen.result} · 기록 ${bigSeen.records} · 보상 ${bigSeen.reward} · 글끼리 겹침 ${bigSeen.overlap.length}${bigSeen.overlap.length ? `: ${bigSeen.overlap.join(' | ')}` : ''}`);
 if (!bigSeen.battle || !bigSeen.select || !bigSeen.result || !bigSeen.records || !bigSeen.reward || bigSeen.overlap.length) { console.log('큰 수 장면을 다 지나지 못했거나, 이름표와 수치가 겹쳤다'); fail = true; }
 console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held}(${Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`).join(' · ') || '없음'})`);
+if (flow.held) fail = true;
 if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 5000 : 40).join('\n  ')); fail = true; }
 if (VERBOSE && flow.held) console.log('보류 화면에서 넘친 곳: ' + [...flow.seen].filter(([, w]) => w === 'held').map(([k]) => k).slice(0, 60).join('\n  '));
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
