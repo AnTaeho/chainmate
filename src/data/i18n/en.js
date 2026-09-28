@@ -4,7 +4,7 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명국 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 export const EN = {
   
-  '점수가 이 막대 끝에 닿으면 대국을 이긴다 — 넘기면 ×2 · ×5 · ×10 눈금으로 늘어난다': 'Reach the end of this bar to win — past it, the bar stretches to ×2, ×5, ×10',
+  '사슬이 끝날 때 점수가 목표에 닿으면 이긴다. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어난다': 'Win when a chain ends at or past the goal. Past it, the bar stretches to ×2, ×5, ×10',
   '고른 정석 — 가리키면 무엇을 하는지 보인다': 'Your joseki — point at it to see what it does',
   '묘수 — 떨구기 전에 눌러 이번 대국에 한 번 쓴다': 'A trick — tap it before a drop to use it once this match',
   '창이 작아 글이 작게 보인다 — 설정에서 큰 글자를 켤 수 있다': 'The window is small, so text is small — turn on Big text in Settings',

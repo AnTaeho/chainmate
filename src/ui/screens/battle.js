@@ -7,7 +7,7 @@ import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, TONE, tierOf } from '../../render/sprites.js';
 import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
-import { dropSquaresFor, visibleIncoming, isHidden, overflowTier } from '../../sim/battle.js';
+import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
@@ -36,6 +36,7 @@ export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S
 // 게임 좌표 → 판 칸(판 밖이면 -1)
 export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
+const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 · ×5 · ×10) = 넘친 층
 // 대국 왼쪽 칸(판 틀 공통 쌓기 — common.js sideStack): 머리 칸(관 · 대국 종류 · 목표 · 점수) → 값 × 배수 → 사슬 칸(남는 높이)
 // … 아래 칸(수 · 버리기 · 상금 · 주머니). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
 export const VAL_H = 22;
@@ -767,19 +768,33 @@ export class BattleScreen {
     if (reg('tactic:')) hint(app, 'tactic', reg('tactic:').id);
   }
 
+  // 목표 막대 끝의 값(목표 × 눈금)을 부드럽게 따라간다. 대국이 바뀌면 · 움직임 줄이기면 곧바로
+  barScale(want, time) {
+    const b = this.bar, tgt = this.view.target;
+    if (!b || b.tgt !== tgt || this.app.reducedMotion) { this.bar = { v: want, t: time, tgt }; return want; }
+    const dt = Math.max(0, Math.min(0.1, time - b.t));
+    b.t = time;
+    b.v += (want - b.v) * Math.min(1, dt * 10);
+    if (Math.abs(want - b.v) < want * 0.005) b.v = want;
+    return b.v;
+  }
+
   // 목표는 막대로: 지금 점수는 채움, 이번 사슬로 얻을 몫(값 × 배수)은 빗금으로 미리 차오른다.
   // 목표를 넘기면 막대가 ×2 · ×5 · ×10 눈금으로 늘어나고 채움 끝에 불이 붙는다.
+  // 사슬 중에는 막대 끝을 늘 다음 눈금에 둔다: 목표를 넘겨도 막대가 꽉 차지 않고 다음 눈금까지 계속 차오른다
+  // (대국은 사슬이 끝난 뒤에 끝난다 — 규칙과 같다). 눈금이 바뀌면 막대는 한 번에 튀지 않고 늘어난다.
   drawGoalBar(ctx) {
     const v = this.view, tgt = v.target;
     if (!tgt || this.boardOnly) return;
     const time = this.app.time;
     const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
-    const live = v.chain && !v.gather ? Math.floor(v.chain.value * v.chain.mult) : v.gather && !v.count ? v.gather.score : 0;
+    const going = !!v.chain && !v.gather;
+    const live = going ? Math.floor(v.chain.value * v.chain.mult) : v.gather && !v.count ? v.gather.score : 0;
     const total = score + live;
-    const maxMul = total <= tgt ? 1 : total <= 2 * tgt ? 2 : total <= 5 * tgt ? 5 : 10;
-    const maxV = tgt * maxMul;
+    const maxMul = BAR_TIERS.find((m) => (going ? total < m * tgt : total <= m * tgt)) ?? BAR_TIERS[BAR_TIERS.length - 1];
+    const maxV = this.barScale(tgt * maxMul, time);
     const X = BX, Y = 15, Wd = S * 8, Hh = 7;
-    if (this.src.kind !== 'demo') this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '점수가 이 막대 끝에 닿으면 대국을 이긴다 — 넘기면 ×2 · ×5 · ×10 눈금으로 늘어난다') });
+    if (this.src.kind !== 'demo') this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '사슬이 끝날 때 점수가 목표에 닿으면 이긴다. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어난다') });
     box(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, PAL.feltDk, PAL.frameDk);
     const fill = Math.round(Wd * Math.min(1, score / maxV));
     const hot = score >= tgt;
@@ -793,11 +808,12 @@ export class BattleScreen {
       const gs = `+${num(live)}`, gw2 = Math.ceil(measure(gs, true) / 2);
       if (!this.hideGain) text(ctx, gs, Math.max(X + gw2, Math.min(X + Wd - gw2, X + fill + gw / 2)), 2, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
     }
-    // 눈금: 목표(×1)는 흰 막대, 넘친 층은 작은 숫자
-    for (const m of [1, 2, 5, 10]) {
-      if (m > maxMul) break;
+    // 눈금: 목표(×1)는 흰 막대(사슬 중에 넘기면 금빛으로 깜빡인다), 넘친 층은 작은 숫자
+    const passed = going && total >= tgt && Math.floor(time * 6) % 2 === 0;
+    for (const m of BAR_TIERS) {
+      if (m * tgt > maxV + 0.5) break;
       const tx = X + Math.round((Wd * m) / maxV * tgt) - 1;
-      rect(ctx, tx, Y - 3, 2, Hh + 6, m === 1 ? PAL.white : PAL.red);
+      rect(ctx, tx, Y - 3, 2, Hh + 6, m === 1 ? (passed ? PAL.goldHi : PAL.white) : PAL.red);
       if (m > 1) { rect(ctx, tx - 7, Y - 8, 1, 1, PAL.red); rect(ctx, tx - 5, Y - 6, 1, 1, PAL.red); rect(ctx, tx - 6, Y - 7, 1, 1, PAL.red); rect(ctx, tx - 7, Y - 6, 1, 1, PAL.red); rect(ctx, tx - 5, Y - 8, 1, 1, PAL.red); digits(ctx, m, tx - 3, Y - 9, PAL.red); }
     }
     // 불: 목표를 넘기면 채움 끝에서 불꽃이 인다
