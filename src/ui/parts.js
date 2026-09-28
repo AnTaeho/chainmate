@@ -13,7 +13,7 @@ import { familyGlyphs, familyChips, chipRows, chipBlockH, chipText, chipW } from
 import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.js';
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
-import { PIECE_NAME, PIECE_MOVE } from './words.js';
+import { PIECE_NAME, PIECE_MOVE, FRAG_SOURCE } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
@@ -421,7 +421,7 @@ export function itemTip(it) {
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
   if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
   if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`묘수 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
-  if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(`${l.name} · 첫 조각`, [l.story, `전설: ${l.text}`]); }
+  if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(l.name, ['조각 셋이면 전설', ...fragmentSteps(l, {}), `전설: ${l.text}`]); }
   return null;
 }
 
@@ -448,7 +448,8 @@ export function itemExtraTip(it) {
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보가 적용된다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${L(info.story)}`); }
   if (it.kind === 'evolve') lines.push('폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존');
-  if (it.kind === 'fragment') lines.push(`전설: ${LEGEND_BY_ID[it.legend].text}`, LEGEND_BY_ID[it.legend].story);
+  // 명국 조각(진열 · 꾸러미): 이 카드가 첫 조각이다 — 세 걸음 중 첫째가 다음 걸음
+  if (it.kind === 'fragment') lines.push(...fragmentSteps(LEGEND_BY_ID[it.legend], {}), `전설: ${LEGEND_BY_ID[it.legend].text}`);
   if (it.kind === 'piece') return moveTip(itemName(it), it.t, lines);
   return lines.length ? tipLines(itemName(it), lines, 170) : null;
 }
@@ -708,13 +709,17 @@ export function miniShard(ctx, x, y, col = PAL.gold) {
   const rows = ['.###.', '#####', '####.', '.##..', '..#..'];
   rows.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, j === 0 && i === 1 ? PAL.goldHi : col); });
 }
+// 조각 세 걸음(첫 → 재현 → 금빛 차례로만 모인다 — legends.js): 한 줄에 하나, 그 조각을 얻는 길로.
+// f = 이 판의 조각({ first, feat, gold }). null이면 판 밖(도감): 얻은 것 · 다음 것을 가르지 않는다.
+// 재현 조건은 첫 조각을 가진 뒤에만 드러난다(HOOKS 「불멸의 기보」) — 첫 조각이 없으면 「명국 재현」(낱말 상자가 풀어 준다)
+export function fragmentSteps(l, f) {
+  const feat = !f || f.first ? l.feat : '명국 재현';
+  const steps = [['first', `첫째: ${FRAG_SOURCE[l.source]}`], ['feat', `둘째: ${feat}`], ['gold', '셋째: 금빛 적을 먹고 이긴다']];
+  const next = f ? steps.findIndex(([k]) => !f[k]) : -1;
+  return steps.map(([k, s], i) => ({ step: !f ? 'step' : f[k] ? 'done' : i === next ? 'next' : 'todo', s }));
+}
 export function fragmentTip(run, l) {
-  const f = run.fragments[l.id] || {};
-  const parts = [['first', '첫 조각'], ['feat', '재현'], ['gold', '금빛']].map(([k, n]) => `${f[k] ? '■' : '□'} ${n}`).join('  ');
-  const lines = [parts];
-  if (f.first && !f.feat) lines.push(`재현: ${l.feat}`);
-  if (f.first && f.feat && !f.gold) lines.push('금빛 적을 먹고 이기면 금빛 조각');
-  return tipLines(l.name, lines, 170);
+  return tipLines(l.name, ['조각 셋이면 전설', ...fragmentSteps(l, run.fragments[l.id] || {})]);
 }
 // max: 놓을 수 있는 조각 수(좁은 칸 — 상금 칸 안)
 export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9, step = 15 } = {}) {

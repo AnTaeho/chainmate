@@ -115,10 +115,27 @@ export function tipRows(tip, w) {
   for (const l of src) {
     if (!l) continue;
     if (l.chips) { out.push(l); continue; }
+    // 걸음 줄(명국 조각): 앞에 표시 네모, 넘친 글은 표시 오른쪽에 맞춰 내려 쓴다
+    if (l.step) { wrap(String(l.s), tw - STEP_IN, l.step === 'next').forEach((q, k) => out.push({ step: l.step, s: q, mark: k === 0 })); continue; }
     if (Array.isArray(l)) { for (const q of wrap(String(l[0]), tw)) out.push([q, l[1]]); continue; }
     for (const q of wrap(String(l), tw)) out.push(q);
   }
   return out;
+}
+// 걸음 줄: done 얻었다(체크 · 진한 글) · next 다음에 할 것(짙은 금빛 네모 · 굵게) · todo 남았다(빈 네모 · 흐린 글) · step 판 밖(도감 — 빈 네모 · 본문 글)
+export const STEP_IN = 10;
+const STEP_INK = { done: PAL.cardInk, next: PAL.goldDk, todo: '#a18f70', step: PAL.cardDim };
+export const stepGlyph = (st) => (st === 'done' ? '■' : '□');
+// 표시 네모 7 × 7: 글 잉크(11) 가운데 줄에 맞춘다
+function stepMark(ctx, st, x, y) {
+  const my = y + 2;
+  if (st === 'done') {
+    rect(ctx, x, my, 7, 7, PAL.goldDk);
+    for (const [dx, dy] of [[1, 3], [2, 4], [3, 5], [4, 4], [5, 3], [6, 2]]) rect(ctx, x + dx, my + dy, 1, 1, PAL.cardHi);
+    return;
+  }
+  frame(ctx, x, my, 7, 7, STEP_INK[st]);
+  if (st === 'next') frame(ctx, x + 1, my + 1, 5, 5, PAL.goldDk);
 }
 const isChips = (l) => !!(l && l.chips);
 // 말풍선 자리 재기: 재기와 그리기가 같은 흐름을 쓴다. 돌려주는 값 { h, title, diag, rows: [{ l, y }] }(y는 글 · 칩 윗변)
@@ -159,6 +176,7 @@ export function tooltip(ctx, x, y, tip, w) {
   if (tip.diagram) moveDiagram(ctx, tip.diagram.t, x + P, y + lay.diag, { dir: tip.diagram.dir || 1 });
   for (const { l, y: ly } of lay.rows) {
     if (isChips(l)) { familyChips(ctx, l.chips, x + P + dx, y + ly, lay.tw); continue; }
+    if (l.step) { if (l.mark) stepMark(ctx, l.step, x + P + dx, y + ly); text(ctx, l.s, x + P + dx + STEP_IN, y + ly, STEP_INK[l.step], { bold: l.step === 'next' }); continue; }
     if (Array.isArray(l)) text(ctx, l[0], x + P + dx, y + ly, l[1]);
     else richText(ctx, l, x + P + dx, y + ly, PAL.cardDim, { termCol: PAL.goldDk });
   }
@@ -169,14 +187,14 @@ export function tooltip(ctx, x, y, tip, w) {
 // 말풍선 글(낱말 상자가 찾을 낱말): 줄바꿈 앞의 글이라 줄에 잘린 낱말(「기사 / 시너지」)도 찾는다. 글 조각마다 하나씩
 export function tipTexts(tip) {
   const src = tip.body ? [...tip.body, ...(tip.extra || [])] : tip.lines || [];
-  return src.filter((l) => l && !l.chips).map((l) => String(Array.isArray(l) ? l[0] : l));
+  return src.filter((l) => l && !l.chips).map((l) => String(l.step ? l.s : Array.isArray(l) ? l[0] : l));
 }
 
 // 큰 글자 설정: 말풍선 하나를 두 배 글자로 화면 아래 가운데에(고정 자리, 낱말 상자 없음)
 export function bigTooltip(ctx, tip) {
   const all = [];
   if (tip.title) all.push([tip.title, tip.titleCol || PAL.cardInk, true]);
-  for (const l of tipRows(tip, 236)) { const [s, col] = l && l.chips ? [chipText(l.chips), PAL.cardDim] : Array.isArray(l) ? l : [l, PAL.cardDim]; all.push([s, col, false]); }
+  for (const l of tipRows(tip, 236)) { const [s, col] = l && l.chips ? [chipText(l.chips), PAL.cardDim] : l && l.step ? [l.mark ? `${stepGlyph(l.step)} ${l.s}` : `  ${l.s}`, STEP_INK[l.step]] : Array.isArray(l) ? l : [l, PAL.cardDim]; all.push([s, col, false]); }
   // 두 배 글자: 줄 높이도 두 배(LINE × 2), 안 여백은 PAD_BOX
   const P = PAD_BOX, LH = LINE * 2;
   const bw = Math.min(476, Math.max(...all.map(([s, , b]) => measure(s, b))) * 2 + P * 2);
