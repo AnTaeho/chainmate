@@ -1,5 +1,5 @@
 // 글 상자가 내용에 맞춰(hug) 480×270 안에 들어가는지 — 연기 시험이 그리지 않는 물건 · 정석 · 명인 · 수업 글까지 한국어 · 영어로 잰다.
-// 글 폭은 연기 시험의 가짜 캔버스(Galmuri11 글자 폭 표)로 잰다. docs/design-notes/layout.md 「격자와 여백」 · 「보류」
+// 글 폭은 연기 시험의 가짜 캔버스(Galmuri11 글자 폭 표)로 잰다. docs/design-notes/layout.md 「격자와 여백」 · 「상점 · 금빛 꾸러미」
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -170,18 +170,48 @@ test('상점: 모든 진열 카드(판본 · 명국 조각 포함) → 꾸러미
   }
 });
 
-test('금빛 꾸러미(카드 셋): 판본 격언 · 명국 조각 카드 → 건너뛰기 줄 → 격언 칸 두 줄이 화면 안', async () => {
-  const { TOP, GAP_GROUP, GAP_IN, BTN_H, CARD } = M.frame;
+// 금빛 꾸러미: 판본 격언 셋(+ 명국 조각은 카드 줄 밖 건너뛰기 줄 왼쪽 칸). 격언 칸은 위 띠 이름표로 접혀 있고, 칸이 찬 채로 고르면 펼친다.
+// 모든 판본 격언 × 한국어 · 영어 × 격언 칸 다섯 · 일곱(흑요 둘)으로 카드 줄 · 건너뛰기 줄 · 펼친 격언 칸(고른 카드 + 두 칸씩, 이름표로 펼치면 세 칸씩)을 잰다
+async function goldenPackCheck(withFragment) {
+  const P = await import('../src/ui/screens/pack.js');
+  const { TOP, MAIN, CARD, BTN_H } = M.frame;
   const run = M.run.createRun({ seed: 1, draft: false });
-  const items = (await allItems(false)).filter((it) => it.edition || it.kind === 'fragment');
+  const add = (id, edition = null) => run.maxims.push({ uid: run.nextUid++, id, data: {}, edition, paid: 5 });
+  const items = (await allItems(false)).filter((it) => it.edition);
+  const frag = { kind: 'fragment', legend: 'century' };
+  let worst = 0, n = 0;
   for (const lang of LANGS) {
     M.lang.setLang(lang);
-    for (const it of items) {
-      const h = M.parts.itemCardH(it, CARD.w, { run, price: false });
-      assert.ok(TOP + h + GAP_GROUP + BTN_H + GAP_IN + M.parts.maximGridH(run, 3, 2) <= 270, `${lang} ${it.id || it.legend} ${it.edition || ''} ${h}`);
+    for (const maxims of [5, 7]) {
+      run.maxims = [];
+      for (const [id, ed] of [['chivalry'], ['quick_change', 'foil'], ['first_move'], ['whim', 'rainbow'], ['sacrifice'], ['wall_breaker', 'obsidian'], ['collector_forms', 'obsidian']].slice(0, maxims)) add(id, ed);
+      // 격언 이름표는 위 띠(카드 줄 위 · 멈춤 단추 왼쪽)
+      assert.ok(2 + BTN_H <= TOP && MAIN.x + P.maximTagW(run) < 460, `${lang} 이름표 ${P.maximTagW(run)}`);
+      for (const it of items) {
+        const pack = { kind: 'golden', options: withFragment ? [it, it, it, frag] : [it, it, it] };
+        const lay = P.packLayout(run, pack);
+        const tag = `${lang} 칸${maxims} ${it.id} ${it.edition}`;
+        // 카드는 늘 셋 · 폭 108(명국 조각은 카드 줄 밖)
+        assert.equal(lay.n, 3, tag);
+        assert.equal(lay.cw, CARD.w, tag);
+        assert.equal(!!lay.cell, withFragment, tag);
+        assert.ok(lay.bottom <= BOTTOM, `${tag}: 카드 ${lay.ch} · 줄 끝 ${lay.bottom}`);
+        if (lay.cell) assert.ok(lay.cell.x + lay.cell.w < lay.skip.x, `${tag}: 명국 조각 칸이 건너뛰기와 겹친다`);
+        worst = Math.max(worst, lay.bottom);
+        // 펼친 격언 칸
+        for (const panel of [{ pick: 0 }, { pick: null }]) {
+          const q = P.packLayout(run, pack, panel);
+          assert.ok(q.bottom <= BOTTOM, `${tag} 펼침 ${panel.pick}: 줄 끝 ${q.bottom}`);
+          if (q.chosen) assert.ok(q.chosen.x + q.chosen.w < q.grid.x, `${tag}: 고른 카드가 격언 칸과 겹친다`);
+        }
+        n++;
+      }
     }
   }
-});
+  assert.ok(n > 500 && worst > TOP, `잰 경우 ${n} · 가장 낮은 줄 끝 ${worst}`);
+}
+test('금빛 꾸러미(카드 셋): 판본 격언 카드 → 건너뛰기 줄 · 펼친 격언 칸이 화면 안(모든 판본 격언 · 한국어 · 영어)', () => goldenPackCheck(false));
+test('금빛 꾸러미(카드 넷 — 명국 조각): 판본 격언 카드 셋(폭 108) → 건너뛰기 줄의 명국 조각 칸 · 펼친 격언 칸이 화면 안(모든 판본 격언 · 한국어 · 영어)', () => goldenPackCheck(true));
 
 test('기보 수준 표: 손 · 주머니는 그 모습의 기보 수준을 읽고, 이형은 바탕 체스 모습의 기보를 따른다', async () => {
   const { PIECES, chartForm } = await import('../src/data/pieces.js');

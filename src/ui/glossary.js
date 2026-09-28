@@ -149,12 +149,13 @@ export function keyList(ids, hot = null, max = KEY_MAX) {
 export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null) {
   const lay = keyLayout(id, w), h = lay.h, P = PAD_BOX;
   openBox('note', x, y, w, h, P, { overlay: true, name: `낱말 ${id}` });
-  box(ctx, x, y, w, h, '#16231f', hot ? PAL.gold : PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, '#2a3a33');
-  for (const [l, ly] of lay.words) text(ctx, l, x + P, y + ly, PAL.gold, { bold: true });
+  // 말풍선과 같은 카드 빛깔(한 묶음): 뒤 판넬(어두운 초록)과 톤이 갈린다. 낱말은 말풍선 글 속 낱말과 같은 짙은 금빛
+  box(ctx, x, y, w, h, PAL.card, hot ? PAL.gold : PAL.frameDk);
+  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
+  for (const [l, ly] of lay.words) text(ctx, l, x + P, y + ly, PAL.goldDk, { bold: true });
   const last = lay.words[lay.words.length - 1];
-  if (note && last && measure(last[0], true) + 6 + measure(note) <= w - P * 2) text(ctx, note, x + w - P, y + last[1], PAL.ink, { align: 'right' });
-  for (const [l, ly] of lay.lines) text(ctx, l, x + P, y + ly, PAL.ink);
+  if (note && last && measure(last[0], true) + 6 + measure(note) <= w - P * 2) text(ctx, note, x + w - P, y + last[1], PAL.cardInk, { align: 'right' });
+  for (const [l, ly] of lay.lines) text(ctx, l, x + P, y + ly, PAL.cardInk);
   closeBox();
   return { id, x, y, w, h };
 }

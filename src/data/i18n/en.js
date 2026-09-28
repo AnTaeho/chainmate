@@ -147,7 +147,7 @@ export const EN = {
   '새길 기물': 'Pick a piece to engrave', '이번 상점에선 끝': 'Done for this shop', '할 수 없다': "Can't do that", '격언 칸이 찼다': 'Maxim slots are full',
   '셋 중 하나를 고른다': 'Pick one of three', '판본이 붙은 격언 셋 중 하나': 'One of three maxims with an edition',
   '주머니에 들어온다': 'Goes into your bag', '주머니의 기물 하나에 새긴다': 'Engrave one piece in your bag', '비었다': 'Empty',
-  '기물 꾸러미': 'Piece Bundle', '기보 꾸러미': 'Study Bundle', '각인 꾸러미': 'Engraving Bundle', '금빛 꾸러미': 'Golden Bundle',
+  '명국 재현': 'Reenact the classic', '첫째': 'First', '둘째': 'Second', '셋째': 'Third', '상점 진열': 'Shop display', '금빛 적을 먹고 이긴다': 'Take a golden enemy and win', '기물 꾸러미': 'Piece Bundle', '기보 꾸러미': 'Study Bundle', '각인 꾸러미': 'Engraving Bundle', '금빛 꾸러미': 'Golden Bundle',
   '기물': 'Piece', '기보': 'Study', '각인': 'Engraving', '명국 조각': 'Classic Fragment',
   '명인의 상자': "Master's Chest", '한 칸': 'One cell', '세 칸': 'Three cells', '다섯 칸!': 'FIVE CELLS!',
   '조각 셋이면 전설': 'Three make a legend', '불멸의 기보': 'Immortal Games', '전설': 'Legend', '잠듦': 'Asleep', '잠김': 'Locked',

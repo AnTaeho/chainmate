@@ -3,7 +3,7 @@
 //           설정 「처음 안내」로 끄고, 「안내 다시 보기」로 본 기록을 지운다.
 //   guide — 수업(상점과 가족)처럼 차례로 따라 하는 길. 지금 가리키는 구역만 누를 수 있다.
 import { PAL } from '../render/palette.js';
-import { W, H, text, box, rect, frame } from '../render/gfx.js';
+import { W, H, text, box, rect, frame, lift } from '../render/gfx.js';
 import { wrap } from '../render/text.js';
 import { placeBubble, noteMode, noteWidth } from './placement.js';
 import { PAD_BOX, GAP_GROUP, flow, BTN_S, inkY } from './frame.js';
@@ -128,6 +128,7 @@ export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
   }
   const bob = Math.round(Math.sin(app.time * 4));
   openBox('note', x, y + bob, w, h, PAD_BOX, { overlay: true, name: '처음 안내' });
+  lift(ctx, x, y + bob, w, h);
   box(ctx, x, y + bob, w, h, PAL.card, PAL.gold);
   if (r && p.arrow) {
     for (let k = 0; k < 5; k++) {
