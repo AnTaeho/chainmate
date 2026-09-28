@@ -287,6 +287,10 @@ export const EN = {
   '지키는 적을 먹으면 값 +20': 'Take a guard: +20 Value', '지키는 적을 먹을 때마다 배수 +2': 'Each guard taken: +2 Mult', '지키는 적을 먹을 때마다 배수 ×1.3': 'Each guard taken: ×1.3 Mult',
   '증원을 먹으면 값 +30': 'Take a reinforcement: +30 Value', '증원 자리에 떨구면 배수 +3': 'Drop on a reinforcement square: +3 Mult', '증원을 먹을 때마다 배수 ×1.5': 'Each reinforcement taken: ×1.5 Mult',
   '역습 시너지': 'Counter synergy', '매복 시너지': 'Ambush synergy',
+  '시계': 'Clock', '다시 놓기': 'New Board', '시계 −1': 'Clock −1', '시간이 다했다': 'Out of time', '짐 · 시계 −1': 'Clock −1',
+  '대국을 지면 한 칸을 잃고 다음 대국으로 간다': 'Lose a match: lose one cell and play on', '다 잃으면 판이 끝난다': 'Lose them all and the run ends',
+  '대국을 지면 시계 한 칸이 준다. 시계를 다 쓰면 판이 끝난다': 'Lose a match and your clock loses a cell. When it runs out, the run ends',
+  '아무것도 지키지 못한다': 'Guards nothing',
   // ── 명인
   '철벽': 'Iron Wall', '적 폰이 좌우 옆 칸도 지킨다': 'Enemy pawns also guard the squares beside them', '적 폰이 옆 칸과 뒤 대각도 지킨다': 'Enemy pawns also guard beside and behind them',
   '안개': 'Fog', '위 세 줄이 안개에 덮인다': 'Fog covers the top three ranks', '내 기물이 닿은 칸만 걷힌다': 'Only squares your piece reaches clear', '안개 속에는 떨굴 수 없다': 'No drops into the fog',
@@ -472,9 +476,9 @@ export const PRE = [
   [/^(\d+)개$/, (m) => `${m[1]}`],
 
   // 시너지 이름 · 칩(「기사 시너지」 · 「기사 +1」 · 「기사 2/4」)
-  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥) 시너지$/, (m, tr) => `${tr(m[1])} synergy`],
-  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥) \+(\d+)$/, (m, tr) => `${tr(m[1])} +${m[2]}`],
-  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥) (\d+)\/(\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}/${m[3]}`],
+  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥|역습|매복) 시너지$/, (m, tr) => `${tr(m[1])} synergy`],
+  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥|역습|매복) \+(\d+)$/, (m, tr) => `${tr(m[1])} +${m[2]}`],
+  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥|역습|매복) (\d+)\/(\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}/${m[3]}`],
   [/^([^\s:\d]+(?: [^\s:\d]+)?): (.+)$/, (m, tr) => `${tr(m[1])}: ${tr(m[2])}`],
   [/^(\d+)관 · (연습|정식|명인) 대국$/, (m) => `Hall ${m[1]} · ${{ 연습: 'Practice', 정식: 'Rated', 명인: 'Master' }[m[2]]}`],
   // 왼쪽 판 제목 「3/8관 · 연습 대국」: 영어는 「Hall 3/8 · Practice」가 판 폭(112)을 넘어 「/8」을 뺀다
@@ -522,6 +526,10 @@ export const TEMPLATES = [
   [/^(.+) 한 장$/, (m, tr) => `1 × ${tr(m[1])}`],
   [/^(.+?)(?:으로|로) 승급 \$(\d+)$/, (m, tr) => `Promote to ${tr(m[1])} $${m[2]}`],
   [/^유리 각인 (.+?)[이가] 깨졌다$/, (m, tr) => `Glass ${tr(m[1])} shattered`],
+  [/^(.+?)[이가] 손으로 돌아왔다$/, (m, tr) => `${tr(m[1])} returned to your hand`],
+  [/^(.+) 포로가 주머니에 든다$/, (m, tr) => `A captive ${tr(m[1]).toLowerCase()} joins your bag`],
+  [/^횃불 · (.+)$/, (m, tr) => `Torch · ${tr(m[1])}`],
+  [/^횃불: (.+)$/, (m, tr) => `Torch: ${tr(m[1])}`],
   [/^(.+)에 (.+) 각인$/, (m, tr) => `${tr(m[2])} engraving on ${tr(m[1])}`],
   [/^(.+) 각인$/, (m, tr) => `${tr(m[1])} Engraving`],
   [/^재현: (.+)$/, (m, tr) => `Reenact: ${tr(m[1])}`],
