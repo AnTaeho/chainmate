@@ -221,3 +221,25 @@ test('각인 · 혼 바꾸기: 같은 종류가 있으면 옛 것 › 새 것, �
     }
   }
 });
+
+test('큰 수: 끝없는 대국의 13~16자리 수가 제 칸 폭 안에(값 × 배수 곱 · 머리 칸 · 관 선택 목표, 한국어 · 영어)', async () => {
+  const { fitNum, measure } = await import('../src/render/gfx.js');
+  const { LEFT, PAD_BOX, EDGE_PAD } = M.frame;
+  const BIG = [1719572936961, 6184890789926, 999999999999999, 9876543210987654];
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    const rooms = { '값 × 배수': LEFT.w - (1 + EDGE_PAD) * 2, '목표': LEFT.w - PAD_BOX * 2 - measure('목표') - 4, '점수': LEFT.w - PAD_BOX * 2 - measure('점수') - 4 };
+    for (const n of BIG) for (const [k, room] of Object.entries(rooms)) assert.ok(measure(fitNum(n, room), true) <= room, `${lang} ${k} ${n} → ${fitNum(n, room)}`);
+    // 관 선택 카드: 목표 수치가 카드 안 폭(IW) 안
+    const run = M.run.createRun({ seed: 1, draft: false });
+    run.endless = true;
+    for (const ante of [29, 33, 36]) {
+      run.ante = ante;
+      for (let i = 0; i < 3; i++) {
+        const lay = M.select.blindLayout(run, i);
+        for (const r of lay.rows) assert.ok(measure(r.val, true) <= lay.IW, `${lang} ${ante}관 카드 ${i} ${r.label} ${r.val}`);
+      }
+    }
+  }
+  M.lang.setLang('ko');
+});

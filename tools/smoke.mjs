@@ -683,6 +683,49 @@ click('next');
   app.toTitle(); pump(1);
 }
 
+// 큰 수(CHM-10): 끝없는 대국 깊은 관의 13~16자리 수 — 관 선택 카드의 목표, 대국 머리 칸 목표 · 점수, 값 × 배수 칸이 터지며 보이는 곱,
+// 결과 · 기록 · 보상의 수치 줄. 글 넘침(flowCheck)에 더해 같은 상자 안의 글끼리 겹침(이름표와 수치)도 잰다
+const bigSeen = { battle: 0, select: 0, result: 0, records: 0, reward: 0, overlap: [] };
+{
+  const cross = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const look = (key, n = 1) => {
+    pump(n);
+    bigSeen[key]++;
+    const ts = LL.LOG.texts.filter((q) => q.s.trim() && !(q.box && q.box.loose));
+    for (let i = 0; i < ts.length; i++) for (let j = i + 1; j < ts.length; j++) {
+      const a = ts[i], b = ts[j];
+      if (a.box === b.box && a.layer === b.layer && cross(a, b) && bigSeen.overlap.length < 12) bigSeen.overlap.push(`${screen()} 「${a.s}」 ∩ 「${b.s}」`);
+    }
+  };
+  const BIG = [1719572936961, 6184890789926, 999999999999999, 9876543210987654];
+  const deep = (ante) => { app.overlay = null; app.nextSeed = 11; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 }); const r = app.run; r.endless = true; r.ante = ante; r.blind = 0; return r; };
+  for (const ante of [29, 33, 36]) {
+    const r = deep(ante); r.phase = 'select'; app.goPhase(); look('select', 60);
+    app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(200);
+    const v = app.screen.view;
+    for (const n of BIG) {
+      v.score = n; v.target = Math.round(n * 0.7); v.gather = null; v.count = null; look('battle', 2);
+      v.gather = { p: 1, value: 1234567, mult: 98765, score: n, burst: true }; look('battle', 2);
+      v.gather = null; v.count = { from: 0, to: n, p: 0.3 }; look('battle', 2); v.count = null;
+    }
+  }
+  for (const n of BIG) {
+    const r = deep(29);
+    r.last = { score: n, target: Math.round(n * 0.6), overflow: 1, reason: 'score' };
+    app.go('reward', { reward: { base: 3, moves: 2, interest: 1, mate: 0, overflow: 1, earned: 1, total: 7 }, events: [] }); look('reward', 200);
+    const r2 = deep(29);
+    r2.log.push({ ante: 29, blind: 0, kind: 'practice', score: Math.round(n / 3), target: n, best: Math.round(n / 2) });
+    r2.bestReplay = { board: Array(64).fill(null), drop: { sq: 27, piece: 'N' }, caps: [{ from: 27, to: 44, form: 'N', after: 'B' }], score: n, reason: 'end' };
+    r2.phase = 'lost';
+    app.go('result'); look('result', 60);
+    const keep = app.records.bestMove;
+    app.records.bestMove = { score: n, steps: ['P', 'N', 'B', 'R', 'Q', 'N', 'B', 'R', 'Q'], ante: 29 };
+    app.go('records'); look('records', 5);
+    app.records.bestMove = keep;
+  }
+  app.toTitle(); pump(1);
+}
+
 // 기보가 보이는 곳(docs/tasks/backlog.md 5): 기보가 붙은 모습으로 먹으면 청록 몫이 뜬다 · 기보를 쓰면 그 모습의 기물이 자란다(단계가 바뀌면 크게)
 const chartSeen = { run: 0, scene: 0, grow: 0, tick: 0, growBad: 0 };
 {
@@ -852,6 +895,8 @@ if (place.n < 100 || place.rule || place.chain || place.off || place.self || pla
 console.log(`시너지 +N 말풍선: ${moreSeen.n}번(${[...moreSeen.screens].join(' ')}) · 시너지 여섯 이상 대국 ${moreSeen.battle6} · 어긋남 ${moreSeen.bad.length}${moreSeen.bad.length ? `: ${moreSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
 if (!moreSeen.battle6 || moreSeen.bad.length) { console.log('시너지 여섯 이상 대국에서 「+N」을 가리켜 보지 못했거나, 가려진 시너지가 말풍선에 다 없다'); fail = true; }
 const flowN = flow.text + flow.pad + flow.overlap + flow.screen;
+console.log(`큰 수 장면: 대국 ${bigSeen.battle} · 관 선택 ${bigSeen.select} · 결과 ${bigSeen.result} · 기록 ${bigSeen.records} · 보상 ${bigSeen.reward} · 글끼리 겹침 ${bigSeen.overlap.length}${bigSeen.overlap.length ? `: ${bigSeen.overlap.join(' | ')}` : ''}`);
+if (!bigSeen.battle || !bigSeen.select || !bigSeen.result || !bigSeen.records || !bigSeen.reward || bigSeen.overlap.length) { console.log('큰 수 장면을 다 지나지 못했거나, 이름표와 수치가 겹쳤다'); fail = true; }
 console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held}(${Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`).join(' · ') || '없음'})`);
 if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 5000 : 40).join('\n  ')); fail = true; }
 if (VERBOSE && flow.held) console.log('보류 화면에서 넘친 곳: ' + [...flow.seen].filter(([, w]) => w === 'held').map(([k]) => k).slice(0, 60).join('\n  '));
