@@ -24,6 +24,15 @@ test('흡수: 모습은 그대로, 먹은 행마가 더해진다', () => {
   assert.ok(chainCaptures(t).includes(S('g8')));
 });
 
+test('흡수: 첫 먹기만 · 얻은 행마는 다음 먹기에서 사라진다', () => {
+  // N d4 → e6(B): 나이트 그대로 + 비숍 행마 → g8(R, 비숍 행마로): 이번엔 룩이 되고 비숍 행마는 사라진다
+  const t = go({ e6: 'B', g8: 'R', h7: 'P', c8: 'P' }, 'N', 'd4', 'absorb', ['e6', 'g8']);
+  assert.equal(t.chain.form, 'R');
+  assert.equal(t.chain.absorbed, null);
+  assert.ok(chainCaptures(t).includes(S('c8')), '룩 행마');
+  assert.ok(!chainCaptures(t).includes(S('h7')), '비숍 행마는 없다');
+});
+
 test('메아리: 막히면 한 번 떨군 모습으로 돌아가 잇는다', () => {
   // N d4 → e6(B) … 비숍으로는 더 없고, 나이트로 돌아가 e6에서 d8을 먹는다
   const t = go({ e6: 'B', d8: 'P' }, 'N', 'd4', 'echo', ['e6']);
@@ -31,9 +40,22 @@ test('메아리: 막히면 한 번 떨군 모습으로 돌아가 잇는다', () 
   assert.deepEqual(chainCaptures(t), [S('d8')]);
 });
 
-test('초월: 먹힌 모습 대신 한 단계 위로', () => {
-  const t = go({ e6: 'P', f4: 'P' }, 'N', 'd4', 'transcend', ['e6']);
-  assert.equal(t.chain.form, 'B', '폰을 먹었지만 나이트 › 비숍');
+test('초월: 두 번 먹을 때마다 한 단계 위로 · 그 사이엔 모습이 그대로', () => {
+  // N d4 → e6(P): 나이트 그대로 → f8(P): 폰을 먹었지만 나이트 › 비숍
+  const t = go({ e6: 'P', f8: 'P', a3: 'P' }, 'N', 'd4', 'transcend', ['e6']);
+  assert.equal(t.chain.form, 'N', '첫 먹기는 그대로');
+  chainCapture(t, S('f8'));
+  assert.equal(t.chain.form, 'B', '둘째 먹기에 나이트 › 비숍');
+});
+
+test('초월: 룩까지만 오른다', () => {
+  // B c1 → d2(P) → e3(P): 비숍 › 룩 · R e3 → e6(Q) → e8(P): 룩에서 더 오르지 않는다
+  const t = go({ d2: 'P', e3: 'P', e6: 'Q', e8: 'P' }, 'B', 'c1', 'transcend', ['d2', 'e3']);
+  assert.equal(t.chain.form, 'R');
+  chainCapture(t, S('e6'));
+  chainCapture(t, S('e8'));
+  assert.equal(t.chain.form, 'R', '퀸을 먹어도 룩 그대로');
+  assert.equal(t.chain.transforms, 1);
 });
 
 test('굶주림: 먹을수록 값이 커진다', () => {
