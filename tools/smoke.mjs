@@ -34,7 +34,7 @@ LL.LOG.on = true;
 // 보류: 사람이 고를 때까지 따로 세는 화면(docs/design-notes/layout.md 「보류」) — 명국 조각이 붙어 카드가 넷인 금빛 꾸러미만
 const HELD = { 'pack-golden-4': '카드 넷인 금빛 꾸러미' };
 const heldOf = () => (screen() === 'pack' && app.run && app.run.pack && app.run.pack.kind === 'golden' && app.run.pack.options.length > 3 ? 'pack-golden-4' : null);
-const flow = { frames: 0, text: 0, overlap: 0, screen: 0, held: 0, heldBy: {}, seen: new Map() };
+const flow = { frames: 0, text: 0, pad: 0, overlap: 0, screen: 0, held: 0, heldBy: {}, seen: new Map() };
 function flowCheck() {
   if (!app) return;
   flow.frames++;
@@ -624,6 +624,16 @@ click('next');
   scene((r) => { r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; app.go('draft'); });
   scene((r) => { r.masters[0] = 'fog'; app.cmd({ type: 'skip' }); app.cmd({ type: 'skip' }); app.goPhase(); });
   scene((r) => { r.ante = 5; r.blind = 0; app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(200); });
+  // 사람이 보낸 대국 화면(2026-09-28 「글자 삐져나가는 거」): 격언 다섯(귀함 겹테 · 은박 점선 · 흔함) · 판본 · 시너지 넷 · 손 넷 — 격언 칸 · 칩 · 단추의 글이 테에 닿지 않는지.
+  // 판본은 넷을 모두(자개 · 무지개 · 흑요도) 한 번씩 지나간다
+  for (const eds of [[null, null, null, null, 'foil'], ['pearl', null, 'rainbow', null, 'obsidian']]) {
+    scene((r) => {
+      r.maxims = [];
+      ['collector_forms', 'long_chain', 'first_move', 'empty_bag', 'kings_neck'].forEach((id, k) => r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: eds[k], paid: 5 }));
+      r.ante = 5; r.blind = 0; app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(200);
+    });
+    click(`hand:0`); pump(30); click(`hand:0`); pump(10);
+  }
   // 판 위 표시: 오른쪽 누르기 = 칸 칠(멈춤이 열리지 않는다) · 오른쪽 끌기 = 화살표(곧은 · 나이트) · 같은 것 다시 = 지움 · 왼쪽 누르기 = 모두 지움
   {
     const mk = () => app.screen.marks;
@@ -821,9 +831,9 @@ console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · �
 if (VERBOSE) console.log('종류별 자리: ' + kinds.join(' · '));
 if (place.bad.length) console.log('어긴 곳: ' + place.bad.join(' | '));
 if (place.n < 100 || place.rule || place.chain || place.off || place.self || place.cover || place.none || place.hintBad) { console.log('설명이 규약의 자리에 뜨지 않았거나 누를 것 · 화면 밖을 덮었다'); fail = true; }
-const flowN = flow.text + flow.overlap + flow.screen;
-console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held}(${Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`).join(' · ') || '없음'})`);
-if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 400 : 20).join('\n  ')); fail = true; }
+const flowN = flow.text + flow.pad + flow.overlap + flow.screen;
+console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held}(${Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`).join(' · ') || '없음'})`);
+if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 5000 : 40).join('\n  ')); fail = true; }
 if (VERBOSE && flow.held) console.log('보류 화면에서 넘친 곳: ' + [...flow.seen].filter(([, w]) => w === 'held').map(([k]) => k).slice(0, 60).join('\n  '));
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);

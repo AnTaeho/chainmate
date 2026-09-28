@@ -294,6 +294,9 @@ if (ko) {
   await scene('codex-page2', () => { const a = window.__app; a.go('codex'); a.screen.page = 1; });
 }
 
+// 사람이 보낸 대국 화면(2026-09-28 「글자 삐져나가는 거」): 격언 다섯(흔함 · 귀함 겹테 · 은박 점선) · 시너지 넷 · 손 넷. 번호가 앞 장면과 짝을 잃지 않게 맨 끝에
+await scene('battle-editions', js(battleSrc(11, "r.maxims = []; for (const [id, ed] of [['collector_forms'], ['long_chain'], ['first_move'], ['empty_bag'], ['kings_neck', 'foil']]) r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: ed || null, paid: 5 }); r.josekis = ['gates', 'stepping']; r.ante = 5; r.blind = 0;")), { wait: 2800 });
+
 // --only로 몇 장만 다시 찍으면 있던 기록에 합친다
 const logFile = path.join(OUT, `${PREFIX}${LANG === 'en' ? '-en' : ''}.json`);
 const prev = ONLY && fs.existsSync(logFile) ? JSON.parse(fs.readFileSync(logFile, 'utf8')) : {};
