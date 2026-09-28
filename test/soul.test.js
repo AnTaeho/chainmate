@@ -1,9 +1,9 @@
 // 깊이 C: 혼 여덟
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { boardFrom, parseSq as S, attackers } from '../src/sim/board.js';
+import { boardFrom, parseSq as S } from '../src/sim/board.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
-import { SOULS, soulSpec, MARTYR } from '../src/data/souls.js';
+import { SOULS, soulSpec } from '../src/data/souls.js';
 import { createRun, applyRun } from '../src/sim/run.js';
 import { createBattle, apply } from '../src/sim/battle.js';
 import { familyCounts } from '../src/data/families.js';
@@ -24,13 +24,19 @@ test('흡수: 모습은 그대로, 먹은 행마가 더해진다', () => {
   assert.ok(chainCaptures(t).includes(S('g8')));
 });
 
-test('흡수: 첫 먹기만 · 얻은 행마는 다음 먹기에서 사라진다', () => {
-  // N d4 → e6(B): 나이트 그대로 + 비숍 행마 → g8(R, 비숍 행마로): 이번엔 룩이 되고 비숍 행마는 사라진다
-  const t = go({ e6: 'B', g8: 'R', h7: 'P', c8: 'P' }, 'N', 'd4', 'absorb', ['e6', 'g8']);
+test('흡수: 세 번까지 모습이 안 바뀐다 · 마지막에 얻은 행마는 사슬 끝까지 남는다', () => {
+  // N d4 → e6(R) → 룩 행마로 e8(P) → 나이트로 f6(B): 세 번 모두 나이트 그대로, 얻은 행마는 마지막 것(비숍) 하나
+  const t = go({ e6: 'R', e8: 'P', f6: 'B', g4: 'R', e2: 'P' }, 'N', 'd4', 'absorb', ['e6']);
+  assert.deepEqual([t.chain.form, t.chain.absorbed], ['N', ['R']]);
+  chainCapture(t, S('e8'));
+  assert.deepEqual([t.chain.form, t.chain.absorbed], ['N', ['P']]);
+  chainCapture(t, S('f6'));
+  assert.deepEqual([t.chain.form, t.chain.absorbed], ['N', ['B']]);
+  // 넷째 먹기(나이트로 g4 룩): 이제 모습이 룩으로 바뀌고, 비숍 행마는 남는다
+  chainCapture(t, S('g4'));
   assert.equal(t.chain.form, 'R');
-  assert.equal(t.chain.absorbed, null);
-  assert.ok(chainCaptures(t).includes(S('c8')), '룩 행마');
-  assert.ok(!chainCaptures(t).includes(S('h7')), '비숍 행마는 없다');
+  assert.deepEqual(t.chain.absorbed, ['B']);
+  assert.ok(chainCaptures(t).includes(S('e2')), '비숍 행마로 g4 › e2');
 });
 
 test('메아리: 막히면 한 번 떨군 모습으로 돌아가 잇는다', () => {
@@ -40,22 +46,14 @@ test('메아리: 막히면 한 번 떨군 모습으로 돌아가 잇는다', () 
   assert.deepEqual(chainCaptures(t), [S('d8')]);
 });
 
-test('초월: 두 번 먹을 때마다 한 단계 위로 · 그 사이엔 모습이 그대로', () => {
-  // N d4 → e6(P): 나이트 그대로 → f8(P): 폰을 먹었지만 나이트 › 비숍
-  const t = go({ e6: 'P', f8: 'P', a3: 'P' }, 'N', 'd4', 'transcend', ['e6']);
-  assert.equal(t.chain.form, 'N', '첫 먹기는 그대로');
-  chainCapture(t, S('f8'));
-  assert.equal(t.chain.form, 'B', '둘째 먹기에 나이트 › 비숍');
-});
-
-test('초월: 룩까지만 오른다', () => {
-  // B c1 → d2(P) → e3(P): 비숍 › 룩 · R e3 → e6(Q) → e8(P): 룩에서 더 오르지 않는다
-  const t = go({ d2: 'P', e3: 'P', e6: 'Q', e8: 'P' }, 'B', 'c1', 'transcend', ['d2', 'e3']);
-  assert.equal(t.chain.form, 'R');
-  chainCapture(t, S('e6'));
-  chainCapture(t, S('e8'));
-  assert.equal(t.chain.form, 'R', '퀸을 먹어도 룩 그대로');
-  assert.equal(t.chain.transforms, 1);
+test('초월: 먹을 때마다 한 단계 위로 · 아마존까지', () => {
+  // N d4 → e6(P) 비숍 → g8(P) 룩 → g3(P) 퀸 → c7(P) 아마존 → e8(P) 아마존 그대로
+  const t = go({ e6: 'P', g8: 'P', g3: 'P', c7: 'P', e8: 'P' }, 'N', 'd4', 'transcend', ['e6']);
+  assert.equal(t.chain.form, 'B', '폰을 먹었지만 나이트 › 비숍');
+  const ladder = [];
+  for (const sq of ['g8', 'g3', 'c7', 'e8']) { chainCapture(t, S(sq)); ladder.push(t.chain.form); }
+  assert.deepEqual(ladder, ['R', 'Q', 'Z', 'Z']);
+  assert.equal(t.chain.transforms, 4);
 });
 
 test('굶주림: 먹을수록 값이 커진다', () => {
@@ -74,35 +72,14 @@ test('순교자: 끊기면 둘레 적을 먹은 것으로', () => {
   assert.equal(t.board[S('d7')], null);
 });
 
-test('순교자: 킹을 지키는 적은 남긴다', () => {
-  // d7 나이트는 f8 킹을 지킨다 — 남고, f5 폰만 먹는다
-  const t = go({ e6: 'P', e8: 'R', d7: 'N', f5: 'P', f8: 'K' }, 'B', 'c4', 'martyr', ['e6']);
+test('순교자: 킹을 뺀 둘레의 적을 모두 먹는다', () => {
+  // 둘레: d7 나이트 · f5 폰 · d6 비숍 · f6 룩 · f7 킹 → 킹만 남는다(킹을 지키는 적도 먹는다)
+  const t = go({ e6: 'P', e8: 'R', d7: 'N', f5: 'P', d6: 'B', f6: 'R', f7: 'K' }, 'B', 'c4', 'martyr', ['e6']);
   assert.equal(t.chain.reason, 'cut');
-  assert.equal(t.board[S('d7')].t, 'N');
-  assert.equal(t.board[S('f5')], null);
-  assert.equal(t.board[S('f8')].t, 'K');
-  assert.ok(attackers(t.board, S('f8')).includes(S('d7')), '킹은 여전히 지켜진다');
-});
-
-test('순교자: 내 기물이 막던 선의 수비수도 남긴다', () => {
-  // e7 룩은 끊는 적이자, 내 기물(e6)이 내려가면 e2 킹을 지킨다
-  const t = go({ e6: 'P', e7: 'R', f5: 'P', e2: 'K' }, 'B', 'c4', 'martyr', ['e6']);
-  assert.equal(t.chain.reason, 'cut');
-  assert.equal(t.board[S('e7')].t, 'R');
-  assert.equal(t.board[S('f5')], null);
-});
-
-test('순교자: 값이 큰 적부터 둘까지만 · 같으면 칸 차례', () => {
-  // 둘레: f6 룩 50 · d6 비숍 30 · d7 나이트 30 · f5 폰 10 → 룩과 d6 비숍(칸 번호가 d7보다 앞)
-  const t = go({ e6: 'P', e8: 'R', d7: 'N', f5: 'P', d6: 'B', f6: 'R' }, 'B', 'c4', 'martyr', ['e6']);
-  assert.equal(MARTYR.take, 2);
-  assert.equal(t.chain.reason, 'cut');
-  assert.equal(t.board[S('f6')], null);
-  assert.equal(t.board[S('d6')], null);
-  assert.equal(t.board[S('d7')].t, 'N');
-  assert.equal(t.board[S('f5')].t, 'P');
-  assert.equal(t.chain.value, 10 + 50 + 30);
-  assert.equal(t.chain.mult, 1 + 2);
+  for (const sq of ['d7', 'f5', 'd6', 'f6']) assert.equal(t.board[S(sq)], null, sq);
+  assert.equal(t.board[S('f7')].t, 'K');
+  assert.equal(t.chain.value, 10 + 30 + 10 + 30 + 50);
+  assert.equal(t.chain.mult, 1 + 4);
 });
 
 test('순교자: 벽은 먹지 않는다', () => {
@@ -122,13 +99,16 @@ test('잠행: 노림이 보지 못해 응수 없이 이어진다', () => {
   assert.notEqual(t.chain.reason, 'cut');
 });
 
-test('잠행: 한 사슬에서 한 번만 무시한다 · 배수 그대로', () => {
-  // c4 비숍 × e6(e8 룩이 지킴 — 무시) → 폰 모습 × d7(c8 비숍이 지킴 — 이번엔 응수) → 나이트로 c8에 못 닿아 끊김
+test('잠행: 지키는 적을 늘 무시한다 · 사슬 끝에 배수 −1', () => {
+  // c4 비숍 × e6(e8 룩이 지킴) → 폰 모습 × d7(c8 비숍이 지킴): 둘 다 무시하고 이어 간다
   const t = go({ e6: 'P', e8: 'R', d7: 'N', c8: 'B' }, 'B', 'c4', 'shade', ['e6']);
   assert.equal(t.chain.forced, null);
+  const before = t.chain.mult;
   chainCapture(t, S('d7'));
-  assert.equal(t.chain.reason, 'cut');
-  assert.equal(t.chain.mult, 2, '사슬 끝에 배수를 깎지 않는다');
+  assert.notEqual(t.chain.reason, 'cut');
+  assert.equal(t.chain.forced, null);
+  assert.equal(t.chain.done, true, '나이트로 더 먹을 적이 없다');
+  assert.equal(t.chain.mult, before + 1 - 1, '둘째 먹기 +1 · 사슬 끝 −1');
 });
 
 test('잠행: 지켜진 킹은 먹을 수 없다', () => {
