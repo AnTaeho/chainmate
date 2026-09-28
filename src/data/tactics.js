@@ -16,6 +16,7 @@ export const TACTIC_PRICE = 4;
 export function useTactic(b, id) {
   if (b.status !== 'play') throw new Error('tactic only before a drop');
   const events = [];
+  b.touched = true; // 묘수를 쓴 판은 다시 놓지 않는다(얼림 · 부른 폰이 사라지지 않게)
   if (id === 'freeze') {
     const list = [];
     b.board.forEach((c, sq) => { if (c && !c.mine && c.t !== 'K' && c.t !== 'X' && c.t !== 'J') list.push(sq); });

@@ -1,10 +1,11 @@
 // 대국 하나: 손 · 주머니 · 수 · 바꾸기 · 증원 · 승패.
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 apply(b, cmd) 하나뿐.
-//   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }
-import { createRng, fork, next, shuffle } from './rng.js';
+//   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }  { type: 'reboard' }
+import { createRng, fork, int, next, shuffle } from './rng.js';
 import { dropSquares, fileOf, rankOf, reach } from './board.js';
 import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts, markFairy } from './chain.js';
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
+import { bestMove } from './solver.js';
 import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js';
 import { soulSpec } from '../data/souls.js';
 import { thaw } from '../data/tactics.js';
@@ -29,7 +30,13 @@ export const DEFAULT_RULES = {
   openKings: false, // 지켜진 킹도 먹는다(전설 「오페라 대국」)
   fog: 0,           // 명인 「안개」: 위에서 몇 줄이 가려지나
   lookahead: 1,     // 증원 예고가 몇 수 앞까지 보이나(격언 「그림자 읽기」 2)
+  reboards: 1,      // 다시 놓기: 첫 수 전에 판을 새로 까는 횟수(대국마다)
 };
+
+// 나쁜 판 거르기(밤샘 2 D3): 판(런)의 대국은 판 후보 n개를 지어 「첫 손 최선 사슬 점수」(풀이기, docs/reports/luck.md ④)가
+// 가장 낮은 것을 버리고 나머지 중 하나를 시드로 고른다. 좋은 판은 그대로 남고 아래 꼬리만 잘린다.
+// 켜는 곳은 판(런)의 startBattle뿐(createBattle 기본은 끔: 시험 · 봇의 짜임 재기 · 수업은 옛 판 그대로).
+export const BOARD_FILTER = { nodes: 3000 };
 
 // 증원 예고는 늘 두 수 앞까지 뽑아 둔다: incoming(다음 수 뒤) · incomingNext(그다음).
 // 무엇이 보이느냐는 rules.lookahead(기본 1, 격언 「그림자 읽기」 2)가 정하고, 뽑는 횟수는 같다
@@ -111,7 +118,8 @@ export const OVERFLOW_TIERS = [1, 2, 5, 10];
 export const overflowTier = (score, target) => (target ? OVERFLOW_TIERS.reduce((a, x) => (score >= x * target ? x : a), 0) : 0);
 
 // golden: null이면 goldenChance(기본 GOLDEN.chance)로 굴린다(시드의 'gold' 하위 스트림), true/false로 강제.
-export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [], golden = null, goldenChance = GOLDEN.chance } = {}) {
+// filter: 판 후보 수(0 · 1이면 거르지 않는다, BOARD_FILTER)
+export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [], golden = null, goldenChance = GOLDEN.chance, filter = 0 } = {}) {
   const root = createRng(seed);
   const b = {
     v: 1,
@@ -133,6 +141,9 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     discarded: 0,      // 바꾸기로 버린 기물 수
     shattered: [],     // 깨진 기물 id(각인 「유리」). 판(런)이 주머니에서 뺀다
     regrip: false,     // 막혀서 손을 새로 쥐었나(대국마다 한 번)
+    reboards: 0,       // 다시 놓기를 쓴 횟수
+    filter,            // 판 후보 수(다시 놓기도 같은 거르기)
+    touched: false,    // 첫 수 전에 판을 건드렸나(묘수) — 다시 놓기를 막는다
     revealed: [],      // 명인 「안개」로 드러난 칸
     hints: {},         // 화면용 표시(격언 「왕의 목」: openKings)
     golden: 0,         // 이번 대국에서 먹은 금빛 적 수
@@ -143,23 +154,64 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
   b.discardsLeft = b.rules.discards;
   shuffle(b.rng.bag, b.bag);
   draw(b);
-  // 시작 손으로 떨굴 수가 없으면 판을 다시 만든다(시드 안에서 결정적으로).
-  // 판(런)의 첫 대국(1관 연습)은 시작 손으로 셋 이상 잇는 사슬(「!」)이 하나는 있는 판을 고른다 — 첫 사슬이 곧바로 나오게(밤샘 D-3)
-  const easy = ante === 1 && kind === 'practice' && rules.easyStart !== false;
-  for (let i = 0; i < 100; i++) {
-    b.board = generateBoard(b);
-    if (hasLegalDrop(b) && (!easy || i >= 60 || hasChainOf(b, EASY_CHAIN))) break;
-  }
+  layBoard(b, b.rng.board, fork(root, 'filter'));
   const gr = fork(root, 'gold');
-  if (golden ?? next(gr) < goldenChance) {
-    const cand = [];
-    b.board.forEach((c, sq) => { if (c && c.t !== 'K' && c.t !== 'X' && c.t !== 'J') cand.push(sq); });
-    if (cand.length) b.board[cand[Math.floor(next(gr) * cand.length)]].gold = true;
-  }
+  if (golden ?? next(gr) < goldenChance) placeGold(b, gr);
   telegraph(b);
   markFairy(b);
   refreshHints(b);
   return b;
+}
+
+// 판 하나를 깐다. 시작 손으로 떨굴 수가 없으면 다시 짓는다(시드 안에서 결정적으로).
+// 판(런)의 첫 대국(1관 연습)은 시작 손으로 셋 이상 잇는 사슬(「!」)이 하나는 있는 판을 고른다 — 첫 사슬이 곧바로 나오게(밤샘 D-3).
+// 그 밖에 b.filter > 1이면 후보 중 첫 손 최선 사슬 점수가 가장 낮은 판을 버린다(BOARD_FILTER).
+function layOne(b, rng, easy) {
+  for (let i = 0; i < 100; i++) {
+    b.board = generateBoard(b, rng);
+    if (hasLegalDrop(b) && (!easy || i >= 60 || hasChainOf(b, EASY_CHAIN))) break;
+  }
+  return b.board;
+}
+export const boardScore = (b) => { const m = b.hand.length ? bestMove(b, { preferMate: false, maxNodes: BOARD_FILTER.nodes }) : null; return m ? m.score : 0; };
+function layBoard(b, rng, pickRng) {
+  const easy = b.ante === 1 && b.kind === 'practice' && b.rules.easyStart !== false;
+  if (easy || !(b.filter > 1)) { layOne(b, rng, easy); return; }
+  const cands = [];
+  for (let i = 0; i < b.filter; i++) {
+    const board = layOne(b, rng, false);
+    markFairy(b);
+    cands.push({ board, score: boardScore(b) });
+  }
+  let worst = 0;
+  cands.forEach((c, i) => { if (c.score < cands[worst].score) worst = i; });
+  cands.splice(worst, 1);
+  b.board = cands[int(pickRng, cands.length)].board;
+}
+function placeGold(b, gr) {
+  const cand = [];
+  b.board.forEach((c, sq) => { if (c && c.t !== 'K' && c.t !== 'X' && c.t !== 'J') cand.push(sq); });
+  if (cand.length) b.board[cand[Math.floor(next(gr) * cand.length)]].gold = true;
+}
+
+// 다시 놓기(밤샘 2 D2): 첫 수 전에 한 번, 판을 새로 깐다. 손 · 목표 · 규칙은 그대로, 적 수 · 킹 수비도 같은 규칙.
+// 새 판은 (대국 시드, 몇째 다시 놓기)로 정해진다. 금빛 적이 있던 판이면 새 판에도 하나.
+export const canReboard = (b) => b.status === 'play' && b.movesUsed === 0 && !b.touched && (b.reboards || 0) < (b.rules.reboards ?? 0);
+export function reboard(b, events = []) {
+  if (!canReboard(b)) throw new Error('cannot reboard');
+  b.reboards = (b.reboards || 0) + 1;
+  const hadGold = b.board.some((c) => c && c.gold);
+  const r = fork(createRng((b.seed ?? 1) >>> 0), `reboard:${b.reboards}`);
+  layBoard(b, fork(r, 'board'), fork(r, 'filter'));
+  if (hadGold) placeGold(b, fork(r, 'gold'));
+  b.incomingNext = null;
+  b.revealed = [];
+  telegraph(b);
+  markFairy(b);
+  refreshHints(b);
+  events.push({ type: 'reboard', count: b.reboards });
+  checkStuck(b, events);
+  return events;
 }
 
 export function dropSquaresFor(b, piece) {
@@ -220,6 +272,7 @@ export function legalCommands(b) {
   if (b.discardsLeft > 0 && b.bag.length > 0) {
     b.hand.forEach((_, i) => out.push({ type: 'discard', handIndices: [i] }));
   }
+  if (canReboard(b)) out.push({ type: 'reboard' });
   return out;
 }
 
@@ -272,6 +325,10 @@ export function apply(b, cmd) {
       draw(b);
       events.push({ type: 'discard', pieces: gone.map((p) => p.t) });
       checkStuck(b, events);
+      break;
+    }
+    case 'reboard': {
+      reboard(b, events);
       break;
     }
     default: throw new Error(`unknown command ${cmd.type}`);

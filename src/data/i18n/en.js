@@ -259,6 +259,7 @@ export const EN = {
   '폰 넷': '4 pawns', '폰 다섯': '5 pawns', '폰 셋': '3 pawns', '나이트 둘': '2 knights', '나이트 셋': '3 knights', '비숍 둘': '2 bishops', '룩 둘': '2 rooks',
   '목표 ×1.25': 'Target ×1.25', '증원 +1': 'Reinforcements +1', '상점 값 +1': 'Shop prices +1', 
   '명인의 상자 다섯 칸이 반': "Master's Chest five-cell chance halved", '명국 첫 조각이 반': 'First fragments halved', '수 −1': 'Moves −1', '대가 목표 ×1.5': 'Grandmaster target ×1.5',
+  '시계 −1': 'Clock −1', '명인의 상자 다섯 칸 · 명국 첫 조각이 반': "Master's Chest five cells · first fragments halved", '수 −1 · 대가 목표 ×1.5': 'Moves −1 · Grandmaster target ×1.5',
   // 낱말 손질(docs/design-notes/terms.md)
   '빠른 갈아입기': 'Quick Change',
   '되받아치기': 'Counterstrike',

@@ -58,12 +58,12 @@ test('단 0은 단 없는 판과 같다(목표 · 첫 대국판 · 상점)', () 
 test('단 규칙은 차례로 쌓인다(여덟)', () => {
   assert.equal(DANS.length, 8);
   const r0 = danRules(0), r8 = danRules(8);
-  assert.deepEqual(r0, { target: 1, reinforce: 0, price: 0, discards: 0, chestFive: 1, fragment: 1, moves: 0, finalTarget: 1 });
-  assert.deepEqual(r8, { target: 1.25, reinforce: 1, price: 1, discards: -1, chestFive: 0.5, fragment: 0.5, moves: -1, finalTarget: 1.5 });
+  assert.deepEqual(r0, { target: 1, reinforce: 0, price: 0, clock: 0, discards: 0, chestFive: 1, fragment: 1, moves: 0, finalTarget: 1 });
+  assert.deepEqual(r8, { target: 1.25, reinforce: 1, price: 1, clock: -2, discards: -1, chestFive: 0.5, fragment: 0.5, moves: -1, finalTarget: 1.5 });
   for (let d = 1; d <= 8; d++) {
     const r = danRules(d), p = danRules(d - 1);
     const changed = Object.keys(r).filter((k) => r[k] !== p[k]);
-    assert.equal(changed.length, 1, `단 ${d}에서 바뀐 것 ${changed}`);
+    assert.ok(changed.length >= 1, `단 ${d}에서 바뀐 것 없음`);
   }
 });
 
@@ -77,15 +77,18 @@ test('단 1: 목표 ×1.25 / 단 8: 8관 대가 목표 ×1.5 더', () => {
   assert.equal(blindInfo(r8, 7, 2).target, targetFor(7, 'master', 1.25));
 });
 
-test('단 2: 증원 +1 / 단 4: 무르기 −1 / 단 7: 수 −1', () => {
+test('단 2: 증원 +1 / 단 4 · 7: 시계 −1 / 단 5: 버리기 −1 / 단 8: 수 −1', () => {
   const plain = createRun({ draft: false, seed: 9 }); applyRun(plain, { type: 'play' });
+  assert.equal(plain.clock, 3);
   const r2 = createRun({ draft: false, seed: 9, dan: 2 }); applyRun(r2, { type: 'play' });
   assert.equal(r2.battle.incoming.length, plain.battle.incoming.length + 1);
-  const r4 = createRun({ draft: false, seed: 9, dan: 4 }); applyRun(r4, { type: 'play' });
-  assert.equal(r4.battle.discardsLeft, 2);
-  const r7 = createRun({ draft: false, seed: 9, dan: 7 }); applyRun(r7, { type: 'play' });
-  assert.equal(r7.battle.movesLeft, 3);
-  const qg = createRun({ draft: false, seed: 9, dan: 7, opening: 'queens_gambit' }); applyRun(qg, { type: 'play' });
+  assert.equal(createRun({ draft: false, seed: 9, dan: 4 }).clock, 2);
+  assert.equal(createRun({ draft: false, seed: 9, dan: 7 }).clock, 1);
+  const r5 = createRun({ draft: false, seed: 9, dan: 5 }); applyRun(r5, { type: 'play' });
+  assert.equal(r5.battle.discardsLeft, 2);
+  const r8 = createRun({ draft: false, seed: 9, dan: 8 }); applyRun(r8, { type: 'play' });
+  assert.equal(r8.battle.movesLeft, 3);
+  const qg = createRun({ draft: false, seed: 9, dan: 8, opening: 'queens_gambit' }); applyRun(qg, { type: 'play' });
   assert.equal(qg.battle.movesLeft, 2);
 });
 
@@ -100,8 +103,8 @@ test('단 3: 상점 값 +1(진열 · 꾸러미 · 다시 진열)', () => {
   assert.equal(rerollCost(b), rerollCost(a) + 1);
 });
 
-test('단 5: 명인의 상자 다섯 칸 무게 반(덜어 낸 몫은 한 칸)', () => {
-  const r5 = createRun({ draft: false, seed: 1, dan: 5 });
+test('단 6: 명인의 상자 다섯 칸 무게 반(덜어 낸 몫은 한 칸)', () => {
+  const r5 = createRun({ draft: false, seed: 1, dan: 6 });
   const c = Object.fromEntries(chestCounts(r5));
   const base = Object.fromEntries(CHEST.counts);
   assert.equal(c[5], base[5] / 2);

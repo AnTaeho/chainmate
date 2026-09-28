@@ -60,6 +60,12 @@ export const CHEST = {
   cells: 5,     // 릴 칸 수. 나온 개수만큼 가운데부터 불이 켜진다(1: 가운데 · 3: 가운데 셋 · 5: 전부)
 };
 export const RUN_DEFAULTS = { money: 4, maximSlots: 5, consumableSlots: 2 };
+// 시계(밤샘 2 D1): 판의 목숨. 대국을 지면 한 칸을 잃고 다음 대국으로 간다(그 대국의 보상 · 명인의 상자 없음).
+// 마지막 칸을 잃으면(시간을 다 쓰면) 판이 끝난다 — 시계 1은 옛 규칙(한 번 지면 끝)과 같다.
+// 8관 명인(대가)에서 지고 칸이 남으면 그 대국을 새 판으로 다시 둔다.
+// filter: 판(런) 대국의 판 후보 수(battle.js BOARD_FILTER — 가장 나쁜 하나를 버린다). 종류별로.
+export const CLOCK = { start: 3 };
+export const BOARD_FILTER_N = { practice: 3, official: 3, master: 3 };
 // 건너뛰기 패(대국마다 정해진 하나). step 2b에서 늘린다.
 export const TAGS = [
   { kind: 'money', amount: 5 },
@@ -74,16 +80,17 @@ export const DANS = [
   { n: 1, text: '목표 ×1.25' },
   { n: 2, text: '증원 +1' },
   { n: 3, text: '상점 값 +1' },
-  { n: 4, text: '버리기 −1' },
-  { n: 5, text: '명인의 상자 다섯 칸이 반' },
-  { n: 6, text: '명국 첫 조각이 반' },
-  { n: 7, text: '수 −1' },
-  { n: 8, text: '대가 목표 ×1.5' },
+  { n: 4, text: '시계 −1' },
+  { n: 5, text: '버리기 −1' },
+  { n: 6, text: '명인의 상자 다섯 칸 · 명국 첫 조각이 반' },
+  { n: 7, text: '시계 −1' },
+  { n: 8, text: '수 −1 · 대가 목표 ×1.5' },
 ];
+// 밤샘 2: 시계가 들어오며 다시 짰다. 시계 3 → 4단 2 → 7단 1(한 번 지면 끝, 옛 규칙과 같다).
 export function danRules(dan) {
   return {
-    target: dan >= 1 ? 1.25 : 1, reinforce: dan >= 2 ? 1 : 0, price: dan >= 3 ? 1 : 0, discards: dan >= 4 ? -1 : 0,
-    chestFive: dan >= 5 ? 0.5 : 1, fragment: dan >= 6 ? 0.5 : 1, moves: dan >= 7 ? -1 : 0, finalTarget: dan >= 8 ? 1.5 : 1,
+    target: dan >= 1 ? 1.25 : 1, reinforce: dan >= 2 ? 1 : 0, price: dan >= 3 ? 1 : 0, clock: dan >= 7 ? -2 : dan >= 4 ? -1 : 0,
+    discards: dan >= 5 ? -1 : 0, chestFive: dan >= 6 ? 0.5 : 1, fragment: dan >= 6 ? 0.5 : 1, moves: dan >= 8 ? -1 : 0, finalTarget: dan >= 8 ? 1.5 : 1,
   };
 }
 
@@ -144,6 +151,8 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
     phase: 'select',
     endless: false,
     money: conf.money,
+    clock: Math.max(0, CLOCK.start + (stake ? stake.clock : 0)),
+    clockMax: Math.max(0, CLOCK.start + (stake ? stake.clock : 0)),
     deck: op.bag.map((t, i) => ({ id: i + 1, t, eng: null, edition: null })),
     nextPieceId: op.bag.length + 1,
     maxims: [],               // [{ uid, id, data, edition, paid }] 왼쪽부터
@@ -213,14 +222,17 @@ export function battleMods(build, master = null) {
   return mods;
 }
 
+// 대국 시드: 8관 명인을 시계를 써서 다시 둘 때는 몇째 다시 두기인지를 붙인다
+export const battleSeed = (run, ante = run.ante, blind = run.blind) =>
+  fork(root(run), `battle:${ante}:${blind}${run.retry ? `:${run.retry}` : ''}`).s;
 function startBattle(run) {
   const info = blindInfo(run);
-  const seed = fork(root(run), `battle:${run.ante}:${run.blind}`).s;
   run.battle = createBattle({
-    seed, ante: run.ante, kind: info.kind, target: info.target,
+    seed: battleSeed(run), ante: run.ante, kind: info.kind, target: info.target,
     bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
     rules: run.rules, mods: battleMods(run, info.master),
     goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
+    filter: run.scratch ? 0 : (BOARD_FILTER_N[info.kind] || 0),
   });
   run.phase = 'battle';
 }
@@ -258,10 +270,24 @@ function endBattle(run, events) {
     souls: [...new Set(run.deck.filter((p) => p.soul).map((p) => p.soul))],
     mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
     discarded: b.discarded,
+    reboards: b.reboards || 0,
   };
   run.log.push(row);
   if (!won) {
     run.last = { ...row, reward: null };
+    // 시계 한 칸을 잃는다. 남은 칸이 있으면 다음 대국으로(8관 명인은 같은 대국을 새 판으로), 다 쓰면 판이 끝난다
+    if (run.clock != null && run.clock > 0) {
+      run.clock--;
+      row.clockLost = true;
+      run.last.clockLost = true;
+      events.push({ type: 'clockLost', clock: run.clock, ante: run.ante, blind: run.blind });
+    }
+    if (run.clock > 0) {
+      run.battle = null;
+      if (run.ante === ANTES && info.kind === 'master' && !run.endless) { run.retry = (run.retry || 0) + 1; run.phase = 'select'; }
+      else advance(run);
+      return;
+    }
     run.phase = 'lost';
     events.push({ type: 'runLost', ante: run.ante, blind: run.blind });
     return;
@@ -414,6 +440,7 @@ function openShop(run) {
 function advance(run) {
   if (run.shop && run.shop.ante == null) { run.shop.ante = run.ante; run.shop.blind = run.blind; } // 옛 저장 · 수업(자리 없는 상점)
   run.pack = null;
+  run.retry = 0;
   if (run.blind < 2) run.blind++;
   else { run.blind = 0; run.ante++; }
   run.phase = 'select';
@@ -542,7 +569,7 @@ export function applyRun(run, cmd) {
       run.consumables.splice(cmd.index, 1);
       break;
     }
-    case 'drop': case 'capture': case 'redrop': case 'discard': {
+    case 'drop': case 'capture': case 'redrop': case 'discard': case 'reboard': {
       need('battle');
       const seen = run.battle.history.length;
       events.push(...applyBattle(run.battle, cmd));
