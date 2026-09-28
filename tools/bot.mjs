@@ -12,7 +12,8 @@ import { bestPerPiece, lineCommands } from '../src/sim/solver.js';
 import { canReboard } from '../src/sim/battle.js';
 import { valueOf } from '../src/data/pieces.js';
 
-export const REBOARD = { on: true, ratio: 1 };
+// ratio 1 → 2(밤샘 2 3부): 1이면 대국당 0.08번만 다시 놓아 판을 끝낸 죽음의 판 운 몫이 52.6%, 2면 0.18번 · 31.3%(luck 30판)
+export const REBOARD = { on: true, ratio: 2 };
 const betterMove = (x, y, nomate, rank) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : rank ? rank(x) > rank(y) : x.score > y.score);
 
 // rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
