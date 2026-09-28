@@ -88,6 +88,30 @@ export function objectsAt(rules, sq) {
   if ((rules.highways || []).includes(sq & 7)) out.push(['고속도로', JOSEKI_BY_ID.highway.text]);
   return out;
 }
+// 판 위 사물 「문」: size×size 칸 안의 아치 문(어두운 청록 안쪽 · 굵은 테 · 문턱). glow = 문 안쪽 빛(0~1)
+const GATE = { rim: '#6fd1bf', hi: '#c8f5ea', in: '#1d4d48', glow: '#2f8a7e' };
+// 아치의 줄마다 [y, 왼쪽 x, 오른쪽 x]: 위는 반원, 아래는 곧은 기둥(바닥 두 줄 위까지)
+function archRows(size, inset) {
+  const top = inset - 1, w = size - inset * 2, r = Math.floor(w / 2), cx = inset + (w - 1) / 2, rows = [];
+  for (let yy = top; yy < size - 2; yy++) {
+    const dy = Math.max(0, r - (yy - top)), dx = Math.sqrt(Math.max(0, r * r - dy * dy));
+    rows.push([yy, Math.round(cx - dx), Math.round(cx + dx)]);
+  }
+  return rows;
+}
+function gateArch(ctx, x, y, size, glow) {
+  const t = size >= 24 ? 2 : 1, inset = size >= 24 ? 3 : 2;
+  const outer = archRows(size, inset);
+  for (const [yy, a, b] of outer) rect(ctx, x + a, y + yy, b - a + 1, 1, GATE.in);
+  ctx.globalAlpha = glow;
+  for (const [yy, a, b] of archRows(size, inset + 2)) rect(ctx, x + a, y + yy + 1, b - a + 1, 1, GATE.glow);
+  ctx.globalAlpha = 1;
+  for (const [yy, a, b] of outer) { rect(ctx, x + a, y + yy, t, 1, GATE.rim); rect(ctx, x + b - t + 1, y + yy, t, 1, GATE.rim); }
+  // 윗테: 반원 꼭대기 줄들은 가로로 이어 그린다(1배에서 끊겨 보이지 않게)
+  for (let k = 0; k < t; k++) { const [yy, a, b] = outer[k]; rect(ctx, x + a, y + yy, b - a + 1, 1, GATE.rim); }
+  rect(ctx, x + 2, y + size - 2, size - 4, 1, GATE.hi);
+  rect(ctx, x + inset, y + size - 3, size - inset * 2, 1, GATE.rim);
+}
 const FALL = 0.2, FALL_PX = 14; // 증원이 위에서 떨어지는 시간(×1) · 높이
 
 // 칸 안의 둥근 고리(다음에 먹을 적)
@@ -1062,18 +1086,10 @@ export class BattleScreen {
       frame(ctx, x + 3, y + 3, S - 6, S - 6, PAL.goldDk);
       for (const [i, j] of [[4, 4], [S - 5, 4], [4, S - 5], [S - 5, S - 5]]) rect(ctx, x + i, y + j, 1, 1, PAL.goldHi);
     }
+    // 문: 어두운 청록 문 안쪽 + 굵은 아치 테 + 문턱. 기물이 서도 기둥 · 윗테 · 문턱이 남는다. 두 문이 번갈아 숨 쉰다
     (rules.gates || []).forEach((sq, k) => {
       const { x, y } = sqXY(sq);
-      const col = '#6fd1bf';
-      // 아치 모양 문(두 문이 번갈아 빛난다)
-      const on = 0.55 + 0.35 * Math.sin(time * 3 + k * Math.PI);
-      ctx.globalAlpha = on;
-      for (let j = 0; j < 20; j++) {
-        const w = j < 6 ? Math.round(Math.sqrt(36 - (6 - j) * (6 - j)) * 1.4) + 4 : 12;
-        rect(ctx, x + 14 - w, y + 5 + j, 1, 1, col); rect(ctx, x + 13 + w, y + 5 + j, 1, 1, col);
-      }
-      rect(ctx, x + 2, y + 24, S - 4, 1, col);
-      ctx.globalAlpha = 1;
+      gateArch(ctx, x, y, S, 0.35 + 0.25 * Math.sin(time * 3 + k * Math.PI));
     });
   }
 
@@ -1382,12 +1398,7 @@ export class BattleScreen {
       frame(ctx, x, y, 18, 18, PAL.goldDk);
       for (const [i, j] of [[1, 1], [16, 1], [1, 16], [16, 16]]) rect(ctx, x + i, y + j, 1, 1, PAL.goldHi);
     } else if (obj === 'gate') {
-      const col = '#6fd1bf';
-      for (let j = 0; j < 16; j++) {
-        const w = j < 5 ? Math.round(Math.sqrt(25 - (5 - j) * (5 - j)) * 1.2) + 2 : 8;
-        rect(ctx, x + 9 - w, y + 1 + j, 1, 1, col); rect(ctx, x + 8 + w, y + 1 + j, 1, 1, col);
-      }
-      rect(ctx, x, y + 17, 18, 1, col);
+      gateArch(ctx, x, y, 18, 0.5);
     } else if (obj === 'highway') {
       for (let j = 0; j < 18; j += 4) { rect(ctx, x + 4, y + j, 1, 2, PAL.goldDk); rect(ctx, x + 13, y + j, 1, 2, PAL.goldDk); }
       rect(ctx, x + 8, y + 4, 2, 10, PAL.gold); rect(ctx, x + 7, y + 5, 4, 1, PAL.gold); rect(ctx, x + 7, y + 12, 4, 1, PAL.gold);
