@@ -143,7 +143,7 @@ export const EN = {
   '금빛 꾸러미가 상점에 나왔다': 'A golden bundle is in the shop',
   '승급': 'Promotion', '넘겼다': 'Survived', '판이 다시 채워진다': 'The board refills', '다시 떨군다': 'Drop again', '목표 달성': 'Target reached',
   '떨굴 곳이 없다': 'Nowhere to drop', '수가 다했다': 'Out of moves', '수를 다 썼다': 'Out of moves',
-  '관 선택': 'Matches', '상점': 'Shop', '진열': 'Display', '꾸러미': 'Bundles', '두루마리': 'Scrolls', '나가기': 'Leave', '샀다': 'Sold', '열었다': 'Opened', '공짜': 'Free',
+  '관 선택': 'Matches', '상점': 'Shop', '진열': 'Display', '꾸러미': 'Bundles', '두루마리': 'Scrolls', '나가기': 'Leave', '다음 대국': 'Next match', '샀다': 'Sold', '열었다': 'Opened', '공짜': 'Free',
   '새길 기물': 'Pick a piece to engrave', '이번 상점에선 끝': 'Done for this shop', '할 수 없다': "Can't do that", '격언 칸이 찼다': 'Maxim slots are full',
   '셋 중 하나를 고른다': 'Pick one of three', '판본이 붙은 격언 셋 중 하나': 'One of three maxims with an edition',
   '주머니에 들어온다': 'Goes into your bag', '주머니의 기물 하나에 새긴다': 'Engrave one piece in your bag', '비었다': 'Empty',

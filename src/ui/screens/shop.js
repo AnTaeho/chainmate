@@ -1,4 +1,4 @@
-// 상점: 진열 2 + 꾸러미 2 + 다시 진열 + 나가기. 오른쪽 격언 칸(끌어서 순서 바꾸기 · 눌러 팔기), 두루마리 칸(눌러 쓰기),
+// 상점: 진열 2 + 꾸러미 2 + 다시 진열 + 다음 대국. 오른쪽 격언 칸(끌어서 순서 바꾸기 · 눌러 팔기), 두루마리 칸(눌러 쓰기),
 // 아래 주머니(눌러 승급 · 버리기).
 import { hint as coachHint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
@@ -22,7 +22,7 @@ import { RIGHT, CENTER, CARD, TOP, PAD_CARD, LINE, GAP_IN, GAP_GROUP, LIST_GAP, 
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 const RX = RIGHT.x, RW = RIGHT.w;
-// 판 틀(docs/design-notes/layout.md 「상점」): 가운데 칸 위 띠에 「진열」 이름표 · 다시 진열 · 나가기, 그 아래로 진열 카드 줄(hug) →
+// 판 틀(docs/design-notes/layout.md 「상점」): 가운데 칸 위 띠에 「진열」 이름표 · 다시 진열 · 다음 대국, 그 아래로 진열 카드 줄(hug) →
 // 꾸러미 줄(hug) → 주머니(남는 높이). 오른쪽 칸은 격언 칸 → 두루마리(아래에서부터). 묶음 사이 GAP_GROUP
 const CARD_W = CARD.w, BAR_Y = 3, BAR_H = 16, BOTTOM = 270 - 2, BAG_MIN = 28;
 
@@ -182,7 +182,7 @@ export class ShopScreen {
     return { wide, ch, scrollY, labelY, room: labelY - GAP_GROUP - TOP };
   }
   // 판 틀(docs/design-notes/layout.md): 왼쪽 칸(상점 · 시너지 · 정석 · 상금 · 주머니 수 — 설명 자리),
-  // 가운데(띠: 진열 · 다시 진열 · 나가기 / 진열 둘 · 꾸러미 둘 · 주머니), 오른쪽 칸(격언 · 두루마리)
+  // 가운데(띠: 진열 · 다시 진열 · 다음 대국 / 진열 둘 · 꾸러미 둘 · 주머니), 오른쪽 칸(격언 · 두루마리)
   draw(ctx, ui) {
     const app = this.app, run = this.run, shop = run.shop;
     runSide(ctx, ui, app, '상점');
@@ -190,8 +190,8 @@ export class ShopScreen {
     const CX = CENTER.x, lay = this.centerLayout();
     text(ctx, '진열', CX, textY(BAR_Y, BAR_H), PAL.dim);
     const rc = rerollCost(run);
-    const leaveW = 52, rerollW = 80;
-    button(ctx, ui, 'shop:leave', CX + CENTER.w - leaveW, BAR_Y, leaveW, BAR_H, '나가기', { onClick: () => this.leave(), tone: 'gold' });
+    const leaveW = measure('다음 대국', true) + 12, rerollW = 80;
+    button(ctx, ui, 'shop:leave', CX + CENTER.w - leaveW, BAR_Y, leaveW, BAR_H, '다음 대국', { onClick: () => this.leave(), tone: 'gold' });
     button(ctx, ui, 'shop:reroll', CX + CENTER.w - leaveW - 4 - rerollW, BAR_Y, rerollW, BAR_H, `다시 진열 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
     // 두루마리를 쓰는 중: 진열 · 꾸러미 자리에 미리 보기 판(고른 기물이 어떻게 되는지 보이고 확인을 받는다), 그 아래 주머니
     let bagY = lay.bagY;
