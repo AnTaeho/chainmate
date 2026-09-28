@@ -5,6 +5,8 @@
 //          명인별 통과율, 많이 산 격언과 산 판의 승률, 관별 최고 한 수, 판당 ms.
 //          2b: 불멸의 기보(전설 완성률 · 조각 · 명국별 · 전설 판 승률), 황금 기물, 명인의 상자, 판본, 사슬 평가, 넘친 목표 층.
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRun, B, targetFor, REWARD, CHEST } from '../src/sim/run.js';
 import { applyNight2 } from './night2.mjs';
@@ -37,7 +39,8 @@ function parseArgs(argv) {
     else if (k === '--give') a.give = argv[++i].split(',');
     else if (k === '--nodraft') a.nodraft = true;
     else if (k === '--limit') a.limit = Number(argv[++i]);             // 판 하나 시간 상한(초)
-    else if (k === '--quiet') a.quiet = true;                          // 정석 드래프트 없이(깊이 E 이전)
+    else if (k === '--quiet') a.quiet = true;
+    else if (k === '--json') a.json = argv[++i];                       // 수치를 JSON으로도(밤샘 2 보고서 · 아티팩트용)                          // 정석 드래프트 없이(깊이 E 이전)
     else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
   }
   return a;
@@ -253,5 +256,33 @@ function report(R, args, wall) {
     table(['격언', '산 판', '그 판 승률'], top.map(([id, c]) => [(MAXIM_BY_ID[id] || LEGEND_BY_ID[id]).name, pc(c.n / n), pc(c.w / c.n)]));
     const winners = R.filter((r) => r.won).slice(0, 5);
     for (const r of winners) console.log(`  이긴 판 예 seed ${r.seed}: 격언 [${r.final.map((id) => MAXIM_BY_ID[id].name).join(', ')}]${r.legends.length ? ' 전설 [' + r.legends.map((id) => LEGEND_BY_ID[id].name).join(', ') + ']' : ''} 주머니 [${r.deck}]`);
+  }
+  // ── JSON(--json): 관별 통과율 · 종류별 · 점수/목표 분포 · 시계 · 새것별 산 판 승률
+  if (args.json) {
+    const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : null);
+    const EDGES = [0, 0.5, 0.75, 1, 1.5, 2, 3, 5, 10, 20, 50, Infinity];
+    const hist = (xs) => EDGES.slice(0, -1).map((lo, i) => xs.filter((x) => x >= lo && x < EDGES[i + 1]).length);
+    const antes = [];
+    for (let ante = 1; ante <= 8; ante++) {
+      const reached = R.filter((r) => r.won || r.ante >= ante).length, cleared = R.filter((r) => r.won || r.ante > ante).length;
+      const bs = battles.filter((b) => b.ante === ante);
+      const kind = (k) => { const x = bs.filter((b) => b.kind === k); return { n: x.length, win: r3(x.filter((b) => b.won).length / x.length) }; };
+      antes.push({ ante, reached: r3(reached / n), cleared: r3(cleared / n), pass: r3(cleared / Math.max(1, reached)), practice: kind('practice'), official: kind('official'), master: kind('master'),
+        ratioHist: hist(bs.filter((b) => b.reason !== 'mate').map((b) => b.score / b.target)) });
+    }
+    const tally = (keyOf) => { const t = {}; for (const r of R) for (const id of new Set(keyOf(r))) { t[id] = t[id] || { n: 0, w: 0 }; t[id].n++; if (r.won) t[id].w++; } return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, { runs: v.n, win: r3(v.w / v.n) }])); };
+    const out = {
+      tool: 'tools/run.mjs', policy: args.policy, seed: args.seed, dan: args.dan || 0, runs: n, timeouts: (args.timeouts || []).length, tune: args.tune || null, B: args.B || null,
+      runWin: r3(wins / n), antes, ratioEdges: EDGES.slice(0, -1).map((x, i) => [x, EDGES[i + 1] === Infinity ? null : EDGES[i + 1]]),
+      clock: { lostPerRun: r3(R.reduce((a, r) => a + r.log.filter((x) => x.clockLost).length, 0) / n), wonWithLoss: r3(R.filter((r) => r.won && r.log.some((x) => x.clockLost)).length / Math.max(1, wins)), reboardPerBattle: r3(battles.reduce((a, b) => a + (b.reboards || 0), 0) / battles.length) },
+      items: {
+        maxim: tally((r) => r.bought), joseki: tally((r) => r.josekis),
+        soul: tally((r) => r.log.flatMap((b) => b.souls || [])), engraving: tally((r) => r.deck.split(' ').filter((x) => x.includes(':')).map((x) => x.split(':')[1])),
+      },
+      masters: Object.fromEntries(Object.keys(MASTER_BY_ID).map((id) => { const bs = battles.filter((b) => b.master === id); return [id, { n: bs.length, win: r3(bs.filter((b) => b.won).length / bs.length) }]; })),
+    };
+    mkdirSync(dirname(args.json), { recursive: true });
+    writeFileSync(args.json, JSON.stringify(out, null, 1) + '\n');
+    console.log(`JSON: ${args.json}`);
   }
 }
