@@ -64,6 +64,15 @@ function drag(id, toGx, toGy) {
   dom.mouse('mouseup', toGx, toGy); pump(1);
   return true;
 }
+// 오른쪽 누르기 · 끌기(판 위 표시)
+function rightAt(id, toId = id) {
+  const a = region(id), b = region(toId);
+  if (!a || !b) throw new Error(`no region ${!a ? id : toId} on ${screen()}`);
+  const c = (r) => [r.x + Math.floor(r.w / 2), r.y + Math.floor(r.h / 2)];
+  dom.mouse('mousemove', ...c(a)); dom.mouse('mousedown', ...c(a), 2); pump(1);
+  dom.mouse('mousemove', ...c(b)); pump(1);
+  dom.mouse('mouseup', ...c(b), 2); pump(1);
+}
 function hover(id) {
   const r = region(id);
   if (!r) return false;
@@ -71,6 +80,7 @@ function hover(id) {
   pump(1);
   return true;
 }
+const marksSeen = { board: 0, clear: false, shop: 0 };
 const pvSeen = { capture: 0, drop: 0, cut: 0, kb: 0, touch: 0 };
 // 칸 말풍선: 증원 그림자 · 노림수
 const tipSeen = { incoming: 0, forced: 0, path: 0 };
@@ -561,6 +571,32 @@ click('next');
   scene((r) => { r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; app.go('draft'); });
   scene((r) => { r.masters[0] = 'fog'; app.cmd({ type: 'skip' }); app.cmd({ type: 'skip' }); app.goPhase(); });
   scene((r) => { r.ante = 5; r.blind = 0; app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(200); });
+  // 판 위 표시: 오른쪽 누르기 = 칸 칠(멈춤이 열리지 않는다) · 오른쪽 끌기 = 화살표(곧은 · 나이트) · 같은 것 다시 = 지움 · 왼쪽 누르기 = 모두 지움
+  {
+    const mk = () => app.screen.marks;
+    rightAt('sq:27');
+    if (app.overlay || screen() !== 'battle' || !mk().squares.has(27)) throw new Error('right-click did not mark a square (or opened pause)');
+    rightAt('sq:27'); if (mk().squares.size) throw new Error('right-click again did not unmark');
+    rightAt('sq:27'); rightAt('sq:28');
+    rightAt('sq:8', 'sq:40'); rightAt('sq:1', 'sq:18');
+    if (mk().arrows.length !== 2 || mk().squares.size !== 2) throw new Error('right-drag did not draw arrows');
+    rightAt('sq:1', 'sq:18'); if (mk().arrows.length !== 1) throw new Error('same arrow did not remove');
+    marksSeen.board = mk().count;
+    click('sq:63');
+    if (mk().count || app.overlay) throw new Error('left-click did not clear marks');
+    marksSeen.clear = true;
+    dom.mouse('mousemove', 20, 20); dom.mouse('mousedown', 20, 20, 2); dom.mouse('mouseup', 20, 20, 2); pump(1);
+    if (app.overlay || mk().count) throw new Error('right-click off the board did something');
+    dom.key('Escape'); pump(1); if (screen() !== 'pause') throw new Error('Esc no longer pauses'); click('pause:resume');
+  }
+  scene((r) => { r.phase = 'shop'; stock(r); app.go('shop'); });
+  for (const id of ['shop:buy:0', 'shop:leave', 'maxim:0', 'cons:0']) {
+    if (!region(id)) continue;
+    const before = JSON.stringify([app.run.money, app.run.maxims.length, app.run.consumables.length]);
+    rightAt(id);
+    if (app.overlay || screen() !== 'shop' || JSON.stringify([app.run.money, app.run.maxims.length, app.run.consumables.length]) !== before) throw new Error(`right-click on ${id} did something`);
+    marksSeen.shop++;
+  }
   app.go('chest', { chest: { count: 3, tier: 'uncommon', cells: [{ lit: false, item: null }, { lit: true, item: { kind: 'money', money: 2 } }, { lit: true, item: { kind: 'chart', form: 'N' } }, { lit: true, item: { kind: 'engrave', piece: 'P', pieceId: 1, eng: 'ivory' } }, { lit: false, item: null }] } });
   pump(200); notesCheck();
   app.toTitle(); pump(1);
@@ -613,9 +649,11 @@ console.log(`말풍선: 증원 ${tipSeen.incoming} · 노림수 ${tipSeen.forced
 console.log(`대국 띠 「새로」: 대국 ${newsSeen.battles} · 그림 ${newsSeen.icons}`);
 console.log(`판 위 사물 말풍선: 발판 ${objTips.step} · 문 ${objTips.gate} · 고속도로 ${objTips.highway} · 벽 ${objTips.wall} · 보석 ${objTips.gem}`);
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
+console.log(`판 위 표시: 칸 · 화살표 ${marksSeen.board} · 왼쪽 누르기로 지움 ${marksSeen.clear ? '확인' : '못 함'} · 상점 오른쪽 누르기 ${marksSeen.shop}(아무 일 없음)`);
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 let fail = false;
+if (marksSeen.board !== 3 || !marksSeen.clear || !marksSeen.shop) { console.log('판 위 표시(오른쪽 누르기)를 다 확인하지 못했다'); fail = true; }
 if (LANG !== 'ko') {
   const { untranslated } = await import('../src/ui/lang.js');
   console.log(`옮기지 못한 글 ${untranslated.size}${untranslated.size ? ': ' + [...untranslated].slice(0, 40).join(' | ') : ''}`);
