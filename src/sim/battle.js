@@ -34,7 +34,7 @@ export const DEFAULT_RULES = {
   reboards: 1,      // 다시 놓기: 첫 수 전에 판을 새로 까는 횟수(대국마다)
 };
 
-// 나쁜 판 거르기(밤샘 2 D3): 판(런)의 대국은 판 후보 n개를 지어 「첫 손 최선 사슬 점수」(풀이기, docs/reports/luck.md ④)가
+// 나쁜 판 거르기(밤샘 2 D3): 판(런)의 대국은 판 후보 n개(판(런)은 넷)를 지어 「첫 손 최선 사슬 점수」(풀이기, docs/reports/luck.md ④)가
 // 가장 낮은 것을 버리고 나머지 중 하나를 시드로 고른다. 좋은 판은 그대로 남고 아래 꼬리만 잘린다.
 // 켜는 곳은 판(런)의 startBattle뿐(createBattle 기본은 끔: 시험 · 봇의 짜임 재기 · 수업은 옛 판 그대로).
 export const BOARD_FILTER = { nodes: 3000 };

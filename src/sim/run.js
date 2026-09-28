@@ -66,7 +66,8 @@ export const RUN_DEFAULTS = { money: 4, maximSlots: 5, consumableSlots: 2 };
 // 8관 명인(대가)에서 지고 칸이 남으면 그 대국을 새 판으로 다시 둔다.
 // filter: 판(런) 대국의 판 후보 수(battle.js BOARD_FILTER — 가장 나쁜 하나를 버린다). 종류별로.
 export const CLOCK = { start: 3 };
-export const BOARD_FILTER_N = { practice: 3, official: 3, master: 3 };
+// 셋 → 넷(밤샘 2 3부): 봇 다시 놓기 2와 함께 판을 끝낸 죽음의 판 운 몫 31.3% → 12.5%(luck 30판), smart 판 승률은 같다(46.7%)
+export const BOARD_FILTER_N = { practice: 4, official: 4, master: 4 };
 // 건너뛰기 패(대국마다 정해진 하나). step 2b에서 늘린다.
 export const TAGS = [
   { kind: 'money', amount: 5 },
