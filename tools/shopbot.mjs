@@ -27,7 +27,9 @@ export const SMART = {
   finalFrom: 6,    // 이 관부터 대가 대비(깊이 층 뒤 5 → 6)
   finalWeight: 0.5, // 대가 판에서 잰 값의 몫
   // 상금 격언의 값(밤샘 D-2): 한 수 점수로는 보이지 않으니 대국당 기대 상금 × 남은 대국 × 1원의 몫(minGainPerCoin)의 절반으로 친다
-  moneyMaxims: { vault: 4, mate_hunter: 0.25 },
+  moneyMaxims: { vault: 4, mate_hunter: 0.25, thrift: 3, lucky_coin: 1.5 },
+  // 확률 격언(밤샘 2): 풀이기는 대국의 운을 모른다(onChainLuck). 기댓값을 득 비율로 얹는다 — 도박사 넷에 하나 ×3 ≈ ×1.5, 조금 덜어서
+  luckMaxims: { gambler: 0.4 },
   // 가족(깊이 B): 가장 많이 모은 가족 쪽으로 한 걸음 가는 물건에 덤(득 비율). famAware false = 가족을 모르는 봇(nofam)
   famAware: true,
   famStep: 0.08,
@@ -35,7 +37,7 @@ export const SMART = {
   evalNodes: 1000,
 };
 const battlesLeft = (run) => Math.max(0, (8 - run.ante) * 3 + (2 - run.blind));
-export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5;
+export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5 + (SMART.luckMaxims[id] || 0);
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -196,7 +198,7 @@ function weakestMaxim(run, build, ctx) {
     // 흑요를 팔면 칸이 하나 줄어 자리가 나지 않는다
     if (m.edition && EDITION_BY_ID[m.edition].slots) return;
     const v = { ...build, maxims: build.maxims.filter((_, j) => j !== i) };
-    const s = ctx.score(v);
+    const s = ctx.score(v) / (1 + moneyGain(run, m.id)); // 상금 · 확률 격언은 점수로 보이지 않는 몫이 있다
     if (!best || s > best.score) best = { index: i, score: s };
   });
   return best;
