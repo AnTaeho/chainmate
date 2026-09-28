@@ -8,10 +8,10 @@ import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows } from '../parts-depth.js';
 import { cardBase, tipLines } from '../parts.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, CARD_ROW } from '../frame.js';
+import { MAIN, TOP, CARD, PAD_CARD, LINE, GAP_IN, GAP_GROUP, CHIP_ROW } from '../frame.js';
 
 const TIER_NAME = { silver: '은', gold: '금', rainbow: '무지개' };
-const CW = CARD.w, CH = 150, PADJ = 6; // 테가 두 겹이라 글은 x + 6
+const CW = CARD.w, CH = 150; // 테가 두 겹이라 글은 안 여백 PAD_CARD.joseki(물건 카드보다 1 넓다)
 const at = (i) => 0.2 + i * 0.22;
 
 export class DraftScreen {
@@ -66,13 +66,17 @@ export class DraftScreen {
       // 카드(물건 카드와 같은 자리): 등급 테 · 모서리 꺾쇠, 왼쪽 위 등급 → 이름 → 가로줄 → 효과 글 → 맨 아래 왼쪽 시너지 칩
       cardBase(ctx, xx, y, nw, CH, { hover: hov, edge: col, double: j.tier !== 'silver', ticks: true, line: picked ? PAL.white : PAL.frameDk });
       if (nw < CW - 4) { ctx.globalAlpha = 1; return; }
-      text(ctx, TIER_NAME[j.tier], x + PADJ, y + 4, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
-      const nl = wrap(j.name, CW - PADJ * 2, true).slice(0, 2);
-      nl.forEach((l, k) => text(ctx, l, x + PADJ, y + 17 + (nl.length === 1 ? 6 : 0) + k * 13, PAL.cardInk, { bold: true }));
-      rect(ctx, x + PADJ, y + 45, CW - PADJ * 2, 1, col);
-      const chipsY = y + CH - 6 - chipRows(j.families, CW - PADJ * 2) * 13;
-      wrap(j.text, CW - PADJ * 2).forEach((l, k) => { if (y + 48 + (k + 1) * CARD_ROW <= chipsY) richText(ctx, l, x + PADJ, y + 48 + k * CARD_ROW, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } }); });
-      if (j.families.length) familyChips(ctx, j.families, x + PADJ, chipsY + 1, CW - PADJ * 2);
+      // 등급(머릿말) → 이름 두 줄 묶음 → 가로줄 → 효과 묶음 → 칩(frame.js 토큰)
+      const P = PAD_CARD.joseki, IW = CW - P * 2;
+      text(ctx, TIER_NAME[j.tier], x + P, y + PAD_CARD.josekiTop, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
+      const nameY = y + PAD_CARD.josekiTop + LINE.body + GAP_IN.joseki, nameEnd = nameY + LINE.body * 2;
+      const nl = wrap(j.name, IW, true).slice(0, 2);
+      nl.forEach((l, k) => text(ctx, l, x + P, nameY + (nl.length === 1 ? Math.floor(LINE.body / 2) : 0) + k * LINE.body, PAL.cardInk, { bold: true }));
+      rect(ctx, x + P, nameEnd + Math.floor(GAP_GROUP.joseki / 2), IW, 1, col);
+      const chipsY = y + CH - P - chipRows(j.families, IW) * CHIP_ROW;
+      const effY = nameEnd + GAP_GROUP.joseki;
+      wrap(j.text, IW).forEach((l, k) => { if (effY + (k + 1) * LINE.card <= chipsY) richText(ctx, l, x + P, effY + k * LINE.card, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } }); });
+      if (j.families.length) familyChips(ctx, j.families, x + P, chipsY + 1, IW);
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, y, CW, CH, PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     });

@@ -6,6 +6,7 @@ import { PAL } from '../render/palette.js';
 import { box, rect, text, frame, measure } from '../render/gfx.js';
 import { familyChips, chipRows, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
+import { PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, CHIP_ROW } from './frame.js';
 
 export class UI {
   constructor() {
@@ -102,10 +103,10 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
 // 말풍선 내용을 폭 w에 맞춘 줄들. 말풍선은 만들 때 폭을 모른다(자리 규칙이 폭을 정한다 — placement.js):
 // tip.body(글) · tip.extra([글, 빛깔] · { chips })를 여기서 줄바꿈한다. 옛 꼴(tip.lines만)은 줄마다 다시 줄바꿈한다.
 // 행마 그림(tip.diagram)은 폭이 넉넉하면(150 이상) 제목 아래 왼쪽, 좁으면 제목 아래 한 줄을 다 쓰고 글은 그 아래.
-const PAD = 5;
+// 간격은 frame.js 토큰: 네 변 PAD_BOX.tip · 제목 LINE_TITLE.tip + GAP_IN.tip · 줄 LINE.body · 글 → 칩 줄 GAP_GROUP.tip
 const diagSide = (tip, w) => !!tip.diagram && w >= 150;
 export function tipRows(tip, w) {
-  const tw = w - PAD * 2 - (diagSide(tip, w) ? DIAG_W : 0);
+  const tw = w - PAD_BOX.tip * 2 - (diagSide(tip, w) ? DIAG_W : 0);
   const src = tip.body ? [...tip.body, ...(tip.extra || [])] : tip.lines || [];
   const out = [];
   for (const l of src) {
@@ -116,34 +117,40 @@ export function tipRows(tip, w) {
   }
   return out;
 }
-const rowH = (l, tw) => (l && l.chips ? chipRows(l.chips, tw) * 13 : 13);
+const isChips = (l) => !!(l && l.chips);
+// 줄 하나의 높이: 칩 줄은 칩 줄 수만큼, 글 뒤에 오는 첫 칩 줄은 묶음 사이 틈을 더한다
+const rowH = (l, tw, prev) => (isChips(l) ? chipRows(l.chips, tw) * CHIP_ROW + (prev && !isChips(prev) ? GAP_GROUP.tip : 0) : LINE.body);
+const titleH = (tip) => (tip.title ? LINE_TITLE.tip + GAP_IN.tip : 0);
 export function tipHeight(tip, w) {
   const side = diagSide(tip, w);
-  const tw = w - PAD * 2 - (side ? DIAG_W : 0);
-  const body = tipRows(tip, w).reduce((n, l) => n + rowH(l, tw), 0);
+  const tw = w - PAD_BOX.tip * 2 - (side ? DIAG_W : 0);
+  const rows = tipRows(tip, w);
+  const body = rows.reduce((n, l, i) => n + rowH(l, tw, rows[i - 1]), 0);
   const diag = tip.diagram ? DIAG_SIZE + 1 : 0;
-  return PAD * 2 + (tip.title ? 14 : 0) + (side ? Math.max(body, diag) : body + (diag ? diag + 3 : 0));
+  return PAD_BOX.tip * 2 + titleH(tip) + (side ? Math.max(body, diag) : body + (diag ? diag + GAP_GROUP.tipDiag : 0));
 }
 // 말풍선 하나를 (x, y)에 폭 w로 그린다(자리는 placement.js가 정해 넘긴다). 그린 네모를 돌려준다
 export function tooltip(ctx, x, y, tip, w) {
   const side = diagSide(tip, w);
   const dw = side ? DIAG_W : 0;
-  const tw = w - PAD * 2 - dw;
+  const P = PAD_BOX.tip;
+  const tw = w - P * 2 - dw;
   const h = tipHeight(tip, w);
   box(ctx, x, y, w, h, PAL.card, PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
-  let yy = y + PAD;
-  if (tip.title) { text(ctx, tip.title, x + PAD, yy, tip.titleCol || PAL.cardInk, { bold: true }); yy += 14; }
+  let yy = y + P;
+  if (tip.title) { text(ctx, tip.title, x + P, yy, tip.titleCol || PAL.cardInk, { bold: true }); yy += titleH(tip); }
   if (tip.diagram) {
-    moveDiagram(ctx, tip.diagram.t, x + PAD, yy + 1, { dir: tip.diagram.dir || 1 });
-    if (!side) yy += DIAG_SIZE + 4;
+    moveDiagram(ctx, tip.diagram.t, x + P, yy + 1, { dir: tip.diagram.dir || 1 });
+    if (!side) yy += DIAG_SIZE + 1 + GAP_GROUP.tipDiag;
   }
-  for (const l of tipRows(tip, w)) {
-    if (l && l.chips) { familyChips(ctx, l.chips, x + PAD + dw, yy + 1, tw); yy += rowH(l, tw); continue; }
-    if (Array.isArray(l)) text(ctx, l[0], x + PAD + dw, yy, l[1]);
-    else richText(ctx, l, x + PAD + dw, yy, PAL.cardDim, { termCol: PAL.goldDk });
-    yy += 13;
-  }
+  const rows = tipRows(tip, w);
+  rows.forEach((l, i) => {
+    if (isChips(l)) { const h1 = rowH(l, tw, rows[i - 1]); familyChips(ctx, l.chips, x + P + dw, yy + 1 + h1 - chipRows(l.chips, tw) * CHIP_ROW, tw); yy += h1; return; }
+    if (Array.isArray(l)) text(ctx, l[0], x + P + dw, yy, l[1]);
+    else richText(ctx, l, x + P + dw, yy, PAL.cardDim, { termCol: PAL.goldDk });
+    yy += LINE.body;
+  });
   frame(ctx, x, y, w, h, PAL.frameDk);
   return { x, y, w, h };
 }

@@ -6,7 +6,8 @@ import { text, rect, frame, box } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { apply } from '../../sim/battle.js';
 import { previewDrop } from '../../sim/solver.js';
-import { BattleScreen, BX, S, LX, LW, RX, RW, sqXY } from './battle.js';
+import { BattleScreen, BX, S, LX, LW, RX, RW, sqXY, headRows } from './battle.js';
+import { SIDE_ROWS, PAD_BOX, LINE, LINE_TITLE, GAP_IN } from '../frame.js';
 import { panel } from '../parts.js';
 import { button } from '../ui.js';
 import { LESSONS, LESSON_GROUPS, lessonBattle, lessonSq } from '../lessons.js';
@@ -188,10 +189,11 @@ export class LessonScreen extends BattleScreen {
     super.drawRight(ctx, ui);
     // 할 일 한 줄(오른쪽 격언 칸 자리 — 수업에는 격언이 없다)
     const say = this.say;
-    panel(ctx, RX, 22, RW, 150);
-    text(ctx, this.phase === 'demo' ? '보기' : '할 일', RX + 6, 26, this.phase === 'demo' ? PAL.dim : PAL.gold, { bold: true });
-    wrap(say, RW - 12).slice(0, 10).forEach((l, k) => richText(ctx, l, RX + 6, 42 + k * 13, PAL.ink, { termCol: PAL.gold, ui }));
-    if (this.phase === 'demo') text(ctx, '누르면 내 차례', RX + RW - 6, 156, PAL.dimDk, { align: 'right' });
+    const P = PAD_BOX.panel, top = 22, bottom = top + 150, ty = top + PAD_BOX.lesson;
+    panel(ctx, RX, top, RW, bottom - top);
+    text(ctx, this.phase === 'demo' ? '보기' : '할 일', RX + P, ty, this.phase === 'demo' ? PAL.dim : PAL.gold, { bold: true });
+    wrap(say, RW - P * 2).slice(0, 10).forEach((l, k) => richText(ctx, l, RX + P, ty + LINE_TITLE.lesson + GAP_IN.lesson + k * LINE.body, PAL.ink, { termCol: PAL.gold, ui }));
+    if (this.phase === 'demo') text(ctx, '누르면 내 차례', RX + RW - P, bottom - 12 - PAD_BOX.lesson, PAL.dimDk, { align: 'right' });
     // 누를 곳이 손이면 그 카드에 숨 쉬는 테, 바꾸기면 단추에
     const st = this.step;
     if (this.phase === 'play' && st && !this.busy) {
@@ -205,12 +207,13 @@ export class LessonScreen extends BattleScreen {
   drawLeft(ctx, ui) {
     super.drawLeft(ctx, ui);
     // 맨 위 칸: 대국 제목 대신 수업 묶음과 지금 수업
-    panel(ctx, LX, 8, LW, 58);
+    const P = PAD_BOX.panel, [h0, h1, , h3] = headRows();
+    panel(ctx, LX, SIDE_ROWS.head, LW, SIDE_ROWS.battleHeadH);
     const g = LESSON_GROUPS.find((x) => x.id === this.L.group);
     const inGroup = LESSONS.filter((x) => x.group === this.L.group);
-    text(ctx, `${g ? g.name : ''} ${inGroup.indexOf(this.L) + 1}/${inGroup.length}`, LX + 6, 11, PAL.dim);
-    wrap(this.L.title, LW - 12, true).slice(0, 2).forEach((l, k) => text(ctx, l, LX + 6, 24 + k * 13, PAL.gold, { bold: true }));
-    text(ctx, this.L.target < 99999 ? `목표 ${this.L.target}` : '목표 외통', LX + 6, 50, PAL.ink);
+    text(ctx, `${g ? g.name : ''} ${inGroup.indexOf(this.L) + 1}/${inGroup.length}`, LX + P, h0, PAL.dim);
+    wrap(this.L.title, LW - P * 2, true).slice(0, 2).forEach((l, k) => text(ctx, l, LX + P, h1 + k * LINE.body, PAL.gold, { bold: true }));
+    text(ctx, this.L.target < 99999 ? `목표 ${this.L.target}` : '목표 외통', LX + P, h3, PAL.ink);
   }
   // 흐린 도트 손가락(1배에서도 보이게 테두리 · 흰 몸)
   drawFinger(ctx) {

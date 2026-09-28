@@ -7,7 +7,7 @@ import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { OPENING_ORDER, UNLOCKS, nextUnlock } from '../records.js';
 import { pageHead } from './common.js';
-import { PAGE } from '../frame.js';
+import { PAGE, LINE } from '../frame.js';
 
 export const danName = (d) => (d ? `${d}단` : '없음');
 
@@ -60,7 +60,7 @@ export class SetupScreen {
       button(ctx, ui, `setup:dan:${d}`, 12 + d * 50, 162, 46, 18, open ? danName(d) : '?', { enabled: open, tone: this.dan === d ? 'gold' : 'plain', onClick: () => { this.dan = d; this.app.sfx('pick'); } });
     }
     const rules = DANS.filter((x) => x.n <= this.dan).map((x) => x.text);
-    wrap(rules.length ? rules.join(' · ') : '더하는 규칙 없음', W - 30).slice(0, 3).forEach((l, k) => text(ctx, l, 14, 188 + k * 13, this.dan ? PAL.red : PAL.dim));
+    wrap(rules.length ? rules.join(' · ') : '더하는 규칙 없음', W - 30).slice(0, 3).forEach((l, k) => text(ctx, l, 14, 188 + k * LINE.body, this.dan ? PAL.red : PAL.dim));
     const nu = nextUnlock(rec);
     if (nu) text(ctx, `다음 해금 ${OPENINGS[nu.id].name}: ${nu.text} (${nu.have}/${nu.need})`, 14, 230, PAL.dim);
     button(ctx, ui, 'setup:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.app.go('title') });

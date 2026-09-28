@@ -6,6 +6,7 @@ import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, frame } from '../render/gfx.js';
 import { wrap } from '../render/text.js';
 import { placeBubble, noteMode, noteWidth } from './placement.js';
+import { PAD_BOX, LINE } from './frame.js';
 
 // 처음 만나는 것마다 한 줄. 글은 「언제 → 무엇」, 한 문장.
 export const HINTS = {
@@ -109,8 +110,8 @@ export function drawCoach(ctx, app) {
 export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
   const mode = noteMode(app.screen);
   const w = noteWidth(mode);
-  const lines = wrap(say, w - 12);
-  const h = 8 + lines.length * 13 + (ok ? 20 : 0);
+  const lines = wrap(say, w - PAD_BOX.coach * 2);
+  const h = PAD_BOX.coachTop * 2 + lines.length * LINE.body + (ok ? 20 : 0);
   const p = placeBubble(mode, r, h, { W, H });
   const { x, y } = p;
   app.hintRect = { x, y, w, h };
@@ -134,7 +135,7 @@ export function bubble(ctx, ui, app, r, say, { ok = null } = {}) {
       }
     }
   }
-  lines.forEach((l, k) => text(ctx, l, x + 6, y + bob + 4 + k * 13, PAL.cardInk, { bold: k === 0 && lines.length === 1 }));
+  lines.forEach((l, k) => text(ctx, l, x + PAD_BOX.coach, y + bob + PAD_BOX.coachTop + k * LINE.body, PAL.cardInk, { bold: k === 0 && lines.length === 1 }));
   if (ok) {
     const bx = x + w - 56, by = y + bob + h - 18;
     ui.region('guide:ok', bx, by, 50, 14, { onClick: ok });

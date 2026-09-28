@@ -7,6 +7,7 @@ import { L } from './lang.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { TRAIT_BY_ID } from '../data/traits.js';
 import { wrap } from '../render/text.js';
+import { CHIP_ROW, FAM_ROW } from './frame.js';
 
 // 5×5 문양
 const GLYPH = {
@@ -56,7 +57,7 @@ export function familyChips(ctx, fams, x, y, w) {
   let xx = x, rows = fams.length ? 1 : 0;
   for (const id of fams) {
     const cw = chipW(id);
-    if (xx > x && xx + cw > x + w) { xx = x; y += 13; rows++; }
+    if (xx > x && xx + cw > x + w) { xx = x; y += CHIP_ROW; rows++; }
     familyChip(ctx, id, xx, y);
     xx += cw + 3;
   }
@@ -109,7 +110,7 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
   // 다 안 들어가면 마지막 줄은 「+N」(남은 시너지 수)
   const list = all.length > maxRows ? all.slice(0, Math.max(0, maxRows - 1)) : all;
   list.forEach((f, k) => {
-    const yy = y + k * 15;
+    const yy = y + k * FAM_ROW;
     const lv = levelOf(n[f.id]);
     const next = THRESHOLDS[lv];
     const id = `${idPrefix}:${f.id}`;
@@ -122,7 +123,7 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
     text(ctx, f.name, x + 11, yy, lv ? PAL.ink : PAL.dim);
     text(ctx, next ? `${n[f.id]}/${next}` : `${n[f.id]}`, x + w - 3, yy, lv ? PAL.ink : PAL.dim, { align: 'right' });
   });
-  if (all.length > list.length && maxRows > 0) { text(ctx, `+${all.length - list.length}`, x + 3, y + list.length * 15, PAL.dim); return list.length + 1; }
+  if (all.length > list.length && maxRows > 0) { text(ctx, `+${all.length - list.length}`, x + 3, y + list.length * FAM_ROW, PAL.dim); return list.length + 1; }
   return list.length;
 }
 

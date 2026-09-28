@@ -6,7 +6,7 @@ import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { panel, tipLines, fragmentStrip, fitText } from '../parts.js';
 import { button } from '../ui.js';
 import { familyList } from '../parts-depth.js';
-import { LEFT, PAUSE, PAGE, SIDE_ROWS } from '../frame.js';
+import { LEFT, PAUSE, PAGE, SIDE_ROWS, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, ROW_TEXT } from '../frame.js';
 
 export function pauseButton(ctx, ui, app, x = PAUSE.x, y = PAUSE.y) {
   const id = 'btn:pause';
@@ -30,34 +30,39 @@ export const hallText = (run) => (run && !run.endless ? `${run.ante}/${ANTES}관
 export function runSide(ctx, ui, app, title) {
   const run = app.run;
   const L = LEFT.x, LW = LEFT.w;
+  const P = PAD_BOX.panel;
   panel(ctx, L, SIDE_ROWS.head, LW, SIDE_ROWS.headH);
-  text(ctx, hallText(run), L + 6, SIDE_ROWS.head + 3, PAL.dim);
-  fitText(ctx, title, L + 6, SIDE_ROWS.head + 16, LW - 12, PAL.gold);
-  // 짜임 칸: 시너지(세로 칩) → 정석 이름
-  const top = SIDE_ROWS.build, end = SIDE_ROWS.buildEnd;
+  text(ctx, hallText(run), L + P, SIDE_ROWS.head + PAD_BOX.top, PAL.dim);
+  fitText(ctx, title, L + P, SIDE_ROWS.head + PAD_BOX.top + LINE.body + GAP_IN.head, LW - P * 2, PAL.gold);
+  // 짜임 칸: 시너지(세로 칩) → 정석 이름. 칸은 머리 칸과 상금 칸 사이(판넬 사이 틈 GAP_GROUP.side)
+  const { top, end } = buildBox();
   panel(ctx, L, top, LW, end - top);
-  let y = top + 4;
+  let y = top + PAD_BOX.build;
   const js = run.josekis || [];
-  const jsH = js.length ? 14 + js.length * 13 + 4 : 0;
-  const famRows = Math.max(0, Math.floor((end - 4 - jsH - (y + 14)) / 15));
-  const shown = familyList(ctx, ui, run, L + 6, y + 14, LW - 12, famRows, { time: app.time, fx: app.screen && app.screen.famFx });
-  if (shown) { text(ctx, '시너지', L + 6, y, PAL.dim); y += 14 + shown * 15 + 4; }
+  const labelH = LINE_TITLE.label + GAP_IN.label;
+  const jsH = js.length ? labelH + js.length * LINE.body + GAP_GROUP.build : 0;
+  const famRows = Math.max(0, Math.floor((end - PAD_BOX.build - jsH - (y + labelH)) / FAM_ROW));
+  const shown = familyList(ctx, ui, run, L + P, y + labelH, LW - P * 2, famRows, { time: app.time, fx: app.screen && app.screen.famFx });
+  if (shown) { text(ctx, '시너지', L + P, y, PAL.dim); y += labelH + shown * FAM_ROW + GAP_GROUP.build; }
   if (js.length) {
-    text(ctx, '정석', L + 6, y, PAL.dim);
-    y += 14;
+    text(ctx, '정석', L + P, y, PAL.dim);
+    y += labelH;
     js.forEach((id) => {
       const j = JOSEKI_BY_ID[id];
       ui.region(`joseki:${id}`, L + 4, y - 1, LW - 8, 13, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [{ chips: j.families }] : []) });
-      fitText(ctx, j.name, L + 6, y, LW - 12, ui.isHover(`joseki:${id}`) ? PAL.goldHi : TIER_COL[j.tier]);
-      y += 13;
+      fitText(ctx, j.name, L + P, y, LW - P * 2, ui.isHover(`joseki:${id}`) ? PAL.goldHi : TIER_COL[j.tier]);
+      y += LINE.body;
     });
   }
   // 상금 · 주머니(대국과 같은 자리)
   moneyPanel(ctx, ui, run);
   panel(ctx, L, SIDE_ROWS.bag, LW, SIDE_ROWS.rowH);
-  text(ctx, '주머니', L + 6, SIDE_ROWS.bag + 5, PAL.dim);
-  text(ctx, `${run.deck.length}`, L + LW - 6, SIDE_ROWS.bag + 5, PAL.ink, { align: 'right' });
+  text(ctx, '주머니', L + P, SIDE_ROWS.bag + ROW_TEXT, PAL.dim);
+  text(ctx, `${run.deck.length}`, L + LW - P, SIDE_ROWS.bag + ROW_TEXT, PAL.ink, { align: 'right' });
 }
+
+// 짜임 칸 자리: 머리 칸 아래 ~ 상금 칸 위(판넬 사이 틈만큼 띄운다)
+export const buildBox = () => ({ top: SIDE_ROWS.head + SIDE_ROWS.headH + GAP_GROUP.side, end: SIDE_ROWS.money - GAP_GROUP.side });
 
 // 판 밖 틀의 쪽 넘기기: 맨 아래 단추 줄 오른쪽(‹ · 쪽 · ›)
 export function pageButtons(ctx, ui, prefix, page, pages, go) {
@@ -71,9 +76,10 @@ export function pageButtons(ctx, ui, prefix, page, pages, go) {
 export function moneyPanel(ctx, ui, run) {
   const L = LEFT.x, LW = LEFT.w, y = SIDE_ROWS.money;
   panel(ctx, L, y, LW, SIDE_ROWS.rowH);
-  text(ctx, '상금', L + 6, y + 5, PAL.dim);
+  const P = PAD_BOX.panel, ty = y + ROW_TEXT;
+  text(ctx, '상금', L + P, ty, PAL.dim);
   const amt = `$${run.money}`;
-  const fx = L + 6 + measure('상금') + 4;
-  fragmentStrip(ctx, ui, run, fx, y + 5, { max: Math.floor((L + LW - 6 - measure(amt, true) - 3 - fx) / 13), step: 13 });
-  text(ctx, amt, L + LW - 6, y + 5, PAL.gold, { align: 'right', bold: true });
+  const fx = L + P + measure('상금') + 4;
+  fragmentStrip(ctx, ui, run, fx, ty, { max: Math.floor((L + LW - P - measure(amt, true) - 3 - fx) / 13), step: 13 });
+  text(ctx, amt, L + LW - P, ty, PAL.gold, { align: 'right', bold: true });
 }

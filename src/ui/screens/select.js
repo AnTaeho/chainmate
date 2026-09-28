@@ -10,7 +10,7 @@ import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { KIND_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, BTN_H, cardX } from '../frame.js';
+import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP } from '../frame.js';
 import { tipLines } from '../parts.js';
 import { drawPortrait } from '../../render/portraits.js';
 
@@ -69,31 +69,32 @@ export class SelectScreen {
       box(ctx, x, y, w, h, cur ? PAL.feltDk : PAL.felt, edge);
       if (cur) frame(ctx, x - 1, y - 1, w + 2, h + 2, edge);
       const ink = cur ? PAL.ink : PAL.dim;
-      const P = 6;
-      text(ctx, KIND_NAME[info.kind], x + P, y + 5, master ? PAL.red : cur ? PAL.gold : PAL.dim, { bold: true });
+      const P = PAD_CARD.blind, LB = LINE.body;
+      text(ctx, KIND_NAME[info.kind], x + P, y + PAD_CARD.blindTop, master ? PAL.red : cur ? PAL.gold : PAL.dim, { bold: true });
       // 이름표 · 수치 한 줄(넘치면 수치를 다음 줄 오른쪽에)
       const row = (label, val, yy, col, bold = true) => {
         text(ctx, label, x + P, yy, PAL.dim);
         const two = measure(label) + 6 + measure(val, bold) > w - P * 2;
-        text(ctx, val, x + w - P, two ? yy + 13 : yy, col, { align: 'right', bold });
-        return two ? 26 : 13;
+        text(ctx, val, x + w - P, two ? yy + LB : yy, col, { align: 'right', bold });
+        return two ? LB * 2 : LB;
       };
-      let yy = y + 24;
+      let yy = y + PAD_CARD.blindTop + LINE_TITLE.blind + GAP_IN.blind;
       yy += row('목표', num(info.target), yy, ink);
       yy += row('이기면', master ? `$${REWARD.base[info.kind]} + 상자` : `$${REWARD.base[info.kind]}`, yy, PAL.gold);
-      rect(ctx, x + P, yy + 3, w - P * 2, 1, PAL.frameDk);
-      yy += 8;
+      // 목표 · 보상 묶음 → 아래 묶음(가로줄은 틈 가운데)
+      rect(ctx, x + P, yy + Math.floor(GAP_GROUP.blind / 2) - 1, w - P * 2, 1, PAL.frameDk);
+      yy += GAP_GROUP.blind;
       if (master) {
         const m = MASTER_BY_ID[info.master];
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)
         ui.region(`select:card:${i}`, x, y, w, h, { keys: [m.text] });
         box(ctx, x + P, yy, 36, 36, PAL.felt, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + P + 2, yy + 2, 1, cur ? 1 : 0.6);
-        wrap(`명인 ${m.name}`, w - P * 2 - 42, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + P + 42, yy + 4 + k * 13, PAL.red, { bold: true }));
-        wrap(m.text, w - P * 2).slice(0, 5).forEach((l, k) => richText(ctx, l, x + P, yy + 42 + k * 13, ink, { termCol: PAL.gold }));
+        wrap(`명인 ${m.name}`, w - P * 2 - 42, true).slice(0, 2).forEach((l, k) => text(ctx, l, x + P + 42, yy + 4 + k * LB, PAL.red, { bold: true }));
+        wrap(m.text, w - P * 2).slice(0, 5).forEach((l, k) => richText(ctx, l, x + P, yy + 36 + GAP_GROUP.blindMaster + k * LB, ink, { termCol: PAL.gold }));
       } else {
         text(ctx, '건너뛰면', x + P, yy, PAL.dim);
-        wrap(tagText(info.tag), w - P * 2).forEach((l, k) => text(ctx, l, x + P, yy + 14 + k * 13, cur ? PAL.gold : PAL.dim, { bold: true }));
+        wrap(tagText(info.tag), w - P * 2).forEach((l, k) => text(ctx, l, x + P, yy + LINE_TITLE.label + GAP_IN.label + k * LB, cur ? PAL.gold : PAL.dim, { bold: true }));
       }
       const by = y + h - 24;
       if (past) {

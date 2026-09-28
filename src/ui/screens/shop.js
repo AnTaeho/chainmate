@@ -18,7 +18,7 @@ const ENG_NAME = (id) => engravingInfo(id).name;
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { runSide, pauseButton } from './common.js';
-import { RIGHT, CENTER, CARD, TOP, BTN_H, SHARD_TO } from '../frame.js';
+import { RIGHT, CENTER, CARD, TOP, BTN_H, SHARD_TO, PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN } from '../frame.js';
 
 const RX = RIGHT.x, RW = RIGHT.w;
 // 가운데 칸: 진열(22 ~ 138) · 꾸러미(142 ~ 184) · 단추(188) · 주머니(210 ~ 268). 오른쪽 칸: 격언(22 ~ 178) · 두루마리(198 ~)
@@ -78,11 +78,11 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
   const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
   if (narrow) { fitText(ctx, name, x + Math.floor(w / 2), y + h - 13, w - 4, PAL.cardInk, { align: 'center' }); return; }
   // 넓은 칸: 이름 아래에 효과 앞머리 한 줄(다 못 적으면 「…」)
-  text(ctx, name, x + 23, y + 2, PAL.cardInk, { bold: true });
+  text(ctx, name, x + 23, y + PAD_CARD.scroll, PAL.cardInk, { bold: true });
   // 「 — 」 뒤의 덧붙임(대가 · 횟수)은 칸에서 뺀다
   const head = effectHead(itemEffect(c)), main = head.split(' — ')[0];
   const ls = wrap(main, w - 26);
-  text(ctx, ls.length > 1 || main !== head ? `${ls[0].replace(/\s*[·—,]$/, '')}…` : ls[0] || '', x + 23, y + 14, PAL.cardDim);
+  text(ctx, ls.length > 1 || main !== head ? `${ls[0].replace(/\s*[·—,]$/, '')}…` : ls[0] || '', x + 23, y + PAD_CARD.scroll + LINE.card, PAL.cardDim);
 }
 export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
@@ -222,7 +222,8 @@ export class ShopScreen {
     box(ctx, x, y, w, h, PAL.feltDk, hover ? PAL.gold : PAL.frameDk);
     envelope(ctx, x + 4, y + 4, 30, 22, pk.kind, { hover });
     const tx = x + 38, tw = w - 42;
-    fitText(ctx, PACK_NAME[pk.kind].split(' ')[0], tx, y + 3, tw, PAL.ink);
+    const ty = y + PAD_BOX.pack;
+    fitText(ctx, PACK_NAME[pk.kind].split(' ')[0], tx, ty, tw, PAL.ink);
     const inside = { piece: '기물 셋 중 하나', chart: '기보 셋 중 하나', engraving: '각인 셋 중 하나', golden: '판본 격언 셋 중 하나' }[pk.kind] || '';
     if (pk.sold) {
       ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
@@ -230,7 +231,7 @@ export class ShopScreen {
       return;
     }
     text(ctx, pk.price ? `$${pk.price}` : '공짜', x + 19, y + h - 15, PAL.gold, { align: 'center', bold: true });
-    wrap(inside, tw).slice(0, 2).forEach((l, k) => text(ctx, l, tx, y + 16 + k * 12, PAL.dim));
+    wrap(inside, tw).slice(0, 2).forEach((l, k) => text(ctx, l, tx, ty + LINE_TITLE.pack + GAP_IN.pack + k * LINE.card, PAL.dim));
   }
 
   drawMenu(ctx, ui) {

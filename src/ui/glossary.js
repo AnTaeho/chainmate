@@ -8,6 +8,7 @@ import { wrap } from '../render/text.js';
 import { PAL } from '../render/palette.js';
 import { text, measure, box, rect } from '../render/gfx.js';
 import { L, getLang } from './lang.js';
+import { PAD_BOX, LINE, LINE_TITLE, GAP_IN } from './frame.js';
 
 const T = (id, group, word, enWord, re, en, say, enSay, basic = false) => ({ id, group, word, enWord, re, en, say, enSay, basic });
 // 기본 낱말(basic): 첫 수업이 가르치는 말. 글 안에서 빛깔을 받지 않고 카드 옆 상자도 띄우지 않는다(docs/design-notes/voice.md).
@@ -125,9 +126,11 @@ export function termsIn(list) {
   return out;
 }
 export const KEY_MAX = 2; // 카드 하나에 상자 둘까지
-const keyLines = (id, w) => wrap(termSay(id), w - 10);
+const keyLines = (id, w) => wrap(termSay(id), w - PAD_BOX.key * 2);
+// 낱말 아래 풀이 첫 줄까지(낱말 위 여백 + 낱말 줄)
+const keyBodyY = () => PAD_BOX.keyTop + LINE_TITLE.key + GAP_IN.key;
 // 낱말 상자 높이(폭 w). 폭은 설명 묶음이 정한다(말풍선과 같은 폭 — placement.js)
-export const keyHeight = (id, w) => 16 + keyLines(id, w).length * 13 + 3;
+export const keyHeight = (id, w) => keyBodyY() + keyLines(id, w).length * LINE.body + PAD_BOX.keyEnd;
 // 상자에 띄울 낱말: 앞에서 KEY_MAX개, 가리킨 낱말(hot)은 꼭 넣는다
 export function keyList(ids, hot = null, max = KEY_MAX) {
   let list = ids.slice(0, max);
@@ -140,8 +143,9 @@ export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null) {
   const h = keyHeight(id, w);
   box(ctx, x, y, w, h, '#16231f', hot ? PAL.gold : PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, '#2a3a33');
-  text(ctx, termWord(id), x + 5, y + 2, PAL.gold, { bold: true });
-  if (note && measure(termWord(id), true) + 6 + measure(note) <= w - 10) text(ctx, note, x + w - 5, y + 2, PAL.ink, { align: 'right' });
-  keyLines(id, w).forEach((l, k) => text(ctx, l, x + 5, y + 16 + k * 13, PAL.ink));
+  const P = PAD_BOX.key;
+  text(ctx, termWord(id), x + P, y + PAD_BOX.keyTop, PAL.gold, { bold: true });
+  if (note && measure(termWord(id), true) + 6 + measure(note) <= w - P * 2) text(ctx, note, x + w - P, y + PAD_BOX.keyTop, PAL.ink, { align: 'right' });
+  keyLines(id, w).forEach((l, k) => text(ctx, l, x + P, y + keyBodyY() + k * LINE.body, PAL.ink));
   return { id, x, y, w, h };
 }
