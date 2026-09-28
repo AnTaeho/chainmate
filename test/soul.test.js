@@ -116,13 +116,13 @@ test('왕관: 승급 칸이 두 줄 앞, 아마존이 된다', () => {
   assert.equal(t.chain.promotions, 1);
 });
 
-test('그림자: 노림이 보지 못해 응수 없이 이어진다', () => {
+test('잠행: 노림이 보지 못해 응수 없이 이어진다', () => {
   const t = go({ e6: 'P', e8: 'R', f3: 'B' }, 'B', 'c4', 'shade', ['e6']);
   assert.equal(t.chain.forced, null);
   assert.notEqual(t.chain.reason, 'cut');
 });
 
-test('그림자: 한 사슬에서 한 번만 무시한다 · 배수 그대로', () => {
+test('잠행: 한 사슬에서 한 번만 무시한다 · 배수 그대로', () => {
   // c4 비숍 × e6(e8 룩이 지킴 — 무시) → 폰 모습 × d7(c8 비숍이 지킴 — 이번엔 응수) → 나이트로 c8에 못 닿아 끊김
   const t = go({ e6: 'P', e8: 'R', d7: 'N', c8: 'B' }, 'B', 'c4', 'shade', ['e6']);
   assert.equal(t.chain.forced, null);
@@ -131,7 +131,7 @@ test('그림자: 한 사슬에서 한 번만 무시한다 · 배수 그대로', 
   assert.equal(t.chain.mult, 2, '사슬 끝에 배수를 깎지 않는다');
 });
 
-test('그림자: 지켜진 킹은 먹을 수 없다', () => {
+test('잠행: 지켜진 킹은 먹을 수 없다', () => {
   const open = go({ e6: 'K', b5: 'P' }, 'B', 'c4', 'shade');
   assert.ok(chainCaptures(open).includes(S('e6')), '지켜지지 않은 킹은 먹는다');
   const guarded = go({ e6: 'K', e8: 'R', b5: 'P' }, 'B', 'c4', 'shade');

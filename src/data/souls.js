@@ -19,7 +19,7 @@ export const SOUL_PRICE = 4;
 export const MARTYR = { take: 2 };
 export const MARTYR_TEXT = '끊길 때: 둘레의 적 둘을 먹는다';
 export const MARTYR_MORE = '킹과 킹을 지키는 적은 남긴다 · 값이 큰 적부터';
-// 그림자: 한 사슬에서 처음 ignores번만 지키는 적을 무시한다(지켜진 킹은 여전히 못 먹는다 — board.js kingTakeable).
+// 잠행(옛 이름 그림자 — 증원 「점선 그림자」와 겹쳐 바꿨다, id shade는 그대로): 한 사슬에서 처음 ignores번만 지키는 적을 무시한다(지켜진 킹은 여전히 못 먹는다 — board.js kingTakeable).
 // 옛 「늘 무시 · 배수 −1」은 끊김이 없어 첫 수 외통이 대국의 9~22%였다(sim --soul shade). 두 번이면 옛것과 외통이 같았다.
 // 한 번으로 줄이며 배수 −1은 뺐다(penalty)
 export const SHADE = { ignores: 1, penalty: 0 };
@@ -110,10 +110,10 @@ soul('martyr', '순교자', '#df5a45', ['sacrifice'], MARTYR_TEXT, {
   more: MARTYR_MORE,
   onCut(ctx) { martyrBurst(ctx); },
 });
-soul('crown', '왕홀', '#efbd55', ['crown', 'march'], '폰 모습이면 여섯째 줄에서 아마존으로 승급', {
+soul('crown', '선봉', '#efbd55', ['crown', 'march'], '폰 모습이면 여섯째 줄에서 아마존으로 승급', {
   onDrop(ctx) { ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, 5); ctx.flags.promoteTo = 'Z'; },
 });
-soul('shade', '그림자', '#8a5cc8', ['sacrifice', 'leap'], '사슬마다 한 번: 지키는 적을 무시한다', {
+soul('shade', '잠행', '#8a5cc8', ['sacrifice', 'leap'], '사슬마다 한 번: 지키는 적을 무시한다', {
   more: '지켜진 킹은 먹을 수 없다',
   onThreat(ctx) {
     if ((ctx.flags.shade || 0) >= SHADE.ignores) return;

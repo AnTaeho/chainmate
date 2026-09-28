@@ -103,7 +103,7 @@ export const EN = {
   
   '같은 종류를 잇달아 먹으면 배수 ×2': 'Same kind in a row: ×2 Mult',
   
-  '메아리': 'Echo', '초월': 'Transcend', '굶주림': 'Hunger', '사냥꾼': 'Hunter', '순교자': 'Martyr', '그림자': 'Shade',
+  '메아리': 'Echo', '초월': 'Transcend', '굶주림': 'Hunger', '사냥꾼': 'Hunter', '순교자': 'Martyr', '잠행': 'Stealth',
   // 진화 · 묘수(깊이 F)
   '진화': 'Evolve', '묘수': 'Trick', '자랄 기물': 'Choose a piece', '대국 중에 쓴다': 'In a match', '대국 중 떨구기 전에 쓴다': 'Use during a match, before a drop',
   
@@ -278,7 +278,7 @@ export const EN = {
   // ── 목소리 손질(docs/design-notes/voice.md): 「조건: 효과」 한 줄
   // 시너지(옛 모음) · 버리기
   '기사': 'Rider', '사제': 'Cleric', '시너지': 'Synergy', '버리기': 'Discard', '빼기': 'Remove',
-  '파수꾼': 'Sentinel', '오뚝이': 'Second Wind', '왕홀': 'Scepter', '뽑은 대로': 'As Dealt', '미련 없이': 'No Regrets',
+  '파수꾼': 'Sentinel', '오뚝이': 'Second Wind', '선봉': 'Vanguard', '뽑은 대로': 'As Dealt', '미련 없이': 'No Regrets',
   '손과 버리기': 'Hand and Discard', '상점과 시너지': 'Shop and Synergy',
   '정석은 판 끝까지 간다. 정석마다 시너지가 다르다': 'A joseki lasts the whole run. Each brings its own synergy',
   '같은 시너지를 2 · 4 · 6개 모으면 효과가 켜진다': 'Collect 2, 4 and 6 of one synergy to switch on its effects',
@@ -348,7 +348,7 @@ export const EN = {
   // 혼
   '첫 먹기: 모습 그대로 · 먹은 적의 행마를 얻는다': 'First take: form holds · gains the taken move',
   '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 잇는다': 'Once, if nothing is left: back to first form',
-  '먹으면 한 단계 위 모습이 된다 · 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Each take: one step up · pawn › knight › bishop › rook › queen › amazon', '두 번 먹을 때마다: 한 단계 위 기물이 된다': 'Every 2nd take: the next piece up',
+  '두 번 먹을 때마다: 한 단계 위 기물이 된다': 'Every 2nd take: the next piece up',
   '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …': 'Second take +10 Value · third +20 · fourth +30 …',
   '폰 모습이면 여섯째 줄에서 아마존으로 승급': 'As a pawn: amazon on the sixth rank',
   '사슬마다 한 번: 지키는 적을 무시한다': 'Once per chain: ignore a guard', '지켜진 킹은 먹을 수 없다': "A guarded king still can't be taken",
