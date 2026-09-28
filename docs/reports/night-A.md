@@ -6,7 +6,7 @@
 
 | 자리 | 파일 |
 |---|---|
-| 진입 · 확대 · 입력 | `index.html` `style.css` `src/main.js` — 480×270 캔버스, 장치 화소 기준 정수배(작으면 비정수) + 레터박스, `image-rendering: pixelated`. 마우스 좌표는 `getBoundingClientRect`로 게임 좌표에. 오른쪽 누르기 = Esc. 터치도 누르기로 |
+| 진입 · 확대 · 입력 | `index.html` `style.css` `src/main.js` — 480×270 캔버스, 장치 화소 기준 정수배(작으면 비정수) + 레터박스, `image-rendering: pixelated`. 마우스 좌표는 `getBoundingClientRect`로 게임 좌표에. 오른쪽 누르기는 판 위 표시만(`docs/design-notes/layout.md` 「판 위 표시」). 터치도 누르기로 |
 | 그리기 | `src/render/` — `sprites.js`(mockup SPR · TONE 이식, 캐시, 톤 w · b · g(황금 적) · s(은빛) · q(금빛)), `text.js`(Galmuri11 12px를 오프스크린에 그려 알파 > 0.5로 잘라 캐시, 굵게는 Bold), `gfx.js`(상자 · 점선 · 선 · 글자 · 기물), `palette.js` |
 | 화면 흐름 | `src/ui/app.js` — 화면 전환, 명령(`applyRun`) 한 곳, 저장, 막간 차례(보상 → 상자 → 전설 → 상점), 알림, 흔들림, 말풍선 |
 | 조작 | `src/ui/ui.js` — 즉시 모드 구역(누르기 · 끌기 · 말풍선). 구역 id가 연기 시험의 이름표 |
