@@ -13,7 +13,7 @@ import { PIECES } from '../data/pieces.js';
 import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
-import { UP, TRANSCEND, ABSORB } from '../data/souls.js';
+import { UP, ABSORB } from '../data/souls.js';
 
 const NO_OPTS = {};
 // 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
@@ -140,8 +140,8 @@ export function chainCapture(t, sq) {
       events.push({ type: 'absorb', piece: target.t, sq: at, forms: [c.form, ...c.absorbed] });
     }
   } else if (c.flags.transcend && target.t !== 'K') {
-    // 혼 「초월」: 먹힌 모습 대신, TRANSCEND.every번 먹을 때마다 한 단계 위로(그 사이엔 모습이 그대로)
-    const up = c.captures.length % TRANSCEND.every === 0 ? UP[c.form] : null;
+    // 혼 「초월」: 먹힌 모습 대신 한 단계 위로
+    const up = UP[c.form];
     if (up) {
       const prev = c.form;
       c.form = up;
@@ -158,8 +158,6 @@ export function chainCapture(t, sq) {
     events.push({ type: 'transform', from: prev, to: c.form, sq: at });
     runHook(t, 'onTransform', { from: prev, to: c.form }, events);
   }
-  // 흡수로 얻은 행마는 흡수가 끝난 다음 먹기까지만 간다(남겨 두면 사슬 내내 행마 둘로 다녀 외통이 66~80%였다)
-  if (c.flags.absorb && c.absorbed && c.captures.length > ABSORB.takes) c.absorbed = null;
   if (!c.forms.includes(c.form)) c.forms.push(c.form);
 
   // 승급: 폰 모습으로 끝줄(조정자가 flags.promoteFrom으로 당길 수 있다 — 전설 「폰 여덟의 행진」)
