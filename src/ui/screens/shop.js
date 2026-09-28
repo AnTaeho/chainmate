@@ -39,6 +39,8 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
   const per = Math.max(1, Math.floor((w + 3) / (cw + 3)));
   const rows = Math.ceil(n / per);
   const step = rows > 1 ? Math.max(4, Math.min(ch + 3, Math.floor((bottom - y - ch) / (rows - 1)))) : ch + 3;
+  // 줄 간격이 가장 좁아도 넘치면(주머니가 커진 긴 판 — 시계로 판이 길어졌다) 줄을 위로 올린다
+  if (rows > 1 && y + (rows - 1) * step + ch > bottom) y = bottom - ch - (rows - 1) * step;
   // 줄 자리를 기록기에 남긴다(글은 없다 — 화면 밖 · 다른 칸과 겹침만 잰다)
   openBox('tile', x, y, w, (rows - 1) * step + ch, 0, { name: '주머니 줄' });
   closeBox();
