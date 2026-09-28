@@ -698,6 +698,8 @@ const bigSeen = { battle: 0, select: 0, result: 0, records: 0, reward: 0, overla
     }
   };
   const BIG = [1719572936961, 6184890789926, 999999999999999, 9876543210987654];
+  // 결과 화면은 판을 기록에 적는다(finishRun) — 세운 장면이 기록(끝없는 대국 깊이 · 판 수)을 바꾸지 않게 되돌린다
+  const saved = JSON.stringify(app.records);
   const deep = (ante) => { app.overlay = null; app.nextSeed = 11; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 }); const r = app.run; r.endless = true; r.ante = ante; r.blind = 0; return r; };
   for (const ante of [29, 33, 36]) {
     const r = deep(ante); r.phase = 'select'; app.goPhase(); look('select', 60);
@@ -718,11 +720,10 @@ const bigSeen = { battle: 0, select: 0, result: 0, records: 0, reward: 0, overla
     r2.bestReplay = { board: Array(64).fill(null), drop: { sq: 27, piece: 'N' }, caps: [{ from: 27, to: 44, form: 'N', after: 'B' }], score: n, reason: 'end' };
     r2.phase = 'lost';
     app.go('result'); look('result', 60);
-    const keep = app.records.bestMove;
     app.records.bestMove = { score: n, steps: ['P', 'N', 'B', 'R', 'Q', 'N', 'B', 'R', 'Q'], ante: 29 };
     app.go('records'); look('records', 5);
-    app.records.bestMove = keep;
   }
+  app.records = JSON.parse(saved); app.saveRecords();
   app.toTitle(); pump(1);
 }
 
