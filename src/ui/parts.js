@@ -262,6 +262,13 @@ const EMBLEM = {
   ebony: { c: { o: '#1e1612', m: '#3e2f28', h: '#6b5a52', w: '#c8902c' }, g: ['................', '................', '...ooooooooo....', '..ohhmhhhhhmoo..', '..ohmhhhmhhhhmo.', '.ohhmhhhmhhhhmo.', '.ohmhhhhmhhhhhmo', '.ommmhhhhmmhhhmo', '.ohhhmmhhhhmmmmo', '.ohhhhhmhhhhhhmo', '..ohhhhmhhhwhmo.', '..ommmmmmmmmmo..', '...oooooooooo...', '................', '................', '................'] },
   glass: { c: { o: '#3f7f8a', m: '#6fb8c4', h: '#bfe0e6', w: '#ffffff' }, g: ['.......o........', '......owo.......', '......owho......', '.....owhho......', '.....owhhho.....', '....owhhhho.....', '....owhhhhmo....', '...owhhhhhmo....', '...owhhhhhhmo...', '..owhhhhhhhmo...', '..owhhhhhhhhmo..', '.owhhhhhhhhhmo..', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '................', '................'] },
   feather: { c: { o: '#3a6a60', m: '#6fd1bf', h: '#e8e0f0', w: '#ffffff' }, g: ['...........ooo..', '.........oohhmo.', '........ohhhhmo.', '.......ohhhhmo..', '......ohhwhmo...', '.....ohhwhmo....', '....ohhwhmo.....', '....ohwhmo......', '...ohwhmo.......', '...owhmo........', '..owmo..........', '..omo...........', '.oo.............', 'o...............', '................', '................'] },
+  // 밤샘 2: 청동 종 · 철 덩이 · 벌레 든 호박 · 비취 고리 · 산호 가지 · 결 있는 대리석
+  bronze: { c: { o: '#5a3414', m: '#a0602a', h: '#d08a48', w: '#f0c090' }, g: ['.......oo.......', '......ommo......', '.....ohhhmo.....', '....ohwhhhmo....', '....ohwhhhmo....', '...ohwhhhhhmo...', '...ohhhhhhhmo...', '...ohhhhhhhmo...', '..ohhhhhhhhhmo..', '..ohhhhhhhhhmo..', '.ohhhhhhhhhhhmo.', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '.......oo.......', '......omo.......', '.......o........'] },
+  iron: { c: { o: '#2a2e33', m: '#555c63', h: '#8a9299', w: '#c8d0d6' }, g: ['................', '................', '................', '....oooooooo....', '...ohhwhhhhmo...', '..ohhwhhhhhhmo..', '.ohhhhhhhhhhhmo.', 'ommmmmmmmmmmmmmo', 'ommmmmmmmmmmmmmo', '.oooooooooooooo.', '................', '................', '................', '................', '................', '................'] },
+  amber: { c: { o: '#6a3a08', m: '#c87a14', h: '#f0a830', w: '#ffe0a0' }, g: ['.......oo.......', '......ohho......', '.....ohwhho.....', '.....owhhho.....', '....owhhhhmo....', '...ohwhhhhhmo...', '...owhhoohhmo...', '..ohhhoooohhmo..', '..ohhhhoohhhmo..', '..ohhhhhhhhhmo..', '..ohhhhhhhhhmo..', '...ohhhhhhhmo...', '....ommmmmmo....', '.....oooooo.....', '................', '................'] },
+  jade: { c: { o: '#1e5a3a', m: '#3f9a60', h: '#7fd09a', w: '#d0ffe0' }, g: ['.....oooooo.....', '...oohhhhhhoo...', '..ohhwwhhhhhmo..', '.ohwwhhhhhhhhmo.', '.ohwhhooooohhmo.', 'ohhhho....ohhhmo', 'ohhho......ohhmo', 'ohhho......ohhmo', 'ohhho......ohhmo', 'ohhhho....ohhhmo', '.ohhhhooooohhmo.', '.ohhhhhhhhhhhmo.', '..ommhhhhhhmmo..', '...oommmmmmoo...', '.....oooooo.....', '................'] },
+  coral: { c: { o: '#7a2a2a', m: '#d05a50', h: '#f08878', w: '#ffd0c8' }, g: ['..o.....o....o..', '.oho...oho..oho.', '.oho...oho..oho.', '.ohho..oho.ohho.', '..oho..ohooho...', '..ohhooohhhmo...', '...ohhhhhhmo....', '....ohhhhmo.....', '.....ohhmo......', '.....ohhmo......', '.....ohhmo......', '....ohhhhmo.....', '...ommmmmmmo....', '...ooooooooo....', '................', '................'] },
+  marble: { c: { o: '#3a3a4a', m: '#7a70a8', h: '#e8e4f8', w: '#ffffff' }, g: ['................', '................', '.oooooooooooooo.', '.ohhhhhhhmhhhho.', '.ohwhhhhmhhhhho.', '.ohhhhhmhhhhhho.', '.ohhhhmhhhhhhmo.', '.ohhhhhmmhhhhmo.', '.ohhhhhhhmhhhmo.', '.ohhmhhhhhmhhmo.', '.ohhhmmhhhhhhmo.', '.ommmmmmmmmmmmo.', '.oooooooooooooo.', '................', '................', '................'] },
 };
 export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
   if (sq) { rect(ctx, x, y, 22, 26, '#1b2b27'); rect(ctx, x + 1, y + 1, 20, 1, '#2a3a33'); }
@@ -277,8 +284,21 @@ export function soulEmblem(ctx, id, x, y, t = 0, { sq = true } = {}) {
   for (let r = 8; r >= 2; r -= 2) { ctx.globalAlpha = 0.18 + (8 - r) * 0.06; for (let a = 0; a < 24; a++) { const q = (a / 24) * Math.PI * 2; rect(ctx, Math.round(cx + Math.cos(q) * r), Math.round(cy + Math.sin(q) * r), 1, 1, s.col); } }
   ctx.globalAlpha = 1;
   for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 6), Math.round(cy + Math.sin(q) * 6), 2, 2, s.col); }
-  rect(ctx, cx - 1, cy - 1, 3, 3, PAL.white);
+  // 가운데 문양(5×5): 혼이 열여섯이 되어 빛깔만으로는 갈리지 않는다(밤샘 2)
+  const g = SOUL_GLYPH[id];
+  if (g) { rect(ctx, cx - 3, cy - 3, 7, 7, '#1b2b27'); g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, cx - 2 + i, cy - 2 + j, 1, 1, PAL.white); }); }
+  else rect(ctx, cx - 1, cy - 1, 3, 3, PAL.white);
 }
+export const SOUL_GLYPH = {
+  absorb: ['.###.', '#...#', '#.###', '#....', '.####'], echo: ['..#..', '.#.#.', '#.#.#', '.#.#.', '..#..'],
+  transcend: ['..#..', '.###.', '#.#.#', '..#..', '..#..'], hunger: ['#.#.#', '#.#.#', '#####', '..#..', '..#..'],
+  hunter: ['..#..', '.###.', '##.##', '.###.', '..#..'], martyr: ['..#..', '#####', '..#..', '..#..', '..#..'],
+  crown: ['##...', '###..', '####.', '#....', '#....'], shade: ['#...#', '.###.', '.....', '.###.', '#...#'],
+  inherit: ['#####', '#...#', '#.#.#', '..#..', '.###.'], relay: ['#....', '.#...', '..###', '...#.', '....#'],
+  retro: ['#...#', '#...#', '.#.#.', '.#.#.', '..#..'], duel: ['#...#', '##.##', '.###.', '##.##', '#...#'],
+  reaper: ['.###.', '#.#.#', '#####', '.#.#.', '.....'], spring: ['#####', '...#.', '..#..', '.#...', '#####'],
+  homing: ['.###.', '#...#', '#.#..', '..##.', '.###.'], ripple: ['.#.#.', '#...#', '..#..', '#...#', '.#.#.'],
+};
 // 진화 그림: 체스 기물 › 이형(나이트 › 야간기사)
 export function evolveArt(ctx, x, y, t = 0) {
   rect(ctx, x, y, 44, 26, '#1b2b27');

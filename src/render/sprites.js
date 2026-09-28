@@ -35,9 +35,16 @@ export const ENG_TONE = {
   ebony: { o: '#efbd55', s: '#1c110a', f: '#3a2416', h: '#6e4a2c', d: '#efbd55' },
   glass: { o: '#236b80', s: '#74c0d4', f: '#b4e8f3', h: '#ffffff', d: '#4fa3b8' },
   feather: { o: '#3b2a1b', s: '#c4ad84', f: '#efe3c7', h: '#fffcf2', d: '#8c704b' },
+  // 밤샘 2
+  bronze: { o: '#5a3414', s: '#a0602a', f: '#d08a48', h: '#f0c090', d: '#7a4a20' },
+  iron: { o: '#1e2226', s: '#555c63', f: '#8a9299', h: '#c8d0d6', d: '#3a4046' },
+  amber: { o: '#6a3a08', s: '#c87a14', f: '#f0a830', h: '#ffe0a0', d: '#9a5a10' },
+  jade: { o: '#1e5a3a', s: '#3f9a60', f: '#7fd09a', h: '#d0ffe0', d: '#2e7a4a' },
+  coral: { o: '#7a2a2a', s: '#d05a50', f: '#f08878', h: '#ffd0c8', d: '#a03a38' },
+  marble: { o: '#3a3a4a', s: '#b0a8d0', f: '#e8e4f8', h: '#ffffff', d: '#7a70a8' },
 };
 // 각인 색(카드 테두리 · 이름)
-export const ENG_EDGE = { gold: '#efbd55', silver: '#d8dee6', ivory: '#f2d6c4', ebony: '#c8902c', glass: '#9fd3e0', feather: '#6fd1bf' };
+export const ENG_EDGE = { gold: '#efbd55', silver: '#d8dee6', ivory: '#f2d6c4', ebony: '#c8902c', glass: '#9fd3e0', feather: '#6fd1bf', bronze: '#d08a48', iron: '#8a9299', amber: '#f0a830', jade: '#7fd09a', coral: '#f08878', marble: '#b0a8d0' };
 // 기보 단계: 0 그대로 · 1 동빛 새김(레벨 1~2) · 2 은빛 테 + 장식(3~4) · 3 금빛 테 + 장식 + 기운(5~)
 export const TIER = [null, { o: null, d: '#b8733a' }, { o: '#6f7f8a', d: '#dfe6ec' }, { o: '#9c6f24', d: '#efbd55' }];
 export const tierOf = (level) => (!level ? 0 : level <= 2 ? 1 : level <= 4 ? 2 : 3);

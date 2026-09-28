@@ -4,6 +4,9 @@
 //   <prefix>-1-battle   첫 수 전 대국(시계 · 다시 놓기 단추 · 함정 · 강 · 횃불 적)
 //   <prefix>-2-lost     진 대국 뒤 시계 한 칸을 잃는 순간
 //   <prefix>-3-select   관 선택(시계)
+//   <prefix>-4-shop     상점: 새 격언 · 새 혼 · 새 각인 기물(역습 · 매복 시너지 칩)
+//   <prefix>-5-pack     각인 꾸러미: 새 각인 셋 · <prefix>-6-pack 나머지 셋
+//   <prefix>-7-draft    정석 고르기: 새 정석 셋
 // --variant: 시안 번호(화면이 window.__n2v로 읽는다 — 시안을 고른 뒤에는 쓰지 않는다)
 import http from 'node:http';
 import fs from 'node:fs';
@@ -107,6 +110,31 @@ await wait(2500);
 await shot('2-lost');
 await wait(2500);
 await shot('3-select');
+
+// 상점 · 꾸러미 · 정석: 새것
+async function runScene(src) {
+  await ev((src) => {
+    const a = window.__app; localStorage.removeItem('chainmate.run.v1'); a.closeOverlay(); a.newRun({ seed: 11 });
+    const r = a.run;
+    if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
+    r.battle = null; r.money = 20;
+    r.maxims = ['reversal', 'kings_step', 'ambusher', 'lucky_coin', 'checkerboard'].map((id, i) => ({ uid: 50 + i, id, data: {}, edition: null, paid: 4 }));
+    r.deck.push({ id: 70, t: 'N', eng: { id: 'bronze' }, edition: null }, { id: 71, t: 'B', eng: { id: 'jade' }, edition: null, soul: 'relay' }, { id: 72, t: 'R', eng: { id: 'marble' }, edition: null, soul: 'ripple' }, { id: 73, t: 'P', eng: { id: 'coral' }, edition: null });
+    a.toasts = [];
+    new Function('r', 'a', src)(r, a);
+  }, src);
+  await wait(1800);
+  await page.mouse.move(1, 1);
+  await wait(100);
+}
+await runScene("r.phase = 'shop'; r.shop = { rng: null, display: [{ kind: 'maxim', id: 'cavalry_charge', edition: null, price: 4 }, { kind: 'soul', id: 'reaper', price: 4 }], packs: [{ kind: 'engraving', price: 4 }, { kind: 'chart', price: 4 }], rerolls: 0, promoted: false, removed: false }; a.go('shop');");
+await shot('4-shop');
+await runScene("r.phase = 'pack'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; r.pack = { kind: 'engraving', options: [{ kind: 'engraving', id: 'bronze' }, { kind: 'engraving', id: 'amber' }, { kind: 'engraving', id: 'jade' }] }; a.go('pack');");
+await shot('5-pack');
+await runScene("r.phase = 'pack'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; r.pack = { kind: 'engraving', options: [{ kind: 'engraving', id: 'iron' }, { kind: 'engraving', id: 'coral' }, { kind: 'engraving', id: 'marble' }] }; a.go('pack');");
+await shot('6-pack');
+await runScene("r.phase = 'draft'; r.draft = { ante: 3, options: ['trap', 'torch', 'first_mover'] }; a.go('draft');");
+await shot('7-draft');
 
 console.log(`예외 ${errors.length}${errors.length ? ` ${errors.join(' | ')}` : ''}`);
 await browser.close();
