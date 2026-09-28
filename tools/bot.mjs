@@ -6,9 +6,13 @@
 //   폰 아끼지 않기: 폰은 떨굴 자리가 드물어 끝까지 남기면 막힌다. 남은 폰이 남은 수 − 1 이상이면
 //   최선의 절반 이상을 내는 폰 수를 먼저 둔다.
 //   목표가 있으면: 목표를 넘기는 수가 여럿이면 그중 아무거나(최선)로 충분하다.
+//   다시 놓기(밤샘 2 D2): 첫 수 전, 첫 손 최선 사슬 점수 × 수가 목표 × REBOARD.ratio에 못 미치면 판을 새로 깐다
+//   (첫 손 최선 사슬 점수가 대국 점수의 대리 지표 — docs/reports/luck.md ④).
 import { bestPerPiece, lineCommands } from '../src/sim/solver.js';
+import { canReboard } from '../src/sim/battle.js';
 import { valueOf } from '../src/data/pieces.js';
 
+export const REBOARD = { on: true, ratio: 1 };
 const betterMove = (x, y, nomate, rank) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : rank ? rank(x) > rank(y) : x.score > y.score);
 
 // rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
@@ -17,6 +21,7 @@ export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null }
   let best = null;
   for (const m of per) if (m && betterMove(m, best, nomate, rank)) best = m;
   if (best && best.mate && !nomate) return { play: best };
+  if (REBOARD.on && b.target != null && canReboard(b) && (!best || best.score * b.movesLeft < (b.target - b.score) * REBOARD.ratio)) return { reboard: true };
   const canDiscard = b.discardsLeft > 0 && b.bag.length > 0;
   const roomy = b.bag.length >= b.movesLeft;
   if (!best) {
@@ -48,6 +53,7 @@ export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null }
 export function stepBattle(b, apply, opts) {
   const d = decideBattle(b, opts);
   if (!d) return false;
+  if (d.reboard) { apply({ type: 'reboard' }); return true; }
   if (d.discard) { apply({ type: 'discard', handIndices: d.discard }); return true; }
   apply({ type: 'drop', handIndex: d.play.handIndex, sq: d.play.sq });
   for (const c of lineCommands(d.play.line)) apply(c);

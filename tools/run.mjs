@@ -145,6 +145,11 @@ function report(R, args, wall) {
   }
   table(['관', '도달', '통과', '대국', '연습', '정식', '명인', '점수/목표p10', 'p25', 'p50', 'p90', '외통', '첫수외통', '막힘', '최고수p50', 'p90', '최고', '연습목표'], rows);
   console.log(`판 끝의 평균: 기보 레벨 합 ${f(R.reduce((a, r) => a + r.charts, 0) / n, 1)}, 주머니 ${f(R.reduce((a, r) => a + r.deckSize, 0) / n, 1)}개, 격언 ${f(R.reduce((a, r) => a + r.final.length, 0) / n, 1)}개, 남은 상금 ${f(R.reduce((a, r) => a + r.money, 0) / n, 1)}`);
+  // 시계 · 다시 놓기(밤샘 2)
+  const clk = R.map((r) => r.log.filter((x) => x.clockLost).length);
+  const wonR = R.filter((r) => r.won);
+  const lostKinds = {}; for (const b of battles) if (b.clockLost) lostKinds[b.kind] = (lostKinds[b.kind] || 0) + 1;
+  console.log(`시계: 판당 잃은 칸 ${f2(clk.reduce((a, x) => a + x, 0) / n)} (0칸 ${pc(clk.filter((x) => x === 0).length / n)} · 1칸 ${pc(clk.filter((x) => x === 1).length / n)} · 2칸 ${pc(clk.filter((x) => x === 2).length / n)} · 3칸+ ${pc(clk.filter((x) => x >= 3).length / n)}), 이긴 판 중 시계를 쓴 판 ${pc(wonR.filter((r) => r.log.some((x) => x.clockLost)).length / Math.max(1, wonR.length))}, 잃은 대국 종류 ${Object.entries(lostKinds).map(([k, v]) => `${k} ${v}`).join(' · ')}. 다시 놓기 대국당 ${f2(battles.reduce((a, b) => a + (b.reboards || 0), 0) / battles.length)}`);
   const allMates = battles.filter((b) => b.reason === 'mate').length;
   const disc = battles.map((b) => b.discarded || 0);
   console.log(`버리기: 대국당 버린 기물 평균 ${f2(disc.reduce((a, x) => a + x, 0) / battles.length)}, 하나라도 버린 대국 ${pc(disc.filter((x) => x > 0).length / battles.length)}, 4개 이상 ${pc(disc.filter((x) => x >= 4).length / battles.length)}`);

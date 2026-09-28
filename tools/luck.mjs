@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createRng, fork, next } from '../src/sim/rng.js';
-import { createRun, blindInfo, battleMods, awaitingGold, ANTES, KINDS } from '../src/sim/run.js';
+import { createRun, blindInfo, battleMods, awaitingGold, battleSeed, ANTES, KINDS, BOARD_FILTER_N } from '../src/sim/run.js';
 import { createBattle, apply, dropSquaresFor, GOLDEN } from '../src/sim/battle.js';
 import { attackers } from '../src/sim/board.js';
 import { boardOpts } from '../src/sim/chain.js';
@@ -48,7 +48,7 @@ const runSeeds = (seed, n) => Array.from({ length: n }, (_, i) => (seed * 100000
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // ── 떠 둔 판 상태에서 대국을 다시 만든다(run.js startBattle과 같은 재료, 시드만 바꿀 수 있게)
-const origSeed = (snap) => fork(createRng(snap.seed), `battle:${snap.ante}:${snap.blind}`).s;
+const origSeed = (snap) => battleSeed(snap);
 const altSeed = (snap, k) => fork(createRng(origSeed(snap)), `alt:${k}`).s;
 function rebuild(snap, seed, withTarget = true) {
   const info = blindInfo(snap);
@@ -57,6 +57,7 @@ function rebuild(snap, seed, withTarget = true) {
     bag: snap.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
     rules: snap.rules, mods: battleMods(snap, info.master),
     goldenChance: awaitingGold(snap) ? GOLDEN.calling : GOLDEN.chance,
+    filter: BOARD_FILTER_N[info.kind] || 0,
   });
 }
 const boardKey = (b) => b.board.map((c) => (c ? c.t + (c.gold ? '*' : '') + (c.trait || '') : '.')).join('') + '|' + b.hand.map((p) => p.t).join('') + '|' + b.target + '|' + JSON.stringify(b.incoming);
@@ -120,7 +121,11 @@ function measure(task) {
   }
   // 원래 시드를 따로 다시 두어 판 안의 결과와 같은지 본다(떠 둔 상태 · 봇이 판 밖에서도 똑같이 도는지)
   const orig = playOut(rebuild(snap, origSeed(snap), true));
-  return { id: task.id, alts, origWon: orig.status === 'won', origScore: orig.score };
+  // 맞춤 문제 가리기: 원래 판의 첫 손 최선 사슬 점수가 대체 판들 사이 몇째인가(0~1, 같으면 반씩). 고르게 퍼지면 원래 판이 대체 판과 같은 분포
+  const ob = rebuild(snap, origSeed(snap), false);
+  const oScore = features(ob).bestScore;
+  const below = alts.filter((a) => a.f.bestScore < oScore).length + 0.5 * alts.filter((a) => a.f.bestScore === oScore).length;
+  return { id: task.id, alts, origWon: orig.status === 'won', origScore: orig.score, origPct: below / Math.max(1, alts.length), origReboards: orig.reboards || 0 };
 }
 
 // ── 판 하나(스냅숏 포함)
@@ -142,7 +147,7 @@ function oneRun(seed, policy, withSnaps) {
   playRun(run, policy, { stopAt: watch });
   return {
     seed, policy, won: run.phase === 'won', ante: run.ante, blind: run.blind,
-    log: run.log.map((x) => ({ ante: x.ante, blind: x.blind, kind: x.kind, master: x.master, target: x.target, score: x.score, won: x.won, reason: x.reason, skipped: !!x.skipped })),
+    log: run.log.map((x) => ({ ante: x.ante, blind: x.blind, kind: x.kind, master: x.master, target: x.target, score: x.score, won: x.won, reason: x.reason, skipped: !!x.skipped, clockLost: !!x.clockLost, reboards: x.reboards || 0 })),
     snaps, mismatch,
   };
 }
@@ -224,6 +229,16 @@ function analyse(args, smart, states, others) {
     list: deaths.map((d) => ({ ...d, altWin: r3(d.altWin) })),
   };
 
+  // 1b. 진 대국 전부(시계를 잃은 대국 포함)
+  const losses = states.filter((s) => s.lost).map((s) => s.alts.filter((a) => a.won).length / s.alts.length);
+  const lostAll = { n: losses.length, meanAltWin: r3(mean(losses)), luck60: r3(losses.filter((x) => x >= 0.6).length / Math.max(1, losses.length)), weak40: r3(losses.filter((x) => x < 0.4).length / Math.max(1, losses.length)),
+    perRun: r3(losses.length / R.length), clockLostPerRun: r3(R.reduce((a, r) => a + r.log.filter((x) => x.clockLost).length, 0) / R.length),
+    reboardPerBattle: r3(R.reduce((a, r) => a + r.log.reduce((b, x) => b + (x.reboards || 0), 0), 0) / Math.max(1, R.reduce((a, r) => a + r.log.filter((x) => !x.skipped).length, 0))) };
+  // 맞춤 확인 거들기: 원래 판의 첫 손 점수 백분위(대체 판 사이). 고르면 평균 0.5 · 사분위마다 25%
+  const pcts = states.map((s) => s.origPct).filter((x) => Number.isFinite(x));
+  const origPct = { n: pcts.length, mean: r3(mean(pcts)), quartiles: [0, 1, 2, 3].map((q) => r3(pcts.filter((x) => x >= q / 4 && (q === 3 ? x <= 1 : x < (q + 1) / 4)).length / Math.max(1, pcts.length))),
+    lostMean: r3(mean(states.filter((s) => s.lost).map((s) => s.origPct))), wonMean: r3(mean(states.filter((s) => !s.lost).map((s) => s.origPct))) };
+
   // 2. 대국마다 이길 확률
   const p = states.map((s) => s.alts.filter((a) => a.won).length / s.alts.length);
   const slot = [];
@@ -240,7 +255,7 @@ function analyse(args, smart, states, others) {
     meanAll: r3(mean(p)), hist: histAll, histEdges: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     slots: slot, product24: r3(prodAll), actualRunWin: r3(winRate(R)),
     // 맞춤 확인: 대국마다 (1 − 대체 판 승률)의 합 = 기대 판 죽음 수(이긴 대국을 모두 잴 때만 뜻이 있다)
-    expectedDeaths: r3(p.reduce((a, x) => a + (1 - x), 0)), observedDeaths: deaths.length,
+    expectedDeaths: r3(p.reduce((a, x) => a + (1 - x), 0)), observedDeaths: states.filter((s) => s.lost).length,
     geoMean24: r3(prodAll ** (1 / 24)),
     trap: [0.9, 0.95, 0.97, 0.98, 0.99].map((q) => ({ perBattle: q, run: r3(q ** 24) })),
     needFor: [0.2, 0.3, 0.5].map((t) => ({ run: t, perBattle: r3(t ** (1 / 24)) })),
@@ -339,7 +354,7 @@ function analyse(args, smart, states, others) {
     rebuildMismatch: R.reduce((a, r) => a + r.mismatch, 0),
     replayMismatch: states.filter((s) => s.origWon !== s.actualWon || s.origScore !== s.actualScore).length, snapshots: R.reduce((a, r) => a + r.snaps.length, 0), timeouts: smart.timeouts,
     runs: R.map((r) => ({ seed: r.seed, won: r.won, ante: r.ante, blind: r.blind, battles: r.log.length })),
-    death, perBattle, decomp, luckShareAll: r3((() => { const vw = mean(allGroups.map(variance)); return vw / variance(allGroups.flat()); })()),
+    death, lostAll, origPct, perBattle, decomp, luckShareAll: r3((() => { const vw = mean(allGroups.map(variance)); return vw / variance(allGroups.flat()); })()),
     features: { rows: rows.length, badCut: r3(lo), goodCut: r3(hi), rank: featRank }, corr, filterSim, policies,
   };
 }
@@ -364,6 +379,9 @@ function report(D, args, wall) {
   table(['관', '죽음', '대체 승률'], D.death.byAnte.filter((x) => x.n).map((x) => [String(x.ante), String(x.n), pc(x.meanAltWin)]));
   table(['종류', '죽음', '대체 승률'], D.death.byKind.map((x) => [x.kind, String(x.n), pc(x.meanAltWin)]));
 
+  const LA = D.lostAll;
+  console.log(`  진 대국 전부(시계를 잃은 대국 포함) ${LA.n}개 · 판당 ${f2(LA.perRun)} · 시계 잃음 판당 ${f2(LA.clockLostPerRun)} · 대체 판 승률 평균 ${pc(LA.meanAltWin)} · ≥60% ${pc(LA.luck60)} · <40% ${pc(LA.weak40)} · 다시 놓기 대국당 ${f2(LA.reboardPerBattle)}`);
+  console.log(`  원래 판의 첫 손 점수 백분위(대체 판 사이): 평균 ${f2(D.origPct.mean)} · 사분위 몫 ${D.origPct.quartiles.map(pc).join(' ')} · 진 대국 ${f2(D.origPct.lostMean)} · 이긴 대국 ${f2(D.origPct.wonMean)}`);
   const P = D.perBattle;
   console.log(`\n② 대국마다 이길 확률 — 상태 ${P.states}개 × 대체 판(모두 ${P.altBoards}판). 평균 ${pc(P.meanAll)}, ≥95% 안전 ${pc(P.safe95)}, <80% 위험 ${pc(P.risky80)}`);
   console.log(`  분포(0~10% … 90~100%): ${P.hist.join(' ')}`);
@@ -460,12 +478,14 @@ if (!isMainThread) {
     r.snaps.forEach((snap, i) => {
       const row = r.log.filter((x) => !x.skipped)[i];
       const death = !r.won && i === r.snaps.length - 1;
-      if (!death && !sampled(r.seed, snap.ante, snap.blind, args.sample)) return;
-      tasks.push({ snap, n: death ? args.k : args.sk, meta: { seed: r.seed, ante: snap.ante, blind: snap.blind, kind: KINDS[snap.blind], master: row && row.master, death, actualWon: row ? row.won : null, actualScore: row ? row.score : null, target: row && row.target } });
+      // 시계(밤샘 2 D1): 진 대국이 판을 끝내지 않을 수 있다. lost = 진 대국 전부, death = 판을 끝낸 대국
+      const lost = !!row && !row.won;
+      if (!lost && !sampled(r.seed, snap.ante, snap.blind, args.sample)) return;
+      tasks.push({ snap, n: lost ? args.k : args.sk, meta: { seed: r.seed, ante: snap.ante, blind: snap.blind, kind: KINDS[snap.blind], master: row && row.master, death, lost, actualWon: row ? row.won : null, actualScore: row ? row.score : null, target: row && row.target } });
     });
   }
   const alts = await measurePool(tasks.map((t) => ({ snap: t.snap, n: t.n })));
-  const states = tasks.map((t, i) => ({ ...t.meta, alts: alts[i].alts, origWon: alts[i].origWon, origScore: alts[i].origScore }));
+  const states = tasks.map((t, i) => ({ ...t.meta, alts: alts[i].alts, origWon: alts[i].origWon, origScore: alts[i].origScore, origPct: alts[i].origPct }));
   const others = {};
   for (const p of ['random', 'none']) if (args.policies > 0) others[p] = await runPool(p, runSeeds(args.seed, args.policies), false);
   const wall = performance.now() - t0;
