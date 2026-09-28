@@ -346,7 +346,7 @@ export const EN = {
   '한 사슬이 한 줄에 다섯 칸을 밟으면 곧바로 이긴다': 'A chain that lands on five squares in a line wins at once',
   '가장 많이 모은 시너지는 1 · 3 · 5개에서 켜진다': 'Your biggest synergy turns on at 1, 3 and 5',
   // 혼
-  '세 번까지 모습이 안 바뀌고, 먹은 적의 행마를 얻는다': 'Form holds for 3 takes · gains the taken move',
+  '첫 먹기: 모습 그대로 · 먹은 적의 행마를 얻는다': 'First take: form holds · gains the taken move',
   '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 잇는다': 'Once, if nothing is left: back to first form',
   '먹으면 한 단계 위 모습이 된다 · 폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Each take: one step up · pawn › knight › bishop › rook › queen › amazon', '두 번 먹을 때마다: 한 단계 위 기물이 된다': 'Every 2nd take: the next piece up',
   '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …': 'Second take +10 Value · third +20 · fourth +30 …',

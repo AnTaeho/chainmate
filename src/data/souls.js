@@ -71,9 +71,10 @@ export const TRANSCEND = { every: 2 };
 export const TRANSCEND_TEXT = '두 번 먹을 때마다: 한 단계 위 기물이 된다';
 export const TRANSCEND_MORE = '폰 › 나이트 › 비숍 › 룩';
 // 흡수: 처음 takes번 먹기까지 모습이 안 바뀌고 먹은 적의 행마를 얻는다. 얻은 행마는 그다음 먹기까지만.
-// 옛것은 얻은 행마가 사슬 끝까지 남아(코드가 지우지 않았다) 행마 둘로 다녀 외통이 66~80%였다(sim --soul absorb)
-export const ABSORB = { takes: 3 };
-export const ABSORB_TEXT = '세 번까지 모습이 안 바뀌고, 먹은 적의 행마를 얻는다';
+// 옛것은 얻은 행마가 사슬 끝까지 남아(코드가 지우지 않았다) 행마 둘로 다녀 외통이 66~80%였다(sim --soul absorb).
+// 행마를 지워도 세 번이면 48~71% · 두 번이면 36~61%, 한 번이라 25~52%(2026-09-28)
+export const ABSORB = { takes: 1 };
+export const ABSORB_TEXT = '첫 먹기: 모습 그대로 · 먹은 적의 행마를 얻는다';
 export const ABSORB_MORE = '얻은 행마는 다음 먹기까지';
 
 soul('absorb', '흡수', '#d27fd6', ['change'], ABSORB_TEXT, {
