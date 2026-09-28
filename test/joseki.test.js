@@ -87,6 +87,15 @@ test('순교의 맹세: 끊기는 순간 둘레 적을 먹은 것으로', () => 
   assert.equal(t.chain.value, 10 + 30 + 10);
 });
 
+test('순교의 맹세: 킹을 지키는 적은 남긴다(혼 순교자와 같은 규칙)', () => {
+  const t = T({ e6: 'P', e8: 'R', d7: 'N', f5: 'P', f8: 'K' }, 'martyr_vow');
+  startChain(t, { type: 'B', sq: S('c4') });
+  chainCapture(t, S('e6'));
+  assert.equal(t.chain.reason, 'cut');
+  assert.equal(t.board[S('d7')].t, 'N', 'f8 킹을 지키는 나이트');
+  assert.equal(t.board[S('f5')], null);
+});
+
 test('결사: 대국 첫 사슬 ×3, 그 기물은 판에서 사라진다', () => {
   const run = createRun({ seed: 2, draft: false });
   run.josekis = ['pact'];
