@@ -6,3 +6,4 @@
 - B 화면: 사슬 중 목표를 넘기면 눈금이 깜빡이고 막대가 부드럽게 늘어난다 · 목표 말풍선 · 5d2b962 · 다음: 규칙 시험
 - B 시험: `test/chaingoal.test.js` 둘 · 0ea8c6d · 다음: smoke 검사
 - B 도구: smoke 사슬 중 목표를 넘긴 채 먹기의 입력 막힘 · 2baf1ed · 다음: 하네스 · 스크린샷 · 보고서
+- 문서: 보고서 `docs/reports/shop-chain.md` · 전후 스크린샷 · DESIGN · layout · backlog · c9f4dfa · 다음: 없음(끝)
