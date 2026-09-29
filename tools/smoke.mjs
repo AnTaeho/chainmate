@@ -594,15 +594,72 @@ function playShopLesson(i) {
   if (app.guide) throw new Error('shop lesson guide stuck');
   lessonLog.push(`${i + 1} 상점`);
 }
+// 수업 열(타이틀 「수업」): 수업마다 목록에서 열고, 끝나면 목록으로 돌아온다
 function lessons() {
-  if (screen() !== 'lesson' || app.screen.index !== 0) throw new Error('first launch did not open the first lesson');
+  if (screen() !== 'title') app.toTitle();
+  pump(1);
+  click('title:lesson');
   const { LESSONS } = lessonMod;
   for (let i = 0; i < LESSONS.length; i++) {
+    if (screen() !== 'lessons') throw new Error(`lesson list did not come back (${screen()})`);
+    click(`lessons:${i}`);
     if (LESSONS[i].shop) playShopLesson(i); else playLesson(i);
+    for (let n = 0; n < 60 && screen() !== 'lessons'; n++) pump(1);
   }
-  for (let n = 0; n < 200 && screen() === 'draft' && app.run.phase === 'draft'; n++) { pump(90); click('draft:0'); pump(60); }
-  if (screen() !== 'battle' || !app.run || app.run.ante !== 1 || !app.records.lessonsDone) throw new Error(`lessons did not lead to the first battle (${screen()})`);
-  if (app.run.scratch) throw new Error('lesson run leaked');
+  if (app.run && app.run.scratch) throw new Error('lesson run leaked');
+  click('lessons:back');
+  pump(1);
+}
+// 첫 판 대본 대국(CHM-22): 처음 켜면 타이틀 → 「새 판」이 곧바로 킹과 두는 1관 연습. 걸음마다 가리킨 곳만 눌리고,
+// 킹 말풍선은 왼쪽 칸(설명 자리)에서 가리킨 것 · 누를 것을 덮지 않는다. 끝나면 보상 → 상점(처음 안내도 킹 말풍선)
+const scriptSeen = { steps: 0, moves: 0, blocked: 0, rewind: 0, won: false, score: 0, target: 0, shop: false, bad: [] };
+function guideCheck() {
+  const g = app.guide, r = app.hintRect, st = g && g.steps[g.i];
+  if (!st || !r) return;
+  place.hint++;
+  if (r.x !== P.SIDE_X || r.w !== P.SIDE_W || r.y < 0 || r.y + r.h > 270) { place.hintBad++; scriptSeen.bad.push(`자리 ${g.i} ${r.x},${r.y},${r.w},${r.h}`); }
+  const tid = typeof st.target === 'function' ? st.target(app) : st.target;
+  const tr = tid && region(tid);
+  if (tr && cross(r, tr)) { place.self++; place.bad.push(`battle 킹 말풍선 ${g.i} 가리킨 것 ${tid}`); }
+  for (const q of app.ui.regions) if (q.onClick && q.enabled && !q.id.startsWith('guide:') && cross(r, q)) { place.cover++; place.bad.push(`battle 킹 말풍선 ${g.i} 누를 것 ${q.id}`); break; }
+}
+function firstPlay() {
+  if (screen() !== 'title') throw new Error(`first launch did not open the title (${screen()})`);
+  click('title:new');
+  if (screen() !== 'battle' || !app.run.battle || app.run.battle.script !== 'king') throw new Error(`new run did not start the scripted battle (${screen()})`);
+  if (app.visited.has('lesson') || app.visited.has('select') || app.visited.has('draft')) throw new Error('first launch went through lessons · select · draft');
+  const s = app.screen;
+  let measuring = false;
+  for (let n = 0; n < 200 && app.guide; n++) {
+    for (let k = 0; k < 900 && app.guide && app.guide.hold && app.guide.hold(app); k++) pump(1);
+    idle();
+    if (!app.guide) break;
+    pump(2);
+    guideCheck();
+    scriptSeen.steps++;
+    const st = app.guide.steps[app.guide.i], step = s.step;
+    // 가리키지 않은 곳은 눌리지 않는다(빈 칸 · 손의 다른 기물)
+    if (n === 1) { const before = JSON.stringify([s.sel, app.run.battle.movesUsed]); click('sq:36'); for (const h of [1, 2, 3]) if (region(`hand:${h}`)) click(`hand:${h}`); if (JSON.stringify([s.sel, app.run.battle.movesUsed]) !== before) scriptSeen.blocked = -99; else scriptSeen.blocked++; }
+    if (st.ok) { if (step && step.rewind) scriptSeen.rewind++; click('guide:ok'); continue; }
+    const tid = st.target(app);
+    if (!tid || !region(tid)) throw new Error(`script step ${app.guide.i} has no target (${tid})`);
+    // 한 수 연출(×1): 떨구기부터 사슬 끝까지
+    if (step && step.drop) { if (measuring) measureSeq(s); s.seq.total = 0; measuring = true; }
+    click(tid);
+    if (step && step.moves) {
+      pump(2);
+      if (screen() !== 'moves') throw new Error('moves overlay did not open');
+      notesCheck();
+      scriptSeen.moves++;
+      click('moves:back');
+    }
+  }
+  if (measuring) measureSeq(s);
+  const last = app.run.log.at(-1);
+  scriptSeen.won = !!(last && last.won); scriptSeen.score = last ? last.score : 0; scriptSeen.target = last ? last.target : 0;
+  for (let n = 0; n < 8 && screen() !== 'shop'; n++) { if (region('next')) click('next'); else pump(30); }
+  for (let n = 0; n < 60 && !app.hintShown; n++) pump(1);
+  scriptSeen.shop = screen() === 'shop' && !!app.hintShown && app.hintShown.id === 'shop';
   app.toTitle();
   pump(1);
 }
@@ -610,6 +667,7 @@ const lessonLog = [];
 
 const t0 = performance.now();
 await start();
+firstPlay();
 lessons();
 const results = [];
 for (let k = 0; k < RUNS; k++) results.push(await playOne(SEED + k));
@@ -888,6 +946,7 @@ const swapSeen = { same: 0, shopBack: 0, shopSwap: 0, soulSwap: 0, packBack: 0, 
 
 // 처음 켠 사람이 수업을 건너뛴다 → 곧바로 1관 · 처음 안내를 끄면 뜨지 않는다
 let skipOk = false;
+// 처음 켠 사람이 대본 대국을 건너뛴다 → 평범한 1관 연습 · 처음 안내를 끄면 뜨지 않는다
 const hintFail = ['shop', 'pack', 'draft', 'family'].filter((id) => !hintsShown.has(id) || !app.records.coachSeen[id]);
 const mainApp = app;
 {
@@ -898,20 +957,27 @@ const mainApp = app;
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
-  if (screen() !== 'lesson') throw new Error('fresh boot did not open lessons');
-  click('lesson:skip');
+  if (screen() !== 'title') throw new Error('fresh boot did not open the title');
+  click('title:new');
+  for (let n = 0; n < 600 && app.guide && app.guide.hold(app); n++) pump(1);
   pump(2);
-  if (!app.records.lessonsDone || !app.run || app.run.ante !== 1) throw new Error('skip did not start the first run');
+  if (!app.guide || !region('guide:skip')) throw new Error('scripted battle has no skip');
+  click('guide:skip');
+  pump(2);
+  if (app.guide || screen() !== 'battle' || !app.run.battle || app.run.battle.script || app.run.ante !== 1 || app.run.battle.target !== 150) throw new Error('skip did not start a plain practice battle');
   app.settings.coach = false;
-  for (let n = 0; n < 200 && screen() === 'draft'; n++) { pump(40); if (app.hintShown) throw new Error('hint shown while off'); if (region('draft:0')) click('draft:0'); pump(60); }
-  if (app.hintShown) throw new Error('hint shown while off');
+  for (let n = 0; n < 200; n++) { pump(1); if (app.hintShown) throw new Error('hint shown while off'); }
+  // 행마 보기는 평범한 대국에서도 열린다
+  click('btn:moves');
+  if (screen() !== 'moves') throw new Error('moves overlay did not open in a plain battle');
+  click('moves:back');
   skipOk = true;
-  log('  수업 건너뛰기 · 안내 끄기 확인');
+  log('  대본 대국 건너뛰기 · 안내 끄기 확인');
   seen();
   app = mainApp;
 }
 seen();
-const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records'];
+const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves'];
 const missing = need.filter((n) => !visited.has(n));
 const ms = app.stats.drawMs.slice().sort((a, b) => a - b);
 const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;
@@ -927,6 +993,7 @@ ims.sort((a, b) => a - b);
 console.log(`누르기 처리 ${ims.length}번 · 평균 ${(ims.reduce((a, x) => a + x, 0) / Math.max(1, ims.length)).toFixed(2)}ms · p99 ${(ims[Math.floor(ims.length * 0.99)] || 0).toFixed(2)}ms · 최대 ${(ims[ims.length - 1] || 0).toFixed(2)}ms`);
 console.log(`방문 화면: ${[...visited].join(' ')}`);
 console.log(`끝없는 대국: ${endless ? `${app.records.bestEndless}관` : '못 감'}`);
+console.log(`첫 판 대본 대국: 걸음 ${scriptSeen.steps} · 행마 보기 ${scriptSeen.moves} · 되돌리기 ${scriptSeen.rewind} · 엉뚱한 곳 막힘 ${scriptSeen.blocked > 0 ? '확인' : '못 함'} · ${scriptSeen.won ? '이김' : '못 이김'} ${scriptSeen.score}/${scriptSeen.target} · 뒤 처음 안내(상점) ${scriptSeen.shop ? '확인' : '못 봄'}${scriptSeen.bad.length ? ` · 어긋남 ${scriptSeen.bad.join(' | ')}` : ''}`);
 console.log(`첫 수업: ${lessonLog.join(' · ')}`);
 console.log(`미리 보기: 먹기 ${pvSeen.capture} · 끊김 ${pvSeen.cut} · 떨구기 ${pvSeen.drop} · 화살표 ${pvSeen.kb} · 터치 ${pvSeen.touch}`);
 console.log(`말풍선: 증원 ${tipSeen.incoming} · 노림수 ${tipSeen.forced} · 판의 길 ${tipSeen.path}`);
@@ -957,7 +1024,8 @@ if (errors.length) fail = true;
 if (missing.length) { console.log(`못 간 화면: ${missing.join(' ')}`); fail = true; }
 if (!reloaded) fail = true;
 if (lessonLog.length !== lessonMod.LESSONS.length) fail = true;
-if (!skipOk) { console.log('수업 건너뛰기 · 처음 안내 끄기를 확인하지 못했다'); fail = true; }
+if (!skipOk) { console.log('대본 대국 건너뛰기 · 처음 안내 끄기를 확인하지 못했다'); fail = true; }
+if (!scriptSeen.won || scriptSeen.moves !== 1 || scriptSeen.rewind !== 1 || scriptSeen.blocked <= 0 || !scriptSeen.shop || scriptSeen.bad.length) { console.log('첫 판 대본 대국을 끝까지 지나지 못했거나, 행마 보기 · 되돌리기 · 누를 곳 막기 · 뒤 처음 안내가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
