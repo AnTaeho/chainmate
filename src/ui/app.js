@@ -225,6 +225,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       // 오른쪽 누르기: 판 위 표시(칸 · 화살표)만. 멈춤 · 내려놓기는 Esc 키로만(판이 없는 화면에서는 아무 일도 없다)
       if (button === 2) { app.ui.move(x, y); const s = app.overlay || app.screen; if (s && s.rightDown) s.rightDown(x, y); return; }
       // 처음 안내: 떠 있는 안내는 사라지고, 따라 하는 길이면 가리키는 곳만 눌린다
+      app.ui.touch = !!app.touch; // 손가락이면 끌기 거리가 넓다(ui.move)
       if (!coachDown(app, x, y)) { app.ui.move(x, y); return; }
       app.ui.down(x, y);
       const s = app.overlay || app.screen;

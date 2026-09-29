@@ -43,7 +43,9 @@ export class UI {
   move(x, y) {
     this.mouse.x = x; this.mouse.y = y;
     this.hover = this.hitIn(this.regions, x, y);
-    if (this.drag && (Math.abs(x - this.drag.x) > 3 || Math.abs(y - this.drag.y) > 3)) this.drag.moved = true;
+    // 끌기로 치는 거리: 손가락은 떨림이 커서 8도트(3도트면 3배 화면의 폰에서 누르기가 끌기로 바뀐다)
+    const slop = this.touch ? 8 : 3;
+    if (this.drag && (Math.abs(x - this.drag.x) > slop || Math.abs(y - this.drag.y) > slop)) this.drag.moved = true;
   }
   down(x, y) {
     this.move(x, y);
