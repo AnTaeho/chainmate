@@ -22,18 +22,22 @@ function loseBattle(run) {
   return ev;
 }
 
-test('시계: 지면 한 칸을 잃고 다음 대국으로(보상 · 상점 없음), 마지막 칸을 잃으면 판이 끝난다', () => {
+test('시계: 지면 한 칸을 잃고 보상 없이 상점을 거쳐 다음 대국으로, 마지막 칸을 잃으면 판이 끝난다', () => {
   const run = createRun({ seed: 5, draft: false });
   assert.equal(run.clock, CLOCK.start);
   const money = run.money;
   const ev = loseBattle(run);
   assert.ok(ev.some((e) => e.type === 'clockLost' && e.clock === CLOCK.start - 1));
+  assert.ok(!ev.some((e) => e.type === 'reward' || e.type === 'chest'));
+  assert.equal(run.phase, 'shop');
+  assert.equal(run.money, money);
+  assert.equal(run.last.reward, null);
+  assert.ok(run.shop.display.length > 0);
+  assert.equal(run.log.at(-1).clockLost, true);
+  applyRun(run, { type: 'leave' });
   assert.equal(run.phase, 'select');
   assert.equal(run.blind, 1);
-  assert.equal(run.money, money);
-  assert.equal(run.shop, null);
-  assert.equal(run.log.at(-1).clockLost, true);
-  for (let i = 1; i < CLOCK.start - 1; i++) loseBattle(run);
+  for (let i = 1; i < CLOCK.start - 1; i++) { loseBattle(run); applyRun(run, { type: 'leave' }); }
   assert.equal(run.clock, 1);
   const last = loseBattle(run);
   assert.equal(run.phase, 'lost');
@@ -45,6 +49,8 @@ test('시계: 명인에서 지면 명인의 상자 없이 다음 관 · 8관 명
   run.blind = 2;
   const ev = loseBattle(run);
   assert.ok(!ev.some((e) => e.type === 'chest'));
+  assert.equal(run.phase, 'shop');
+  applyRun(run, { type: 'leave' });
   assert.equal(run.ante, 2);
   assert.equal(run.blind, 0);
   const fin = createRun({ seed: 6, draft: false });
@@ -53,9 +59,28 @@ test('시계: 명인에서 지면 명인의 상자 없이 다음 관 · 8관 명
   const first = JSON.stringify(fin.battle.board);
   fin.phase = 'select'; fin.battle = null;
   loseBattle(fin);
+  assert.equal(fin.phase, 'shop');
+  const shop1 = JSON.stringify(fin.shop.display);
+  // 상점을 떠났다 돌아와도(shop) 떠나면 같은 대국 앞이다
+  applyRun(fin, { type: 'leave' });
+  applyRun(fin, { type: 'shop' });
+  assert.equal(fin.phase, 'shop');
+  applyRun(fin, { type: 'leave' });
+  assert.equal(fin.phase, 'select');
   assert.equal(fin.ante, ANTES);
   assert.equal(fin.blind, 2);
   assert.equal(fin.retry, 1);
+  applyRun(fin, { type: 'play' });
+  const second = JSON.stringify(fin.battle.board);
+  // 두 번째로 지면 상점 진열도 새로 굴린다(같은 자리의 상점이 되풀이되지 않게)
+  fin.phase = 'select'; fin.battle = null; fin.shop = null;
+  loseBattle(fin);
+  assert.equal(fin.retry, 2);
+  assert.notEqual(JSON.stringify(fin.shop.display), shop1);
+  applyRun(fin, { type: 'leave' });
+  applyRun(fin, { type: 'play' });
+  assert.notEqual(JSON.stringify(fin.battle.board), second);
+  fin.phase = 'select'; fin.battle = null; fin.retry = 1;
   applyRun(fin, { type: 'play' });
   assert.notEqual(JSON.stringify(fin.battle.board), first);
 });

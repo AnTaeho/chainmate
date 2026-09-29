@@ -6,7 +6,7 @@
 //   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
 //   select  다음 대국 앞.   play | skip(연습 · 정식만) | use | moveMaxim | shop(떠나온 상점으로 돌아가기)
 //   battle  대국 중.        drop | capture | discard
-//   shop    대국을 이긴 뒤. buy | buyPack | reroll | sell | use | promote | remove | moveMaxim | leave
+//   shop    대국을 이긴 뒤(진 뒤에도 시계가 남으면 — 보상 없이). buy | buyPack | reroll | sell | use | promote | remove | moveMaxim | leave
 //   pack    꾸러미를 연 뒤. pick | skipPack
 //   won     8관 명인을 이김. endless
 //   lost    끝.
@@ -61,7 +61,7 @@ export const CHEST = {
   cells: 5,     // 릴 칸 수. 나온 개수만큼 가운데부터 불이 켜진다(1: 가운데 · 3: 가운데 셋 · 5: 전부)
 };
 export const RUN_DEFAULTS = { money: 4, maximSlots: 5, consumableSlots: 2 };
-// 시계(밤샘 2 D1): 판의 목숨. 대국을 지면 한 칸을 잃고 다음 대국으로 간다(그 대국의 보상 · 명인의 상자 없음).
+// 시계(밤샘 2 D1): 판의 목숨. 대국을 지면 한 칸을 잃고 다음 대국으로 간다(그 대국의 보상 · 명인의 상자는 없고, 상점은 연다 — CHM-20).
 // 마지막 칸을 잃으면(시간을 다 쓰면) 판이 끝난다 — 시계 1은 옛 규칙(한 번 지면 끝)과 같다.
 // 8관 명인(대가)에서 지고 칸이 남으면 그 대국을 새 판으로 다시 둔다.
 // filter: 판(런) 대국의 판 후보 수(battle.js BOARD_FILTER — 가장 나쁜 하나를 버린다). 종류별로.
@@ -294,10 +294,14 @@ function endBattle(run, events) {
       run.last.clockLost = true;
       events.push({ type: 'clockLost', clock: run.clock, ante: run.ante, blind: run.blind });
     }
+    // CHM-20: 진 대국 뒤에도 상점은 연다(보상 · 명인의 상자는 없다) — 지면 덱을 보강할 기회까지 사라져 연쇄로 무너졌다.
+    // 8관 명인은 떠나면 같은 대국 앞으로 돌아온다(stay).
     if (run.clock > 0) {
       run.battle = null;
-      if (run.ante === ANTES && info.kind === 'master' && !run.endless) { run.retry = (run.retry || 0) + 1; run.phase = 'select'; }
-      else advance(run);
+      const stay = run.ante === ANTES && info.kind === 'master' && !run.endless;
+      if (stay) run.retry = (run.retry || 0) + 1;
+      openShop(run);
+      if (stay) run.shop.stay = true;
       return;
     }
     run.phase = 'lost';
@@ -440,7 +444,7 @@ function applyChestItem(run, it, events) {
 function openShop(run) {
   run.shop = {
     ante: run.ante, blind: run.blind, // 이 상점이 열린 대국 자리(떠났다 돌아오면 여기로 되돌린다)
-    rng: fork(root(run), `shop:${run.ante}:${run.blind}`),
+    rng: fork(root(run), `shop:${run.ante}:${run.blind}${run.retry ? `:${run.retry}` : ''}`),
     display: [], packs: [], rerolls: 0, promoted: false, removed: false,
   };
   rollDisplay(run);
@@ -705,7 +709,9 @@ export function applyRun(run, cmd) {
     }
     case 'leave': {
       need('shop');
-      advance(run);
+      // 8관 명인에서 진 뒤의 상점: 같은 대국 앞으로(다음 관으로 넘어가지 않는다)
+      if (run.shop.stay) { run.pack = null; run.phase = 'select'; }
+      else advance(run);
       break;
     }
     // 관 선택에서 떠나온 상점으로 돌아간다. 상점이 열린 대국 자리로 되돌려, 상점 안은 떠날 때와 똑같다(진열 · 꾸러미 · 횟수).
