@@ -612,7 +612,7 @@ function lessons() {
 }
 // 첫 판 대본 대국(CHM-22): 처음 켜면 타이틀 → 「새 판」이 곧바로 킹과 두는 1관 연습. 걸음마다 가리킨 곳만 눌리고,
 // 킹 말풍선은 왼쪽 칸(설명 자리)에서 가리킨 것 · 누를 것을 덮지 않는다. 끝나면 보상 → 상점(처음 안내도 킹 말풍선)
-const scriptSeen = { steps: 0, moves: 0, blocked: 0, rewind: 0, won: false, score: 0, target: 0, shop: false, bad: [] };
+const scriptSeen = { steps: 0, moves: 0, blocked: 0, rewind: 0, won: false, score: 0, target: 0, shop: false, faction: false, bad: [] };
 function guideCheck() {
   const g = app.guide, r = app.hintRect, st = g && g.steps[g.i];
   if (!st || !r) return;
@@ -660,6 +660,16 @@ function firstPlay() {
   for (let n = 0; n < 8 && screen() !== 'shop'; n++) { if (region('next')) click('next'); else pump(30); }
   for (let n = 0; n < 60 && !app.hintShown; n++) pump(1);
   scriptSeen.shop = screen() === 'shop' && !!app.hintShown && app.hintShown.id === 'shop';
+  // 대본 대국은 관 선택을 건너뛴다: 농민군 처음 안내는 그 뒤 처음 보는 관 선택(1관 정식)에서 뜬다(상점 → 레퍼토리 → 관 선택)
+  for (let n = 0; n < 40; n++) {
+    pump(80);
+    if (screen() === 'select') break;
+    if (app.hintShown) { click(app.hintShown.regionId); continue; }
+    if (screen() === 'shop') click('shop:leave');
+    else if (screen() === 'draft') click('draft:0');
+  }
+  for (let n = 0; n < 60 && !app.hintShown; n++) pump(1);
+  scriptSeen.faction = screen() === 'select' && app.run.ante === 1 && app.run.blind === 1 && !!app.hintShown && app.hintShown.id === 'faction_peasants';
   app.toTitle();
   pump(1);
 }
@@ -993,7 +1003,7 @@ ims.sort((a, b) => a - b);
 console.log(`누르기 처리 ${ims.length}번 · 평균 ${(ims.reduce((a, x) => a + x, 0) / Math.max(1, ims.length)).toFixed(2)}ms · p99 ${(ims[Math.floor(ims.length * 0.99)] || 0).toFixed(2)}ms · 최대 ${(ims[ims.length - 1] || 0).toFixed(2)}ms`);
 console.log(`방문 화면: ${[...visited].join(' ')}`);
 console.log(`끝없는 대국: ${endless ? `${app.records.bestEndless}관` : '못 감'}`);
-console.log(`첫 판 대본 대국: 걸음 ${scriptSeen.steps} · 행마 보기 ${scriptSeen.moves} · 되돌리기 ${scriptSeen.rewind} · 엉뚱한 곳 막힘 ${scriptSeen.blocked > 0 ? '확인' : '못 함'} · ${scriptSeen.won ? '이김' : '못 이김'} ${scriptSeen.score}/${scriptSeen.target} · 뒤 처음 안내(상점) ${scriptSeen.shop ? '확인' : '못 봄'}${scriptSeen.bad.length ? ` · 어긋남 ${scriptSeen.bad.join(' | ')}` : ''}`);
+console.log(`첫 판 대본 대국: 걸음 ${scriptSeen.steps} · 행마 보기 ${scriptSeen.moves} · 되돌리기 ${scriptSeen.rewind} · 엉뚱한 곳 막힘 ${scriptSeen.blocked > 0 ? '확인' : '못 함'} · ${scriptSeen.won ? '이김' : '못 이김'} ${scriptSeen.score}/${scriptSeen.target} · 뒤 처음 안내(상점) ${scriptSeen.shop ? '확인' : '못 봄'} · 1관 정식 관 선택 농민군 안내 ${scriptSeen.faction ? '확인' : '못 봄'}${scriptSeen.bad.length ? ` · 어긋남 ${scriptSeen.bad.join(' | ')}` : ''}`);
 console.log(`첫 수업: ${lessonLog.join(' · ')}`);
 console.log(`미리 보기: 먹기 ${pvSeen.capture} · 끊김 ${pvSeen.cut} · 떨구기 ${pvSeen.drop} · 화살표 ${pvSeen.kb} · 터치 ${pvSeen.touch}`);
 console.log(`말풍선: 증원 ${tipSeen.incoming} · 노림수 ${tipSeen.forced} · 판의 길 ${tipSeen.path}`);
@@ -1025,7 +1035,7 @@ if (missing.length) { console.log(`못 간 화면: ${missing.join(' ')}`); fail 
 if (!reloaded) fail = true;
 if (lessonLog.length !== lessonMod.LESSONS.length) fail = true;
 if (!skipOk) { console.log('대본 대국 건너뛰기 · 처음 안내 끄기를 확인하지 못했다'); fail = true; }
-if (!scriptSeen.won || scriptSeen.moves !== 1 || scriptSeen.rewind !== 1 || scriptSeen.blocked <= 0 || !scriptSeen.shop || scriptSeen.bad.length) { console.log('첫 판 대본 대국을 끝까지 지나지 못했거나, 행마 보기 · 되돌리기 · 누를 곳 막기 · 뒤 처음 안내가 어긋났다'); fail = true; }
+if (!scriptSeen.won || scriptSeen.moves !== 1 || scriptSeen.rewind !== 1 || scriptSeen.blocked <= 0 || !scriptSeen.shop || !scriptSeen.faction || scriptSeen.bad.length) { console.log('첫 판 대본 대국을 끝까지 지나지 못했거나, 행마 보기 · 되돌리기 · 누를 곳 막기 · 뒤 처음 안내(상점 · 농민군)가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
