@@ -17,6 +17,7 @@ import { PIECE_NAME, PIECE_MOVE, FRAG_SOURCE } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { drawIcon } from '../render/icons.js';
+import { shade, glow, flicker } from '../render/light.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox } from '../render/layoutlog.js';
@@ -24,6 +25,7 @@ import { openBox, closeBox } from '../render/layoutlog.js';
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
 // 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
 export function cardBase(ctx, x, y, w, h, { fill = PAL.card, hover = false, edge = null, double = false, ticks = false, line = PAL.frameDk } = {}) {
+  shade(ctx, x, y, w, h);
   box(ctx, x, y, w, h, fill, hover ? PAL.gold : line);
   rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
   if (edge) {
@@ -120,6 +122,9 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   y -= lift;
   openBox('card', x, y, w, h, PAD_CARD, { overlay, name: `격언 ${m.id}` });
   const fill = legendary ? '#f6d98a' : obsidian ? '#231a2c' : PAL.card;
+  // 밑 그림자 · 판본 빛(칸 뒤 층, 판본 빛깔로 천천히 숨 쉰다)
+  shade(ctx, x, y, w, h, 1 + Math.min(3, lift));
+  if (m.edition) glow(ctx, x, y, w, h, EDITION_TINT[m.edition] || PAL.goldHi, 0.32 * flicker(t, 2.2, 0.35), 4);
   box(ctx, x, y, w, h, fill, PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, legendary ? PAL.goldHi : obsidian ? '#4a3a5c' : PAL.cardHi);
   rect(ctx, x + 1, y + 2, 2, h - 3, RARITY[info.rarity] || PAL.dim);
@@ -362,6 +367,7 @@ export function discardIcon(ctx, x, y, col) {
 
 // 패널: 윗변 한 줄 빛, 아랫변 한 줄 그늘
 export function panel(ctx, x, y, w, h) {
+  shade(ctx, x, y, w, h);
   box(ctx, x, y, w, h, PAL.feltDk, PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, '#1f302a');
   rect(ctx, x + 1, y + h - 2, w - 2, 1, '#0e1813');
@@ -497,6 +503,7 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   const t0 = t;
   const back = false;
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
+  if (it.edition && !sold) glow(ctx, x, y, w, h, EDITION_TINT[it.edition] || PAL.goldHi, 0.35 * flicker(t, 2.2, 0.35), 6);
   cardBase(ctx, x, y, w, h, { fill, hover });
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
@@ -632,6 +639,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   const edge = it.kind === 'engraving' ? ENG_EDGE[it.id] : it.kind === 'soul' ? SOUL_BY_ID[it.id].col : null;
   openBox('card', x, y, w, h, PAD_CARD, { name: `카드 ${it.kind}` });
+  if (it.edition && !sold) glow(ctx, x, y, w, h, EDITION_TINT[it.edition] || PAL.goldHi, 0.35 * flicker(t, 2.2, 0.35), 6);
   cardBase(ctx, x, y, w, h, { fill, hover, edge, ticks: true });
   if (it.kind === 'maxim') rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[maximInfo(it.id).rarity]);
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);

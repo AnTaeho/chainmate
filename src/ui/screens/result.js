@@ -1,7 +1,7 @@
 // 판 결과: 이김/짐, 도달 관, 최고 한 수(작은 판에 다시 둔다), 목표에 모자란 점수(아슬아슬), 모은 조각,
 // 새 도감 칸 · 해금 알림 · 다음 해금까지. 「다시」 / 「타이틀」.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, sprite, num, short, fitNum, line, measure } from '../../render/gfx.js';
+import { W, H, text, box, rect, frame, sprite, num, short, fitNum, line, measure, fine } from '../../render/gfx.js';
 import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { button } from '../ui.js';
@@ -68,7 +68,8 @@ export class ResultScreen {
       x = lerp(a.x, b.x, p); y = lerp(a.y, b.y, p);
       form = p >= 1 ? cur.after : cur.form;
     }
-    sprite(ctx, form, 'w', x, y - 6);
+    // 다시 보기의 움직이는 기물은 소수점 자리로
+    if (cur) fine(() => sprite(ctx, form, 'w', x, y - 6)); else sprite(ctx, form, 'w', x, y - 6);
     if (done >= n) {
       const e = this.xy(pos);
       frame(ctx, e.x, e.y, Q, Q, r.reason === 'cut' ? PAL.red : PAL.gold);

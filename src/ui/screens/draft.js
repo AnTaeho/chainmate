@@ -1,4 +1,5 @@
 // 정석 고르기(깊이 E): 1 · 3 · 5관의 첫 대국 앞. 카드 셋이 차례로 뒤집히며 나오고(등급 빛: 은 · 금 · 무지개) 하나를 고른다.
+import { sway } from '../sway.js';
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
@@ -78,6 +79,14 @@ export class DraftScreen {
       const col = j.tier === 'rainbow' ? `hsl(${Math.floor(time * 120 + i * 60) % 360},70%,70%)` : TIER_COL[j.tier];
       const picked = this.chosen && this.chosen.i === i;
       const faded = this.chosen && !picked;
+      // 흔들림(sway.js): 다 뒤집힌 레퍼토리 카드는 숨 쉬고, 가리키면 기울며 들린다. 고른 뒤에는 멈춘다
+      sway(ctx, time, `${uid}:${id}`, x, y, CW, CH, (c) => this.drawCard(c, ui, j, i, x, y, xx, nw, CH, col, hov, picked, faded, id), { hover: hov, press: hov && ui.press && ui.press.id === uid, mx: ui.mouse.x, still: p < 1 || !!this.chosen, shadow: p >= 1 && !faded });
+    });
+    // 안내는 왼쪽 칸에서 오른쪽을 가리키므로 바로 옆 첫 카드에(정석 고르기 전체에 대한 한 줄)
+    if (!this.chosen && this.t > 1.2) hint(this.app, 'draft', 'draft:0');
+  }
+  drawCard(ctx, ui, j, i, x, y, xx, nw, CH, col, hov, picked, faded, id) {
+    {
       if (faded) ctx.globalAlpha = 0.35;
       // 카드(물건 카드와 같은 자리): 등급 테 · 모서리 꺾쇠, 왼쪽 위 등급 → 이름 → 가로줄 → 효과 글 → 맨 아래 왼쪽 시너지 칩
       cardBase(ctx, xx, y, nw, CH, { hover: hov, edge: col, double: j.tier !== 'silver', ticks: true, line: picked ? PAL.white : PAL.frameDk });
@@ -92,9 +101,7 @@ export class DraftScreen {
       closeBox();
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, y, CW, CH, PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
-    });
-    // 안내는 왼쪽 칸에서 오른쪽을 가리키므로 바로 옆 첫 카드에(정석 고르기 전체에 대한 한 줄)
-    if (!this.chosen && this.t > 1.2) hint(this.app, 'draft', 'draft:0');
+    }
   }
   key(k) {
     if (/^[1-3]$/.test(k)) this.pick(Number(k) - 1);

@@ -1,9 +1,10 @@
 // 꾸러미 열기: 카드가 차례로 뒤집히며 나오고 하나를 고른다(건너뛰기 가능). 금빛 꾸러미는 금빛.
 // 각인이면 고른 뒤 주머니에서 새길 기물을 누른다. 금빛 꾸러미의 격언을 칸이 찬 채로 고르면 격언 칸이 펼쳐지고,
 // 옛 격언 하나를 골라 바꾼다(팔고 받는다). 격언 칸은 평소엔 위 띠의 이름표 「격언 5/5」 — 누르면 펼쳐 판다.
+import { sway } from '../sway.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { box, rect, measure } from '../../render/gfx.js';
+import { box, rect, measure, fine } from '../../render/gfx.js';
 import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../../sim/run.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
@@ -171,7 +172,11 @@ export class PackScreen {
     lay.cards.forEach((i, k) => {
       const o = pack.options[i];
       const x = x0 + k * (cw + gap), y = TOP;
-      flipCard(o, i, x, y, cw, ch, (scaleX, hover) => itemCard(ctx, o, x, y, cw, ch, { hover, price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + k, run, ui, under: { onClick: () => this.pick(i) } }));
+      // 흔들림(sway.js): 다 뒤집힌 카드만 숨 쉰다
+      const id = `pack:pick:${i}`, hov = ui.isHover(id), done = this.t - flipAt(i) > 0.3;
+      sway(ctx, ui.time, `${id}:${o.kind}:${o.id || o.form || o.t || ''}`, x, y, cw, ch, (c) => {
+        flipCard(o, i, x, y, cw, ch, (scaleX, hover) => itemCard(c, o, x, y, cw, ch, { hover, price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + k, run, ui, under: { onClick: () => this.pick(i) } }));
+      }, { hover: hov && done, press: hov && ui.press && ui.press.id === id, mx: ui.mouse.x, still: !done, shadow: done });
     });
     if (lay.cell) {
       const { i, x, y, w, h } = lay.cell;
@@ -191,9 +196,10 @@ export class PackScreen {
     if (this.t < OPEN + 0.25) {
       const k = Math.min(1, this.t / OPEN);
       const fade = this.t < OPEN ? 1 : 1 - (this.t - OPEN) / 0.25;
-      const ew = 96, eh = 66, ex = Math.floor(x0 + (n * cw + (n - 1) * gap) / 2 - ew / 2), ey = 50 + Math.round(Math.max(0, this.t - OPEN) * 60);
+      const ew = 96, eh = 66, ex = Math.floor(x0 + (n * cw + (n - 1) * gap) / 2 - ew / 2), ey = 50 + Math.max(0, this.t - OPEN) * 60;
       ctx.globalAlpha = Math.max(0, fade);
-      envelope(ctx, ex, ey, ew, eh, pack.kind, { open: k });
+      // 봉투가 내려가며 사라진다(소수점 자리로)
+      fine(() => envelope(ctx, ex, ey, ew, eh, pack.kind, { open: k }));
       ctx.globalAlpha = 1;
     }
   }
