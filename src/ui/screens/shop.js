@@ -288,6 +288,8 @@ export class ShopScreen {
     this.drawMenu(ctx, ui);
     // 처음 안내(한 번에 하나, 앞의 것부터)
     if (!this.menu && !this.target) {
+      // 대국을 지고 들어온 상점(CHM-20): 시계 줄을 먼저 가리킨다
+      if (run.last && run.last.clockLost) coachHint(app, 'clock', 'clock');
       coachHint(app, 'shop', 'shop:buy:0');
       if (run.consumables.length) coachHint(app, 'scroll', 'cons:0');
       const fam = ui.regions.find((r) => r.id.startsWith('fam:'));
