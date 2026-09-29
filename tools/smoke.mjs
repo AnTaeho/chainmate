@@ -116,7 +116,7 @@ const tipSeen = { incoming: 0, forced: 0, path: 0 };
 const newsSeen = { battles: 0, icons: 0 };
 const objTips = { step: 0, gate: 0, highway: 0, wall: 0, gem: 0, trap: 0 };
 // 밤샘 2: 시계(대국을 지고 다음 대국으로) · 다시 놓기(첫 수 전 단추)
-const n2 = { forced: false, clockBefore: null, clockLost: 0, clockNext: 0, clockBad: [], reboard: 0, reboardBot: 0, reboardBad: 0, tried: false, waitNext: false };
+const n2 = { forced: false, clockBefore: null, clockLost: 0, clockShop: 0, clockNext: 0, clockBad: [], reboard: 0, reboardBot: 0, reboardBad: 0, tried: false, waitNext: false };
 // 손은 하나만 든다: 둘을 차례로 눌러도 든 것은 나중 것 하나, 든 것을 다시 누르면 놓인다
 const pickSeen = { swap: 0, swapBad: 0, off: 0, offBad: 0 };
 // 낱말 상자: 카드를 가리키면 옆에 낱말 상자가 1개 이상, 카드 · 말풍선을 가리지 않고 화면 안에.
@@ -293,9 +293,9 @@ function battleStep() {
     idle();
     return;
   }
-  // 시계: 2관 첫 대국을 한 번 일부러 진다(수 하나 · 먼 목표) → 시계 한 칸을 잃고 다음 대국으로 가야 한다
+  // 시계: 2관 첫 대국을 한 번 일부러 진다(수 하나 · 먼 목표) → 시계 한 칸을 잃고 보상 없이 상점(CHM-20)을 거쳐 다음 대국으로 가야 한다
   if (!n2.forced && app.run.ante === 2 && b.movesUsed === 0 && !s.busy && app.run.clock > 1) {
-    n2.forced = true; n2.clockBefore = { clock: app.run.clock, ante: app.run.ante, blind: app.run.blind };
+    n2.forced = true; n2.clockBefore = { clock: app.run.clock, ante: app.run.ante, blind: app.run.blind, money: app.run.money };
     b.movesLeft = 1; b.target = 1e12; s.sync();
   }
   // 다시 놓기: 3관부터 한 번은 단추를 눌러 본다(판이 바뀌고 손은 그대로 · 단추가 사라진다)
@@ -508,11 +508,12 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
       shopBack.trips++;
       continue;
     }
-    // 시계를 잃은 뒤: 판이 이어지고(관 선택) 시계가 한 칸 줄었나 · 다음 대국을 두면 센다
-    if (name === 'select' && n2.clockBefore && !n2.waitNext) {
+    // 시계를 잃은 뒤: 판이 이어져 상점이 열리고(보상 없음 · 상금 그대로) 시계가 한 칸 줄었나 · 상점을 떠나 다음 대국을 두면 센다
+    if ((name === 'shop' || name === 'select') && n2.clockBefore && !n2.waitNext) {
       const c = n2.clockBefore, last = app.run.log.at(-1);
       n2.clockLost++;
-      if (!last || !last.clockLost || app.run.clock !== c.clock - 1 || app.run.phase !== 'select') n2.clockBad.push(`${c.ante}:${c.blind} ${app.run.clock}/${c.clock}`);
+      if (name !== 'shop' || !last || !last.clockLost || app.run.clock !== c.clock - 1 || app.run.phase !== 'shop' || app.run.money !== c.money || (app.run.last && app.run.last.reward)) n2.clockBad.push(`${c.ante}:${c.blind} ${name} ${app.run.clock}/${c.clock} 상금 ${app.run.money}/${c.money}`);
+      else n2.clockShop++;
       n2.waitNext = true;
     }
     if (name === 'select') { notesOnce('select', 4); if (n2.waitNext || !(app.run.blind < 2 && rnd() < 0.15)) click('select:play'); else click('select:skip'); pump(2); if (n2.waitNext && screen() === 'battle') { n2.clockNext++; n2.waitNext = false; n2.clockBefore = null; } continue; }
@@ -919,7 +920,7 @@ console.log(`말풍선: 증원 ${tipSeen.incoming} · 노림수 ${tipSeen.forced
 console.log(`대국 띠 「새로」: 대국 ${newsSeen.battles} · 그림 ${newsSeen.icons}`);
 console.log(`손 고르기: 둘을 차례로 ${pickSeen.swap}(둘 이상 남음 ${pickSeen.swapBad}) · 다시 눌러 놓기 ${pickSeen.off}(안 놓임 ${pickSeen.offBad})`);
 console.log(`판 위 사물 말풍선: 발판 ${objTips.step} · 문 ${objTips.gate} · 고속도로 ${objTips.highway} · 벽 ${objTips.wall} · 보석 ${objTips.gem} · 함정 ${objTips.trap}`);
-console.log(`시계 · 다시 놓기: 시계를 잃고 다음 대국 ${n2.clockLost} → ${n2.clockNext}(어긋남 ${n2.clockBad.length}${n2.clockBad.length ? ': ' + n2.clockBad.join(' | ') : ''}) · 다시 놓기 ${n2.reboard}(봇 ${n2.reboardBot}, 어긋남 ${n2.reboardBad})`);
+console.log(`시계 · 다시 놓기: 시계를 잃고 상점 ${n2.clockLost} → ${n2.clockShop} → 다음 대국 ${n2.clockNext}(어긋남 ${n2.clockBad.length}${n2.clockBad.length ? ': ' + n2.clockBad.join(' | ') : ''}) · 다시 놓기 ${n2.reboard}(봇 ${n2.reboardBot}, 어긋남 ${n2.reboardBad})`);
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
 console.log(`판 위 표시: 칸 · 화살표 ${marksSeen.board} · 왼쪽 누르기로 지움 ${marksSeen.clear ? '확인' : '못 함'} · 상점 오른쪽 누르기 ${marksSeen.shop}(아무 일 없음)`);
 console.log(`사슬 중 목표를 넘긴 채 먹기: ${passSeen.n}번 · 입력이 막힘 ${passSeen.blocked}`);
@@ -930,7 +931,7 @@ let fail = false;
 if (!pickSeen.swap || !pickSeen.off || pickSeen.swapBad || pickSeen.offBad) { console.log('손에서 기물이 하나만 들리지 않는다'); fail = true; }
 if (!passSeen.n || passSeen.blocked) { console.log('사슬 중 목표를 넘긴 장면을 못 봤거나, 그때 입력이 막혔다'); fail = true; }
 if (!shopBack.trips || shopBack.changed || shopBack.stray || shopBack.overlap) { console.log('관 선택에서 상점으로 오가지 못했거나, 오가며 상점이 바뀌었거나, 상점이 없는데 단추가 있거나, 단추가 판의 길과 겹친다'); fail = true; }
-if (!n2.clockLost || !n2.clockNext || n2.clockBad.length || !n2.reboard || n2.reboardBad) { console.log('시계를 잃고 다음 대국으로 가지 못했거나, 다시 놓기가 어긋났다'); fail = true; }
+if (!n2.clockLost || !n2.clockShop || !n2.clockNext || n2.clockBad.length || !n2.reboard || n2.reboardBad) { console.log('시계를 잃고 상점을 거쳐 다음 대국으로 가지 못했거나, 다시 놓기가 어긋났다'); fail = true; }
 if (marksSeen.board !== 3 || !marksSeen.clear || !marksSeen.shop) { console.log('판 위 표시(오른쪽 누르기)를 다 확인하지 못했다'); fail = true; }
 if (LANG !== 'ko') {
   const { untranslated } = await import('../src/ui/lang.js');
