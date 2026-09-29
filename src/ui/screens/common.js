@@ -10,6 +10,13 @@ import { familyCounts } from '../../data/families.js';
 import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
+// 세력 빛깔을 짙은 판넬 위 글자로 읽히게 조금 밝힌다
+export function lightHue(hex, k = 0.25) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.round(v + (255 - v) * k));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
 export function pauseButton(ctx, ui, app, x = PAUSE.x, y = PAUSE.y) {
   const id = 'btn:pause';
   ui.region(id, x - 2, y - 2, 16, 14, { onClick: () => app.openOverlay('pause') });

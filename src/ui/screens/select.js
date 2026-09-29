@@ -9,12 +9,17 @@ import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
 import { CHARTS } from '../../data/charts.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
-import { KIND_NAME } from '../words.js';
+import { KIND_NAME, josa } from '../words.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, GAP_IN, GAP_GROUP, flow, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { tipLines, fitText } from '../parts.js';
 import { drawPortrait } from '../../render/portraits.js';
+import { FACTION_BY_ID, bossOf } from '../../data/factions.js';
+import { drawCrest, CREST_SIZE } from '../../render/crests.js';
+import { factionFor } from '../../sim/run.js';
+import { lightHue } from './common.js';
+
 
 // 마지막 관(대가)의 왕관 9×7
 const CROWN = ['#...#...#', '##..#..##', '##.###.##', '#########', '#########', '.........', '#########'];
@@ -40,6 +45,14 @@ export function antePath(ctx, ui, run, cx, y, time) {
       CROWN.forEach((row, j) => { for (let k = 0; k < cw; k++) if (row[k] === '#') rect(ctx, x + k, py - 1 + j, 1, 1, col); });
       continue;
     }
+    // 다음 관: 구슬 대신 그 세력의 문장(상점에서 대비하게 — 설계서 「순서」)
+    if (a === run.ante + 1) {
+      const nf = factionFor(run, a);
+      drawCrest(ctx, nf, x - 2, py - 2);
+      const f = FACTION_BY_ID[nf];
+      ui.region('select:next', x - 3, py - 3, CREST_SIZE + 2, CREST_SIZE + 2, { tip: () => tipLines(`다음 관 · ${f.name}`, f.habit.text) });
+      continue;
+    }
     if (done) box(ctx, x, py, pw, pw, PAL.gold, PAL.goldDk);
     else if (cur) {
       box(ctx, x, py, pw, pw, PAL.goldHi, PAL.gold);
@@ -47,7 +60,7 @@ export function antePath(ctx, ui, run, cx, y, time) {
     } else box(ctx, x, py, pw, pw, PAL.feltDk, PAL.dimDk);
   }
   const fm = MASTER_BY_ID[FINAL_MASTER];
-  ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${fm.name}`, '꺾으면 판을 이긴다') });
+  ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${FACTION_BY_ID[factionFor(run, ANTES)].name}`, josa(`명인 ${fm.name}`, '을/를') + ' 꺾으면 판을 이긴다') });
 }
 
 export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` : tag.kind === 'chart' ? `${CHARTS[tag.form].name} 한 장` : '');
@@ -100,12 +113,31 @@ export function blindLayout(run, i, w = SEL.w) {
   return out;
 }
 
+// 세력 띠: 문장 2배 왼쪽, 이름(제목 줄) → 버릇(본문 줄, 접힌다). 폭 = 연습 · 정식 카드 둘
+const CREST2 = CREST_SIZE * 2;
+export function bandLayout(fa, w) {
+  const P = PAD_CARD, tx = P + CREST2 + 6, f = flow(P);
+  const name = f.line(true);
+  const lines = wrap(fa.habit.text, w - tx - P).map((l) => [l, f.line()]);
+  return { w, tx, name, lines, h: Math.max(P * 2 + CREST2, f.y + P) };
+}
+// 관 선택의 자리: 연습 · 정식 카드는 세력 띠 아래, 명인 카드는 본 칸 위부터 온 높이. 아랫변은 셋이 같다
+export function selectPlan(run, lays = [0, 1, 2].map((i) => blindLayout(run, i))) {
+  const fa = FACTION_BY_ID[blindInfo(run).faction];
+  const band = bandLayout(fa, SEL.w * 2 + SEL.gap);
+  const low = Math.max(lays[0].h, lays[1].h);
+  const H = Math.max(lays[2].h, band.h + SEL.gap + low);
+  const y = TOP + band.h + SEL.gap;
+  return { band, H, cards: [{ y, h: TOP + H - y }, { y, h: TOP + H - y }, { y: TOP, h: H }] };
+}
+
 export class SelectScreen {
   constructor(app) { this.app = app; this.notes = 'side'; }
   // 판 틀: 왼쪽 칸(관 선택 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(대국 카드 셋 — 가장 긴 카드에 맞춘 높이 · 판의 길 ·
   // 떠나온 상점이 있으면 판의 길 띠 왼쪽에 「상점」)
   draw(ctx, ui) {
     const app = this.app, run = app.run;
+    const fid = blindInfo(run).faction, fa = FACTION_BY_ID[fid];
     runSide(ctx, ui, app, '관 선택');
     pauseButton(ctx, ui, app);
     // 처음 시계를 잃은 뒤: 시계 줄을 가리키는 한 줄
@@ -113,10 +145,25 @@ export class SelectScreen {
     // 판의 길은 본 칸 위 띠(카드 줄이 내용에 맞춰 길어지므로 아래를 비운다)
     antePath(ctx, ui, run, MAIN.x + MAIN.w / 2, 5, app.time);
     const lays = [0, 1, 2].map((i) => blindLayout(run, i));
-    const h = Math.max(...lays.map((q) => q.h));
+    const plan = selectPlan(run, lays);
+    // 세력 띠: 연습 · 정식 카드 위(문장 2배 · 이름 · 버릇), 명인 카드는 오른쪽에 온 높이
+    // 시안(docs/shots/factions/draft1~4)에서 4를 골랐다 — 보고서 docs/reports/factions.md 「화면」
+    {
+      const bd = plan.band, bx = selX(0), by = TOP;
+      openBox('card', bx, by, bd.w, bd.h, PAD_CARD, { name: '세력 띠' });
+      box(ctx, bx, by, bd.w, bd.h, PAL.feltDk, fa.hue);
+      drawCrest(ctx, fid, bx + PAD_CARD, by + Math.floor((bd.h - CREST_SIZE * 2) / 2), { scale: 2 });
+      text(ctx, fa.name, bx + bd.tx, by + bd.name, lightHue(fa.hue), { bold: true });
+      bd.lines.forEach(([l, ly]) => text(ctx, l, bx + bd.tx, by + ly, PAL.ink));
+      ui.region('faction', bx, by, bd.w, bd.h, { tip: () => tipLines(fa.name, [fa.habit.text, `명인 ${bossOf(fid).name}`, bossOf(fid).text]) });
+      closeBox();
+      // 새 세력을 처음 만나는 관 선택: 버릇 한 줄(처음 안내)
+      hint(app, `faction_${fid}`, 'faction');
+    }
     for (let i = 0; i < 3; i++) {
       const lay = lays[i], info = lay.info, master = lay.master;
-      const x = selX(i), y = TOP, w = SEL.w;
+      const x = selX(i), w = SEL.w;
+      const { y, h } = plan.cards[i];
       const cur = i === run.blind;
       const past = i < run.blind;
       const log = run.log.find((l) => l.ante === run.ante && l.blind === i);

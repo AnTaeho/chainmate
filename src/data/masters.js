@@ -3,8 +3,9 @@
 import { defineModifier, getModifier } from '../sim/scoring.js';
 
 export const MASTERS = [];
+const BOSS_NAME = { iron_wall: '성주', fog: '사냥꾼 두령', mirror: '기병대장', hourglass: '전령장', heavy_hand: '촌장', silence: '수도원장', grudge: '용병대장', grandmaster: '대가' };
 function master(id, rule, text, def) {
-  MASTERS.push({ id, name: rule, rule, text });
+  MASTERS.push({ id, name: BOSS_NAME[id], rule, text });
   defineModifier(id, { kind: 'master', ...def });
 }
 
