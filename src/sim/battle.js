@@ -56,6 +56,8 @@ function rollIncoming(b, taken) {
   return out;
 }
 function telegraph(b) {
+  // 대본 대국(run.js layScript): 수마다 정해 둔 증원(b.plan)을 차례로 쓴다 — 판 시드와 상관없이 같은 증원
+  if (b.plan) { b.incoming = b.plan.shift() || []; b.incomingNext = b.plan[0] || []; return; }
   if (b.incomingNext) b.incoming = b.incomingNext;
   else b.incoming = rollIncoming(b, []);
   b.incomingNext = rollIncoming(b, b.incoming.map((x) => x.sq));

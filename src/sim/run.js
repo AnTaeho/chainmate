@@ -5,17 +5,19 @@
 // 국면(run.phase)과 명령
 //   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
 //   select  다음 대국 앞.   play | skip(연습 · 정식만) | use | moveMaxim | shop(떠나온 상점으로 돌아가기)
-//   battle  대국 중.        drop | capture | discard
+//   battle  대국 중.        drop | capture | discard | unscript(대본 대국을 건너뛰어 평범한 대국으로)
 //   shop    대국을 이긴 뒤(진 뒤에도 시계가 남으면 — 보상 없이). buy | buyPack | reroll | sell | use | promote | remove | moveMaxim | leave
 //   pack    꾸러미를 연 뒤. pick | skipPack
 //   won     8관 명인을 이김. endless
 //   lost    끝.
 import { createRng, fork, int, next, shuffle } from './rng.js';
 import { boardFilter } from './tuning.js';
-import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES } from './battle.js';
+import { parseSq } from './board.js';
+import { SCRIPT } from '../data/tutorial.js';
+import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints } from './battle.js';
 import { getModifier } from './scoring.js';
 import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult } from './shop.js';
-import { gradeOf } from './chain.js';
+import { gradeOf, markFairy } from './chain.js';
 import { MAXIM_BY_ID } from '../data/maxims.js';
 import { CHART_TABLE, CHART_FORMS } from '../data/charts.js';
 import { ENGRAVING_BY_ID } from '../data/engravings.js';
@@ -154,7 +156,9 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
 }
 
 // draft: false면 정석 드래프트 없이(깊이 E 이전 규칙 — 시험 · 하네스 비교용)
-export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true } = {}) {
+// script: 첫 대국(1관 연습)을 대본 대국으로(CHM-22, 기본 오프닝 · 단 0만). 레퍼토리 고르기는 그 대국 뒤로 미룬다 —
+//   레퍼토리가 판 위 사물 · 목표 · 주머니를 바꾸면 정해 둔 판이 어긋나서
+export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true, script = false } = {}) {
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
   const conf = { ...RUN_DEFAULTS, ...op.run };
@@ -195,13 +199,16 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
     log: [],                  // 대국마다 한 줄(하네스 · 결과 화면용)
   };
   if (!draft) run.noDraft = true;
+  if (script && opening === DEFAULT_OPENING && !dan) { run.script = SCRIPT.id; run.draftLate = run.ante; }
   openDraft(run);
   return run;
 }
 
 // ── 정석 드래프트(깊이 E): 1 · 3 · 5관의 첫 대국 앞에 셋 중 하나
 function openDraft(run) {
-  if (run.noDraft || run.endless || run.blind !== 0 || !DRAFT_ANTES.includes(run.ante) || (run.drafted || []).includes(run.ante)) return;
+  if (run.noDraft || run.endless || run.script || !DRAFT_ANTES.includes(run.ante) || (run.drafted || []).includes(run.ante)) return;
+  // 대본 대국 뒤로 미룬 레퍼토리 고르기(draftLate)는 그 관의 다음 대국 앞에서
+  if (run.blind !== 0 && run.draftLate !== run.ante) return;
   const r = fork(root(run), `draft:${run.ante}`);
   const pool = JOSEKIS.filter((j) => !run.josekis.includes(j.id));
   const options = [];
@@ -256,14 +263,38 @@ export const battleSeed = (run, ante = run.ante, blind = run.blind) =>
   fork(root(run), `battle:${ante}:${blind}${run.retry ? `:${run.retry}` : ''}`).s;
 function startBattle(run) {
   const info = blindInfo(run);
+  // 대본 대국: 1관 연습 하나만. 판 조정(거르기 · 다시 놓기)은 끄고 정해 둔 판을 깐다(세력 버릇 · 기보는 평소대로 켜진다)
+  const scripted = !!run.script && run.ante === 1 && run.blind === 0 && info.kind === 'practice';
   run.battle = createBattle({
     seed: battleSeed(run), ante: run.ante, kind: info.kind, target: info.target,
     bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
-    rules: run.rules, mods: battleMods(run, info.master, info.faction),
+    rules: scripted ? { ...run.rules, reboards: 0 } : run.rules, mods: battleMods(run, info.master, info.faction),
     goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
-    filter: run.scratch ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
+    golden: scripted ? false : null,
+    filter: run.scratch || scripted ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
   });
+  if (scripted) layScript(run.battle, SCRIPT);
   run.phase = 'battle';
+}
+
+// 대본 판을 깐다: 적 · 손 · 주머니(판의 주머니에서 종류로 골라 같은 id) · 수마다 증원 · 목표
+export function layScript(b, sc) {
+  let id = 1;
+  b.board = new Array(64).fill(null);
+  for (const [name, t] of Object.entries(sc.board)) b.board[parseSq(name)] = { t, id: id++, born: -1 };
+  b.nextId = Math.max(b.nextId, id);
+  const pool = [...b.hand, ...b.bag];
+  const take = (t) => { const i = pool.findIndex((p) => p.t === t); if (i < 0) throw new Error(`script needs ${t}`); return pool.splice(i, 1)[0]; };
+  b.hand = sc.hand.map(take);
+  b.bag = [...sc.bag.map(take), ...pool];
+  b.target = sc.target;
+  b.script = sc.id;
+  b.plan = sc.plan.map((list) => list.map((r) => ({ sq: parseSq(r.sq), t: r.t })));
+  // 대국이 판을 바꿀 때마다 부르는 차례와 같게: 증원 예고 → 이형 적 표시 → 화면용 표시
+  b.incoming = b.plan.shift() || [];
+  b.incomingNext = b.plan[0] || [];
+  markFairy(b);
+  refreshHints(b);
 }
 
 function runEvent(run, ev) {
@@ -282,6 +313,7 @@ function endBattle(run, events) {
   const info = blindInfo(run);
   const best = b.history.reduce((a, h) => Math.max(a, h.score), 0);
   const won = b.status === 'won';
+  if (b.script) run.script = null; // 대본 대국은 한 번(뒤로 미룬 레퍼토리 고르기가 다음 대국 앞에 열린다)
   // 깨진 기물(유리)은 주머니에서 빠진다
   if (b.shattered.length) run.deck = run.deck.filter((p) => !b.shattered.includes(p.id));
   // 정석 「결사」: 첫 사슬을 푼 기물은 판에서 사라진다(주머니 여섯은 남긴다) · 「왕좌」: 승급한 폰은 퀸으로
@@ -297,7 +329,7 @@ function endBattle(run, events) {
   const worn = {};
   for (const h of b.history) for (const t of h.caps || '') if (t !== 'K' && t !== 'J') worn[t] = (worn[t] || 0) + 1;
   const row = {
-    ante: run.ante, blind: run.blind, kind: info.kind, faction: info.faction, master: info.master, target: info.target,
+    ante: run.ante, blind: run.blind, kind: info.kind, faction: info.faction, master: info.master, target: b.target ?? info.target,
     score: b.score, won, reason: b.result.reason, moves: b.movesUsed, best,
     goldenSeen: b.board.some((c) => c && c.gold) || b.golden > 0, golden: b.golden, overflow: b.overflow, grades,
     // 하네스용: 이 대국 때 주머니에 있던 혼 · 외통을 낸 사슬의 혼
@@ -606,6 +638,15 @@ export function applyRun(run, cmd) {
       if (!c || c.kind !== 'tactic') throw new Error('no tactic');
       events.push(...useTactic(run.battle, c.id));
       run.consumables.splice(cmd.index, 1);
+      break;
+    }
+    // 대본 대국 건너뛰기(첫 수 뒤에도): 대본을 지우고 같은 대국 자리에 평범한 1관 연습을 새로 깐다
+    case 'unscript': {
+      need('battle');
+      if (!run.battle || !run.battle.script) throw new Error('not a scripted battle');
+      run.script = null;
+      startBattle(run);
+      events.push({ type: 'battleStart', ...blindInfo(run) });
       break;
     }
     case 'drop': case 'capture': case 'redrop': case 'discard': case 'reboard': {
