@@ -1,8 +1,8 @@
 // 소개 영상 녹화: 실제 게임을 브라우저(Playwright chromium)로 열어 정해진 각본을 둔다(약 70초).
 //   node tools/video.mjs [--out docs/media] [--ffmpeg 경로]
 // 결과: <out>/chainmate-play.webm, ffmpeg(libx264)가 있으면 <out>/chainmate-play.mp4(H.264 · yuv420p), 장면 시각 <out>/chapters.md.
-//   --first: 「처음 켠 사람의 첫 10분」 — 빈 저장소로 켜서 수업 열을 손으로 두고, 처음 안내를 읽으며 첫 판을 2관까지(960×540).
-//            결과 <out>/first-play.mp4 · <out>/first-play.md
+//   --first: 「처음 켠 사람의 첫 몇 분」 — 빈 저장소로 켜서 타이틀 → 「새 판」 → 킹과 두는 대본 대국 → 보상 → 첫 상점 → 레퍼토리 →
+//            1관 정식 관 선택, 처음 안내를 읽으며 3분 안쪽까지(960×540). 결과 <out>/first-play.mp4 · <out>/first-play.md
 // Playwright는 저장소 의존성에 넣지 않는다(전역 설치나 npx -y로). ffmpeg는 PATH · --ffmpeg · FFMPEG 순으로 찾는다.
 // 화면 크기: 뷰포트를 480×270으로 녹화하면 1440×810으로 늘릴 때 흐려져서, 뷰포트를 1440×810으로 두고 게임이 정수배(×3)로 그리게 한다.
 import http from 'node:http';
@@ -143,53 +143,42 @@ async function intro() {
 
 }
 
-// 처음 켠 사람의 첫 10분: 사람 손 빠르기로(글을 읽는 틈을 두고) 둔다
+// 처음 켠 사람의 첫 몇 분(CHM-25, 새 흐름): 타이틀 → 「새 판」 → 킹과 두는 대본 대국 → 보상 → 첫 상점(처음 안내) →
+// 레퍼토리 고르기 → 1관 정식 관 선택(농민군 안내) → 정식 · 마스터전을 이어 둔다. 사람 손 빠르기로(글을 읽는 틈을 두고), 3분 안.
 async function firstTen() {
-  const LIMIT = 9.5 * 60 * 1000;
+  const LIMIT = 2.9 * 60 * 1000;
   const late = () => Date.now() - t0 > LIMIT;
   const scr = () => ev(() => window.__app.screen.name);
-  mark('처음 켬 — 곧바로 첫 수업 1의 시범');
-  const lessons = await ev(async () => (await import('/src/ui/lessons.js')).LESSONS.map((L) => ({ title: L.title, shop: !!L.shop, steps: L.steps || null })));
-  for (let i = 0; i < lessons.length; i++) {
-    const L = lessons[i];
-    if (L.shop) {
-      await page.waitForFunction(() => !!window.__app.guide, null, { timeout: 30000 });
-      mark(`수업 ${i + 1} · ${L.title}(가리키는 곳만 눌린다)`);
-      for (let k = 0; k < 8; k++) {
-        const st = await ev(() => { const g = window.__app.guide; return g && g.steps[g.i] ? { target: g.steps[g.i].target, ok: !!g.steps[g.i].ok } : null; });
-        if (!st) break;
-        await wait(2400);
-        await click(st.ok ? 'guide:ok' : st.target, 500);
-        await wait(900);
-      }
-      continue;
-    }
-    await page.waitForFunction((i) => { const s = window.__app.screen; return s.name === 'lesson' && s.index === i; }, i, { timeout: 60000 });
-    mark(`수업 ${i + 1} · ${L.title} — 시범`);
-    await page.waitForFunction(() => window.__app.screen.phase === 'play', null, { timeout: 60000 });
-    mark(`수업 ${i + 1} · 내 차례`);
-    await wait(1500);
-    for (let k = 0; k < L.steps.length; k++) {
-      await idle();
-      const st = L.steps[k];
-      if (st.pick != null) { await click(`hand:${st.pick}`, 900); continue; }
-      if (st.discard) { await click('btn:discard', 1200); await wait(900); continue; }
-      const sq = await ev(() => { const s = window.__app.screen; const l = s.clickable().list; return l[l.length - 1]; });
-      await hover(`sq:${sq}`, st.say ? 1600 : 900);
-      await click(`sq:${sq}`, 100);
-    }
-    await page.waitForFunction((i) => { const s = window.__app.screen; return !(s.name === 'lesson' && s.index === i); }, i, { timeout: 30000 }).catch(() => {});
+  const ready = () => page.waitForFunction(() => { const a = window.__app, g = a.guide; return !g || (!a.overlay && !(g.hold && g.hold(a)) && a.hintRect); }, null, { timeout: 60000 });
+  mark('처음 켬 — 타이틀');
+  await park();
+  await wait(2600);
+  await click('title:new', 700);
+  mark('새 판 — 킹과 두는 첫 대국(대본)');
+  for (let guard = 0; guard < 80; guard++) {
+    await ready();
+    const st = await ev(() => { const a = window.__app, g = a.guide; if (!g) return null; const st = g.steps[g.i], s = a.screen; return { ok: !!st.ok, target: typeof st.target === 'function' ? st.target(a) : st.target, moves: !!(s.step && s.step.moves), end: !!(s.step && s.step.end), long: st.say.length }; });
+    if (!st) break;
+    // 킹의 말을 읽을 틈: 알았다 걸음은 길게, 누르는 걸음은 짧게
+    await wait(st.ok ? 700 + st.long * 30 : 350 + st.long * 10);
+    if (st.ok) { await click('guide:ok', 300); if (st.end) break; continue; }
+    await click(st.target, 300);
+    if (st.moves) { mark('행마 보기'); await wait(2200); await click('moves:back', 350); }
   }
-  // 첫 판: 처음 안내를 읽고 누른다
-  mark('수업 끝 — 곧바로 첫 판(정석 고르기)');
+  // 대본 뒤: 처음 안내(킹 말풍선)를 읽고 누른다
+  const FIRST_MARK = { reward: '대본 대국 끝 — 보상', shop: '첫 상점 — 처음 안내(킹 말풍선)', draft: '레퍼토리 고르기(대본 대국 뒤)', select: '1관 정식 관 선택 — 농민군 처음 안내', pack: '첫 꾸러미' };
+  const firstSeen = new Set();
   for (let g = 0; g < 400 && !late(); g++) {
     const name = await scr();
-    if (name === 'draft') { await wait(3200); await click('draft:0', 900); await wait(1200); continue; }
+    if (!firstSeen.has(name) && FIRST_MARK[name]) { firstSeen.add(name); mark(FIRST_MARK[name]); }
+    const hint = await ev(() => window.__app.hintShown && window.__app.hintShown.id);
+    if (hint && name !== 'battle') { await wait(2400); await click(await ev(() => window.__app.hintShown.regionId), 500); await wait(500); continue; }
+    if (name === 'draft') { if (await ev(() => !!window.__app.screen.chosen)) { await wait(300); continue; } await wait(3000); if (await region('draft:0')) await click('draft:0', 900); await wait(1200); continue; }
     if (name === 'select') { await wait(1800); await click('select:play', 700); await wait(1500); continue; }
     if (name === 'battle') { if (!(await playBattle())) await wait(300); continue; }
     if (name === 'reward' || name === 'chest' || name === 'legend') { await wait(2200); await click('next', 400); continue; }
     if (name === 'shop') { await shopTurn(); continue; }
-    if (name === 'pack') { await wait(2600); const i = await ev(() => { const o = window.__app.run.pack.options; const k = o.findIndex((x) => x.kind !== 'engraving'); return k < 0 ? 0 : k; }); await click(`pack:pick:${i}`, 1200); if (await region('target:ok')) { await click(`deck:${await ev(() => window.__app.run.deck[0].id)}`, 900); await wait(1500); await click('target:ok', 600); } await wait(1000); continue; }
+    if (name === 'pack') { await wait(2600); const i = await ev(() => { const o = window.__app.run.pack.options; const k = o.findIndex((x) => x.kind !== 'engraving'); return k < 0 ? 0 : k; }); if (!(await region(`pack:pick:${i}`))) { await wait(400); continue; } await click(`pack:pick:${i}`, 1200); if (await region('target:ok')) { await click(`deck:${await ev(() => window.__app.run.deck[0].id)}`, 900); await wait(1500); await click('target:ok', 600); } await wait(1000); continue; }
     if (name === 'result') { mark('판이 끝났다'); break; }
     await wait(400);
   }
@@ -216,10 +205,7 @@ async function playBattle() {
   await click(`sq:${d.drop}`, 80);
   return true;
 }
-let shopSeen = 0;
 async function shopTurn() {
-  shopSeen++;
-  if (shopSeen === 1) mark('첫 상점 — 처음 안내');
   await wait(2600);
   const plan = await ev(async () => {
     const { canBuy } = await import('/src/sim/run.js');
@@ -265,7 +251,7 @@ if (ff) {
   if (m) scale = (Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])) / total;
 }
 const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-const md = [FIRST ? '# 처음 켠 사람의 첫 10분' : '# 소개 영상 장면', '', `\`tools/video.mjs${FIRST ? ' --first' : ''}\`로 녹화(${W}×${H}, 약 ${Math.round(total * scale)}초). 시각은 영상 시작부터.`, '', '| 시각 | 장면 |', '|---|---|', ...chapters.map(([t, s]) => `| ${fmt(t * scale)} | ${s} |`), ''];
+const md = [FIRST ? '# 처음 켠 사람의 첫 몇 분' : '# 소개 영상 장면', '', `\`tools/video.mjs${FIRST ? ' --first' : ''}\`로 녹화(${W}×${H}, 약 ${Math.round(total * scale)}초). 시각은 영상 시작부터.`, '', '| 시각 | 장면 |', '|---|---|', ...chapters.map(([t, s]) => `| ${fmt(t * scale)} | ${s} |`), ''];
 fs.writeFileSync(path.join(OUT, FIRST ? 'first-play.md' : 'chapters.md'), md.join('\n'));
 for (const f of [webm, mp4]) if (f && fs.existsSync(f)) console.log(path.relative(ROOT, f), (fs.statSync(f).size / 1e6).toFixed(2) + 'MB');
 console.log(`길이 ${(total * scale).toFixed(1)}s(벽시계 ${total.toFixed(1)}s) · 페이지 오류 ${errors.length}${errors.length ? '\n' + errors.join('\n') : ''}`);
