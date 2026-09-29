@@ -952,7 +952,7 @@ const chartSeen = { run: 0, scene: 0, grow: 0, tick: 0, growBad: 0 };
 
 // 각인 · 혼 덮어쓰기(docs/tasks/backlog.md 6): 이미 같은 종류가 있는 기물을 고르면 옛 것 › 새 것 확인(target:swap).
 // 「그만」이면 대상 고르기로(두루마리 · 꾸러미 · 기물 그대로), 「바꾸기」면 새 것으로. 같은 것이 새겨진 기물은 고를 수 없다
-const swapSeen = { same: 0, shopBack: 0, shopSwap: 0, soulSwap: 0, packBack: 0, packSwap: 0, bad: [] };
+const swapSeen = { same: 0, shopBack: 0, shopEsc: 0, shopSwap: 0, soulSwap: 0, packBack: 0, packEsc: 0, packSwap: 0, bad: [] };
 {
   const bad = (m) => swapSeen.bad.push(m);
   const setup = (fn) => { app.overlay = null; app.nextSeed = 11; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 }); fn(app.run); pump(90); };
@@ -972,6 +972,10 @@ const swapSeen = { same: 0, shopBack: 0, shopSwap: 0, soulSwap: 0, packBack: 0, 
     notesCheck();
     click('target:cancel');
     if (s().target && s().target.index === 0 && s().target.pieceId == null && r.consumables.length === 2 && gold.eng.id === 'gold' && !region('target:swap')) swapSeen.shopBack++; else bad('상점 「그만」이 대상 고르기로 돌아가지 않았다');
+    // Esc도 「그만」과 같다(대상 고르기 전체를 닫지 않는다)
+    click(`deck:${gold.id}`);
+    dom.key('Escape'); pump(1);
+    if (screen() === 'shop' && s().target && s().target.index === 0 && s().target.pieceId == null && r.consumables.length === 2 && gold.eng.id === 'gold' && !region('target:swap')) swapSeen.shopEsc++; else bad('상점 바꾸기 확인에서 Esc가 대상 고르기로 돌아가지 않았다');
     click(`deck:${gold.id}`);
     click('target:ok');
     if (gold.eng.id === 'glass' && r.consumables.length === 1 && r.consumables[0].kind === 'soul') swapSeen.shopSwap++; else bad('상점 「바꾸기」가 새 각인으로 바꾸지 않았다');
@@ -993,6 +997,9 @@ const swapSeen = { same: 0, shopBack: 0, shopSwap: 0, soulSwap: 0, packBack: 0, 
     notesCheck();
     click('target:cancel');
     if (screen() === 'pack' && r.phase === 'pack' && r.pack && app.screen.engraveIndex === 0 && app.screen.engraveTarget == null && gold.eng.id === 'gold') swapSeen.packBack++; else bad('꾸러미 「그만」이 대상 고르기로 돌아가지 않았다');
+    click(`deck:${gold.id}`);
+    dom.key('Escape'); pump(1);
+    if (screen() === 'pack' && r.phase === 'pack' && r.pack && app.screen.engraveIndex === 0 && app.screen.engraveTarget == null && gold.eng.id === 'gold') swapSeen.packEsc++; else bad('꾸러미 바꾸기 확인에서 Esc가 대상 고르기로 돌아가지 않았다');
     click(`deck:${gold.id}`);
     click('target:ok');
     if (gold.eng.id === 'glass' && r.phase === 'shop') swapSeen.packSwap++; else bad('꾸러미 「바꾸기」가 새 각인으로 바꾸지 않았다');
@@ -1088,8 +1095,8 @@ if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseS
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
-console.log(`각인 · 혼 바꾸기: 같은 것 흐림 ${swapSeen.same} · 상점 그만 ${swapSeen.shopBack} · 바꾸기 ${swapSeen.shopSwap} · 혼 ${swapSeen.soulSwap} · 꾸러미 그만 ${swapSeen.packBack} · 바꾸기 ${swapSeen.packSwap}${swapSeen.bad.length ? ` · 어긋남: ${swapSeen.bad.join(' | ')}` : ''}`);
-if (swapSeen.bad.length || !swapSeen.same || !swapSeen.shopBack || !swapSeen.shopSwap || !swapSeen.soulSwap || !swapSeen.packBack || !swapSeen.packSwap) { console.log('각인 · 혼을 덮어쓰기 전에 확인하지 않았거나, 「그만」 · 「바꾸기」가 어긋났다'); fail = true; }
+console.log(`각인 · 혼 바꾸기: 같은 것 흐림 ${swapSeen.same} · 상점 그만 ${swapSeen.shopBack} · Esc ${swapSeen.shopEsc} · 바꾸기 ${swapSeen.shopSwap} · 혼 ${swapSeen.soulSwap} · 꾸러미 그만 ${swapSeen.packBack} · Esc ${swapSeen.packEsc} · 바꾸기 ${swapSeen.packSwap}${swapSeen.bad.length ? ` · 어긋남: ${swapSeen.bad.join(' | ')}` : ''}`);
+if (swapSeen.bad.length || !swapSeen.same || !swapSeen.shopBack || !swapSeen.shopEsc || !swapSeen.packEsc || !swapSeen.shopSwap || !swapSeen.soulSwap || !swapSeen.packBack || !swapSeen.packSwap) { console.log('각인 · 혼을 덮어쓰기 전에 확인하지 않았거나, 「그만」 · 「바꾸기」가 어긋났다'); fail = true; }
 console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 ${chartSeen.scene} · 기보를 쓴 순간 크게 ${chartSeen.grow} · 수준만 ${chartSeen.tick}(어긋남 ${chartSeen.growBad})`);
 if (!chartSeen.scene || !chartSeen.grow || !chartSeen.tick || chartSeen.growBad) { console.log('기보 몫 연출이 뜨지 않았거나 기보를 쓴 순간이 자라지 않았다'); fail = true; }
 console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);

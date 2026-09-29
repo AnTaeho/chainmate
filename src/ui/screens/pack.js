@@ -9,7 +9,7 @@ import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button } from '../ui.js';
-import { itemCard, itemRowH, itemKeys, itemExtraTip, itemEffect, itemName, maximGrid, maximGridH, envelope, targetPanel, targetOk, cardBase, fitText, shardIcon } from '../parts.js';
+import { itemCard, itemRowH, itemKeys, itemExtraTip, itemEffect, itemName, maximGrid, maximGridH, envelope, targetPanel, targetOk, isSwap, cardBase, fitText, shardIcon } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, BTN_H, GAP_GROUP, LIST_GAP, PAD_CARD, flow, BTN_S } from '../frame.js';
@@ -226,7 +226,13 @@ export class PackScreen {
     closeBox();
   }
   key(k) {
-    if (k === 'Escape') { if (this.engraveIndex != null) this.engraveIndex = null; else if (this.panel) this.togglePanel(); else this.finish({ type: 'skipPack' }); }
+    if (k === 'Escape') {
+      // 새길 기물을 고르는 중: 바꾸기 확인이면 「그만」과 같게 대상 고르기로, 그 밖에는 카드 줄로
+      if (this.engraveIndex != null) {
+        const o = this.app.run.pack.options[this.engraveIndex], p = this.engraveTarget != null ? this.app.run.deck.find((x) => x.id === this.engraveTarget) : null;
+        if (o && isSwap(o, p)) this.engraveTarget = null; else { this.engraveIndex = null; this.engraveTarget = null; }
+      } else if (this.panel) this.togglePanel(); else this.finish({ type: 'skipPack' });
+    }
     else if (/^[1-4]$/.test(k) && !this.panel) this.pick(Number(k) - 1);
   }
 }

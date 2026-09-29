@@ -670,6 +670,8 @@ const TP_BTN = { w: 58, h: BTN_S }; // 영어 「Engrave」(52) + 글과 테 사
 // 한 기물에 각인 하나 · 혼 하나(run.js engrave · ensoul은 있던 것을 바꾼다). 같은 종류가 이미 있으면 그 id(바꾸기), 같은 것이면 고를 수 없다
 export const heldOf = (what, p) => (!p ? null : what.kind === 'engraving' ? (p.eng ? p.eng.id : null) : what.kind === 'soul' ? p.soul || null : null);
 export const targetOk = (what, p) => !what || heldOf(what, p) !== what.id || what.kind === 'evolve';
+// 바꾸기 모양(「옛 › 새」 · 바꾸기/그만)인가: 고른 기물에 다른 각인 · 혼이 이미 있다. 이때 「그만」 · Esc는 대상 고르기로 돌아간다
+export const isSwap = (what, p) => { const held = heldOf(what, p); return !!held && held !== what.id; };
 const markName = (kind, id) => (kind === 'engraving' ? engravingInfo(id).name : SOUL_BY_ID[id].name);
 function targetText(run, what, p, to) {
   const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
@@ -677,7 +679,7 @@ function targetText(run, what, p, to) {
   const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
   // 바꾸기: 옛 것 › 새 것(문양 둘과 이름 둘)
   const held = heldOf(what, p);
-  if (held && held !== what.id) return { title: `${markName(what.kind, held)} › ${markName(what.kind, what.id)}`, body: eff, after, swap: held };
+  if (isSwap(what, p)) return { title: `${markName(what.kind, held)} › ${markName(what.kind, what.id)}`, body: eff, after, swap: held };
   const title = what.kind === 'evolve' ? `${PIECE_NAME[p.t]} › ${PIECE_NAME[after.t]}` : `${PIECE_NAME[p.t]}에 ${what.kind === 'engraving' ? `${engravingInfo(what.id).name} 각인` : `${SOUL_BY_ID[what.id].name}의 혼`}`;
   return { title, body: what.kind === 'evolve' ? (PIECE_MOVE[after.t] || '') : eff, after };
 }

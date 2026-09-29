@@ -10,7 +10,7 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk } from '../parts.js';
+import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk, isSwap } from '../parts.js';
 import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
@@ -396,6 +396,11 @@ export class ShopScreen {
 
   key(k) {
     if (k === 'Escape') {
+      // 바꾸기 확인에서는 「그만」과 같게 대상 고르기로, 그 밖에는 고르던 것을 닫는다
+      if (this.target && this.target.pieceId != null) {
+        const c = this.run.consumables[this.target.index], p = this.run.deck.find((x) => x.id === this.target.pieceId);
+        if (c && isSwap(c, p)) { this.target = { index: this.target.index }; return; }
+      }
       if (this.menu || this.target) { this.menu = null; this.target = null; return; }
       this.app.openOverlay('pause');
     } else if (k === 'Enter') this.leave();
