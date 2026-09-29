@@ -525,7 +525,7 @@ export class BattleScreen {
           add(0.3, { tick: (p) => { v.cut.p = p; } });
           break;
         case 'mate': add(0.5, {
-          begin: () => { this.topple(e.sq); this.word('체크메이트', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
+          begin: () => { this.topple(e.sq); this.word('메이트', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
         }); break;
         case 'refill': add(0.35, {
           begin: () => { this.word('적이 다시 찬다', PAL.gold, 1.1, 1); this.snd('refill'); },
