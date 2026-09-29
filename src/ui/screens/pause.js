@@ -7,6 +7,8 @@ import { openBox, closeBox } from '../../render/layoutlog.js';
 
 export class PauseScreen {
   constructor(app) { this.app = app; }
+  // 멈춤 동안은 뒤 화면의 연출 시계도 멈춘다(대국 연출이 덮개 밑에서 흘러가던 것)
+  update() {}
   draw(ctx, ui) {
     const app = this.app;
     // 막간 상자(hug): 제목(제목 줄) → 묶음 틈 → 단추 셋(사이 묶음 틈)
