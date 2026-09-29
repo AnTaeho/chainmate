@@ -140,7 +140,7 @@ export const EN = {
   '목표': 'Target', '이기면': 'Win', '건너뛰면': 'If skipped', '건너뜀': 'Skipped', '이김': 'Won', '두기': 'Play', '건너뛰기': 'Skip',
   '이기면 마스터의 상자': "Win: Master's Chest", '끝없는 대국': 'Endless',
   '점수': 'Score', '수': 'Moves', '상금': 'Purse', '주머니': 'Bag', '손': 'Hand', '격언': 'Maxim',
-  '대국 승리': 'Match Won', '체크메이트 승리': 'Won by Mate', '대국 기본': 'Base', '적립': 'Interest', '체크메이트': 'Checkmate', '대국 중 번 상금': 'Earned in match', '합': 'Total',
+  '대국 승리': 'Match Won', '체크메이트 승리': 'Won by Mate', '대국 기본': 'Base', '적립': 'Interest', '체크메이트': 'Checkmate', '메이트': 'Mate', '대국 중 번 상금': 'Earned in match', '합': 'Total',
   '금빛 꾸러미가 상점에 나왔다': 'A golden bundle is in the shop',
   '프로모션': 'Promotion', '넘겼다': 'Survived', '적이 다시 찬다': 'Enemies refill', '다시 떨군다': 'Drop again', '목표 달성': 'Target reached',
   '떨굴 곳이 없다': 'Nowhere to drop', '수가 다했다': 'Out of moves', '수를 다 썼다': 'Out of moves',
