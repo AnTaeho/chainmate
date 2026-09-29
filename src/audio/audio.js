@@ -253,7 +253,7 @@ export function createAudio(win = globalThis, opts = {}) {
     const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
     const g = pluck(at, vol, attack, 0.5, attack + dur * 0.3, dur, dest);
     src.connect(f); f.connect(g);
-    src.start(at, Math.random() * 0.6); src.stop(at + dur + 0.02);
+    src.start(at, Math.random() * 0.4); src.stop(at + dur + 0.02);
     done(src, [f, g]);
   }
   function kick(at, vol, dest) {
@@ -383,7 +383,7 @@ export function createAudio(win = globalThis, opts = {}) {
       },
       form: ['A', 'B'],
     },
-    // 타이틀: 라단조 발라드 66, 여백 많게. 화음과 베이스, 드문 비브라폰. A B 8마디
+    // 타이틀: 가단조 발라드 66, 여백 많게. 화음과 베이스, 드문 비브라폰. A B 8마디
     title: {
       style: jazzStep, bpm: 66, swing: 0.34, bass: 'ballad', at: { ch: 0, beat: 99, dense: 99, lead: 1 },
       epVol: 0.045, beatVol: 0, leadVol: 0.06, leadDur: 6,
