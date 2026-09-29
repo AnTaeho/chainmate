@@ -10,6 +10,7 @@ import { CHARTS } from '../../data/charts.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { KIND_NAME, josa } from '../words.js';
+import { L } from '../lang.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, GAP_IN, GAP_GROUP, flow, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -92,14 +93,26 @@ export function blindLayout(run, i, w = SEL.w) {
   if (master) {
     const m = MASTER_BY_ID[info.master];
     out.m = m;
-    // 초상 옆 이름: 굵게 두 줄까지, 넘치면 보통 굵기(영어 「Master Iron Wall」)
-    let names = wrap(`명인 ${m.name}`, IW - PORTRAIT - 6, true);
-    out.nameBold = names.length <= 2;
-    if (!out.nameBold) names = wrap(`명인 ${m.name}`, IW - PORTRAIT - 6, false);
-    const top = f.space(Math.max(PORTRAIT, names.length * LINE));
-    out.portrait = top;
-    const nf = flow(top + Math.max(0, Math.floor((PORTRAIT - names.length * LINE) / 2)));
-    out.names = names.map((l) => [l, nf.line()]);
+    // 초상 옆 이름: 굵게 두 줄까지, 넘치거나 낱말 하나가 굵게 안 들어가면 보통 굵기.
+    // 보통 굵기로도 낱말이 초상 옆에 안 들어가면(영어 「Grandmaster」 · 「Castellan」) 초상 아래 온 폭에 쓴다(낱말 가운데서 끊지 않게)
+    const full = `명인 ${m.name}`, nameW = IW - PORTRAIT - 6, words = L(full).split(' '); // 낱말은 옮긴 글에서 센다
+    const fits = (w, bold) => words.every((x) => measure(x, bold) <= w);
+    out.nameX = PORTRAIT + 6;
+    let names = wrap(full, nameW, true);
+    out.nameBold = names.length <= 2 && fits(nameW, true);
+    if (!out.nameBold) names = wrap(full, nameW, false);
+    if (!fits(nameW, false)) {
+      out.nameX = 0;
+      out.nameBold = fits(IW, true) && wrap(full, IW, true).length <= 2;
+      names = wrap(full, IW, out.nameBold);
+      out.portrait = f.space(PORTRAIT); // 이름 줄은 초상 바로 아래(줄 위 여백이 틈이 된다 — 8관 영어 명인 카드가 본 칸에 들어가게)
+      out.names = names.map((l) => [l, f.line()]);
+    } else {
+      const top = f.space(Math.max(PORTRAIT, names.length * LINE));
+      out.portrait = top;
+      const nf = flow(top + Math.max(0, Math.floor((PORTRAIT - names.length * LINE) / 2)));
+      out.names = names.map((l) => [l, nf.line()]);
+    }
     f.gap(GAP_IN);
     out.lines = wrap(m.text, IW).map((l) => [l, f.line()]);
   } else {
@@ -184,7 +197,7 @@ export class SelectScreen {
         ui.region(`select:card:${i}`, x, y, w, h, { keys: [lay.m.text] });
         box(ctx, x + P, y + lay.portrait, PORTRAIT, PORTRAIT, PAL.felt, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + P + 2, y + lay.portrait + 2, 1, cur ? 1 : 0.6);
-        for (const [l, ly] of lay.names) text(ctx, l, x + P + PORTRAIT + 6, y + ly, PAL.red, { bold: lay.nameBold });
+        for (const [l, ly] of lay.names) text(ctx, l, x + P + lay.nameX, y + ly, PAL.red, { bold: lay.nameBold });
         for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, ink, { termCol: PAL.gold });
       } else {
         text(ctx, '건너뛰면', x + P, y + lay.skipLabel, PAL.dim);
