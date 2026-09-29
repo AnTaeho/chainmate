@@ -17,6 +17,7 @@ import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
 import { SOULS } from '../src/data/souls.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { MASTER_BY_ID } from '../src/data/masters.js';
+import { FACTIONS, FACTION_BY_ID } from '../src/data/factions.js';
 import { LEGENDS, LEGEND_BY_ID } from '../src/data/legends.js';
 import { EDITIONS } from '../src/data/editions.js';
 import { familyCounts, FAMILIES } from '../src/data/families.js';
@@ -172,6 +173,16 @@ function report(R, args, wall) {
   }
   table(['명인', '대국', '통과', '평균관'], mrows);
 
+  // ── 세력(docs/design-notes/factions.md): 세력별 대국 통과율 · 명인 통과율의 관 보정 · 관별 가장 많이 입은 모습
+  const fx = factionStats(battles);
+  console.log('\n세력: 종류별 통과율 · 명인 관 보정(같은 관 모든 세력 명인 통과율과의 차, 평균) · 평균관');
+  table(['세력', '대국', '연습', '정식', '명인', '명인 대국', '관 보정', '평균관', '입은 모습(몫 큰 셋)'], fx.rows.map((x) => [
+    x.name, String(x.n), pc(x.practice.win), pc(x.official.win), pc(x.master.win), String(x.master.n), x.adj == null ? '-' : (x.adj >= 0 ? '+' : '') + (100 * x.adj).toFixed(1) + '%p', f(x.ante, 1),
+    x.worn.slice(0, 3).map(([t, v]) => `${PIECES[t].name} ${(100 * v).toFixed(0)}%`).join(' · '),
+  ]));
+  console.log('관별 가장 많이 입은 모습(세력 · 그 모습의 몫 · 사슬로 먹은 수)');
+  table(['관', ...FACTIONS.map((x) => x.name)], fx.byAnte.map((row) => [String(row.ante), ...FACTIONS.map((x) => { const c = row.f[x.id]; return c ? `${PIECES[c.top].name} ${(100 * c.share).toFixed(0)}%/${c.n}` : '-'; })]));
+
   // ── 2b: 불멸의 기보
   const withLegend = R.filter((r) => r.legends.length);
   const noLegend = R.filter((r) => !r.legends.length);
@@ -279,10 +290,48 @@ function report(R, args, wall) {
         maxim: tally((r) => r.bought), joseki: tally((r) => r.josekis),
         soul: tally((r) => r.log.flatMap((b) => b.souls || [])), engraving: tally((r) => r.deck.split(' ').filter((x) => x.includes(':')).map((x) => x.split(':')[1])),
       },
+      factions: fx,
       masters: Object.fromEntries(Object.keys(MASTER_BY_ID).map((id) => { const bs = battles.filter((b) => b.master === id); return [id, { n: bs.length, win: r3(bs.filter((b) => b.won).length / bs.length) }]; })),
     };
     mkdirSync(dirname(args.json), { recursive: true });
     writeFileSync(args.json, JSON.stringify(out, null, 1) + '\n');
     console.log(`JSON: ${args.json}`);
   }
+}
+
+// 세력별 수치: 종류별 통과율, 명인 통과율의 관 보정(명인 대국마다 이김(1/0) − 같은 관 명인 통과율, 세력 평균), 입은 모습 몫
+export function factionStats(battles) {
+  const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : null);
+  const kindOf = (bs, k) => { const x = bs.filter((b) => b.kind === k); return { n: x.length, win: r3(x.filter((b) => b.won).length / x.length) }; };
+  const masterAt = {};
+  for (let a = 1; a <= 8; a++) { const x = battles.filter((b) => b.kind === 'master' && b.ante === a); masterAt[a] = x.length ? x.filter((b) => b.won).length / x.length : null; }
+  const share = (bs) => {
+    const w = {};
+    for (const b of bs) for (const [t, v] of Object.entries(b.worn || {})) w[t] = (w[t] || 0) + v;
+    const tot = Object.values(w).reduce((a, x) => a + x, 0);
+    return { tot, list: Object.entries(w).map(([t, v]) => [t, r3(v / tot)]).sort((a, b) => b[1] - a[1]) };
+  };
+  const rows = FACTIONS.map((fa) => {
+    const bs = battles.filter((b) => b.faction === fa.id);
+    const ms = bs.filter((b) => b.kind === 'master' && masterAt[b.ante] != null);
+    // 같은 관에 다른 세력이 없는 관(1관 · 8관)은 보정이 늘 0이라 빼고, 섞이는 2~7관만 센다
+    const mid = ms.filter((b) => b.ante >= 2 && b.ante <= 7);
+    return {
+      id: fa.id, name: fa.name, n: bs.length,
+      practice: kindOf(bs, 'practice'), official: kindOf(bs, 'official'), master: kindOf(bs, 'master'),
+      adj: mid.length ? r3(mid.reduce((a, b) => a + (b.won ? 1 : 0) - masterAt[b.ante], 0) / mid.length) : null, adjN: mid.length,
+      ante: bs.length ? bs.reduce((a, b) => a + b.ante, 0) / bs.length : null,
+      worn: share(bs).list,
+    };
+  });
+  const byAnte = [];
+  for (let a = 1; a <= 8; a++) {
+    const f = {};
+    for (const fa of FACTIONS) {
+      const s = share(battles.filter((b) => b.faction === fa.id && b.ante === a));
+      if (s.tot) f[fa.id] = { top: s.list[0][0], share: s.list[0][1], n: s.tot, list: s.list };
+    }
+    byAnte.push({ ante: a, f });
+  }
+  return { rows, byAnte, masterAt: Object.fromEntries(Object.entries(masterAt).map(([k, v]) => [k, r3(v)])) };
 }

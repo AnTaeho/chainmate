@@ -512,6 +512,8 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
       continue;
     }
     // 시계를 잃은 뒤: 판이 이어져 상점이 열리고(보상 없음 · 상금 그대로) 시계가 한 칸 줄었나 · 상점을 떠나 다음 대국을 두면 센다
+    // 외통은 목표와 상관없이 이긴다(세력마다 판이 달라 일부러 진 대국이 외통으로 끝날 수 있다): 다음 대국에서 다시 진다
+    if ((name === 'shop' || name === 'select') && n2.clockBefore && !n2.waitNext && app.run.log.at(-1) && app.run.log.at(-1).reason === 'mate') { n2.forced = false; n2.clockBefore = null; }
     if ((name === 'shop' || name === 'select') && n2.clockBefore && !n2.waitNext) {
       const c = n2.clockBefore, last = app.run.log.at(-1);
       n2.clockLost++;
@@ -711,7 +713,7 @@ click('next');
     if (app.run.phase !== 'shop' || !app.run.maxims.some((m) => m.id === 'memory')) goldSeen.bad.push('자리가 생긴 뒤 격언을 곧바로 받지 못했다');
   }
   scene((r) => { r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; app.go('draft'); });
-  scene((r) => { r.masters[0] = 'fog'; app.cmd({ type: 'skip' }); app.cmd({ type: 'skip' }); app.goPhase(); });
+  scene((r) => { r.factions[0] = 'hunters'; app.cmd({ type: 'skip' }); app.cmd({ type: 'skip' }); app.goPhase(); });
   scene((r) => { r.ante = 5; r.blind = 0; app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(200); });
   // 사람이 보낸 대국 화면(2026-09-28 「글자 삐져나가는 거」): 격언 다섯(귀함 겹테 · 은박 점선 · 흔함) · 판본 · 시너지 넷 · 손 넷 — 격언 칸 · 칩 · 단추의 글이 테에 닿지 않는지.
   // 판본은 넷을 모두(자개 · 무지개 · 흑요도) 한 번씩 지나간다
