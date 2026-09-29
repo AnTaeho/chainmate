@@ -224,7 +224,7 @@ export const EN = {
   '응수의 달인': 'Reply Master', 
   '퀸으로 가는 길': 'Road to the Queen', '프로모션할 때마다 값 +80': 'Promotion: +80 Value',
   '증원 사냥': 'Reinforcement Hunt', 
-  '패스트 폰': 'Passed Pawn', 
+  '패스드 폰': 'Passed Pawn', 
   '광마': 'Wild Horse', 
   '룩 리프트': 'Rook Lift', 
   // ── 밤샘 2: 가짓수 늘리기(격언 스물일곱 · 정석 열하나 · 혼 여덟 · 각인 여섯 · 시너지 둘) · 시계 · 다시 놓기
@@ -540,7 +540,7 @@ export const TEMPLATES = [
   [/^끝없는 대국 가장 깊은 곳 (\d+)관$/, (m) => `Deepest endless: Hall ${m[1]}`],
   [/^(.+의 기보) (\d+)$/, (m, tr) => `${tr(m[1])} Lv ${m[2]}`],
   [/^(.+) 한 장$/, (m, tr) => `1 × ${tr(m[1])}`],
-  [/^(.+?)(?:으로|로) 프로모션 \$(\d+)$/, (m, tr) => `Promote to ${tr(m[1])} $${m[2]}`],
+  [/^(.+?)(?:으로|로) 올리기 \$(\d+)$/, (m, tr) => `Upgrade to ${tr(m[1])} $${m[2]}`],
   [/^유리 각인 (.+?)[이가] 깨졌다$/, (m, tr) => `Glass ${tr(m[1])} shattered`],
   [/^(.+?)[이가] 손으로 돌아왔다$/, (m, tr) => `${tr(m[1])} returned to your hand`],
   [/^(.+) 포로가 주머니에 든다$/, (m, tr) => `A captive ${tr(m[1]).toLowerCase()} joins your bag`],

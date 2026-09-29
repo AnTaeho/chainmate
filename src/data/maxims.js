@@ -211,7 +211,7 @@ maxim('reinforce_hunt', '증원 사냥', '증원을 먹을 때마다 배수 +2',
 });
 
 // ── 깊이 G: 증강체스의 나머지 카드에서(뿌리의 동사를 비튼 셋)
-maxim('promotion_rush', '패스트 폰', '폰 모습으로 둘을 먹은 뒤: 어느 줄에서든 프로모션', '프로모션', 'uncommon', 5, {
+maxim('promotion_rush', '패스드 폰', '폰 모습으로 둘을 먹은 뒤: 어느 줄에서든 프로모션', '프로모션', 'uncommon', 5, {
   onCapture(ctx) {
     if (ctx.event.form !== 'P') return;
     ctx.flags.pawnTakes = (ctx.flags.pawnTakes || 0) + 1;
