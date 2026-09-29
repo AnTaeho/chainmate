@@ -85,15 +85,15 @@ test('정석 카드: 셋이 같은 높이로 본 칸 안(모든 정석, 한국�
 });
 
 test('관 선택: 명인 카드(1~7관 명인 · 8관 대가)가 본 칸 안', async () => {
-  const { MASTERS, FINAL_MASTER } = await import('../src/data/masters.js');
+  const { FACTIONS, FINAL_FACTION } = await import('../src/data/factions.js');
   for (const lang of LANGS) {
     M.lang.setLang(lang);
-    for (const m of MASTERS) for (const ante of [1, 4, 7, 8]) {
-      if ((ante === 8) !== (m.id === FINAL_MASTER)) continue;
+    for (const f of FACTIONS) for (const ante of [1, 4, 7, 8]) {
+      if ((ante === 8) !== (f.id === FINAL_FACTION)) continue;
       const run = M.run.createRun({ seed: 1, draft: false });
-      run.ante = ante; run.masters[ante - 1] = m.id;
+      run.ante = ante; run.factions[ante - 1] = f.id;
       const h = Math.max(...[0, 1, 2].map((i) => M.select.blindLayout(run, i).h));
-      assert.ok(M.frame.TOP + h <= 270 - M.frame.GAP_GROUP, `${lang} ${m.id} ${ante}관 ${h}`);
+      assert.ok(M.frame.TOP + h <= 270 - M.frame.GAP_GROUP, `${lang} ${f.id} ${ante}관 ${h}`);
     }
   }
 });

@@ -1,9 +1,10 @@
-// 명인(보스) 8. 관마다 하나(같은 판에서 겹치지 않음), 8관은 「대가」 고정.
+// 명인(보스) 8 — 세력(factions.js)의 우두머리. 관의 세력이 정하고, 8관(왕궁 근위)은 「대가」.
+// id와 규칙은 옛 명인 그대로다(옛 저장의 run.masters가 세력으로 옮겨진다). name은 우두머리 이름, rule은 옛 명인 이름.
 import { defineModifier, getModifier } from '../sim/scoring.js';
 
 export const MASTERS = [];
-function master(id, name, text, def) {
-  MASTERS.push({ id, name, text });
+function master(id, rule, text, def) {
+  MASTERS.push({ id, name: rule, rule, text });
   defineModifier(id, { kind: 'master', ...def });
 }
 

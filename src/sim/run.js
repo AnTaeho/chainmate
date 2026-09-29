@@ -19,7 +19,7 @@ import { gradeOf } from './chain.js';
 import { MAXIM_BY_ID } from '../data/maxims.js';
 import { CHART_TABLE, CHART_FORMS } from '../data/charts.js';
 import { ENGRAVING_BY_ID } from '../data/engravings.js';
-import { MASTERS, FINAL_MASTER } from '../data/masters.js';
+import { FACTIONS, FACTION_BY_ID, FIRST_FACTION, FINAL_FACTION, MIDDLE_FACTIONS, FACTION_OF_BOSS } from '../data/factions.js';
 import { OPENINGS, DEFAULT_OPENING } from '../data/openings.js';
 import { EDITION_BY_ID, editionSpec, editionSlots } from '../data/editions.js';
 import { LEGENDS, LEGEND_BY_ID } from '../data/legends.js';
@@ -107,10 +107,26 @@ export function targetFor(ante, kind, mult = 1) {
   return Math.round(raw / mag) * mag;
 }
 
-function masterFor(run, ante) {
-  if (ante <= ANTES) return run.masters[ante - 1];
-  const r = fork(root(run), `master:${ante}`);
-  return MASTERS[int(r, MASTERS.length)].id;
+// 관의 세력(docs/design-notes/factions.md): 1관 농민군 · 8관 왕궁 근위 고정, 2~7관은 판 시드로 섞은 여섯. 끝없는 대국은 관마다 아무 세력
+export function factionFor(run, ante) {
+  if (ante <= ANTES) return run.factions[ante - 1];
+  const r = fork(root(run), `faction:${ante}`);
+  return FACTIONS[int(r, FACTIONS.length)].id;
+}
+const masterFor = (run, ante) => FACTION_BY_ID[factionFor(run, ante)].boss;
+// 판의 세력 순서: [농민군, 섞은 여섯, 왕궁 근위]
+export function factionOrder(seed) {
+  const r = fork(createRng(seed), 'factions');
+  return [FIRST_FACTION, ...shuffle(r, [...MIDDLE_FACTIONS]), FINAL_FACTION];
+}
+// 옛 저장(세력 전, run.masters = 관마다 명인 id): 명인을 우두머리로 둔 세력으로 옮긴다. 싸울 명인 차례가 그대로 남는다.
+export function migrateRun(run) {
+  if (!run || run.factions) return run;
+  run.factions = Array.isArray(run.masters) && run.masters.length === ANTES && run.masters.every((id) => FACTION_OF_BOSS[id])
+    ? run.masters.map((id) => FACTION_OF_BOSS[id])
+    : factionOrder(run.seed ?? 1);
+  delete run.masters;
+  return run;
 }
 
 function tagFor(run, ante, blind) {
@@ -120,15 +136,18 @@ function tagFor(run, ante, blind) {
   return tag;
 }
 
-// 지금(또는 다음) 대국의 정보: 종류 · 목표 · 명인 · 건너뛰기 패
+// 지금(또는 다음) 대국의 정보: 종류 · 목표 · 세력 · 명인(세력의 우두머리) · 건너뛰기 패
 export function blindInfo(run, ante = run.ante, blind = run.blind) {
   const kind = KINDS[blind];
+  const faction = factionFor(run, ante);
   const master = kind === 'master' ? masterFor(run, ante) : null;
   const st = run.stake;
-  const mult = (st ? st.target * (master === FINAL_MASTER ? st.finalTarget : 1) : 1) * josekiTargetMult(run);
+  // 단 8 「대가 목표 ×1.25」: 왕궁 근위의 우두머리 대국
+  const mult = (st ? st.target * (master && faction === FINAL_FACTION ? st.finalTarget : 1) : 1) * josekiTargetMult(run);
   return {
     ante, blind, kind,
     target: targetFor(ante, kind, mult),
+    faction,
     master,
     tag: kind === 'master' ? null : tagFor(run, ante, blind),
   };
@@ -139,8 +158,6 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
   const conf = { ...RUN_DEFAULTS, ...op.run };
-  const r = fork(createRng(seed), 'masters');
-  const pool = shuffle(r, MASTERS.map((m) => m.id).filter((id) => id !== FINAL_MASTER));
   const rules = clone(op.rules);
   const stake = dan > 0 ? danRules(dan) : null;
   if (stake) {
@@ -167,7 +184,7 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
     consumables: [],          // [{ kind: 'chart', form } | { kind: 'engraving', id }]
     consumableSlots: conf.consumableSlots,
     charts: Object.fromEntries(CHART_FORMS.map((f) => [f, 0])),
-    masters: [...pool.slice(0, ANTES - 1), FINAL_MASTER],
+    factions: factionOrder(seed), // 관마다 세력 id(1관 농민군 · 8관 왕궁 근위)
     fragments: {},            // { [명국 id]: { first, feat, gold } } — 불멸의 기보 조각
     legends: [],              // 완성한 명국 id(전설 격언은 maxims에 legendary: true로, 격언 칸 수와 따로)
     nextUid: 1,
@@ -207,9 +224,10 @@ export function josekiTargetMult(run) {
 }
 
 // ── 대국 만들기
-// 대국에 켜질 조정자: 명인 → 기보 → 격언(왼쪽부터). build = { charts, maxims } (판 자체거나 봇이 그려 본 변형)
-export function battleMods(build, master = null) {
+// 대국에 켜질 조정자: 세력의 버릇 → 명인 → 기보 → 격언(왼쪽부터). build = { charts, maxims } (판 자체거나 봇이 그려 본 변형)
+export function battleMods(build, master = null, faction = null) {
   const mods = [];
+  if (faction) mods.push({ id: `faction:${faction}` });
   if (master) mods.push({ id: master });
   mods.push({ id: 'charts', data: { table: CHART_TABLE, levels: { ...build.charts } } });
   // 가족(깊이 B): 문턱을 넘은 가족마다 하나(정석 「복제」면 가장 많이 모은 가족의 문턱이 하나 낮다)
@@ -241,7 +259,7 @@ function startBattle(run) {
   run.battle = createBattle({
     seed: battleSeed(run), ante: run.ante, kind: info.kind, target: info.target,
     bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
-    rules: run.rules, mods: battleMods(run, info.master),
+    rules: run.rules, mods: battleMods(run, info.master, info.faction),
     goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
     filter: run.scratch ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
   });
@@ -275,8 +293,11 @@ function endBattle(run, events) {
   for (const { id, to } of b.becomes || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t !== to) { events.push({ type: 'evolve', pieceId: id, from: p.t, to }); p.t = to; } }
   const grades = {};
   for (const h of b.history) { const g = gradeOf(h.captures); if (g) grades[g.mark] = (grades[g.mark] || 0) + 1; }
+  // 하네스용: 사슬에서 입은 모습(먹은 종류, 킹 · 보석 빼고)의 수 — 세력마다 퍼즐 모양이 다른지 보는 지표
+  const worn = {};
+  for (const h of b.history) for (const t of h.caps || '') if (t !== 'K' && t !== 'J') worn[t] = (worn[t] || 0) + 1;
   const row = {
-    ante: run.ante, blind: run.blind, kind: info.kind, master: info.master, target: info.target,
+    ante: run.ante, blind: run.blind, kind: info.kind, faction: info.faction, master: info.master, target: info.target,
     score: b.score, won, reason: b.result.reason, moves: b.movesUsed, best,
     goldenSeen: b.board.some((c) => c && c.gold) || b.golden > 0, golden: b.golden, overflow: b.overflow, grades,
     // 하네스용: 이 대국 때 주머니에 있던 혼 · 외통을 낸 사슬의 혼
@@ -284,6 +305,7 @@ function endBattle(run, events) {
     mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
     discarded: b.discarded,
     reboards: b.reboards || 0,
+    worn,
   };
   run.log.push(row);
   if (!won) {

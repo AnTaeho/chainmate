@@ -291,6 +291,13 @@ export const EN = {
   '대국을 지면 한 칸을 잃고 다음 대국으로 간다': 'Lose a match: lose one cell and play on', '다 잃으면 판이 끝난다': 'Lose them all and the run ends',
   '대국을 지면 시계 한 칸이 준다. 시계를 다 쓰면 판이 끝난다': 'Lose a match and your clock loses a cell. When it runs out, the run ends',
   '아무것도 지키지 못한다': 'Guards nothing',
+  // ── 세력(factions.js): 이름 · 버릇 · 우두머리
+  '세력': 'Faction', '농민군': 'Peasant Host', '기병대': 'Cavalry', '수도원': 'Abbey', '성채': 'Fortress', '숲 사냥꾼': 'Forest Hunters', '전령단': 'Heralds', '용병단': 'Mercenaries', '왕궁 근위': 'Royal Guard',
+  '촌장': 'Village Elder', '기병대장': 'Cavalry Captain', '수도원장': 'Abbot', '성주': 'Castellan', '사냥꾼 두령': 'Huntmaster', '전령장': 'Chief Herald', '용병대장': 'Mercenary Captain',
+  '적 폰이 옆 칸도 지킨다': 'Enemy pawns also guard beside them', '증원이 모두 나이트 무리로 온다': 'Reinforcements are all knight-kind',
+  '돌기둥 둘~넷이 늘 선다': 'Two to four stone pillars stand', '성벽 한 줄이 판을 가른다 · 문은 하나': 'A wall splits the board · one gate',
+  '위 두 줄은 숲이다 · 닿으면 걷힌다': 'Top two rows are forest · your reach clears it', '증원 +1 · 두 수 앞까지 보인다': 'Reinforcements +1 · seen two moves ahead',
+  '적 특성이 두 배로 붙는다': 'Enemy traits come twice as often', '킹을 지키는 적 +1': 'Each king gets one more guard',
   // ── 명인
   '철벽': 'Iron Wall', '적 폰이 좌우 옆 칸도 지킨다': 'Enemy pawns also guard the squares beside them', '적 폰이 옆 칸과 뒤 대각도 지킨다': 'Enemy pawns also guard beside and behind them',
   '안개': 'Fog', '위 세 줄이 안개에 덮인다': 'Fog covers the top three ranks', '내 기물이 닿은 칸만 걷힌다': 'Only squares your piece reaches clear', '안개 속에는 떨굴 수 없다': 'No drops into the fog',
