@@ -47,7 +47,7 @@ export const TERMS = [
   B('goal', 'battle', '목표', 'Target', null, null, '대국을 이기는 점수', 'The score that wins the match'),
   // ── 판
   T('run', 'run', '판', 'Run', null, null, '1관부터 8관까지의 한 도전. 지면 처음부터', 'One try from Hall 1 to Hall 8. Lose and start over'),
-  T('hall', 'run', '관', 'Hall', null, null, '연습 대국 · 정식 대국 · 마스터전. 8관까지', 'Practice, rated and master match. Eight halls'),
+  T('hall', 'run', '관', 'Hall', null, null, '연습 대국 · 정식 대국 · 마스터전. 8관까지', 'Practice, rated and master matches. Eight halls'),
   T('match', 'run', '대국', 'Match', null, null, '목표 점수에 닿아야 이기는 한 번의 겨루기', 'One contest you win by reaching the target'),
   T('faction', 'run', '세력', 'Faction', null, null, '관 하나를 차지한 적. 세력마다 나오는 적 · 버릇 · 마스터가 다르다', 'The foe holding a hall. Each has its own enemies, habit and master'),
   T('habit', 'run', '버릇', 'Habit', null, null, '세력이 그 관의 대국 셋에 모두 거는 약한 규칙', 'A light rule a faction puts on all three matches of its hall'),
