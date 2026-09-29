@@ -44,7 +44,7 @@ master('silence', '침묵', '맨 위 격언 둘이 잠든다', {
 master('grudge', '앙갚음', '끊긴 사슬은 점수가 4분의 1', {
   onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.chain.scoreMul *= 0.25; },
 });
-master('grandmaster', '대가', '킹이 둘 · 둘 다 먹어야 외통', {
+master('grandmaster', '대가', '킹이 둘 · 둘 다 먹어야 체크메이트', {
   onBattleStart(ctx) { ctx.rules.kings = 2; },
 });
 

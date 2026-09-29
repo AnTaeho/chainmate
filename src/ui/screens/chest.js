@@ -52,7 +52,7 @@ export class ChestScreen {
   draw(ctx, ui) {
     const c = this.chest;
     const x0 = 90, y = 56, cw = 56, ch = 64, gap = 4;
-    text(ctx, '명인의 상자', W / 2, 22, PAL.gold, { align: 'center', bold: true, scale: 2 });
+    text(ctx, '마스터의 상자', W / 2, 22, PAL.gold, { align: 'center', bold: true, scale: 2 });
     box(ctx, x0 - 8, y - 8, 5 * cw + 4 * gap + 16, ch + 16, PAL.frame, PAL.frameDk);
     c.cells.forEach((cell, i) => {
       const x = x0 + i * (cw + gap);

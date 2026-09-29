@@ -149,7 +149,7 @@ export function runSide(ctx, ui, app, title) {
   }
   if (js.length) {
     f.gap(GAP_GROUP);
-    text(ctx, '정석', L + P, f.line(), PAL.dim);
+    text(ctx, '레퍼토리', L + P, f.line(), PAL.dim);
     f.gap(GAP_IN);
     js.forEach((id) => {
       const j = JOSEKI_BY_ID[id];

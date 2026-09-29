@@ -17,7 +17,7 @@ import { pageHead, pageButtons } from './common.js';
 import { PAGE, PAD_CARD, LIST_GAP, GAP_GROUP, textY, rowBoxH, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
-const TABS = [['maxims', '격언'], ['pieces', '기물'], ['factions', '세력'], ['legends', '명국'], ['openings', '오프닝'], ['editions', '판본']];
+const TABS = [['maxims', '격언'], ['pieces', '기물'], ['factions', '세력'], ['legends', '명경기'], ['openings', '오프닝'], ['editions', '판본']];
 
 export class CodexScreen {
   constructor(app) { this.app = app; this.tab = 'maxims'; this.page = 0; }
@@ -29,7 +29,7 @@ export class CodexScreen {
     // 세력: 만난 세력만(세력 전 기록은 만난 명인의 세력으로 친다). 말풍선에 버릇과 우두머리
     if (this.tab === 'factions') {
       const met = (f) => !!((c.factions || {})[f.id] || (c.masters || {})[f.boss]);
-      return FACTIONS.map((f) => ({ id: f.id, seen: met(f), name: f.name, crest: f.id, tip: () => tipLines(f.name, [f.habit.text, `명인 ${bossOf(f.id).name}`, bossOf(f.id).text]), col: f.hue }));
+      return FACTIONS.map((f) => ({ id: f.id, seen: met(f), name: f.name, crest: f.id, tip: () => tipLines(f.name, [f.habit.text, `마스터 ${bossOf(f.id).name}`, bossOf(f.id).text]), col: f.hue }));
     }
     if (this.tab === 'legends') return LEGENDS.map((l) => ({ id: l.id, seen: (c.legends[l.id] || 0) > 0 || !!c.legendsDone[l.id], name: l.name, parts: c.legends[l.id] || 0, done: !!c.legendsDone[l.id], tip: () => tipLines(l.name, [`전설: ${l.text}`, ...fragmentSteps(l, c.legendsDone[l.id] ? { first: true, feat: true, gold: true } : null)]), col: PAL.gold }));
     if (this.tab === 'openings') return OPENING_ORDER.map((id) => { const o = OPENINGS[id]; const u = UNLOCKS.find((x) => x.id === id); const open = this.app.records.unlocked.openings.includes(id); return { id, seen: open, name: o.name, tip: () => (open ? tipLines(o.name, o.text) : tipLines('잠김', u.text)), col: PAL.gold }; });

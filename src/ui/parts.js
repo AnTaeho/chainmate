@@ -414,7 +414,7 @@ export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}
 }
 
 // ── 상점 · 꾸러미 물건 카드
-export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명국 조각', soul: '혼', evolve: '진화', tactic: '묘수', gamble: '도박' };
+export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명경기 조각', soul: '혼', evolve: '진화', tactic: '전술', gamble: '도박' };
 
 export function itemName(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).name;
@@ -440,7 +440,7 @@ export function itemTip(it) {
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 깃든다']); }
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
   if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
-  if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`묘수 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
+  if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`전술 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(l.name, ['조각 셋이면 전설', ...fragmentSteps(l, {}), `전설: ${l.text}`]); }
   return null;
 }
@@ -733,7 +733,7 @@ export function miniShard(ctx, x, y, col = PAL.gold) {
 // f = 이 판의 조각({ first, feat, gold }). null이면 판 밖(도감): 얻은 것 · 다음 것을 가르지 않는다.
 // 재현 조건은 첫 조각을 가진 뒤에만 드러난다(HOOKS 「불멸의 기보」) — 첫 조각이 없으면 「명국 재현」(낱말 상자가 풀어 준다)
 export function fragmentSteps(l, f) {
-  const feat = !f || f.first ? l.feat : '명국 재현';
+  const feat = !f || f.first ? l.feat : '명경기 재현';
   const steps = [['first', `첫째: ${FRAG_SOURCE[l.source]}`], ['feat', `둘째: ${feat}`], ['gold', '셋째: 금빛 적을 먹고 이긴다']];
   const next = f ? steps.findIndex(([k]) => !f[k]) : -1;
   return steps.map(([k, s], i) => ({ step: !f ? 'step' : f[k] ? 'done' : i === next ? 'next' : 'todo', s }));

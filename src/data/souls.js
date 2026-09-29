@@ -76,7 +76,7 @@ soul('martyr', '순교자', '#df5a45', ['sacrifice'], MARTYR_TEXT, {
   more: MARTYR_MORE,
   onCut(ctx) { martyrBurst(ctx); },
 });
-soul('crown', '선봉', '#efbd55', ['crown', 'march'], '폰 모습이면 여섯째 줄에서 아마존으로 승급', {
+soul('crown', '선봉', '#efbd55', ['crown', 'march'], '폰 모습이면 여섯째 줄에서 아마존으로 프로모션', {
   onDrop(ctx) { ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, 5); ctx.flags.promoteTo = 'Z'; },
 });
 soul('shade', '잠행', '#8a5cc8', ['sacrifice', 'leap'], '지키는 적을 무시한다 · 배수 −1', {

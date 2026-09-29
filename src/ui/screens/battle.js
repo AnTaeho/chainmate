@@ -198,8 +198,8 @@ export class BattleScreen {
     const info = events.find((e) => e.type === 'battleStart');
     const b = this.bRef;
     const m = b.mods.find((s) => MASTER_BY_ID[s.id]);
-    if (m) { this.banner = { title: `명인 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: 2.6, col: PAL.red, master: m.id }; this.snd('start'); }
-    else if (info && this.run) { const fa = factionOfBattle(b); this.banner = { title: `${this.run.ante}관 · ${KIND_SHORT[b.kind]} 대국`, sub: `${fa ? `${fa.name} · ` : ''}목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold }; }
+    if (m) { this.banner = { title: `마스터 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: 2.6, col: PAL.red, master: m.id }; this.snd('start'); }
+    else if (info && this.run) { const fa = factionOfBattle(b); this.banner = { title: `${this.run.ante}관 · ${KIND_NAME[b.kind]}`, sub: `${fa ? `${fa.name} · ` : ''}목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold }; }
     // 이번 판에서 처음 나온 것(이형 적 · 적 특성 · 판 위 사물 · 금빛 적): 띠 아래에 작은 그림 한 줄
     if (this.banner && info && this.run) {
       const news = this.newThings(b);
@@ -499,7 +499,7 @@ export class BattleScreen {
         case 'promote': add(0.3, {
           begin: () => { v.lift = { sq: e.sq, p: 0 }; this.snd('promote'); },
           tick: (p) => { const to = e.to || 'Q'; v.lift.p = p; if (p >= 0.5 && v.chain) { v.chain.form = to; v.chain.steps[v.chain.steps.length - 1] = to; if (v.board[e.sq]) v.board[e.sq].t = to; } },
-          done: () => { v.lift = null; this.sparkle(e.sq, PAL.gold, 12); this.word('승급', PAL.gold); },
+          done: () => { v.lift = null; this.sparkle(e.sq, PAL.gold, 12); this.word('프로모션', PAL.gold); },
         }); break;
         case 'grade': add(0.2, { begin: () => this.gradeStamp(e) }); break;
         case 'forced': add(0.1, { begin: () => { if (v.chain) v.chain.forced = e.attackers.slice(); this.snd('forced'); } }); break;
@@ -525,7 +525,7 @@ export class BattleScreen {
           add(0.3, { tick: (p) => { v.cut.p = p; } });
           break;
         case 'mate': add(0.5, {
-          begin: () => { this.topple(e.sq); this.word('외통', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
+          begin: () => { this.topple(e.sq); this.word('체크메이트', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
         }); break;
         case 'refill': add(0.35, {
           begin: () => { this.word('적이 다시 찬다', PAL.gold, 1.1, 1); this.snd('refill'); },
@@ -1247,7 +1247,7 @@ export class BattleScreen {
     const y2 = TOP + h1 + LIST_GAP * 2, h2 = P * 2 + LINE;
     openBox('panel', RX, y2, RW, h2, P, { overlay: true, name: '그다음' });
     panel(ctx, RX, y2, RW, h2);
-    const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['외통', PAL.gold] : pv.redrop ? ['다시 떨군다', PAL.gold]
+    const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['체크메이트', PAL.gold] : pv.redrop ? ['다시 떨군다', PAL.gold]
       : pv.done ? ['사슬이 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red] : [`다음에 먹을 적 ${pv.next.length}`, PAL.gold];
     fitText(ctx, msg, RX + P, y2 + textY(P), RW - P * 2, col);
     closeBox();
@@ -1261,7 +1261,7 @@ export class BattleScreen {
     // (머리 칸은 한 줄: 두 줄이면 사슬 칸이 모자란다. 대국 종류는 관 줄의 「이기면 $3 · $4」와 목표가 말한다)
     const fa = factionOfBattle(b);
     const room = LW - PAD_BOX * 2;
-    let title = master ? `명인 ${MASTER_BY_ID[master.id].name}` : KIND_NAME[b.kind];
+    let title = master ? `마스터 ${MASTER_BY_ID[master.id].name}` : KIND_NAME[b.kind];
     if (fa && !master) {
       const cands = [`${fa.name} · ${KIND_NAME[b.kind]}`, `${fa.name} · ${KIND_SHORT[b.kind]}`];
       title = cands.find((c) => measure(c, true) <= room) || cands.find((c) => measure(c) <= room) || fa.name;
@@ -1300,7 +1300,7 @@ export class BattleScreen {
     if (spec.rightInline) text(ctx, spec.right, LX + LW - P, hy + hl.kicker, PAL.goldDk, { align: 'right' });
     spec.titles.forEach((l, k) => fitText(ctx, l, LX + P, hy + hl.titles[k], LW - P * 2, spec.titleCol));
     // 제목 줄을 가리키면: 명인 대국은 명인 규칙, 연습 · 정식은 세력의 버릇
-    if (spec.master) { const m = spec.master; ui.region('master', LX + 2, hy + hl.titles[0], LW - 4, 16, { tip: () => tipLines(`명인 ${m.name}`, m.text) }); }
+    if (spec.master) { const m = spec.master; ui.region('master', LX + 2, hy + hl.titles[0], LW - 4, 16, { tip: () => tipLines(`마스터 ${m.name}`, m.text) }); }
     else if (spec.faction) { const fa = spec.faction; ui.region('faction', LX + 2, hy + hl.titles[0], LW - 4, 16, { tip: () => tipLines(fa.name, fa.habit.text) }); }
     // 수치가 이름표 옆에 안 들어가면(끝없는 대국의 큰 수) 짧은 꼴(1.2G)로
     const fitRow = (label, n) => (typeof n === 'number' ? fitNum(n, LW - P * 2 - measure(label) - 4) : n);

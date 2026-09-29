@@ -16,8 +16,8 @@ export class RecordsScreen {
     const d = r.daily && r.daily.date === today() ? r.daily : null;
     const rows = [
       ['판', `${r.runs}`], ['이긴 판', `${r.wins}`], ['최고 관', r.bestAnte ? `${r.bestAnte}관` : '-'],
-      ['외통', `${r.mates}`], ['전설 완성', `${r.legends}`], ['신의 한 수(!!!)', `${(r.grades['!!!'] || 0) + (r.grades['∞'] || 0)}`],
-      ['열린 단', danName(r.unlocked.dan)],
+      ['체크메이트', `${r.mates}`], ['전설 완성', `${r.legends}`], ['신의 한 수(!!!)', `${(r.grades['!!!'] || 0) + (r.grades['∞'] || 0)}`],
+      ['열린 레이팅', danName(r.unlocked.dan)],
       ['끝없는 대국', r.bestEndless ? `${r.bestEndless}관` : '-'],
       ['오늘의 대국', d ? `${d.won ? '이김' : `${d.ante}관`} · ${d.runs}판` : '아직'],
       ['첫 수업', r.lessonsDone ? '끝' : '아직'],

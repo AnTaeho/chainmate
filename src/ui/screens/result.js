@@ -8,6 +8,7 @@ import { button } from '../ui.js';
 import { KIND_NAME } from '../words.js';
 import { shardIcon } from '../parts.js';
 import { nextUnlock } from '../records.js';
+import { rating } from './setup.js';
 import { lerp } from '../anim.js';
 import { PAD_BOX, LINE, GAP_GROUP, GAP_IN, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -96,7 +97,7 @@ export class ResultScreen {
     if (this.out.fresh) notes.push([`도감 ${this.out.fresh}칸을 새로 채웠다`, PAL.ink]);
     if (this.out.deeper) notes.push([`끝없는 대국 가장 깊은 곳 ${this.out.endless}관`, PAL.gold]);
     for (const id of this.out.unlocked) notes.push([`오프닝 「${OPENINGS[id].name}」이 열렸다`, PAL.gold]);
-    if (this.out.dan) notes.push([`${this.out.dan}단이 열렸다`, PAL.gold]);
+    if (this.out.dan) notes.push([`레이팅 ${rating(this.out.dan)}이 열렸다`, PAL.gold]);
     if (!this.out.unlocked.length && this.next) notes.push([`다음 해금 ${OPENINGS[this.next.id].name}: ${this.next.text} ${this.next.have}/${this.next.need}`, PAL.dim]);
     if (run.daily) notes.push([`오늘의 대국 ${run.daily}`, PAL.goldDk]);
     const shown = notes.slice(-3);

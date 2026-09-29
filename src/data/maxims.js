@@ -74,12 +74,12 @@ maxim('vault', '금고', '먹은 적 하나에 상금 +1 · 대국마다 5까지
 });
 
 // ── 승급
-maxim('back_rank_dream', '끝줄의 꿈', '승급한 사슬은 한 번 끊겨도 이어진다', '승급', 'uncommon', 6, {
+maxim('back_rank_dream', '끝줄의 꿈', '프로모션한 사슬은 한 번 끊겨도 이어진다', '프로모션', 'uncommon', 6, {
   onCut(ctx) {
     if (ctx.chain.promotions > 0 && !ctx.flags.backRankDream) { ctx.flags.backRankDream = true; ctx.cancelCut(); }
   },
 });
-maxim('promotion_feast', '승급 잔치', '승급할 때마다 배수 ×2', '승급', 'uncommon', 5, {
+maxim('promotion_feast', '퀸의 잔치', '프로모션할 때마다 배수 ×2', '프로모션', 'uncommon', 5, {
   onPromote(ctx) { ctx.mulMult(2); },
 });
 
@@ -96,11 +96,11 @@ maxim('close_call', '아슬아슬', '끊기지 않은 사슬: 값 +30', '끊김'
 
 // ── 외통
 // 밤샘 D-2: 외통 사냥꾼 · 왕의 목 · 다시 생각 · 그림자 읽기는 판 시작에 쥐여 줘도 통과한 관이 +0.25(보통 격언 +1.1)라 효과를 올렸다.
-maxim('mate_hunter', '외통 사냥꾼', '킹을 지키는 적이 하나 적다 · 외통 승리: 상금 +6', '외통', 'common', 4, {
+maxim('mate_hunter', '메이트 사냥꾼', '킹을 지키는 적이 하나 적다 · 메이트: 상금 +6', '체크메이트', 'common', 4, {
   onBattleStart(ctx) { ctx.rules.guards = Math.max(1, (ctx.rules.guards ?? kingGuards(ctx.t.ante ?? 1)) - 1); },
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.addMoney(6); },
 });
-maxim('kings_neck', '왕의 목', '킹을 지키는 적을 먹으면 배수 +2 · 외통: 배수 ×3', '외통', 'uncommon', 6, {
+maxim('kings_neck', '왕의 목', '킹을 지키는 적을 먹으면 배수 +2 · 체크메이트: 배수 ×3', '체크메이트', 'uncommon', 6, {
   more: '지켜지지 않은 킹은 빛난다',
   onCapture(ctx) {
     const { piece, to } = ctx.event;
@@ -119,7 +119,7 @@ maxim('kings_neck', '왕의 목', '킹을 지키는 적을 먹으면 배수 +2 �
   },
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.mulMult(3); },
 });
-maxim('memory', '대국의 기억', '외통 승리마다 커진다: 배수 ×1.5 · ×2 · ×2.5 …', '외통', 'rare', 8, {
+maxim('memory', '대국의 기억', '체크메이트 승리마다 커진다: 배수 ×1.5 · ×2 · ×2.5 …', '체크메이트', 'rare', 8, {
   onChainEnd(ctx) { const m = num(ctx.data.mates); if (m > 0) ctx.mulMult(1 + 0.5 * m); },
   onRunEvent(spec, ev) {
     if (ev.type === 'battleWon' && ev.reason === 'mate') spec.data = { ...spec.data, mates: num(spec.data && spec.data.mates) + 1 };
@@ -203,7 +203,7 @@ maxim('collector_forms', '모습 모으기', '새 모습이 될 때마다 값 +2
 maxim('reply_master', '되받아치기', '지키는 적을 먹을 때마다 배수 +2', '지키는 적', 'uncommon', 5, {
   onCapture(ctx) { if (ctx.event.forced) ctx.addMult(2); },
 });
-maxim('promotion_road', '승급의 길', '승급할 때마다 값 +80', '승급', 'common', 4, {
+maxim('promotion_road', '퀸으로 가는 길', '프로모션할 때마다 값 +80', '프로모션', 'common', 4, {
   onPromote(ctx) { ctx.addValue(80); },
 });
 maxim('reinforce_hunt', '증원 사냥', '증원을 먹을 때마다 배수 +2', '증원', 'common', 3, {
@@ -211,7 +211,7 @@ maxim('reinforce_hunt', '증원 사냥', '증원을 먹을 때마다 배수 +2',
 });
 
 // ── 깊이 G: 증강체스의 나머지 카드에서(뿌리의 동사를 비튼 셋)
-maxim('promotion_rush', '특진', '폰 모습으로 둘을 먹은 뒤: 어느 줄에서든 승급', '승급', 'uncommon', 5, {
+maxim('promotion_rush', '패스트 폰', '폰 모습으로 둘을 먹은 뒤: 어느 줄에서든 프로모션', '프로모션', 'uncommon', 5, {
   onCapture(ctx) {
     if (ctx.event.form !== 'P') return;
     ctx.flags.pawnTakes = (ctx.flags.pawnTakes || 0) + 1;
@@ -326,7 +326,7 @@ maxim('pilgrimage', '순례', '판의 네 구역을 모두 밟은 사슬: 배수
     if (q.size === 4) ctx.mulMult(4);
   },
 });
-maxim('kings_step', '왕의 발자국', '킹 옆 칸에서 먹을 때마다 배수 +3', '외통', 'uncommon', 5, {
+maxim('kings_step', '왕의 발자국', '킹 옆 칸에서 먹을 때마다 배수 +3', '체크메이트', 'uncommon', 5, {
   onCapture(ctx) { const b = ctx.t.board; if (ctx.event.piece !== 'K' && around(ctx.event.to).some((s) => b[s] && !b[s].mine && b[s].t === 'K')) ctx.addMult(3); },
 });
 maxim('ambusher', '매복병', '증원 자리에 떨구면 값 +40', '증원', 'common', 3, {

@@ -61,7 +61,7 @@ export function antePath(ctx, ui, run, cx, y, time) {
     } else box(ctx, x, py, pw, pw, PAL.feltDk, PAL.dimDk);
   }
   const fm = MASTER_BY_ID[FINAL_MASTER];
-  ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${FACTION_BY_ID[factionFor(run, ANTES)].name}`, josa(`명인 ${fm.name}`, '을/를') + ' 꺾으면 판을 이긴다') });
+  ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${FACTION_BY_ID[factionFor(run, ANTES)].name}`, josa(`마스터 ${fm.name}`, '을/를') + ' 꺾으면 판을 이긴다') });
 }
 
 export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` : tag.kind === 'chart' ? `${CHARTS[tag.form].name} 한 장` : '');
@@ -95,7 +95,7 @@ export function blindLayout(run, i, w = SEL.w) {
     out.m = m;
     // 초상 옆 이름: 굵게 두 줄까지, 넘치거나 낱말 하나가 굵게 안 들어가면 보통 굵기.
     // 보통 굵기로도 낱말이 초상 옆에 안 들어가면(영어 「Grandmaster」 · 「Castellan」) 초상 아래 온 폭에 쓴다(낱말 가운데서 끊지 않게)
-    const full = `명인 ${m.name}`, nameW = IW - PORTRAIT - 6, words = L(full).split(' '); // 낱말은 옮긴 글에서 센다
+    const full = `마스터 ${m.name}`, nameW = IW - PORTRAIT - 6, words = L(full).split(' '); // 낱말은 옮긴 글에서 센다
     const fits = (w, bold) => words.every((x) => measure(x, bold) <= w);
     out.nameX = PORTRAIT + 6;
     let names = wrap(full, nameW, true);
@@ -168,7 +168,7 @@ export class SelectScreen {
       drawCrest(ctx, fid, bx + PAD_CARD, by + Math.floor((bd.h - CREST_SIZE * 2) / 2), { scale: 2 });
       text(ctx, fa.name, bx + bd.tx, by + bd.name, lightHue(fa.hue), { bold: true });
       bd.lines.forEach(([l, ly]) => text(ctx, l, bx + bd.tx, by + ly, PAL.ink));
-      ui.region('faction', bx, by, bd.w, bd.h, { tip: () => tipLines(fa.name, [fa.habit.text, `명인 ${bossOf(fid).name}`, bossOf(fid).text]) });
+      ui.region('faction', bx, by, bd.w, bd.h, { tip: () => tipLines(fa.name, [fa.habit.text, `마스터 ${bossOf(fid).name}`, bossOf(fid).text]) });
       closeBox();
       // 새 세력을 처음 만나는 관 선택: 버릇 한 줄(처음 안내)
       hint(app, `faction_${fid}`, 'faction');

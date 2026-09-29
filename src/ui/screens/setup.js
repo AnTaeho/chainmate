@@ -1,4 +1,4 @@
-// 판 준비: 오프닝(해금된 것) · 단(이긴 단 + 1까지). 잠긴 오프닝은 「?」와 해금 과제.
+// 판 준비: 오프닝(해금된 것) · 레이팅(내부 값은 단 0~8 — 이긴 단 + 1까지, 화면은 800 + 200 × 단). 잠긴 오프닝은 「?」와 해금 과제.
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, sprite, measure } from '../../render/gfx.js';
 import { OPENINGS } from '../../data/openings.js';
@@ -10,7 +10,9 @@ import { pageHead } from './common.js';
 import { PAGE, LINE, PAD_CARD, GAP_IN, GAP_GROUP, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
-export const danName = (d) => (d ? `${d}단` : '없음');
+// 단 → 레이팅(표시만). 저장 · 규칙은 단 0~8 그대로
+export const rating = (d) => 800 + 200 * (d || 0);
+export const danName = (d) => `${rating(d)}`;
 
 export class SetupScreen {
   constructor(app) {
@@ -81,11 +83,11 @@ export class SetupScreen {
       for (const [l, ly] of lay.extras) text(ctx, l, x + w / 2, y + ly, PAL.gold, { align: 'center' });
       closeBox();
     });
-    // 단: 이름표와 단추 줄 한 줄 → 묶음 틈 → 더하는 규칙
+    // 레이팅(단): 이름표와 단추 줄 한 줄 → 묶음 틈 → 더하는 규칙
     f.gap(GAP_GROUP);
     const dy = f.space(18);
-    text(ctx, '단', 12, textY(dy, 18), PAL.dim);
-    const dx = 12 + measure('단') + 8, dw = Math.floor((W - 12 - dx - 8 * 4) / 9);
+    text(ctx, '레이팅', 12, textY(dy, 18), PAL.dim);
+    const dx = 12 + measure('레이팅') + 8, dw = Math.floor((W - 12 - dx - 8 * 4) / 9);
     for (let d = 0; d <= 8; d++) {
       const open = d <= rec.unlocked.dan;
       button(ctx, ui, `setup:dan:${d}`, dx + d * (dw + 4), dy, dw, 18, open ? danName(d) : '?', { enabled: open, tone: this.dan === d ? 'gold' : 'plain', onClick: () => { this.dan = d; this.app.sfx('pick'); } });

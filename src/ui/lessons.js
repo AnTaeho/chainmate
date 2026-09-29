@@ -73,12 +73,12 @@ export const LESSONS = [
       { drop: 'a5' },
       { cap: 'c6' },
     ] },
-  { id: 'mate', group: 'battle', title: '외통', target: 99999, hand: ['N'], board: { e7: 'K', a7: 'R', h1: 'P' }, preview: true,
+  { id: 'mate', group: 'battle', title: '체크메이트', target: 99999, hand: ['N'], board: { e7: 'K', a7: 'R', h1: 'P' }, preview: true,
     steps: [
       { pick: 0, say: '킹은 지키는 적이 있으면 못 먹는다. 지금은 룩이 지킨다' },
       { drop: 'b5', say: '지키는 룩을 먹을 수 있는 칸에 떨군다' },
       { cap: 'a7', say: '지키던 룩을 먹으면 내가 룩이 된다' },
-      { cap: 'e7', say: '지키는 적이 없는 킹을 먹으면 외통. 점수와 상관없이 이긴다' },
+      { cap: 'e7', say: '지키는 적이 없는 킹을 먹으면 체크메이트. 점수와 상관없이 이긴다' },
     ] },
   // ── 판
   { id: 'fairy', group: 'run', title: '체스 밖의 행마', target: 80, hand: ['O'], board: { d4: 'P', d7: 'R', h7: 'B' }, preview: true,

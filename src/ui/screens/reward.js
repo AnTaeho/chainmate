@@ -15,7 +15,7 @@ export class RewardScreen {
     this.lines = [['대국 기본', r.base]];
     if (r.moves) this.lines.push([`남은 수 ${r.moves}`, r.moves]);
     if (r.interest) this.lines.push(['적립', r.interest]);
-    if (r.mate) this.lines.push(['외통', r.mate]);
+    if (r.mate) this.lines.push(['체크메이트', r.mate]);
     if (r.overflow) this.lines.push([`넘친 목표 ×${last.overflow}`, r.overflow]);
     if (r.earned) this.lines.push(['대국 중 번 상금', r.earned]);
     this.total = r.total;
@@ -59,7 +59,7 @@ export class RewardScreen {
     const w = Math.max(240, measure(scoreLine) + PAD_BOX * 2 + 8), h = lay.h, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2), P = PAD_BOX;
     openBox('panel', x, y, w, h, P, { name: '보상' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
-    text(ctx, last.reason === 'mate' ? '외통 승리' : '대국 승리', W / 2, y + lay.title, PAL.gold, { align: 'center', bold: true, scale: 2 });
+    text(ctx, last.reason === 'mate' ? '체크메이트 승리' : '대국 승리', W / 2, y + lay.title, PAL.gold, { align: 'center', bold: true, scale: 2 });
     // 넘친 목표는 제목 옆 도장으로
     if (last.overflow >= 2) {
       const col = last.overflow >= 5 ? PAL.red : PAL.gold, s = `목표 ×${last.overflow}`;

@@ -56,7 +56,7 @@ export class DraftScreen {
   draw(ctx, ui) {
     const run = this.run;
     const d = run.draft || (this.chosen ? { ante: run.ante, options: [] } : null);
-    runSide(ctx, ui, this.app, '정석');
+    runSide(ctx, ui, this.app, '레퍼토리');
     pauseButton(ctx, ui, this.app);
     if (!d) return;
     const opts = this.chosen ? this.chosenOpts || [] : d.options;
@@ -83,7 +83,7 @@ export class DraftScreen {
       cardBase(ctx, xx, y, nw, CH, { hover: hov, edge: col, double: j.tier !== 'silver', ticks: true, line: picked ? PAL.white : PAL.frameDk });
       if (nw < CW - 4) { ctx.globalAlpha = 1; return; }
       const lay = josekiLayout(j), P = PAD_CARD;
-      openBox('card', x, y, CW, CH, P, { name: `정석 ${id}` });
+      openBox('card', x, y, CW, CH, P, { name: `레퍼토리 ${id}` });
       text(ctx, TIER_NAME[j.tier], x + P, y + lay.tier, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
       for (const [l, ly] of lay.names) text(ctx, l, x + P, y + ly, PAL.cardInk, { bold: true });
       rect(ctx, x + P, y + lay.rule, lay.IW, 1, col);

@@ -27,8 +27,8 @@ legend('immortal', {
 export const OPERA_REFILLS = 3;
 legend('opera', {
   name: '오페라 대국', year: 1858, story: '모피가 오페라 관람석에서 17수 만에 이겼다',
-  text: '지켜진 킹도 먹는다 · 외통하면 적이 다시 차고 사슬이 이어진다', verb: '외통',
-  feat: '대국 첫 수에 외통', source: 'display',
+  text: '지켜진 킹도 먹는다 · 체크메이트하면 적이 다시 차고 사슬이 이어진다', verb: '체크메이트',
+  feat: '대국 첫 수에 체크메이트', source: 'display',
   check: (h) => h.move === 0 && h.mates > 0,
 }, {
   // 킹 수비(셋 · 넷)를 그대로 두면 외통이 대국당 3~5%라 이 전설이 거의 듣지 않았다(첫 손 최선 수 평균 ×1.0).
@@ -58,9 +58,9 @@ legend('evergreen', {
 });
 
 legend('eight_pawns', {
-  name: '폰 여덟의 행진', year: null, story: '여덟 폰이 모두 승급한 전설',
-  text: '폰으로 시작: 여섯째 줄에서 승급 · 승급마다 배수 ×3', verb: '승급',
-  feat: '한 사슬에서 두 번 승급한다', source: 'piece',
+  name: '폰 여덟의 행진', year: null, story: '여덟 폰이 모두 프로모션한 전설',
+  text: '폰으로 시작: 여섯째 줄에서 프로모션 · 프로모션마다 배수 ×3', verb: '프로모션',
+  feat: '한 사슬에서 두 번 프로모션한다', source: 'piece',
   check: (h) => h.promotions >= 2,
 }, {
   onDrop(ctx) { if (ctx.chain.dropType === 'P') ctx.flags.promoteFrom = 5; },

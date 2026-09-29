@@ -179,7 +179,7 @@ export class PackScreen {
       flipCard(o, i, x, y, w, h, (scaleX, hover) => {
         if (scaleX < 0.98) { const nw = Math.max(2, Math.round(w * scaleX)); cardBase(ctx, x + Math.floor((w - nw) / 2), y, nw, h, { fill: '#f3e2b0' }); return; }
         const s = shardCellLayout(w);
-        openBox('card', x, y, w, h, PAD_CARD, { name: '명국 조각 칸' });
+        openBox('card', x, y, w, h, PAD_CARD, { name: '명경기 조각 칸' });
         cardBase(ctx, x, y, w, h, { fill: '#f3e2b0', hover });
         shardIcon(ctx, x + PAD_CARD + 3, y + Math.floor((h - 14) / 2));
         fitText(ctx, itemName(o), x + s.tx, y + s.name, s.tw, PAL.cardInk);

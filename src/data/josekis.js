@@ -95,7 +95,7 @@ joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬: 배수 ×3 �
 joseki('highlander', '하이랜더', 'rainbow', ['hunt'], '주머니 기물이 모두 다른 종류: 목표 절반', {
   targetMult(run) { const seen = new Set(); for (const p of run.deck) { if (seen.has(p.t)) return 1; seen.add(p.t); } return 0.5; },
 });
-joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 시작해 승급하면: 주머니의 그 폰이 퀸이 된다', {
+joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 시작해 프로모션하면: 주머니의 그 폰이 퀸이 된다', {
   onPromote(ctx) { if (ctx.chain.dropType === 'P') ctx.chain.throne = true; },
 });
 joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 사슬이 한 줄에 다섯 칸을 밟으면 곧바로 이긴다', {

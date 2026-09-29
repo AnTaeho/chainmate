@@ -229,7 +229,7 @@ export class LessonScreen extends BattleScreen {
       titles: wrap(this.L.title, LW - PAD_BOX * 2, true),
       titleCol: PAL.gold,
       master: null,
-      target: this.L.target < 99999 ? `${this.L.target}` : '외통',
+      target: this.L.target < 99999 ? `${this.L.target}` : '체크메이트',
     };
   }
   // 흐린 도트 손가락(1배에서도 보이게 테두리 · 흰 몸)
