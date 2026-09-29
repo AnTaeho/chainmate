@@ -36,8 +36,10 @@ const CARD_W = CARD.w, BAR_Y = 2, BAR_H = BTN_S, BOTTOM = 270 - 2, BAG_MIN = 28;
 export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selectedId = null, idPrefix = 'deck', flash = null, grow = null, can = null, bottom = 268 } = {}) {
   const n = run.deck.length;
   const cw = 20, ch = 28;
-  const per = Math.max(1, Math.floor((w + 3) / (cw + 3)));
-  const rows = Math.ceil(n / per);
+  let per = Math.max(1, Math.floor((w + 3) / (cw + 3)));
+  let rows = Math.ceil(n / per), hstep = cw + 3;
+  // 줄을 쌓을 높이가 없으면(긴 진열 카드 아래 큰 주머니 — 용병단 땅의 배신자로 주머니가 열넷까지 는다) 한 줄에 옆으로 겹쳐 놓는다
+  if (rows > 1 && bottom - y < ch + (rows - 1) * 8) { per = n; rows = 1; hstep = Math.max(4, Math.floor((w - cw) / Math.max(1, n - 1))); }
   const step = rows > 1 ? Math.max(4, Math.min(ch + 3, Math.floor((bottom - y - ch) / (rows - 1)))) : ch + 3;
   // 줄 간격이 가장 좁아도 넘치면(주머니가 커진 긴 판 — 시계로 판이 길어졌다) 줄을 위로 올린다
   if (rows > 1 && y + (rows - 1) * step + ch > bottom) y = bottom - ch - (rows - 1) * step;
@@ -46,7 +48,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
   closeBox();
   run.deck.forEach((p, i) => {
     const col = i % per, row = Math.floor(i / per);
-    const px = x + col * (cw + 3), py = y + row * step;
+    const px = x + col * hstep, py = y + row * step;
     const id = `${idPrefix}:${p.id}`;
     const ok = !can || can(p);
     ui.region(id, px, py, cw, ch, { onClick: pick && ok ? () => pick(p) : null, tip: () => pieceTip(p) });
