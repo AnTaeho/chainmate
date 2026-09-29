@@ -1,0 +1,813 @@
+{
+ "tool": "tools/run.mjs",
+ "policy": "smart",
+ "seed": 1,
+ "dan": 0,
+ "runs": 40,
+ "timeouts": 0,
+ "tune": null,
+ "B": [
+  150,
+  700,
+  5000,
+  14500,
+  62500,
+  275000,
+  535000,
+  1080000
+ ],
+ "runWin": 0.5,
+ "antes": [
+  {
+   "ante": 1,
+   "reached": 1,
+   "cleared": 1,
+   "pass": 1,
+   "practice": {
+    "n": 40,
+    "win": 1
+   },
+   "official": {
+    "n": 40,
+    "win": 1
+   },
+   "master": {
+    "n": 40,
+    "win": 1
+   },
+   "ratioHist": [
+    0,
+    0,
+    0,
+    7,
+    19,
+    25,
+    33,
+    21,
+    8,
+    4,
+    0
+   ]
+  },
+  {
+   "ante": 2,
+   "reached": 1,
+   "cleared": 1,
+   "pass": 1,
+   "practice": {
+    "n": 40,
+    "win": 1
+   },
+   "official": {
+    "n": 40,
+    "win": 1
+   },
+   "master": {
+    "n": 40,
+    "win": 0.975
+   },
+   "ratioHist": [
+    0,
+    1,
+    0,
+    21,
+    16,
+    21,
+    23,
+    19,
+    4,
+    1,
+    1
+   ]
+  },
+  {
+   "ante": 3,
+   "reached": 1,
+   "cleared": 1,
+   "pass": 1,
+   "practice": {
+    "n": 40,
+    "win": 1
+   },
+   "official": {
+    "n": 40,
+    "win": 0.975
+   },
+   "master": {
+    "n": 40,
+    "win": 0.925
+   },
+   "ratioHist": [
+    0,
+    2,
+    2,
+    33,
+    14,
+    13,
+    15,
+    17,
+    6,
+    0,
+    0
+   ]
+  },
+  {
+   "ante": 4,
+   "reached": 1,
+   "cleared": 1,
+   "pass": 1,
+   "practice": {
+    "n": 40,
+    "win": 1
+   },
+   "official": {
+    "n": 40,
+    "win": 0.95
+   },
+   "master": {
+    "n": 40,
+    "win": 0.975
+   },
+   "ratioHist": [
+    0,
+    2,
+    1,
+    24,
+    16,
+    14,
+    17,
+    13,
+    8,
+    7,
+    1
+   ]
+  },
+  {
+   "ante": 5,
+   "reached": 1,
+   "cleared": 0.925,
+   "pass": 0.925,
+   "practice": {
+    "n": 40,
+    "win": 0.95
+   },
+   "official": {
+    "n": 39,
+    "win": 0.923
+   },
+   "master": {
+    "n": 37,
+    "win": 0.919
+   },
+   "ratioHist": [
+    1,
+    6,
+    1,
+    20,
+    11,
+    17,
+    7,
+    15,
+    7,
+    5,
+    4
+   ]
+  },
+  {
+   "ante": 6,
+   "reached": 0.925,
+   "cleared": 0.8,
+   "pass": 0.865,
+   "practice": {
+    "n": 37,
+    "win": 0.865
+   },
+   "official": {
+    "n": 36,
+    "win": 0.833
+   },
+   "master": {
+    "n": 36,
+    "win": 0.75
+   },
+   "ratioHist": [
+    7,
+    5,
+    8,
+    18,
+    10,
+    5,
+    6,
+    5,
+    9,
+    5,
+    5
+   ]
+  },
+  {
+   "ante": 7,
+   "reached": 0.8,
+   "cleared": 0.75,
+   "pass": 0.938,
+   "practice": {
+    "n": 32,
+    "win": 0.969
+   },
+   "official": {
+    "n": 31,
+    "win": 0.935
+   },
+   "master": {
+    "n": 31,
+    "win": 0.806
+   },
+   "ratioHist": [
+    6,
+    1,
+    2,
+    8,
+    11,
+    12,
+    9,
+    6,
+    3,
+    3,
+    3
+   ]
+  },
+  {
+   "ante": 8,
+   "reached": 0.75,
+   "cleared": 0.5,
+   "pass": 0.667,
+   "practice": {
+    "n": 30,
+    "win": 0.933
+   },
+   "official": {
+    "n": 30,
+    "win": 0.833
+   },
+   "master": {
+    "n": 40,
+    "win": 0.5
+   },
+   "ratioHist": [
+    13,
+    8,
+    6,
+    12,
+    6,
+    5,
+    7,
+    4,
+    3,
+    4,
+    3
+   ]
+  }
+ ],
+ "ratioEdges": [
+  [
+   0,
+   0.5
+  ],
+  [
+   0.5,
+   0.75
+  ],
+  [
+   0.75,
+   1
+  ],
+  [
+   1,
+   1.5
+  ],
+  [
+   1.5,
+   2
+  ],
+  [
+   2,
+   3
+  ],
+  [
+   3,
+   5
+  ],
+  [
+   5,
+   10
+  ],
+  [
+   10,
+   20
+  ],
+  [
+   20,
+   50
+  ],
+  [
+   50,
+   null
+  ]
+ ],
+ "clock": {
+  "lostPerRun": 1.8,
+  "wonWithLoss": 0.35,
+  "reboardPerBattle": 0.14
+ },
+ "items": {
+  "maxim": {
+   "lucky_coin": {
+    "runs": 10,
+    "win": 0.3
+   },
+   "long_diagonal": {
+    "runs": 6,
+    "win": 0.167
+   },
+   "wall_breaker": {
+    "runs": 13,
+    "win": 0.538
+   },
+   "first_move": {
+    "runs": 19,
+    "win": 0.632
+   },
+   "long_road": {
+    "runs": 9,
+    "win": 0.667
+   },
+   "kings_step": {
+    "runs": 5,
+    "win": 0.6
+   },
+   "counter_book": {
+    "runs": 6,
+    "win": 0.667
+   },
+   "loner": {
+    "runs": 7,
+    "win": 0.429
+   },
+   "nobility": {
+    "runs": 10,
+    "win": 0.5
+   },
+   "last_move": {
+    "runs": 7,
+    "win": 0.857
+   },
+   "sacrifice": {
+    "runs": 6,
+    "win": 0.5
+   },
+   "vault": {
+    "runs": 13,
+    "win": 0.615
+   },
+   "welcome": {
+    "runs": 5,
+    "win": 0.6
+   },
+   "payback": {
+    "runs": 11,
+    "win": 0.364
+   },
+   "quick_change": {
+    "runs": 18,
+    "win": 0.556
+   },
+   "promotion_road": {
+    "runs": 6,
+    "win": 0.333
+   },
+   "collector_forms": {
+    "runs": 9,
+    "win": 0.444
+   },
+   "small_bag": {
+    "runs": 6,
+    "win": 0.833
+   },
+   "queen_hunt": {
+    "runs": 9,
+    "win": 0.667
+   },
+   "bare_board": {
+    "runs": 5,
+    "win": 0.8
+   },
+   "kings_neck": {
+    "runs": 8,
+    "win": 0.625
+   },
+   "combo": {
+    "runs": 2,
+    "win": 0
+   },
+   "gambler": {
+    "runs": 6,
+    "win": 0.5
+   },
+   "reply_master": {
+    "runs": 5,
+    "win": 0.4
+   },
+   "coronation": {
+    "runs": 13,
+    "win": 0.615
+   },
+   "mate_hunter": {
+    "runs": 9,
+    "win": 0.667
+   },
+   "diagonal": {
+    "runs": 6,
+    "win": 0.333
+   },
+   "memory": {
+    "runs": 1,
+    "win": 0
+   },
+   "promotion_rush": {
+    "runs": 3,
+    "win": 0.667
+   },
+   "pawn_march": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "encircle": {
+    "runs": 4,
+    "win": 0.5
+   },
+   "checkerboard": {
+    "runs": 11,
+    "win": 0.455
+   },
+   "back_rank_dream": {
+    "runs": 7,
+    "win": 0.714
+   },
+   "pilgrimage": {
+    "runs": 5,
+    "win": 0.8
+   },
+   "thrift": {
+    "runs": 11,
+    "win": 0.455
+   },
+   "close_call": {
+    "runs": 5,
+    "win": 1
+   },
+   "long_chain": {
+    "runs": 6,
+    "win": 0.5
+   },
+   "eldest": {
+    "runs": 7,
+    "win": 0.714
+   },
+   "center": {
+    "runs": 7,
+    "win": 0.714
+   },
+   "second_wind": {
+    "runs": 7,
+    "win": 0.571
+   },
+   "whim": {
+    "runs": 9,
+    "win": 0.667
+   },
+   "specialty": {
+    "runs": 6,
+    "win": 0.333
+   },
+   "second_thought": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "rook_lift": {
+    "runs": 4,
+    "win": 0.5
+   },
+   "promotion_feast": {
+    "runs": 3,
+    "win": 0.667
+   },
+   "full_board": {
+    "runs": 3,
+    "win": 0.667
+   },
+   "edge": {
+    "runs": 11,
+    "win": 0.636
+   },
+   "mad_horse": {
+    "runs": 4,
+    "win": 0.25
+   },
+   "low_stance": {
+    "runs": 3,
+    "win": 0
+   },
+   "light_step": {
+    "runs": 5,
+    "win": 0.4
+   },
+   "cavalry_charge": {
+    "runs": 10,
+    "win": 0.6
+   },
+   "no_regrets": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "reinforce_hunt": {
+    "runs": 3,
+    "win": 0.667
+   },
+   "collector": {
+    "runs": 4,
+    "win": 1
+   },
+   "blacksmith": {
+    "runs": 4,
+    "win": 0.75
+   },
+   "youngest": {
+    "runs": 3,
+    "win": 0.333
+   },
+   "last_square": {
+    "runs": 4,
+    "win": 1
+   },
+   "homecoming": {
+    "runs": 5,
+    "win": 0.4
+   },
+   "disguise": {
+    "runs": 1,
+    "win": 0
+   },
+   "farmer": {
+    "runs": 6,
+    "win": 0.5
+   },
+   "empty_bag": {
+    "runs": 7,
+    "win": 0.429
+   },
+   "ivory_tower": {
+    "runs": 1,
+    "win": 0
+   },
+   "steadfast": {
+    "runs": 2,
+    "win": 0.5
+   }
+  },
+  "joseki": {
+   "rampart": {
+    "runs": 3,
+    "win": 0.667
+   },
+   "gates": {
+    "runs": 9,
+    "win": 0.444
+   },
+   "captive": {
+    "runs": 4,
+    "win": 0
+   },
+   "archery": {
+    "runs": 11,
+    "win": 0.545
+   },
+   "knight_oath": {
+    "runs": 6,
+    "win": 0.5
+   },
+   "meadow": {
+    "runs": 3,
+    "win": 0.667
+   },
+   "battery": {
+    "runs": 5,
+    "win": 0.6
+   },
+   "pact": {
+    "runs": 25,
+    "win": 0.6
+   },
+   "torch": {
+    "runs": 7,
+    "win": 0.286
+   },
+   "martyr_vow": {
+    "runs": 8,
+    "win": 0.5
+   },
+   "highlander": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "long_think": {
+    "runs": 8,
+    "win": 0.375
+   },
+   "gloom": {
+    "runs": 1,
+    "win": 1
+   },
+   "desert": {
+    "runs": 7,
+    "win": 0.143
+   },
+   "mitre": {
+    "runs": 5,
+    "win": 0.8
+   },
+   "blitz": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "gomoku": {
+    "runs": 2,
+    "win": 0
+   },
+   "stepping": {
+    "runs": 4,
+    "win": 0.75
+   },
+   "throne": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "river": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "trap": {
+    "runs": 1,
+    "win": 1
+   },
+   "highway": {
+    "runs": 3,
+    "win": 0.667
+   }
+  },
+  "soul": {
+   "relay": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "hunger": {
+    "runs": 3,
+    "win": 0.333
+   },
+   "crown": {
+    "runs": 6,
+    "win": 0.5
+   },
+   "echo": {
+    "runs": 6,
+    "win": 0.833
+   },
+   "hunter": {
+    "runs": 8,
+    "win": 0.625
+   },
+   "martyr": {
+    "runs": 3,
+    "win": 0.333
+   },
+   "duel": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "spring": {
+    "runs": 3,
+    "win": 0.667
+   },
+   "shade": {
+    "runs": 6,
+    "win": 0.833
+   },
+   "reaper": {
+    "runs": 4,
+    "win": 0
+   },
+   "transcend": {
+    "runs": 7,
+    "win": 0.857
+   },
+   "homing": {
+    "runs": 1,
+    "win": 1
+   },
+   "retro": {
+    "runs": 2,
+    "win": 0.5
+   },
+   "absorb": {
+    "runs": 5,
+    "win": 0.4
+   },
+   "ripple": {
+    "runs": 1,
+    "win": 0
+   },
+   "inherit": {
+    "runs": 1,
+    "win": 1
+   }
+  },
+  "engraving": {
+   "marble": {
+    "runs": 5,
+    "win": 0.6
+   },
+   "ivory": {
+    "runs": 8,
+    "win": 0.625
+   },
+   "jade": {
+    "runs": 13,
+    "win": 0.538
+   },
+   "silver": {
+    "runs": 11,
+    "win": 0.273
+   },
+   "glass": {
+    "runs": 15,
+    "win": 0.733
+   },
+   "iron": {
+    "runs": 9,
+    "win": 0.778
+   },
+   "bronze": {
+    "runs": 6,
+    "win": 0.667
+   },
+   "feather": {
+    "runs": 7,
+    "win": 0.571
+   },
+   "ebony": {
+    "runs": 11,
+    "win": 0.545
+   },
+   "amber": {
+    "runs": 10,
+    "win": 0.5
+   },
+   "coral": {
+    "runs": 2,
+    "win": 1
+   }
+  }
+ },
+ "masters": {
+  "iron_wall": {
+   "n": 37,
+   "win": 0.865
+  },
+  "fog": {
+   "n": 39,
+   "win": 0.974
+  },
+  "mirror": {
+   "n": 37,
+   "win": 0.892
+  },
+  "hourglass": {
+   "n": 39,
+   "win": 0.872
+  },
+  "heavy_hand": {
+   "n": 37,
+   "win": 0.973
+  },
+  "silence": {
+   "n": 38,
+   "win": 0.921
+  },
+  "grudge": {
+   "n": 37,
+   "win": 0.892
+  },
+  "grandmaster": {
+   "n": 40,
+   "win": 0.5
+  }
+ }
+}
