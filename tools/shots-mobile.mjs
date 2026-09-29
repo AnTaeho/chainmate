@@ -1,6 +1,9 @@
 // 화면 맞춤 스크린샷(CHM-28): 기기를 흉내 내어 창 전체를 찍는다(게임 캔버스 밖의 가장자리까지).
 //   node tools/shots-mobile.mjs [--prefix before|after] [--out docs/shots/mobile] [--only 기기이름] [--engine webkit|chromium]
-// 기기마다 타이틀 · 대국 · 상점을 찍고, 캔버스 크기(CSS · 뒷면)를 표로 적는다. 폰 세로는 세로 안내 화면이 뜬다.
+//                               [--scenes title,battle,shop,pause,legend,chest,result] [--no-touch]
+// 기기마다 타이틀 · 대국 · 상점 · 멈춤 · 전설 · 상자 · 결과를 찍고, 캔버스 크기(CSS · 뒷면)를 표로 적는다. 폰 세로는 세로 안내 화면이 뜬다.
+// 전설 · 상자는 금빛 번쩍임 한가운데(-flash)와 가라앉은 뒤를 따로 찍는다(여백 판도 같이 밝아지나). 번쩍임은 update를 멈춰 세운다.
+// 타이틀은 여백 판 장면을 칠한 시간(ms, padStats.sceneMs)을 표에 적는다.
 // 터치가 있는 기기는 page.touchscreen.tap으로 「새 판」 → 대본 대국 첫 수(나이트 떨구기 → 룩 → 퀸)까지 눌러 본다.
 // 폰 · 태블릿은 webkit(없으면 chromium 기기 흉내), 데스크톱은 chromium.
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
@@ -17,6 +20,8 @@ const PREFIX = opt('--prefix', 'after');
 const OUT = path.resolve(ROOT, opt('--out', 'docs/shots/mobile'));
 const ONLY = opt('--only', null);
 const ENGINE = opt('--engine', null);
+const SCENES = new Set(opt('--scenes', 'title,battle,shop,pause,legend,chest,result').split(','));
+const TOUCH = !args.includes('--no-touch');
 
 // 이름 · 창(CSS) · dpr · 터치 · 엔진
 const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
@@ -98,28 +103,73 @@ async function shotsFor(d) {
     return { cssW: Math.round(r.width * 100) / 100, cssH: Math.round(r.height * 100) / 100, left: r.left, top: r.top, back: `${c.width}×${c.height}`, turned, scale: window.__app.scale };
   });
   table.push({ name: d.name, view: `${d.w}×${d.h}`, dpr: d.dpr, ...size });
-  // 타이틀
-  await ev(() => { window.__app.go('title'); });
-  await settle(1200);
-  await shot('title');
+  const want = (n) => SCENES.has(n);
+  // 타이틀(여백 판 장면을 칠한 시간도 잰다)
+  if (want('title')) {
+    await ev(() => { window.__app.go('title'); });
+    await settle(1200);
+    await shot('title');
+    const ms = await ev(async () => (await import('/src/render/backdrop.js')).padStats.sceneMs);
+    table[table.length - 1].sceneMs = Math.round(ms * 10) / 10;
+  }
   // 대국(판 11, 첫 대국)
-  await ev(() => { const a = window.__app; a.newRun({ seed: 11 }); a.cmd({ type: 'play' }); a.go('battle', { events: [] }); });
-  await settle(2600);
-  await shot('battle');
+  if (want('battle')) {
+    await ev(() => { const a = window.__app; a.newRun({ seed: 11 }); a.cmd({ type: 'play' }); a.go('battle', { events: [] }); });
+    await settle(2600);
+    await shot('battle');
+  }
   // 상점: 봇이 대국을 끝까지 두고 첫 상점에서 멈춘다
-  await ev(async () => {
-    const { playRun } = await import('/tools/shopbot.mjs');
-    const a = window.__app;
-    a.newRun({ seed: 11 });
-    playRun(a.run, 'none', { stopAt: (r) => r.phase === 'shop' });
-    a.run.money = 30; a.fx.clear(); a.goPhase();
-  });
-  await settle(900);
-  await shot('shop');
-  // 멈춤 덮개(판 밖 가장자리도 같이 어두워지나)
-  await ev(() => window.__app.openOverlay('pause'));
-  await settle(300);
-  await shot('pause');
+  if (want('shop') || want('pause')) {
+    await ev(async () => {
+      const { playRun } = await import('/tools/shopbot.mjs');
+      const a = window.__app;
+      a.newRun({ seed: 11 });
+      playRun(a.run, 'none', { stopAt: (r) => r.phase === 'shop' });
+      a.run.money = 30; a.fx.clear(); a.goPhase();
+    });
+    await settle(900);
+    if (want('shop')) await shot('shop');
+    // 멈춤 덮개(판 밖 가장자리도 같이 어두워지나)
+    if (want('pause')) {
+      await ev(() => window.__app.openOverlay('pause'));
+      await settle(300);
+      await shot('pause');
+      await ev(() => window.__app.closeOverlay());
+    }
+  }
+  // 전설 완성: 금빛 번쩍임 한가운데(멈춰 세움) → 끝 장면
+  if (want('legend')) {
+    await ev(() => { const a = window.__app; a.newRun({ seed: 11 }); a.shakeT = 0; a.shakeAmt = 0; a.go('legend', { legend: 'century' }); const s = a.screen; s.update = () => {}; s.t = 0.15; });
+    await settle(300);
+    await shot('legend-flash');
+    await ev(() => { const a = window.__app; a.go('legend', { legend: 'century' }); const s = a.screen; s.t = s.tDone + 1; });
+    await settle(600);
+    await shot('legend');
+  }
+  // 마스터의 상자: 다섯 칸 → 번쩍임 한가운데(멈춰 세움) → 가라앉은 뒤
+  if (want('chest')) {
+    const chest = { count: 5, tier: 'rare', cells: [{ lit: true, item: { kind: 'money', money: 2 } }, { lit: true, item: { kind: 'chart', form: 'N' } }, { lit: true, item: { kind: 'engrave', piece: 'P', pieceId: 1, eng: 'ivory' } }, { lit: true, item: { kind: 'chart', form: 'Q' } }, { lit: true, item: { kind: 'money', money: 3 } }] };
+    await ev((chest) => { const a = window.__app; a.newRun({ seed: 11 }); a.go('chest', { chest }); const s = a.screen; s.t = 99; s.update(0); s.update = () => {}; s.flash = 0.6; a.shakeT = 0; a.shakeAmt = 0; }, chest);
+    await settle(300);
+    await shot('chest-flash');
+    await ev(() => { const a = window.__app; const s = a.screen; s.flash = 0; });
+    await settle(300);
+    await shot('chest');
+  }
+  // 결과: 진 판(마지막 대국 · 최고 한 수 판)
+  if (want('result')) {
+    await ev(() => {
+      const a = window.__app;
+      a.newRun({ seed: 11 });
+      const r = a.run;
+      r.log.push({ ante: 3, blind: 1, kind: 'practice', score: 1840, target: 2400, best: 960 });
+      r.bestReplay = { board: Array(64).fill(null), drop: { sq: 27, piece: 'N' }, caps: [{ from: 27, to: 44, form: 'N', after: 'B' }], score: 960, reason: 'end' };
+      r.phase = 'lost';
+      a.go('result');
+    });
+    await settle(900);
+    await shot('result');
+  }
   await context.close();
 }
 
@@ -162,12 +212,12 @@ const touchResults = [];
 for (const d of DEVICES) {
   if (ONLY && !d.name.includes(ONLY)) continue;
   await shotsFor(d);
-  if (d.touch) touchResults.push(await touchFlow(d));
+  if (d.touch && TOUCH) touchResults.push(await touchFlow(d));
 }
 for (const b of Object.values(browsers)) await b.close();
 srv.close();
-console.log('\n기기 | 창 | dpr | 캔버스 CSS | 뒷면 | 왼쪽·위 | 세로 안내');
-for (const r of table) console.log(`${r.name} | ${r.view} | ${r.dpr} | ${r.cssW}×${r.cssH} | ${r.back} | ${r.left},${r.top} | ${r.turned ? '예' : '아니오'}`);
+console.log('\n기기 | 창 | dpr | 캔버스 CSS | 뒷면 | 왼쪽·위 | 세로 안내 | 타이틀 여백 장면 ms');
+for (const r of table) console.log(`${r.name} | ${r.view} | ${r.dpr} | ${r.cssW}×${r.cssH} | ${r.back} | ${r.left},${r.top} | ${r.turned ? '예' : '아니오'} | ${r.sceneMs ?? '-'}`);
 console.log('\n터치 흐름');
 for (const r of touchResults) console.log(`${r.name}: ${r.result}${r.log ? ` (${r.log})` : ''}`);
 if (errors.length) { console.log('오류', errors.length); for (const e of errors.slice(0, 5)) console.log(e); process.exitCode = 1; }
