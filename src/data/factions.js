@@ -35,7 +35,7 @@ faction('peasants', {
 });
 faction('cavalry', {
   name: '기병대', crest: 'horseshoe', hue: '#c07a3a',
-  mix: { P: 1, N: 2.2, B: 0.6, R: 0.6, Q: 0.6 }, unique: { L: 1, H: 0.6 },
+  mix: { P: 0.9, N: 2.8, B: 0.6, R: 0.6, Q: 0.6 }, unique: { L: 1, H: 0.6 },
   habit: { text: '증원이 모두 나이트 무리로 온다', apply(r) { r.reinforceMix = { N: 4, L: 1, H: 1 }; } },
   boss: 'mirror',
 });
