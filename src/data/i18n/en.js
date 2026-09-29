@@ -77,7 +77,7 @@ export const EN = {
   '폰을 먹어라': 'Take the pawn',
   '들어온 퀸이 노린다. 먼저 먹어라': 'The queen that landed threatens you. Take her first',
   '목표를 넘겼다! 이제 혼자 두어 보라': 'Target reached! Now play on your own',
-  '되돌린다': 'Rewind', '행마': 'Moves', '움직임 줄이기': 'Reduce Motion', '킹과 다시 두기': 'Replay with King', '수업': 'Lessons',
+  '되돌린다': 'Rewind', '행마': 'Moves', '이 판': 'Board', '기본 기물': 'Basic pieces', '특수 기물': 'Special pieces', '움직임 줄이기': 'Reduce Motion', '킹과 다시 두기': 'Replay with King', '수업': 'Lessons',
   '다음 새 판은 킹과 둔다': 'Your next run starts with the King',
   // 첫 수업 열 · 처음 안내(친절 손질)
   '기초': 'Basics', '목표 체크메이트': 'Goal: checkmate', '대국': 'Battle', '보기': 'Watch', '할 일': 'Your turn', '누르면 내 차례': 'Tap to play it yourself', '수업 건너뛰기': 'Skip lessons',

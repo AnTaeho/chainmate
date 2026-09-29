@@ -13,7 +13,7 @@ import { button } from '../ui.js';
 import { tipLines, miniShard, moveTip, fitText, cardBase, fragmentSteps } from '../parts.js';
 import { drawIcon } from '../../render/icons.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
-import { pageHead, pageButtons } from './common.js';
+import { pageHead, pageButtons, tabRow } from './common.js';
 import { PAGE, PAD_CARD, LIST_GAP, GAP_GROUP, textY, rowBoxH, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
@@ -40,9 +40,8 @@ export class CodexScreen {
     pageHead(ctx, '도감');
     // 탭은 제목 오른쪽부터(영어 제목이 길어도 겹치지 않게)
     const tx0 = Math.max(44, PAGE.titleX + measure('도감', true) + 8);
-    // 탭 폭은 이름마다 글에 맞춘다(글과 테 사이 2 이상, 가장 좁아도 44 — 영어 「Masters」 · 「Opening」이 테에 붙지 않고 오른쪽 모은 수에 닿지 않게)
-    let tx = tx0;
-    TABS.forEach(([id, label]) => { const tw = Math.max(44, measure(label, true) + 6); const bx = tx; tx += tw + 4; button(ctx, ui, `codex:tab:${id}`, bx, 5, tw, BTN_S, label, { tone: this.tab === id ? 'gold' : 'plain', onClick: () => { this.tab = id; this.page = 0; this.app.sfx('pick'); } }); });
+    // 탭 폭은 이름마다 글에 맞춘다(common.js tabRow — 영어 「Masters」 · 「Opening」이 테에 붙지 않고 오른쪽 모은 수에 닿지 않게)
+    tabRow(ctx, ui, 'codex', TABS, this.tab, tx0, 5, BTN_S, (id) => { this.tab = id; this.page = 0; this.app.sfx('pick'); });
     const list = this.entries();
     const seen = list.filter((e) => e.seen).length;
     text(ctx, `${seen} / ${list.length}`, W - PAGE.titleX, PAGE.titleY, PAL.dim, { align: 'right' });

@@ -22,6 +22,7 @@ before(async () => {
     battle: await import('../src/ui/screens/battle.js'),
     run: await import('../src/sim/run.js'),
     lessons: await import('../src/ui/lessons.js'),
+    moves: await import('../src/ui/screens/moves.js'),
   };
 });
 after(async () => { const { setCanvasFactory } = await import('../src/render/surface.js'); setCanvasFactory(null); M.lang.setLang('ko'); });
@@ -297,4 +298,32 @@ test('줄 바꿈: 문장부호(마침표 · 쉼표 · 가운뎃점 …)는 줄 �
   // 글자 단위로 끊는 긴 낱말: 쉼표 · 마침표가 여럿 이어져도 앞 글자와 함께 내린다
   assert.deepEqual(wrap('abcdefghij.,', 60).filter((l) => CLOSE_PUNCT.test(l)), []);
   M.lang.setLang('ko');
+});
+
+// 행마 보기(CHM-26): 탭 셋 · 카드 두 칸 × 두 줄 · 쪽마다 고르게. 행마 글은 카드 안 세 줄까지, 이름은 「새로」와 한 줄
+test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) 안, 특수 기물은 쪽마다 셋', async () => {
+  const { moves, text, frame } = M;
+  const w = await import('../src/ui/words.js');
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const t of 'PNBRQKACZLHGOSW') {
+      const n = text.wrap(w.PIECE_MOVE[t], moves.textW()).length;
+      assert.ok(n <= moves.MOVE_LINES, `${lang} ${t} 행마 글 ${n}줄`);
+      assert.ok(text.textWidth(w.PIECE_NAME[t], true) + text.textWidth('새로', true) + 6 <= moves.textW(), `${lang} ${t} 이름 + 새로`);
+    }
+    // 머리 줄: 제목 · 탭 셋 · 돌아가기가 한 줄에
+    const tabs = moves.MOVE_TABS.reduce((a, [, l]) => a + Math.max(44, text.textWidth(l, true) + 6) + 4, -4);
+    const head = text.textWidth('행마', true) + 8 + tabs + 8 + Math.max(64, text.textWidth('돌아가기', true) + 8);
+    assert.ok(head <= moves.cardW() * 2 + 6, `${lang} 머리 줄 ${head}`);
+  }
+  M.lang.setLang('ko');
+  const P = frame.PAD_BOX, h = P + frame.BTN_S + frame.GAP_GROUP + moves.cardH() * 2 + 6 + frame.GAP_GROUP + frame.BTN_S + P;
+  assert.ok(Math.floor((270 - h) / 2) >= 8, `상자 높이 ${h}`);
+  assert.deepEqual([9, 6, 4, 5, 8, 15].map((n) => { const { pages, per } = moves.movesPages(n); return [pages, per]; }), [[3, 3], [2, 3], [1, 4], [2, 3], [2, 4], [4, 4]]);
+  // 기본 · 특수는 늘 전부, 「새로」는 「이 판」에서 온다
+  const list = [{ t: 'G', board: true, hand: false, fairy: true, fresh: true }];
+  assert.deepEqual(moves.movesTab('basic', list).map((x) => x.t), ['P', 'N', 'B', 'R', 'Q', 'K']);
+  const fairy = moves.movesTab('fairy', list);
+  assert.equal(fairy.length, 9);
+  assert.deepEqual(fairy.filter((x) => x.fresh).map((x) => x.t), ['G']);
 });

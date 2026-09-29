@@ -162,6 +162,16 @@ export function runSide(ctx, ui, app, title) {
   drawFoot(ctx, ui, [...(clock ? [clockRow(app, run)] : []), { money: run }, { label: '주머니', val: `${run.deck.length}` }]);
 }
 
+// 탭 줄(도감 · 행마 보기): 이름마다 글에 맞춘 폭(글과 테 사이 2 이상, 가장 좁아도 44), 사이 4, 고른 탭은 금빛. 끝난 x를 돌려준다
+export function tabRow(ctx, ui, prefix, tabs, cur, x, y, h, go) {
+  for (const [id, label] of tabs) {
+    const tw = Math.max(44, measure(label, true) + 6);
+    button(ctx, ui, `${prefix}:tab:${id}`, x, y, tw, h, label, { tone: cur === id ? 'gold' : 'plain', onClick: () => go(id) });
+    x += tw + 4;
+  }
+  return x - 4;
+}
+
 // 판 밖 틀의 쪽 넘기기: 맨 아래 단추 줄 오른쪽(‹ · 쪽 · ›)
 export function pageButtons(ctx, ui, prefix, page, pages, go) {
   const x = W - PAGE.titleX - 112;
