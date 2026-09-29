@@ -15,7 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createRng, fork, next } from '../src/sim/rng.js';
-import { createRun, blindInfo, battleMods, awaitingGold, battleSeed, ANTES, KINDS, BOARD_FILTER_N } from '../src/sim/run.js';
+import { createRun, blindInfo, battleMods, awaitingGold, battleSeed, ANTES, KINDS } from '../src/sim/run.js';
+import { boardFilter } from '../src/sim/tuning.js';
 import { createBattle, apply, dropSquaresFor, GOLDEN } from '../src/sim/battle.js';
 import { attackers } from '../src/sim/board.js';
 import { boardOpts } from '../src/sim/chain.js';
@@ -59,7 +60,7 @@ function rebuild(snap, seed, withTarget = true) {
     bag: snap.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
     rules: snap.rules, mods: battleMods(snap, info.master),
     goldenChance: awaitingGold(snap) ? GOLDEN.calling : GOLDEN.chance,
-    filter: BOARD_FILTER_N[info.kind] || 0,
+    filter: boardFilter(),
   });
 }
 const boardKey = (b) => b.board.map((c) => (c ? c.t + (c.gold ? '*' : '') + (c.trait || '') : '.')).join('') + '|' + b.hand.map((p) => p.t).join('') + '|' + b.target + '|' + JSON.stringify(b.incoming);

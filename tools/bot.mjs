@@ -13,7 +13,7 @@ import { canReboard } from '../src/sim/battle.js';
 import { valueOf } from '../src/data/pieces.js';
 
 // ratio 1 → 2(밤샘 2 3부): 1이면 대국당 0.08번만 다시 놓아 판을 끝낸 죽음의 판 운 몫이 52.6%, 2면 0.18번 · 31.3%(luck 30판)
-export const REBOARD = { on: true, ratio: 2 };
+export const REBOARD = { ratio: 2 }; // 켜고 끄기는 src/sim/tuning.js BOARD_TUNING.reboard(끄면 canReboard가 늘 거짓)
 const betterMove = (x, y, nomate, rank) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : rank ? rank(x) > rank(y) : x.score > y.score);
 
 // rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
@@ -22,7 +22,7 @@ export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null }
   let best = null;
   for (const m of per) if (m && betterMove(m, best, nomate, rank)) best = m;
   if (best && best.mate && !nomate) return { play: best };
-  if (REBOARD.on && b.target != null && canReboard(b) && (!best || best.score * b.movesLeft < (b.target - b.score) * REBOARD.ratio)) return { reboard: true };
+  if (b.target != null && canReboard(b) && (!best || best.score * b.movesLeft < (b.target - b.score) * REBOARD.ratio)) return { reboard: true };
   const canDiscard = b.discardsLeft > 0 && b.bag.length > 0;
   const roomy = b.bag.length >= b.movesLeft;
   if (!best) {
