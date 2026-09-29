@@ -1,0 +1,32 @@
+연기 시험 seed 3: 판 5 (lost 5관 · lost 6관 · lost 5관 · lost 4관 · lost 10관)
+프레임 20000 · 그리기 평균 0.41ms · p99 1.38ms · 최대 5.48ms · 그리기 호출 26399528
+한 수 연출(×1) 평균 2.86s · 최대 3.82s (165수)
+누르기 처리 4801번 · 평균 2.55ms · p99 15.30ms · 최대 2403.82ms
+방문 화면: lesson shop pack draft battle title setup select pause settings reward chest result codex records lessons legend
+끝없는 대국: 10관
+첫 수업: 1 떨구고 먹는다 10 · 2 잡으면 그것이 된다 160 · 3 이을수록 곱해진다 800 · 4 지키는 적부터 160 · 5 목표와 수 60 · 6 손과 버리기 90 · 7 증원 60 · 8 외통 400 · 9 체스 밖의 행마 160 · 10 상점
+미리 보기: 먹기 894 · 끊김 94 · 떨구기 159 · 화살표 3 · 터치 3
+말풍선: 증원 20 · 노림수 20 · 판의 길 1
+대국 띠 「새로」: 대국 40 · 그림 60
+손 고르기: 둘을 차례로 6(둘 이상 남음 0) · 다시 눌러 놓기 2(안 놓임 0)
+판 위 사물 말풍선: 발판 0 · 문 5 · 고속도로 0 · 벽 5 · 보석 5 · 함정 5
+시계 · 다시 놓기: 시계를 잃고 상점 1 → 1 → 다음 대국 1(어긋남 0) · 다시 놓기 22(봇 21, 어긋남 0)
+이어 하기: 확인 · 설정: 확인 · 격언 끌기: 확인
+판 위 표시: 칸 · 화살표 3 · 왼쪽 누르기로 지움 확인 · 상점 오른쪽 누르기 4(아무 일 없음)
+사슬 중 목표를 넘긴 채 먹기: 251번 · 입력이 막힘 0
+관 선택 → 상점 → 관 선택: 2번 · 바뀐 것 0 · 상점 없이 단추 0 · 판의 길과 겹침 0
+소리 마디 38685
+예외 0 · 40.1s
+세력: 판 5개 · 서로 다른 차례 5 · 대국에서 만난 세력 8(peasants cavalry heralds fortress mercs abbey hunters royal) · 관 선택 세력 띠 85 · 다음 관 문장 79 · 어긋남 0
+옮기지 못한 글 0
+처음 안내: draft faction_peasants shop family maximSell scroll master pack faction_cavalry clock faction_heralds incoming fairy faction_fortress things joseki faction_mercs trait faction_abbey tactic faction_hunters faction_royal
+새기기 미리 보기: 두루마리 15 · 꾸러미 16
+각인 · 혼 바꾸기: 같은 것 흐림 1 · 상점 그만 1 · 바꾸기 1 · 혼 1 · 꾸러미 그만 1 · 바꾸기 1
+기보 몫: 판을 도는 동안 613 · 세운 대국 3 · 기보를 쓴 순간 크게 1 · 수준만 1(어긋남 0)
+낱말 상자: 진열 60 · 꾸러미 9 · 정석 45 · 카드와 겹침 0 · 화면 밖 0 · 손가락 두 번 1 · 상자 없음 0 · 자리가 없어 뺌 4 · 셋 넘음 0 · 기본 낱말 0 · 카드 종류 0 · 시너지 칩 20(상자 0)
+자리 규칙: 가리킨 것 662(판 틀 624 · 판 밖 38, 화면 8) · 어김 0 · 묶음 끊김 0 · 화면 밖 0 · 가리킨 것 덮음 0 · 누를 것 덮음 0 · 안 뜸 0 · 당겨 놓음 76 (lesson box:value, select fam:leap, select fam:diag, shop fam:leap, shop fam:diag, select fam:leap) · 처음 안내 22(어김 0)
+시너지 +N 말풍선: 38번(battle select shop pack draft) · 시너지 여섯 이상 대국 5 · 어긋남 0
+금빛 꾸러미 격언 칸: 바꾸기 1 · 팔기 1 · 어긋남 0
+큰 수 장면: 대국 36 · 관 선택 3 · 결과 4 · 기록 4 · 보상 4 · 글끼리 겹침 0
+글 넘침 0(글이 상자 밖 0 · 테에 붙음 0 · 상자 겹침 0 · 화면 밖 0) · 잰 프레임 33028 · 보류 0(없음)
+SMOKE OK
