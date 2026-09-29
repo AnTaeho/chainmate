@@ -79,8 +79,8 @@ export class DraftScreen {
       const col = j.tier === 'rainbow' ? `hsl(${Math.floor(time * 120 + i * 60) % 360},70%,70%)` : TIER_COL[j.tier];
       const picked = this.chosen && this.chosen.i === i;
       const faded = this.chosen && !picked;
-      // 흔들림(sway.js): 다 뒤집힌 레퍼토리 카드는 숨 쉬고, 가리키면 기울며 들린다. 고른 뒤에는 멈춘다
-      sway(ctx, time, `${uid}:${id}`, x, y, CW, CH, (c) => this.drawCard(c, ui, j, i, x, y, xx, nw, CH, col, hov, picked, faded, id), { hover: hov, press: hov && ui.press && ui.press.id === uid, mx: ui.mouse.x, still: p < 1 || !!this.chosen, shadow: p >= 1 && !faded });
+      // 들림(sway.js): 레퍼토리 카드는 가리키면 들리고, 누르면 가라앉는다
+      sway(ctx, time, `${uid}:${id}`, x, y, CW, CH, (c) => this.drawCard(c, ui, j, i, x, y, xx, nw, CH, col, hov, picked, faded, id), { hover: hov, press: hov && ui.press && ui.press.id === uid, shadow: p >= 1 && !faded });
     });
     // 안내는 왼쪽 칸에서 오른쪽을 가리키므로 바로 옆 첫 카드에(정석 고르기 전체에 대한 한 줄)
     if (!this.chosen && this.t > 1.2) hint(this.app, 'draft', 'draft:0');

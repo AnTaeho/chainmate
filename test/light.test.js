@@ -1,4 +1,4 @@
-// 빛과 움직임(docs/design-notes/layout.md 「빛과 움직임」): 흔들림은 그리기 변환만 바꾸고, 1배 · 움직임 줄이기에서는 돌리지 않는다.
+// 빛과 움직임(docs/design-notes/layout.md 「빛과 움직임」): 카드 들림은 그리기 변환(위아래)만 바꾸고, 가만히 있거나 가리켜도 돌지 않는다.
 // 소수점 자리는 fine 안에서만 1/N 칸에 서고, 밖에서는 늘 정수 칸이다. 누르는 구역과 레이아웃 기록은 원래 네모 그대로.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -48,35 +48,37 @@ test('fine 안에서만 1/N 칸, 밖은 정수 칸', () => {
   });
 });
 
-test('흔들림: 3배는 돌리고, 1배 · 움직임 줄이기는 돌리지 않는다', () => {
+test('카드: 가만히 있으면 멈추고, 가리키면 들리고, 누르면 가라앉는다 — 어느 배율에서도 돌지 않는다', () => {
   const run = (look, opts = {}) => withLook(look, () => {
     const { ctx, calls } = rec();
     let drawn = 0;
     for (let t = 0; t < 2; t += 0.05) M.sway.sway(ctx, t, `card:${JSON.stringify(look)}:${JSON.stringify(opts)}`, 100, 50, 60, 80, () => { drawn++; }, opts);
     return { calls, drawn };
   });
-  const big = run({ n: 3, calm: false });
-  assert.ok(big.calls.some((c) => c[0] === 'rotate'), '3배에서 돌지 않았다');
-  const one = run({ n: 1, calm: false });
-  assert.ok(!one.calls.some((c) => c[0] === 'rotate'), '1배에서 돌았다');
-  const calm = run({ n: 3, calm: true });
-  assert.ok(!calm.calls.some((c) => c[0] === 'rotate' || c[0] === 'translate'), '움직임 줄이기에서 흔들렸다');
-  assert.equal(calm.drawn, 40);
-  // 움직임 줄이기라도 가리키면 들린다(기울지는 않는다)
-  const hov = run({ n: 3, calm: true }, { hover: true, mx: 160 });
-  assert.ok(hov.calls.some((c) => c[0] === 'translate') && !hov.calls.some((c) => c[0] === 'rotate'));
-  // 기울기는 ±2° 안
-  const ang = big.calls.filter((c) => c[0] === 'rotate').map((c) => Math.abs(c[1]) * 180 / Math.PI);
-  assert.ok(Math.max(...ang) <= 2.01, `기울기 ${Math.max(...ang)}°`);
+  for (const look of [{ n: 3, calm: false }, { n: 1, calm: false }, { n: 3, calm: true }]) {
+    const idle = run(look);
+    assert.equal(idle.drawn, 40);
+    assert.ok(!idle.calls.some((c) => c[0] === 'rotate' || c[0] === 'translate' || c[0] === 'drawImage'), `가만히 있는데 움직였다 ${JSON.stringify(look)}`);
+    const ty = (cs) => cs.filter((c) => c[0] === 'translate').map((c) => { assert.equal(c[1], 0); return c[2]; });
+    const hov = run(look, { hover: true });
+    assert.ok(!hov.calls.some((c) => c[0] === 'rotate'), `가리키니 돌았다 ${JSON.stringify(look)}`);
+    const up = ty(hov.calls);
+    assert.ok(up.length && Math.min(...up) >= -1.5 - 1e-9 && up.at(-1) < 0, `가리킴 들림 ${up.at(-1)}`);
+    const down = ty(run(look, { press: true }).calls);
+    assert.ok(down.length && down.at(-1) === 1, `누름 가라앉음 ${down.at(-1)}`);
+  }
+  // 멈춘 배율에서는 정수 칸
+  const one = withLook({ n: 1 }, () => { const { ctx, calls } = rec(); for (let t = 0; t < 1; t += 0.05) M.sway.sway(ctx, t, 'card:one', 0, 0, 10, 10, () => {}, { hover: true }); return calls; });
+  assert.ok(one.filter((c) => c[0] === 'translate').every((c) => Number.isInteger(c[2])));
 });
 
-test('흔들리는 카드의 레이아웃 기록은 원래 네모', () => {
+test('들린 카드의 레이아웃 기록은 원래 네모', () => {
   withLook({ n: 3, calm: false }, () => {
     const { ctx } = rec();
     M.log.LOG.on = true;
     try {
       M.log.logBegin();
-      M.sway.sway(ctx, 1.3, 'card:log', 100, 50, 60, 80, () => { M.log.openBox('card', 100, 50, 60, 80, 7, { name: '카드' }); M.gfx.text(ctx, '말', 110, 60); M.log.closeBox(); }, { hover: true, mx: 150 });
+      M.sway.sway(ctx, 1.3, 'card:log', 100, 50, 60, 80, () => { M.log.openBox('card', 100, 50, 60, 80, 7, { name: '카드' }); M.gfx.text(ctx, '말', 110, 60); M.log.closeBox(); }, { hover: true });
       const b = M.log.LOG.boxes.find((x) => x.name === '카드');
       assert.deepEqual([b.x, b.y, b.w, b.h], [100, 50, 60, 80]);
       const t = M.log.LOG.texts[0];

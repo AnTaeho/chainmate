@@ -172,11 +172,11 @@ export class PackScreen {
     lay.cards.forEach((i, k) => {
       const o = pack.options[i];
       const x = x0 + k * (cw + gap), y = TOP;
-      // 흔들림(sway.js): 다 뒤집힌 카드만 숨 쉰다
+      // 들림(sway.js): 다 뒤집힌 카드만 가리키면 들린다
       const id = `pack:pick:${i}`, hov = ui.isHover(id), done = this.t - flipAt(i) > 0.3;
       sway(ctx, ui.time, `${id}:${o.kind}:${o.id || o.form || o.t || ''}`, x, y, cw, ch, (c) => {
         flipCard(o, i, x, y, cw, ch, (scaleX, hover) => itemCard(c, o, x, y, cw, ch, { hover, price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + k, run, ui, under: { onClick: () => this.pick(i) } }));
-      }, { hover: hov && done, press: hov && ui.press && ui.press.id === id, mx: ui.mouse.x, still: !done, shadow: done });
+      }, { hover: hov && done, press: hov && ui.press && ui.press.id === id, shadow: done });
     });
     if (lay.cell) {
       const { i, x, y, w, h } = lay.cell;

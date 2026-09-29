@@ -1498,11 +1498,11 @@ export class BattleScreen {
       const usable = live && live.status === 'play' && !this.busy;
       // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)
       const nudge = usable && !this.sel.length && this.idleT > 2.5 && Math.floor(app.time * 3) % v.hand.length === i ? 2 : 0;
-      // 흔들림(sway.js): 가리키면 커서 쪽으로 기울며 들린다. 들어 올린 카드 · 연출 중에는 숨 쉬기를 멈춘다
+      // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
       const pressed = hov && ui.press && ui.press.id === id;
       sway(ctx, app.time, `hand:${i}:${p.id ?? p.t}`, x, y - (selected ? 4 : nudge), w, lay.HAND_H, (c) => {
         pieceCard(c, p, x, y, w, lay.HAND_H, { lift: selected ? 4 : nudge, selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(chartLevel(run, p.t)), level: chartLevel(run, p.t), time: app.time + i });
-      }, { hover: hov && usable, press: pressed, mx: ui.mouse.x, still: selected });
+      }, { hover: hov && usable, press: pressed });
     });
   }
 

@@ -65,7 +65,7 @@ export function glow(ctx, x, y, w, h, col, a = 0.5, spread = 6) {
 export const flicker = (time, speed = 3, amt = 0.12) => (LOOK.calm ? 1 : 1 - amt + amt * Math.sin(time * speed));
 
 // ── 판넬 · 카드 · 격언 칸 그림자: 아래로 d 도트, 오른쪽으로 1 도트 비켜 어둡게(테 검사에 안 걸리게 rect만)
-// 흔들리는 카드(sway.js)는 바닥 자리에 제 그림자를 깔고, 그 안에서 그리는 카드 바탕은 그림자를 건너뛴다(unshaded)
+// 들리는 카드(sway.js)는 바닥 자리에 제 그림자를 깔고, 그 안에서 그리는 카드 바탕은 그림자를 건너뛴다(unshaded)
 let OFF = 0;
 export function unshaded(fn) { OFF++; try { return fn(); } finally { OFF--; } }
 export function shade(ctx, x, y, w, h, d = 2) {

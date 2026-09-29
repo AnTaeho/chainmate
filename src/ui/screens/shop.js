@@ -247,12 +247,12 @@ export class ShopScreen {
         const x = CX + i * (CARD_W + 8), y = TOP, id = `shop:buy:${i}`;
         const ok = canBuy(run, it);
         ui.region(id, x, y, CARD_W, lay.cardH, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemExtraTip(it), keys: () => itemKeys(it), preview: true });
-        // 흔들림(sway.js): 판 카드는 가라앉아 멈춘다
+        // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
         const hov = ui.isHover(id) && ok;
         sway(ctx, ui.time, `${id}:${it.kind}:${it.id || it.form || it.t || ''}`, x, y, CARD_W, lay.cardH, (c) => {
           itemCard(c, it, x, y, CARD_W, lay.cardH, { hover: hov, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok } });
           if (!it.sold && !ok) { c.globalAlpha = 0.35; rect(c, x, y, CARD_W, lay.cardH, PAL.shadow); c.globalAlpha = 1; }
-        }, { hover: hov, press: hov && ui.press && ui.press.id === id, mx: ui.mouse.x, still: !!it.sold });
+        }, { hover: hov, press: hov && ui.press && ui.press.id === id });
       });
       // 꾸러미: 진열 아래 칸 둘(금빛 꾸러미가 붙으면 셋)
       shop.packs.forEach((pk, i) => {
@@ -263,7 +263,7 @@ export class ShopScreen {
         sway(ctx, ui.time, `${id}:${pk.kind}`, x, y, pw, lay.packH, (c) => {
           this.packCard(c, pk, x, y, pw, lay.packH, hov);
           if (!pk.sold && !ok) { c.globalAlpha = 0.35; rect(c, x, y, pw, lay.packH, PAL.shadow); c.globalAlpha = 1; }
-        }, { hover: hov, press: hov && ui.press && ui.press.id === id, mx: ui.mouse.x, still: !!pk.sold, amt: 0.6 });
+        }, { hover: hov, press: hov && ui.press && ui.press.id === id, amt: 0.6 });
       });
     }
     // 주머니(가운데 아래 — 남는 높이). 수는 왼쪽 칸 「주머니」.
