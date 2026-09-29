@@ -47,31 +47,31 @@ faction('abbey', {
 });
 faction('fortress', {
   name: '성채', crest: 'tower', hue: '#9aa4b0',
-  mix: { P: 1.3, N: 0.5, B: 0.5, R: 2.5, Q: 0.7 }, unique: { C: 0.6, O: 1 },
+  mix: { P: 1.5, N: 0.5, B: 0.5, R: 2, Q: 0.7 }, unique: { C: 0.4, O: 1 },
   habit: { text: '성벽 한 줄이 판을 가른다 · 문은 하나', apply(r) { r.wallRow = { ranks: [3] }; } },
   boss: 'iron_wall',
 });
 faction('hunters', {
   name: '숲 사냥꾼', crest: 'bow', hue: '#4f9a5a',
-  mix: { P: 1.3, N: 2, B: 0.6, R: 0.5, Q: 0.5 }, unique: { S: 1, G: 1 },
+  mix: { P: 0.5, N: 1, B: 0.6, R: 0.5, Q: 0.5 }, unique: { S: 5, G: 2 },
   habit: { text: '위 두 줄은 숲이다 · 닿으면 걷힌다', apply(r) { r.fog = Math.max(r.fog || 0, 2); } },
   boss: 'fog',
 });
 faction('heralds', {
   name: '전령단', crest: 'horn', hue: '#5a8ec8',
-  mix: { P: 1.2, N: 1.5, B: 1.5, R: 0.4, Q: 0.3 }, unique: { H: 1 },
+  mix: { P: 0.4, N: 0.8, B: 1, R: 0.4, Q: 0.3 }, unique: { H: 6 },
   habit: { text: '증원 +1 · 두 수 앞까지 보인다', apply(r) { r.reinforceBonus = (r.reinforceBonus || 0) + 1; r.lookahead = Math.max(r.lookahead || 1, 2); } },
   boss: 'hourglass',
 });
 faction('mercs', {
   name: '용병단', crest: 'coin', hue: '#e0b040',
-  mix: { fairy: 2 }, unique: ANY_FAIRY,
+  mix: { P: 0.8, fairy: 2 }, unique: ANY_FAIRY,
   habit: { text: '적 특성이 두 배로 붙는다', apply(r) { r.traitMult = 2; r.traitFrom = 2; } },
   boss: 'grudge',
 });
 faction('royal', {
   name: '왕궁 근위', crest: 'crown', hue: '#b04a6a',
-  mix: { P: 0.8, N: 0.7, B: 0.7, R: 1.8, Q: 2.5 }, unique: { Z: 0.5, C: 0.6 },
+  mix: { P: 1.3, N: 0.6, B: 0.6, R: 0.9, Q: 1.7 }, unique: { Z: 0.3, C: 0.6 },
   habit: { text: '킹을 지키는 적 +1', apply(r) { r.guardsBonus = (r.guardsBonus || 0) + 1; } },
   boss: 'grandmaster',
 });
