@@ -51,7 +51,9 @@ export function textImage(s, col, bold = false) {
 
 // 줄 바꿈: 너비 w 안에서 낱말(띄어쓰기) 단위로, 낱말이 너무 길면 글자 단위로.
 // 효과를 잇는 「 · 」가 줄 끝 · 줄 머리에 걸리면 뺀다(줄 바꿈이 곧 나눔이다)
+// 문장부호(마침표 · 쉼표 · 가운뎃점 · 닫는 괄호 …)는 줄 머리에 두지 않는다 — 글자 단위로 끊을 때 앞 글자와 함께 내린다
 const noDot = (l) => (l.endsWith(' ·') ? l.slice(0, -2) : l);
+export const CLOSE_PUNCT = /^[.,·:;!?…)\]}」』》〉’”%]/;
 export function wrap(s, w, bold = false) {
   s = L(String(s));
   const out = [];
@@ -65,7 +67,13 @@ export function wrap(s, w, bold = false) {
       if (textWidth(word, bold) <= w) { line = word; continue; }
       line = '';
       for (const ch of word) {
-        if (textWidth(line + ch, bold) > w && line) { out.push(line); line = ''; }
+        if (textWidth(line + ch, bold) > w && line) {
+          // 문장부호가 줄 머리에 오면 앞 글자를 함께 내린다(앞 글자가 하나뿐이면 그대로)
+          let keep = 0;
+          if (CLOSE_PUNCT.test(ch)) { keep = 1; while (keep < line.length && CLOSE_PUNCT.test(line[line.length - keep])) keep++; }
+          if (keep >= line.length) keep = 0;
+          out.push(line.slice(0, line.length - keep)); line = line.slice(line.length - keep);
+        }
         line += ch;
       }
     }

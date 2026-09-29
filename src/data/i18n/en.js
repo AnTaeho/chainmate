@@ -125,7 +125,7 @@ export const EN = {
   '발밑 문양은 특성. 가리키면 무엇을 하는지 보인다': 'The mark at its feet is a trait. Point at it to see what it does',
   '벽과 보석은 가리키면 무엇을 하는지 보인다': 'Point at walls and gems to see what they do',
   '특수 기물은 체스에 없는 행마를 쓴다. 누르면 먹을 칸이 보인다': 'Special pieces move in ways chess does not. Tap one to see where it can take',
-  '점선 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다': 'Dotted shadows are reinforcements. Enemies land there when this move ends',
+  '점선 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다': 'Dotted shadows show where reinforcements land when this move ends',
   '격언을 누르면 팔 수 있고, 끌면 순서가 바뀐다': 'Tap a maxim to sell it, drag to reorder',
   // ── 화면
   // 혼(깊이 C)

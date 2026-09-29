@@ -276,3 +276,25 @@ test('큰 수: 끝없는 대국의 13~16자리 수가 제 칸 폭 안에(값 × 
   }
   M.lang.setLang('ko');
 });
+
+test('줄 바꿈: 문장부호(마침표 · 쉼표 · 가운뎃점 …)는 줄 머리에 오지 않는다 — 처음 안내 전부 · 한국어 · 영어', async () => {
+  const { HINTS } = await import('../src/ui/coach.js');
+  const { wrap, CLOSE_PUNCT } = M.text;
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const w of [60, 80, 100, 160]) for (const [id, s] of Object.entries(HINTS)) {
+      const lines = wrap(s, w);
+      for (const l of lines) assert.ok(!CLOSE_PUNCT.test(l), `${lang} ${w} ${id}: ${JSON.stringify(lines)}`);
+      assert.equal(lines.join('').replace(/[ ·]/g, ''), M.lang.L(s).replace(/[ ·]/g, ''), `${lang} ${w} ${id} 글자가 빠지지 않는다`);
+    }
+  }
+  // 1배 옛 영어 증원 안내(폭 116 말풍선 안 100): 「reinforcements.」가 100을 넘어 글자로 끊기면 「. Enemies」로 줄이 시작됐다
+  M.lang.setLang('en');
+  const inc = wrap('Dotted shadows are reinforcements. Enemies land there when this move ends', 100);
+  assert.ok(inc.every((l) => !CLOSE_PUNCT.test(l)), JSON.stringify(inc));
+  // 지금 영어 안내는 낱말을 글자로 끊지 않는다
+  assert.ok(wrap(HINTS.incoming, 100).includes('reinforcements'), JSON.stringify(wrap(HINTS.incoming, 100)));
+  // 글자 단위로 끊는 긴 낱말: 쉼표 · 마침표가 여럿 이어져도 앞 글자와 함께 내린다
+  assert.deepEqual(wrap('abcdefghij.,', 60).filter((l) => CLOSE_PUNCT.test(l)), []);
+  M.lang.setLang('ko');
+});
