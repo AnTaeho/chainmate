@@ -38,7 +38,9 @@ import { FAIRIES } from '../data/pieces.js';
 // 깊이 층(이형 · 가족 · 정석 · 혼 …) 뒤 다시 맞춤(보고서 docs/reports/depth.md): 옛 곡선 그대로면 smart 봇 판 승률 89.7%(30판).
 //   2관 ×1.17 · 3관 ×2.5 · 4관 ×2.5 · 5관 ×3.8 · 6관 ×6.9 · 7관 ×5.8 · 8관 ×5.7 + 킹 수비 5관 다섯 · 6관부터 여섯 → 20.0%(30판).
 // 밤샘 2(시계 · 다시 놓기 · 나쁜 판 거르기 · 가짓수 뒤) 다시 맞춤: 옛 곡선이면 smart 50%(40판) — 4관 ×1.23 · 5관 ×1.5 · 6관 ×1.5 · 7관 ×1.55 · 8관 ×1.53 → 40%(docs/reports/night2.md)
-export const B = [150, 700, 5000, 16000, 75000, 330000, 650000, 1300000];
+// CHM-20: 진 뒤 상점을 열고, 대국 하나의 체감 운을 줄이려고 4~8관 인상 폭을 절반쯤으로 — 옛 곡선 대비 ×1.12 · 1.25 · 1.25 · 1.27 · 1.27
+//   (밤샘 2 곡선이면 smart 42.5% · 이 곡선 50.0%(40판) · 단 8 10.0%(30판), docs/reports/night2.md 「CHM-20 손질」)
+export const B = [150, 700, 5000, 14500, 62500, 275000, 535000, 1080000];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
