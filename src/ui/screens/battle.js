@@ -1257,13 +1257,14 @@ export class BattleScreen {
   headSpec() {
     const b = this.b, run = this.run, master = b.mods.find((s) => MASTER_BY_ID[s.id]);
     // 명인 대국은 제목이 곧 명인 이름(가리키면 명인 규칙 — 우두머리 이름이 곧 세력을 말한다).
-    // 연습 · 정식은 「농민군 · 연습 대국」, 한 줄에 안 들어가면 「농민군 · 연습」(머리 칸은 한 줄: 두 줄이면 사슬 칸이 모자란다)
+    // 연습 · 정식은 「농민군 · 연습 대국」, 한 줄에 안 들어가면 「농민군 · 연습」, 그래도 안 들어가면(영어) 세력 이름만
+    // (머리 칸은 한 줄: 두 줄이면 사슬 칸이 모자란다. 대국 종류는 관 줄의 「이기면 $3 · $4」와 목표가 말한다)
     const fa = factionOfBattle(b);
     const room = LW - PAD_BOX * 2;
     let title = master ? `명인 ${MASTER_BY_ID[master.id].name}` : KIND_NAME[b.kind];
     if (fa && !master) {
       const cands = [`${fa.name} · ${KIND_NAME[b.kind]}`, `${fa.name} · ${KIND_SHORT[b.kind]}`];
-      title = cands.find((c) => measure(c, true) <= room) || cands.find((c) => measure(c) <= room) || cands[1];
+      title = cands.find((c) => measure(c, true) <= room) || cands.find((c) => measure(c) <= room) || fa.name;
     }
     return {
       kicker: run && !run.endless ? `${b.ante}/${ANTES}관` : `${b.ante}관`,
