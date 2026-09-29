@@ -1,7 +1,7 @@
 // 앱: 화면 전환 · 판 상태 · 저장 · 입력 · 프레임. DOM을 모른다(main.js가 캔버스와 입력을 넘긴다).
 import { logBegin, layerUp, openBox, closeBox } from '../render/layoutlog.js';
 import { feltCanvas } from '../render/texture.js';
-import { createRun, applyRun } from '../sim/run.js';
+import { createRun, applyRun, migrateRun } from '../sim/run.js';
 import { PAL } from '../render/palette.js';
 import { context } from '../render/surface.js';
 import { W, H, text, box, rect, lift } from '../render/gfx.js';
@@ -107,7 +107,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.continueRun = () => {
     const run = store.get(KEYS.run);
     if (!run) return false;
-    app.run = run;
+    app.run = migrateRun(run); // 세력 전의 저장(명인 차례)은 세력으로 옮긴다
     app.goPhase();
     return true;
   };

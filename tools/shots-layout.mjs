@@ -213,14 +213,14 @@ if (ko) {
 }
 // ── 판: 관 선택 · 정석 · 대국
 await scene('select', js(fresh(7, "const r = window.__app.run; if (r.phase === 'draft') { window.__app.cmd({ type: 'joseki', index: 0 }); window.__app.goPhase(); }")));
-if (ko) await scene('select-master', js(fresh(3, "const a = window.__app; if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); a.run.masters[0] = 'fog'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase();")));
+if (ko) await scene('select-master', js(fresh(3, "const a = window.__app; if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); a.run.factions[0] = 'hunters'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase();")));
 await scene('draft', js(fresh(7)), { wait: 1600 });
 if (ko) await scene('draft-ante3', js(fresh(7, "const a = window.__app, r = a.run; a.cmd({ type: 'joseki', index: 0 }); r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; a.goPhase();")), { wait: 1600 });
 const battleSrc = (seed, extra) => fresh(seed, `const a = window.__app, r = a.run; if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); ${extra} a.cmd({ type: 'play' }); a.go('battle', { events: [] });`);
 await scene('battle', js(battleSrc(7, '')), { wait: 2600 });
 if (ko) {
-  await scene('battle-master', js(battleSrc(3, "a.run.masters[0] = 'mirror'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' });")), { wait: 3400 });
-  await scene('battle-fog', js(battleSrc(3, "a.run.masters[0] = 'fog'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' });")), { wait: 3400 });
+  await scene('battle-master', js(battleSrc(3, "a.run.factions[0] = 'cavalry'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' });")), { wait: 3400 });
+  await scene('battle-fog', js(battleSrc(3, "a.run.factions[0] = 'hunters'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' });")), { wait: 3400 });
 }
 await scene('battle-full', js(battleSrc(11, "window.__fill(r); r.ante = 5; r.blind = 0;")), { wait: 2800 });
 if (ko) {

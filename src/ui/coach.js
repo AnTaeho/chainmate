@@ -27,6 +27,15 @@ export const HINTS = {
   tactic: '묘수는 떨구기 전에 눌러 이번 대국에 한 번 쓴다',
   bigText: '창이 작아 글이 작다. 설정에서 큰 글자를 켤 수 있다',
   clock: '대국을 지면 시계 한 칸이 준다. 시계를 다 쓰면 판이 끝난다',
+  // 세력(factions.js): 새 세력을 처음 만나는 관 선택에서, 버릇만
+  faction_peasants: '농민군 땅이다. 적 폰이 옆 칸도 지킨다',
+  faction_cavalry: '기병대 땅이다. 증원이 나이트 무리로 온다',
+  faction_abbey: '수도원 땅이다. 돌기둥이 길을 막는다',
+  faction_fortress: '성채 땅이다. 성벽을 넘는 길은 문 하나다',
+  faction_hunters: '숲 사냥꾼 땅이다. 위 두 줄은 숲이라 떨굴 수 없다',
+  faction_heralds: '전령단 땅이다. 증원이 하나 더 온다',
+  faction_mercs: '용병단 땅이다. 적 특성이 두 배로 붙는다',
+  faction_royal: '왕궁 근위 땅이다. 킹을 지키는 적이 하나 더 있다',
 };
 
 const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id]);

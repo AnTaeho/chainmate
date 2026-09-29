@@ -172,7 +172,7 @@ for (const q of plan4.line) { await idle(); await clickId(`sq:${q}`); }
 await page.waitForFunction(() => { const s = window.__app.screen; return s.falls && [...s.falls.values()].some((t) => t > 0.07); }, null, { timeout: 8000, polling: 'raf' }).catch(() => {});
 await shot('27d-reinforce-fall');
 // 명인 규칙 글이 카드와 띠에 들어가는지: 가장 긴 글(안개)
-await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.run.masters[0] = 'fog'; a.goPhase(); });
+await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.run.factions[0] = 'hunters'; a.goPhase(); });
 await settle(200);
 await shot('02b-select-fog');
 await ev(() => { const a = window.__app; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase(); });

@@ -13,6 +13,7 @@ import { EDITION_BY_ID } from '../src/data/editions.js';
 import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
+import { FINAL_FACTION } from '../src/data/factions.js';
 import { stepBattle } from './bot.mjs';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
@@ -74,9 +75,9 @@ export const EVALS = { n: 0 };
 // 짜임 하나의 힘: K개 대국판에서 「한 수」의 최선 점수 평균. 판마다 대국의 몇째 수인지(0~3)를 돌려 가며
 // 그만큼 기물을 먼저 써 둔 채로 잰다(첫수 · 마지막 수 · 작은 주머니 같은 격언이 제 몫을 받게).
 // 네 수를 끝까지 두는 것보다 6배쯤 싸고, 짜임끼리 비교하는 데는 충분하다.
-export function evalBuild(run, build, seeds, ante, master = null) {
+export function evalBuild(run, build, seeds, ante, master = null, faction = null) {
   EVALS.n++;
-  const mods = battleMods(build, master).filter((m) => SMART.famAware || !String(m.id).startsWith('family:'));
+  const mods = battleMods(build, master, faction).filter((m) => SMART.famAware || !String(m.id).startsWith('family:'));
   let total = 0;
   seeds.forEach((seed, k) => {
     const b = createBattle({
@@ -153,7 +154,8 @@ function makeCtx(run) {
   const seeds = evalSeeds(run, SMART.K);
   const ante = nextAnte(run);
   const nextBlind = run.phase === 'shop' ? (run.blind + 1) % 3 : run.blind;
-  const nextMaster = blindInfo(run, ante, nextBlind).master;
+  const nextInfo = blindInfo(run, ante, nextBlind);
+  const nextMaster = nextInfo.master, nextFaction = nextInfo.faction;
   const cache = new Map();
   return {
     seeds, ante,
@@ -161,11 +163,12 @@ function makeCtx(run) {
       const key = JSON.stringify([build.deck.map((p) => p.t + (p.eng ? p.eng.id : '') + (p.soul || '')).sort(), build.maxims.map((m) => m.id + JSON.stringify(m.data || {})), build.charts, build.josekis || []]);
       if (!cache.has(key)) {
         // 다음이 명인 대국이면 그 명인을 걸고도 잰다. finalFrom관부터는 8관 「대가」(기보가 안 듣는다)도 미리 섞는다.
-        const parts = [evalBuild(run, build, seeds, ante)];
-        if (nextMaster && nextMaster !== FINAL_MASTER) parts.push(evalBuild(run, build, seeds, ante, nextMaster));
+        // 세력(버릇 · 적 구성)은 다음 대국의 세력으로 잰다
+        const parts = [evalBuild(run, build, seeds, ante, null, nextFaction)];
+        if (nextMaster && nextMaster !== FINAL_MASTER) parts.push(evalBuild(run, build, seeds, ante, nextMaster, nextFaction));
         let v = parts.reduce((a, x) => a + x, 0) / parts.length;
         if (run.ante >= SMART.finalFrom || nextMaster === FINAL_MASTER) {
-          const fin = evalBuild(run, build, seeds, Math.max(ante, 8), FINAL_MASTER);
+          const fin = evalBuild(run, build, seeds, Math.max(ante, 8), FINAL_MASTER, FINAL_FACTION);
           // 대가 판은 기보가 빠져 값이 한 자릿수 작다: 비율끼리 섞이게 기하 평균
           v = Math.pow(v + 1, 1 - SMART.finalWeight) * Math.pow(fin + 1, SMART.finalWeight);
         }

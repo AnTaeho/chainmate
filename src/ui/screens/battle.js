@@ -19,6 +19,11 @@ import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
+import { FACTION_BY_ID } from '../../data/factions.js';
+import { drawCrest } from '../../render/crests.js';
+
+// 대국의 세력(버릇 조정자 faction:<id>) — 수업 · 타이틀 시연은 없다
+export const factionOfBattle = (b) => { const s = b && b.mods && b.mods.find((x) => typeof x.id === 'string' && x.id.startsWith('faction:')); return s ? FACTION_BY_ID[s.id.slice(8)] : null; };
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { button } from '../ui.js';
@@ -194,7 +199,7 @@ export class BattleScreen {
     const b = this.bRef;
     const m = b.mods.find((s) => MASTER_BY_ID[s.id]);
     if (m) { this.banner = { title: `명인 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: 2.6, col: PAL.red, master: m.id }; this.snd('start'); }
-    else if (info && this.run) this.banner = { title: `${this.run.ante}관 · ${KIND_SHORT[b.kind]} 대국`, sub: `목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold };
+    else if (info && this.run) { const fa = factionOfBattle(b); this.banner = { title: `${this.run.ante}관 · ${KIND_SHORT[b.kind]} 대국`, sub: `${fa ? `${fa.name} · ` : ''}목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold }; }
     // 이번 판에서 처음 나온 것(이형 적 · 적 특성 · 판 위 사물 · 금빛 적): 띠 아래에 작은 그림 한 줄
     if (this.banner && info && this.run) {
       const news = this.newThings(b);
@@ -919,10 +924,24 @@ export class BattleScreen {
     }
   }
 
+  // 세력마다 판 틀 한 가지(다른 땅에 왔다는 표지): 틀 안쪽 테 한 줄이 세력 빛깔, 네 모서리 조각 자리에 작은 문장 빛
+  drawFactionFrame(ctx) {
+    const fa = factionOfBattle(this.b);
+    if (!fa) return;
+    const n = S * 8 + 12, x0 = BX - 6, y0 = BY - 6;
+    ctx.globalAlpha = 0.85;
+    frame(ctx, BX - 2, BY - 2, S * 8 + 4, S * 8 + 4, fa.hue);
+    ctx.globalAlpha = 1;
+    // 모서리 조각(5×5 꽃)을 세력 빛깔로 덧칠한다
+    const orn = ['..#..', '.#o#.', '#o#o#', '.#o#.', '..#..'];
+    for (const [ox, oy] of [[0, 0], [n - 6, 0], [0, n - 6], [n - 6, n - 6]]) orn.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === 'o') rect(ctx, x0 + ox + i, y0 + oy + j, 1, 1, fa.hue); });
+  }
+
   drawBoard(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, time = app.time;
     this.drawGoalBar(ctx);
     ctx.drawImage(boardFrameCanvas(S), BX - 6, BY - 6);
+    this.drawFactionFrame(ctx);
     // 사슬 평가의 테두리 불빛: 흰 → 금 → 붉은 금 → 무지개. 사슬이 끝나면 사그라든다
     if (this.glow) {
       const g = this.glow;
@@ -1237,11 +1256,21 @@ export class BattleScreen {
   // 왼쪽 칸 자리: 머리 칸 내용(headSpec — 수업이 바꾼다)과 아래 칸 줄 수로 쌓는다
   headSpec() {
     const b = this.b, run = this.run, master = b.mods.find((s) => MASTER_BY_ID[s.id]);
+    // 명인 대국은 제목이 곧 명인 이름(가리키면 명인 규칙 — 우두머리 이름이 곧 세력을 말한다).
+    // 연습 · 정식은 「농민군 · 연습 대국」, 한 줄에 안 들어가면 「농민군 · 연습」, 그래도 안 들어가면(영어) 세력 이름만
+    // (머리 칸은 한 줄: 두 줄이면 사슬 칸이 모자란다. 대국 종류는 관 줄의 「이기면 $3 · $4」와 목표가 말한다)
+    const fa = factionOfBattle(b);
+    const room = LW - PAD_BOX * 2;
+    let title = master ? `명인 ${MASTER_BY_ID[master.id].name}` : KIND_NAME[b.kind];
+    if (fa && !master) {
+      const cands = [`${fa.name} · ${KIND_NAME[b.kind]}`, `${fa.name} · ${KIND_SHORT[b.kind]}`];
+      title = cands.find((c) => measure(c, true) <= room) || cands.find((c) => measure(c) <= room) || fa.name;
+    }
     return {
       kicker: run && !run.endless ? `${b.ante}/${ANTES}관` : `${b.ante}관`,
       right: `이기면 $${REWARD.base[b.kind]}`,
-      // 명인 대국은 제목이 곧 명인 이름(가리키면 명인 규칙)
-      titles: [master ? `명인 ${MASTER_BY_ID[master.id].name}` : KIND_NAME[b.kind]],
+      titles: [title],
+      faction: fa,
       titleCol: master ? PAL.red : PAL.gold,
       master: master ? MASTER_BY_ID[master.id] : null,
       target: num(this.view.target),
@@ -1270,7 +1299,9 @@ export class BattleScreen {
     text(ctx, spec.kicker, LX + P, hy + hl.kicker, PAL.dim);
     if (spec.rightInline) text(ctx, spec.right, LX + LW - P, hy + hl.kicker, PAL.goldDk, { align: 'right' });
     spec.titles.forEach((l, k) => fitText(ctx, l, LX + P, hy + hl.titles[k], LW - P * 2, spec.titleCol));
+    // 제목 줄을 가리키면: 명인 대국은 명인 규칙, 연습 · 정식은 세력의 버릇
     if (spec.master) { const m = spec.master; ui.region('master', LX + 2, hy + hl.titles[0], LW - 4, 16, { tip: () => tipLines(`명인 ${m.name}`, m.text) }); }
+    else if (spec.faction) { const fa = spec.faction; ui.region('faction', LX + 2, hy + hl.titles[0], LW - 4, 16, { tip: () => tipLines(fa.name, fa.habit.text) }); }
     // 수치가 이름표 옆에 안 들어가면(끝없는 대국의 큰 수) 짧은 꼴(1.2G)로
     const fitRow = (label, n) => (typeof n === 'number' ? fitNum(n, LW - P * 2 - measure(label) - 4) : n);
     text(ctx, '목표', LX + P, hy + hl.rows[0], PAL.dim);

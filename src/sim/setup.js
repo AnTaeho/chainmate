@@ -16,7 +16,11 @@ export const reinforceCount = () => 2;
 // 깊이 A: 4관부터 이형 적이 섞인다(관마다 무게 +FAIRY_ENEMY.step, 겹친 기물은 반). 먹으면 그 이형이 된다.
 export const FAIRY_ENEMY = { from: 4, step: 0.12 };
 const FAIRY_ENEMY_W = { A: 0.5, C: 0.5, Z: 0.25, L: 1, H: 1, G: 1, O: 1, S: 1, W: 0.5 };
-export function enemyWeights(ante) {
+// 세력(docs/design-notes/factions.md): 대국 규칙 깃발로 적 구성을 비튼다(세력 id는 모른다).
+//   rules.mix     { 종류: 곱 } 관별 무게에 곱한다(주력 적). fairy 키는 이형 전부에 곱한다
+//   rules.unique  { 이형: 무게 } 고유 적 — 1관부터 UNIQUE.base × (1 + UNIQUE.step × (관 − 1)) × 무게로 섞인다(4관부터의 이형 무게에 더한다)
+export const UNIQUE = { base: 0.35, step: 0.25 };
+export function enemyWeights(ante, rules = null) {
   const w = [
     ['P', Math.max(2, 7 - 0.6 * ante)],
     ['N', 2 + 0.1 * ante],
@@ -28,10 +32,27 @@ export function enemyWeights(ante) {
     const k = FAIRY_ENEMY.step * (ante - FAIRY_ENEMY.from + 1);
     for (const [t, x] of Object.entries(FAIRY_ENEMY_W)) w.push([t, k * x]);
   }
-  return w;
+  if (!rules || (!rules.mix && !rules.unique)) return w;
+  const mix = rules.mix || {};
+  const out = w.map(([t, x]) => [t, x * (mix[t] ?? (FAIRY_ENEMY_W[t] != null ? mix.fairy ?? 1 : 1))]);
+  const u = UNIQUE.base * (1 + UNIQUE.step * (ante - 1));
+  for (const [t, x] of Object.entries(rules.unique || {})) {
+    const row = out.find((r) => r[0] === t);
+    if (row) row[1] += u * x; else out.push([t, u * x]);
+  }
+  return out;
 }
-export function rollType(rng, ante) {
-  const w = enemyWeights(ante);
+// 무게 표 하나에서 종류 하나를 굴린다
+export function rollFrom(rng, w) {
+  let total = 0;
+  for (const [, x] of w) total += x;
+  let r = next(rng) * total;
+  for (const [t, x] of w) { if ((r -= x) < 0) return t; }
+  return w[w.length - 1][0];
+}
+// rules: 대국 규칙(세력 깃발). 없으면 관별 기본 무게
+export function rollType(rng, ante, rules = null) {
+  const w = enemyWeights(ante, rules);
   let total = 0;
   for (const [, x] of w) total += x;
   let r = next(rng) * total;
@@ -67,7 +88,7 @@ export function kingDefended(board, ksq, opts = {}, guards = 2) {
 // 판 위 사물(깊이 F): 2관부터 드물게 보석 하나 · 벽 한두 칸(배수를 막는 벽은 포 · 메뚜기의 받침이 된다)
 export const THINGS = { from: 2, gem: 0.3, wall: 0.25 };
 function placeTraits(b, rng, board) {
-  const p = b.rules.traits === false ? 0 : traitChance(b.ante ?? 1);
+  const p = b.rules.traits === false ? 0 : traitChance(b.ante ?? 1, b.rules);
   if (!p) return;
   for (let sq = 0; sq < 64; sq++) {
     const c = board[sq];
@@ -75,7 +96,13 @@ function placeTraits(b, rng, board) {
     if (next(rng) < p) c.trait = TRAITS[int(rng, TRAITS.length)].id;
   }
 }
+// 세력 깃발 rules.walls = [적어도, 많아야]: 판마다 벽이 그만큼 늘 선다(수도원의 돌기둥)
 function placeThings(b, rng, board, reserve) {
+  if (b.rules.walls && b.rules.things !== false) {
+    const [lo, hi] = b.rules.walls;
+    const n = lo + int(rng, hi - lo + 1);
+    for (let i = 0; i < n; i++) { const sq = randomEmpty(rng, board, 2, reserve); if (sq >= 0) board[sq] = { t: 'X', id: b.nextId++, born: -1 }; }
+  }
   if ((b.ante ?? 1) < THINGS.from || b.rules.things === false) return;
   if (next(rng) < THINGS.gem) { const sq = randomEmpty(rng, board, 2, reserve); if (sq >= 0) board[sq] = { t: 'J', id: b.nextId++, born: -1 }; }
   if (next(rng) < THINGS.wall) {
@@ -84,16 +111,30 @@ function placeThings(b, rng, board, reserve) {
   }
 }
 
+// 세력 깃발 rules.wallRow = { ranks: [줄…] }: 판을 가로지르는 벽 한 줄, 가운데 네 칸(c~f) 중 하나가 빈 문(성채)
+export const WALL_ROW = { gateFiles: [2, 3, 4, 5] };
+function placeWallRow(b, rng, board, reserve) {
+  const wr = b.rules.wallRow;
+  if (!wr || b.rules.things === false) return;
+  const rank = wr.ranks[int(rng, wr.ranks.length)];
+  const gate = WALL_ROW.gateFiles[int(rng, WALL_ROW.gateFiles.length)];
+  for (let f = 0; f < 8; f++) {
+    const sq = rank * 8 + f;
+    if (f !== gate && !board[sq] && !reserve.includes(sq)) board[sq] = { t: 'X', id: b.nextId++, born: -1 };
+  }
+}
+
 export function generateBoard(b, rng = b.rng.board, reserve = []) {
   const count = b.rules.enemies ?? enemyCount(b.ante);
   const kings = b.rules.kings;
-  const guards = b.rules.guards ?? kingGuards(b.ante);
+  const guards = (b.rules.guards ?? kingGuards(b.ante)) + (b.rules.guardsBonus || 0);
   const opts = { pawnSides: b.rules.pawnSides };
   for (let attempt = 0; attempt < 500; attempt++) {
     const board = emptyBoard();
     const ksqs = [];
     let placed = 0, ok = true;
     const put = (sq, t) => { board[sq] = { t, id: b.nextId++, born: -1 }; placed++; };
+    placeWallRow(b, rng, board, reserve);
     for (let k = 0; k < kings && ok; k++) {
       // 킹은 rank 4~6(폰 수비수가 한 줄 위에 설 자리가 있게)
       const free = [];
@@ -105,7 +146,7 @@ export function generateBoard(b, rng = b.rng.board, reserve = []) {
       if (!pawnAt.length) { ok = false; break; }
       put(pawnAt[int(rng, pawnAt.length)], 'P');
       for (let g = 1; g < guards && ok; g++) {
-        const t2 = rollType(rng, b.ante);
+        const t2 = rollType(rng, b.ante, b.rules);
         const cand = defenderSquares(board, t2, ksq, opts, reserve);
         if (!cand.length) { ok = false; break; }
         put(cand[int(rng, cand.length)], t2);
@@ -115,7 +156,7 @@ export function generateBoard(b, rng = b.rng.board, reserve = []) {
     for (let i = placed; i < count; i++) {
       const sq = randomEmpty(rng, board, 2, reserve);
       if (sq < 0) break;
-      put(sq, rollType(rng, b.ante));
+      put(sq, rollType(rng, b.ante, b.rules));
     }
     placeThings(b, rng, board, reserve);
     placeTraits(b, rng, board);

@@ -58,7 +58,7 @@ function rebuild(snap, seed, withTarget = true) {
   return createBattle({
     seed, ante: snap.ante, kind: info.kind, target: withTarget ? info.target : null,
     bag: snap.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
-    rules: snap.rules, mods: battleMods(snap, info.master),
+    rules: snap.rules, mods: battleMods(snap, info.master, info.faction),
     goldenChance: awaitingGold(snap) ? GOLDEN.calling : GOLDEN.chance,
     filter: boardFilter(),
   });

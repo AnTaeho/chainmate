@@ -142,7 +142,7 @@ function plainBattle(run) {
   return createBattle({
     seed: battleSeed(run), ante: run.ante, kind: info.kind, target: info.target,
     bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
-    rules: run.rules, mods: battleMods(run, info.master),
+    rules: run.rules, mods: battleMods(run, info.master, info.faction),
     goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
   });
 }

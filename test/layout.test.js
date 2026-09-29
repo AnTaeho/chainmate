@@ -84,16 +84,19 @@ test('정석 카드: 셋이 같은 높이로 본 칸 안(모든 정석, 한국�
   }
 });
 
-test('관 선택: 명인 카드(1~7관 명인 · 8관 대가)가 본 칸 안', async () => {
-  const { MASTERS, FINAL_MASTER } = await import('../src/data/masters.js');
+test('관 선택: 세력 띠 · 카드 셋(1~7관 명인 · 8관 대가)이 본 칸 안', async () => {
+  const { FACTIONS, FINAL_FACTION } = await import('../src/data/factions.js');
   for (const lang of LANGS) {
     M.lang.setLang(lang);
-    for (const m of MASTERS) for (const ante of [1, 4, 7, 8]) {
-      if ((ante === 8) !== (m.id === FINAL_MASTER)) continue;
+    for (const f of FACTIONS) for (const ante of [1, 4, 7, 8]) {
+      if ((ante === 8) !== (f.id === FINAL_FACTION)) continue;
       const run = M.run.createRun({ seed: 1, draft: false });
-      run.ante = ante; run.masters[ante - 1] = m.id;
-      const h = Math.max(...[0, 1, 2].map((i) => M.select.blindLayout(run, i).h));
-      assert.ok(M.frame.TOP + h <= 270 - M.frame.GAP_GROUP, `${lang} ${m.id} ${ante}관 ${h}`);
+      run.ante = ante; run.factions[ante - 1] = f.id;
+      const plan = M.select.selectPlan(run);
+      const h = plan.H;
+      assert.ok(M.frame.TOP + h <= 270 - M.frame.GAP_GROUP, `${lang} ${f.id} ${ante}관 ${h}`);
+      // 연습 · 정식 카드는 세력 띠 아래, 제 내용이 들어가고 아랫변이 명인 카드와 같다
+      for (const i of [0, 1]) assert.ok(plan.cards[i].h >= M.select.blindLayout(run, i).h && plan.cards[i].y + plan.cards[i].h === plan.cards[2].y + plan.cards[2].h, `${lang} ${f.id} 카드 ${i}`);
     }
   }
 });

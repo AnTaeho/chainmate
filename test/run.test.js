@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createRun, applyRun, legalRunCommands, blindInfo, targetFor, B, REWARD, sellPrice } from '../src/sim/run.js';
 import { SHOP, rerollCost } from '../src/sim/shop.js';
 import { MASTERS, FINAL_MASTER } from '../src/data/masters.js';
+import { FACTION_BY_ID } from '../src/data/factions.js';
 import { stepBattle } from '../tools/bot.mjs';
 
 // 간단한 봇: 대국은 풀이기, 상점에선 살 수 있는 첫 물건 하나를 사고 꾸러미는 첫 선택, 나간다. 명령을 모두 적어 둔다.
@@ -22,17 +23,18 @@ function botCommands(run, maxCmds = 100000) {
   return cmds;
 }
 
-test('판 시작: 주머니 8, 상금 4, 명인은 1~7관이 서로 다르고 8관은 대가', () => {
+test('판 시작: 주머니 8, 상금 4, 세력은 1관 농민군 · 8관 왕궁 근위, 명인은 관마다 다르고 8관은 대가', () => {
   const run = createRun({ draft: false, seed: 3 });
   assert.equal(run.deck.length, 8);
   assert.equal(run.money, 4);
   assert.equal(run.phase, 'select');
-  assert.equal(run.masters.length, 8);
-  assert.equal(run.masters[7], FINAL_MASTER);
-  assert.equal(new Set(run.masters.slice(0, 7)).size, 7);
-  assert.ok(!run.masters.slice(0, 7).includes(FINAL_MASTER));
-  assert.deepEqual([...run.masters.slice(0, 7)].sort(), MASTERS.map((m) => m.id).filter((id) => id !== FINAL_MASTER).sort());
-  assert.notDeepEqual(createRun({ draft: false, seed: 4 }).masters, run.masters);
+  assert.equal(run.factions.length, 8);
+  assert.equal(run.factions[0], 'peasants');
+  assert.equal(run.factions[7], 'royal');
+  const masters = [1, 2, 3, 4, 5, 6, 7, 8].map((a) => blindInfo(run, a, 2).master);
+  assert.equal(masters[7], FINAL_MASTER);
+  assert.deepEqual([...masters].sort(), MASTERS.map((m) => m.id).sort());
+  assert.notDeepEqual(createRun({ draft: false, seed: 4 }).factions, run.factions);
 });
 
 test('목표: B × 종류 배율, 9관부터 늘어난다', () => {
@@ -44,7 +46,8 @@ test('목표: B × 종류 배율, 9관부터 늘어난다', () => {
   assert.equal(info.kind, 'practice');
   assert.equal(info.master, null);
   assert.ok(info.tag);
-  assert.equal(blindInfo(run, 2, 2).master, run.masters[1]);
+  assert.equal(blindInfo(run, 2, 2).master, FACTION_BY_ID[run.factions[1]].boss);
+  assert.equal(blindInfo(run, 2, 0).faction, run.factions[1]);
 });
 
 test('대국을 이기면 보상(기본 + 남은 수 + 적립 + 외통 + 대국 중 번 돈) 뒤 상점', () => {

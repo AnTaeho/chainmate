@@ -11,4 +11,10 @@ export const TRAITS = [
 export const TRAIT_BY_ID = Object.fromEntries(TRAITS.map((t) => [t.id, t]));
 // 적 하나에 특성이 붙을 확률: 4관 6% · 관마다 +4%p, 최대 26%
 export const TRAIT_CHANCE = { from: 4, base: 0.06, step: 0.04, max: 0.26, traitorDeckMax: 14 };
-export const traitChance = (ante) => (ante < TRAIT_CHANCE.from ? 0 : Math.min(TRAIT_CHANCE.max, TRAIT_CHANCE.base + TRAIT_CHANCE.step * (ante - TRAIT_CHANCE.from)));
+// 세력 깃발(용병단): rules.traitFrom 이 관부터 붙고(그 앞 관은 4관 확률로), rules.traitMult 배
+export const traitChance = (ante, rules = null) => {
+  const from = (rules && rules.traitFrom) || TRAIT_CHANCE.from;
+  if (ante < from) return 0;
+  const k = (rules && rules.traitMult) || 1;
+  return k * Math.min(TRAIT_CHANCE.max, TRAIT_CHANCE.base + TRAIT_CHANCE.step * Math.max(0, ante - TRAIT_CHANCE.from));
+};

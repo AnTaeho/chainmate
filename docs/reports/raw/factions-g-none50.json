@@ -1,0 +1,4947 @@
+{
+ "tool": "tools/run.mjs",
+ "policy": "none",
+ "seed": 1,
+ "dan": 0,
+ "runs": 50,
+ "timeouts": 0,
+ "tune": null,
+ "B": null,
+ "runWin": 0,
+ "antes": [
+  {
+   "ante": 1,
+   "reached": 1,
+   "cleared": 1,
+   "pass": 1,
+   "practice": {
+    "n": 50,
+    "win": 1
+   },
+   "official": {
+    "n": 50,
+    "win": 1
+   },
+   "master": {
+    "n": 50,
+    "win": 1
+   },
+   "ratioHist": [
+    0,
+    0,
+    0,
+    63,
+    30,
+    30,
+    20,
+    6,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "ante": 2,
+   "reached": 1,
+   "cleared": 1,
+   "pass": 1,
+   "practice": {
+    "n": 50,
+    "win": 0.98
+   },
+   "official": {
+    "n": 50,
+    "win": 0.82
+   },
+   "master": {
+    "n": 50,
+    "win": 0.5
+   },
+   "ratioHist": [
+    8,
+    15,
+    12,
+    55,
+    23,
+    8,
+    3,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "ante": 3,
+   "reached": 1,
+   "cleared": 0.38,
+   "pass": 0.38,
+   "practice": {
+    "n": 50,
+    "win": 0.34
+   },
+   "official": {
+    "n": 44,
+    "win": 0.295
+   },
+   "master": {
+    "n": 33,
+    "win": 0.212
+   },
+   "ratioHist": [
+    74,
+    12,
+    4,
+    4,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "ante": 4,
+   "reached": 0.38,
+   "cleared": 0.02,
+   "pass": 0.053,
+   "practice": {
+    "n": 19,
+    "win": 0.368
+   },
+   "official": {
+    "n": 10,
+    "win": 0.1
+   },
+   "master": {
+    "n": 4,
+    "win": 0.25
+   },
+   "ratioHist": [
+    23,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "ante": 5,
+   "reached": 0.02,
+   "cleared": 0,
+   "pass": 0,
+   "practice": {
+    "n": 1,
+    "win": 0
+   },
+   "official": {
+    "n": 0,
+    "win": null
+   },
+   "master": {
+    "n": 0,
+    "win": null
+   },
+   "ratioHist": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "ante": 6,
+   "reached": 0,
+   "cleared": 0,
+   "pass": 0,
+   "practice": {
+    "n": 0,
+    "win": null
+   },
+   "official": {
+    "n": 0,
+    "win": null
+   },
+   "master": {
+    "n": 0,
+    "win": null
+   },
+   "ratioHist": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "ante": 7,
+   "reached": 0,
+   "cleared": 0,
+   "pass": 0,
+   "practice": {
+    "n": 0,
+    "win": null
+   },
+   "official": {
+    "n": 0,
+    "win": null
+   },
+   "master": {
+    "n": 0,
+    "win": null
+   },
+   "ratioHist": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "ante": 8,
+   "reached": 0,
+   "cleared": 0,
+   "pass": 0,
+   "practice": {
+    "n": 0,
+    "win": null
+   },
+   "official": {
+    "n": 0,
+    "win": null
+   },
+   "master": {
+    "n": 0,
+    "win": null
+   },
+   "ratioHist": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  }
+ ],
+ "ratioEdges": [
+  [
+   0,
+   0.5
+  ],
+  [
+   0.5,
+   0.75
+  ],
+  [
+   0.75,
+   1
+  ],
+  [
+   1,
+   1.5
+  ],
+  [
+   1.5,
+   2
+  ],
+  [
+   2,
+   3
+  ],
+  [
+   3,
+   5
+  ],
+  [
+   5,
+   10
+  ],
+  [
+   10,
+   20
+  ],
+  [
+   20,
+   50
+  ],
+  [
+   50,
+   null
+  ]
+ ],
+ "clock": {
+  "lostPerRun": 3,
+  "wonWithLoss": 0,
+  "reboardPerBattle": 0.534
+ },
+ "items": {
+  "maxim": {},
+  "joseki": {
+   "battery": {
+    "runs": 4,
+    "win": 0
+   },
+   "pact": {
+    "runs": 4,
+    "win": 0
+   },
+   "torch": {
+    "runs": 9,
+    "win": 0
+   },
+   "gomoku": {
+    "runs": 1,
+    "win": 0
+   },
+   "archery": {
+    "runs": 5,
+    "win": 0
+   },
+   "knight_oath": {
+    "runs": 5,
+    "win": 0
+   },
+   "martyr_vow": {
+    "runs": 4,
+    "win": 0
+   },
+   "gates": {
+    "runs": 7,
+    "win": 0
+   },
+   "desert": {
+    "runs": 6,
+    "win": 0
+   },
+   "long_think": {
+    "runs": 6,
+    "win": 0
+   },
+   "first_mover": {
+    "runs": 1,
+    "win": 0
+   },
+   "rampart": {
+    "runs": 6,
+    "win": 0
+   },
+   "stepping": {
+    "runs": 3,
+    "win": 0
+   },
+   "highway": {
+    "runs": 10,
+    "win": 0
+   },
+   "river": {
+    "runs": 6,
+    "win": 0
+   },
+   "trap": {
+    "runs": 5,
+    "win": 0
+   },
+   "gloom": {
+    "runs": 2,
+    "win": 0
+   },
+   "mitre": {
+    "runs": 6,
+    "win": 0
+   },
+   "blitz": {
+    "runs": 3,
+    "win": 0
+   },
+   "captive": {
+    "runs": 3,
+    "win": 0
+   },
+   "meadow": {
+    "runs": 2,
+    "win": 0
+   },
+   "throne": {
+    "runs": 3,
+    "win": 0
+   }
+  },
+  "soul": {},
+  "engraving": {
+   "ivory": {
+    "runs": 2,
+    "win": 0
+   },
+   "jade": {
+    "runs": 2,
+    "win": 0
+   },
+   "marble": {
+    "runs": 2,
+    "win": 0
+   },
+   "bronze": {
+    "runs": 1,
+    "win": 0
+   },
+   "ebony": {
+    "runs": 1,
+    "win": 0
+   },
+   "iron": {
+    "runs": 3,
+    "win": 0
+   },
+   "gold": {
+    "runs": 1,
+    "win": 0
+   },
+   "amber": {
+    "runs": 2,
+    "win": 0
+   },
+   "coral": {
+    "runs": 1,
+    "win": 0
+   }
+  }
+ },
+ "factions": {
+  "rows": [
+   {
+    "id": "peasants",
+    "name": "농민군",
+    "n": 150,
+    "practice": {
+     "n": 50,
+     "win": 1
+    },
+    "official": {
+     "n": 50,
+     "win": 1
+    },
+    "master": {
+     "n": 50,
+     "win": 1
+    },
+    "adj": null,
+    "adjN": 0,
+    "ante": 1,
+    "worn": [
+     [
+      "P",
+      0.569
+     ],
+     [
+      "N",
+      0.191
+     ],
+     [
+      "B",
+      0.087
+     ],
+     [
+      "R",
+      0.072
+     ],
+     [
+      "S",
+      0.05
+     ],
+     [
+      "Q",
+      0.031
+     ]
+    ]
+   },
+   {
+    "id": "cavalry",
+    "name": "기병대",
+    "n": 78,
+    "practice": {
+     "n": 29,
+     "win": 0.69
+    },
+    "official": {
+     "n": 26,
+     "win": 0.615
+    },
+    "master": {
+     "n": 23,
+     "win": 0.478
+    },
+    "adj": 0.064,
+    "adjN": 23,
+    "ante": 2.4615384615384617,
+    "worn": [
+     [
+      "N",
+      0.443
+     ],
+     [
+      "P",
+      0.206
+     ],
+     [
+      "B",
+      0.085
+     ],
+     [
+      "H",
+      0.085
+     ],
+     [
+      "R",
+      0.074
+     ],
+     [
+      "L",
+      0.057
+     ],
+     [
+      "Q",
+      0.047
+     ],
+     [
+      "O",
+      0.002
+     ]
+    ]
+   },
+   {
+    "id": "abbey",
+    "name": "수도원",
+    "n": 72,
+    "practice": {
+     "n": 28,
+     "win": 0.429
+    },
+    "official": {
+     "n": 24,
+     "win": 0.417
+    },
+    "master": {
+     "n": 20,
+     "win": 0.45
+    },
+    "adj": 0.121,
+    "adjN": 20,
+    "ante": 2.763888888888889,
+    "worn": [
+     [
+      "B",
+      0.493
+     ],
+     [
+      "P",
+      0.251
+     ],
+     [
+      "N",
+      0.085
+     ],
+     [
+      "R",
+      0.07
+     ],
+     [
+      "Q",
+      0.054
+     ],
+     [
+      "A",
+      0.037
+     ],
+     [
+      "L",
+      0.004
+     ],
+     [
+      "S",
+      0.003
+     ],
+     [
+      "H",
+      0.001
+     ]
+    ]
+   },
+   {
+    "id": "fortress",
+    "name": "성채",
+    "n": 25,
+    "practice": {
+     "n": 11,
+     "win": 0.545
+    },
+    "official": {
+     "n": 8,
+     "win": 0.5
+    },
+    "master": {
+     "n": 6,
+     "win": 0.333
+    },
+    "adj": -0.029,
+    "adjN": 6,
+    "ante": 2.96,
+    "worn": [
+     [
+      "R",
+      0.4
+     ],
+     [
+      "P",
+      0.287
+     ],
+     [
+      "Q",
+      0.067
+     ],
+     [
+      "N",
+      0.062
+     ],
+     [
+      "O",
+      0.062
+     ],
+     [
+      "C",
+      0.051
+     ],
+     [
+      "B",
+      0.051
+     ],
+     [
+      "A",
+      0.01
+     ],
+     [
+      "G",
+      0.005
+     ],
+     [
+      "H",
+      0.005
+     ]
+    ]
+   },
+   {
+    "id": "hunters",
+    "name": "숲 사냥꾼",
+    "n": 48,
+    "practice": {
+     "n": 18,
+     "win": 0.722
+    },
+    "official": {
+     "n": 17,
+     "win": 0.412
+    },
+    "master": {
+     "n": 13,
+     "win": 0.538
+    },
+    "adj": 0.127,
+    "adjN": 13,
+    "ante": 2.5208333333333335,
+    "worn": [
+     [
+      "S",
+      0.289
+     ],
+     [
+      "N",
+      0.188
+     ],
+     [
+      "P",
+      0.178
+     ],
+     [
+      "R",
+      0.112
+     ],
+     [
+      "B",
+      0.098
+     ],
+     [
+      "G",
+      0.083
+     ],
+     [
+      "Q",
+      0.051
+     ]
+    ]
+   },
+   {
+    "id": "heralds",
+    "name": "전령단",
+    "n": 46,
+    "practice": {
+     "n": 18,
+     "win": 0.667
+    },
+    "official": {
+     "n": 15,
+     "win": 0.6
+    },
+    "master": {
+     "n": 13,
+     "win": 0.077
+    },
+    "adj": -0.315,
+    "adjN": 13,
+    "ante": 2.6739130434782608,
+    "worn": [
+     [
+      "H",
+      0.338
+     ],
+     [
+      "B",
+      0.195
+     ],
+     [
+      "P",
+      0.177
+     ],
+     [
+      "N",
+      0.146
+     ],
+     [
+      "R",
+      0.097
+     ],
+     [
+      "Q",
+      0.031
+     ],
+     [
+      "A",
+      0.005
+     ],
+     [
+      "C",
+      0.003
+     ],
+     [
+      "Z",
+      0.003
+     ],
+     [
+      "O",
+      0.003
+     ],
+     [
+      "G",
+      0.003
+     ]
+    ]
+   },
+   {
+    "id": "mercs",
+    "name": "용병단",
+    "n": 42,
+    "practice": {
+     "n": 16,
+     "win": 0.625
+    },
+    "official": {
+     "n": 14,
+     "win": 0.643
+    },
+    "master": {
+     "n": 12,
+     "win": 0.25
+    },
+    "adj": -0.106,
+    "adjN": 12,
+    "ante": 2.5952380952380953,
+    "worn": [
+     [
+      "P",
+      0.303
+     ],
+     [
+      "N",
+      0.19
+     ],
+     [
+      "R",
+      0.19
+     ],
+     [
+      "B",
+      0.126
+     ],
+     [
+      "Q",
+      0.104
+     ],
+     [
+      "W",
+      0.017
+     ],
+     [
+      "H",
+      0.011
+     ],
+     [
+      "G",
+      0.011
+     ],
+     [
+      "A",
+      0.011
+     ],
+     [
+      "S",
+      0.008
+     ],
+     [
+      "Z",
+      0.008
+     ],
+     [
+      "O",
+      0.008
+     ],
+     [
+      "L",
+      0.008
+     ],
+     [
+      "C",
+      0.003
+     ]
+    ]
+   },
+   {
+    "id": "royal",
+    "name": "왕궁 근위",
+    "n": 0,
+    "practice": {
+     "n": 0,
+     "win": null
+    },
+    "official": {
+     "n": 0,
+     "win": null
+    },
+    "master": {
+     "n": 0,
+     "win": null
+    },
+    "adj": null,
+    "adjN": 0,
+    "ante": null,
+    "worn": []
+   }
+  ],
+  "byAnte": [
+   {
+    "ante": 1,
+    "f": {
+     "peasants": {
+      "top": "P",
+      "share": 0.569,
+      "n": 643,
+      "list": [
+       [
+        "P",
+        0.569
+       ],
+       [
+        "N",
+        0.191
+       ],
+       [
+        "B",
+        0.087
+       ],
+       [
+        "R",
+        0.072
+       ],
+       [
+        "S",
+        0.05
+       ],
+       [
+        "Q",
+        0.031
+       ]
+      ]
+     }
+    }
+   },
+   {
+    "ante": 2,
+    "f": {
+     "cavalry": {
+      "top": "N",
+      "share": 0.422,
+      "n": 346,
+      "list": [
+       [
+        "N",
+        0.422
+       ],
+       [
+        "P",
+        0.217
+       ],
+       [
+        "R",
+        0.09
+       ],
+       [
+        "B",
+        0.087
+       ],
+       [
+        "H",
+        0.075
+       ],
+       [
+        "L",
+        0.061
+       ],
+       [
+        "Q",
+        0.049
+       ]
+      ]
+     },
+     "abbey": {
+      "top": "B",
+      "share": 0.491,
+      "n": 167,
+      "list": [
+       [
+        "B",
+        0.491
+       ],
+       [
+        "P",
+        0.246
+       ],
+       [
+        "R",
+        0.114
+       ],
+       [
+        "Q",
+        0.066
+       ],
+       [
+        "N",
+        0.048
+       ],
+       [
+        "A",
+        0.036
+       ]
+      ]
+     },
+     "fortress": {
+      "top": "P",
+      "share": 0.351,
+      "n": 57,
+      "list": [
+       [
+        "P",
+        0.351
+       ],
+       [
+        "R",
+        0.333
+       ],
+       [
+        "N",
+        0.105
+       ],
+       [
+        "C",
+        0.07
+       ],
+       [
+        "O",
+        0.07
+       ],
+       [
+        "B",
+        0.053
+       ],
+       [
+        "Q",
+        0.018
+       ]
+      ]
+     },
+     "hunters": {
+      "top": "S",
+      "share": 0.308,
+      "n": 182,
+      "list": [
+       [
+        "S",
+        0.308
+       ],
+       [
+        "N",
+        0.22
+       ],
+       [
+        "P",
+        0.209
+       ],
+       [
+        "G",
+        0.088
+       ],
+       [
+        "R",
+        0.071
+       ],
+       [
+        "B",
+        0.071
+       ],
+       [
+        "Q",
+        0.033
+       ]
+      ]
+     },
+     "heralds": {
+      "top": "H",
+      "share": 0.316,
+      "n": 152,
+      "list": [
+       [
+        "H",
+        0.316
+       ],
+       [
+        "B",
+        0.217
+       ],
+       [
+        "P",
+        0.178
+       ],
+       [
+        "N",
+        0.151
+       ],
+       [
+        "R",
+        0.125
+       ],
+       [
+        "Q",
+        0.013
+       ]
+      ]
+     },
+     "mercs": {
+      "top": "P",
+      "share": 0.288,
+      "n": 118,
+      "list": [
+       [
+        "P",
+        0.288
+       ],
+       [
+        "R",
+        0.212
+       ],
+       [
+        "N",
+        0.178
+       ],
+       [
+        "Q",
+        0.11
+       ],
+       [
+        "B",
+        0.11
+       ],
+       [
+        "G",
+        0.025
+       ],
+       [
+        "S",
+        0.017
+       ],
+       [
+        "W",
+        0.017
+       ],
+       [
+        "H",
+        0.008
+       ],
+       [
+        "C",
+        0.008
+       ],
+       [
+        "O",
+        0.008
+       ],
+       [
+        "L",
+        0.008
+       ],
+       [
+        "A",
+        0.008
+       ]
+      ]
+     }
+    }
+   },
+   {
+    "ante": 3,
+    "f": {
+     "cavalry": {
+      "top": "N",
+      "share": 0.472,
+      "n": 235,
+      "list": [
+       [
+        "N",
+        0.472
+       ],
+       [
+        "P",
+        0.2
+       ],
+       [
+        "H",
+        0.106
+       ],
+       [
+        "B",
+        0.089
+       ],
+       [
+        "R",
+        0.051
+       ],
+       [
+        "L",
+        0.051
+       ],
+       [
+        "Q",
+        0.03
+       ]
+      ]
+     },
+     "abbey": {
+      "top": "B",
+      "share": 0.487,
+      "n": 431,
+      "list": [
+       [
+        "B",
+        0.487
+       ],
+       [
+        "P",
+        0.269
+       ],
+       [
+        "N",
+        0.104
+       ],
+       [
+        "R",
+        0.056
+       ],
+       [
+        "Q",
+        0.051
+       ],
+       [
+        "A",
+        0.032
+       ]
+      ]
+     },
+     "fortress": {
+      "top": "R",
+      "share": 0.381,
+      "n": 63,
+      "list": [
+       [
+        "R",
+        0.381
+       ],
+       [
+        "P",
+        0.238
+       ],
+       [
+        "Q",
+        0.111
+       ],
+       [
+        "B",
+        0.095
+       ],
+       [
+        "O",
+        0.079
+       ],
+       [
+        "N",
+        0.048
+       ],
+       [
+        "C",
+        0.048
+       ]
+      ]
+     },
+     "hunters": {
+      "top": "S",
+      "share": 0.275,
+      "n": 182,
+      "list": [
+       [
+        "S",
+        0.275
+       ],
+       [
+        "N",
+        0.181
+       ],
+       [
+        "R",
+        0.148
+       ],
+       [
+        "P",
+        0.143
+       ],
+       [
+        "B",
+        0.121
+       ],
+       [
+        "G",
+        0.066
+       ],
+       [
+        "Q",
+        0.066
+       ]
+      ]
+     },
+     "heralds": {
+      "top": "H",
+      "share": 0.333,
+      "n": 144,
+      "list": [
+       [
+        "H",
+        0.333
+       ],
+       [
+        "B",
+        0.188
+       ],
+       [
+        "N",
+        0.16
+       ],
+       [
+        "P",
+        0.146
+       ],
+       [
+        "R",
+        0.111
+       ],
+       [
+        "Q",
+        0.063
+       ]
+      ]
+     },
+     "mercs": {
+      "top": "P",
+      "share": 0.312,
+      "n": 231,
+      "list": [
+       [
+        "P",
+        0.312
+       ],
+       [
+        "N",
+        0.199
+       ],
+       [
+        "R",
+        0.186
+       ],
+       [
+        "B",
+        0.13
+       ],
+       [
+        "Q",
+        0.104
+       ],
+       [
+        "Z",
+        0.013
+       ],
+       [
+        "W",
+        0.013
+       ],
+       [
+        "A",
+        0.013
+       ],
+       [
+        "O",
+        0.009
+       ],
+       [
+        "H",
+        0.009
+       ],
+       [
+        "L",
+        0.009
+       ],
+       [
+        "S",
+        0.004
+       ]
+      ]
+     }
+    }
+   },
+   {
+    "ante": 4,
+    "f": {
+     "cavalry": {
+      "top": "N",
+      "share": 0.451,
+      "n": 51,
+      "list": [
+       [
+        "N",
+        0.451
+       ],
+       [
+        "P",
+        0.157
+       ],
+       [
+        "Q",
+        0.118
+       ],
+       [
+        "R",
+        0.078
+       ],
+       [
+        "B",
+        0.059
+       ],
+       [
+        "H",
+        0.059
+       ],
+       [
+        "L",
+        0.059
+       ],
+       [
+        "O",
+        0.02
+       ]
+      ]
+     },
+     "abbey": {
+      "top": "B",
+      "share": 0.53,
+      "n": 83,
+      "list": [
+       [
+        "B",
+        0.53
+       ],
+       [
+        "P",
+        0.169
+       ],
+       [
+        "R",
+        0.06
+       ],
+       [
+        "A",
+        0.06
+       ],
+       [
+        "N",
+        0.06
+       ],
+       [
+        "Q",
+        0.048
+       ],
+       [
+        "L",
+        0.036
+       ],
+       [
+        "S",
+        0.024
+       ],
+       [
+        "H",
+        0.012
+       ]
+      ]
+     },
+     "fortress": {
+      "top": "R",
+      "share": 0.467,
+      "n": 75,
+      "list": [
+       [
+        "R",
+        0.467
+       ],
+       [
+        "P",
+        0.28
+       ],
+       [
+        "Q",
+        0.067
+       ],
+       [
+        "C",
+        0.04
+       ],
+       [
+        "N",
+        0.04
+       ],
+       [
+        "O",
+        0.04
+       ],
+       [
+        "A",
+        0.027
+       ],
+       [
+        "B",
+        0.013
+       ],
+       [
+        "G",
+        0.013
+       ],
+       [
+        "H",
+        0.013
+       ]
+      ]
+     },
+     "hunters": {
+      "top": "S",
+      "share": 0.267,
+      "n": 45,
+      "list": [
+       [
+        "S",
+        0.267
+       ],
+       [
+        "P",
+        0.2
+       ],
+       [
+        "G",
+        0.133
+       ],
+       [
+        "R",
+        0.133
+       ],
+       [
+        "B",
+        0.111
+       ],
+       [
+        "N",
+        0.089
+       ],
+       [
+        "Q",
+        0.067
+       ]
+      ]
+     },
+     "heralds": {
+      "top": "H",
+      "share": 0.402,
+      "n": 82,
+      "list": [
+       [
+        "H",
+        0.402
+       ],
+       [
+        "P",
+        0.22
+       ],
+       [
+        "B",
+        0.159
+       ],
+       [
+        "N",
+        0.134
+       ],
+       [
+        "R",
+        0.024
+       ],
+       [
+        "A",
+        0.012
+       ],
+       [
+        "Q",
+        0.012
+       ],
+       [
+        "Z",
+        0.012
+       ],
+       [
+        "O",
+        0.012
+       ],
+       [
+        "G",
+        0.012
+       ]
+      ]
+     },
+     "mercs": {
+      "top": "B",
+      "share": 0.25,
+      "n": 8,
+      "list": [
+       [
+        "B",
+        0.25
+       ],
+       [
+        "P",
+        0.25
+       ],
+       [
+        "W",
+        0.125
+       ],
+       [
+        "N",
+        0.125
+       ],
+       [
+        "H",
+        0.125
+       ],
+       [
+        "G",
+        0.125
+       ]
+      ]
+     }
+    }
+   },
+   {
+    "ante": 5,
+    "f": {
+     "heralds": {
+      "top": "H",
+      "share": 0.25,
+      "n": 12,
+      "list": [
+       [
+        "H",
+        0.25
+       ],
+       [
+        "B",
+        0.25
+       ],
+       [
+        "P",
+        0.25
+       ],
+       [
+        "C",
+        0.083
+       ],
+       [
+        "R",
+        0.083
+       ],
+       [
+        "A",
+        0.083
+       ]
+      ]
+     }
+    }
+   },
+   {
+    "ante": 6,
+    "f": {}
+   },
+   {
+    "ante": 7,
+    "f": {}
+   },
+   {
+    "ante": 8,
+    "f": {}
+   }
+  ],
+  "masterAt": {
+   "1": 1,
+   "2": 0.5,
+   "3": 0.212,
+   "4": 0.25,
+   "5": null,
+   "6": null,
+   "7": null,
+   "8": null
+  }
+ },
+ "battles": [
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "fortress",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "fortress",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "fortress",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   3,
+   1,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "fortress",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   1,
+   "fortress",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   5,
+   0,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   0,
+   "fortress",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "fortress",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "fortress",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "heralds",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   1,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   2,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "hunters",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "hunters",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   0,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   2,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   1,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "hunters",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "fortress",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   1,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "hunters",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "hunters",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "hunters",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "heralds",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   1,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   0,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "mercs",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "heralds",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   1,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   2,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   0,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   1,
+   "hunters",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "heralds",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   1,
+   "heralds",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   1,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "fortress",
+   1,
+   "score"
+  ],
+  [
+   3,
+   1,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "abbey",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   2,
+   "abbey",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "cavalry",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "cavalry",
+   1,
+   "mate"
+  ],
+  [
+   3,
+   0,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "mercs",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   0,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   3,
+   1,
+   "heralds",
+   1,
+   "score"
+  ],
+  [
+   3,
+   2,
+   "heralds",
+   0,
+   "moves"
+  ],
+  [
+   4,
+   0,
+   "fortress",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   1,
+   "fortress",
+   1,
+   "mate"
+  ],
+  [
+   4,
+   2,
+   "fortress",
+   0,
+   "moves"
+  ],
+  [
+   1,
+   0,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   1,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   1,
+   2,
+   "peasants",
+   1,
+   "score"
+  ],
+  [
+   2,
+   0,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   1,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   2,
+   2,
+   "abbey",
+   1,
+   "score"
+  ],
+  [
+   3,
+   0,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   1,
+   "mercs",
+   0,
+   "moves"
+  ],
+  [
+   3,
+   2,
+   "mercs",
+   0,
+   "moves"
+  ]
+ ],
+ "masters": {
+  "iron_wall": {
+   "n": 6,
+   "win": 0.333
+  },
+  "fog": {
+   "n": 13,
+   "win": 0.538
+  },
+  "mirror": {
+   "n": 23,
+   "win": 0.478
+  },
+  "hourglass": {
+   "n": 13,
+   "win": 0.077
+  },
+  "heavy_hand": {
+   "n": 50,
+   "win": 1
+  },
+  "silence": {
+   "n": 20,
+   "win": 0.45
+  },
+  "grudge": {
+   "n": 12,
+   "win": 0.25
+  },
+  "grandmaster": {
+   "n": 0,
+   "win": null
+  }
+ }
+}

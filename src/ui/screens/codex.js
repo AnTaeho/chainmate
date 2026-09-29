@@ -1,10 +1,11 @@
-// 도감: 격언 · 명인 · 명국 · 오프닝 · 판본. 본 것만 채워지고 나머지는 「?」. 명국은 모은 조각 수까지.
+// 도감: 격언 · 기물 · 세력(우두머리 명인 포함) · 명국 · 오프닝 · 판본. 본 것만 채워지고 나머지는 「?」. 명국은 모은 조각 수까지.
 import { PAL, RARITY, EDITION_TINT } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, sprite, measure } from '../../render/gfx.js';
 import { PIECES } from '../../data/pieces.js';
 import { PIECE_NAME, PIECE_MOVE } from '../words.js';
 import { MAXIMS } from '../../data/maxims.js';
-import { MASTERS } from '../../data/masters.js';
+import { FACTIONS, bossOf } from '../../data/factions.js';
+import { drawCrest, CREST_SIZE } from '../../render/crests.js';
 import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { EDITIONS } from '../../data/editions.js';
@@ -16,7 +17,7 @@ import { pageHead, pageButtons } from './common.js';
 import { PAGE, PAD_CARD, LIST_GAP, GAP_GROUP, textY, rowBoxH, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
-const TABS = [['maxims', '격언'], ['pieces', '기물'], ['masters', '명인'], ['legends', '명국'], ['openings', '오프닝'], ['editions', '판본']];
+const TABS = [['maxims', '격언'], ['pieces', '기물'], ['factions', '세력'], ['legends', '명국'], ['openings', '오프닝'], ['editions', '판본']];
 
 export class CodexScreen {
   constructor(app) { this.app = app; this.tab = 'maxims'; this.page = 0; }
@@ -25,7 +26,11 @@ export class CodexScreen {
     if (this.tab === 'maxims') return MAXIMS.map((m) => ({ id: m.id, seen: !!c.maxims[m.id], name: m.name, tip: () => tipLines(m.name, [m.text, `${m.verb} · $${m.price}`]), col: RARITY[m.rarity] }));
     // 기물: 체스 여섯과 이형 아홉(이형은 행마 한 줄)
     if (this.tab === 'pieces') return Object.values(PIECES).map((p) => ({ id: p.id, seen: true, name: PIECE_NAME[p.id], piece: p.id, tip: () => moveTip(PIECE_NAME[p.id], p.id, [PIECE_MOVE[p.id] || '', `값 ${p.value}`]), col: p.fairy ? PAL.gold : PAL.dim }));
-    if (this.tab === 'masters') return MASTERS.map((m) => ({ id: m.id, seen: !!c.masters[m.id], name: m.name, tip: () => tipLines(`명인 ${m.name}`, m.text), col: PAL.red }));
+    // 세력: 만난 세력만(세력 전 기록은 만난 명인의 세력으로 친다). 말풍선에 버릇과 우두머리
+    if (this.tab === 'factions') {
+      const met = (f) => !!((c.factions || {})[f.id] || (c.masters || {})[f.boss]);
+      return FACTIONS.map((f) => ({ id: f.id, seen: met(f), name: f.name, crest: f.id, tip: () => tipLines(f.name, [f.habit.text, `명인 ${bossOf(f.id).name}`, bossOf(f.id).text]), col: f.hue }));
+    }
     if (this.tab === 'legends') return LEGENDS.map((l) => ({ id: l.id, seen: (c.legends[l.id] || 0) > 0 || !!c.legendsDone[l.id], name: l.name, parts: c.legends[l.id] || 0, done: !!c.legendsDone[l.id], tip: () => tipLines(l.name, [`전설: ${l.text}`, ...fragmentSteps(l, c.legendsDone[l.id] ? { first: true, feat: true, gold: true } : null)]), col: PAL.gold }));
     if (this.tab === 'openings') return OPENING_ORDER.map((id) => { const o = OPENINGS[id]; const u = UNLOCKS.find((x) => x.id === id); const open = this.app.records.unlocked.openings.includes(id); return { id, seen: open, name: o.name, tip: () => (open ? tipLines(o.name, o.text) : tipLines('잠김', u.text)), col: PAL.gold }; });
     return EDITIONS.map((e) => ({ id: e.id, seen: !!c.editions[e.id], name: e.name, tip: () => tipLines(e.name, e.text), col: EDITION_TINT[e.id] }));
@@ -61,10 +66,11 @@ export class CodexScreen {
       cardBase(ctx, x, y, cw, ch, { fill: e.done ? '#f6d98a' : PAL.card, hover: ui.isHover(id) });
       rect(ctx, x + 1, y + 2, 2, ch - 3, e.col);
       // 오른쪽 그림(아이콘 12 · 기물 16 · 조각 셋)은 오른쪽 안 여백 안, 이름은 그 왼쪽까지
-      const right = e.piece ? 16 + 2 : this.tab === 'maxims' || this.tab === 'legends' ? 12 + 3 : e.parts != null ? 18 + 3 : 0;
+      const right = e.piece ? 16 + 2 : e.crest || this.tab === 'maxims' || this.tab === 'legends' ? 12 + 3 : e.parts != null ? 18 + 3 : 0;
       fitText(ctx, e.name, x + P, y + textY(P), cw - P * 2 - right, PAL.cardInk);
       if (this.tab === 'maxims' || this.tab === 'legends') drawIcon(ctx, e.id, x + cw - P - 12, y + Math.floor((ch - 12) / 2), 0.9);
       if (e.piece) sprite(ctx, e.piece, 'w', x + cw - P - 16, y + Math.floor((ch - 22) / 2));
+      if (e.crest) drawCrest(ctx, e.crest, x + cw - P - CREST_SIZE, y + Math.floor((ch - CREST_SIZE) / 2));
       if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - P - 18 + k * 6, y + ch - P - 5, PAL.goldDk); }
       closeBox();
     });
