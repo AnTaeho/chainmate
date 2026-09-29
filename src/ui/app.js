@@ -177,7 +177,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (n) app.go(n[0], n[1] || {});
     else app.goPhase();
   };
-  app.toTitle = () => { app.overlay = null; app.run = null; app.fx.clear(); app.go('title'); };
+  // 따라 하는 길도 닫는다(수업 ⑩의 길은 화면이 아니라 판에 걸려 있어 화면을 떠나도 남는다)
+  app.toTitle = () => { app.overlay = null; app.guide = null; app.run = null; app.fx.clear(); app.go('title'); };
 
   // ── 효과
   app.shake = (px, dur = 0.25) => {
@@ -233,7 +234,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
   app.key = (k) => {
     if (app.audio) app.audio.unlock();
-    if (app.guide) return;
+    // 따라 하는 길(대본 대국 · 수업 ⑩) 중에도 Esc는 늘 멈춤을 연다 — 화면의 Esc(고른 손 내려놓기 · 꾸러미 넘기기)는 길을 어긋나게 하니 거치지 않는다.
+    // 멈춤을 닫으면 길은 그 걸음에서 이어진다. 다른 키는 길 중에 받지 않는다(덮개 — 멈춤 · 설정 · 행마 보기 — 는 받는다)
+    if (app.guide && !app.overlay) { if (k === 'Escape') app.openOverlay('pause'); return; }
     const s = app.overlay || app.screen;
     if (s && s.key) s.key(k);
   };

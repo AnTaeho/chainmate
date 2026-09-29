@@ -64,10 +64,10 @@ export function coachDown(app, x, y) {
   const st = g.steps[g.i];
   if (!st || (g.hold && g.hold(app))) return true;   // 길이 쉬는 동안(연출 중)은 막지 않는다
   const r = guideRegion(app, st);
-  // 가리키는 구역 밖은 누를 수 없다(「알았다」 · 「건너뛰기」 단추는 안내가 그린다)
+  // 가리키는 구역 밖은 누를 수 없다(「알았다」 · 「건너뛰기」 단추는 안내가 그린다). 멈춤(≡)은 늘 눌린다
   const inside = (q) => q && x >= q.x && y >= q.y && x < q.x + q.w && y < q.y + q.h;
   const reg = (id) => app.ui.regions.find((q) => q.id === id);
-  return inside(r) || inside(reg('guide:ok')) || inside(reg('guide:skip'));
+  return inside(r) || inside(reg('guide:ok')) || inside(reg('guide:skip')) || inside(reg('btn:pause'));
 }
 
 function guideRegion(app, st) {

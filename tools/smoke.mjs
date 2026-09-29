@@ -588,6 +588,8 @@ function playShopLesson(i) {
   for (let n = 0; n < 40 && app.guide; n++) {
     const st = app.guide.steps[app.guide.i];
     pump(30);
+    // 꾸러미 걸음에서 Esc: 꾸러미를 넘기지 않고 멈춤이 열린다 → 계속이면 그 걸음에서 잇는다
+    if (st.screen === 'pack' && screen() === 'pack') pauseCheck('수업 ⑩ 꾸러미');
     if (st.ok) click('guide:ok'); else click(st.target);
     pump(30);
   }
@@ -623,6 +625,19 @@ function guideCheck() {
   if (tr && cross(r, tr)) { place.self++; place.bad.push(`battle 킹 말풍선 ${g.i} 가리킨 것 ${tid}`); }
   for (const q of app.ui.regions) if (q.onClick && q.enabled && !q.id.startsWith('guide:') && cross(r, q)) { place.cover++; place.bad.push(`battle 킹 말풍선 ${g.i} 누를 것 ${q.id}`); break; }
 }
+// 따라 하는 길(대본 대국 · 수업 ⑩) 중의 멈춤: Esc · ≡ 단추가 늘 멈춤을 열고, 닫으면 길이 같은 걸음에서 잇는다
+const pauseSeen = { esc: 0, button: 0, scriptDrop: 0, title: 0, resume: 0, skip: 0, lessonTitle: 0, bad: [] };
+function pauseCheck(where) {
+  const g = app.guide, i0 = g && g.i, sc = app.screen, phase = app.run && app.run.phase;
+  dom.key('Escape'); pump(1);
+  if (screen() === 'pause') pauseSeen.esc++; else pauseSeen.bad.push(`${where} Esc에 멈춤이 안 열림(${screen()})`);
+  dom.key('Escape'); pump(1);
+  if (app.overlay) pauseSeen.bad.push(`${where} Esc로 멈춤이 안 닫힘`);
+  click('btn:pause');
+  if (screen() === 'pause') pauseSeen.button++; else pauseSeen.bad.push(`${where} ≡에 멈춤이 안 열림(${screen()})`);
+  click('pause:resume');
+  if (app.overlay || app.guide !== g || app.guide.i !== i0 || app.screen !== sc || (app.run && app.run.phase) !== phase) pauseSeen.bad.push(`${where} 멈춤을 닫은 뒤 길이 어긋남`);
+}
 function firstPlay() {
   if (screen() !== 'title') throw new Error(`first launch did not open the title (${screen()})`);
   click('title:new');
@@ -640,6 +655,7 @@ function firstPlay() {
     const st = app.guide.steps[app.guide.i], step = s.step;
     // 가리키지 않은 곳은 눌리지 않는다(빈 칸 · 손의 다른 기물)
     if (n === 1) { const before = JSON.stringify([s.sel, app.run.battle.movesUsed]); click('sq:36'); for (const h of [1, 2, 3]) if (region(`hand:${h}`)) click(`hand:${h}`); if (JSON.stringify([s.sel, app.run.battle.movesUsed]) !== before) scriptSeen.blocked = -99; else scriptSeen.blocked++; }
+    if (n === 2 || (step && step.drop && !pauseSeen.scriptDrop++)) pauseCheck(`대본 걸음 ${app.guide.i}`);
     if (st.ok) { if (step && step.rewind) scriptSeen.rewind++; click('guide:ok'); continue; }
     const tid = st.target(app);
     if (!tid || !region(tid)) throw new Error(`script step ${app.guide.i} has no target (${tid})`);
@@ -678,7 +694,38 @@ const lessonLog = [];
 const t0 = performance.now();
 await start();
 firstPlay();
+// 대본 중 멈춤 → 타이틀로: 길이 닫히고 타이틀이 눌린다 → 이어 하기면 대본이 그 수에서 이어진다 → 멈춤을 닫고 「건너뛰기」
+{
+  app.newRun({ script: true });
+  for (let n = 0; n < 900 && app.guide && app.guide.hold(app); n++) pump(1);
+  pump(2);
+  dom.key('Escape'); pump(1);
+  click('pause:title');
+  if (screen() === 'title' && !app.guide && !app.overlay && region('title:continue')) pauseSeen.title++; else pauseSeen.bad.push(`대본 멈춤 → 타이틀로(${screen()}, 길 ${!!app.guide})`);
+  click('title:continue');
+  for (let n = 0; n < 900 && app.guide && app.guide.hold(app); n++) pump(1);
+  pump(2);
+  if (screen() === 'battle' && app.guide && app.run.battle && app.run.battle.script) pauseSeen.resume++; else pauseSeen.bad.push(`이어 하기가 대본으로 돌아오지 않음(${screen()})`);
+  dom.key('Escape'); pump(1); click('pause:resume');
+  if (region('guide:skip')) { click('guide:skip'); pump(2); }
+  if (!app.guide && screen() === 'battle' && app.run.battle && !app.run.battle.script) pauseSeen.skip++; else pauseSeen.bad.push('멈춤을 닫은 뒤 「건너뛰기」가 평범한 대국을 열지 않음');
+  app.toTitle(); pump(1);
+}
 lessons();
+// 수업 ⑩ 중 멈춤 → 타이틀로: 길과 연습 판이 함께 닫힌다
+{
+  click('title:lesson');
+  const i = lessonMod.LESSONS.findIndex((L) => L.shop);
+  click(`lessons:${i}`);
+  pump(30);
+  dom.key('Escape'); pump(1);
+  click('pause:title');
+  if (screen() === 'title' && !app.guide && !app.run && region('title:lesson')) pauseSeen.lessonTitle++; else pauseSeen.bad.push(`수업 ⑩ 멈춤 → 타이틀로(${screen()}, 길 ${!!app.guide}, 판 ${!!app.run})`);
+  click('title:lesson');
+  if (screen() !== 'lessons') throw new Error('lesson list did not open after leaving lesson 10');
+  click('lessons:back');
+  pump(1);
+}
 const results = [];
 for (let k = 0; k < RUNS; k++) results.push(await playOne(SEED + k));
 // 판 밖: 도감 · 기록 화면, 오프닝과 단을 모두 연 뒤 시실리안 3단 판, 오늘의 대국
@@ -1036,6 +1083,8 @@ if (!reloaded) fail = true;
 if (lessonLog.length !== lessonMod.LESSONS.length) fail = true;
 if (!skipOk) { console.log('대본 대국 건너뛰기 · 처음 안내 끄기를 확인하지 못했다'); fail = true; }
 if (!scriptSeen.won || scriptSeen.moves !== 1 || scriptSeen.rewind !== 1 || scriptSeen.blocked <= 0 || !scriptSeen.shop || !scriptSeen.faction || scriptSeen.bad.length) { console.log('첫 판 대본 대국을 끝까지 지나지 못했거나, 행마 보기 · 되돌리기 · 누를 곳 막기 · 뒤 처음 안내(상점 · 농민군)가 어긋났다'); fail = true; }
+console.log(`길 중 멈춤: Esc ${pauseSeen.esc} · ≡ ${pauseSeen.button} · 타이틀로 ${pauseSeen.title} · 이어 하기 ${pauseSeen.resume} · 닫고 건너뛰기 ${pauseSeen.skip} · 수업 ⑩ 타이틀로 ${pauseSeen.lessonTitle}${pauseSeen.bad.length ? ` · 어긋남 ${pauseSeen.bad.join(' | ')}` : ''}`);
+if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseSeen.title || !pauseSeen.resume || !pauseSeen.skip || !pauseSeen.lessonTitle) { console.log('길 중에 멈춤이 열리지 않았거나, 닫은 뒤 · 타이틀로 · 건너뛰기가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
