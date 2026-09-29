@@ -11,6 +11,8 @@ import { reboardOn } from '../src/sim/tuning.js';
 const { targetOk } = await import('../src/ui/parts.js');
 const { FAMILIES, familyCounts } = await import('../src/data/families.js');
 const { L } = await import('../src/ui/lang.js');
+const { LEGENDS } = await import('../src/data/legends.js');
+const codexDone = { cells: 0, cover: 0 };
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -733,6 +735,18 @@ click('result:title');
 click('title:codex');
 for (const t of ['factions', 'legends', 'openings', 'editions', 'pieces', 'maxims']) { click(`codex:tab:${t}`); notesCheck(); if (region('codex:next') && region('codex:next').enabled) { click('codex:next'); notesCheck(); click('codex:prev'); } }
 click('codex:back');
+// 완성한 명경기가 있는 도감(명경기 탭): 완성 칸의 말풍선(조각 세 걸음이 다 찬 풀이)이 누를 것(돌아가기 · 탭)을 덮지 않는다
+{
+  const c = app.records.codex, keep = JSON.stringify({ legends: c.legends, legendsDone: c.legendsDone });
+  for (const l of LEGENDS) { c.legends[l.id] = 3; c.legendsDone[l.id] = true; }
+  click('title:codex'); click('codex:tab:legends');
+  const cover0 = place.cover;
+  codexDone.cells = LEGENDS.filter((l) => region(`codex:${l.id}`) && region(`codex:${l.id}`).tip).length;
+  notesCheck();
+  codexDone.cover = place.cover - cover0;
+  click('codex:back');
+  Object.assign(c, JSON.parse(keep));
+}
 click('title:records');
 click('records:back');
 click('title:lesson');
@@ -1090,6 +1104,8 @@ if (!reloaded) fail = true;
 if (lessonLog.length !== lessonMod.LESSONS.length) fail = true;
 if (!skipOk) { console.log('대본 대국 건너뛰기 · 처음 안내 끄기를 확인하지 못했다'); fail = true; }
 if (!scriptSeen.won || scriptSeen.moves !== 1 || scriptSeen.rewind !== 1 || scriptSeen.blocked <= 0 || !scriptSeen.shop || !scriptSeen.faction || scriptSeen.bad.length) { console.log('첫 판 대본 대국을 끝까지 지나지 못했거나, 행마 보기 · 되돌리기 · 누를 곳 막기 · 뒤 처음 안내(상점 · 농민군)가 어긋났다'); fail = true; }
+console.log(`완성한 명경기 도감: 칸 ${codexDone.cells} · 누를 것 덮음 ${codexDone.cover}`);
+if (codexDone.cells !== LEGENDS.length) { console.log('완성한 명경기 도감 칸을 모두 가리키지 못했다'); fail = true; }
 console.log(`길 중 멈춤: Esc ${pauseSeen.esc} · ≡ ${pauseSeen.button} · 타이틀로 ${pauseSeen.title} · 이어 하기 ${pauseSeen.resume} · 닫고 건너뛰기 ${pauseSeen.skip} · 수업 ⑩ 타이틀로 ${pauseSeen.lessonTitle}${pauseSeen.bad.length ? ` · 어긋남 ${pauseSeen.bad.join(' | ')}` : ''}`);
 if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseSeen.title || !pauseSeen.resume || !pauseSeen.skip || !pauseSeen.lessonTitle) { console.log('길 중에 멈춤이 열리지 않았거나, 닫은 뒤 · 타이틀로 · 건너뛰기가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
