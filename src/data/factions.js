@@ -47,7 +47,7 @@ faction('abbey', {
 });
 faction('fortress', {
   name: '성채', crest: 'tower', hue: '#9aa4b0',
-  mix: { P: 1.1, N: 0.5, B: 0.5, R: 2.2, Q: 0.6 }, unique: { C: 0.4, O: 1 },
+  mix: { P: 0.8, N: 0.6, B: 0.6, R: 1.8, Q: 0.5 }, unique: { C: 0.3, O: 1 },
   habit: { text: '성벽 한 줄이 판을 가른다 · 문은 하나', apply(r) { r.wallRow = { ranks: [3] }; } },
   boss: 'iron_wall',
 });
