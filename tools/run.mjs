@@ -291,6 +291,8 @@ function report(R, args, wall) {
         soul: tally((r) => r.log.flatMap((b) => b.souls || [])), engraving: tally((r) => r.deck.split(' ').filter((x) => x.includes(':')).map((x) => x.split(':')[1])),
       },
       factions: fx,
+      // 대국 한 줄씩 [관, 대국(0 · 1 · 2), 세력, 이김 1/0, 끝난 까닭](세력 · 관별로 다시 셀 때)
+      battles: battles.map((b) => [b.ante, b.blind, b.faction || null, b.won ? 1 : 0, b.reason]),
       masters: Object.fromEntries(Object.keys(MASTER_BY_ID).map((id) => { const bs = battles.filter((b) => b.master === id); return [id, { n: bs.length, win: r3(bs.filter((b) => b.won).length / bs.length) }]; })),
     };
     mkdirSync(dirname(args.json), { recursive: true });

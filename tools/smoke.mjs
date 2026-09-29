@@ -117,6 +117,8 @@ const tipSeen = { incoming: 0, forced: 0, path: 0 };
 const newsSeen = { battles: 0, icons: 0 };
 const objTips = { step: 0, gate: 0, highway: 0, wall: 0, gem: 0, trap: 0 };
 // 밤샘 2: 시계(대국을 지고 다음 대국으로) · 다시 놓기(첫 수 전 단추)
+// 세력(factions.js): 판마다 섞인 차례 · 대국에서 만난 세력 · 관 선택의 세력 띠와 다음 관 문장 · 처음 안내
+const facSeen = { met: new Set(), orders: new Set(), runs: 0, band: 0, next: 0, bad: [] };
 const n2 = { forced: false, clockBefore: null, clockLost: 0, clockShop: 0, clockNext: 0, clockBad: [], reboard: 0, reboardBot: 0, reboardBad: 0, tried: false, waitNext: false };
 // 손은 하나만 든다: 둘을 차례로 눌러도 든 것은 나중 것 하나, 든 것을 다시 누르면 놓인다
 const pickSeen = { swap: 0, swapBad: 0, off: 0, offBad: 0 };
@@ -493,10 +495,16 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
     if (dan != null && app.run.dan !== dan) throw new Error('dan not chosen');
   }
   if (inject) inject(app.run);
+  if (app.run.factions) { facSeen.runs++; facSeen.orders.add(app.run.factions.join(',')); }
   let steps = 0;
   while (steps++ < 4000) {
     const name = screen();
     if (name === 'result') break;
+    if (name === 'battle' && app.run && app.run.battle) { const fm = app.run.battle.mods.find((m) => String(m.id).startsWith('faction:')); if (fm) facSeen.met.add(fm.id.slice(8)); else facSeen.bad.push(`세력 없는 대국 ${app.run.ante}관`); }
+    if (name === 'select') {
+      if (region('faction')) facSeen.band++; else facSeen.bad.push(`세력 띠 없음 ${app.run.ante}관`);
+      if (app.run.ante < 7 && !app.run.endless) { if (region('select:next')) facSeen.next++; else facSeen.bad.push(`다음 관 문장 없음 ${app.run.ante}관`); }
+    }
     if (name === 'draft') { pump(40); notesOnce('draft', 4); for (let k = 0; k < app.run.draft.options.length; k++) keyBoxesAt(`draft:${k}`, 'draft'); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
     if (name === 'select' && !tipSeen.path) { hover('select:path'); if (hoverTip()) tipSeen.path++; }
     if (name === 'select' && !app.run.shop && region('select:shop')) shopBack.stray++;
@@ -608,7 +616,7 @@ for (let k = 0; k < RUNS; k++) results.push(await playOne(SEED + k));
 // 판 밖: 도감 · 기록 화면, 오프닝과 단을 모두 연 뒤 시실리안 3단 판, 오늘의 대국
 click('result:title');
 click('title:codex');
-for (const t of ['masters', 'legends', 'openings', 'editions', 'pieces', 'maxims']) { click(`codex:tab:${t}`); notesCheck(); if (region('codex:next') && region('codex:next').enabled) { click('codex:next'); notesCheck(); click('codex:prev'); } }
+for (const t of ['factions', 'legends', 'openings', 'editions', 'pieces', 'maxims']) { click(`codex:tab:${t}`); notesCheck(); if (region('codex:next') && region('codex:next').enabled) { click('codex:next'); notesCheck(); click('codex:prev'); } }
 click('codex:back');
 click('title:records');
 click('records:back');
@@ -933,6 +941,8 @@ console.log(`관 선택 → 상점 → 관 선택: ${shopBack.trips}번 · 바�
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 let fail = false;
+console.log(`세력: 판 ${facSeen.runs}개 · 서로 다른 차례 ${facSeen.orders.size} · 대국에서 만난 세력 ${facSeen.met.size}(${[...facSeen.met].join(' ')}) · 관 선택 세력 띠 ${facSeen.band} · 다음 관 문장 ${facSeen.next} · 어긋남 ${facSeen.bad.length}${facSeen.bad.length ? ': ' + facSeen.bad.slice(0, 5).join(' | ') : ''}`);
+if (facSeen.met.size < 5 || facSeen.orders.size < Math.min(2, facSeen.runs) || facSeen.bad.length) { console.log('세력이 다섯 넘게 나오지 않았거나, 판마다 차례가 같거나, 관 선택에 세력이 안 보였다'); fail = true; }
 if (!pickSeen.swap || !pickSeen.off || pickSeen.swapBad || pickSeen.offBad) { console.log('손에서 기물이 하나만 들리지 않는다'); fail = true; }
 if (!passSeen.n || passSeen.blocked) { console.log('사슬 중 목표를 넘긴 장면을 못 봤거나, 그때 입력이 막혔다'); fail = true; }
 if (!shopBack.trips || shopBack.changed || shopBack.stray || shopBack.overlap) { console.log('관 선택에서 상점으로 오가지 못했거나, 오가며 상점이 바뀌었거나, 상점이 없는데 단추가 있거나, 단추가 판의 길과 겹친다'); fail = true; }
