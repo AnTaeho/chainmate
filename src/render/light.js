@@ -110,36 +110,43 @@ export function groundShadow(ctx, cx, by, lift = 0) {
 }
 
 // ── 흐르는 배경: 판 밖 펠트 위에 아주 천천히 흐르는 물감 얼룩(64×36을 늘려 그린다, 몇 프레임에 한 번 다시 칠한다)
+// 얼룩 칸은 게임 좌표에 박혀 있다: 칸 (i, j)는 (-8 + i × FCW, -8 + j × FCH)에서 시작(화면 밖 여백 판 · src/render/backdrop.js가 같은 칸을 판 밖으로 이어 칠한다)
 const FW = 64, FH = 36;
+export const FLOW = { cols: FW, rows: FH, x0: -8, y0: -8, cw: (480 + 16) / FW, ch: (270 + 16) / FH };
+// 흐름의 시각(움직임 줄이기면 0에서 멈춘다, 초당 12번만 바뀐다)
+export const flowTime = (time) => (LOOK.calm ? 0 : Math.floor(time * 12) / 12);
+// ImageData d(가로 cols 칸)에 칸 i0.., j0..의 얼룩을 칠한다
+export function paintFlow(d, cols, rows, i0, j0, t, tint, s) {
+  const A = tint ? rgb(tint) : [111, 207, 185];
+  const B = [226, 178, 77];
+  const q = t * 0.09;
+  for (let jj = 0; jj < rows; jj++) for (let ii = 0; ii < cols; ii++) {
+    const i = ii + i0, j = jj + j0;
+    const u = i / FW * 6, v = j / FH * 3.4;
+    // 소용돌이: 좌표를 두 번 비튼 물결 두 겹
+    const wx = u + 0.9 * Math.sin(v * 1.3 + q * 2.1);
+    const wy = v + 0.9 * Math.sin(u * 1.1 - q * 1.7);
+    const f1 = Math.sin(wx * 1.2 + q * 3.0 + Math.sin(wy * 1.7 - q * 1.3) * 1.4);
+    const f2 = Math.sin(wy * 1.6 - q * 2.3 + Math.sin(wx * 0.9 + q * 1.1) * 1.8);
+    const m = 0.5 + 0.5 * f1, n = Math.max(0, f2);
+    const k = (jj * cols + ii) * 4;
+    const c = m > 0.5 ? A : B;
+    d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2];
+    d[k + 3] = Math.round(255 * Math.min(1, (Math.abs(m - 0.5) * 2) * (0.55 + 0.45 * n)) * 0.11 * s);
+  }
+}
 let flowCv = null, flowImg = null, flowKey = null;
 export function flowLayer(ctx, time, tint, x, y, w, h) {
   const s = LOOK.flow;
   if (s <= 0) return;
   if (!flowCv) { flowCv = makeCanvas(FW, FH); flowImg = null; }
   const g = context(flowCv);
-  // 초당 12번만 다시 칠한다(움직임 줄이기면 한 번 칠하고 멈춘다)
-  const t = LOOK.calm ? 0 : Math.floor(time * 12) / 12;
+  const t = flowTime(time);
   const key = `${t}|${tint}|${s}`;
   if (key !== flowKey) {
     flowKey = key;
     if (!flowImg) flowImg = g.getImageData(0, 0, FW, FH);
-    const d = flowImg.data;
-    const A = tint ? rgb(tint) : [111, 207, 185];
-    const B = [226, 178, 77];
-    const q = t * 0.09;
-    for (let j = 0; j < FH; j++) for (let i = 0; i < FW; i++) {
-      const u = i / FW * 6, v = j / FH * 3.4;
-      // 소용돌이: 좌표를 두 번 비튼 물결 두 겹
-      const wx = u + 0.9 * Math.sin(v * 1.3 + q * 2.1);
-      const wy = v + 0.9 * Math.sin(u * 1.1 - q * 1.7);
-      const f1 = Math.sin(wx * 1.2 + q * 3.0 + Math.sin(wy * 1.7 - q * 1.3) * 1.4);
-      const f2 = Math.sin(wy * 1.6 - q * 2.3 + Math.sin(wx * 0.9 + q * 1.1) * 1.8);
-      const m = 0.5 + 0.5 * f1, n = Math.max(0, f2);
-      const k = (j * FW + i) * 4;
-      const c = m > 0.5 ? A : B;
-      d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2];
-      d[k + 3] = Math.round(255 * Math.min(1, (Math.abs(m - 0.5) * 2) * (0.55 + 0.45 * n)) * 0.11 * s);
-    }
+    paintFlow(flowImg.data, FW, FH, 0, 0, t, tint, s);
     g.putImageData(flowImg, 0, 0);
   }
   ctx.imageSmoothingEnabled = true;

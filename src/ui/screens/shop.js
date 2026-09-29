@@ -258,7 +258,7 @@ export class ShopScreen {
       shop.packs.forEach((pk, i) => {
         const pw = lay.packW, x = CX + i * (pw + (pw === CARD_W ? 8 : PACK_GAP)), y = lay.packY, id = `shop:pack:${i}`;
         const ok = !pk.sold && run.money >= pk.price;
-        ui.region(id, x, y, pw, lay.packH, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack'), tip: () => packTip(pk) });
+        ui.region(id, x, y, pw, lay.packH, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack'), tip: () => packTip(pk), preview: true });
         const hov = ui.isHover(id) && ok;
         sway(ctx, ui.time, `${id}:${pk.kind}`, x, y, pw, lay.packH, (c) => {
           this.packCard(c, pk, x, y, pw, lay.packH, hov);
@@ -292,7 +292,7 @@ export class ShopScreen {
       const c = run.consumables[i];
       if (!c) { frame(ctx, x, y, cw, rl.ch, PAL.feltHi); continue; }
       const id = `cons:${i}`;
-      ui.region(id, x, y, cw, rl.ch, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c) });
+      ui.region(id, x, y, cw, rl.ch, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c), preview: true });
       consumableCard(ctx, c, x, y, cw, rl.ch, ui.isHover(id) || (this.target && this.target.index === i));
     }
     this.drawMenu(ctx, ui);

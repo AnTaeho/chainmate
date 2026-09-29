@@ -2,12 +2,24 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>체인메이트</title>
+<meta name="theme-color" content="#0b1210">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="체인메이트">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="safe" aria-hidden="true"></div>
+<canvas id="pad" aria-hidden="true"></canvas>
 <canvas id="screen" width="480" height="270" aria-label="체인메이트"></canvas>
+<div id="turn" role="status"><canvas id="turn-art" width="32" height="32"></canvas><p id="turn-text">가로로 돌려 주세요</p></div>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

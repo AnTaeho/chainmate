@@ -1143,7 +1143,7 @@ export class BattleScreen {
       const id = `tactic:${i}`;
       // 묘수 칸(15)은 손 이름표 줄(BTN_S) 가운데
       const ty = y + ((BTN_S - 15) >> 1);
-      ui.region(id, x, ty, 15, 15, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c) });
+      ui.region(id, x, ty, 15, 15, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c), preview: true });
       box(ctx, x, ty, 15, 15, '#132019', ui.isHover(id) && ok ? PAL.gold : PAL.frameDk);
       ctx.save(); ctx.translate(x + 1, ty + 2); ctx.scale(0.8, 0.8); tacticIcon(ctx, c.id, 0, 0); ctx.restore();
     });

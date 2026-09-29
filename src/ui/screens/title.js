@@ -182,6 +182,8 @@ export class TitleScreen {
     items.push(['title:settings', '설정', () => app.openOverlay('settings')]);
     return items;
   }
+  // 여백 판이 가장자리를 늘려 잇는 그림(main.js)
+  surroundImage() { if (!backdrop) backdrop = drawBackdrop(); return backdrop; }
   draw(ctx, ui) {
     const app = this.app, time = app.time;
     if (app.pixelScale && app.pixelScale < 2 && !app.settings.big) hint(app, 'bigText', 'title:settings');

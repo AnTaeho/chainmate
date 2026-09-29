@@ -65,6 +65,13 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (k !== tintKey) { tintKey = k; const fa = FACTION_BY_ID[factionFor(r, r.ante)]; tintCol = fa ? fa.hue : null; }
     return tintCol;
   };
+  // 여백 판(main.js · src/render/backdrop.js)이 칠할 것: 화면이 제 그림을 깔면 그 그림(surroundImage), 아니면 펠트 · 흐름.
+  // dim: 덮개(0.72) · 따라 하는 길(0.45)이 화면을 어둡게 한 만큼
+  app.coachDim = 0;
+  app.surround = () => {
+    const s = app.screen;
+    return { time: app.time, tint: app.tint(), image: s && s.surroundImage ? s.surroundImage() : null, dim: app.overlay ? 0.72 : app.coachDim || 0 };
+  };
   app.speed = () => app.settings.speed || 1;
   app.records = loadRecords(store);
   setLang(app.settings.lang);
@@ -303,7 +310,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     });
     closeBox();
     if (!app.overlay) drawCoach(ctx, app);
-    else { app.hintNow = null; app.hintShown = null; }
+    else { app.hintNow = null; app.hintShown = null; app.coachDim = 0; }
     ui.end();
     // 말풍선 + 낱말 상자: 한 묶음(말풍선 → 상자, 같은 폭)을 화면의 설명 자리 규칙대로(placement.js)
     app.keyBoxes = [];

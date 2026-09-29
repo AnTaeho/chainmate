@@ -96,6 +96,7 @@ export function updateGuide(app, dt) {
 export function drawCoach(ctx, app) {
   const ui = app.ui;
   const g = app.guide;
+  app.coachDim = 0;
   if (g) {
     const st = g.steps[g.i];
     app.hintNow = null;
@@ -105,6 +106,7 @@ export function drawCoach(ctx, app) {
     if (r) {
       // 가리키는 곳만 밝게
       ctx.globalAlpha = 0.45;
+      app.coachDim = 0.45; // 여백 판도 같이 어둡게(main.js)
       rect(ctx, 0, 0, W, r.y, PAL.shadow); rect(ctx, 0, r.y + r.h, W, H - r.y - r.h, PAL.shadow);
       rect(ctx, 0, r.y, r.x, r.h, PAL.shadow); rect(ctx, r.x + r.w, r.y, W - r.x - r.w, r.h, PAL.shadow);
       ctx.globalAlpha = 1;
