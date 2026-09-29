@@ -918,7 +918,7 @@ const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;
 const avg = ms.reduce((a, x) => a + x, 0) / Math.max(1, ms.length);
 const mt = moveTimes.slice().sort((a, b) => a - b);
 console.log(`연기 시험 seed ${SEED}: 판 ${results.length} (${results.map((r) => `${r.phase} ${r.ante}관`).join(' · ')})`);
-console.log(`프레임 ${ms.length} · 그리기 평균 ${avg.toFixed(2)}ms · p99 ${pct(0.99).toFixed(2)}ms · 최대 ${ms[ms.length - 1].toFixed(2)}ms · 그리기 호출 ${dom.counter.calls}`);
+console.log(`프레임 ${ms.length} · 그리기 평균 ${avg.toFixed(2)}ms · p99 ${pct(0.99).toFixed(2)}ms · 최대 ${ms[ms.length - 1].toFixed(2)}ms · 그리기 호출 ${dom.counter.calls} · 화면 배율 ${app.scale}(캔버스 ${dom.screen.width}×${dom.screen.height})`);
 console.log(`한 수 연출(×1) 평균 ${(mt.reduce((a, x) => a + x, 0) / Math.max(1, mt.length)).toFixed(2)}s · 최대 ${(mt[mt.length - 1] || 0).toFixed(2)}s (${mt.length}수)`);
 if (VERBOSE && worst) console.log('가장 긴 수', JSON.stringify(worst));
 const ims = [];

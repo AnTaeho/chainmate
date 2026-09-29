@@ -1,4 +1,4 @@
-// 연기 시험용 가짜 DOM: 캔버스 컨텍스트는 그리기 호출을 세기만 한다. 입력은 등록된 듣개에 직접 넣는다.
+// 연기 시험용 가짜 DOM: 캔버스 컨텍스트는 그리기 호출을 세기만 한다(setTransform · translate · rotate · putImageData도 센다). 입력은 등록된 듣개에 직접 넣는다.
 // 글 폭은 Galmuri11 12px의 실제 글자 폭(브라우저에서 잰 표, 보통 · 굵게)을 더한다 — 연기 시험의 「글 넘침」이 실제 화면과 맞게.
 // 표에 없는 글자는 한글 · 한자 · 넓은 기호 12, 그 밖 6. 짝 글자 사이 좁힘(커닝)은 빼서 실제보다 조금 넓거나 같다.
 const W_CHARS = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~·×…—›‹■□○●★→←↑↓–’‘“”";
@@ -11,6 +11,10 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
   function makeCtx(canvas) {
     const base = {
       canvas, fillStyle: '#000', globalAlpha: 1, font: '', textAlign: 'left', textBaseline: 'top', imageSmoothingEnabled: false,
+      // 빛과 움직임이 쓰는 그리기 상태(읽으면 함수가 아닌 값이 나와야 한다)
+      globalCompositeOperation: 'source-over', shadowBlur: 0, shadowColor: 'rgba(0,0,0,0)', filter: 'none',
+      createRadialGradient() { counter.calls++; return { addColorStop() {} }; },
+      createLinearGradient() { counter.calls++; return { addColorStop() {} }; },
       measureText(s) { const bold = /700|bold/.test(this.font || ''); return { width: [...String(s)].reduce((a, ch) => a + charW(ch, bold), 0) }; },
       getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(Math.max(1, w * h * 4)), width: w, height: h }),
     };
