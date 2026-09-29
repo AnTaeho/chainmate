@@ -10,6 +10,7 @@ import { generateBoard, randomEmpty, rollType, reinforceCount } from './setup.js
 import { soulSpec } from '../data/souls.js';
 import { PIECES } from '../data/pieces.js';
 import { thaw } from '../data/tactics.js';
+import { reboardOn } from './tuning.js';
 
 export { enemyCount, kingGuards, reinforceCount, enemyWeights, kingDefended } from './setup.js';
 
@@ -36,7 +37,7 @@ export const DEFAULT_RULES = {
 
 // 나쁜 판 거르기(밤샘 2 D3): 판(런)의 대국은 판 후보 n개(판(런)은 넷)를 지어 「첫 손 최선 사슬 점수」(풀이기, docs/reports/luck.md ④)가
 // 가장 낮은 것을 버리고 나머지 중 하나를 시드로 고른다. 좋은 판은 그대로 남고 아래 꼬리만 잘린다.
-// 켜는 곳은 판(런)의 startBattle뿐(createBattle 기본은 끔: 시험 · 봇의 짜임 재기 · 수업은 옛 판 그대로).
+// 켜는 곳은 판(런)의 startBattle뿐(createBattle 기본은 끔: 시험 · 봇의 짜임 재기 · 수업은 옛 판 그대로). 켜고 끄기는 tuning.js BOARD_TUNING.
 export const BOARD_FILTER = { nodes: 3000 };
 
 // 증원 예고는 늘 두 수 앞까지 뽑아 둔다: incoming(다음 수 뒤) · incomingNext(그다음).
@@ -207,7 +208,7 @@ function placeGold(b, gr) {
 
 // 다시 놓기(밤샘 2 D2): 첫 수 전에 한 번, 판을 새로 깐다. 손 · 목표 · 규칙은 그대로, 적 수 · 킹 수비도 같은 규칙.
 // 새 판은 (대국 시드, 몇째 다시 놓기)로 정해진다. 금빛 적이 있던 판이면 새 판에도 하나.
-export const canReboard = (b) => b.status === 'play' && b.movesUsed === 0 && !b.touched && (b.reboards || 0) < (b.rules.reboards ?? 0);
+export const canReboard = (b) => reboardOn() && b.status === 'play' && b.movesUsed === 0 && !b.touched && (b.reboards || 0) < (b.rules.reboards ?? 0);
 export function reboard(b, events = []) {
   if (!canReboard(b)) throw new Error('cannot reboard');
   b.reboards = (b.reboards || 0) + 1;

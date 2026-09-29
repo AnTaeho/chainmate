@@ -1,8 +1,9 @@
 // 밤샘 2: 시계(D1) · 다시 놓기(D2) · 나쁜 판 거르기(D3)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRun, applyRun, legalRunCommands, ANTES, CLOCK } from '../src/sim/run.js';
-import { createBattle, apply, legalCommands, canReboard, boardScore } from '../src/sim/battle.js';
+import { createRun, applyRun, legalRunCommands, ANTES, CLOCK, blindInfo, battleMods, battleSeed, awaitingGold } from '../src/sim/run.js';
+import { createBattle, apply, legalCommands, canReboard, boardScore, GOLDEN } from '../src/sim/battle.js';
+import { BOARD_TUNING, boardFilter, reboardOn } from '../src/sim/tuning.js';
 import { useTactic } from '../src/data/tactics.js';
 
 // 지금 대국을 진다: 수를 하나만 남기고 목표를 멀리 둔 채 첫 떨구기부터 사슬을 끝까지
@@ -92,7 +93,7 @@ test('시계 1(단 7부터)은 한 번 지면 판이 끝난다', () => {
   assert.equal(run.phase, 'lost');
 });
 
-test('다시 놓기: 첫 수 전에 한 번, 손 · 목표는 그대로, 판은 시드로 정해진다', () => {
+test('다시 놓기: 첫 수 전에 한 번, 손 · 목표는 그대로, 판은 시드로 정해진다', { skip: !reboardOn() && '판 조정의 다시 놓기가 꺼져 있다' }, () => {
   const make = () => createBattle({ seed: 77, ante: 3, kind: 'official', target: 500 });
   const b = make();
   const hand = JSON.stringify(b.hand), board = JSON.stringify(b.board);
@@ -110,7 +111,7 @@ test('다시 놓기: 첫 수 전에 한 번, 손 · 목표는 그대로, 판은 
   assert.equal(JSON.stringify(again.incoming), JSON.stringify(b.incoming));
 });
 
-test('다시 놓기: 첫 수를 두거나 묘수를 쓰면 못 한다', () => {
+test('다시 놓기: 첫 수를 두거나 묘수를 쓰면 못 한다', { skip: !reboardOn() && '판 조정의 다시 놓기가 꺼져 있다' }, () => {
   const b = createBattle({ seed: 78, ante: 2, kind: 'practice', target: 1e9 });
   const d = legalCommands(b).find((c) => c.type === 'drop');
   apply(b, d);
@@ -127,4 +128,55 @@ test('나쁜 판 거르기: 같은 시드면 같은 판 · 거른 판의 첫 손
   let plain = 0, filtered = 0;
   for (let s = 1; s <= 30; s++) { plain += boardScore(mk(s, 0)); filtered += boardScore(mk(s, 3)); }
   assert.ok(filtered > plain, `거른 판 ${filtered} · 옛 판 ${plain}`);
+});
+
+// 판 조정(tuning.js)을 끄면 판(런)의 대국판은 거르기 없는 판(밤샘 2 전의 판 생성)과 같고, 다시 놓기는 규칙에서 사라진다
+function runBattleAt(seed, ante, blind) {
+  const run = createRun({ seed, draft: false });
+  run.ante = ante; run.blind = blind;
+  applyRun(run, { type: 'play' });
+  return run;
+}
+function plainBattle(run) {
+  const info = blindInfo(run);
+  return createBattle({
+    seed: battleSeed(run), ante: run.ante, kind: info.kind, target: info.target,
+    bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
+    rules: run.rules, mods: battleMods(run, info.master),
+    goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
+  });
+}
+test('판 조정을 끄면 같은 시드 → 거르기 없는 옛 판 · 다시 놓기 명령이 없다', () => {
+  const keep = { ...BOARD_TUNING };
+  try {
+    BOARD_TUNING.filter = 0; BOARD_TUNING.reboard = false;
+    assert.equal(boardFilter(), 0);
+    for (const [seed, ante, blind] of [[5, 2, 0], [11, 4, 1], [23, 6, 2], [31, 8, 2]]) {
+      const run = runBattleAt(seed, ante, blind);
+      const plain = plainBattle(run);
+      assert.equal(JSON.stringify(run.battle.board), JSON.stringify(plain.board), `seed ${seed} ${ante}관`);
+      assert.equal(JSON.stringify(run.battle.hand), JSON.stringify(plain.hand));
+      assert.equal(JSON.stringify(run.battle.incoming), JSON.stringify(plain.incoming));
+      assert.ok(!canReboard(run.battle));
+      assert.ok(!legalRunCommands(run).some((c) => c.type === 'reboard'));
+      assert.throws(() => applyRun(run, { type: 'reboard' }));
+    }
+  } finally { Object.assign(BOARD_TUNING, keep); }
+});
+test('판 조정: filter 값 읽기(true · 수 · 끔)', () => {
+  const keep = { ...BOARD_TUNING };
+  try {
+    BOARD_TUNING.filter = true; assert.equal(boardFilter(), 4);
+    BOARD_TUNING.filter = 3; assert.equal(boardFilter(), 3);
+    BOARD_TUNING.filter = 1; assert.equal(boardFilter(), 0);
+    BOARD_TUNING.filter = false; assert.equal(boardFilter(), 0);
+  } finally { Object.assign(BOARD_TUNING, keep); }
+});
+test('판 조정을 켜면 판(런)의 대국판을 거른다(거르기 없는 판과 다를 수 있다)', { skip: !boardFilter() && '판 조정의 거르기가 꺼져 있다' }, () => {
+  let differ = 0;
+  for (const seed of [5, 11, 23, 31, 47, 53]) {
+    const run = runBattleAt(seed, 4, 1);
+    if (JSON.stringify(run.battle.board) !== JSON.stringify(plainBattle(run).board)) differ++;
+  }
+  assert.ok(differ > 0);
 });

@@ -11,6 +11,7 @@
 //   won     8관 명인을 이김. endless
 //   lost    끝.
 import { createRng, fork, int, next, shuffle } from './rng.js';
+import { boardFilter } from './tuning.js';
 import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES } from './battle.js';
 import { getModifier } from './scoring.js';
 import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult } from './shop.js';
@@ -64,10 +65,7 @@ export const RUN_DEFAULTS = { money: 4, maximSlots: 5, consumableSlots: 2 };
 // 시계(밤샘 2 D1): 판의 목숨. 대국을 지면 한 칸을 잃고 다음 대국으로 간다(그 대국의 보상 · 명인의 상자는 없고, 상점은 연다 — CHM-20).
 // 마지막 칸을 잃으면(시간을 다 쓰면) 판이 끝난다 — 시계 1은 옛 규칙(한 번 지면 끝)과 같다.
 // 8관 명인(대가)에서 지고 칸이 남으면 그 대국을 새 판으로 다시 둔다.
-// filter: 판(런) 대국의 판 후보 수(battle.js BOARD_FILTER — 가장 나쁜 하나를 버린다). 종류별로.
 export const CLOCK = { start: 3 };
-// 셋 → 넷(밤샘 2 3부): 봇 다시 놓기 2와 함께 판을 끝낸 죽음의 판 운 몫 31.3% → 12.5%(luck 30판), smart 판 승률은 같다(46.7%)
-export const BOARD_FILTER_N = { practice: 4, official: 4, master: 4 };
 // 건너뛰기 패(대국마다 정해진 하나). step 2b에서 늘린다.
 export const TAGS = [
   { kind: 'money', amount: 5 },
@@ -242,7 +240,7 @@ function startBattle(run) {
     bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
     rules: run.rules, mods: battleMods(run, info.master),
     goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
-    filter: run.scratch ? 0 : (BOARD_FILTER_N[info.kind] || 0),
+    filter: run.scratch ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
   });
   run.phase = 'battle';
 }
