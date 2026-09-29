@@ -295,7 +295,7 @@ export const EN = {
   '세력': 'Faction', '농민군': 'Peasants', '기병대': 'Cavalry', '수도원': 'Abbey', '성채': 'Fortress', '숲 사냥꾼': 'Huntsmen', '전령단': 'Heralds', '용병단': 'Mercenaries', '왕궁 근위': 'Royal Guard',
   '촌장': 'Village Elder', '기병대장': 'Cavalry Captain', '수도원장': 'Abbot', '성주': 'Castellan', '사냥꾼 두령': 'Hunt Chief', '전령장': 'Chief Herald', '용병대장': 'Mercenary Captain',
   '적 폰이 옆 칸도 지킨다': 'Enemy pawns also guard beside them', '증원이 모두 나이트 무리로 온다': 'Reinforcements are all knight-kind',
-  '돌기둥 둘~넷이 늘 선다': 'Two to four stone pillars stand', '성벽 한 줄이 판을 가른다 · 문은 하나': 'A wall splits the board · one gate',
+  '돌기둥 셋~다섯이 늘 선다': 'Three to five stone pillars stand', '성벽 한 줄이 판을 가른다 · 문은 하나': 'A wall splits the board · one gate',
   '위 두 줄은 숲이다 · 닿으면 걷힌다': 'Top two rows are forest · your reach clears it', '증원 +1 · 두 수 앞까지 보인다': 'Reinforcements +1 · seen two moves ahead',
   '적 특성이 두 배로 붙는다': 'Enemy traits come twice as often', '킹을 지키는 적 +1': 'Each king gets one more guard',
   '농민군 땅이다. 적 폰이 옆 칸도 지킨다': 'Peasant land. Enemy pawns also guard beside them',

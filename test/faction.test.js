@@ -77,10 +77,10 @@ test('버릇 · 기병대: 증원이 모두 나이트 무리(나이트 · 낙타
   assert.equal(top, 'N');
 });
 
-test('버릇 · 수도원: 돌기둥(벽) 둘~넷이 늘 선다', () => {
+test('버릇 · 수도원: 돌기둥(벽) 셋~다섯이 늘 선다', () => {
   for (let seed = 1; seed <= 10; seed++) {
     const b = battleOf('abbey', 2, seed);
-    assert.ok(count(b.board, 'X') >= 2, `seed ${seed}: ${count(b.board, 'X')}`);
+    assert.ok(count(b.board, 'X') >= 3, `seed ${seed}: ${count(b.board, 'X')}`);
   }
   assert.equal(count(battleOf(null, 1, 1).board, 'X'), 0);
 });
