@@ -616,6 +616,7 @@ function lessons() {
 }
 // 첫 판 대본 대국(CHM-22): 처음 켜면 타이틀 → 「새 판」이 곧바로 킹과 두는 1관 연습. 걸음마다 가리킨 곳만 눌리고,
 // 킹 말풍선은 왼쪽 칸(설명 자리)에서 가리킨 것 · 누를 것을 덮지 않는다. 끝나면 보상 → 상점(처음 안내도 킹 말풍선)
+const movesTabs = [];
 const scriptSeen = { steps: 0, moves: 0, blocked: 0, rewind: 0, won: false, score: 0, target: 0, shop: false, faction: false, bad: [] };
 function guideCheck() {
   const g = app.guide, r = app.hintRect, st = g && g.steps[g.i];
@@ -1048,6 +1049,16 @@ const mainApp = app;
   // 행마 보기는 평범한 대국에서도 열린다
   click('btn:moves');
   if (screen() !== 'moves') throw new Error('moves overlay did not open in a plain battle');
+  // 탭 셋(CHM-26): 이 판 → 기본 기물 → 특수 기물, 쪽이 있으면 끝까지 넘긴다. 그리는 동안 글 넘침 · 테를 잰다(pump)
+  if (app.overlay.tab !== 'board') throw new Error('moves overlay did not open on the board tab');
+  for (const tab of ['board', 'basic', 'fairy']) {
+    click(`moves:tab:${tab}`); pump(3);
+    const cards = LL.LOG.boxes.filter((b) => /^행마 [A-Z]$/.test(b.name || '')).length;
+    let pages = 1;
+    for (let n = 0; n < 6 && region('moves:next') && region('moves:next').enabled; n++) { click('moves:next'); pump(3); pages++; }
+    if (app.overlay.tab !== tab || !cards) throw new Error(`moves tab ${tab} did not show cards`);
+    movesTabs.push(`${tab} ${cards}장 · 쪽 ${pages}`);
+  }
   click('moves:back');
   skipOk = true;
   log('  대본 대국 건너뛰기 · 안내 끄기 확인');
@@ -1072,6 +1083,7 @@ console.log(`누르기 처리 ${ims.length}번 · 평균 ${(ims.reduce((a, x) =>
 console.log(`방문 화면: ${[...visited].join(' ')}`);
 console.log(`끝없는 대국: ${endless ? `${app.records.bestEndless}관` : '못 감'}`);
 console.log(`첫 판 대본 대국: 걸음 ${scriptSeen.steps} · 행마 보기 ${scriptSeen.moves} · 되돌리기 ${scriptSeen.rewind} · 엉뚱한 곳 막힘 ${scriptSeen.blocked > 0 ? '확인' : '못 함'} · ${scriptSeen.won ? '이김' : '못 이김'} ${scriptSeen.score}/${scriptSeen.target} · 뒤 처음 안내(상점) ${scriptSeen.shop ? '확인' : '못 봄'} · 1관 정식 관 선택 농민군 안내 ${scriptSeen.faction ? '확인' : '못 봄'}${scriptSeen.bad.length ? ` · 어긋남 ${scriptSeen.bad.join(' | ')}` : ''}`);
+console.log(`행마 보기 탭: ${movesTabs.join(' · ') || '못 봄'}`);
 console.log(`첫 수업: ${lessonLog.join(' · ')}`);
 console.log(`미리 보기: 먹기 ${pvSeen.capture} · 끊김 ${pvSeen.cut} · 떨구기 ${pvSeen.drop} · 화살표 ${pvSeen.kb} · 터치 ${pvSeen.touch}`);
 console.log(`말풍선: 증원 ${tipSeen.incoming} · 노림수 ${tipSeen.forced} · 판의 길 ${tipSeen.path}`);
@@ -1086,6 +1098,7 @@ console.log(`관 선택 → 상점 → 관 선택: ${shopBack.trips}번 · 바�
 console.log(`소리 마디 ${dom.audioCalls.nodes}`);
 console.log(`예외 ${errors.length} · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 let fail = false;
+if (movesTabs.length !== 3 || !/^fairy 3장 · 쪽 3$/.test(movesTabs[2])) { console.log('행마 보기 탭 셋을 다 넘기지 못했다'); fail = true; }
 console.log(`세력: 판 ${facSeen.runs}개 · 서로 다른 차례 ${facSeen.orders.size} · 대국에서 만난 세력 ${facSeen.met.size}(${[...facSeen.met].join(' ')}) · 관 선택 세력 띠 ${facSeen.band} · 다음 관 문장 ${facSeen.next} · 어긋남 ${facSeen.bad.length}${facSeen.bad.length ? ': ' + facSeen.bad.slice(0, 5).join(' | ') : ''}`);
 if (facSeen.met.size < 5 || facSeen.orders.size < Math.min(2, facSeen.runs) || facSeen.bad.length) { console.log('세력이 다섯 넘게 나오지 않았거나, 판마다 차례가 같거나, 관 선택에 세력이 안 보였다'); fail = true; }
 if (!pickSeen.swap || !pickSeen.off || pickSeen.swapBad || pickSeen.offBad) { console.log('손에서 기물이 하나만 들리지 않는다'); fail = true; }
