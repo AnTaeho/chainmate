@@ -1,10 +1,13 @@
 // 앱: 화면 전환 · 판 상태 · 저장 · 입력 · 프레임. DOM을 모른다(main.js가 캔버스와 입력을 넘긴다).
 import { logBegin, layerUp, openBox, closeBox } from '../render/layoutlog.js';
 import { feltCanvas } from '../render/texture.js';
+import { LOOK } from '../render/look.js';
+import { flowLayer } from '../render/light.js';
+import { factionFor } from '../sim/run.js';
+import { FACTION_BY_ID } from '../data/factions.js';
 import { createRun, applyRun, migrateRun } from '../sim/run.js';
 import { PAL } from '../render/palette.js';
-import { context } from '../render/surface.js';
-import { W, H, text, box, rect, lift } from '../render/gfx.js';
+import { W, H, text, box, rect, lift, fine } from '../render/gfx.js';
 import { UI, tooltip, bigTooltip, tipHeight, tipTexts } from './ui.js';
 import { miniShard } from './parts.js';
 import { setLang } from './lang.js';
@@ -21,7 +24,9 @@ import { firstLaunch } from './screens/lessons.js';
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null }) {
-  const ctx = context(canvas);
+  // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
   const store = makeStore(storage);
   const app = {
     canvas, ctx, store, audio,
@@ -42,6 +47,24 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     nextSeed: seed,
   };
 
+  LOOK.calm = !!reducedMotion;
+  // 뒷면 캔버스 배율(main.js fit이 정한다). 캔버스 크기를 바꾸면 그리기 상태가 풀리므로 draw마다 setTransform
+  app.scale = 1;
+  app.setScale = (n) => {
+    n = Math.max(1, Math.floor(n) || 1);
+    app.scale = n; LOOK.n = n;
+    if (canvas.width !== W * n) canvas.width = W * n;
+    if (canvas.height !== H * n) canvas.height = H * n;
+  };
+  // 흐르는 배경에 섞을 세력 빛깔(판이 없으면 없음)
+  let tintKey = null, tintCol = null;
+  app.tint = () => {
+    const r = app.run;
+    if (!r || !r.factions || r.scratch) return null;
+    const k = `${r.seed}:${r.ante}`;
+    if (k !== tintKey) { tintKey = k; const fa = FACTION_BY_ID[factionFor(r, r.ante)]; tintCol = fa ? fa.hue : null; }
+    return tintCol;
+  };
   app.speed = () => app.settings.speed || 1;
   app.records = loadRecords(store);
   setLang(app.settings.lang);
@@ -167,7 +190,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
         const x = x0 + (x1 - x0) * q, y = y0 + (y1 - y0) * q - Math.sin(q * Math.PI) * 40;
         for (let i = 1; i <= 4; i++) { const qq = Math.max(0, q - i * 0.04); c.globalAlpha = 0.5 - i * 0.1; rect(c, x0 + (x1 - x0) * qq, y0 + (y1 - y0) * qq - Math.sin(qq * Math.PI) * 40 + 2, 2, 2, PAL.goldHi); }
         c.globalAlpha = k >= 1 ? Math.max(0, 1 - (e.t - 0.75) / 0.15) : 1;
-        miniShard(c, Math.round(x) - 2, Math.round(y) - 2);
+        miniShard(c, x - 2, y - 2);
         if (k >= 1) { const r = (e.t - 0.75) * 60; for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; rect(c, x1 + Math.cos(a) * r, y1 + Math.sin(a) * r, 1, 1, PAL.goldHi); } }
         c.globalAlpha = 1;
       },
@@ -232,16 +255,20 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const ui = app.ui;
     ui.begin();
     logBegin();
+    ctx.setTransform(app.scale, 0, 0, app.scale, 0, 0);
+    ctx.imageSmoothingEnabled = false;
     ctx.save();
     if (app.shakeAmt > 0) {
       const a = Math.round(app.shakeAmt * Math.min(1, app.shakeT * 6));
       ctx.translate(Math.round((Math.random() * 2 - 1) * a), Math.round((Math.random() * 2 - 1) * a));
     }
     ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8);
+    flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16);
     if (app.screen) app.screen.draw(ctx, ui);
     // 연출(떠오르는 수 · 날아가는 조각)은 칸을 넘나든다 — 글 넘침은 재지 않는다
     openBox('fx', 0, 0, W, H, 0, { loose: true, name: '연출' });
-    app.fx.draw(ctx, 1);
+    // 연출은 움직이는 것이라 소수점 자리에(떠오르는 수 · 튀는 불티 · 날아가는 조각 — 3배 화면에서 계단 없이)
+    fine(() => app.fx.draw(ctx, 1));
     closeBox();
     ctx.restore();
     if (app.overlay) {

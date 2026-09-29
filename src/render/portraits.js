@@ -1,5 +1,6 @@
 // 명인 초상 32×32(코드로 그린 도트). 얼굴 · 어깨 바탕 위에 명인마다 한 가지 표지.
 import { makeCanvas, context } from './surface.js';
+import { place } from './gfx.js';
 
 const SKIN = '#d9b08c', SKIN_DK = '#a8795a', INK = '#1a1210', WHITE = '#f4ead2';
 const LOOK = {
@@ -101,7 +102,7 @@ export function portraitCanvas(id) {
 export function drawPortrait(ctx, id, x, y, scale = 1, alpha = 1) {
   const c = portraitCanvas(id);
   if (alpha !== 1) ctx.globalAlpha = alpha;
-  ctx.drawImage(c, Math.round(x), Math.round(y), 32 * scale, 32 * scale);
+  ctx.drawImage(c, place(x), place(y), 32 * scale, 32 * scale);
   if (alpha !== 1) ctx.globalAlpha = 1;
 }
 export const PORTRAIT_IDS = Object.keys(DRAW);

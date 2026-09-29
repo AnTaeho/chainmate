@@ -19,7 +19,13 @@ export async function boot(env = {}) {
     if (app) app.pixelScale = s / dpr;
     canvas.style.width = `${(W * s) / dpr}px`;
     canvas.style.height = `${(H * s) / dpr}px`;
+    // 뒷면 캔버스 배율 N(빛과 움직임): 장치 화소 배율 s를 나누는 1~4 중 가장 큰 것(없으면 min(s, 4)).
+    // 480×270 좌표는 그대로이고, 움직이는 것만 1/N 칸에 선다. 남는 배율은 CSS가 네모 도트로 늘린다(image-rendering: pixelated)
+    let n = 1;
+    if (Number.isInteger(s) && s > 1) { n = Math.min(s, 4); for (let d = 4; d >= 2; d--) if (d <= s && s % d === 0) { n = d; break; } }
+    if (app) app.setScale(n); else pendingScale = n;
   }
+  let pendingScale = 1;
   fit();
   win.addEventListener('resize', fit);
 
@@ -36,6 +42,7 @@ export async function boot(env = {}) {
   const reduced = !!(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const now = () => (win.performance || globalThis.performance).now();
   app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio });
+  app.setScale(pendingScale);
   fit();
   if (audio) audio.apply(app.settings);
 

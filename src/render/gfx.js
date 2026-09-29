@@ -5,6 +5,15 @@ import { spriteCanvas, tierSparkle, SW, SH } from './sprites.js';
 import { L } from '../ui/lang.js';
 import { LOG, logText, logFrame } from './layoutlog.js';
 import { SOUL_BY_ID } from '../data/souls.js';
+import { snap } from './look.js';
+
+// 소수점 자리(빛과 움직임): fine(fn) 안에서 그린 rect · text · sprite는 정수 칸 대신 1/N 칸에 선다(N = 화면 배율).
+// 움직이는 것(미끄러지는 기물 · 날아가는 카드 · 흐르는 점수)만 감싼다 — 멈춘 화면은 늘 정수 칸이라 도트가 어긋나지 않는다.
+let FINE = 0;
+export function fine(fn) { FINE++; try { return fn(); } finally { FINE--; } }
+const R = (v) => (FINE ? snap(v) : Math.round(v));
+// 자리 하나를 지금 모드(정수 칸 · fine 안이면 1/N 칸)에 맞춘다 — gfx 밖에서 drawImage를 바로 부르는 그림용
+export const place = R;
 
 // 혼이 깃든 기물: 몸 뒤 왼쪽 위에 혼 빛깔 기운 한 점(천천히 떠오르며 깜빡인다)
 export function soulSpark(ctx, x, y, col, t = null) {
@@ -21,7 +30,7 @@ export const W = 480, H = 270;
 
 export function rect(ctx, x, y, w, h, col) {
   ctx.fillStyle = col;
-  ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+  ctx.fillRect(R(x), R(y), Math.round(w), Math.round(h));
 }
 
 export function box(ctx, x, y, w, h, fill, edge = PAL.frameDk) {
@@ -74,8 +83,8 @@ export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false
   let dx = x;
   if (align === 'center') dx = x - Math.floor(w / 2);
   else if (align === 'right') dx = x - w;
-  dx = Math.round(dx); y = Math.round(y);
-  if (LOG.on && alpha > 0 && ctx.globalAlpha > 0) logText(s, dx, y, w, scale);
+  dx = R(dx); y = R(y);
+  if (LOG.on && alpha > 0 && ctx.globalAlpha > 0) logText(s, Math.round(dx), Math.round(y), w, scale);
   if (alpha !== 1) ctx.globalAlpha = alpha;
   if (shadow) {
     const sh = textImage(s, shadow, bold);
@@ -93,14 +102,15 @@ export const measure = (s, bold = false) => textWidth(s, bold);
 export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null } = {}) {
   const c = spriteCanvas(type, side, eng, tier);
   if (alpha <= 0) return;
-  if (tier === 3 && sx === 1 && sy === 1) { if (alpha !== 1) ctx.globalAlpha = alpha; tierSparkle(ctx, Math.round(x), Math.round(y), time); if (alpha !== 1) ctx.globalAlpha = 1; }
+  const px = R(x), py = R(y);
+  if (tier === 3 && sx === 1 && sy === 1) { if (alpha !== 1) ctx.globalAlpha = alpha; tierSparkle(ctx, px, py, time); if (alpha !== 1) ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = alpha;
-  if (soul && sx === 1 && sy === 1) soulSpark(ctx, Math.round(x), Math.round(y), SOUL_BY_ID[soul] ? SOUL_BY_ID[soul].col : '#ffffff', time);
-  if (sx === 1 && sy === 1) ctx.drawImage(c, Math.round(x), Math.round(y));
+  if (soul && sx === 1 && sy === 1) soulSpark(ctx, px, py, SOUL_BY_ID[soul] ? SOUL_BY_ID[soul].col : '#ffffff', time);
+  if (sx === 1 && sy === 1) ctx.drawImage(c, px, py);
   else {
     const w = Math.max(1, Math.round(SW * Math.abs(sx)));
     const h = Math.max(1, Math.round(SH * sy));
-    ctx.drawImage(c, Math.round(x + (SW - w) / 2), Math.round(y + SH - h), w, h);
+    ctx.drawImage(c, R(x + (SW - w) / 2), R(y + SH - h), w, h);
   }
   if (alpha !== 1) ctx.globalAlpha = 1;
 }
