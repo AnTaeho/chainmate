@@ -1,7 +1,6 @@
 // 타이틀: 달빛 아래의 기원. 밤하늘 · 별 · 달 · 멀리 거대한 기물 실루엣 · 안개 · 원근 체스 바닥(한 번 그려 캐시),
 // 그 바닥 위에 눕힌 판에서 풀이기가 실제 규칙 · 실제 연출로 사슬을 계속 둔다(소리 없음). 반딧불 · 로고 빛 · 시연만 매 프레임.
 import { hint } from '../coach.js';
-import { openLesson } from './lessons.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, rect, sprite } from '../../render/gfx.js';
 import { makeCanvas, context } from '../../render/surface.js';
@@ -174,10 +173,9 @@ export class TitleScreen {
     const has = app.hasSave();
     const items = [];
     if (has) items.push(['title:continue', '이어 하기', () => app.continueRun()]);
-    // 처음 켰으면(기록이 비었으면) 새 판은 첫 수업부터
-    const first = !app.records.lessonsDone && app.records.runs === 0;
-    items.push(['title:new', '새 판', () => (first ? openLesson(app, 0, 'first') : app.go('setup'))]);
-    items.push(['title:lesson', '첫 수업', () => app.go('lessons')]);
+    // 처음 켰으면(또는 설정 「킹과 다시 두기」) 새 판은 곧바로 킹과 두는 첫 대국부터
+    items.push(['title:new', '새 판', () => (app.wantsScript() ? app.newRun({ script: true }) : app.go('setup'))]);
+    items.push(['title:lesson', '수업', () => app.go('lessons')]);
     items.push(['title:daily', '오늘의 대국', () => app.newRun({ daily: true })]);
     items.push(['title:codex', '도감', () => app.go('codex')]);
     items.push(['title:records', '기록', () => app.go('records')]);

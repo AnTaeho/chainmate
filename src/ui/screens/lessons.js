@@ -21,15 +21,6 @@ import { L } from '../lang.js';
 
 const seenOf = (app) => app.records.lessonsSeen || {};
 
-// 처음 켰나(기록 · 판 · 본 수업이 모두 비었다) → 첫 수업으로
-export function firstLaunch(app) {
-  const r = app.records;
-  if (r.lessonsDone || r.runs > 0 || Object.keys(seenOf(app)).length || app.hasSave()) return false;
-  app.lessonFrom = 'first';
-  app.go('lesson', { index: 0, phase: 'demo' });
-  return true;
-}
-
 // 수업 i를 연다(판 수업 ②는 상점 길)
 export function openLesson(app, i, from = app.lessonFrom) {
   app.lessonFrom = from;

@@ -19,7 +19,6 @@ import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
 import { SCREENS } from './screens/index.js';
 import { coachDown, updateGuide, drawCoach } from './coach.js';
-import { firstLaunch } from './screens/lessons.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -32,7 +31,6 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     canvas, ctx, store, audio,
     ui: new UI(),
     settings: loadSettings(store),
-    reducedMotion,
     run: null,
     screen: null,
     overlay: null,
@@ -47,7 +45,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     nextSeed: seed,
   };
 
-  LOOK.calm = !!reducedMotion;
+  // 움직임 줄이기: 기기 설정(OS) 또는 게임 설정 「움직임 줄이기」(settings.calm)
+  Object.defineProperty(app, 'reducedMotion', { get: () => !!reducedMotion || !!app.settings.calm, enumerable: true });
+  LOOK.calm = app.reducedMotion;
   // 뒷면 캔버스 배율(main.js fit이 정한다). 캔버스 크기를 바꾸면 그리기 상태가 풀리므로 draw마다 setTransform
   app.scale = 1;
   app.setScale = (n) => {
@@ -114,19 +114,25 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
 
   // ── 판
   app.hasSave = () => !!store.get(KEYS.run);
+  // opts.script: 첫 대국을 킹과 두는 대본 대국으로(CHM-22) — 관 선택을 건너뛰고 곧바로 대국
   app.newRun = (opts = {}) => {
     const daily = opts.daily ? today() : null;
     const seed = daily ? dailySeed(daily) : opts.seed ?? app.nextSeed ?? ((Math.floor(now() * 7919) ^ Date.now()) >>> 0) % 2147483647;
     app.nextSeed = null;
-    app.run = createRun({ seed, opening: daily ? 'standard' : opts.opening, dan: daily ? 0 : opts.dan || 0 });
+    const script = !!opts.script && !daily;
+    app.run = createRun({ seed, opening: daily ? 'standard' : opts.opening, dan: daily ? 0 : opts.dan || 0, script });
+    if (script) { app.records.kingDone = true; app.records.kingAgain = false; app.saveRecords(); }
     if (daily) app.run.daily = daily;
     app.fresh = [];
     observe(app.records, app.run, [], app.fresh);
     // 스크린샷 · 영상 도구(window.__autoDraft): 정석 첫째를 곧바로 골라 예전 흐름으로
     if (globalThis.__autoDraft && app.run.phase === 'draft') applyRun(app.run, { type: 'joseki', index: 0 });
     app.save();
+    if (app.run.script && app.run.phase === 'select') { const ev = app.cmd({ type: 'play' }); app.go('battle', { events: ev }); return; }
     app.goPhase();
   };
+  // 다음 새 판을 킹과 두나: 처음 켠 사람(판 · 수업 기록이 없다) · 설정 「킹과 다시 두기」
+  app.wantsScript = () => !!app.records.kingAgain || (!app.records.kingDone && !app.records.runs && !app.records.lessonsDone);
   app.continueRun = () => {
     const run = store.get(KEYS.run);
     if (!run) return false;
@@ -236,6 +242,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.update = (dt) => {
     dt = Math.min(dt, 0.1);
     app.time += dt;
+    LOOK.calm = app.reducedMotion;
     if (app.clockFx) { app.clockFx.t += dt; if (app.clockFx.t > 2.4) app.clockFx = null; } // 시계 칸을 잃는 깜빡임(common.js clockPips)
     app.ui.time = app.time;
     const sp = app.speed();
@@ -300,7 +307,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.tipRect = null;
     app.noteStack = null;
     const h = ui.hover;
-    if (ui.drag || app.guide) return;
+    if (ui.drag || (app.guide && !app.overlay)) return; // 따라 하는 길 중에는 말풍선을 띄우지 않는다(덮개 — 행마 보기 — 는 띄운다)
     const mx = ui.mouse.x, my = ui.mouse.y;
     const span = ui.termSpans.find((q) => mx >= q.x && my >= q.y && mx < q.x + q.w && my < q.y + q.h);
     const hot = span ? span.id : null;
@@ -363,7 +370,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
 
   app.clone = clone;
-  // 처음 켠 사람(기록이 비었다)은 타이틀을 건너뛰고 첫 수업으로
-  if (!firstLaunch(app)) app.go('title');
+  // 처음 켠 사람도 타이틀에서 시작한다: 「새 판」이 곧바로 킹과 두는 대본 대국(수업 열은 타이틀 「수업」에서)
+  app.go('title');
   return app;
 }

@@ -292,8 +292,12 @@ export class BattleScreen {
     }
     return this.targets;
   }
-  // 첫 수업이 누를 곳을 좁힌다(평소 대국은 그대로)
+  // 첫 수업 · 대본 대국이 누를 곳을 좁힌다(평소 대국은 그대로)
   filterTargets(t) { return t; }
+  // 대국 복사본에서 두는 중(대본 대국의 「한 번 끊겨 보기」): 판의 기록에 적지 않는다
+  get rehearsal() { return false; }
+  // 행마 보기(덮개): 지금 판과 손의 기물
+  openMoves() { this.app.openOverlay('moves', { battle: this }); }
   // 누를 수 없는 칸을 눌렀다
   missSq() {}
 
@@ -377,9 +381,9 @@ export class BattleScreen {
     const run = this.run;
     if (cmd.type === 'drop') this.slow = this.src.kind === 'lesson' || (!!run && !run.log.some((x) => !x.skipped) && bRef.history.length < 3);
     if (cmd.type === 'drop') { const hp = bRef.hand[cmd.handIndex]; this.dropEng = hp && hp.eng ? hp.eng.id : null; this.dropSoul = hp && hp.soul ? hp.soul : null; }
-    if (cmd.type === 'drop' && run) this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
+    if (cmd.type === 'drop' && run && !this.rehearsal) this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
     const events = this.src.cmd(cmd);
-    if (run) this.record(events, run);
+    if (run && !this.rehearsal) this.record(events, run);
     const post = clone(bRef.board);
     for (const e of events) if (e.type === 'reinforce') post[e.sq] = null;
     if (cmd.type === 'drop') v.hand.splice(cmd.handIndex, 1);
@@ -628,7 +632,7 @@ export class BattleScreen {
         v.score = from + e.score;
         v.count = null;
         this.lastEnd = { value: e.value, mult: e.mult, score: e.score, reason: e.reason, steps: v.chain ? v.chain.steps.slice() : [], eng: v.chain ? v.chain.eng : null };
-        if (this.run && e.score > 0 && app.noteMove(e.score, this.lastEnd.steps) && app.records.runs + app.records.wins > 0) this.toast('최고 한 수', PAL.gold);
+        if (this.run && !this.rehearsal && e.score > 0 && app.noteMove(e.score, this.lastEnd.steps) && app.records.runs + app.records.wins > 0) this.toast('최고 한 수', PAL.gold);
         v.gather = null;
         v.chain = null;
         v.cut = null;
@@ -1458,10 +1462,15 @@ export class BattleScreen {
     const lay = this.rightLayout(run);
     if (run) {
       // 이름표 줄: 「격언 5/5」와 정석 표(멈춤 단추 왼쪽에 붙여). 이름표가 길면(영어) 표에 닿기 전에 줄인다. 명국 조각은 상금 줄
+      // 「행마」 단추(행마 보기)는 정석 표 왼쪽
       const nj = (run.josekis || []).length;
       const bx = PAUSE.x - 4 - nj * 12;
-      const label = `격언 ${maximCount(run)}/${maximCapacity(run)}`;
-      text(ctx, measure(label) <= bx - RX - 4 ? label : `${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
+      // 이름표는 단추 왼쪽에 들어가는 만큼: 「격언 5/5」 → 「5/5」 → 없음(영어 · 정석 셋)
+      const mw = measure('행마', true) + 6, mx = bx - 4 - mw;
+      const room = mx - RX - 4, full = `격언 ${maximCount(run)}/${maximCapacity(run)}`, count = `${maximCount(run)}/${maximCapacity(run)}`;
+      const label = measure(full) <= room ? full : measure(count) <= room ? count : null;
+      if (label) text(ctx, label, RX, 8, PAL.dim);
+      button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves() });
       josekiBadges(ctx, ui, run, bx, 9);
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
       maximColumn(ctx, ui, run, RX, TOP, RW, lay.room, { offUids: off });
