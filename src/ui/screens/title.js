@@ -16,55 +16,87 @@ import { BattleScreen, BX, BY, S } from './battle.js';
 const NO_UI = { region() {}, isHover: () => false, hover: null };
 const HOR = 150;
 
-// ── 정적 배경(한 번)
-let backdrop = null;
-function drawBackdrop() {
-  const c = makeCanvas(W, H), g = context(c);
-  const sky = ['#070c0e', '#0a1214', '#0d181a', '#10201f', '#132722', '#172d26'];
-  for (let y = 0; y < HOR; y++) {
-    const u = (y / HOR) * sky.length, k = Math.min(sky.length - 1, Math.floor(u)), f = u % 1;
-    g.fillStyle = sky[k]; g.fillRect(0, y, W, 1);
-    if (k + 1 < sky.length) { g.fillStyle = sky[k + 1]; for (let x = y % 2; x < W; x += 2) if (((x * 7 + y * 3) % 10) / 10 < f) g.fillRect(x, y, 1, 1); }
-  }
-  let s = 7;
+// ── 정적 배경: 장면을 게임 좌표 [x0, x0 + w) × [y0, y0 + h)에 칠한다(g의 (0, 0) = 게임 (x0, y0)).
+// 게임 캔버스는 (0, 0, 480, 270)을, 여백 판은 창 전체(음수 좌표 · 480 너머)를 같은 함수로 칠한다 — 겹치는 곳은 같은 도트라 이음새가 없다.
+// 하늘 · 별은 창 끝까지, 원근 바닥은 같은 소실점에서 칸이 넓어지며 이어진다. 달 · 큰 실루엣은 게임 판 안의 제자리.
+const mod = (a, m) => ((a % m) + m) % m;
+const SKY = ['#070c0e', '#0a1214', '#0d181a', '#10201f', '#132722', '#172d26'];
+const STAR_H = HOR - 20;
+// 별은 480 × 130 칸마다 90개. 게임 판이 덮는 칸(0, 0)은 예전 그대로(씨앗 7), 다른 칸은 칸 번호로 씨앗
+function starCell(ci, cj) {
+  let s = ci === 0 && cj === 0 ? 7 : 1 + mod((ci * 73856093) ^ (cj * 19349663), 2147483645);
   const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 90; i++) { const x = Math.floor(rnd() * W), y = Math.floor(rnd() * (HOR - 20)); g.fillStyle = rnd() < 0.2 ? '#fff1b8' : '#5d6f68'; g.fillRect(x, y, 1, 1); }
+  const out = [];
+  for (let i = 0; i < 90; i++) { const x = Math.floor(rnd() * W), y = Math.floor(rnd() * STAR_H); out.push([ci * W + x, cj * STAR_H + y, rnd() < 0.2 ? '#fff1b8' : '#5d6f68']); }
+  return out;
+}
+export function paintScene(g, x0, y0, w, h) {
+  const x1 = x0 + w, y1 = y0 + h;
+  const R = (x, y, rw, rh) => g.fillRect(x - x0, y - y0, rw, rh);
+  // 하늘: 위(y < 0)는 가장 어두운 빛깔 그대로
+  if (y0 < 0) { g.fillStyle = SKY[0]; R(x0, y0, w, Math.min(0, y1) - y0); }
+  for (let y = Math.max(0, y0); y < Math.min(HOR, y1); y++) {
+    const u = (y / HOR) * SKY.length, k = Math.min(SKY.length - 1, Math.floor(u)), f = u % 1;
+    g.fillStyle = SKY[k]; R(x0, y, w, 1);
+    if (k + 1 < SKY.length) { g.fillStyle = SKY[k + 1]; for (let x = x0 + mod(y - x0, 2); x < x1; x += 2) if (mod(x * 7 + y * 3, 10) / 10 < f) R(x, y, 1, 1); }
+  }
+  for (let cj = Math.floor(y0 / STAR_H); cj <= Math.min(0, Math.floor((y1 - 1) / STAR_H)); cj++) {
+    for (let ci = Math.floor(x0 / W); ci <= Math.floor((x1 - 1) / W); ci++) for (const [x, y, col] of starCell(ci, cj)) { g.fillStyle = col; R(x, y, 1, 1); }
+  }
   // 달(크레이터)과 옅은 달무리
   const MX = 404, MY = 46, MR = 20;
   for (let y = -MR - 8; y <= MR + 8; y++) for (let x = -MR - 8; x <= MR + 8; x++) {
     const d = Math.hypot(x, y);
-    if (d <= MR) { g.fillStyle = d > MR - 2 ? '#d9cfae' : (x * 3 + y * 5) % 11 === 0 ? '#cfc4a0' : '#eee5c7'; g.fillRect(MX + x, MY + y, 1, 1); }
-    else if (d < MR + 8 && (x + y) % 2 === 0 && d < MR + 8 - (d - MR)) { g.fillStyle = 'rgba(238,229,199,0.08)'; g.fillRect(MX + x, MY + y, 1, 1); }
+    if (d <= MR) { g.fillStyle = d > MR - 2 ? '#d9cfae' : mod(x * 3 + y * 5, 11) === 0 ? '#cfc4a0' : '#eee5c7'; R(MX + x, MY + y, 1, 1); }
+    else if (d < MR + 8 && mod(x + y, 2) === 0 && d < MR + 8 - (d - MR)) { g.fillStyle = 'rgba(238,229,199,0.08)'; R(MX + x, MY + y, 1, 1); }
   }
-  for (const [x, y, r] of [[-6, -4, 4], [5, 6, 3], [8, -8, 2]]) for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r) { g.fillStyle = '#d6cba8'; g.fillRect(MX + x + i, MY + y + j, 1, 1); }
-  // 멀리 거대한 기물 실루엣(달 쪽 가장자리에 빛)
-  const sil = (t, x, y, sc, col, rim) => { for (const [i, j, k] of spritePixels(t)) { g.fillStyle = (k === 'h' || (k === 'o' && i > 8)) && rim ? rim : col; g.fillRect(x + i * sc, y + j * sc, sc, sc); } };
+  for (const [x, y, r] of [[-6, -4, 4], [5, 6, 3], [8, -8, 2]]) for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r) { g.fillStyle = '#d6cba8'; R(MX + x + i, MY + y + j, 1, 1); }
+  // 멀리 거대한 기물 실루엣(달 쪽 가장자리에 빛). 판 밖 둘은 더 멀리 있는 작은 것(넓은 여백에서만 보인다)
+  const sil = (t, x, y, sc, col, rim) => { for (const [i, j, k] of spritePixels(t)) { g.fillStyle = (k === 'h' || (k === 'o' && i > 8)) && rim ? rim : col; R(x + i * sc, y + j * sc, sc, sc); } };
   sil('R', 12, 26, 6, '#0b1513', '#1c2e28');
   sil('K', 318, 8, 7, '#0a1311', '#22362f');
   sil('N', 96, 66, 4, '#0d1816', '#1d302a');
   sil('B', 250, 70, 4, '#0d1816', '#1d302a');
+  sil('P', -78, 104, 2, '#0e1a17', '#1a2b26');
+  sil('R', 530, 100, 2, '#0e1a17', '#1a2b26');
   // 지평선 안개
-  for (let y = HOR - 26; y < HOR; y++) for (let x = y % 2; x < W; x += 2) if (((x + y * 3) % 7) < (y - (HOR - 26)) / 6) { g.fillStyle = 'rgba(46,64,60,0.5)'; g.fillRect(x, y, 1, 1); }
-  // 원근 체스 바닥
+  g.fillStyle = 'rgba(46,64,60,0.5)';
+  for (let y = Math.max(HOR - 26, y0); y < Math.min(HOR, y1); y++) for (let x = x0 + mod(y - x0, 2); x < x1; x += 2) if (mod(x + y * 3, 7) < (y - (HOR - 26)) / 6) R(x, y, 1, 1);
+  // 원근 체스 바닥: 같은 소실점(240, 150)에서 줄을 창 끝까지 잇는다(판 아래로도 칸이 넓어지며). 같은 빛깔 칸은 한 번에 칠한다
   const N = 12;
-  for (let j = 0; j < N; j++) {
-    const y0 = HOR + Math.round(120 * Math.pow(j / N, 1.7)), y1 = HOR + Math.round(120 * Math.pow((j + 1) / N, 1.7));
-    for (let y = y0; y < y1; y++) {
-      const w = 6 + (y - HOR) * 0.9;
-      let x = 0;
-      while (x < W) {
-        const k = Math.floor((x - 240) / w + 100);
-        const light = (k + j) % 2 === 0;
-        const glow = Math.max(0, 1 - Math.abs(x - 240) / 260) * Math.max(0, (y - HOR) / 120);
-        g.fillStyle = light ? (glow > 0.45 ? '#3e4f40' : '#2a3a33') : (glow > 0.45 ? '#233129' : '#18241f');
-        g.fillRect(x, y, 1, 1);
-        x++;
+  const rowY = (j) => HOR + Math.round(120 * Math.pow(j / N, 1.7));
+  for (let j = 0; rowY(j) < y1; j++) {
+    const ya = rowY(j), yb = rowY(j + 1);
+    if (yb <= y0) continue;
+    for (let y = Math.max(ya, y0); y < Math.min(yb, y1); y++) {
+      const fw = 6 + (y - HOR) * 0.9, near = Math.min(1, (y - HOR) / 120);
+      let run = x0, cur = null;
+      for (let x = x0; x <= x1; x++) {
+        let col = null;
+        if (x < x1) {
+          const k = Math.floor((x - 240) / fw + 100);
+          const light = mod(k + j, 2) === 0;
+          const glow = Math.max(0, 1 - Math.abs(x - 240) / 260) * near;
+          col = light ? (glow > 0.45 ? '#3e4f40' : '#2a3a33') : (glow > 0.45 ? '#233129' : '#18241f');
+        }
+        if (col !== cur) { if (cur) { g.fillStyle = cur; R(run, y, x - run, 1); } cur = col; run = x; }
       }
     }
-    g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, y0, W, 1);
+    if (ya >= y0) { g.fillStyle = 'rgba(0,0,0,0.25)'; R(x0, ya, w, 1); }
   }
+  // 게임 판 아래(y ≥ 270)의 가까운 바닥은 차츰 밤빛에 잠긴다 — 270에서 0으로 시작해 이음새가 없고, 큰 칸이 시선을 끌지 않는다
+  for (let y = Math.max(H, y0); y < y1; y++) {
+    const a = Math.round(0.6 * Math.min(1, (y - H) / 200) * 100) / 100;
+    if (a > 0) { g.fillStyle = `rgba(7,12,14,${a})`; R(x0, y, w, 1); }
+  }
+}
+let backdrop = null;
+function drawBackdrop() {
+  const c = makeCanvas(W, H);
+  paintScene(context(c), 0, 0, W, H);
   return c;
 }
+export const TITLE_SCENE = { key: 'title', paint: paintScene };
 
 // ── 로고: 금빛 3단 명암 + 어두운 그림자(한 번). 몇 초마다 빛이 한 번 스친다
 let logo = null;
@@ -182,8 +214,8 @@ export class TitleScreen {
     items.push(['title:settings', '설정', () => app.openOverlay('settings')]);
     return items;
   }
-  // 여백 판이 가장자리를 늘려 잇는 그림(main.js)
-  surroundImage() { if (!backdrop) backdrop = drawBackdrop(); return backdrop; }
+  // 여백 판이 창 전체로 이어 칠하는 장면(main.js · src/render/backdrop.js)
+  surroundScene() { return TITLE_SCENE; }
   draw(ctx, ui) {
     const app = this.app, time = app.time;
     if (app.pixelScale && app.pixelScale < 2 && !app.settings.big) hint(app, 'bigText', 'title:settings');

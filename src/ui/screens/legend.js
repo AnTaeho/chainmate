@@ -86,8 +86,9 @@ export class LegendScreen {
   }
   draw(ctx, ui) {
     const l = this.l, t = this.t;
-    // 멈춤: 금빛 번쩍
-    if (t < T_FREEZE) { ctx.globalAlpha = 0.5 * (1 - t / T_FREEZE); rect(ctx, 0, 0, W, H, PAL.goldHi); ctx.globalAlpha = 1; }
+    // 멈춤: 금빛 번쩍(여백 판도 같이)
+    const fl = this.surroundFlash();
+    if (fl) { ctx.globalAlpha = fl.a; rect(ctx, 0, 0, W, H, fl.col); ctx.globalAlpha = 1; }
     text(ctx, '불멸의 기보', W / 2, 8, PAL.goldDk, { align: 'center', bold: true });
     text(ctx, l.name, W / 2, 22, PAL.gold, { align: 'center', bold: true, scale: 2, shadow: PAL.shadow });
     this.drawReplay(ctx);
@@ -121,6 +122,8 @@ export class LegendScreen {
     }
     button(ctx, ui, 'next', W / 2 - 40, H - 26, 80, 18, '계속', { onClick: () => this.next(), tone: t >= this.tDone ? 'gold' : 'plain' });
   }
+  // 화면 전체 번쩍임 — 게임 캔버스와 여백 판(main.js)이 같이 쓴다
+  surroundFlash() { return this.t < T_FREEZE ? { col: PAL.goldHi, a: 0.5 * (1 - this.t / T_FREEZE) } : null; }
   next() {
     if (this.t < this.tDone) { this.t = this.tDone; return; }
     this.app.next();

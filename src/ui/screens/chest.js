@@ -83,13 +83,12 @@ export class ChestScreen {
       const iy = cy + (big ? LINE * 2 : LINE) + GAP_GROUP;
       items.forEach((s, k) => text(ctx, s, W / 2, textY(iy + k * LINE), PAL.ink, { align: 'center' }));
     }
-    if (this.flash > 0) {
-      ctx.globalAlpha = Math.min(0.5, this.flash * 0.5);
-      rect(ctx, 0, 0, W, H, PAL.gold);
-      ctx.globalAlpha = 1;
-    }
+    const fl = this.surroundFlash();
+    if (fl) { ctx.globalAlpha = fl.a; rect(ctx, 0, 0, W, H, fl.col); ctx.globalAlpha = 1; }
     button(ctx, ui, 'next', W / 2 - 40, H - 28, 80, 18, '계속', { onClick: () => this.next(), tone: 'gold' });
   }
+  // 다섯 칸 · 세 칸의 금빛 번쩍임 — 게임 캔버스와 여백 판(main.js)이 같이 쓴다
+  surroundFlash() { return this.flash > 0 ? { col: PAL.gold, a: Math.min(0.5, this.flash * 0.5) } : null; }
   next() {
     if (this.stopped < this.chest.cells.length) { this.t = 99; return; }
     this.app.next();
