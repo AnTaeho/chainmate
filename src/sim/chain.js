@@ -66,9 +66,9 @@ export function chainCaptures(t) {
   if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
   // 흡수: 먹은 행마가 더해진다(모습은 그대로)
   if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
-  // 혼 「역행」: 폰 모습이면 아래 대각으로도 · 혼 「도약」: 첫 먹기는 두 칸 안의 적 어디든(밤샘 2)
-  if (c.flags.pawnBack && c.form === 'P') for (const df of [-1, 1]) { const s = at((c.sq & 7) + df, (c.sq >> 3) - 1); if (s >= 0 && takeableAt(t, s, c.sq, bo) && !list.includes(s)) list.push(s); }
-  if (c.flags.spring && !c.captures.length) {
+  // 혼 「역행」: 폰 모습이면(각성하면 어느 모습이든) 아래 대각으로도 · 혼 「도약」: 첫 먹기(각성하면 둘째까지)는 두 칸 안의 적 어디든(밤샘 2)
+  if (c.flags.pawnBack && (c.form === 'P' || c.flags.pawnBack === 'any')) for (const df of [-1, 1]) { const s = at((c.sq & 7) + df, (c.sq >> 3) - 1); if (s >= 0 && takeableAt(t, s, c.sq, bo) && !list.includes(s)) list.push(s); }
+  if (c.flags.spring && c.captures.length < c.flags.spring) {
     for (let df = -2; df <= 2; df++) for (let dr = -2; dr <= 2; dr++) {
       const s = at((c.sq & 7) + df, (c.sq >> 3) + dr);
       if (s >= 0 && s !== c.sq && takeableAt(t, s, c.sq, bo) && !list.includes(s)) list.push(s);
@@ -151,9 +151,10 @@ export function chainCapture(t, sq) {
     c.money = (c.money || 0) + 2;
     events.push({ type: 'money', src: 'gem', money: 2 });
   } else if (c.flags.absorb && target.t !== 'K' && c.captures.length <= ABSORB.takes) {
-    // 흡수는 가장 최근에 먹은 행마 하나만 더한다(쌓이게 두면 모든 응수를 받아 첫 수 외통이 판의 절반이 됐다 — 하네스 30판)
+    // 흡수는 가장 최근에 먹은 행마 하나만 더한다(쌓이게 두면 모든 응수를 받아 첫 수 외통이 판의 절반이 됐다 — 하네스 30판).
+    // 각성한 흡수는 absorbKeep(둘)까지 쌓는다(새것이 앞)
     if (target.t !== c.form && (c.absorbed || [])[0] !== target.t) {
-      c.absorbed = [target.t];
+      c.absorbed = [target.t, ...(c.absorbed || []).filter((x) => x !== target.t)].slice(0, c.flags.absorbKeep || 1);
       events.push({ type: 'absorb', piece: target.t, sq: at, forms: [c.form, ...c.absorbed] });
     }
   } else if (c.flags.transcend && target.t !== 'K') {

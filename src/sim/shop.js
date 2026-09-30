@@ -6,7 +6,7 @@ import { CHARTS, CHART_FORMS, CHART_PRICE } from '../data/charts.js';
 import { ENGRAVINGS, ENGRAVING_PRICE } from '../data/engravings.js';
 import { EDITIONS, EDITION_BY_ID } from '../data/editions.js';
 import { LEGENDS } from '../data/legends.js';
-import { SOULS, SOUL_RARITY, soulPrice } from '../data/souls.js';
+import { SOULS, SOUL_RARITY, soulPrice, isCracked } from '../data/souls.js';
 import { TACTICS, TACTIC_PRICE, EVOLVE_PRICE } from '../data/tactics.js';
 
 // 수치(내가 정한 것 — DESIGN에 없는 값)
@@ -22,6 +22,8 @@ export const SHOP = {
   // 진열 칸에 무엇이 나오나(무게)
   kindWeights: [['maxim', 55], ['chart', 20], ['engraving', 12], ['piece', 13], ['soul', 6], ['evolve', 5], ['tactic', 5], ['gamble', 4]],
   gamblePrice: 2, // 도박 물건(깊이 G): 사는 순간 결과가 굴러 나온다
+  // 두루마리 「깨우기」(CHM-17 각성): 주머니에 금이 간 혼이 있을 때만 진열 칸 무게에 더한다. 비싸고 드물게
+  awaken: { weight: 3, price: 8 },
   soulOnPiece: 0.12, // 진열 기물에 혼이 깃들어 나올 확률(값 + 그 혼의 값 — 혼 등급 souls.js SOUL_RARITY)
   // 격언 등급(무게). 전설은 상점에 나오지 않는다(step 2b)
   rarityWeights: [['common', 70], ['uncommon', 25], ['rare', 5]],
@@ -103,7 +105,8 @@ export function rollItem(run, rng, exclude) {
     const f = fragmentOffer(run, rng, 'display');
     if (f && !exclude.includes(f.legend)) return { ...f, price: SHOP.fragmentPrice };
   }
-  const kind = weighted(rng, SHOP.kindWeights);
+  const kind = weighted(rng, run.deck && run.deck.some(isCracked) ? [...SHOP.kindWeights, ['awaken', SHOP.awaken.weight]] : SHOP.kindWeights);
+  if (kind === 'awaken') return { kind: 'awaken', price: SHOP.awaken.price };
   if (kind === 'maxim') {
     const it = rollMaxim(rng, exclude);
     if (it) return it;

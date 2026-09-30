@@ -7,7 +7,7 @@ import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, cha
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { bestMove } from './solver.js';
 import { generateBoard, randomEmpty, rollType, rollFrom, reinforceCount } from './setup.js';
-import { soulSpec } from '../data/souls.js';
+import { pieceSoul, CRACK } from '../data/souls.js';
 import { PIECES } from '../data/pieces.js';
 import { thaw } from '../data/tactics.js';
 import { reboardOn } from './tuning.js';
@@ -121,7 +121,9 @@ function draw(b) {
   while (b.hand.length < b.rules.hand && b.bag.length) b.hand.push(b.bag.shift());
 }
 
-const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null, ...(p.soul ? { soul: p.soul } : {}) });
+const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null, ...soulOf(p) });
+// 기물의 혼 · 금(사슬 수 links) · 각성(awake)을 옮긴다(판 주머니 → 대국)
+export const soulOf = (p) => (p.soul ? { soul: p.soul, ...(p.links ? { links: p.links } : {}), ...(p.awake ? { awake: true } : {}) } : {});
 
 // 금빛 적: 대국 시작 판에서 킹이 아닌 적 하나가 이 확률로 금빛(HOOKS 「드문 것들의 사다리」 대국당 ~4%).
 // 먹으면 값을 한 번 더 받고(chain.js), 판(런)이 대국 뒤 금빛 꾸러미와 조각 기회로 바꾼다.
@@ -236,7 +238,7 @@ export function dropSquaresFor(b, piece) {
   const allow = { attacked: false };
   if ((b.mods && b.mods.length) || piece.eng || piece.soul) {
     // 조회일 뿐이라 조정자 state가 새지 않게 복사본으로 돌린다
-    const t = { ...b, mods: forkSpecs(b.mods), chain: piece.eng || piece.soul ? { engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) } : null };
+    const t = { ...b, mods: forkSpecs(b.mods), chain: piece.eng || piece.soul ? { engraving: forkSpec(piece.eng), soul: pieceSoul(piece) } : null };
     const ctxEvent = { type: piece.t, engraving: piece.eng };
     // onDropCheck: ctx.event.allow.attacked = true 로 노려진 칸 허용
     ctxEvent.allow = allow;
@@ -306,7 +308,7 @@ export function apply(b, cmd) {
       b.hand.splice(cmd.handIndex, 1);
       b.chainPiece = piece;
       b.status = 'chain';
-      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng, soul: soulSpec(piece.soul) }));
+      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng, soul: pieceSoul(piece) }));
       reveal(b);
       if (b.chain.done) endMove(b, events);
       break;
@@ -379,12 +381,22 @@ function endMove(b, events) {
     b.shattered.push(b.chainPiece.id);
     b.deckSize--;
     events.push({ type: 'shatter', piece: b.chainPiece.t, id: b.chainPiece.id });
-  } else if (c.returnHome && !b.returnUsed) {
-    // 혼 「귀환」: 대국마다 한 번, 사슬을 푼 기물이 손으로 돌아온다(수는 쓴다)
-    b.returnUsed = true;
+  } else if (c.returnHome && Number(b.returnUsed || 0) < c.returnHome) {
+    // 혼 「귀환」: 대국마다 한 번(각성하면 두 번), 사슬을 푼 기물이 손으로 돌아온다(수는 쓴다)
+    b.returnUsed = Number(b.returnUsed || 0) + 1;
     b.hand.push(b.chainPiece);
     events.push({ type: 'returnHome', piece: b.chainPiece.t, id: b.chainPiece.id });
   } else b.used.push(b.chainPiece);
+  // 혼의 금(CHM-17 각성 사다리): 혼이 깃든 기물로 먹은 사슬마다 한 칸. CRACK.links에 닿는 순간 금이 간다(판(런)이 대국 뒤 주머니에 옮긴다)
+  const cp = b.chainPiece;
+  if (cp.soul && !cp.awake && c.captures.length) {
+    cp.links = (cp.links || 0) + 1;
+    if (cp.links === CRACK.links) { events.push({ type: 'crack', id: cp.id, piece: cp.t, soul: cp.soul }); (b.cracks || (b.cracks = [])).push({ id: cp.id, soul: cp.soul }); }
+  }
+  // 금빛 적을 먹은 사슬의 기물(각성: 금이 간 혼이 금빛 적을 먹고 이기면 깨어난다)
+  if (c.golden) (b.goldBy || (b.goldBy = [])).push(cp.id);
+  // 혼 「계승」 각성: 대국 뒤 판(런)이 그 모습의 기보를 올린다
+  if (c.chartUp) (b.chartUps || (b.chartUps = [])).push(c.chartUp);
   // 혼 「계주」: 이어 먹은 손 기물은 쓴 것으로
   if (c.relay) {
     const i = b.hand.findIndex((p) => p.id === c.relay.id);

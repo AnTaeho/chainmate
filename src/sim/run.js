@@ -14,7 +14,8 @@ import { createRng, fork, int, next, shuffle } from './rng.js';
 import { boardFilter } from './tuning.js';
 import { parseSq } from './board.js';
 import { SCRIPT } from '../data/tutorial.js';
-import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints } from './battle.js';
+import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
+import { isCracked } from '../data/souls.js';
 import { getModifier } from './scoring.js';
 import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul } from './shop.js';
 import { gradeOf, markFairy } from './chain.js';
@@ -63,6 +64,7 @@ export const CHEST = {
   // 판본은 넣지 않는다: 가진 격언에 곧바로 붙어(은박 배수 +5) 상자 하나가 판 봇 승률을 10%p 넘게 올렸다(보고서 2b).
   items: [['money', 60], ['chart', 30], ['engrave', 10], ['fairy', 6]],
   money: 2,     // 상금 칸 하나
+  awakenFrom: 3, // 이만큼 이상 뜬 상자는 금이 간 혼 하나를 깨운다(마지막 칸, CHM-17)
   cells: 5,     // 릴 칸 수. 나온 개수만큼 가운데부터 불이 켜진다(1: 가운데 · 3: 가운데 셋 · 5: 전부)
 };
 export const RUN_DEFAULTS = { money: 4, maximSlots: 5, consumableSlots: 2 };
@@ -266,7 +268,7 @@ function startBattle(run) {
   const scripted = !!run.script && run.ante === 1 && run.blind === 0 && info.kind === 'practice';
   run.battle = createBattle({
     seed: battleSeed(run), ante: run.ante, kind: info.kind, target: info.target,
-    bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
+    bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...soulOf(p) })),
     rules: scripted ? { ...run.rules, reboards: 0 } : run.rules, mods: battleMods(run, info.master, info.faction),
     goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
     golden: scripted ? false : null,
@@ -320,6 +322,11 @@ function endBattle(run, events) {
   // 적 특성 「배신자」: 먹은 배신자가 내 주머니로(주머니가 너무 커지지 않게 열넷까지)
   for (const t of b.traitors || []) if (run.deck.length < TRAIT_CHANCE.traitorDeckMax) addPiece(run, t, events);
   for (const id of b.crowned || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t === 'P') { p.t = 'Q'; events.push({ type: 'evolve', pieceId: id, from: 'P', to: 'Q' }); } }
+  // 혼의 금: 대국에서 센 사슬 수를 주머니로(이기든 지든)
+  for (const bp of [...b.hand, ...b.bag, ...b.used]) { const p = bp.links && run.deck.find((x) => x.id === bp.id); if (p && p.soul === bp.soul) p.links = Math.max(p.links || 0, bp.links); }
+  for (const e of b.cracks || []) (run.cracked || (run.cracked = [])).push({ soul: e.soul, ante: run.ante, blind: run.blind });
+  // 혼 「계승」 각성: 마지막 모습의 기보 +1(대국마다 한 번)
+  for (const form of b.chartUps || []) useChart(run, form, events);
   // 혼 「계승」: 사슬이 끝난 모습으로(여러 번이면 마지막)
   for (const { id, to } of b.becomes || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t !== to) { events.push({ type: 'evolve', pieceId: id, from: p.t, to }); p.t = to; } }
   const grades = {};
@@ -378,6 +385,8 @@ function endBattle(run, events) {
   runEvent(run, { type: 'battleWon', reason: b.result.reason, kind: info.kind });
   run.battle = null;
   if (info.kind === 'master') row.chest = openChest(run, events);
+  // 각성 길 하나: 금빛 적을 먹고 이긴 대국 — 금이 간 혼 하나가 깨어난다(금빛 적을 먹은 기물부터)
+  if (b.golden > 0) { const p = crackedPick(run, b.goldBy || []); if (p) awaken(run, p.id, 'golden', events); }
   const goldenPack = b.golden > 0 ? goldenReward(run, b.golden, events) : null;
   if (run.ante === ANTES && info.kind === 'master' && !run.endless) {
     run.phase = 'won';
@@ -442,6 +451,8 @@ function openChest(run, events) {
   const count = weighted(r, chestCounts(run));
   const items = [];
   for (let i = 0; i < count; i++) items.push(chestItem(run, r, items));
+  // 각성 길 둘: 세 칸 이상 뜬 상자는 금이 간 혼이 있으면 마지막 칸이 「깨우기」가 된다
+  if (count >= CHEST.awakenFrom) { const p = crackedPick(run); if (p) items[items.length - 1] = { kind: 'awaken', pieceId: p.id, piece: p.t, soul: p.soul }; }
   const lit = litCells(count);
   let k = 0;
   const cells = Array.from({ length: CHEST.cells }, (_, i) => (lit.includes(i) ? { lit: true, item: items[k++] } : { lit: false, item: null }));
@@ -482,7 +493,8 @@ function chestItem(run, r, prev) {
 }
 
 function applyChestItem(run, it, events) {
-  if (it.kind === 'chart') useChart(run, it.form, events);
+  if (it.kind === 'awaken') awaken(run, it.pieceId, 'chest', events);
+  else if (it.kind === 'chart') useChart(run, it.form, events);
   else if (it.kind === 'money') { run.money += it.money; events.push({ type: 'money', src: 'chest', money: it.money }); }
   else if (it.kind === 'engrave') engrave(run, it.pieceId, it.eng, events);
   else if (it.kind === 'piece') addPiece(run, it.t, events);
@@ -535,7 +547,7 @@ function gamble(run, id, slot, events) {
   const r = fork(root(run), `gamble:${run.ante}:${run.blind}:${run.shop.rerolls}:${slot}`);
   const p = run.deck[int(r, run.deck.length)];
   if (id === 'potion') {
-    if (next(r) < 0.5) { const s = rollSoul(r); p.soul = s; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, soul: s }); }
+    if (next(r) < 0.5) { const s = rollSoul(r); setSoul(p, s); events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, soul: s }); }
     else { const ids = Object.keys(ENGRAVING_BY_ID); const e = ids[int(r, ids.length)]; p.eng = { id: e }; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, eng: e }); }
   } else {
     const to = FAIRIES[int(r, FAIRIES.length)];
@@ -544,12 +556,29 @@ function gamble(run, id, slot, events) {
   }
 }
 
-// 혼 새기기(깊이 C): 기물 하나에 혼 하나(있으면 바뀐다)
+// 혼 새기기(깊이 C): 기물 하나에 혼 하나(있으면 바뀐다). 새 혼은 금 · 각성 없이 처음부터
 function ensoul(run, pieceId, id, events) {
   const p = run.deck.find((x) => x.id === pieceId);
   if (!p) throw new Error(`no piece ${pieceId}`);
-  p.soul = id;
+  setSoul(p, id);
   events.push({ type: 'ensoul', piece: p.t, pieceId, soul: id });
+}
+
+const setSoul = (p, id) => { p.soul = id; delete p.links; delete p.awake; };
+
+// ── 각성(CHM-17 2단계). 금이 간 혼(souls.js isCracked) 하나를 깨운다. src: 'golden' | 'chest' | 'scroll'
+export const crackedPieces = (run) => run.deck.filter(isCracked);
+// 깨울 기물: prefer(금빛 적을 먹은 기물 id들) 가운데 금이 간 것, 없으면 사슬을 가장 많이 이은 것(같으면 먼저 들어온 것)
+function crackedPick(run, prefer = []) {
+  const list = crackedPieces(run);
+  return list.find((p) => prefer.includes(p.id)) || list.sort((a, b) => b.links - a.links || a.id - b.id)[0] || null;
+}
+function awaken(run, pieceId, src, events) {
+  const p = run.deck.find((x) => x.id === pieceId);
+  if (!isCracked(p)) throw new Error('no cracked soul');
+  p.awake = true;
+  (run.awakened || (run.awakened = [])).push({ soul: p.soul, src, ante: run.ante, blind: run.blind });
+  events.push({ type: 'awaken', pieceId, piece: p.t, soul: p.soul, src });
 }
 
 function addPiece(run, t, events, soul = null) {
@@ -581,7 +610,7 @@ const pay = (run, n) => {
 export function canBuy(run, it) {
   if (!it || it.sold || run.money < it.price) return false;
   if (it.kind === 'maxim') return hasMaximRoom(run, it.edition);
-  if (it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'tactic') return run.consumables.length < run.consumableSlots;
+  if (it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'tactic' || it.kind === 'awaken') return run.consumables.length < run.consumableSlots;
   return true;
 }
 
@@ -666,7 +695,7 @@ export function applyRun(run, cmd) {
       else if (it.kind === 'piece') addPiece(run, it.t, events, it.soul || null);
       else if (it.kind === 'fragment') grantFragment(run, it.legend, 'first', events);
       else if (it.kind === 'gamble') gamble(run, it.id, cmd.slot, events);
-      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : it.kind === 'evolve' ? { kind: 'evolve' } : { kind: it.kind, id: it.id });
+      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : it.kind === 'evolve' || it.kind === 'awaken' ? { kind: it.kind } : { kind: it.kind, id: it.id });
       events.push({ type: 'buy', item: { ...it } });
       break;
     }
@@ -732,7 +761,8 @@ export function applyRun(run, cmd) {
         if (!to) throw new Error('cannot evolve');
         events.push({ type: 'evolve', pieceId: p.id, from: p.t, to });
         p.t = to;
-      } else if (c.kind === 'tactic') throw new Error('tactics are used in a battle');
+      } else if (c.kind === 'awaken') awaken(run, cmd.target, 'scroll', events);
+      else if (c.kind === 'tactic') throw new Error('tactics are used in a battle');
       else useChart(run, c.form, events);
       run.consumables.splice(cmd.index, 1);
       break;
@@ -824,6 +854,7 @@ export function legalRunCommands(run) {
   run.consumables.forEach((c, index) => {
     if (c.kind === 'engraving' || c.kind === 'soul') for (const p of run.deck) out.push({ type: 'use', index, target: p.id });
     else if (c.kind === 'evolve') { for (const p of run.deck) if (evolveTo(run.seed, p)) out.push({ type: 'use', index, target: p.id }); }
+    else if (c.kind === 'awaken') { for (const p of crackedPieces(run)) out.push({ type: 'use', index, target: p.id }); }
     else if (c.kind !== 'tactic') out.push({ type: 'use', index });
   });
   run.maxims.forEach((m, index) => { if (canSell(m)) out.push({ type: 'sell', index }); });

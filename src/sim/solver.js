@@ -3,7 +3,7 @@
 import { startChain, chainCaptures, chainCapture, chainRedrops, chainRedrop, chainSummary } from './chain.js';
 import { dropSquaresFor } from './battle.js';
 import { forkSpec, forkSpecs } from './scoring.js';
-import { soulSpec } from '../data/souls.js';
+import { pieceSoul } from '../data/souls.js';
 
 
 function cloneTable(t) {
@@ -81,7 +81,7 @@ export function bestMove(b, opts = {}) {
   const indices = opts.handIndices ?? b.hand.map((_, i) => i);
   for (const handIndex of indices) {
     const piece = b.hand[handIndex];
-    const key = piece.t + JSON.stringify(piece.eng) + (piece.soul || '');
+    const key = piece.t + JSON.stringify(piece.eng) + (piece.soul || '') + (piece.awake ? '!' : '');
     if (seen.has(key)) continue;
     seen.add(key);
     // 떨군 기물은 손에서 빠진다(실제 대국과 같게 — 손을 보는 조정자 「막내」 · 「맏이」 · 혼 「계주」)
@@ -89,7 +89,7 @@ export function bestMove(b, opts = {}) {
     for (const sq of dropSquaresFor(b, piece)) {
       const t = cloneTable({ ...b, hand: rest, chain: null });
       // 각인 명세는 복사해서 쓴다(탐색 중 조정자 state가 실제 손 기물에 새지 않게)
-      startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) });
+      startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece) });
       const r = dfs(t, stats, preferMate, rank);
       if (!r) continue;
       // opts.collect: 떨구기마다 그 자리의 최선(재미 하네스가 「의미 있는 선택지」를 센다)
@@ -131,6 +131,6 @@ export function previewCapture(t, sq) {
 export function previewDrop(b, handIndex, sq) {
   const piece = b.hand[handIndex];
   const t = cloneTable({ ...b, hand: b.hand.filter((_, i) => i !== handIndex), chain: null });
-  startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: soulSpec(piece.soul) });
+  startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece) });
   return { sq, form: piece.t, next: t.chain.done ? [] : chainCaptures(t) };
 }

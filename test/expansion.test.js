@@ -298,7 +298,7 @@ test('혼 귀환: 사슬을 푼 기물이 손으로 돌아온다(대국마다 �
     apply(b, d);
     while (b.status === 'chain') apply(b, legalCommands(b)[0]);
     assert.ok(b.hand.some((p) => p.id === 1));
-    assert.equal(b.returnUsed, true);
+    assert.equal(Number(b.returnUsed), 1);
     done = true;
   }
   assert.ok(done);
