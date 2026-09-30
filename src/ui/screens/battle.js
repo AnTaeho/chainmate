@@ -37,6 +37,8 @@ import { openBox, closeBox } from '../../render/layoutlog.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
 import { Marks, drawMarkSquares, drawMarkArrows } from '../marks.js';
+import { awakenFlow } from './awaken.js';
+import { SOUL_BY_ID } from '../../data/souls.js';
 
 export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
@@ -573,6 +575,14 @@ export class BattleScreen {
             this.word(e.clock > 0 ? '시계 −1' : '시간이 다했다', PAL.red, 1.3, 2); this.snd('glass'); this.shake(2, 0.2);
           },
         }); this.runEvents.push(e); break;
+        // 혼에 금이 간다(CHM-17): 짧은 금 소리 · 혼 빛깔 글. 처음이면 킹이 한 줄 안내
+        case 'crack': add(0.25, {
+          begin: () => {
+            const s = SOUL_BY_ID[e.soul];
+            this.toast(`${s.name}의 혼에 금이 갔다`, s.col, 2.4);
+            this.snd('crack');
+          },
+        }); this.runEvents.push(e); break;
         case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${josa(PIECE_NAME[e.piece], '이/가')} 깨졌다`, PAL.sky); this.snd('glass'); } }); break;
         // 증원은 위에서 떨어져 들어온다. 떨어지는 시간은 한 수 연출 길이에 넣지 않는다(update가 따로 센다)
         case 'reinforce': add(0.1, {
@@ -654,6 +664,7 @@ export class BattleScreen {
     if (reward) list.push(['reward', { reward, events: ev }]);
     const chest = ev.find((e) => e.type === 'chest');
     if (chest) list.push(['chest', { chest }]);
+    list.push(...awakenFlow(ev));
     for (const e of ev) if (e.type === 'legend') list.push(['legend', { legend: e.legend }]);
     app.flow(list);
   }

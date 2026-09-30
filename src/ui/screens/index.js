@@ -4,6 +4,7 @@ import { BattleScreen } from './battle.js';
 import { RewardScreen } from './reward.js';
 import { ChestScreen } from './chest.js';
 import { LegendScreen } from './legend.js';
+import { AwakenScreen } from './awaken.js';
 import { ShopScreen } from './shop.js';
 import { PackScreen } from './pack.js';
 import { ResultScreen } from './result.js';
@@ -30,6 +31,7 @@ export const SCREENS = {
   reward: RewardScreen,
   chest: ChestScreen,
   legend: LegendScreen,
+  awaken: AwakenScreen,
   shop: ShopScreen,
   pack: PackScreen,
   result: ResultScreen,

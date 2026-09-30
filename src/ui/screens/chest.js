@@ -5,7 +5,8 @@ import { CHARTS } from '../../data/charts.js';
 import { ENGRAVING_BY_ID } from '../../data/engravings.js';
 import { button } from '../ui.js';
 import { PIECE_NAME } from '../words.js';
-import { shardIcon } from '../parts.js';
+import { shardIcon, awakenArt } from '../parts.js';
+import { SOUL_BY_ID } from '../../data/souls.js';
 import { LINE, GAP_GROUP, textY } from '../frame.js';
 
 export function chestItemText(it) {
@@ -14,6 +15,8 @@ export function chestItemText(it) {
   if (it.kind === 'chart') return CHARTS[it.form].name;
   if (it.kind === 'engrave') return `${PIECE_NAME[it.piece]}에 ${ENGRAVING_BY_ID[it.eng].name} 각인`;
   if (it.kind === 'edition') return '판본';
+  if (it.kind === 'piece') return PIECE_NAME[it.t];
+  if (it.kind === 'awaken') return `${SOUL_BY_ID[it.soul].name}의 혼이 깨어난다`;
   return '';
 }
 
@@ -21,6 +24,8 @@ function drawItem(ctx, it, x, y) {
   if (it.kind === 'money') { rect(ctx, x + 4, y + 4, 12, 12, PAL.gold); rect(ctx, x + 6, y + 6, 8, 8, PAL.goldDk); text(ctx, '$', x + 10, y + 3, PAL.goldHi, { align: 'center', bold: true }); }
   else if (it.kind === 'chart') sprite(ctx, it.form, 'b', x + 2, y - 2);
   else if (it.kind === 'engrave') sprite(ctx, it.piece, 'w', x + 2, y - 2, { eng: it.eng });
+  else if (it.kind === 'piece') sprite(ctx, it.t, 'w', x + 2, y - 2);
+  else if (it.kind === 'awaken') awakenArt(ctx, x - 1, y - 3, 0, { sq: false });
   else shardIcon(ctx, x + 2, y + 2);
 }
 const SPIN = [{ kind: 'money', money: 2 }, { kind: 'chart', form: 'N' }, { kind: 'engrave', piece: 'P', eng: 'gold' }, { kind: 'chart', form: 'Q' }, { kind: 'chart', form: 'R' }];

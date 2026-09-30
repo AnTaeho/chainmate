@@ -146,6 +146,9 @@ export function createAudio(win = globalThis, opts = {}) {
       [48, 55, 60].forEach((n) => tone(NOTE(n), { t: 0.8, dur: 1.2, type: 'sawtooth', vol: 0.07, filter: { freq: 1800 } }));
     },
     fragment: () => arp([84, 88, 91], 0.07, { dur: 0.4, type: 'sine', vol: 0.12 }),
+    // 혼의 금(CHM-17): 사기 그릇에 금이 가는 짧은 두 번의 딱 소리 · 각성: 금이 터지며 솟는 쓸기 + 종 화음
+    crack: () => { noise({ dur: 0.04, vol: 0.22, freq: 7000, q: 5 }); noise({ t: 0.07, dur: 0.05, vol: 0.18, freq: 5200, q: 5 }); tone(NOTE(79), { t: 0.07, dur: 0.12, type: 'triangle', vol: 0.05, slide: NOTE(74) }); },
+    awaken: () => { noise({ dur: 0.35, vol: 0.16, freq: 800, q: 1.5, sweep: 7000 }); bell(NOTE(84), { t: 0.3, dur: 0.9, vol: 0.16 }); bell(NOTE(88), { t: 0.36, dur: 0.9, vol: 0.12 }); bell(NOTE(91), { t: 0.42, dur: 1.1, vol: 0.12 }); },
     // 전설 한 소절: 느린 금빛 선율 + 종
     legend: () => {
       const mel = [[72, 0], [76, 0.25], [79, 0.5], [84, 0.75], [83, 1.1], [79, 1.35], [81, 1.6], [84, 2.0]];

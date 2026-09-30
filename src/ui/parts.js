@@ -6,7 +6,7 @@ import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
-import { SOUL_BY_ID, RARITY_NAME } from '../data/souls.js';
+import { SOUL_BY_ID, RARITY_NAME, isCracked, CRACK } from '../data/souls.js';
 import { TACTIC_BY_ID } from '../data/tactics.js';
 import { L, getLang } from './lang.js';
 import { familyGlyphs, familyChips, chipRows, chipBlockH, chipText, chipW } from './parts-depth.js';
@@ -74,8 +74,16 @@ export function pieceTip(p) {
   const lines = [];
   if (PIECE_MOVE[p.t]) lines.push(PIECE_MOVE[p.t]);
   if (p.eng) { const e = engravingInfo(p.eng.id); lines.push(`${e.name} 각인 · ${e.text}`); }
-  if (p.soul && SOUL_BY_ID[p.soul]) { const s = SOUL_BY_ID[p.soul]; lines.push(`${s.name}의 혼 · ${L(s.text)}`); }
-  return moveTip(PIECE_NAME[p.t], p.t, lines);
+  const extra = [];
+  if (p.soul && SOUL_BY_ID[p.soul]) {
+    const s = SOUL_BY_ID[p.soul];
+    lines.push(`${s.name}의 혼 · ${L(s.text)}`);
+    // 각성 사다리(CHM-17): 금까지 남은 사슬 · 금이 간 뒤 깨어나면 듣는 것 · 깨어난 뒤 듣는 것
+    if (p.awake) extra.push([`각성 · ${L(s.awake)}`, PAL.goldDk]);
+    else if (isCracked(p)) extra.push([`금이 갔다 · 깨어나면: ${L(s.awake)}`, PAL.goldDk]);
+    else if (p.links) extra.push([`금 ${p.links}/${CRACK.links}`, PAL.cardDim]);
+  }
+  return moveTip(PIECE_NAME[p.t], p.t, lines, { extra });
 }
 
 export function chartTip(form, level = null) {
@@ -231,8 +239,46 @@ export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hove
   if (p.eng && ENG_EDGE[p.eng.id]) { frame(ctx, x + 1, yy + 1, w - 2, h - 2, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
   sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null });
   if (level > 0) chartBadge(ctx, level, x + w - 1, yy + 1, { dim, glow });
+  if (p.soul && (p.awake || isCracked(p))) soulMark(ctx, p, x, yy, w, h, time, dim);
   if (flash > 0) { ctx.globalAlpha = flash * 0.8; rect(ctx, x + 1, yy + 1, w - 2, h - 2, PAL.white); ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = 1;
+}
+// 혼의 금 · 각성 표(CHM-17): 금이 간 혼은 카드 왼쪽 위에서 흘러내리는 금(혼 빛깔 틈), 깨어난 혼은 금빛 이중 테와 모서리 빛.
+// 시안(window.__soulv): 1 금선 · 금테(고른 것) · 2 구석 표 · 3 기운. docs/shots/souls/draft-*
+const soulV = () => (typeof window !== 'undefined' && window.__soulv) || 1;
+const CRACK_PX = [[2, 1], [3, 2], [3, 3], [4, 4], [5, 4], [5, 5], [6, 6], [6, 7], [7, 8]];
+export function soulMark(ctx, p, x, y, w, h, time = null, dim = false) {
+  const s = SOUL_BY_ID[p.soul];
+  if (!s) return;
+  const t = time == null ? 0 : time;
+  if (dim) ctx.globalAlpha *= 0.6;
+  const v = soulV();
+  if (v === 2) {
+    // 구석 표: 왼쪽 아래 5×5 칸
+    rect(ctx, x + 1, y + h - 7, 6, 6, PAL.ink);
+    if (p.awake) { rect(ctx, x + 3, y + h - 6, 2, 4, PAL.gold); rect(ctx, x + 2, y + h - 5, 4, 2, PAL.gold); }
+    else { rect(ctx, x + 2, y + h - 6, 1, 1, s.col); rect(ctx, x + 3, y + h - 5, 1, 1, s.col); rect(ctx, x + 4, y + h - 4, 1, 1, s.col); rect(ctx, x + 5, y + h - 3, 1, 1, s.col); }
+  } else if (v === 3) {
+    // 기운: 금이면 기물 몸을 가로지르는 어두운 틈, 깨어나면 몸 둘레를 도는 금빛 점 셋
+    const cx = x + Math.floor(w / 2), cy = y + Math.floor(h / 2);
+    if (p.awake) for (let k = 0; k < 3; k++) { const q = t * 2.4 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * (w / 2 - 2)) - 1, Math.round(cy + Math.sin(q) * (h / 2 - 3)) - 1, 2, 2, PAL.gold); }
+    else for (let i = 0; i < 6; i++) rect(ctx, cx - 3 + i, cy - 4 + i + (i % 2), 1, 1, PAL.ink);
+  } else if (p.awake) {
+    // 금테: 안쪽 이중 테 금빛 + 네 모서리 반짝(천천히 돈다)
+    frame(ctx, x + 1, y + 1, w - 2, h - 2, PAL.gold);
+    frame(ctx, x + 2, y + 2, w - 4, h - 4, PAL.goldDk);
+    const k = Math.floor(t * 3) % 4, corners = [[x + 1, y + 1], [x + w - 2, y + 1], [x + w - 2, y + h - 2], [x + 1, y + h - 2]];
+    const [ax, ay] = corners[k];
+    rect(ctx, ax, ay, 1, 1, PAL.white);
+  } else {
+    // 금선: 왼쪽 위 모서리에서 흘러내리는 금(혼 빛깔로 비치는 틈)
+    for (const [dx, dy] of CRACK_PX) rect(ctx, x + dx, y + dy, 1, 1, PAL.ink);
+    const k = 0.55 + 0.45 * Math.sin(t * 3.3);
+    ctx.globalAlpha *= k;
+    for (const [dx, dy] of CRACK_PX.slice(1, -1)) rect(ctx, x + dx + 1, y + dy, 1, 1, s.col);
+    ctx.globalAlpha /= k;
+  }
+  if (dim) ctx.globalAlpha /= 0.6;
 }
 // 기보 수준 표: 오른끝 right · 윗변 y에 붙는 청록 칸(숫자 3 × 5 + 둘레 1). 돌려주는 값은 폭
 export function chartBadge(ctx, level, right, y, { dim = false, glow = 0 } = {}) {
@@ -315,6 +361,17 @@ export const SOUL_GLYPH = {
   reaper: ['.###.', '#.#.#', '#####', '.#.#.', '.....'], spring: ['#####', '...#.', '..#..', '.#...', '#####'],
   homing: ['.###.', '#...#', '#.#..', '..##.', '.###.'], ripple: ['.#.#.', '#...#', '..#..', '#...#', '.#.#.'],
 };
+// 두루마리 「깨우기」(CHM-17): 금 간 구슬에서 금빛이 새어 나온다
+export const AWAKEN_TEXT = '금이 간 혼 하나가 깨어난다';
+export const AWAKEN_MORE = '혼 깃든 기물로 사슬을 다섯 번 이으면 금이 간다';
+export function awakenArt(ctx, x, y, t = 0, { sq = true } = {}) {
+  if (sq) rect(ctx, x, y, 22, 26, '#1b2b27');
+  const cx = x + 11, cy = y + 13;
+  for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) { const d = i * i + j * j; if (d <= 25) rect(ctx, cx + i, cy + j, 1, 1, d > 16 ? PAL.goldDk : i + j < -3 ? PAL.goldHi : PAL.gold); }
+  for (const [i, j] of [[-1, -5], [0, -4], [0, -3], [1, -2], [1, -1], [0, 0], [1, 1], [2, 2], [2, 3]]) rect(ctx, cx + i, cy + j, 1, 1, PAL.ink);
+  const k = Math.floor(t * 4) % 4;
+  for (let r = 0; r < 4; r++) { const q = (r * Math.PI) / 2 + Math.PI / 4; const d = 7 + ((k + r) % 2); rect(ctx, Math.round(cx + Math.cos(q) * d), Math.round(cy + Math.sin(q) * d), 1, 1, PAL.goldHi); }
+}
 // 진화 그림: 체스 기물 › 이형(나이트 › 야간기사)
 export function evolveArt(ctx, x, y, t = 0) {
   rect(ctx, x, y, 44, 26, '#1b2b27');
@@ -332,6 +389,7 @@ export function itemEffect(it) {
   if (it.kind === 'piece') return (it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼: ${L(SOUL_BY_ID[it.soul].text)}` : PIECE_MOVE[it.t] || '');
   if (it.kind === 'soul') return SOUL_BY_ID[it.id].text;
   if (it.kind === 'evolve') return '체스 기물 하나가 특수 기물로 자란다';
+  if (it.kind === 'awaken') return AWAKEN_TEXT;
   if (it.kind === 'tactic') return TACTIC_BY_ID[it.id].text;
   if (it.kind === 'gamble') return it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로';
   // 명국 조각: 카드에는 한 줄(전설의 효과는 가리키면 — itemExtraTip)
@@ -361,6 +419,7 @@ export function itemUse(it) {
   if (it.kind === 'engraving') return '기물에 새긴다';
   if (it.kind === 'soul') return '기물에 깃든다';
   if (it.kind === 'evolve') return '기물이 자란다';
+  if (it.kind === 'awaken') return '금이 간 혼에 쓴다';
   if (it.kind === 'tactic') return '대국 중에 쓴다';
   return '';
 }
@@ -431,7 +490,7 @@ export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}
 }
 
 // ── 상점 · 꾸러미 물건 카드
-export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명경기 조각', soul: '혼', evolve: '진화', tactic: '전술', gamble: '도박' };
+export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명경기 조각', soul: '혼', evolve: '진화', tactic: '전술', gamble: '도박', awaken: '각성' };
 
 export function itemName(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).name;
@@ -440,6 +499,7 @@ export function itemName(it) {
   if (it.kind === 'piece') return PIECE_NAME[it.t];
   if (it.kind === 'soul') return `${SOUL_BY_ID[it.id].name}의 혼`;
   if (it.kind === 'evolve') return '진화';
+  if (it.kind === 'awaken') return '깨우기';
   if (it.kind === 'gamble') return it.id === 'potion' ? '수상한 물약' : '룰렛';
   if (it.kind === 'tactic') return TACTIC_BY_ID[it.id].name;
   if (it.kind === 'fragment') return LEGEND_BY_ID[it.legend].name;
@@ -456,6 +516,7 @@ export function itemTip(it) {
   if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '주머니에 들어온다']);
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 깃든다'], 150, [rarityLine(s.rarity)]); }
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
+  if (it.kind === 'awaken') return tipLines('깨우기', [AWAKEN_TEXT, AWAKEN_MORE]);
   if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
   if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`전술 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(l.name, ['조각 셋이면 전설', ...fragmentSteps(l, {}), `전설: ${l.text}`]); }
@@ -562,6 +623,10 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
     if (it.kind === 'evolve') { rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27'); rect(ctx, cx - 7, y + 33, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, cx - 3 + i, y + 32 - i, 1, 1, PAL.gold); rect(ctx, cx + 1, y + 25, 6, 8, PAL.gold); }
     else tacticIcon(ctx, it.id, cx - 8, y + 25);
     text(ctx, it.kind === 'evolve' ? '진화' : TACTIC_BY_ID[it.id].name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
+  } else if (it.kind === 'awaken') {
+    frame(ctx, x + 1, y + 1, w - 2, h - 2, PAL.gold);
+    awakenArt(ctx, cx - 11, y + 20, t);
+    text(ctx, '깨우기', cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'soul') {
     const s = SOUL_BY_ID[it.id];
     frame(ctx, x + 1, y + 1, w - 2, h - 2, s.col);
@@ -597,6 +662,7 @@ function itemArt(ctx, it, x, y, t, run) {
   if (it.kind === 'engraving') { engravingEmblem(ctx, it.id, x, y); return 22; }
   if (it.kind === 'soul') { soulEmblem(ctx, it.id, x, y, t); return 22; }
   if (it.kind === 'evolve') { evolveArt(ctx, x, y, t); return 44; }
+  if (it.kind === 'awaken') { awakenArt(ctx, x, y, t); return 22; }
   if (it.kind === 'tactic') { rect(ctx, x, y, 22, 26, '#1b2b27'); tacticIcon(ctx, it.id, x + 3, y + 7); return 22; }
   if (it.kind === 'gamble') { rect(ctx, x, y, 22, 26, '#1b2b27'); text(ctx, '?', x + 11, y + 2, `hsl(${Math.floor(t * 200) % 360},70%,70%)`, { align: 'center', bold: true, scale: 2 }); return 22; }
   if (it.kind === 'fragment') { shardIcon(ctx, x + 3, y + 5); return 22; }
@@ -682,17 +748,24 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
 const TP_BTN = { w: 58, h: BTN_S }; // 영어 「Engrave」(52) + 글과 테 사이 2 × 2 + 테
 // 한 기물에 각인 하나 · 혼 하나(run.js engrave · ensoul은 있던 것을 바꾼다). 같은 종류가 이미 있으면 그 id(바꾸기), 같은 것이면 고를 수 없다
 export const heldOf = (what, p) => (!p ? null : what.kind === 'engraving' ? (p.eng ? p.eng.id : null) : what.kind === 'soul' ? p.soul || null : null);
-export const targetOk = (what, p) => !what || heldOf(what, p) !== what.id || what.kind === 'evolve';
+export const targetOk = (what, p) => !what || (what.kind === 'awaken' ? isCracked(p) : heldOf(what, p) !== what.id || what.kind === 'evolve');
 // 바꾸기 모양(「옛 › 새」 · 바꾸기/그만)인가: 고른 기물에 다른 각인 · 혼이 이미 있다. 이때 「그만」 · Esc는 대상 고르기로 돌아간다
 export const isSwap = (what, p) => { const held = heldOf(what, p); return !!held && held !== what.id; };
 const markName = (kind, id) => (kind === 'engraving' ? engravingInfo(id).name : SOUL_BY_ID[id].name);
 function targetText(run, what, p, to) {
+  if (what.kind === 'awaken') {
+    if (!p) return { title: '주머니에서 깨울 기물을 고른다', body: AWAKEN_TEXT };
+    const s = SOUL_BY_ID[p.soul];
+    return { title: `${s.name}의 혼이 깨어난다`, body: `각성 · ${L(s.awake)}`, after: { ...p, awake: true } };
+  }
   const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
   if (!p) return { title: what.kind === 'engraving' ? '주머니에서 새길 기물을 고른다' : what.kind === 'soul' ? '주머니에서 깃들 기물을 고른다' : '주머니에서 자랄 기물을 고른다', body: eff };
   const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
   // 바꾸기: 옛 것 › 새 것(문양 둘과 이름 둘)
   const held = heldOf(what, p);
-  if (isSwap(what, p)) return { title: `${markName(what.kind, held)} › ${markName(what.kind, what.id)}`, body: eff, after, swap: held };
+  // 금이 갔거나 깨어난 혼을 바꾸면 그 사다리도 사라진다(run.js setSoul)
+  const lose = what.kind === 'soul' && (p.awake ? '각성이 사라진다' : isCracked(p) ? '금이 사라진다' : null);
+  if (isSwap(what, p)) return { title: `${markName(what.kind, held)} › ${markName(what.kind, what.id)}`, body: lose ? [eff, lose] : eff, after, swap: held };
   const title = what.kind === 'evolve' ? `${PIECE_NAME[p.t]} › ${PIECE_NAME[after.t]}` : `${PIECE_NAME[p.t]}에 ${what.kind === 'engraving' ? `${engravingInfo(what.id).name} 각인` : `${SOUL_BY_ID[what.id].name}의 혼`}`;
   return { title, body: what.kind === 'evolve' ? (PIECE_MOVE[after.t] || '') : eff, after };
 }
@@ -704,7 +777,7 @@ export function targetPanelLayout(run, what, p, w, { to = null } = {}) {
   const f = flow(P);
   const titles = wrap(title, tw, true).map((l) => [l, f.line(true)]);
   f.gap(GAP_GROUP);
-  const lines = wrap(body, tw).map((l) => [l, f.line()]);
+  const lines = [].concat(body).flatMap((b) => wrap(b, tw)).map((l) => [l, f.line()]);
   let h = Math.max(f.y, P + (p ? 28 : 0), P + (side ? TP_BTN.h * 2 + GAP_IN : 0));
   let btnY = P;
   if (!side) { btnY = h + GAP_GROUP; h = btnY + TP_BTN.h; }
@@ -718,7 +791,7 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
   ui.region(`${idPrefix}:panel`, x, y, w, h, {});
   openBox('panel', x, y, w, h, P, { name: '새기기 미리 보기' });
   box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
-  const verb = lay.swap ? '바꾸기' : what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : '자란다';
+  const verb = lay.swap ? '바꾸기' : what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : what.kind === 'awaken' ? '깨운다' : '자란다';
   if (p && lay.swap) {
     // 옛 문양(가리키면 옛 효과) › 새 문양(금빛 테)
     const mark = (id, mx, my) => (what.kind === 'engraving' ? engravingEmblem(ctx, id, mx, my) : soulEmblem(ctx, id, mx, my, ui.time));

@@ -44,10 +44,13 @@ export class CodexScreen {
     // 탭은 제목 오른쪽부터(영어 제목이 길어도 겹치지 않게)
     const tx0 = Math.max(44, PAGE.titleX + measure('도감', true) + 8);
     // 탭 폭은 이름마다 글에 맞춘다(common.js tabRow — 영어 「Masters」 · 「Opening」이 테에 붙지 않고 오른쪽 모은 수에 닿지 않게)
-    tabRow(ctx, ui, 'codex', TABS, this.tab, tx0, 5, BTN_S, (id) => { this.tab = id; this.page = 0; this.app.sfx('pick'); });
+    const tabEnd = tabRow(ctx, ui, 'codex', TABS, this.tab, tx0, 5, BTN_S, (id) => { this.tab = id; this.page = 0; this.app.sfx('pick'); });
     const list = this.entries();
     const seen = list.filter((e) => e.seen).length;
-    text(ctx, `${seen} / ${list.length}`, W - PAGE.titleX, PAGE.titleY, PAL.dim, { align: 'right' });
+    // 모은 수: 머리줄 오른쪽. 탭이 거기까지 차면(영어 — 탭 일곱) 맨 아래 「돌아가기」 오른쪽으로
+    const count = `${seen} / ${list.length}`;
+    if (tabEnd + 8 + measure(count) <= W - PAGE.titleX) text(ctx, count, W - PAGE.titleX, PAGE.titleY, PAL.dim, { align: 'right' });
+    else text(ctx, count, PAGE.titleX + 80 + 8, PAGE.btnY + 3, PAL.dim);
     // 칸 하나 = 이름 한 줄(안 여백 PAD_CARD). 줄 수는 본 칸(머리줄 아래 ~ 단추 줄 위 묶음 틈)에 들어가는 만큼
     const cols = 5, cw = 88, ch = rowBoxH(PAD_CARD), gap = 4;
     const rows = Math.floor((PAGE.btnY - GAP_GROUP - PAGE.bodyY + gap) / (ch + gap)), per = cols * rows;

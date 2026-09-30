@@ -10,11 +10,12 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk, isSwap, rarityLine } from '../parts.js';
+import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk, isSwap, rarityLine, awakenArt } from '../parts.js';
 import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
-import { SOUL_BY_ID } from '../../data/souls.js';
+import { SOUL_BY_ID, isCracked } from '../../data/souls.js';
+import { awakenFlow } from './awaken.js';
 import { TACTIC_BY_ID, evolveTo } from '../../data/tactics.js';
 const ENG_NAME = (id) => engravingInfo(id).name;
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
@@ -100,10 +101,10 @@ export function growPillar(ctx, x, y, w, h, p) {
 // 두루마리 한 칸(이름 한 줄 — 높이 rowBoxH(PAD_CARD)): 넓은 칸은 왼쪽 그림(각인 = 재료, 혼 = 기운, 진화 = 자라는 화살, 기보 = 모습 윤곽) + 이름,
 // 좁은 칸(셋 이상 — 두 칸씩)은 이름만. 효과는 가리키면 왼쪽 칸 설명에
 export function consumableCard(ctx, c, x, y, w, h, hover) {
-  const edge = c.kind === 'engraving' ? ENG_EDGE[c.id] || PAL.gold : c.kind === 'soul' ? SOUL_BY_ID[c.id].col : null;
+  const edge = c.kind === 'engraving' ? ENG_EDGE[c.id] || PAL.gold : c.kind === 'soul' ? SOUL_BY_ID[c.id].col : c.kind === 'awaken' ? PAL.gold : null;
   openBox('card', x, y, w, h, PAD_CARD, { name: `두루마리 ${c.kind}` });
   cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge });
-  const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
+  const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'awaken' ? '깨우기' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
   // 혼 두루마리: 왼쪽 안쪽에 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙)
   if (c.kind === 'soul') rect(ctx, x + 2, y + 2, 2, h - 4, RARITY[SOUL_BY_ID[c.id].rarity]);
   const P = PAD_CARD, narrow = w < 80;
@@ -112,6 +113,7 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
   rect(ctx, ax + 2, ay, 18, 18, '#1b2b27');
   if (c.kind === 'engraving') engravingEmblem(ctx, c.id, ax - 1, ay - 5, { sq: false });
   else if (c.kind === 'soul') soulEmblem(ctx, c.id, ax - 1, ay - 4, 0, { sq: false });
+  else if (c.kind === 'awaken') awakenArt(ctx, ax - 1, ay - 4, 0, { sq: false });
   else if (c.kind === 'evolve') { rect(ctx, ax + 5, ay + 11, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, ax + 9 + i, ay + 10 - i, 1, 1, PAL.gold); rect(ctx, ax + 12, ay + 4, 5, 6, PAL.gold); }
   else if (c.kind === 'tactic') tacticIcon(ctx, c.id, ax + 3, ay + 4);
   else if (c.kind === 'chart') { dots(ctx, ax + 2, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', ax + 3, ay - 3, { alpha: 0.9 }); }
@@ -135,7 +137,7 @@ export function packCellLayout(pk, w) {
   return { tx, tw, price, name, env: packEnv(w) ? Math.floor((h - ENV.h) / 2) : null, h };
 }
 export const packCellH = (pk, w) => packCellLayout(pk, w).h;
-export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
+export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' || c.kind === 'awaken' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
   constructor(app) {
@@ -190,6 +192,7 @@ export class ShopScreen {
         this.app.flyShard(r ? r.x + r.w / 2 : 240, r ? r.y + r.h / 2 : 100, to.x, to.y);
       }
       if (e.type === 'legend') { this.app.flow([['legend', { legend: e.legend, back: 'shop' }]]); return ev; }
+      if (e.type === 'awaken') { this.app.flow(awakenFlow([e])); return ev; }
       if (e.type === 'chart') {
         this.app.toast(`${CHARTS[e.form].name} ${e.level}`, PAL.gold);
       }
@@ -302,6 +305,9 @@ export class ShopScreen {
     if (!this.menu && !this.target) {
       // 대국을 지고 들어온 상점(CHM-20): 시계 줄을 먼저 가리킨다
       if (run.last && run.last.clockLost) coachHint(app, 'clock', 'clock');
+      // 혼에 처음 금이 간 뒤(CHM-17): 금이 간 기물을 가리킨다
+      const cracked = run.deck.find(isCracked);
+      if (cracked) coachHint(app, 'crack', `deck:${cracked.id}`);
       coachHint(app, 'shop', 'shop:buy:0');
       if (run.consumables.length) coachHint(app, 'scroll', 'cons:0');
       const fam = ui.regions.find((r) => r.id.startsWith('fam:'));
@@ -374,7 +380,7 @@ export class ShopScreen {
     const c = this.run.consumables[i];
     if (!c) return;
     this.menu = null;
-    if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
+    if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve' || c.kind === 'awaken') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
     if (c.kind === 'tactic') { this.app.toast('대국 중에 쓴다', PAL.dim); return; }
     this.act({ type: 'use', index: i }, 'chart');
   }

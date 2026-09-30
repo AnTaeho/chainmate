@@ -298,6 +298,19 @@ export const EN = {
   '결투': 'Duel', '같은 종류를 두 번 못 먹는다 · 배수 ×2': 'Cannot take the same kind twice · ×2 Mult', '킹은 빼고': 'Kings excepted',
   '사신': 'Reaper', '킹을 지키는 적을 먹을 때마다 배수 +3': 'Each king guard taken: +3 Mult',
   '도약': 'Spring', '첫 먹기: 두 칸 안의 적이면 어디든 먹는다': 'First take: any enemy within two squares',
+  // 혼 각성(CHM-17)
+  '각성': 'Awakening', '깨우기': 'Awaken', '깨운다': 'Awaken', '혼이 깨어났다': 'The soul awakens', '금빛 적을 먹고 이겼다': 'Won after taking a golden enemy',
+  '금이 간 혼 하나가 깨어난다': 'A cracked soul awakens', '혼 깃든 기물로 사슬을 다섯 번 이으면 금이 간다': 'Five chains with a soul piece crack its soul',
+  '금이 간 혼에 쓴다': 'Use on a cracked soul', '주머니에서 깨울 기물을 고른다': 'Choose a cracked piece in your bag', '각성이 사라진다': 'The awakening is lost', '금이 사라진다': 'The crack is lost',
+  '혼에 금이 갔다. 금빛 적 · 마스터의 상자 · 깨우기로 깨어난다': 'A soul cracked. A golden enemy, a Master\'s Chest or Awaken wakes it',
+  '얻은 행마: 둘까지 쌓인다': 'Gained moves: keep up to two', '더 먹을 적이 없을 때: 두 번까지 돌아간다': 'When stuck: return up to twice',
+  '아마존 모습으로 먹을 때마다: 배수 ×1.5': 'Each take as an amazon: ×1.5 Mult', '먹을 때마다: 값 +20씩 · 배수 +1씩 커진다': 'Each take: Value grows by 20 · Mult by 1',
+  '앞서 먹은 종류를 또 먹으면: 배수 ×2': 'Take a kind taken before: ×2 Mult', '끊길 때 한 번: 둘레를 먹고 이어 간다': 'Once on a cut: clear around and keep going',
+  '폰 모습이면: 다섯째 줄에서 아마존으로': 'As a pawn: amazon on the fifth rank', '노림을 넘길 때마다: 배수 +1 · 배수 −1 없음': 'Each guard slipped: +1 Mult · no −1',
+  '대국마다 한 번: 마지막 모습의 기보 +1': 'Once per match: +1 Study for the last form', '이어 먹기: 사슬마다 한 번': 'Relay: once per chain',
+  '어느 모습이든: 아래 대각으로도 먹는다': 'Any form: also takes diagonally backward', '배수 ×2가 ×3이 된다': '×2 Mult becomes ×3',
+  '체크메이트한 사슬: 배수 ×3': 'Checkmating chain: ×3 Mult', '둘째 먹기까지: 두 칸 안 어디든': 'First two takes: anywhere within two squares',
+  '대국마다 두 번 돌아온다': 'Returns twice per match', '먹을 때마다: 둘레 적 둘이 못 지킨다': 'Each take: two nearby enemies stop guarding',
   '귀환': 'Homing', '사슬이 끝나면 손으로 돌아온다': 'Returns to your hand when the chain ends', '대국마다 한 번 · 수는 쓴다': 'Once per match · the move is still spent',
   '파문': 'Ripple', '먹을 때마다 둘레 적 하나가 이번 수 동안 못 지킨다': 'Each take: a nearby enemy stops guarding', '값이 가장 큰 적부터': 'Highest value first',
   // 각인
@@ -514,6 +527,9 @@ export const EN = {
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
   [/^(\d+)개$/, (m) => `${m[1]}`],
+  // 혼 각성(CHM-17): 효과 글에 「 · 」가 끼어 쪼개기 전에 본다
+  [/^금이 갔다 · 깨어나면: (.+)$/, (m, tr) => `Cracked · when awakened: ${tr(m[1])}`],
+  [/^각성 · (.+)$/, (m, tr) => `Awakened · ${tr(m[1])}`],
 
   // 시너지 이름 · 칩(「기사 시너지」 · 「기사 +1」 · 「기사 2/4」)
   [/^(기사|성채|사제|변신|희생|왕관|행진|사냥|역습|매복) 시너지$/, (m, tr) => `${tr(m[1])} synergy`],
@@ -594,6 +610,9 @@ export const TEMPLATES = [
   [/^(.+ 시너지) (\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}`],
   [/^레퍼토리 · (\d+)관$/, (m) => `Repertoire · Hall ${m[1]}`],
   [/^\+(폰|나이트|비숍|룩|퀸|대주교|재상|아마존|낙타|야간기사|메뚜기|포|궁수|유령)$/, (m, tr) => `+${tr(m[1])}`],
+  [/^(.+)의 혼에 금이 갔다$/, (m, tr) => `${tr(m[1])} Soul cracked`],
+  [/^(.+)의 혼이 깨어난다$/, (m, tr) => `${tr(m[1])} Soul awakens`],
+  [/^금 (\d+)\/(\d+)$/, (m) => `Crack ${m[1]}/${m[2]}`],
   [/^(.+)의 혼$/, (m, tr) => `${tr(m[1])} Soul`],
   [/^(.+)의 혼 · (.+)$/, (m, tr) => `${tr(m[1])} Soul · ${m[2]}`],
   [/^전술 (.+)$/, (m, tr) => `Tactic: ${tr(m[1])}`],
