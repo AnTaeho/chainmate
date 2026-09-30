@@ -734,7 +734,7 @@ for (let k = 0; k < RUNS; k++) results.push(await playOne(SEED + k));
 // 판 밖: 도감 · 기록 화면, 오프닝과 단을 모두 연 뒤 시실리안 3단 판, 오늘의 대국
 click('result:title');
 click('title:codex');
-for (const t of ['factions', 'legends', 'openings', 'editions', 'pieces', 'maxims']) { click(`codex:tab:${t}`); notesCheck(); if (region('codex:next') && region('codex:next').enabled) { click('codex:next'); notesCheck(); click('codex:prev'); } }
+for (const t of ['factions', 'legends', 'openings', 'editions', 'pieces', 'souls', 'maxims']) { click(`codex:tab:${t}`); notesCheck(); if (region('codex:next') && region('codex:next').enabled) { click('codex:next'); notesCheck(); click('codex:prev'); } }
 click('codex:back');
 // 완성한 명경기가 있는 도감(명경기 탭): 완성 칸의 말풍선(조각 세 걸음이 다 찬 풀이)이 누를 것(돌아가기 · 탭)을 덮지 않는다
 {
