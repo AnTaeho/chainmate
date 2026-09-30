@@ -14,7 +14,7 @@ import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
 import { playRun, SMART, DRAFT } from './shopbot.mjs';
 import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
-import { SOULS } from '../src/data/souls.js';
+import { SOULS, SOUL_BY_ID, SOUL_RARITY, RARITY_NAME } from '../src/data/souls.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { MASTER_BY_ID } from '../src/data/masters.js';
 import { FACTIONS, FACTION_BY_ID } from '../src/data/factions.js';
@@ -60,6 +60,8 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
     charts: Object.values(run.charts).reduce((a, x) => a + x, 0), deckSize: run.deck.length,
     fam: familyCounts(run), josekis: run.josekis || [], fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],
     best: Math.max(0, ...run.log.filter((x) => !x.skipped).map((x) => x.best || 0)),
+    // 혼 등급 · 각성(CHM-17): 판 동안 주머니에 있던 혼 · 금이 간 때 · 깨어난 때와 길
+    souls: [...new Set(run.log.flatMap((b) => b.souls || []))], cracked: run.cracked || [], awakened: run.awakened || [],
     ms: performance.now() - t0,
   };
 }
@@ -259,6 +261,26 @@ function report(R, args, wall) {
     table(['혼', '가진 판', '승률', '대국', '외통', '혼이 낸 외통'], sr);
   }
 
+  // 혼 등급 · 각성(CHM-17): 등급별로 그 등급 혼을 가진 판 · 그 판 승률, 금이 간 판 · 깨어난 판 · 그 판 승률 · 깨운 길
+  const soulFx = {};
+  {
+    const has = (r, rar) => r.souls.some((id) => SOUL_BY_ID[id].rarity === rar);
+    const rows = Object.keys(SOUL_RARITY).map((rar) => { const on = R.filter((r) => has(r, rar)); soulFx[rar] = { runs: on.length, win: on.length ? on.filter((r) => r.won).length / on.length : null }; return [RARITY_NAME[rar], `${SOUL_RARITY[rar].weight} · $${SOUL_RARITY[rar].price}`, String(on.length), pc(on.length / n), pc(on.filter((r) => r.won).length / on.length)]; });
+    const none = R.filter((r) => !r.souls.length);
+    rows.push(['혼 없음', '', String(none.length), pc(none.length / n), pc(none.filter((r) => r.won).length / none.length)]);
+    console.log('\n혼 등급: 그 등급 혼을 가진 판(대국 때 주머니) · 그 판 승률');
+    table(['등급', '무게 · 값', '판', '몫', '승률'], rows);
+    const cr = R.filter((r) => r.cracked.length), aw = R.filter((r) => r.awakened.length);
+    const src = {};
+    for (const r of R) for (const a of r.awakened) src[a.src] = (src[a.src] || 0) + 1;
+    const byAnte = aw.map((r) => r.awakened[0].ante).sort((a, b) => a - b);
+    console.log(`각성: 금이 간 판 ${cr.length} (${pc(cr.length / n)}) 승률 ${pc(cr.filter((r) => r.won).length / cr.length)} · 깨어난 판 ${aw.length} (${pc(aw.length / n)}) 승률 ${pc(aw.filter((r) => r.won).length / aw.length)} · 안 깨어난 판 승률 ${pc(R.filter((r) => !r.awakened.length && r.won).length / (n - aw.length))} · 깨운 길 ${JSON.stringify(src)} · 첫 각성 관 p50 ${byAnte.length ? byAnte[Math.floor(byAnte.length / 2)] : '-'} · 첫 금 관 p50 ${cr.length ? cr.map((r) => r.cracked[0].ante).sort((a, b) => a - b)[Math.floor(cr.length / 2)] : '-'}`);
+    const awSoul = {};
+    for (const r of R) for (const a of r.awakened) awSoul[a.soul] = (awSoul[a.soul] || 0) + 1;
+    if (aw.length) console.log(`  깨어난 혼: ${Object.entries(awSoul).sort((a, b) => b[1] - a[1]).map(([id, k]) => `${SOUL_BY_ID[id].name} ${k}`).join(' · ')}`);
+    Object.assign(soulFx, { crackedRuns: cr.length, crackedWin: cr.length ? cr.filter((r) => r.won).length / cr.length : null, awakenedRuns: aw.length, awakenedWin: aw.length ? aw.filter((r) => r.won).length / aw.length : null, awakenSrc: src, awakenedSouls: awSoul });
+  }
+
   // 격언
   if (args.policy !== 'none') {
     const cnt = {};
@@ -291,6 +313,7 @@ function report(R, args, wall) {
         soul: tally((r) => r.log.flatMap((b) => b.souls || [])), engraving: tally((r) => r.deck.split(' ').filter((x) => x.includes(':')).map((x) => x.split(':')[1])),
       },
       factions: fx,
+      souls: soulFx,
       // 대국 한 줄씩 [관, 대국(0 · 1 · 2), 세력, 이김 1/0, 끝난 까닭](세력 · 관별로 다시 셀 때)
       battles: battles.map((b) => [b.ante, b.blind, b.faction || null, b.won ? 1 : 0, b.reason]),
       masters: Object.fromEntries(Object.keys(MASTER_BY_ID).map((id) => { const bs = battles.filter((b) => b.master === id); return [id, { n: bs.length, win: r3(bs.filter((b) => b.won).length / bs.length) }]; })),

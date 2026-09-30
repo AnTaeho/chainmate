@@ -7,7 +7,8 @@
 //   none   — 아무것도 사지 않는다(격언 없이 어디까지 가나 보는 기준선).
 //   smart도 조각이 진열에 보이면 적립을 다 남기고도 살 수 있을 때 산다(운 좋은 판). 꾸러미에서는 나머지가 짜임을 올리지 못할 때만 조각.
 import { createRng, fork, int, next } from '../src/sim/rng.js';
-import { createBattle } from '../src/sim/battle.js';
+import { createBattle, soulOf } from '../src/sim/battle.js';
+import { isCracked } from '../src/data/souls.js';
 import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult } from '../src/sim/run.js';
 import { EDITION_BY_ID } from '../src/data/editions.js';
 import { LEGENDS } from '../src/data/legends.js';
@@ -36,6 +37,8 @@ export const SMART = {
   famStep: 0.08,
   // 짜임 재기의 풀이기 마디 예산: 대국 결정(10000)보다 작게. 깊이 층(이형 · 가족)으로 판이 넓어져 재기 한 번이 0.6초까지 늘었다
   evalNodes: 1000,
+  // 각성(CHM-17): 이만큼 사슬을 이은 혼은 새 혼으로 바꾸지 않는다(금까지 다섯)
+  keepLinks: 3,
 };
 const battlesLeft = (run) => Math.max(0, (8 - run.ante) * 3 + (2 - run.blind));
 export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5 + (SMART.luckMaxims[id] || 0);
@@ -82,7 +85,7 @@ export function evalBuild(run, build, seeds, ante, master = null, faction = null
   seeds.forEach((seed, k) => {
     const b = createBattle({
       seed, ante, kind: 'practice', target: null, golden: false,
-      bag: build.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
+      bag: build.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...soulOf(p) })),
       rules: run.rules, mods,
     });
     const m = Math.min(k % b.rules.moves, b.rules.moves - 1);
@@ -126,11 +129,25 @@ function bestEngraveTarget(run, build, engId, ctx, soul = false) {
   for (const p of order) {
     const key = p.t + (p.eng ? p.eng.id : '') + (p.soul || '');
     if (seen.has(key) || (soul ? p.soul === engId : p.eng && p.eng.id === engId)) continue;
+    // 각성 사다리(CHM-17): 금이 가까운(사슬 셋 이상) · 금이 간 · 깨어난 혼은 새 혼으로 덮지 않는다
+    if (soul && p.soul && (p.awake || (p.links || 0) >= SMART.keepLinks)) continue;
     if (seen.size >= 3) break;
     seen.add(key);
     const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? (soul ? { ...q, soul: engId } : { ...q, eng: { id: engId } }) : q)) };
     const score = ctx.score(v);
     if (!best || score > best.score) best = { target: p.id, score };
+  }
+  return best;
+}
+
+// 깨우기를 쓸 가장 좋은 기물: 금이 간 기물마다 깨운 짜임을 그려 본다
+function bestAwakenTarget(run, build, ctx) {
+  let best = null;
+  for (const p of build.deck) {
+    if (!isCracked(p)) continue;
+    const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? { ...q, awake: true } : q)) };
+    const score = ctx.score(v);
+    if (!best || score > best.score) best = { target: p.id, score, build: v };
   }
   return best;
 }
@@ -160,7 +177,7 @@ function makeCtx(run) {
   return {
     seeds, ante,
     score(build) {
-      const key = JSON.stringify([build.deck.map((p) => p.t + (p.eng ? p.eng.id : '') + (p.soul || '')).sort(), build.maxims.map((m) => m.id + JSON.stringify(m.data || {})), build.charts, build.josekis || []]);
+      const key = JSON.stringify([build.deck.map((p) => p.t + (p.eng ? p.eng.id : '') + (p.soul || '') + (p.awake ? '!' : '')).sort(), build.maxims.map((m) => m.id + JSON.stringify(m.data || {})), build.charts, build.josekis || []]);
       if (!cache.has(key)) {
         // 다음이 명인 대국이면 그 명인을 걸고도 잰다. finalFrom관부터는 8관 「대가」(기보가 안 듣는다)도 미리 섞는다.
         // 세력(버릇 · 적 구성)은 다음 대국의 세력으로 잰다
@@ -186,9 +203,12 @@ function useConsumables(run, ctx) {
     if (c.kind === 'chart') act(run, { type: 'use', index: 0 });
     else if (c.kind === 'tactic') break;
     else if (c.kind === 'evolve') { const t = bestEvolveTarget(run, buildOf(run), ctx); if (t) act(run, { type: 'use', index: 0, target: t.target }); else break; }
+    else if (c.kind === 'awaken') { const t = bestAwakenTarget(run, buildOf(run), ctx); if (t) act(run, { type: 'use', index: 0, target: t.target }); else break; }
     else {
       const t = bestEngraveTarget(run, buildOf(run), c.id, ctx, c.kind === 'soul');
-      act(run, { type: 'use', index: 0, target: t ? t.target : run.deck[0].id });
+      // 갈 곳이 없으면 사다리에 오르지 않은 기물에(금 · 각성을 덮지 않게)
+      const spare = run.deck.find((p) => !(p.soul && (p.awake || (p.links || 0) >= SMART.keepLinks))) || run.deck[0];
+      act(run, { type: 'use', index: 0, target: t ? t.target : spare.id });
     }
   }
 }
@@ -221,6 +241,11 @@ function variantFor(run, build, it, ctx) {
   if (it.kind === 'piece') return { build: { ...build, deck: [...build.deck, { id: -1, t: it.t, eng: null, ...(it.soul ? { soul: it.soul } : {}) }] } };
   if (it.kind === 'evolve') {
     const t = bestEvolveTarget(run, build, ctx);
+    if (!t) return null;
+    return { build: t.build, target: t.target };
+  }
+  if (it.kind === 'awaken') {
+    const t = bestAwakenTarget(run, build, ctx);
     if (!t) return null;
     return { build: t.build, target: t.target };
   }
@@ -279,7 +304,7 @@ function smartShop(run, hunt = false) {
     run.shop.display.forEach((it, slot) => {
       if (it.sold || run.money < it.price) return;
       if (it.kind === 'tactic') return;
-      if ((it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve') && run.consumables.length >= run.consumableSlots) return;
+      if ((it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'awaken') && run.consumables.length >= run.consumableSlots) return;
       const v = variantFor(run, build, it, ctx);
       if (!v) return;
       const refund = v.sell != null ? sellPrice(run.maxims[v.sell]) : 0;
