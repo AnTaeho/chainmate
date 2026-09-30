@@ -1,6 +1,6 @@
 // 혼 등급 · 각성 스크린샷(CHM-17): 1배(창 480×270)와 3배(창 1440×810)로 찍는다.
 //   node tools/shots-souls.mjs [--prefix before|after|draft-1] [--out docs/shots/souls] [--only 이름] [--scale 1|3] [--lang ko|en]
-//   --variant N: 시안 번호(화면이 window.__soulv로 읽는다 — 시안을 고른 뒤에는 쓰지 않는다)
+//   시안(draft-*)은 b42bd24의 --variant로 찍었다(고른 뒤 시안 코드는 뺐다)
 // 찍는 것:
 //   1-shop    상점: 귀한 혼 두루마리 · 혼 깃든 기물, 두루마리 칸의 혼 둘(흔함 · 드묾)
 //   2-shop    상점: 흔한 혼 · 드문 혼 두루마리, 흔한 혼 말풍선
@@ -20,7 +20,6 @@ const OUT = path.resolve(opt('--out', path.join(ROOT, 'docs/shots/souls')));
 const ONLY = opt('--only', null);
 const SCALES = opt('--scale', '1,3').split(',').map(Number);
 const LANG = opt('--lang', 'ko');
-const VARIANT = opt('--variant', null);
 
 async function loadPlaywright() {
   try { return await import('playwright'); } catch { /* 전역 */ }
@@ -68,11 +67,10 @@ const SCENES = [
 for (const sc of SCALES) {
   const page = await browser.newPage({ viewport: { width: 480 * sc, height: 270 * sc }, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => errors.push(String(e)));
-  await page.addInitScript(([lang, v]) => {
+  await page.addInitScript((lang) => {
     window.__autoDraft = true;
-    if (v) { window.__soulv = Number(v); window.__awakev = Number(v); }
     localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang, speed: 1 }));
-  }, [LANG, VARIANT]);
+  }, LANG);
   await page.goto(`http://localhost:${port}/index.html`);
   await page.waitForFunction(() => window.__app && window.__app.screen);
   await page.evaluate(() => { window.__app.records.coachSeen = new Proxy({}, { get: () => true, has: () => true }); window.__app.settings.coach = false; });

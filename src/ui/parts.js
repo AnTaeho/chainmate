@@ -243,35 +243,21 @@ export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hove
   if (flash > 0) { ctx.globalAlpha = flash * 0.8; rect(ctx, x + 1, yy + 1, w - 2, h - 2, PAL.white); ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = 1;
 }
-// 혼의 금 · 각성 표(CHM-17): 금이 간 혼은 카드 왼쪽 위에서 흘러내리는 금(혼 빛깔 틈), 깨어난 혼은 금빛 이중 테와 모서리 빛.
-// 시안(window.__soulv): 1 금선 · 금테(고른 것) · 2 구석 표 · 3 기운. docs/shots/souls/draft-*
-const soulV = () => (typeof window !== 'undefined' && window.__soulv) || 1;
+// 혼의 금 · 각성 표(CHM-17): 금이 간 혼은 카드 왼쪽 위에서 흘러내리는 금(혼 빛깔로 비치는 틈), 깨어난 혼은 금빛 이중 테와 도는 모서리 빛.
+// 시안 셋(금선 · 금테 / 구석 표 / 기운) 가운데 1배에서 가장 잘 보이는 것을 골랐다 — docs/shots/souls/draft-*-deck, 보고서 docs/reports/souls.md
 const CRACK_PX = [[2, 1], [3, 2], [3, 3], [4, 4], [5, 4], [5, 5], [6, 6], [6, 7], [7, 8]];
 export function soulMark(ctx, p, x, y, w, h, time = null, dim = false) {
   const s = SOUL_BY_ID[p.soul];
   if (!s) return;
   const t = time == null ? 0 : time;
   if (dim) ctx.globalAlpha *= 0.6;
-  const v = soulV();
-  if (v === 2) {
-    // 구석 표: 왼쪽 아래 5×5 칸
-    rect(ctx, x + 1, y + h - 7, 6, 6, PAL.ink);
-    if (p.awake) { rect(ctx, x + 3, y + h - 6, 2, 4, PAL.gold); rect(ctx, x + 2, y + h - 5, 4, 2, PAL.gold); }
-    else { rect(ctx, x + 2, y + h - 6, 1, 1, s.col); rect(ctx, x + 3, y + h - 5, 1, 1, s.col); rect(ctx, x + 4, y + h - 4, 1, 1, s.col); rect(ctx, x + 5, y + h - 3, 1, 1, s.col); }
-  } else if (v === 3) {
-    // 기운: 금이면 기물 몸을 가로지르는 어두운 틈, 깨어나면 몸 둘레를 도는 금빛 점 셋
-    const cx = x + Math.floor(w / 2), cy = y + Math.floor(h / 2);
-    if (p.awake) for (let k = 0; k < 3; k++) { const q = t * 2.4 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * (w / 2 - 2)) - 1, Math.round(cy + Math.sin(q) * (h / 2 - 3)) - 1, 2, 2, PAL.gold); }
-    else for (let i = 0; i < 6; i++) rect(ctx, cx - 3 + i, cy - 4 + i + (i % 2), 1, 1, PAL.ink);
-  } else if (p.awake) {
-    // 금테: 안쪽 이중 테 금빛 + 네 모서리 반짝(천천히 돈다)
+  if (p.awake) {
     frame(ctx, x + 1, y + 1, w - 2, h - 2, PAL.gold);
     frame(ctx, x + 2, y + 2, w - 4, h - 4, PAL.goldDk);
     const k = Math.floor(t * 3) % 4, corners = [[x + 1, y + 1], [x + w - 2, y + 1], [x + w - 2, y + h - 2], [x + 1, y + h - 2]];
     const [ax, ay] = corners[k];
     rect(ctx, ax, ay, 1, 1, PAL.white);
   } else {
-    // 금선: 왼쪽 위 모서리에서 흘러내리는 금(혼 빛깔로 비치는 틈)
     for (const [dx, dy] of CRACK_PX) rect(ctx, x + dx, y + dy, 1, 1, PAL.ink);
     const k = 0.55 + 0.45 * Math.sin(t * 3.3);
     ctx.globalAlpha *= k;
