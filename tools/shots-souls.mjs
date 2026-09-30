@@ -4,7 +4,11 @@
 // 찍는 것:
 //   1-shop    상점: 귀한 혼 두루마리 · 혼 깃든 기물, 두루마리 칸의 혼 둘(흔함 · 드묾)
 //   2-shop    상점: 흔한 혼 · 드문 혼 두루마리, 흔한 혼 말풍선
-//   3-codex   도감 혼 탭(본 혼 · 못 본 혼, 귀한 혼 말풍선)
+//   3-codex   도감 혼 탭(본 혼 · 못 본 혼 · 깨운 혼의 각성 칸, 귀한 혼 말풍선)
+//   4-deck · 5-deck   주머니의 금(계주) · 각성(순교자) 표와 말풍선, 진열의 두루마리 깨우기
+//   6-awaken · 7-awaken   각성 막간: 터지는 순간 · 끝 장면
+//   8-chest   마스터의 상자 세 칸, 마지막 칸이 깨우기
+//   9-target  두루마리 깨우기 미리 보기(금 간 계주 › 각성)
 // Playwright는 저장소 의존성에 넣지 않는다(전역).
 import http from 'node:http';
 import fs from 'node:fs';
@@ -61,6 +65,10 @@ const SCENES = [
   // 각성 막간(마스터의 상자에서): 터지는 순간(0.75초) · 끝 장면
   { name: '6-awaken', src: `Object.assign(r.deck.find((p) => p.id === 72), { links: 5, awake: true }); r.phase = 'shop'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; a.go('awaken', { awaken: { pieceId: 72, piece: 'R', soul: 'martyr', src: 'chest' } });`, wait: 700 },
   { name: '7-awaken', src: `Object.assign(r.deck.find((p) => p.id === 72), { links: 5, awake: true }); r.phase = 'shop'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; a.go('awaken', { awaken: { pieceId: 72, piece: 'R', soul: 'martyr', src: 'chest' } });`, wait: 2000 },
+  // 마스터의 상자: 세 칸, 마지막 칸이 깨우기(릴이 다 선 뒤)
+  { name: '8-chest', src: `Object.assign(r.deck.find((p) => p.id === 71), { links: 5 }); r.phase = 'shop'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; a.go('chest', { chest: { count: 3, tier: 'uncommon', cells: [{ lit: false, item: null }, { lit: true, item: { kind: 'money', money: 2 } }, { lit: true, item: { kind: 'chart', form: 'N' } }, { lit: true, item: { kind: 'awaken', pieceId: 71, piece: 'B', soul: 'relay' } }, { lit: false, item: null }], items: [] } });`, wait: 4000 },
+  // 두루마리 깨우기를 들고 금 간 기물을 고른 미리 보기
+  { name: '9-target', src: `Object.assign(r.deck.find((p) => p.id === 71), { links: 5 }); r.deck.push({ id: 73, t: 'N', eng: null, edition: null, soul: 'hunger', links: 3 });` + SHOP([{ kind: 'maxim', id: 'edge', edition: null, price: 4 }, { kind: 'soul', id: 'echo', price: 6 }], [{ kind: 'awaken' }]) + ` a.screen.target = { index: 0, pieceId: 71 };` },
   { name: '3-codex', src: `a.records.codex.souls = { hunger: true, hunter: true, retro: true, echo: true, relay: true, martyr: true, transcend: true, homing: true }; a.records.codex.awake = { martyr: true, hunger: true }; a.go('codex'); a.screen.tab = 'souls';`, hover: 'codex:martyr' },
 ];
 
