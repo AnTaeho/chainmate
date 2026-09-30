@@ -8,6 +8,7 @@ import { canBuy } from '../src/sim/run.js';
 import { evolveTo } from '../src/data/tactics.js';
 import { isHidden, canReboard } from '../src/sim/battle.js';
 import { reboardOn } from '../src/sim/tuning.js';
+import { CRACK, isCracked } from '../src/data/souls.js';
 const { targetOk } = await import('../src/ui/parts.js');
 const { FAMILIES, familyCounts } = await import('../src/data/families.js');
 const { L } = await import('../src/ui/lang.js');
@@ -1023,6 +1024,65 @@ const swapSeen = { same: 0, shopBack: 0, shopEsc: 0, shopSwap: 0, soulSwap: 0, p
   app.toTitle(); pump(1);
 }
 
+// 혼 각성 걸음(CHM-17): 주머니 모든 기물에 금 바로 앞의 혼(사슬 4/5) → 먹은 사슬 하나로 금이 간다(대국 글 · 금 소리, 한 수 연출 4초 안)
+//   → 상점 처음 안내가 금 간 기물을 가리킨다 → 두루마리 깨우기: 금 없는 기물은 고를 수 없다 → 미리 보기 → 깨운다 → 각성 막간 → 상점, 기물에 금테.
+//   마스터의 상자에서 깨우기 칸이 뜨는 모습도 그려 본다(글 넘침 · 자리 규칙이 같이 잰다)
+const awakeSeen = { crack: 0, toast: 0, hint: 0, skip: 0, preview: 0, screen: 0, back: 0, chest: 0, bad: [] };
+{
+  const bad = (m) => awakeSeen.bad.push(m);
+  app.overlay = null; app.nextSeed = 12; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
+  const r = app.run;
+  for (const p of r.deck) Object.assign(p, { soul: 'hunger', links: CRACK.links - 1 });
+  if (app.records.coachSeen) delete app.records.coachSeen.crack;
+  app.settings.coach = true;
+  app.goPhase(); pump(30);
+  click('select:play'); pump(2);
+  if (screen() !== 'battle') bad(`대국이 열리지 않았다(${screen()})`);
+  else {
+    idle();
+    const b = app.run.battle, s = app.screen;
+    b.target = 1; s.sync();
+    const d = decideBattle(b);
+    s.seq.total = 0; s.seq.trace = [];
+    const toastsBefore = app.toasts.length;
+    click(`hand:${d.play.handIndex}`); click(`sq:${d.play.sq}`); idle();
+    for (const c of lineCommands(d.play.line)) { if (!app.run.battle || app.screen.name !== 'battle' || app.run.battle.status !== 'chain') break; click(`sq:${c.sq}`); idle(); }
+    measureSeq(s);
+    if ((r.cracked || []).length) awakeSeen.crack++; else bad('금이 가지 않았다');
+    if (app.toasts.slice(toastsBefore).some((x) => /금이 갔다|cracked/.test(L(x.msg)))) awakeSeen.toast++; else bad('금 글이 뜨지 않았다');
+  }
+  for (let k = 0; k < 20 && screen() !== 'shop'; k++) { pump(30); if (['reward', 'chest', 'legend', 'awaken'].includes(screen())) { click('next'); pump(1); if (region('next')) click('next'); } }
+  if (screen() !== 'shop') bad(`상점으로 오지 않았다(${screen()})`);
+  else {
+    const cracked = r.deck.find(isCracked), other = r.deck.find((p) => !isCracked(p));
+    pump(20);
+    if (cracked && app.hintShown && app.hintShown.id === 'crack' && app.hintShown.regionId === `deck:${cracked.id}`) awakeSeen.hint++; else bad(`처음 안내(금)가 금 간 기물을 가리키지 않았다(${app.hintShown ? app.hintShown.id : '없음'})`);
+    hintCheck();
+    r.consumables = [{ kind: 'awaken' }];
+    pump(2);
+    click('cons:0'); pump(2);
+    if (other) { click(`deck:${other.id}`); if (app.screen.target && app.screen.target.pieceId == null) awakeSeen.skip++; else bad('금 없는 기물이 골라졌다'); }
+    click(`deck:${cracked.id}`); pump(2);
+    if (region('target:ok')) awakeSeen.preview++; else bad('깨우기 미리 보기가 뜨지 않았다');
+    notesCheck();
+    click('target:ok'); pump(2);
+    if (screen() === 'awaken') awakeSeen.screen++; else bad(`각성 막간이 열리지 않았다(${screen()})`);
+    pump(120); notesCheck();
+    click('next'); pump(2);
+    if (screen() === 'awaken') click('next');
+    pump(2);
+    if (screen() === 'shop' && cracked.awake && !r.consumables.length) awakeSeen.back++; else bad(`각성 뒤 상점으로 돌아오지 않았다(${screen()} · ${cracked.awake})`);
+    // 마스터의 상자: 세 칸, 마지막 칸이 깨우기
+    const item = { kind: 'awaken', pieceId: other.id, piece: other.t, soul: 'hunger' };
+    app.go('chest', { chest: { count: 3, tier: 'uncommon', cells: [{ lit: false, item: null }, { lit: true, item: { kind: 'money', money: 2 } }, { lit: true, item: { kind: 'chart', form: 'N' } }, { lit: true, item }, { lit: false, item: null }], items: [] } });
+    pump(240); notesCheck();
+    const cell = region('chest:cell:3');
+    if (cell && cell.keys && /깨어난다|awakens/.test(L(cell.keys[0]))) awakeSeen.chest++; else bad('상자의 깨우기 칸 글이 없다');
+    click('next'); pump(1); if (screen() === 'chest') click('next');
+  }
+  app.toTitle(); pump(1);
+}
+
 // 처음 켠 사람이 수업을 건너뛴다 → 곧바로 1관 · 처음 안내를 끄면 뜨지 않는다
 let skipOk = false;
 // 처음 켠 사람이 대본 대국을 건너뛴다 → 평범한 1관 연습 · 처음 안내를 끄면 뜨지 않는다
@@ -1124,6 +1184,8 @@ if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseS
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
+console.log(`혼 각성: 금 ${awakeSeen.crack} · 금 글 ${awakeSeen.toast} · 처음 안내 ${awakeSeen.hint} · 금 없는 기물 못 고름 ${awakeSeen.skip} · 미리 보기 ${awakeSeen.preview} · 막간 ${awakeSeen.screen} · 상점으로 ${awakeSeen.back} · 상자 칸 ${awakeSeen.chest}${awakeSeen.bad.length ? ` · 어긋남: ${awakeSeen.bad.join(' | ')}` : ''}`);
+if (awakeSeen.bad.length || !awakeSeen.crack || !awakeSeen.screen || !awakeSeen.back || !awakeSeen.chest) { console.log('혼에 금이 가고 깨어나는 걸음이 어긋났다'); fail = true; }
 console.log(`각인 · 혼 바꾸기: 같은 것 흐림 ${swapSeen.same} · 상점 그만 ${swapSeen.shopBack} · Esc ${swapSeen.shopEsc} · 바꾸기 ${swapSeen.shopSwap} · 혼 ${swapSeen.soulSwap} · 꾸러미 그만 ${swapSeen.packBack} · Esc ${swapSeen.packEsc} · 바꾸기 ${swapSeen.packSwap}${swapSeen.bad.length ? ` · 어긋남: ${swapSeen.bad.join(' | ')}` : ''}`);
 if (swapSeen.bad.length || !swapSeen.same || !swapSeen.shopBack || !swapSeen.shopEsc || !swapSeen.packEsc || !swapSeen.shopSwap || !swapSeen.soulSwap || !swapSeen.packBack || !swapSeen.packSwap) { console.log('각인 · 혼을 덮어쓰기 전에 확인하지 않았거나, 「그만」 · 「바꾸기」가 어긋났다'); fail = true; }
 console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 ${chartSeen.scene} · 기보를 쓴 순간 크게 ${chartSeen.grow} · 수준만 ${chartSeen.tick}(어긋남 ${chartSeen.growBad})`);
