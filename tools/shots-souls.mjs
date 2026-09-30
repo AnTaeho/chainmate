@@ -61,7 +61,7 @@ const SCENES = [
   // 각성 막간(마스터의 상자에서): 터지는 순간(0.75초) · 끝 장면
   { name: '6-awaken', src: `Object.assign(r.deck.find((p) => p.id === 72), { links: 5, awake: true }); r.phase = 'shop'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; a.go('awaken', { awaken: { pieceId: 72, piece: 'R', soul: 'martyr', src: 'chest' } });`, wait: 700 },
   { name: '7-awaken', src: `Object.assign(r.deck.find((p) => p.id === 72), { links: 5, awake: true }); r.phase = 'shop'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; a.go('awaken', { awaken: { pieceId: 72, piece: 'R', soul: 'martyr', src: 'chest' } });`, wait: 2000 },
-  { name: '3-codex', src: `a.records.codex.souls = { hunger: true, hunter: true, retro: true, echo: true, relay: true, martyr: true, transcend: true, homing: true }; a.go('codex'); a.screen.tab = 'souls';`, hover: 'codex:martyr' },
+  { name: '3-codex', src: `a.records.codex.souls = { hunger: true, hunter: true, retro: true, echo: true, relay: true, martyr: true, transcend: true, homing: true }; a.records.codex.awake = { martyr: true, hunger: true }; a.go('codex'); a.screen.tab = 'souls';`, hover: 'codex:martyr' },
 ];
 
 for (const sc of SCALES) {
