@@ -2,7 +2,7 @@
 // 아래 주머니(눌러 승급 · 버리기).
 import { sway } from '../sway.js';
 import { hint as coachHint } from '../coach.js';
-import { PAL } from '../../render/palette.js';
+import { PAL, RARITY } from '../../render/palette.js';
 import { wrap } from '../../render/text.js';
 import { W, text, box, rect, frame, sprite, dots, measure } from '../../render/gfx.js';
 import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } from '../../sim/run.js';
@@ -10,7 +10,7 @@ import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button } from '../ui.js';
-import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk, isSwap } from '../parts.js';
+import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk, isSwap, rarityLine } from '../parts.js';
 import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
@@ -104,6 +104,8 @@ export function consumableCard(ctx, c, x, y, w, h, hover) {
   openBox('card', x, y, w, h, PAD_CARD, { name: `두루마리 ${c.kind}` });
   cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge });
   const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
+  // 혼 두루마리: 왼쪽 안쪽에 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙)
+  if (c.kind === 'soul') rect(ctx, x + 2, y + 2, 2, h - 4, RARITY[SOUL_BY_ID[c.id].rarity]);
   const P = PAD_CARD, narrow = w < 80;
   if (narrow) { fitText(ctx, name, x + Math.floor(w / 2), y + textY(P), w - P * 2, PAL.cardInk, { align: 'center' }); closeBox(); return; }
   const ax = x + 2, ay = y + Math.floor((h - 18) / 2);
@@ -133,7 +135,7 @@ export function packCellLayout(pk, w) {
   return { tx, tw, price, name, env: packEnv(w) ? Math.floor((h - ENV.h) / 2) : null, h };
 }
 export const packCellH = (pk, w) => packCellLayout(pk, w).h;
-export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다']) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
+export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
   constructor(app) {

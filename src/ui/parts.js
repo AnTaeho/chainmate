@@ -6,7 +6,7 @@ import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
-import { SOUL_BY_ID } from '../data/souls.js';
+import { SOUL_BY_ID, RARITY_NAME } from '../data/souls.js';
 import { TACTIC_BY_ID } from '../data/tactics.js';
 import { L, getLang } from './lang.js';
 import { familyGlyphs, familyChips, chipRows, chipBlockH, chipText, chipW } from './parts-depth.js';
@@ -281,6 +281,9 @@ export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
   if (!e) return;
   e.g.forEach((r, j) => { for (let i = 0; i < 16; i++) { const k = r[i]; if (k !== '.') rect(ctx, x + 3 + i, y + 5 + j, 1, 1, e.c[k]); } });
 }
+// 혼 등급(흔함 · 드묾 · 귀함): 격언 등급 테와 같은 빛깔(palette RARITY). 혼 깃든 기물은 그 혼의 등급
+export const soulRarity = (it) => (it.kind === 'soul' ? SOUL_BY_ID[it.id].rarity : it.kind === 'piece' && it.soul ? SOUL_BY_ID[it.soul].rarity : null);
+export const rarityLine = (rarity) => [RARITY_NAME[rarity], RARITY[rarity]];
 // 혼 그림: 기물 없이 혼의 빛깔로 도는 기운(혼도 주머니의 어느 기물에나 깃든다)
 export function soulEmblem(ctx, id, x, y, t = 0, { sq = true } = {}) {
   const s = SOUL_BY_ID[id];
@@ -293,6 +296,14 @@ export function soulEmblem(ctx, id, x, y, t = 0, { sq = true } = {}) {
   const g = SOUL_GLYPH[id];
   if (g) { rect(ctx, cx - 3, cy - 3, 7, 7, '#1b2b27'); g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, cx - 2 + i, cy - 2 + j, 1, 1, PAL.white); }); }
   else rect(ctx, cx - 1, cy - 1, 3, 3, PAL.white);
+}
+// 작은 혼 표(9×9): 혼 빛깔 바탕에 가운데 문양(도감 칸처럼 좁은 곳)
+export function soulGlyph(ctx, id, x, y) {
+  const s = SOUL_BY_ID[id];
+  rect(ctx, x, y, 9, 9, '#1b2b27');
+  frame(ctx, x, y, 9, 9, s.col);
+  const g = SOUL_GLYPH[id];
+  if (g) g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, x + 2 + i, y + 2 + j, 1, 1, PAL.white); });
 }
 export const SOUL_GLYPH = {
   absorb: ['.###.', '#...#', '#.###', '#....', '.####'], echo: ['..#..', '.#.#.', '#.#.#', '.#.#.', '..#..'],
@@ -443,7 +454,7 @@ export function itemTip(it) {
   if (it.kind === 'chart') return chartTip(it.form);
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '기물 하나에 새긴다']); }
   if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '주머니에 들어온다']);
-  if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 깃든다']); }
+  if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 깃든다'], 150, [rarityLine(s.rarity)]); }
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
   if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
   if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`전술 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
@@ -554,6 +565,7 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   } else if (it.kind === 'soul') {
     const s = SOUL_BY_ID[it.id];
     frame(ctx, x + 1, y + 1, w - 2, h - 2, s.col);
+    rect(ctx, x + 6, y + 16, w - 12, 2, RARITY[s.rarity]);
     rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
     soulEmblem(ctx, it.id, cx - 11, y + 20, t);
     text(ctx, s.name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
@@ -641,7 +653,8 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   openBox('card', x, y, w, h, PAD_CARD, { name: `카드 ${it.kind}` });
   if (it.edition && !sold) glow(ctx, x, y, w, h, EDITION_TINT[it.edition] || PAL.goldHi, 0.35 * flicker(t, 2.2, 0.35), 6);
   cardBase(ctx, x, y, w, h, { fill, hover, edge, ticks: true });
-  if (it.kind === 'maxim') rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[maximInfo(it.id).rarity]);
+  const rar = it.kind === 'maxim' ? maximInfo(it.id).rarity : soulRarity(it);
+  if (rar) rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[rar]);
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
   const lay = itemCardLayout(it, w, { run, price });

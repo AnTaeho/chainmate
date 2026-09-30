@@ -181,7 +181,7 @@ export const EN = {
   '명경기 재현': 'Reenact the classic', '첫째': 'First', '둘째': 'Second', '셋째': 'Third', '상점 진열': 'Shop display', '금빛 적을 먹고 이긴다': 'Take a golden enemy and win', '기물 꾸러미': 'Piece Bundle', '기보 꾸러미': 'Study Bundle', '각인 꾸러미': 'Engraving Bundle', '금빛 꾸러미': 'Golden Bundle',
   '기물': 'Piece', '기보': 'Study', '각인': 'Engraving', '명경기 조각': 'Classic Fragment',
   '마스터의 상자': "Master's Chest", '한 칸': 'One cell', '세 칸': 'Three cells', '다섯 칸!': 'FIVE CELLS!',
-  '조각 셋이면 전설': 'Three make a legend', '불멸의 기보': 'Immortal Games', '전설': 'Legend', '잠듦': 'Asleep', '잠김': 'Locked',
+  '조각 셋이면 전설': 'Three make a legend', '불멸의 기보': 'Immortal Games', '전설': 'Legend', '흔함': 'Common', '드묾': 'Uncommon', '귀함': 'Rare', '잠듦': 'Asleep', '잠김': 'Locked',
   '첫 조각': 'First fragment', '재현 조각': 'Reenactment fragment', '금빛 조각': 'Golden fragment', '재현': 'Reenact', '금빛': 'Golden',
   '판이 끝났다': 'The run is over', '여덟 관을 꺾었다': 'All eight halls conquered', '도달': 'Reached', '최고 한 수': 'Best move',
   '마지막 대국': 'Last match', '모자란 점수': 'Short by', '모은 조각': 'Fragments',

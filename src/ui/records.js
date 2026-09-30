@@ -18,7 +18,7 @@ export function emptyRecords() {
     runs: 0, wins: 0, bestAnte: 0,
     bestMove: null,            // { score, steps: [모습…], ante }
     mates: 0, legends: 0, grades: {},
-    codex: { maxims: {}, masters: {}, factions: {}, legends: {}, legendsDone: {}, openings: { standard: true }, editions: {} },
+    codex: { maxims: {}, masters: {}, factions: {}, legends: {}, legendsDone: {}, openings: { standard: true }, editions: {}, souls: {}, awake: {} },
     unlocked: { openings: ['standard'], dan: 0 },
     danWins: {},
     bestEndless: 0,            // 끝없는 대국에서 닿은 가장 깊은 관
@@ -57,6 +57,10 @@ export function observe(rec, run, events, fresh = []) {
   mark(rec, 'openings', run.opening, fresh);
   for (const m of run.maxims) { if (!m.legendary) mark(rec, 'maxims', m.id, fresh); if (m.edition) mark(rec, 'editions', m.edition, fresh); }
   if (run.shop) for (const it of run.shop.display) { if (it.kind === 'maxim') { mark(rec, 'maxims', it.id, fresh); if (it.edition) mark(rec, 'editions', it.edition, fresh); } }
+  // 혼: 만난 혼(진열 두루마리 · 혼 깃든 진열 기물 · 가진 두루마리 · 주머니)
+  for (const p of run.deck) mark(rec, 'souls', p.soul, fresh);
+  for (const c of run.consumables || []) if (c.kind === 'soul') mark(rec, 'souls', c.id, fresh);
+  if (run.shop) for (const it of run.shop.display) mark(rec, 'souls', it.kind === 'soul' ? it.id : it.kind === 'piece' ? it.soul : null, fresh);
   if (run.pack) for (const o of run.pack.options) { if (o.kind === 'maxim') { mark(rec, 'maxims', o.id, fresh); if (o.edition) mark(rec, 'editions', o.edition, fresh); } }
   if (run.battle) for (const s of run.battle.mods) {
     if (s.kind === 'master' || MASTER_IDS.has(s.id)) mark(rec, 'masters', s.id, fresh);
