@@ -56,6 +56,12 @@ const SHOP = (display, consumables = []) => `r.phase = 'shop'; r.consumables = $
 const SCENES = [
   { name: '1-shop', src: SHOP([{ kind: 'soul', id: 'martyr', price: 9 }, { kind: 'piece', t: 'N', soul: 'spring', price: 9 }], [{ kind: 'soul', id: 'hunger' }, { kind: 'soul', id: 'echo' }]), hover: 'shop:buy:0' },
   { name: '2-shop', src: SHOP([{ kind: 'soul', id: 'hunter', price: 4 }, { kind: 'soul', id: 'duel', price: 6 }]), hover: 'shop:buy:1' },
+  // 주머니: 금이 간 혼(계주, 사슬 5/5) · 깨어난 혼(순교자) · 금까지 가는 혼(굶주림 3/5), 금이 간 기물 말풍선
+  { name: '4-deck', src: `Object.assign(r.deck.find((p) => p.id === 71), { links: 5 }); Object.assign(r.deck.find((p) => p.id === 72), { links: 5, awake: true }); r.deck.push({ id: 73, t: 'N', eng: null, edition: null, soul: 'hunger', links: 3 });` + SHOP([{ kind: 'maxim', id: 'edge', edition: null, price: 4 }, { kind: 'awaken', price: 8 }]), hover: 'deck:71' },
+  { name: '5-deck', src: `Object.assign(r.deck.find((p) => p.id === 71), { links: 5 }); Object.assign(r.deck.find((p) => p.id === 72), { links: 5, awake: true });` + SHOP([{ kind: 'maxim', id: 'edge', edition: null, price: 4 }, { kind: 'soul', id: 'echo', price: 6 }]), hover: 'deck:72' },
+  // 각성 막간(마스터의 상자에서): 터지는 순간(0.75초) · 끝 장면
+  { name: '6-awaken', src: `Object.assign(r.deck.find((p) => p.id === 72), { links: 5, awake: true }); r.phase = 'shop'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; a.go('awaken', { awaken: { pieceId: 72, piece: 'R', soul: 'martyr', src: 'chest' } });`, wait: 700 },
+  { name: '7-awaken', src: `Object.assign(r.deck.find((p) => p.id === 72), { links: 5, awake: true }); r.phase = 'shop'; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; a.go('awaken', { awaken: { pieceId: 72, piece: 'R', soul: 'martyr', src: 'chest' } });`, wait: 2000 },
   { name: '3-codex', src: `a.records.codex.souls = { hunger: true, hunter: true, retro: true, echo: true, relay: true, martyr: true, transcend: true, homing: true }; a.go('codex'); a.screen.tab = 'souls';`, hover: 'codex:martyr' },
 ];
 
@@ -64,7 +70,7 @@ for (const sc of SCALES) {
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.addInitScript(([lang, v]) => {
     window.__autoDraft = true;
-    if (v) window.__soulv = Number(v);
+    if (v) { window.__soulv = Number(v); window.__awakev = Number(v); }
     localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang, speed: 1 }));
   }, [LANG, VARIANT]);
   await page.goto(`http://localhost:${port}/index.html`);
@@ -85,10 +91,10 @@ for (const sc of SCALES) {
     if (ONLY && !s.name.includes(ONLY)) continue;
     await page.mouse.move(2, 2);
     await ev((src) => new Function(src)(), SETUP + s.src);
-    await settle(1500);
+    await settle(s.wait ?? 1500);
     if (s.run) await s.run({ ev, settle, hover, region, page, toXY });
     if (s.hover) await hover(s.hover);
-    await settle(300);
+    if (s.wait == null) await settle(300);
     await shot(s.name);
   }
   await page.close();
