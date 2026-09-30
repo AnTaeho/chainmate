@@ -1,0 +1,2816 @@
+
+> chainmate@0.1.0 test
+> node --test 'test/*.test.js'
+
+TAP version 13
+# Subtest: 곡 넷 × 층 0~4를 한 바퀴씩 예약해도 예외가 없다
+ok 1 - 곡 넷 × 층 0~4를 한 바퀴씩 예약해도 예외가 없다
+  ---
+  duration_ms: 217.252055
+  type: 'test'
+  ...
+# Subtest: 층이 높을수록 소리가 두꺼워진다
+ok 2 - 층이 높을수록 소리가 두꺼워진다
+  ---
+  duration_ms: 51.867574
+  type: 'test'
+  ...
+# Subtest: 화면에 따라 곡과 층을 고른다
+ok 3 - 화면에 따라 곡과 층을 고른다
+  ---
+  duration_ms: 9.911325
+  type: 'test'
+  ...
+# Subtest: 음악을 끄면 예약하지 않고, 효과음은 그대로 난다
+ok 4 - 음악을 끄면 예약하지 않고, 효과음은 그대로 난다
+  ---
+  duration_ms: 1.066189
+  type: 'test'
+  ...
+# Subtest: 흐르는 얼룩: 판 밖으로 넓힌 칸도 겹치는 곳은 게임의 64×36과 같다
+ok 5 - 흐르는 얼룩: 판 밖으로 넓힌 칸도 겹치는 곳은 게임의 64×36과 같다
+  ---
+  duration_ms: 29.633853
+  type: 'test'
+  ...
+# Subtest: 여백 판: 창 크기 · 흐름 시각 · 어둡기가 같으면 다시 칠하지 않는다
+ok 6 - 여백 판: 창 크기 · 흐름 시각 · 어둡기가 같으면 다시 칠하지 않는다
+  ---
+  duration_ms: 15.819485
+  type: 'test'
+  ...
+# Subtest: 타이틀 장면: 창 전체로 이어 그려도 게임 판 자리는 게임 캔버스와 같은 도트, 여백에 빈 곳이 없다
+ok 7 - 타이틀 장면: 창 전체로 이어 그려도 게임 판 자리는 게임 캔버스와 같은 도트, 여백에 빈 곳이 없다
+  ---
+  duration_ms: 302.300088
+  type: 'test'
+  ...
+# Subtest: 대국판 생성: 적 수는 관을 따르고, 킹 하나는 폰 포함 셋(3관부터 넷)이 지킨 채 시작, 시작 손으로 떨굴 수 있다
+ok 8 - 대국판 생성: 적 수는 관을 따르고, 킹 하나는 폰 포함 셋(3관부터 넷)이 지킨 채 시작, 시작 손으로 떨굴 수 있다
+  ---
+  duration_ms: 496.190101
+  type: 'test'
+  ...
+# Subtest: rules로 기본값을 바꾼다(손 · 수 · 무르기 · 킹 수)
+ok 9 - rules로 기본값을 바꾼다(손 · 수 · 무르기 · 킹 수)
+  ---
+  duration_ms: 1.546508
+  type: 'test'
+  ...
+# Subtest: 증원은 예고된 칸에 들어온다
+ok 10 - 증원은 예고된 칸에 들어온다
+  ---
+  duration_ms: 8.879778
+  type: 'test'
+  ...
+# Subtest: 예고 칸이 막혔으면 가장 가까운 빈칸
+ok 11 - 예고 칸이 막혔으면 가장 가까운 빈칸
+  ---
+  duration_ms: 2.360625
+  type: 'test'
+  ...
+# Subtest: 명령으로만 진행: 사슬 중 legalCommands는 응수 칸만, 외통이면 이긴다
+ok 12 - 명령으로만 진행: 사슬 중 legalCommands는 응수 칸만, 외통이면 이긴다
+  ---
+  duration_ms: 1.589532
+  type: 'test'
+  ...
+# Subtest: 목표 넘기면 즉시 이김, 수를 다 쓰면 짐
+ok 13 - 목표 넘기면 즉시 이김, 수를 다 쓰면 짐
+  ---
+  duration_ms: 134.453277
+  type: 'test'
+  ...
+# Subtest: 버리기: 하나를 골라 버리고 다시 뽑는다, 떨굴 수 없고 버리기도 없으면 짐
+ok 14 - 버리기: 하나를 골라 버리고 다시 뽑는다, 떨굴 수 없고 버리기도 없으면 짐
+  ---
+  duration_ms: 2.956602
+  type: 'test'
+  ...
+# Subtest: 버리기는 한 번에 하나: 둘 이상은 거부, 둘 수 있는 버리기는 손 기물마다 하나
+ok 15 - 버리기는 한 번에 하나: 둘 이상은 거부, 둘 수 있는 버리기는 손 기물마다 하나
+  ---
+  duration_ms: 1.162856
+  type: 'test'
+  ...
+# Subtest: 결정성: 같은 시드 + 같은 명령 = 같은 JSON, 저장했다 되살려도 같다
+ok 16 - 결정성: 같은 시드 + 같은 명령 = 같은 JSON, 저장했다 되살려도 같다
+  ---
+  duration_ms: 101.882319
+  type: 'test'
+  ...
+# Subtest: 하위 스트림은 서로 흔들지 않는다: 주머니가 달라도 판은 같다
+ok 17 - 하위 스트림은 서로 흔들지 않는다: 주머니가 달라도 판은 같다
+  ---
+  duration_ms: 7.718603
+  type: 'test'
+  ...
+# Subtest: 판의 첫 대국(1관 연습)은 시작 손으로 셋 잇는 사슬이 있다
+ok 18 - 판의 첫 대국(1관 연습)은 시작 손으로 셋 잇는 사슬이 있다
+  ---
+  duration_ms: 725.248757
+  type: 'test'
+  ...
+# Subtest: 막히면 대국마다 한 번 손을 새로 쥔다(손 · 쓴 기물을 주머니에 섞어 다시 뽑기)
+ok 19 - 막히면 대국마다 한 번 손을 새로 쥔다(손 · 쓴 기물을 주머니에 섞어 다시 뽑기)
+  ---
+  duration_ms: 1.467368
+  type: 'test'
+  ...
+# Subtest: 미리 보기: 먹기 전에 바뀐 모습 · 값 · 연쇄 · 다음 적 · 끊김이 실제와 같고 대국은 그대로
+ok 20 - 미리 보기: 먹기 전에 바뀐 모습 · 값 · 연쇄 · 다음 적 · 끊김이 실제와 같고 대국은 그대로
+  ---
+  duration_ms: 191.716679
+  type: 'test'
+  ...
+# Subtest: 미끄러지는 선은 적에게도 내 기물에게도 막힌다
+ok 21 - 미끄러지는 선은 적에게도 내 기물에게도 막힌다
+  ---
+  duration_ms: 5.577382
+  type: 'test'
+  ...
+# Subtest: 비숍 긴 대각선: 비어 있으면 닿고, 내 기물이 서면 막힌다
+ok 22 - 비숍 긴 대각선: 비어 있으면 닿고, 내 기물이 서면 막힌다
+  ---
+  duration_ms: 4.770691
+  type: 'test'
+  ...
+# Subtest: 내 룩 모습은 첫 적에서 멈춘다
+ok 23 - 내 룩 모습은 첫 적에서 멈춘다
+  ---
+  duration_ms: 0.336061
+  type: 'test'
+  ...
+# Subtest: 적 폰은 아래를, 내 폰 모습은 위를 먹는다
+ok 24 - 적 폰은 아래를, 내 폰 모습은 위를 먹는다
+  ---
+  duration_ms: 0.434996
+  type: 'test'
+  ...
+# Subtest: 떨굴 칸: 노려지는 칸 거부, 먹을 적이 있어야 함
+ok 25 - 떨굴 칸: 노려지는 칸 거부, 먹을 적이 있어야 함
+  ---
+  duration_ms: 11.038085
+  type: 'test'
+  ...
+# Subtest: 폰은 rank 7(8번째 줄)에 떨굴 수 없다
+ok 26 - 폰은 rank 7(8번째 줄)에 떨굴 수 없다
+  ---
+  duration_ms: 0.867998
+  type: 'test'
+  ...
+# Subtest: 킹은 아무도 지키지 않을 때만 먹을 수 있다
+ok 27 - 킹은 아무도 지키지 않을 때만 먹을 수 있다
+  ---
+  duration_ms: 8.559509
+  type: 'test'
+  ...
+# Subtest: 철벽 깃발: 적 폰이 옆 칸도 지킨다
+ok 28 - 철벽 깃발: 적 폰이 옆 칸도 지킨다
+  ---
+  duration_ms: 0.27261
+  type: 'test'
+  ...
+# Subtest: 장면: 응수 · 승급 뒤 응수 · 외통, 값 340 × 연쇄 6 = 2040
+ok 29 - 장면: 응수 · 승급 뒤 응수 · 외통, 값 340 × 연쇄 6 = 2040
+  ---
+  duration_ms: 16.101568
+  type: 'test'
+  ...
+# Subtest: 같은 칸에 폰 모습으로 도착했다면 끊겼을 자리: 승급이 먼저라 퀸으로 응수
+ok 30 - 같은 칸에 폰 모습으로 도착했다면 끊겼을 자리: 승급이 먼저라 퀸으로 응수
+  ---
+  duration_ms: 0.377218
+  type: 'test'
+  ...
+# Subtest: 응수 실패 → 끊김: 룩 모습을 나이트가 노린다. 값·연쇄는 인정
+ok 31 - 응수 실패 → 끊김: 룩 모습을 나이트가 노린다. 값·연쇄는 인정
+  ---
+  duration_ms: 0.378725
+  type: 'test'
+  ...
+# Subtest: 노리는 킹: 지켜지면 못 먹어서 끊김, 아무도 안 지키면 먹고 외통
+ok 32 - 노리는 킹: 지켜지면 못 먹어서 끊김, 아무도 안 지키면 먹고 외통
+  ---
+  duration_ms: 0.554494
+  type: 'test'
+  ...
+# Subtest: 노림수가 둘이면 하나만 먹으면 되고, 새 칸에서 다시 판정
+ok 33 - 노림수가 둘이면 하나만 먹으면 되고, 새 칸에서 다시 판정
+  ---
+  duration_ms: 0.363428
+  type: 'test'
+  ...
+# Subtest: 떨군 뒤 먹을 게 없는 선택지는 없다 · 잘못된 먹기는 거부
+ok 34 - 떨군 뒤 먹을 게 없는 선택지는 없다 · 잘못된 먹기는 거부
+  ---
+  duration_ms: 0.281508
+  type: 'test'
+  ...
+# Subtest: 목표를 사슬 중간에 넘겨도 같은 사슬에서 더 먹을 수 있고, 사슬이 끝나면 won
+ok 35 - 목표를 사슬 중간에 넘겨도 같은 사슬에서 더 먹을 수 있고, 사슬이 끝나면 won
+  ---
+  duration_ms: 65.806721
+  type: 'test'
+  ...
+# Subtest: 넘친 덤의 층은 사슬 끝의 최종 점수로 정해진다
+ok 36 - 넘친 덤의 층은 사슬 끝의 최종 점수로 정해진다
+  ---
+  duration_ms: 40.315337
+  type: 'test'
+  ...
+# Subtest: 시계: 지면 한 칸을 잃고 보상 없이 상점을 거쳐 다음 대국으로, 마지막 칸을 잃으면 판이 끝난다
+ok 37 - 시계: 지면 한 칸을 잃고 보상 없이 상점을 거쳐 다음 대국으로, 마지막 칸을 잃으면 판이 끝난다
+  ---
+  duration_ms: 109.958266
+  type: 'test'
+  ...
+# Subtest: 시계: 명인에서 지면 명인의 상자 없이 다음 관 · 8관 명인은 같은 대국을 새 판으로
+ok 38 - 시계: 명인에서 지면 명인의 상자 없이 다음 관 · 8관 명인은 같은 대국을 새 판으로
+  ---
+  duration_ms: 458.480822
+  type: 'test'
+  ...
+# Subtest: 시계 1(단 7부터)은 한 번 지면 판이 끝난다
+ok 39 - 시계 1(단 7부터)은 한 번 지면 판이 끝난다
+  ---
+  duration_ms: 4.621767
+  type: 'test'
+  ...
+# Subtest: 다시 놓기: 첫 수 전에 한 번, 손 · 목표는 그대로, 판은 시드로 정해진다
+ok 40 - 다시 놓기: 첫 수 전에 한 번, 손 · 목표는 그대로, 판은 시드로 정해진다
+  ---
+  duration_ms: 3.476036
+  type: 'test'
+  ...
+# Subtest: 다시 놓기: 첫 수를 두거나 묘수를 쓰면 못 한다
+ok 41 - 다시 놓기: 첫 수를 두거나 묘수를 쓰면 못 한다
+  ---
+  duration_ms: 1.561017
+  type: 'test'
+  ...
+# Subtest: 나쁜 판 거르기: 같은 시드면 같은 판 · 거른 판의 첫 손 점수가 평균으로 낫다
+ok 42 - 나쁜 판 거르기: 같은 시드면 같은 판 · 거른 판의 첫 손 점수가 평균으로 낫다
+  ---
+  duration_ms: 500.162699
+  type: 'test'
+  ...
+# Subtest: 판 조정을 끄면 같은 시드 → 거르기 없는 옛 판 · 다시 놓기 명령이 없다
+ok 43 - 판 조정을 끄면 같은 시드 → 거르기 없는 옛 판 · 다시 놓기 명령이 없다
+  ---
+  duration_ms: 31.190276
+  type: 'test'
+  ...
+# Subtest: 판 조정: filter 값 읽기(true · 수 · 끔)
+ok 44 - 판 조정: filter 값 읽기(true · 수 · 끔)
+  ---
+  duration_ms: 0.184385
+  type: 'test'
+  ...
+# Subtest: 판 조정을 켜면 판(런)의 대국판을 거른다(거르기 없는 판과 다를 수 있다)
+ok 45 - 판 조정을 켜면 판(런)의 대국판을 거른다(거르기 없는 판과 다를 수 있다)
+  ---
+  duration_ms: 116.474604
+  type: 'test'
+  ...
+# Subtest: 가짓수: 정석 24 · 격언 70 · 시너지 10 · 혼 16 · 각인 12
+ok 46 - 가짓수: 정석 24 · 격언 70 · 시너지 10 · 혼 16 · 각인 12
+  ---
+  duration_ms: 10.103657
+  type: 'test'
+  ...
+# Subtest: 이름 겹침 없음: 격언 · 정석 · 혼 · 각인 · 명인 · 특성 · 시너지 · 전설 · 묘수
+ok 47 - 이름 겹침 없음: 격언 · 정석 · 혼 · 각인 · 명인 · 특성 · 시너지 · 전설 · 묘수
+  ---
+  duration_ms: 0.462437
+  type: 'test'
+  ...
+# Subtest: 새 시너지 둘은 넷 이상에 붙어 2 · 4 · 6이 켜질 수 있다
+ok 48 - 새 시너지 둘은 넷 이상에 붙어 2 · 4 · 6이 켜질 수 있다
+  ---
+  duration_ms: 0.531711
+  type: 'test'
+  ...
+# Subtest: 역습 시너지: 지키는 적을 먹으면 값 +20 · 4 배수 +2 · 6 ×1.3
+ok 49 - 역습 시너지: 지키는 적을 먹으면 값 +20 · 4 배수 +2 · 6 ×1.3
+  ---
+  duration_ms: 23.05998
+  type: 'test'
+  ...
+# Subtest: 매복 시너지: 증원을 먹으면 값 +30 · 4 증원 자리 떨구기 배수 +3 · 6 ×1.5
+ok 50 - 매복 시너지: 증원을 먹으면 값 +30 · 4 증원 자리 떨구기 배수 +3 · 6 ×1.5
+  ---
+  duration_ms: 0.680592
+  type: 'test'
+  ...
+# Subtest: 기마 돌격: 뛰어 먹은 다음 먹기 배수 +3
+ok 51 - 기마 돌격: 뛰어 먹은 다음 먹기 배수 +3
+  ---
+  duration_ms: 0.461954
+  type: 'test'
+  ...
+# Subtest: 긴 대각: 대각선 세 칸 이상이면 값 +30
+ok 52 - 긴 대각: 대각선 세 칸 이상이면 값 +30
+  ---
+  duration_ms: 0.444821
+  type: 'test'
+  ...
+# Subtest: 포위: 둘레에 적이 셋 이상인 칸에서 먹으면 배수 +2
+ok 53 - 포위: 둘레에 적이 셋 이상인 칸에서 먹으면 배수 +2
+  ---
+  duration_ms: 10.003049
+  type: 'test'
+  ...
+# Subtest: 외톨이: 지키는 적이 없는 적을 먹으면 값 +15
+ok 54 - 외톨이: 지키는 적이 없는 적을 먹으면 값 +15
+  ---
+  duration_ms: 0.745024
+  type: 'test'
+  ...
+# Subtest: 가득 찬 판: 떨굴 때 적이 열여섯 이상이면 ×1.5
+ok 55 - 가득 찬 판: 떨굴 때 적이 열여섯 이상이면 ×1.5
+  ---
+  duration_ms: 0.772266
+  type: 'test'
+  ...
+# Subtest: 막내 · 맏이: 손에서 가장 낮은 · 높은 기물로 시작
+ok 56 - 막내 · 맏이: 손에서 가장 낮은 · 높은 기물로 시작
+  ---
+  duration_ms: 2.835159
+  type: 'test'
+  ...
+# Subtest: 두 번째 바람 · 승부수 · 역전
+ok 57 - 두 번째 바람 · 승부수 · 역전
+  ---
+  duration_ms: 0.476918
+  type: 'test'
+  ...
+# Subtest: 연타: 같은 모습으로 잇달아 먹으면 배수 +2
+ok 58 - 연타: 같은 모습으로 잇달아 먹으면 배수 +2
+  ---
+  duration_ms: 0.16508
+  type: 'test'
+  ...
+# Subtest: 변장: 특수 기물 모습으로 먹으면 값 +30
+ok 59 - 변장: 특수 기물 모습으로 먹으면 값 +30
+  ---
+  duration_ms: 0.234354
+  type: 'test'
+  ...
+# Subtest: 체스판: 밝은 칸 값 +10 · 어두운 칸 배수 +1
+ok 60 - 체스판: 밝은 칸 값 +10 · 어두운 칸 배수 +1
+  ---
+  duration_ms: 0.176183
+  type: 'test'
+  ...
+# Subtest: 마지막 한 칸 · 귀족 · 농부
+ok 61 - 마지막 한 칸 · 귀족 · 농부
+  ---
+  duration_ms: 0.23105
+  type: 'test'
+  ...
+# Subtest: 대장장이: 각인 기물로 시작하면 ×1.5
+ok 62 - 대장장이: 각인 기물로 시작하면 ×1.5
+  ---
+  duration_ms: 0.178307
+  type: 'test'
+  ...
+# Subtest: 혼 수집가 · 금욕: 판(런)이 짜임에서 센다(onBuild)
+ok 63 - 혼 수집가 · 금욕: 판(런)이 짜임에서 센다(onBuild)
+  ---
+  duration_ms: 13.143069
+  type: 'test'
+  ...
+# Subtest: 주특기: 기보 레벨이 가장 높은 모습으로 먹으면 값 +25
+ok 64 - 주특기: 기보 레벨이 가장 높은 모습으로 먹으면 값 +25
+  ---
+  duration_ms: 0.447331
+  type: 'test'
+  ...
+# Subtest: 순례: 네 구역을 모두 밟은 사슬 ×4
+ok 65 - 순례: 네 구역을 모두 밟은 사슬 ×4
+  ---
+  duration_ms: 0.307916
+  type: 'test'
+  ...
+# Subtest: 왕의 발자국: 킹 옆 칸에서 먹으면 배수 +3
+ok 66 - 왕의 발자국: 킹 옆 칸에서 먹으면 배수 +3
+  ---
+  duration_ms: 0.284448
+  type: 'test'
+  ...
+# Subtest: 매복병: 증원 자리에 떨구면 값 +40
+ok 67 - 매복병: 증원 자리에 떨구면 값 +40
+  ---
+  duration_ms: 0.248001
+  type: 'test'
+  ...
+# Subtest: 반격의 서: 지키는 적을 두 번 먹은 사슬 ×2
+ok 68 - 반격의 서: 지키는 적을 두 번 먹은 사슬 ×2
+  ---
+  duration_ms: 0.17984
+  type: 'test'
+  ...
+# Subtest: 절약: 대국을 이기면 남은 버리기마다 상금 +1
+ok 69 - 절약: 대국을 이기면 남은 버리기마다 상금 +1
+  ---
+  duration_ms: 15.139916
+  type: 'test'
+  ...
+# Subtest: 도박사: 사슬 넷에 하나 ×3(풀이기는 모른다) · 행운의 동전: 먹기 여섯에 하나 상금
+ok 70 - 도박사: 사슬 넷에 하나 ×3(풀이기는 모른다) · 행운의 동전: 먹기 여섯에 하나 상금
+  ---
+  duration_ms: 622.757593
+  type: 'test'
+  ...
+# Subtest: 정석 사막 · 풀밭 · 포대 · 그늘: 주머니 기물이 이형이 된다
+ok 71 - 정석 사막 · 풀밭 · 포대 · 그늘: 주머니 기물이 이형이 된다
+  ---
+  duration_ms: 1.452528
+  type: 'test'
+  ...
+# Subtest: 정석 강: 가운데 두 줄을 건너 먹으면 배수 +1
+ok 72 - 정석 강: 가운데 두 줄을 건너 먹으면 배수 +1
+  ---
+  duration_ms: 0.281029
+  type: 'test'
+  ...
+# Subtest: 정석 횃불: 값이 가장 큰 적 둘은 아무것도 지키지 못한다
+ok 73 - 정석 횃불: 값이 가장 큰 적 둘은 아무것도 지키지 못한다
+  ---
+  duration_ms: 13.164529
+  type: 'test'
+  ...
+# Subtest: 정석 함정: 빈칸 둘 · 증원이 들면 값이 점수로
+ok 74 - 정석 함정: 빈칸 둘 · 증원이 들면 값이 점수로
+  ---
+  duration_ms: 2.322347
+  type: 'test'
+  ...
+# Subtest: 정석 속기 · 장고: 수 · 손 · 버리기
+ok 75 - 정석 속기 · 장고: 수 · 손 · 버리기
+  ---
+  duration_ms: 9.249773
+  type: 'test'
+  ...
+# Subtest: 정석 선수: 값이 가장 큰 적 하나가 빠진다
+ok 76 - 정석 선수: 값이 가장 큰 적 하나가 빠진다
+  ---
+  duration_ms: 8.27134
+  type: 'test'
+  ...
+# Subtest: 정석 포로: 대국 첫 사슬이 마지막에 먹은 적이 주머니로
+ok 77 - 정석 포로: 대국 첫 사슬이 마지막에 먹은 적이 주머니로
+  ---
+  duration_ms: 0.428338
+  type: 'test'
+  ...
+# Subtest: 혼 계승: 사슬이 끝난 모습이 된다(킹 빼고)
+ok 78 - 혼 계승: 사슬이 끝난 모습이 된다(킹 빼고)
+  ---
+  duration_ms: 0.241123
+  type: 'test'
+  ...
+# Subtest: 혼 계주: 막히면 손의 다음 기물이 그 칸에서 잇는다(대국마다 한 번)
+ok 79 - 혼 계주: 막히면 손의 다음 기물이 그 칸에서 잇는다(대국마다 한 번)
+  ---
+  duration_ms: 0.480138
+  type: 'test'
+  ...
+# Subtest: 혼 역행: 폰 모습이면 아래 대각으로도 먹는다
+ok 80 - 혼 역행: 폰 모습이면 아래 대각으로도 먹는다
+  ---
+  duration_ms: 0.401392
+  type: 'test'
+  ...
+# Subtest: 혼 결투: 같은 종류를 두 번 못 먹는다 · 배수 ×2
+ok 81 - 혼 결투: 같은 종류를 두 번 못 먹는다 · 배수 ×2
+  ---
+  duration_ms: 2.859765
+  type: 'test'
+  ...
+# Subtest: 혼 사신: 킹을 지키는 적을 먹으면 배수 +3
+ok 82 - 혼 사신: 킹을 지키는 적을 먹으면 배수 +3
+  ---
+  duration_ms: 4.39279
+  type: 'test'
+  ...
+# Subtest: 혼 도약: 첫 먹기는 두 칸 안의 적 어디든
+ok 83 - 혼 도약: 첫 먹기는 두 칸 안의 적 어디든
+  ---
+  duration_ms: 0.242905
+  type: 'test'
+  ...
+# Subtest: 혼 귀환: 사슬을 푼 기물이 손으로 돌아온다(대국마다 한 번)
+ok 84 - 혼 귀환: 사슬을 푼 기물이 손으로 돌아온다(대국마다 한 번)
+  ---
+  duration_ms: 10.176807
+  type: 'test'
+  ...
+# Subtest: 혼 파문: 먹을 때마다 둘레 적 하나가 이번 수 동안 못 지킨다
+ok 85 - 혼 파문: 먹을 때마다 둘레 적 하나가 이번 수 동안 못 지킨다
+  ---
+  duration_ms: 0.433028
+  type: 'test'
+  ...
+# Subtest: 각인 청동 · 철 · 호박 · 비취 · 산호 · 대리석
+ok 86 - 각인 청동 · 철 · 호박 · 비취 · 산호 · 대리석
+  ---
+  duration_ms: 0.666024
+  type: 'test'
+  ...
+# Subtest: 장면 기준값(조정자 없음)
+ok 87 - 장면 기준값(조정자 없음)
+  ---
+  duration_ms: 5.066407
+  type: 'test'
+  ...
+# Subtest: 격언 chivalry · knight → 45
+ok 88 - 격언 chivalry · knight → 45
+  ---
+  duration_ms: 0.254015
+  type: 'test'
+  ...
+# Subtest: 격언 chivalry · pawn → 10
+ok 89 - 격언 chivalry · pawn → 10
+  ---
+  duration_ms: 0.11347
+  type: 'test'
+  ...
+# Subtest: 격언 pawn_march · pawn → 50
+ok 90 - 격언 pawn_march · pawn → 50
+  ---
+  duration_ms: 0.110994
+  type: 'test'
+  ...
+# Subtest: 격언 pawn_march · knight → 30
+ok 91 - 격언 pawn_march · knight → 30
+  ---
+  duration_ms: 0.074796
+  type: 'test'
+  ...
+# Subtest: 격언 quick_change · knight → 90
+ok 92 - 격언 quick_change · knight → 90
+  ---
+  duration_ms: 0.090668
+  type: 'test'
+  ...
+# Subtest: 격언 quick_change · mate → 4760
+ok 93 - 격언 quick_change · mate → 4760
+  ---
+  duration_ms: 0.216105
+  type: 'test'
+  ...
+# Subtest: 격언 whim · mate → 4080
+ok 94 - 격언 whim · mate → 4080
+  ---
+  duration_ms: 0.278567
+  type: 'test'
+  ...
+# Subtest: 격언 whim · knight → 30
+ok 95 - 격언 whim · knight → 30
+  ---
+  duration_ms: 0.078451
+  type: 'test'
+  ...
+# Subtest: 격언 steadfast · pawn → 30
+ok 96 - 격언 steadfast · pawn → 30
+  ---
+  duration_ms: 5.780225
+  type: 'test'
+  ...
+# Subtest: 격언 steadfast · knight → 30
+ok 97 - 격언 steadfast · knight → 30
+  ---
+  duration_ms: 0.179005
+  type: 'test'
+  ...
+# Subtest: 격언 steadfast · promote → 10
+ok 98 - 격언 steadfast · promote → 10
+  ---
+  duration_ms: 0.109522
+  type: 'test'
+  ...
+# Subtest: 격언 coronation · toQueen → 140
+ok 99 - 격언 coronation · toQueen → 140
+  ---
+  duration_ms: 0.138572
+  type: 'test'
+  ...
+# Subtest: 격언 coronation · promote → 60
+ok 100 - 격언 coronation · promote → 60
+  ---
+  duration_ms: 0.091201
+  type: 'test'
+  ...
+# Subtest: 격언 coronation · mate → 2640
+ok 101 - 격언 coronation · mate → 2640
+  ---
+  duration_ms: 0.21222
+  type: 'test'
+  ...
+# Subtest: 격언 low_stance · pawn → 40
+ok 102 - 격언 low_stance · pawn → 40
+  ---
+  duration_ms: 0.134927
+  type: 'test'
+  ...
+# Subtest: 격언 low_stance · mate → 3060
+ok 103 - 격언 low_stance · mate → 3060
+  ---
+  duration_ms: 0.254953
+  type: 'test'
+  ...
+# Subtest: 격언 diagonal · mate → 2190
+ok 104 - 격언 diagonal · mate → 2190
+  ---
+  duration_ms: 1.521843
+  type: 'test'
+  ...
+# Subtest: 격언 diagonal · knight → 30
+ok 105 - 격언 diagonal · knight → 30
+  ---
+  duration_ms: 0.168482
+  type: 'test'
+  ...
+# Subtest: 격언 wall_breaker · rook → 250
+ok 106 - 격언 wall_breaker · rook → 250
+  ---
+  duration_ms: 0.166543
+  type: 'test'
+  ...
+# Subtest: 격언 wall_breaker · mate → 3400
+ok 107 - 격언 wall_breaker · mate → 3400
+  ---
+  duration_ms: 0.220502
+  type: 'test'
+  ...
+# Subtest: 격언 long_chain · mate → 2856
+ok 108 - 격언 long_chain · mate → 2856
+  ---
+  duration_ms: 0.224765
+  type: 'test'
+  ...
+# Subtest: 격언 long_chain · knight → 30
+ok 109 - 격언 long_chain · knight → 30
+  ---
+  duration_ms: 0.072035
+  type: 'test'
+  ...
+# Subtest: 격언 long_road · rook → 70
+ok 110 - 격언 long_road · rook → 70
+  ---
+  duration_ms: 1.559492
+  type: 'test'
+  ...
+# Subtest: 격언 long_road · knight → 30
+ok 111 - 격언 long_road · knight → 30
+  ---
+  duration_ms: 2.719502
+  type: 'test'
+  ...
+# Subtest: 격언 edge · rook → 150
+ok 112 - 격언 edge · rook → 150
+  ---
+  duration_ms: 0.198275
+  type: 'test'
+  ...
+# Subtest: 격언 edge · knight → 30
+ok 113 - 격언 edge · knight → 30
+  ---
+  duration_ms: 0.088517
+  type: 'test'
+  ...
+# Subtest: 격언 center · knight → 45
+ok 114 - 격언 center · knight → 45
+  ---
+  duration_ms: 0.165567
+  type: 'test'
+  ...
+# Subtest: 격언 center · rook → 50
+ok 115 - 격언 center · rook → 50
+  ---
+  duration_ms: 0.083347
+  type: 'test'
+  ...
+# Subtest: 격언 vault · knight → 30
+ok 116 - 격언 vault · knight → 30
+  ---
+  duration_ms: 0.200192
+  type: 'test'
+  ...
+# Subtest: 격언 vault · mate → 2040
+ok 117 - 격언 vault · mate → 2040
+  ---
+  duration_ms: 0.28905
+  type: 'test'
+  ...
+# Subtest: 격언 promotion_feast · promote → 20
+ok 118 - 격언 promotion_feast · promote → 20
+  ---
+  duration_ms: 0.121613
+  type: 'test'
+  ...
+# Subtest: 격언 promotion_feast · mate → 3400
+ok 119 - 격언 promotion_feast · mate → 3400
+  ---
+  duration_ms: 0.175717
+  type: 'test'
+  ...
+# Subtest: 격언 payback · cut → 450
+ok 120 - 격언 payback · cut → 450
+  ---
+  duration_ms: 0.090592
+  type: 'test'
+  ...
+# Subtest: 격언 payback · knight → 30
+ok 121 - 격언 payback · knight → 30
+  ---
+  duration_ms: 0.070662
+  type: 'test'
+  ...
+# Subtest: 격언 close_call · knight → 60
+ok 122 - 격언 close_call · knight → 60
+  ---
+  duration_ms: 0.083933
+  type: 'test'
+  ...
+# Subtest: 격언 close_call · cut → 50
+ok 123 - 격언 close_call · cut → 50
+  ---
+  duration_ms: 0.073375
+  type: 'test'
+  ...
+# Subtest: 격언 close_call · mate → 2220
+ok 124 - 격언 close_call · mate → 2220
+  ---
+  duration_ms: 0.214293
+  type: 'test'
+  ...
+# Subtest: 격언 mate_hunter · mate → 2040
+ok 125 - 격언 mate_hunter · mate → 2040
+  ---
+  duration_ms: 0.227897
+  type: 'test'
+  ...
+# Subtest: 격언 mate_hunter · knight → 30
+ok 126 - 격언 mate_hunter · knight → 30
+  ---
+  duration_ms: 0.079781
+  type: 'test'
+  ...
+# Subtest: 격언 kings_neck · mate → 8160
+ok 127 - 격언 kings_neck · mate → 8160
+  ---
+  duration_ms: 0.32443
+  type: 'test'
+  ...
+# Subtest: 격언 kings_neck · knight → 30
+ok 128 - 격언 kings_neck · knight → 30
+  ---
+  duration_ms: 0.079681
+  type: 'test'
+  ...
+# Subtest: 격언 first_move · knight → 60
+ok 129 - 격언 first_move · knight → 60
+  ---
+  duration_ms: 0.155343
+  type: 'test'
+  ...
+# Subtest: 격언 first_move · knight → 30
+ok 130 - 격언 first_move · knight → 30
+  ---
+  duration_ms: 0.074428
+  type: 'test'
+  ...
+# Subtest: 격언 last_move · knight → 90
+ok 131 - 격언 last_move · knight → 90
+  ---
+  duration_ms: 4.815285
+  type: 'test'
+  ...
+# Subtest: 격언 last_move · knight → 30
+ok 132 - 격언 last_move · knight → 30
+  ---
+  duration_ms: 0.158357
+  type: 'test'
+  ...
+# Subtest: 격언 no_regrets · knight → 150
+ok 133 - 격언 no_regrets · knight → 150
+  ---
+  duration_ms: 0.178365
+  type: 'test'
+  ...
+# Subtest: 격언 no_regrets · knight → 30
+ok 134 - 격언 no_regrets · knight → 30
+  ---
+  duration_ms: 0.082195
+  type: 'test'
+  ...
+# Subtest: 격언 second_thought · knight → 210
+ok 135 - 격언 second_thought · knight → 210
+  ---
+  duration_ms: 0.118386
+  type: 'test'
+  ...
+# Subtest: 격언 second_thought · knight → 30
+ok 136 - 격언 second_thought · knight → 30
+  ---
+  duration_ms: 0.074354
+  type: 'test'
+  ...
+# Subtest: 격언 empty_bag · knight → 180
+ok 137 - 격언 empty_bag · knight → 180
+  ---
+  duration_ms: 0.093156
+  type: 'test'
+  ...
+# Subtest: 격언 small_bag · knight → 45
+ok 138 - 격언 small_bag · knight → 45
+  ---
+  duration_ms: 0.316454
+  type: 'test'
+  ...
+# Subtest: 격언 small_bag · knight → 30
+ok 139 - 격언 small_bag · knight → 30
+  ---
+  duration_ms: 0.119877
+  type: 'test'
+  ...
+# Subtest: 격언 welcome · knight → 70
+ok 140 - 격언 welcome · knight → 70
+  ---
+  duration_ms: 0.156347
+  type: 'test'
+  ...
+# Subtest: 격언 welcome · knight → 30
+ok 141 - 격언 welcome · knight → 30
+  ---
+  duration_ms: 0.079262
+  type: 'test'
+  ...
+# Subtest: 격언 shadow_reading · knight → 30
+ok 142 - 격언 shadow_reading · knight → 30
+  ---
+  duration_ms: 0.13902
+  type: 'test'
+  ...
+# Subtest: 격언 ivory_tower · knight → 30
+ok 143 - 격언 ivory_tower · knight → 30
+  ---
+  duration_ms: 0.08966
+  type: 'test'
+  ...
+# Subtest: 격언 70종 모두 장면 검사가 있다
+ok 144 - 격언 70종 모두 장면 검사가 있다
+  ---
+  duration_ms: 0.472126
+  type: 'test'
+  ...
+# Subtest: 희생: 대국마다 첫 끊김만 넘긴다(대국 state)
+ok 145 - 희생: 대국마다 첫 끊김만 넘긴다(대국 state)
+  ---
+  duration_ms: 0.390553
+  type: 'test'
+  ...
+# Subtest: 끝줄의 꿈: 승급한 사슬의 끊김을 한 번 넘긴다
+ok 146 - 끝줄의 꿈: 승급한 사슬의 끊김을 한 번 넘긴다
+  ---
+  duration_ms: 0.502908
+  type: 'test'
+  ...
+# Subtest: 대국의 기억: 판에 쌓인 외통 수만큼 ×(1 + 0.5n), 판(런)이 data를 올린다
+ok 147 - 대국의 기억: 판에 쌓인 외통 수만큼 ×(1 + 0.5n), 판(런)이 data를 올린다
+  ---
+  duration_ms: 0.282878
+  type: 'test'
+  ...
+# Subtest: 기보 수집가: 기보를 쓸 때마다 연쇄 +1 영구
+ok 148 - 기보 수집가: 기보를 쓸 때마다 연쇄 +1 영구
+  ---
+  duration_ms: 0.200817
+  type: 'test'
+  ...
+# Subtest: 상아탑: 상아 기물로 떨군 사슬 연쇄 +5(상아 값 +30과 함께)
+ok 149 - 상아탑: 상아 기물로 떨군 사슬 연쇄 +5(상아 값 +30과 함께)
+  ---
+  duration_ms: 0.159409
+  type: 'test'
+  ...
+# Subtest: 왕의 목: 지키는 이 없는 킹을 hints.openKings로 알린다
+ok 150 - 왕의 목: 지키는 이 없는 킹을 hints.openKings로 알린다
+  ---
+  duration_ms: 3.064355
+  type: 'test'
+  ...
+# Subtest: 그림자 읽기: 증원 두 수 앞이 보인다, 뽑기는 같다(같은 시드 같은 판)
+ok 151 - 그림자 읽기: 증원 두 수 앞이 보인다, 뽑기는 같다(같은 시드 같은 판)
+  ---
+  duration_ms: 17.393975
+  type: 'test'
+  ...
+# Subtest: 각인: 금 상금 +2 · 상아 값 +30 · 흑단 ×1.5 · 유리 ×2
+ok 152 - 각인: 금 상금 +2 · 상아 값 +30 · 흑단 ×1.5 · 유리 ×2
+  ---
+  duration_ms: 9.615695
+  type: 'test'
+  ...
+# Subtest: 각인 은: 첫 먹기의 끊김만 넘긴다
+ok 153 - 각인 은: 첫 먹기의 끊김만 넘긴다
+  ---
+  duration_ms: 0.307092
+  type: 'test'
+  ...
+# Subtest: 각인 유리: 대국 흐름에서 1/4로 깨져 shattered에 남는다
+ok 154 - 각인 유리: 대국 흐름에서 1/4로 깨져 shattered에 남는다
+  ---
+  duration_ms: 552.314466
+  type: 'test'
+  ...
+# Subtest: 명인 8: 철벽 · 모래시계 · 무거운 손 · 대가
+ok 155 - 명인 8: 철벽 · 모래시계 · 무거운 손 · 대가
+  ---
+  duration_ms: 16.201758
+  type: 'test'
+  ...
+# Subtest: 꺼진 기보(off)는 레벨이 듣지 않는다
+ok 156 - 꺼진 기보(off)는 레벨이 듣지 않는다
+  ---
+  duration_ms: 0.298526
+  type: 'test'
+  ...
+# Subtest: 명인 침묵: 왼쪽 격언 둘이 꺼진다
+ok 157 - 명인 침묵: 왼쪽 격언 둘이 꺼진다
+  ---
+  duration_ms: 78.492752
+  type: 'test'
+  ...
+# Subtest: 명인 앙갚음: 끊긴 사슬은 점수가 4분의 1
+ok 158 - 명인 앙갚음: 끊긴 사슬은 점수가 4분의 1
+  ---
+  duration_ms: 0.500502
+  type: 'test'
+  ...
+# Subtest: 명인 철벽: 응수가 없다 — 노려진 칸을 먹으면 곧바로 끊긴다
+ok 159 - 명인 철벽: 응수가 없다 — 노려진 칸을 먹으면 곧바로 끊긴다
+  ---
+  duration_ms: 4.368047
+  type: 'test'
+  ...
+# Subtest: 명인 안개: 안개 속에는 떨굴 수 없다
+ok 160 - 명인 안개: 안개 속에는 떨굴 수 없다
+  ---
+  duration_ms: 1.543341
+  type: 'test'
+  ...
+# Subtest: 명인 모래시계 · 무거운 손: 무르기가 줄어든다
+ok 161 - 명인 모래시계 · 무거운 손: 무르기가 줄어든다
+  ---
+  duration_ms: 1.237452
+  type: 'test'
+  ...
+# Subtest: 명인 거울: 같은 종류를 두 번 먹지 못한다
+ok 162 - 명인 거울: 같은 종류를 두 번 먹지 못한다
+  ---
+  duration_ms: 0.530263
+  type: 'test'
+  ...
+# Subtest: 명인 안개: 위 다섯 줄은 내 기물이 닿은 칸만 드러난다
+ok 163 - 명인 안개: 위 다섯 줄은 내 기물이 닿은 칸만 드러난다
+  ---
+  duration_ms: 8.180445
+  type: 'test'
+  ...
+# Subtest: 기보 표: 모습 다섯(킹 없음)
+ok 164 - 기보 표: 모습 다섯(킹 없음)
+  ---
+  duration_ms: 0.285949
+  type: 'test'
+  ...
+# Subtest: 사슬 평가: 3 「!」 · 5 「!!」 · 8 「!!!」 · 12 「∞」, 닿는 순간 한 번씩
+ok 165 - 사슬 평가: 3 「!」 · 5 「!!」 · 8 「!!!」 · 12 「∞」, 닿는 순간 한 번씩
+  ---
+  duration_ms: 5.106237
+  type: 'test'
+  ...
+# Subtest: 황금 기물: 먹으면 값을 한 번 더 받고 「golden」 이벤트, 대국은 먹은 수를 센다
+ok 166 - 황금 기물: 먹으면 값을 한 번 더 받고 「golden」 이벤트, 대국은 먹은 수를 센다
+  ---
+  duration_ms: 0.506791
+  type: 'test'
+  ...
+# Subtest: 황금 기물: 대국 시작 판의 킹 아닌 적 하나, 확률은 대국당 약 4%
+ok 167 - 황금 기물: 대국 시작 판의 킹 아닌 적 하나, 확률은 대국당 약 4%
+  ---
+  duration_ms: 9959.09625
+  type: 'test'
+  ...
+# Subtest: 넘친 목표: 층 ×1 · ×2 · ×5 · ×10, 한 수로 여러 층을 넘으면 층마다 이벤트
+ok 168 - 넘친 목표: 층 ×1 · ×2 · ×5 · ×10, 한 수로 여러 층을 넘으면 층마다 이벤트
+  ---
+  duration_ms: 4.034449
+  type: 'test'
+  ...
+# Subtest: 넘친 목표 상금: ×5 +1 · ×10 +2, 보상 내역에 overflow
+ok 169 - 넘친 목표 상금: ×5 +1 · ×10 +2, 보상 내역에 overflow
+  ---
+  duration_ms: 160.713294
+  type: 'test'
+  ...
+# Subtest: 판본: 은박 연쇄 +5 · 자개 값 +50 · 무지개 연쇄 ×1.5, 그 격언 바로 뒤에서 듣는다
+ok 170 - 판본: 은박 연쇄 +5 · 자개 값 +50 · 무지개 연쇄 ×1.5, 그 격언 바로 뒤에서 듣는다
+  ---
+  duration_ms: 1.339093
+  type: 'test'
+  ...
+# Subtest: 판본: 명인 침묵이 잠재운 격언의 판본도 같이 잠든다
+ok 171 - 판본: 명인 침묵이 잠재운 격언의 판본도 같이 잠든다
+  ---
+  duration_ms: 1.242352
+  type: 'test'
+  ...
+# Subtest: 판본: 값에 판본 값이 붙고(팔면 절반), 흑요는 격언 칸 +1
+ok 172 - 판본: 값에 판본 값이 붙고(팔면 절반), 흑요는 격언 칸 +1
+  ---
+  duration_ms: 5.55135
+  type: 'test'
+  ...
+# Subtest: 판본: 진열 격언에 약 4%(칸당 ~2%), 무게는 은박 > 자개 > 무지개 > 흑요
+ok 173 - 판본: 진열 격언에 약 4%(칸당 ~2%), 무게는 은박 > 자개 > 무지개 > 흑요
+  ---
+  duration_ms: 54.37446
+  type: 'test'
+  ...
+# Subtest: 명인의 상자: 명인 대국을 이기면 1 · 3 · 5개, 칸 다섯에 가운데부터 불이 켜지고 물건이 곧바로 들어온다
+ok 174 - 명인의 상자: 명인 대국을 이기면 1 · 3 · 5개, 칸 다섯에 가운데부터 불이 켜지고 물건이 곧바로 들어온다
+  ---
+  duration_ms: 16.879144
+  type: 'test'
+  ...
+# Subtest: 명인의 상자: 개수 분포 1 ≈ 77% · 3 ≈ 20% · 5 ≈ 3% (판 시드 × 관마다 다른 결과)
+ok 175 - 명인의 상자: 개수 분포 1 ≈ 77% · 3 ≈ 20% · 5 ≈ 3% (판 시드 × 관마다 다른 결과)
+  ---
+  duration_ms: 1966.309112
+  type: 'test'
+  ...
+# Subtest: 명인의 상자: 물건 넷(상금 · 기보 · 각인 · 이형 기물)이 판에 그대로 들어간다
+ok 176 - 명인의 상자: 물건 넷(상금 · 기보 · 각인 · 이형 기물)이 판에 그대로 들어간다
+  ---
+  duration_ms: 33.02429
+  type: 'test'
+  ...
+# Subtest: 불멸의 기보: 명국 다섯, 첫 조각이 나오는 곳이 서로 다르게 나뉜다
+ok 177 - 불멸의 기보: 명국 다섯, 첫 조각이 나오는 곳이 서로 다르게 나뉜다
+  ---
+  duration_ms: 0.453203
+  type: 'test'
+  ...
+# Subtest: 재현 판정: 명국마다 조건
+ok 178 - 재현 판정: 명국마다 조건
+  ---
+  duration_ms: 0.323757
+  type: 'test'
+  ...
+# Subtest: 첫 조각: 진열에서 사거나 꾸러미에서 고른다
+ok 179 - 첫 조각: 진열에서 사거나 꾸러미에서 고른다
+  ---
+  duration_ms: 4.702891
+  type: 'test'
+  ...
+# Subtest: 첫 조각 확률: 진열 칸 3% · 꾸러미 4%, 나오는 곳이 맞는 명국만, 가진 첫 조각은 다시 안 나온다
+ok 180 - 첫 조각 확률: 진열 칸 3% · 꾸러미 4%, 나오는 곳이 맞는 명국만, 가진 첫 조각은 다시 안 나온다
+  ---
+  duration_ms: 86.762298
+  type: 'test'
+  ...
+# Subtest: 재현(둘째 조각): 첫 조각을 가진 판에서만, 해낸 사슬 뒤 곧바로
+ok 181 - 재현(둘째 조각): 첫 조각을 가진 판에서만, 해낸 사슬 뒤 곧바로
+  ---
+  duration_ms: 5.873002
+  type: 'test'
+  ...
+# Subtest: 셋째 조각: 황금 기물을 먹고 이기면 재현까지 해낸 명국의 금빛 조각 + 금빛 꾸러미
+ok 182 - 셋째 조각: 황금 기물을 먹고 이기면 재현까지 해낸 명국의 금빛 조각 + 금빛 꾸러미
+  ---
+  duration_ms: 3.353905
+  type: 'test'
+  ...
+# Subtest: 금빛의 부름: 재현까지 모은 명국이 금빛만 기다리면 그 판의 대국에 황금 기물이 10%로
+ok 183 - 금빛의 부름: 재현까지 모은 명국이 금빛만 기다리면 그 판의 대국에 황금 기물이 10%로
+  ---
+  duration_ms: 589.249794
+  type: 'test'
+  ...
+# Subtest: 셋째 조각: 조각은 첫 → 재현 → 금빛 차례, 재현 전의 황금 기물은 조각을 주지 않는다
+ok 184 - 셋째 조각: 조각은 첫 → 재현 → 금빛 차례, 재현 전의 황금 기물은 조각을 주지 않는다
+  ---
+  duration_ms: 2.132575
+  type: 'test'
+  ...
+# Subtest: 셋째 조각: 첫 조각이 없으면 금빛 꾸러미에 첫 조각이 끼어 나올 기회
+ok 185 - 셋째 조각: 첫 조각이 없으면 금빛 꾸러미에 첫 조각이 끼어 나올 기회
+  ---
+  duration_ms: 104.887206
+  type: 'test'
+  ...
+# Subtest: 전설 불멸의 대국: 끊김을 넘기며 연쇄 ×2, 되잡힌 칸에서 계속
+ok 186 - 전설 불멸의 대국: 끊김을 넘기며 연쇄 ×2, 되잡힌 칸에서 계속
+  ---
+  duration_ms: 0.715974
+  type: 'test'
+  ...
+# Subtest: 전설 오페라 대국: 외통 뒤 판이 다시 채워지고 킹이 된 기물이 사슬을 잇는다
+ok 187 - 전설 오페라 대국: 외통 뒤 판이 다시 채워지고 킹이 된 기물이 사슬을 잇는다
+  ---
+  duration_ms: 1.486899
+  type: 'test'
+  ...
+# Subtest: 전설 오페라 대국: 지켜진 킹도 먹는다(떨굴 칸도 그만큼 늘어난다)
+ok 188 - 전설 오페라 대국: 지켜진 킹도 먹는다(떨굴 칸도 그만큼 늘어난다)
+  ---
+  duration_ms: 4.618024
+  type: 'test'
+  ...
+# Subtest: 전설 세기의 대국: 퀸 모습으로 먹은 수만큼 사슬 끝 ×1.5를 거듭 곱한다
+ok 189 - 전설 세기의 대국: 퀸 모습으로 먹은 수만큼 사슬 끝 ×1.5를 거듭 곱한다
+  ---
+  duration_ms: 0.529347
+  type: 'test'
+  ...
+# Subtest: 전설 상록의 대국: 사슬이 멈추면 한 번, 그 모습 그대로 다시 떨궈 값 · 연쇄를 잇는다
+ok 190 - 전설 상록의 대국: 사슬이 멈추면 한 번, 그 모습 그대로 다시 떨궈 값 · 연쇄를 잇는다
+  ---
+  duration_ms: 2.415103
+  type: 'test'
+  ...
+# Subtest: 전설 상록의 대국: 대국에서 redrop 명령, 풀이기가 다시 떨구기 줄을 찾는다
+ok 191 - 전설 상록의 대국: 대국에서 redrop 명령, 풀이기가 다시 떨구기 줄을 찾는다
+  ---
+  duration_ms: 42.948006
+  type: 'test'
+  ...
+# Subtest: 전설 폰 여덟의 행진: 폰으로 떨군 사슬은 여섯째 줄부터 승급, 승급마다 연쇄 ×3
+ok 192 - 전설 폰 여덟의 행진: 폰으로 떨군 사슬은 여섯째 줄부터 승급, 승급마다 연쇄 ×3
+  ---
+  duration_ms: 0.738372
+  type: 'test'
+  ...
+# Subtest: 풀이기 마디 예산: 넘으면 첫 수만 따라가도 늘 끝까지 둘 수 있는 줄, 점수는 그 줄을 둔 결과와 같다
+ok 193 - 풀이기 마디 예산: 넘으면 첫 수만 따라가도 늘 끝까지 둘 수 있는 줄, 점수는 그 줄을 둔 결과와 같다
+  ---
+  duration_ms: 191.74862
+  type: 'test'
+  ...
+# Subtest: 저장: 조각 · 전설 · 판본 · 금빛 꾸러미가 든 판이 JSON 왕복 뒤 같은 결과를 낸다
+ok 194 - 저장: 조각 · 전설 · 판본 · 금빛 꾸러미가 든 판이 JSON 왕복 뒤 같은 결과를 낸다
+  ---
+  duration_ms: 208.803269
+  type: 'test'
+  ...
+# Subtest: 가짓수: 정석 24 · 격언 70 · 시너지 10 · 혼 16 · 각인 12
+ok 195 - 가짓수: 정석 24 · 격언 70 · 시너지 10 · 혼 16 · 각인 12
+  ---
+  duration_ms: 1.316767
+  type: 'test'
+  ...
+# Subtest: 이름 겹침 없음: 격언 · 정석 · 혼 · 각인 · 명인 · 특성 · 시너지 · 전설 · 묘수
+ok 196 - 이름 겹침 없음: 격언 · 정석 · 혼 · 각인 · 명인 · 특성 · 시너지 · 전설 · 묘수
+  ---
+  duration_ms: 0.415982
+  type: 'test'
+  ...
+# Subtest: 새 시너지 둘은 넷 이상에 붙어 2 · 4 · 6이 켜질 수 있다
+ok 197 - 새 시너지 둘은 넷 이상에 붙어 2 · 4 · 6이 켜질 수 있다
+  ---
+  duration_ms: 0.683167
+  type: 'test'
+  ...
+# Subtest: 역습 시너지: 지키는 적을 먹으면 값 +20 · 4 배수 +2 · 6 ×1.3
+ok 198 - 역습 시너지: 지키는 적을 먹으면 값 +20 · 4 배수 +2 · 6 ×1.3
+  ---
+  duration_ms: 4.554619
+  type: 'test'
+  ...
+# Subtest: 매복 시너지: 증원을 먹으면 값 +30 · 4 증원 자리 떨구기 배수 +3 · 6 ×1.5
+ok 199 - 매복 시너지: 증원을 먹으면 값 +30 · 4 증원 자리 떨구기 배수 +3 · 6 ×1.5
+  ---
+  duration_ms: 0.649871
+  type: 'test'
+  ...
+# Subtest: 기마 돌격: 뛰어 먹은 다음 먹기 배수 +3
+ok 200 - 기마 돌격: 뛰어 먹은 다음 먹기 배수 +3
+  ---
+  duration_ms: 0.431849
+  type: 'test'
+  ...
+# Subtest: 긴 대각: 대각선 세 칸 이상이면 값 +30
+ok 201 - 긴 대각: 대각선 세 칸 이상이면 값 +30
+  ---
+  duration_ms: 0.422349
+  type: 'test'
+  ...
+# Subtest: 포위: 둘레에 적이 셋 이상인 칸에서 먹으면 배수 +2
+ok 202 - 포위: 둘레에 적이 셋 이상인 칸에서 먹으면 배수 +2
+  ---
+  duration_ms: 0.336179
+  type: 'test'
+  ...
+# Subtest: 외톨이: 지키는 적이 없는 적을 먹으면 값 +15
+ok 203 - 외톨이: 지키는 적이 없는 적을 먹으면 값 +15
+  ---
+  duration_ms: 0.60524
+  type: 'test'
+  ...
+# Subtest: 가득 찬 판: 떨굴 때 적이 열여섯 이상이면 ×1.5
+ok 204 - 가득 찬 판: 떨굴 때 적이 열여섯 이상이면 ×1.5
+  ---
+  duration_ms: 1.396189
+  type: 'test'
+  ...
+# Subtest: 막내 · 맏이: 손에서 가장 낮은 · 높은 기물로 시작
+ok 205 - 막내 · 맏이: 손에서 가장 낮은 · 높은 기물로 시작
+  ---
+  duration_ms: 0.583814
+  type: 'test'
+  ...
+# Subtest: 두 번째 바람 · 승부수 · 역전
+ok 206 - 두 번째 바람 · 승부수 · 역전
+  ---
+  duration_ms: 0.556268
+  type: 'test'
+  ...
+# Subtest: 연타: 같은 모습으로 잇달아 먹으면 배수 +2
+ok 207 - 연타: 같은 모습으로 잇달아 먹으면 배수 +2
+  ---
+  duration_ms: 0.201819
+  type: 'test'
+  ...
+# Subtest: 변장: 특수 기물 모습으로 먹으면 값 +30
+ok 208 - 변장: 특수 기물 모습으로 먹으면 값 +30
+  ---
+  duration_ms: 0.190108
+  type: 'test'
+  ...
+# Subtest: 체스판: 밝은 칸 값 +10 · 어두운 칸 배수 +1
+ok 209 - 체스판: 밝은 칸 값 +10 · 어두운 칸 배수 +1
+  ---
+  duration_ms: 0.184372
+  type: 'test'
+  ...
+# Subtest: 마지막 한 칸 · 귀족 · 농부
+ok 210 - 마지막 한 칸 · 귀족 · 농부
+  ---
+  duration_ms: 0.390547
+  type: 'test'
+  ...
+# Subtest: 대장장이: 각인 기물로 시작하면 ×1.5
+ok 211 - 대장장이: 각인 기물로 시작하면 ×1.5
+  ---
+  duration_ms: 0.228791
+  type: 'test'
+  ...
+# Subtest: 혼 수집가 · 금욕: 판(런)이 짜임에서 센다(onBuild)
+ok 212 - 혼 수집가 · 금욕: 판(런)이 짜임에서 센다(onBuild)
+  ---
+  duration_ms: 0.955304
+  type: 'test'
+  ...
+# Subtest: 주특기: 기보 레벨이 가장 높은 모습으로 먹으면 값 +25
+ok 213 - 주특기: 기보 레벨이 가장 높은 모습으로 먹으면 값 +25
+  ---
+  duration_ms: 0.926534
+  type: 'test'
+  ...
+# Subtest: 순례: 네 구역을 모두 밟은 사슬 ×4
+ok 214 - 순례: 네 구역을 모두 밟은 사슬 ×4
+  ---
+  duration_ms: 0.358402
+  type: 'test'
+  ...
+# Subtest: 왕의 발자국: 킹 옆 칸에서 먹으면 배수 +3
+ok 215 - 왕의 발자국: 킹 옆 칸에서 먹으면 배수 +3
+  ---
+  duration_ms: 0.298772
+  type: 'test'
+  ...
+# Subtest: 매복병: 증원 자리에 떨구면 값 +40
+ok 216 - 매복병: 증원 자리에 떨구면 값 +40
+  ---
+  duration_ms: 0.278957
+  type: 'test'
+  ...
+# Subtest: 반격의 서: 지키는 적을 두 번 먹은 사슬 ×2
+ok 217 - 반격의 서: 지키는 적을 두 번 먹은 사슬 ×2
+  ---
+  duration_ms: 1.70165
+  type: 'test'
+  ...
+# Subtest: 절약: 대국을 이기면 남은 버리기마다 상금 +1
+ok 218 - 절약: 대국을 이기면 남은 버리기마다 상금 +1
+  ---
+  duration_ms: 8.94259
+  type: 'test'
+  ...
+# Subtest: 도박사: 사슬 넷에 하나 ×3(풀이기는 모른다) · 행운의 동전: 먹기 여섯에 하나 상금
+ok 219 - 도박사: 사슬 넷에 하나 ×3(풀이기는 모른다) · 행운의 동전: 먹기 여섯에 하나 상금
+  ---
+  duration_ms: 583.870638
+  type: 'test'
+  ...
+# Subtest: 정석 사막 · 풀밭 · 포대 · 그늘: 주머니 기물이 이형이 된다
+ok 220 - 정석 사막 · 풀밭 · 포대 · 그늘: 주머니 기물이 이형이 된다
+  ---
+  duration_ms: 0.760905
+  type: 'test'
+  ...
+# Subtest: 정석 강: 가운데 두 줄을 건너 먹으면 배수 +1
+ok 221 - 정석 강: 가운데 두 줄을 건너 먹으면 배수 +1
+  ---
+  duration_ms: 0.250004
+  type: 'test'
+  ...
+# Subtest: 정석 횃불: 값이 가장 큰 적 둘은 아무것도 지키지 못한다
+ok 222 - 정석 횃불: 값이 가장 큰 적 둘은 아무것도 지키지 못한다
+  ---
+  duration_ms: 6.639082
+  type: 'test'
+  ...
+# Subtest: 정석 함정: 빈칸 둘 · 증원이 들면 값이 점수로
+ok 223 - 정석 함정: 빈칸 둘 · 증원이 들면 값이 점수로
+  ---
+  duration_ms: 2.081355
+  type: 'test'
+  ...
+# Subtest: 정석 속기 · 장고: 수 · 손 · 버리기
+ok 224 - 정석 속기 · 장고: 수 · 손 · 버리기
+  ---
+  duration_ms: 9.647341
+  type: 'test'
+  ...
+# Subtest: 정석 선수: 값이 가장 큰 적 하나가 빠진다
+ok 225 - 정석 선수: 값이 가장 큰 적 하나가 빠진다
+  ---
+  duration_ms: 5.672653
+  type: 'test'
+  ...
+# Subtest: 정석 포로: 대국 첫 사슬이 마지막에 먹은 적이 주머니로
+ok 226 - 정석 포로: 대국 첫 사슬이 마지막에 먹은 적이 주머니로
+  ---
+  duration_ms: 0.320322
+  type: 'test'
+  ...
+# Subtest: 혼 계승: 사슬이 끝난 모습이 된다(킹 빼고)
+ok 227 - 혼 계승: 사슬이 끝난 모습이 된다(킹 빼고)
+  ---
+  duration_ms: 0.184348
+  type: 'test'
+  ...
+# Subtest: 혼 계주: 막히면 손의 다음 기물이 그 칸에서 잇는다(대국마다 한 번)
+ok 228 - 혼 계주: 막히면 손의 다음 기물이 그 칸에서 잇는다(대국마다 한 번)
+  ---
+  duration_ms: 0.42632
+  type: 'test'
+  ...
+# Subtest: 혼 역행: 폰 모습이면 아래 대각으로도 먹는다
+ok 229 - 혼 역행: 폰 모습이면 아래 대각으로도 먹는다
+  ---
+  duration_ms: 0.336988
+  type: 'test'
+  ...
+# Subtest: 혼 결투: 같은 종류를 두 번 못 먹는다 · 배수 ×2
+ok 230 - 혼 결투: 같은 종류를 두 번 못 먹는다 · 배수 ×2
+  ---
+  duration_ms: 4.334104
+  type: 'test'
+  ...
+# Subtest: 혼 사신: 킹을 지키는 적을 먹으면 배수 +3
+ok 231 - 혼 사신: 킹을 지키는 적을 먹으면 배수 +3
+  ---
+  duration_ms: 0.382726
+  type: 'test'
+  ...
+# Subtest: 혼 도약: 첫 먹기는 두 칸 안의 적 어디든
+ok 232 - 혼 도약: 첫 먹기는 두 칸 안의 적 어디든
+  ---
+  duration_ms: 0.179389
+  type: 'test'
+  ...
+# Subtest: 혼 귀환: 사슬을 푼 기물이 손으로 돌아온다(대국마다 한 번)
+ok 233 - 혼 귀환: 사슬을 푼 기물이 손으로 돌아온다(대국마다 한 번)
+  ---
+  duration_ms: 8.226734
+  type: 'test'
+  ...
+# Subtest: 혼 파문: 먹을 때마다 둘레 적 하나가 이번 수 동안 못 지킨다
+ok 234 - 혼 파문: 먹을 때마다 둘레 적 하나가 이번 수 동안 못 지킨다
+  ---
+  duration_ms: 0.436662
+  type: 'test'
+  ...
+# Subtest: 각인 청동 · 철 · 호박 · 비취 · 산호 · 대리석
+ok 235 - 각인 청동 · 철 · 호박 · 비취 · 산호 · 대리석
+  ---
+  duration_ms: 0.588343
+  type: 'test'
+  ...
+# Subtest: 세력 섞기: 1관 농민군 · 8관 왕궁 근위, 2~7관은 여섯을 판 시드로 섞는다(결정적)
+ok 236 - 세력 섞기: 1관 농민군 · 8관 왕궁 근위, 2~7관은 여섯을 판 시드로 섞는다(결정적)
+  ---
+  duration_ms: 4.375137
+  type: 'test'
+  ...
+# Subtest: 세력: 관의 세 대국 모두 같은 세력, 명인은 그 세력의 우두머리, JSON 왕복
+ok 237 - 세력: 관의 세 대국 모두 같은 세력, 명인은 그 세력의 우두머리, JSON 왕복
+  ---
+  duration_ms: 18.229767
+  type: 'test'
+  ...
+# Subtest: 우두머리: 옛 명인 여덟이 세력마다 하나씩, 8관은 대가
+ok 238 - 우두머리: 옛 명인 여덟이 세력마다 하나씩, 8관은 대가
+  ---
+  duration_ms: 0.320026
+  type: 'test'
+  ...
+# Subtest: 버릇 · 농민군: 적 폰이 옆 칸도 지킨다
+ok 239 - 버릇 · 농민군: 적 폰이 옆 칸도 지킨다
+  ---
+  duration_ms: 7.188563
+  type: 'test'
+  ...
+# Subtest: 버릇 · 기병대: 증원이 모두 나이트 무리(나이트 · 낙타 · 야간기사), 주력은 나이트
+ok 240 - 버릇 · 기병대: 증원이 모두 나이트 무리(나이트 · 낙타 · 야간기사), 주력은 나이트
+  ---
+  duration_ms: 61.552663
+  type: 'test'
+  ...
+# Subtest: 버릇 · 수도원: 돌기둥(벽) 셋~다섯이 늘 선다
+ok 241 - 버릇 · 수도원: 돌기둥(벽) 셋~다섯이 늘 선다
+  ---
+  duration_ms: 11.708471
+  type: 'test'
+  ...
+# Subtest: 버릇 · 성채: 넷째 줄에 성벽 일곱 칸, 가운데 네 칸 중 하나가 문
+ok 242 - 버릇 · 성채: 넷째 줄에 성벽 일곱 칸, 가운데 네 칸 중 하나가 문
+  ---
+  duration_ms: 54.324111
+  type: 'test'
+  ...
+# Subtest: 버릇 · 숲 사냥꾼: 위 두 줄은 숲(떨굴 수 없다) · 우두머리는 다섯 줄
+ok 243 - 버릇 · 숲 사냥꾼: 위 두 줄은 숲(떨굴 수 없다) · 우두머리는 다섯 줄
+  ---
+  duration_ms: 15.756508
+  type: 'test'
+  ...
+# Subtest: 버릇 · 전령단: 증원 +1 · 두 수 앞까지 보인다
+ok 244 - 버릇 · 전령단: 증원 +1 · 두 수 앞까지 보인다
+  ---
+  duration_ms: 30.382372
+  type: 'test'
+  ...
+# Subtest: 버릇 · 용병단: 적 특성이 2관부터 두 배로 붙는다 · 고유 적은 이형 아무거나
+ok 245 - 버릇 · 용병단: 적 특성이 2관부터 두 배로 붙는다 · 고유 적은 이형 아무거나
+  ---
+  duration_ms: 53.967251
+  type: 'test'
+  ...
+# Subtest: 버릇 · 왕궁 근위: 킹을 지키는 적 +1
+ok 246 - 버릇 · 왕궁 근위: 킹을 지키는 적 +1
+  ---
+  duration_ms: 156.558031
+  type: 'test'
+  ...
+# Subtest: 고유 적: 1관부터 그 세력의 이형만 조금 섞인다
+ok 247 - 고유 적: 1관부터 그 세력의 이형만 조금 섞인다
+  ---
+  duration_ms: 0.354569
+  type: 'test'
+  ...
+# Subtest: 단 8 「대가 목표 ×1.25」는 왕궁 근위의 우두머리 대국에만
+ok 248 - 단 8 「대가 목표 ×1.25」는 왕궁 근위의 우두머리 대국에만
+  ---
+  duration_ms: 0.348126
+  type: 'test'
+  ...
+# Subtest: 옛 저장: 명인 차례(run.masters)가 세력으로 옮겨지고 같은 명인과 둔다
+ok 249 - 옛 저장: 명인 차례(run.masters)가 세력으로 옮겨지고 같은 명인과 둔다
+  ---
+  duration_ms: 0.335043
+  type: 'test'
+  ...
+# Subtest: 겹친 기물: 대주교 = 비숍 + 나이트, 재상 = 룩 + 나이트, 아마존 = 퀸 + 나이트
+ok 250 - 겹친 기물: 대주교 = 비숍 + 나이트, 재상 = 룩 + 나이트, 아마존 = 퀸 + 나이트
+  ---
+  duration_ms: 2.599804
+  type: 'test'
+  ...
+# Subtest: 낙타는 (3,1)로 뛰고 늘 같은 색 칸에 선다
+ok 251 - 낙타는 (3,1)로 뛰고 늘 같은 색 칸에 선다
+  ---
+  duration_ms: 0.28347
+  type: 'test'
+  ...
+# Subtest: 야간기사는 나이트 도약을 같은 쪽으로 거듭하고, 막히면 거기까지
+ok 252 - 야간기사는 나이트 도약을 같은 쪽으로 거듭하고, 막히면 거기까지
+  ---
+  duration_ms: 0.272172
+  type: 'test'
+  ...
+# Subtest: 메뚜기: 첫 기물(적이든 아니든)을 넘어 바로 뒤 칸의 적을 먹는다
+ok 253 - 메뚜기: 첫 기물(적이든 아니든)을 넘어 바로 뒤 칸의 적을 먹는다
+  ---
+  duration_ms: 0.880164
+  type: 'test'
+  ...
+# Subtest: 포: 가로 · 세로로 기물 하나를 넘어 그 너머 첫 기물이 적이면 먹는다
+ok 254 - 포: 가로 · 세로로 기물 하나를 넘어 그 너머 첫 기물이 적이면 먹는다
+  ---
+  duration_ms: 0.323345
+  type: 'test'
+  ...
+# Subtest: 유령: 가로 · 세로로 막힘을 무시하고 먹는다(적 유령도 막힘 없이 노린다)
+ok 255 - 유령: 가로 · 세로로 막힘을 무시하고 먹는다(적 유령도 막힘 없이 노린다)
+  ---
+  duration_ms: 0.227377
+  type: 'test'
+  ...
+# Subtest: 궁수: 딱 두 칸 떨어진 고리만 쏜다
+ok 256 - 궁수: 딱 두 칸 떨어진 고리만 쏜다
+  ---
+  duration_ms: 3.23138
+  type: 'test'
+  ...
+# Subtest: 궁수 모습으로 먹으면 제자리에 남고 먹힌 칸만 빈다 · 응수는 제자리 기준
+ok 257 - 궁수 모습으로 먹으면 제자리에 남고 먹힌 칸만 빈다 · 응수는 제자리 기준
+  ---
+  duration_ms: 7.035138
+  type: 'test'
+  ...
+# Subtest: 이형 적을 먹으면 그 이형이 된다 · 기보는 바탕 모습을 따른다
+ok 258 - 이형 적을 먹으면 그 이형이 된다 · 기보는 바탕 모습을 따른다
+  ---
+  duration_ms: 0.985611
+  type: 'test'
+  ...
+# Subtest: 이형은 승급하지 않는다(폰 모습만)
+ok 259 - 이형은 승급하지 않는다(폰 모습만)
+  ---
+  duration_ms: 0.890416
+  type: 'test'
+  ...
+# Subtest: 떨굴 칸 판정도 이형의 노림을 쓴다
+ok 260 - 떨굴 칸 판정도 이형의 노림을 쓴다
+  ---
+  duration_ms: 9.013629
+  type: 'test'
+  ...
+# Subtest: 적 이형은 4관부터 섞인다
+ok 261 - 적 이형은 4관부터 섞인다
+  ---
+  duration_ms: 34.787809
+  type: 'test'
+  ...
+# Subtest: 상점 기물 칸과 기물 꾸러미에 이형이 나온다(관이 오를수록 자주)
+ok 262 - 상점 기물 칸과 기물 꾸러미에 이형이 나온다(관이 오를수록 자주)
+  ---
+  duration_ms: 23.816834
+  type: 'test'
+  ...
+# Subtest: 이형이 든 주머니로 대국이 끝까지 돌고 JSON 왕복 · 같은 시드 같은 결과
+ok 263 - 이형이 든 주머니로 대국이 끝까지 돌고 JSON 왕복 · 같은 시드 같은 결과
+  ---
+  duration_ms: 153.945331
+  type: 'test'
+  ...
+# Subtest: 판에 이형 적이 있어도 풀이기는 예산 안에서 수를 찾는다
+ok 264 - 판에 이형 적이 있어도 풀이기는 예산 안에서 수를 찾는다
+  ---
+  duration_ms: 15.604282
+  type: 'test'
+  ...
+# Subtest: 명인의 상자에서 이형 기물이 주머니로 들어온다
+ok 265 - 명인의 상자에서 이형 기물이 주머니로 들어온다
+  ---
+  duration_ms: 92.85335
+  type: 'test'
+  ...
+# Subtest: 격언 마흔 모두 가족이 있다 · 가족마다 격언이 셋 이상
+ok 266 - 격언 마흔 모두 가족이 있다 · 가족마다 격언이 셋 이상
+  ---
+  duration_ms: 1.28287
+  type: 'test'
+  ...
+# Subtest: 세기: 격언의 가족 + 주머니 이형 종류(같은 종류 여럿은 하나), 체스 기물은 세지 않는다
+ok 267 - 세기: 격언의 가족 + 주머니 이형 종류(같은 종류 여럿은 하나), 체스 기물은 세지 않는다
+  ---
+  duration_ms: 1.635196
+  type: 'test'
+  ...
+# Subtest: 판(런)의 대국에 켜진 가족이 들어간다
+ok 268 - 판(런)의 대국에 켜진 가족이 들어간다
+  ---
+  duration_ms: 5.69207
+  type: 'test'
+  ...
+# Subtest: 도약: 뛰어서 먹으면 값 +20 · 6에 연쇄 ×1.5
+ok 269 - 도약: 뛰어서 먹으면 값 +20 · 6에 연쇄 ×1.5
+  ---
+  duration_ms: 2.143474
+  type: 'test'
+  ...
+# Subtest: 도약 4: 대국마다 첫 도약 뒤 노림을 한 번 무시한다
+ok 270 - 도약 4: 대국마다 첫 도약 뒤 노림을 한 번 무시한다
+  ---
+  duration_ms: 4.946392
+  type: 'test'
+  ...
+# Subtest: 직선: 세 칸 이상이면 연쇄 +2, 4에 칸마다 값 +10, 6에 그 너머 첫 적까지 꿰뚫는다
+ok 271 - 직선: 세 칸 이상이면 연쇄 +2, 4에 칸마다 값 +10, 6에 그 너머 첫 적까지 꿰뚫는다
+  ---
+  duration_ms: 0.761335
+  type: 'test'
+  ...
+# Subtest: 대각: 값 +15, 4에 연쇄 +2
+ok 272 - 대각: 값 +15, 4에 연쇄 +2
+  ---
+  duration_ms: 0.366525
+  type: 'test'
+  ...
+# Subtest: 변신: 바뀔 때마다 연쇄 +2, 4에 모습 종류 수의 절반만큼 ×, 6에 막히면 지나온 모습 전부로 한 번 더
+ok 273 - 변신: 바뀔 때마다 연쇄 +2, 4에 모습 종류 수의 절반만큼 ×, 6에 막히면 지나온 모습 전부로 한 번 더
+  ---
+  duration_ms: 0.449615
+  type: 'test'
+  ...
+# Subtest: 희생: 끊긴 사슬 값 ×2, 4에 대국마다 첫 끊김을 넘긴다, 6에 끊길 때마다 연쇄 ×2
+ok 274 - 희생: 끊긴 사슬 값 ×2, 4에 대국마다 첫 끊김을 넘긴다, 6에 끊길 때마다 연쇄 ×2
+  ---
+  duration_ms: 0.653278
+  type: 'test'
+  ...
+# Subtest: 왕관: 퀸을 먹으면 값 +60 · 4에 승급 칸이 한 줄 앞
+ok 275 - 왕관: 퀸을 먹으면 값 +60 · 4에 승급 칸이 한 줄 앞
+  ---
+  duration_ms: 0.906104
+  type: 'test'
+  ...
+# Subtest: 행진: 폰으로 떨군 사슬 값 +40, 6에 ×3
+ok 276 - 행진: 폰으로 떨군 사슬 값 +40, 6에 ×3
+  ---
+  duration_ms: 0.479598
+  type: 'test'
+  ...
+# Subtest: 사냥: 같은 종류를 잇달아 먹으면 값 +30, 4에 판에서 가장 비싼 적을 먹으면 연쇄 +4
+ok 277 - 사냥: 같은 종류를 잇달아 먹으면 값 +30, 4에 판에서 가장 비싼 적을 먹으면 연쇄 +4
+  ---
+  duration_ms: 0.421938
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 아이폰 15 세로
+ok 278 - 화면 맞춤: 아이폰 15 세로
+  ---
+  duration_ms: 2.795055
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 아이폰 15 가로(사파리)
+ok 279 - 화면 맞춤: 아이폰 15 가로(사파리)
+  ---
+  duration_ms: 0.253719
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 아이폰 15 가로(전체 화면)
+ok 280 - 화면 맞춤: 아이폰 15 가로(전체 화면)
+  ---
+  duration_ms: 0.113529
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 아이패드 세로
+ok 281 - 화면 맞춤: 아이패드 세로
+  ---
+  duration_ms: 0.100969
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 아이패드 가로
+ok 282 - 화면 맞춤: 아이패드 가로
+  ---
+  duration_ms: 0.260707
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 맥 1920×960
+ok 283 - 화면 맞춤: 맥 1920×960
+  ---
+  duration_ms: 0.135166
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 맥북 에어 1470×956
+ok 284 - 화면 맞춤: 맥북 에어 1470×956
+  ---
+  duration_ms: 0.158928
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 모니터 1280×720
+ok 285 - 화면 맞춤: 모니터 1280×720
+  ---
+  duration_ms: 0.092951
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 모니터 1920×1080
+ok 286 - 화면 맞춤: 모니터 1920×1080
+  ---
+  duration_ms: 0.37253
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 창 1366×700 dpr 1.25
+ok 287 - 화면 맞춤: 창 1366×700 dpr 1.25
+  ---
+  duration_ms: 0.40221
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 안드로이드 세로 360×740
+ok 288 - 화면 맞춤: 안드로이드 세로 360×740
+  ---
+  duration_ms: 0.148434
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 안드로이드 가로 740×360
+ok 289 - 화면 맞춤: 안드로이드 가로 740×360
+  ---
+  duration_ms: 0.064258
+  type: 'test'
+  ...
+# Subtest: 화면 맞춤: 좁은 데스크톱 창 세로
+ok 290 - 화면 맞춤: 좁은 데스크톱 창 세로
+  ---
+  duration_ms: 0.062391
+  type: 'test'
+  ...
+# Subtest: 뒷면 배율 N: K를 나누는 2~4 중 가장 큰 것, 없으면 min(K, 4)
+ok 291 - 뒷면 배율 N: K를 나누는 2~4 중 가장 큰 것, 없으면 min(K, 4)
+  ---
+  duration_ms: 1.360768
+  type: 'test'
+  ...
+# Subtest: N이 K를 나누지 못해도 도트 하나는 기기 화소 K×K로 고르다(가장 가까운 화소 고르기)
+ok 292 - N이 K를 나누지 못해도 도트 하나는 기기 화소 K×K로 고르다(가장 가까운 화소 고르기)
+  ---
+  duration_ms: 0.33578
+  type: 'test'
+  ...
+# Subtest: 안전 영역(노치)을 비켜 앉는다: 아이폰 가로 전체 화면, 좌우 59 · 아래 21
+ok 293 - 안전 영역(노치)을 비켜 앉는다: 아이폰 가로 전체 화면, 좌우 59 · 아래 21
+  ---
+  duration_ms: 1.722103
+  type: 'test'
+  ...
+# Subtest: dpr 1 모니터는 예전과 같은 정수배 · 가운데
+ok 294 - dpr 1 모니터는 예전과 같은 정수배 · 가운데
+  ---
+  duration_ms: 0.171147
+  type: 'test'
+  ...
+# Subtest: 판은 1관 정석 셋 중 하나로 시작하고, 3관 · 5관 첫 대국 앞에 다시 고른다
+ok 295 - 판은 1관 정석 셋 중 하나로 시작하고, 3관 · 5관 첫 대국 앞에 다시 고른다
+  ---
+  duration_ms: 3.934282
+  type: 'test'
+  ...
+# Subtest: 같은 시드면 같은 정석 셋
+ok 296 - 같은 시드면 같은 정석 셋
+  ---
+  duration_ms: 0.481101
+  type: 'test'
+  ...
+# Subtest: 정석마다 가족 · 글이 있고 가족 수에 들어간다
+ok 297 - 정석마다 가족 · 글이 있고 가족 수에 들어간다
+  ---
+  duration_ms: 0.32388
+  type: 'test'
+  ...
+# Subtest: 기물을 바꾸는 정석: 기사 서약 · 성벽 쌓기 · 주교관 · 활터
+ok 298 - 기물을 바꾸는 정석: 기사 서약 · 성벽 쌓기 · 주교관 · 활터
+  ---
+  duration_ms: 0.304176
+  type: 'test'
+  ...
+# Subtest: 고속도로: b · g 줄에서는 세로로 룩처럼도 먹는다
+ok 299 - 고속도로: b · g 줄에서는 세로로 룩처럼도 먹는다
+  ---
+  duration_ms: 24.717945
+  type: 'test'
+  ...
+# Subtest: 발판: 발판 위의 적을 먹으면 연쇄 ×2
+ok 300 - 발판: 발판 위의 적을 먹으면 연쇄 ×2
+  ---
+  duration_ms: 25.153278
+  type: 'test'
+  ...
+# Subtest: 판의 문: 문 위의 적을 먹으면 다른 문으로 나온다
+ok 301 - 판의 문: 문 위의 적을 먹으면 다른 문으로 나온다
+  ---
+  duration_ms: 0.506406
+  type: 'test'
+  ...
+# Subtest: 순교의 맹세: 끊기는 순간 둘레 적을 먹은 것으로
+ok 302 - 순교의 맹세: 끊기는 순간 둘레 적을 먹은 것으로
+  ---
+  duration_ms: 0.445315
+  type: 'test'
+  ...
+# Subtest: 결사: 대국 첫 사슬 ×3, 그 기물은 판에서 사라진다
+ok 303 - 결사: 대국 첫 사슬 ×3, 그 기물은 판에서 사라진다
+  ---
+  duration_ms: 40.928647
+  type: 'test'
+  ...
+# Subtest: 하이랜더: 같은 종류가 없으면 목표 절반
+ok 304 - 하이랜더: 같은 종류가 없으면 목표 절반
+  ---
+  duration_ms: 0.635385
+  type: 'test'
+  ...
+# Subtest: 오목: 한 줄에 다섯 칸을 밟은 사슬은 대국을 곧바로 이긴다
+ok 305 - 오목: 한 줄에 다섯 칸을 밟은 사슬은 대국을 곧바로 이긴다
+  ---
+  duration_ms: 7.770841
+  type: 'test'
+  ...
+# Subtest: 왕좌: 폰으로 떨궈 승급하면 그 폰이 주머니에 퀸으로
+ok 306 - 왕좌: 폰으로 떨궈 승급하면 그 폰이 주머니에 퀸으로
+  ---
+  duration_ms: 0.271306
+  type: 'test'
+  ...
+# Subtest: 복제: 가장 많이 모은 가족의 문턱이 하나 낮다
+ok 307 - 복제: 가장 많이 모은 가족의 문턱이 하나 낮다
+  ---
+  duration_ms: 4.330623
+  type: 'test'
+  ...
+# Subtest: 토큰: 이름마다 한 값(후보 2) · 시안 덮어쓰기는 이름 하나를 바꾼다
+ok 308 - 토큰: 이름마다 한 값(후보 2) · 시안 덮어쓰기는 이름 하나를 바꾼다
+  ---
+  duration_ms: 246.697063
+  type: 'test'
+  ...
+# Subtest: 대국 왼쪽 칸: 머리 칸 · 값 × 배수 · 사슬 칸 · 아래 칸이 위아래로 쌓여 사슬 칸이 남는다(수업 제목 두 줄 · 영어 포함)
+ok 309 - 대국 왼쪽 칸: 머리 칸 · 값 × 배수 · 사슬 칸 · 아래 칸이 위아래로 쌓여 사슬 칸이 남는다(수업 제목 두 줄 · 영어 포함)
+  ---
+  duration_ms: 1.96116
+  type: 'test'
+  ...
+# Subtest: 오른쪽 칸: 격언 다섯 칸 · 시너지 띠 · 손 이름표 · 손이 화면 안, 칸이 늘면 두 줄로
+ok 310 - 오른쪽 칸: 격언 다섯 칸 · 시너지 띠 · 손 이름표 · 손이 화면 안, 칸이 늘면 두 줄로
+  ---
+  duration_ms: 0.884973
+  type: 'test'
+  ...
+# Subtest: 정석 카드: 셋이 같은 높이로 본 칸 안(모든 정석, 한국어 · 영어)
+ok 311 - 정석 카드: 셋이 같은 높이로 본 칸 안(모든 정석, 한국어 · 영어)
+  ---
+  duration_ms: 7.621492
+  type: 'test'
+  ...
+# Subtest: 관 선택: 세력 띠 · 카드 셋(1~7관 명인 · 8관 대가)이 본 칸 안
+ok 312 - 관 선택: 세력 띠 · 카드 셋(1~7관 명인 · 8관 대가)이 본 칸 안
+  ---
+  duration_ms: 37.24028
+  type: 'test'
+  ...
+# Subtest: 수업 할 일: 모든 걸음 글이 손 이름표 줄 위에 들어간다
+ok 313 - 수업 할 일: 모든 걸음 글이 손 이름표 줄 위에 들어간다
+  ---
+  duration_ms: 2.890964
+  type: 'test'
+  ...
+# Subtest: 꾸러미(기물 · 기보 · 각인): 카드 셋 → 건너뛰기, 새기기 미리 보기 → 주머니 한 줄이 화면 안
+ok 314 - 꾸러미(기물 · 기보 · 각인): 카드 셋 → 건너뛰기, 새기기 미리 보기 → 주머니 한 줄이 화면 안
+  ---
+  duration_ms: 56.858168
+  type: 'test'
+  ...
+# Subtest: 상점: 모든 진열 카드(판본 · 명국 조각 포함) → 꾸러미 칸 → 주머니 한 줄이 화면 안(한국어 · 영어)
+ok 315 - 상점: 모든 진열 카드(판본 · 명국 조각 포함) → 꾸러미 칸 → 주머니 한 줄이 화면 안(한국어 · 영어)
+  ---
+  duration_ms: 145.535096
+  type: 'test'
+  ...
+# Subtest: 금빛 꾸러미(카드 셋): 판본 격언 카드 → 건너뛰기 줄 · 펼친 격언 칸이 화면 안(모든 판본 격언 · 한국어 · 영어)
+ok 316 - 금빛 꾸러미(카드 셋): 판본 격언 카드 → 건너뛰기 줄 · 펼친 격언 칸이 화면 안(모든 판본 격언 · 한국어 · 영어)
+  ---
+  duration_ms: 348.980021
+  type: 'test'
+  ...
+# Subtest: 금빛 꾸러미(카드 넷 — 명국 조각): 판본 격언 카드 셋(폭 108) → 건너뛰기 줄의 명국 조각 칸 · 펼친 격언 칸이 화면 안(모든 판본 격언 · 한국어 · 영어)
+ok 317 - 금빛 꾸러미(카드 넷 — 명국 조각): 판본 격언 카드 셋(폭 108) → 건너뛰기 줄의 명국 조각 칸 · 펼친 격언 칸이 화면 안(모든 판본 격언 · 한국어 · 영어)
+  ---
+  duration_ms: 323.407001
+  type: 'test'
+  ...
+# Subtest: 기보 수준 표: 손 · 주머니는 그 모습의 기보 수준을 읽고, 이형은 바탕 체스 모습의 기보를 따른다
+ok 318 - 기보 수준 표: 손 · 주머니는 그 모습의 기보 수준을 읽고, 이형은 바탕 체스 모습의 기보를 따른다
+  ---
+  duration_ms: 0.55979
+  type: 'test'
+  ...
+# Subtest: 각인 · 혼 바꾸기: 같은 종류가 있으면 옛 것 › 새 것, 같은 것은 고를 수 없다 · 상점 두루마리 폭(224)에서도 화면 안(한국어 · 영어)
+ok 319 - 각인 · 혼 바꾸기: 같은 종류가 있으면 옛 것 › 새 것, 같은 것은 고를 수 없다 · 상점 두루마리 폭(224)에서도 화면 안(한국어 · 영어)
+  ---
+  duration_ms: 61.985578
+  type: 'test'
+  ...
+# Subtest: 큰 수: 끝없는 대국의 13~16자리 수가 제 칸 폭 안에(값 × 배수 곱 · 머리 칸 · 관 선택 목표, 한국어 · 영어)
+ok 320 - 큰 수: 끝없는 대국의 13~16자리 수가 제 칸 폭 안에(값 × 배수 곱 · 머리 칸 · 관 선택 목표, 한국어 · 영어)
+  ---
+  duration_ms: 1.859153
+  type: 'test'
+  ...
+# Subtest: 줄 바꿈: 문장부호(마침표 · 쉼표 · 가운뎃점 …)는 줄 머리에 오지 않는다 — 처음 안내 전부 · 한국어 · 영어
+ok 321 - 줄 바꿈: 문장부호(마침표 · 쉼표 · 가운뎃점 …)는 줄 머리에 오지 않는다 — 처음 안내 전부 · 한국어 · 영어
+  ---
+  duration_ms: 4.592553
+  type: 'test'
+  ...
+# Subtest: 행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) 안, 특수 기물은 쪽마다 셋
+ok 322 - 행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) 안, 특수 기물은 쪽마다 셋
+  ---
+  duration_ms: 1.474852
+  type: 'test'
+  ...
+# Subtest: 수업은 열, 묶음 셋
+ok 323 - 수업은 열, 묶음 셋
+  ---
+  duration_ms: 5.293505
+  type: 'test'
+  ...
+# Subtest: 수업 drop: 걸음대로 두면 이긴다
+ok 324 - 수업 drop: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 17.941955
+  type: 'test'
+  ...
+# Subtest: 수업 become: 걸음대로 두면 이긴다
+ok 325 - 수업 become: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 7.836477
+  type: 'test'
+  ...
+# Subtest: 수업 chain: 걸음대로 두면 이긴다
+ok 326 - 수업 chain: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 10.135374
+  type: 'test'
+  ...
+# Subtest: 수업 guard: 걸음대로 두면 이긴다
+ok 327 - 수업 guard: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 8.058867
+  type: 'test'
+  ...
+# Subtest: 수업 guard: 시범은 끊긴다
+ok 328 - 수업 guard: 시범은 끊긴다
+  ---
+  duration_ms: 8.152423
+  type: 'test'
+  ...
+# Subtest: 수업 target: 걸음대로 두면 이긴다
+ok 329 - 수업 target: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 8.71914
+  type: 'test'
+  ...
+# Subtest: 수업 redraw: 걸음대로 두면 이긴다
+ok 330 - 수업 redraw: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 14.962602
+  type: 'test'
+  ...
+# Subtest: 수업 reinforce: 걸음대로 두면 이긴다
+ok 331 - 수업 reinforce: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 11.654401
+  type: 'test'
+  ...
+# Subtest: 수업 mate: 걸음대로 두면 이긴다
+ok 332 - 수업 mate: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 19.351748
+  type: 'test'
+  ...
+# Subtest: 수업 fairy: 걸음대로 두면 이긴다
+ok 333 - 수업 fairy: 걸음대로 두면 이긴다
+  ---
+  duration_ms: 2.821722
+  type: 'test'
+  ...
+# Subtest: 떨굴 칸을 열어 둔 걸음은 빛나는 칸 어디서든 이긴다
+ok 334 - 떨굴 칸을 열어 둔 걸음은 빛나는 칸 어디서든 이긴다
+  ---
+  duration_ms: 19.36273
+  type: 'test'
+  ...
+# Subtest: fine 안에서만 1/N 칸, 밖은 정수 칸
+ok 335 - fine 안에서만 1/N 칸, 밖은 정수 칸
+  ---
+  duration_ms: 54.090236
+  type: 'test'
+  ...
+# Subtest: 카드: 가만히 있으면 멈추고, 가리키면 들리고, 누르면 가라앉는다 — 어느 배율에서도 돌지 않는다
+ok 336 - 카드: 가만히 있으면 멈추고, 가리키면 들리고, 누르면 가라앉는다 — 어느 배율에서도 돌지 않는다
+  ---
+  duration_ms: 8.474184
+  type: 'test'
+  ...
+# Subtest: 들린 카드의 레이아웃 기록은 원래 네모
+ok 337 - 들린 카드의 레이아웃 기록은 원래 네모
+  ---
+  duration_ms: 1.176542
+  type: 'test'
+  ...
+# Subtest: 빛 · 그림자 · 흐르는 배경이 가짜 캔버스에서 돈다
+ok 338 - 빛 · 그림자 · 흐르는 배경이 가짜 캔버스에서 돈다
+  ---
+  duration_ms: 7.276615
+  type: 'test'
+  ...
+# Subtest: 격언은 일흔(밤샘 여덟 · 깊이 G 셋 · 밤샘 2 스물일곱) · 새 여덟은 동사가 겹치지 않게 퍼졌다
+ok 339 - 격언은 일흔(밤샘 여덟 · 깊이 G 셋 · 밤샘 2 스물일곱) · 새 여덟은 동사가 겹치지 않게 퍼졌다
+  ---
+  duration_ms: 1.072425
+  type: 'test'
+  ...
+# Subtest: 가벼운 발: 폰 · 나이트로 떨군 사슬 연쇄 +3
+ok 340 - 가벼운 발: 폰 · 나이트로 떨군 사슬 연쇄 +3
+  ---
+  duration_ms: 2.341626
+  type: 'test'
+  ...
+# Subtest: 퀸 사냥: 퀸을 먹을 때마다 값 +60
+ok 341 - 퀸 사냥: 퀸을 먹을 때마다 값 +60
+  ---
+  duration_ms: 0.448742
+  type: 'test'
+  ...
+# Subtest: 빈 판: 적이 여덟 이하면 ×1.5
+ok 342 - 빈 판: 적이 여덟 이하면 ×1.5
+  ---
+  duration_ms: 0.545619
+  type: 'test'
+  ...
+# Subtest: 되돌이: 떨군 모습으로 다시 갈아입으면 ×2(한 번)
+ok 343 - 되돌이: 떨군 모습으로 다시 갈아입으면 ×2(한 번)
+  ---
+  duration_ms: 4.57881
+  type: 'test'
+  ...
+# Subtest: 모습 모으기: 처음 되는 모습마다 값 +20
+ok 344 - 모습 모으기: 처음 되는 모습마다 값 +20
+  ---
+  duration_ms: 0.566056
+  type: 'test'
+  ...
+# Subtest: 응수의 달인: 응수로 먹을 때마다 연쇄 +2
+ok 345 - 응수의 달인: 응수로 먹을 때마다 연쇄 +2
+  ---
+  duration_ms: 0.453892
+  type: 'test'
+  ...
+# Subtest: 승급의 길: 승급할 때마다 값 +80
+ok 346 - 승급의 길: 승급할 때마다 값 +80
+  ---
+  duration_ms: 0.257735
+  type: 'test'
+  ...
+# Subtest: 증원 사냥: 들어온 적(born ≥ 0)을 먹을 때마다 연쇄 +2
+ok 347 - 증원 사냥: 들어온 적(born ≥ 0)을 먹을 때마다 연쇄 +2
+  ---
+  duration_ms: 0.547302
+  type: 'test'
+  ...
+# Subtest: 외통 사냥꾼: 킹 수비가 하나 적은 판
+ok 348 - 외통 사냥꾼: 킹 수비가 하나 적은 판
+  ---
+  duration_ms: 38.866023
+  type: 'test'
+  ...
+# Subtest: 왕의 목: 킹을 지키던 적을 먹으면 연쇄 +2
+ok 349 - 왕의 목: 킹을 지키던 적을 먹으면 연쇄 +2
+  ---
+  duration_ms: 0.535772
+  type: 'test'
+  ...
+# Subtest: 다시 생각: 무르기 +1 · 무른 기물마다 값 +10
+ok 350 - 다시 생각: 무르기 +1 · 무른 기물마다 값 +10
+  ---
+  duration_ms: 6.823068
+  type: 'test'
+  ...
+# Subtest: 그림자 읽기: 증원이 올 칸에 떨구면 연쇄 +4
+ok 351 - 그림자 읽기: 증원이 올 칸에 떨구면 연쇄 +4
+  ---
+  duration_ms: 0.45537
+  type: 'test'
+  ...
+# Subtest: 특진: 폰 모습으로 둘을 먹으면 곧바로 승급
+ok 352 - 특진: 폰 모습으로 둘을 먹으면 곧바로 승급
+  ---
+  duration_ms: 0.310875
+  type: 'test'
+  ...
+# Subtest: 광마: 나이트 모습이 가장자리에서 먹으면 노림을 한 번 무시
+ok 353 - 광마: 나이트 모습이 가장자리에서 먹으면 노림을 한 번 무시
+  ---
+  duration_ms: 0.366404
+  type: 'test'
+  ...
+# Subtest: 룩 리프트: 룩 모습이 구석에서 먹으면 연쇄 ×2
+ok 354 - 룩 리프트: 룩 모습이 구석에서 먹으면 연쇄 ×2
+  ---
+  duration_ms: 0.196256
+  type: 'test'
+  ...
+# Subtest: 오프닝 다섯: 주머니는 모두 여덟, 적힌 대로
+ok 355 - 오프닝 다섯: 주머니는 모두 여덟, 적힌 대로
+  ---
+  duration_ms: 5.83364
+  type: 'test'
+  ...
+# Subtest: 오프닝 규칙: 시실리안 손 5 · 퀸스 갬빗 수 3 · 룩 엔딩 격언 칸 4
+ok 356 - 오프닝 규칙: 시실리안 손 5 · 퀸스 갬빗 수 3 · 룩 엔딩 격언 칸 4
+  ---
+  duration_ms: 43.332302
+  type: 'test'
+  ...
+# Subtest: 오프닝마다 한 판이 끝까지 돈다(봇)
+ok 357 - 오프닝마다 한 판이 끝까지 돈다(봇)
+  ---
+  duration_ms: 1380.736908
+  type: 'test'
+  ...
+# Subtest: 단 0은 단 없는 판과 같다(목표 · 첫 대국판 · 상점)
+ok 358 - 단 0은 단 없는 판과 같다(목표 · 첫 대국판 · 상점)
+  ---
+  duration_ms: 0.468923
+  type: 'test'
+  ...
+# Subtest: 단 규칙은 차례로 쌓인다(여덟)
+ok 359 - 단 규칙은 차례로 쌓인다(여덟)
+  ---
+  duration_ms: 0.541979
+  type: 'test'
+  ...
+# Subtest: 단 1: 증원 +1 / 단 4 · 7: 시계 −1 / 단 6: 버리기 −1
+ok 360 - 단 1: 증원 +1 / 단 4 · 7: 시계 −1 / 단 6: 버리기 −1
+  ---
+  duration_ms: 10.005146
+  type: 'test'
+  ...
+# Subtest: 단 2부터: 상점 값 +1(진열 · 꾸러미 · 다시 진열)
+ok 361 - 단 2부터: 상점 값 +1(진열 · 꾸러미 · 다시 진열)
+  ---
+  duration_ms: 0.491795
+  type: 'test'
+  ...
+# Subtest: 단 3부터: 명인의 상자 다섯 칸 무게 반(덜어 낸 몫은 한 칸)
+ok 362 - 단 3부터: 명인의 상자 다섯 칸 무게 반(덜어 낸 몫은 한 칸)
+  ---
+  duration_ms: 0.247937
+  type: 'test'
+  ...
+# Subtest: 단 3부터: 첫 조각 확률 반(진열 3000칸)
+ok 363 - 단 3부터: 첫 조각 확률 반(진열 3000칸)
+  ---
+  duration_ms: 42.992837
+  type: 'test'
+  ...
+# Subtest: 단은 저장 왕복 뒤에도 같다
+ok 364 - 단은 저장 왕복 뒤에도 같다
+  ---
+  duration_ms: 1.443713
+  type: 'test'
+  ...
+# Subtest: 기록: 외통 · 평가 · 도감 · 해금 · 단
+ok 365 - 기록: 외통 · 평가 · 도감 · 해금 · 단
+  ---
+  duration_ms: 1.013156
+  type: 'test'
+  ...
+# Subtest: 오늘의 대국: 날짜마다 정해진 시드
+ok 366 - 오늘의 대국: 날짜마다 정해진 시드
+  ---
+  duration_ms: 7.852139
+  type: 'test'
+  ...
+# Subtest: 세기의 대국 첫 조각은 기보 꾸러미에서 4%로 나오고 고르면 받는다(2b에서 0이었던 것은 봇 탓)
+ok 367 - 세기의 대국 첫 조각은 기보 꾸러미에서 4%로 나오고 고르면 받는다(2b에서 0이었던 것은 봇 탓)
+  ---
+  duration_ms: 68.650906
+  type: 'test'
+  ...
+# Subtest: 격언 · 전설 아이콘은 모두 있고 12×12
+ok 368 - 격언 · 전설 아이콘은 모두 있고 12×12
+  ---
+  duration_ms: 14.497771
+  type: 'test'
+  ...
+# Subtest: 기물 스프라이트는 16×22
+ok 369 - 기물 스프라이트는 16×22
+  ---
+  duration_ms: 0.423593
+  type: 'test'
+  ...
+# Subtest: 명국 재생: 명국마다 있고, 수의 출발 칸에 기물이 있다
+ok 370 - 명국 재생: 명국마다 있고, 수의 출발 칸에 기물이 있다
+  ---
+  duration_ms: 0.53325
+  type: 'test'
+  ...
+# Subtest: 화면 글에 만든 쪽 말 · 설명서 말투가 없다
+ok 371 - 화면 글에 만든 쪽 말 · 설명서 말투가 없다
+  ---
+  duration_ms: 29.704144
+  type: 'test'
+  ...
+# Subtest: 영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · 해금 · 정석 · 혼 · 특성 · 묘수 · 행마)이 모두 옮겨진다
+ok 372 - 영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · 해금 · 정석 · 혼 · 특성 · 묘수 · 행마)이 모두 옮겨진다
+  ---
+  duration_ms: 56.265493
+  type: 'test'
+  ...
+# Subtest: 낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고, 시너지(가족)마다 낱말이 있다
+ok 373 - 낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고, 시너지(가족)마다 낱말이 있다
+  ---
+  duration_ms: 10.926141
+  type: 'test'
+  ...
+# Subtest: 낱말 상자: 기본 낱말은 글에서 찾아도 상자를 띄우지 않고, 카드 하나에 둘까지
+ok 374 - 낱말 상자: 기본 낱말은 글에서 찾아도 상자를 띄우지 않고, 카드 하나에 둘까지
+  ---
+  duration_ms: 7.746118
+  type: 'test'
+  ...
+# Subtest: 설명 자리: 판 틀은 왼쪽 칸에 가리킨 것의 윗변 높이로, 판 밖은 가리킨 것 바로 아래(모자라면 위)
+ok 375 - 설명 자리: 판 틀은 왼쪽 칸에 가리킨 것의 윗변 높이로, 판 밖은 가리킨 것 바로 아래(모자라면 위)
+  ---
+  duration_ms: 5.557837
+  type: 'test'
+  ...
+# Subtest: 판 시작: 주머니 8, 상금 4, 세력은 1관 농민군 · 8관 왕궁 근위, 명인은 관마다 다르고 8관은 대가
+ok 376 - 판 시작: 주머니 8, 상금 4, 세력은 1관 농민군 · 8관 왕궁 근위, 명인은 관마다 다르고 8관은 대가
+  ---
+  duration_ms: 3.123504
+  type: 'test'
+  ...
+# Subtest: 목표: B × 종류 배율, 9관부터 늘어난다
+ok 377 - 목표: B × 종류 배율, 9관부터 늘어난다
+  ---
+  duration_ms: 0.524355
+  type: 'test'
+  ...
+# Subtest: 대국을 이기면 보상(기본 + 남은 수 + 적립 + 외통 + 대국 중 번 돈) 뒤 상점
+ok 378 - 대국을 이기면 보상(기본 + 남은 수 + 적립 + 외통 + 대국 중 번 돈) 뒤 상점
+  ---
+  duration_ms: 177.633018
+  type: 'test'
+  ...
+# Subtest: 상점: 사기 · 다시 진열(5, +1) · 팔기(절반) · 칸 제한
+ok 379 - 상점: 사기 · 다시 진열(5, +1) · 팔기(절반) · 칸 제한
+  ---
+  duration_ms: 15.706924
+  type: 'test'
+  ...
+# Subtest: 소모품: 기보는 레벨을 올리고(기보 수집가 +1), 각인 두루마리는 주머니의 기물에
+ok 380 - 소모품: 기보는 레벨을 올리고(기보 수집가 +1), 각인 두루마리는 주머니의 기물에
+  ---
+  duration_ms: 60.554775
+  type: 'test'
+  ...
+# Subtest: 꾸러미: 3개 중 하나(기물은 주머니에, 기보는 곧바로, 각인은 대상을 골라), 넘길 수도
+ok 381 - 꾸러미: 3개 중 하나(기물은 주머니에, 기보는 곧바로, 각인은 대상을 골라), 넘길 수도
+  ---
+  duration_ms: 4.781893
+  type: 'test'
+  ...
+# Subtest: 기물 조작: 승급(P→N/B→R→Q) · 버리기, 상점마다 한 번씩, 주머니는 여섯 밑으로 못 줄인다
+ok 382 - 기물 조작: 승급(P→N/B→R→Q) · 버리기, 상점마다 한 번씩, 주머니는 여섯 밑으로 못 줄인다
+  ---
+  duration_ms: 38.886468
+  type: 'test'
+  ...
+# Subtest: 건너뛰기: 연습 · 정식은 패를 받고 다음 대국으로, 명인은 못 건넌다
+ok 383 - 건너뛰기: 연습 · 정식은 패를 받고 다음 대국으로, 명인은 못 건넌다
+  ---
+  duration_ms: 0.326256
+  type: 'test'
+  ...
+# Subtest: 격언 자리 바꾸기(침묵이 가장 왼쪽을 끈다)
+ok 384 - 격언 자리 바꾸기(침묵이 가장 왼쪽을 끈다)
+  ---
+  duration_ms: 0.56236
+  type: 'test'
+  ...
+# Subtest: 결정성: 같은 시드 + 같은 명령 = 같은 JSON
+ok 385 - 결정성: 같은 시드 + 같은 명령 = 같은 JSON
+  ---
+  duration_ms: 2432.994816
+  type: 'test'
+  ...
+# Subtest: 저장 왕복: 대국 중 · 상점 중에 JSON으로 저장했다 되살려 이어도 같다
+ok 386 - 저장 왕복: 대국 중 · 상점 중에 JSON으로 저장했다 되살려 이어도 같다
+  ---
+  duration_ms: 1242.966209
+  type: 'test'
+  ...
+# Subtest: 8관 명인을 이기면 판을 이기고, 끝없는 대국으로 이어 간다
+ok 387 - 8관 명인을 이기면 판을 이기고, 끝없는 대국으로 이어 간다
+  ---
+  duration_ms: 20.48951
+  type: 'test'
+  ...
+# Subtest: 유리 기물이 깨지면 판의 주머니에서도 빠진다
+ok 388 - 유리 기물이 깨지면 판의 주머니에서도 빠진다
+  ---
+  duration_ms: 14.365651
+  type: 'test'
+  ...
+# Subtest: 훅 순서: 먹기는 명인→기보→각인→격언, 사슬 끝은 (기보)→각인→격언→명인. 같은 종류는 배열 순서
+ok 389 - 훅 순서: 먹기는 명인→기보→각인→격언, 사슬 끝은 (기보)→각인→격언→명인. 같은 종류는 배열 순서
+  ---
+  duration_ms: 14.196025
+  type: 'test'
+  ...
+# Subtest: 기보 레벨: 먹을 때의 모습 기준으로 값·연쇄를 더한다
+ok 390 - 기보 레벨: 먹을 때의 모습 기준으로 값·연쇄를 더한다
+  ---
+  duration_ms: 1.023883
+  type: 'test'
+  ...
+# Subtest: onCut 취소(「희생」 꼴): 첫 끊김을 무시하고 응수 제한 없이 이어 간다. 상태는 명세에 남는다
+ok 391 - onCut 취소(「희생」 꼴): 첫 끊김을 무시하고 응수 제한 없이 이어 간다. 상태는 명세에 남는다
+  ---
+  duration_ms: 0.934062
+  type: 'test'
+  ...
+# Subtest: 갈아입기 반응과 사슬 끝 곱하기
+ok 392 - 갈아입기 반응과 사슬 끝 곱하기
+  ---
+  duration_ms: 0.547377
+  type: 'test'
+  ...
+# Subtest: allowCapture로 먹을 칸을 거른다(응수 대상이 막히면 끊김)
+ok 393 - allowCapture로 먹을 칸을 거른다(응수 대상이 막히면 끊김)
+  ---
+  duration_ms: 0.416195
+  type: 'test'
+  ...
+# Subtest: onBattleStart로 규칙을 바꾼다(「모래시계」 · 「무거운 손」 꼴)
+ok 394 - onBattleStart로 규칙을 바꾼다(「모래시계」 · 「무거운 손」 꼴)
+  ---
+  duration_ms: 18.401989
+  type: 'test'
+  ...
+# Subtest: 각인 onDropCheck: 노려지는 칸에도 떨군다(「깃」 꼴), 그 기물에만
+ok 395 - 각인 onDropCheck: 노려지는 칸에도 떨군다(「깃」 꼴), 그 기물에만
+  ---
+  duration_ms: 6.010059
+  type: 'test'
+  ...
+# Subtest: 풀이기는 조정자까지 돌려 최선을 고른다
+ok 396 - 풀이기는 조정자까지 돌려 최선을 고른다
+  ---
+  duration_ms: 23.455295
+  type: 'test'
+  ...
+# Subtest: 각인 명세는 그 기물로 떨군 사슬에서만 켜진다(대국 흐름)
+ok 397 - 각인 명세는 그 기물로 떨군 사슬에서만 켜진다(대국 흐름)
+  ---
+  duration_ms: 26.204577
+  type: 'test'
+  ...
+# Subtest: 풀이기 탐색은 손 기물의 각인 state를 건드리지 않는다
+ok 398 - 풀이기 탐색은 손 기물의 각인 state를 건드리지 않는다
+  ---
+  duration_ms: 11.40386
+  type: 'test'
+  ...
+# Subtest: 상점 → 관 선택 → 상점 → 관 선택: 진열 · 꾸러미 · 돈 · 대국 칸이 그대로
+ok 399 - 상점 → 관 선택 → 상점 → 관 선택: 진열 · 꾸러미 · 돈 · 대국 칸이 그대로
+  ---
+  duration_ms: 94.164924
+  type: 'test'
+  ...
+# Subtest: 돌아간 상점에서 한 일은 떠나기 전에 한 것과 같다(다시 진열 횟수 · 승급을 쓴 것도 남는다)
+ok 400 - 돌아간 상점에서 한 일은 떠나기 전에 한 것과 같다(다시 진열 횟수 · 승급을 쓴 것도 남는다)
+  ---
+  duration_ms: 164.337602
+  type: 'test'
+  ...
+# Subtest: 두기 뒤 · 건너뛴 뒤 · 판의 첫 대국 앞에는 돌아갈 상점이 없다
+ok 401 - 두기 뒤 · 건너뛴 뒤 · 판의 첫 대국 앞에는 돌아갈 상점이 없다
+  ---
+  duration_ms: 59.780324
+  type: 'test'
+  ...
+# Subtest: 정석 관: 정석을 고른 뒤의 관 선택에서만 상점으로 가고, 정석은 한 번만 고른다
+ok 402 - 정석 관: 정석을 고른 뒤의 관 선택에서만 상점으로 가고, 정석은 한 번만 고른다
+  ---
+  duration_ms: 327.13229
+  type: 'test'
+  ...
+# Subtest: 저장 왕복: 관 선택(상점이 남은 채) · 돌아간 상점에서 저장하고 불러와도 같다
+ok 403 - 저장 왕복: 관 선택(상점이 남은 채) · 돌아간 상점에서 저장하고 불러와도 같다
+  ---
+  duration_ms: 14.643143
+  type: 'test'
+  ...
+# Subtest: 봇이 고르는 명령(legalRunCommands)에는 상점으로 돌아가기가 없다
+ok 404 - 봇이 고르는 명령(legalRunCommands)에는 상점으로 돌아가기가 없다
+  ---
+  duration_ms: 36.906602
+  type: 'test'
+  ...
+# Subtest: 혼 열여섯 · 가족이 있고 세기에 들어간다
+ok 405 - 혼 열여섯 · 가족이 있고 세기에 들어간다
+  ---
+  duration_ms: 1.14552
+  type: 'test'
+  ...
+# Subtest: 흡수: 모습은 그대로, 먹은 행마가 더해진다
+ok 406 - 흡수: 모습은 그대로, 먹은 행마가 더해진다
+  ---
+  duration_ms: 1.968847
+  type: 'test'
+  ...
+# Subtest: 흡수: 세 번까지 모습이 안 바뀐다 · 마지막에 얻은 행마는 사슬 끝까지 남는다
+ok 407 - 흡수: 세 번까지 모습이 안 바뀐다 · 마지막에 얻은 행마는 사슬 끝까지 남는다
+  ---
+  duration_ms: 2.320489
+  type: 'test'
+  ...
+# Subtest: 메아리: 막히면 한 번 떨군 모습으로 돌아가 잇는다
+ok 408 - 메아리: 막히면 한 번 떨군 모습으로 돌아가 잇는다
+  ---
+  duration_ms: 0.578051
+  type: 'test'
+  ...
+# Subtest: 초월: 먹을 때마다 한 단계 위로 · 아마존까지
+ok 409 - 초월: 먹을 때마다 한 단계 위로 · 아마존까지
+  ---
+  duration_ms: 0.948177
+  type: 'test'
+  ...
+# Subtest: 굶주림: 먹을수록 값이 커진다
+ok 410 - 굶주림: 먹을수록 값이 커진다
+  ---
+  duration_ms: 0.409485
+  type: 'test'
+  ...
+# Subtest: 사냥꾼: 같은 종류를 잇달아 먹으면 연쇄 ×2
+ok 411 - 사냥꾼: 같은 종류를 잇달아 먹으면 연쇄 ×2
+  ---
+  duration_ms: 0.448349
+  type: 'test'
+  ...
+# Subtest: 순교자: 끊기면 둘레 적을 먹은 것으로
+ok 412 - 순교자: 끊기면 둘레 적을 먹은 것으로
+  ---
+  duration_ms: 0.482528
+  type: 'test'
+  ...
+# Subtest: 순교자: 킹을 뺀 둘레의 적을 모두 먹는다
+ok 413 - 순교자: 킹을 뺀 둘레의 적을 모두 먹는다
+  ---
+  duration_ms: 1.576941
+  type: 'test'
+  ...
+# Subtest: 순교자: 벽은 먹지 않는다
+ok 414 - 순교자: 벽은 먹지 않는다
+  ---
+  duration_ms: 0.580851
+  type: 'test'
+  ...
+# Subtest: 왕관: 승급 칸이 두 줄 앞, 아마존이 된다
+ok 415 - 왕관: 승급 칸이 두 줄 앞, 아마존이 된다
+  ---
+  duration_ms: 0.405022
+  type: 'test'
+  ...
+# Subtest: 잠행: 노림이 보지 못해 응수 없이 이어진다
+ok 416 - 잠행: 노림이 보지 못해 응수 없이 이어진다
+  ---
+  duration_ms: 0.260446
+  type: 'test'
+  ...
+# Subtest: 잠행: 지키는 적을 늘 무시한다 · 사슬 끝에 배수 −1
+ok 417 - 잠행: 지키는 적을 늘 무시한다 · 사슬 끝에 배수 −1
+  ---
+  duration_ms: 0.199016
+  type: 'test'
+  ...
+# Subtest: 잠행: 지켜진 킹은 먹을 수 없다
+ok 418 - 잠행: 지켜진 킹은 먹을 수 없다
+  ---
+  duration_ms: 1.02003
+  type: 'test'
+  ...
+# Subtest: 혼 두루마리를 사서 기물에 깃들이고 대국에서 쓴다 · 저장 왕복
+ok 419 - 혼 두루마리를 사서 기물에 깃들이고 대국에서 쓴다 · 저장 왕복
+  ---
+  duration_ms: 14.218586
+  type: 'test'
+  ...
+# Subtest: 혼 기물로 대국이 결정적으로 돈다
+ok 420 - 혼 기물로 대국이 결정적으로 돈다
+  ---
+  duration_ms: 74.312024
+  type: 'test'
+  ...
+# Subtest: 혼 등급: 열여섯 모두 흔함 · 드묾 · 귀함 중 하나, 값은 등급을 따른다
+ok 421 - 혼 등급: 열여섯 모두 흔함 · 드묾 · 귀함 중 하나, 값은 등급을 따른다
+  ---
+  duration_ms: 2.610402
+  type: 'test'
+  ...
+# Subtest: 혼 등급: 같은 시드면 같은 혼, 나오는 몫은 등급 무게를 따른다
+ok 422 - 혼 등급: 같은 시드면 같은 혼, 나오는 몫은 등급 무게를 따른다
+  ---
+  duration_ms: 41.368898
+  type: 'test'
+  ...
+# Subtest: 혼 등급: 상점의 혼 두루마리 · 혼 깃든 기물은 그 혼의 값을 받는다
+ok 423 - 혼 등급: 상점의 혼 두루마리 · 혼 깃든 기물은 그 혼의 값을 받는다
+  ---
+  duration_ms: 25.961939
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 흡수: 얻은 행마가 둘까지 쌓인다
+ok 424 - 각성 효과 · 흡수: 얻은 행마가 둘까지 쌓인다
+  ---
+  duration_ms: 2.644221
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 메아리: 두 번까지 처음 모습으로 돌아간다
+ok 425 - 각성 효과 · 메아리: 두 번까지 처음 모습으로 돌아간다
+  ---
+  duration_ms: 0.937776
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 초월: 아마존 모습으로 먹을 때마다 배수 ×1.5
+ok 426 - 각성 효과 · 초월: 아마존 모습으로 먹을 때마다 배수 ×1.5
+  ---
+  duration_ms: 8.395672
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 굶주림: 값 +20씩 · 배수 +1씩 커진다
+ok 427 - 각성 효과 · 굶주림: 값 +20씩 · 배수 +1씩 커진다
+  ---
+  duration_ms: 0.719544
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 사냥꾼: 앞서 먹은 종류를 또 먹으면 배수 ×2
+ok 428 - 각성 효과 · 사냥꾼: 앞서 먹은 종류를 또 먹으면 배수 ×2
+  ---
+  duration_ms: 0.577535
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 순교자: 끊길 때 한 번 둘레를 먹고 이어 간다
+ok 429 - 각성 효과 · 순교자: 끊길 때 한 번 둘레를 먹고 이어 간다
+  ---
+  duration_ms: 1.422625
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 선봉: 폰 모습이면 다섯째 줄에서 아마존으로
+ok 430 - 각성 효과 · 선봉: 폰 모습이면 다섯째 줄에서 아마존으로
+  ---
+  duration_ms: 0.692185
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 잠행: 노림을 넘길 때마다 배수 +1 · 배수 −1 없음
+ok 431 - 각성 효과 · 잠행: 노림을 넘길 때마다 배수 +1 · 배수 −1 없음
+  ---
+  duration_ms: 0.416195
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 계승: 대국마다 한 번 마지막 모습의 기보가 오른다
+ok 432 - 각성 효과 · 계승: 대국마다 한 번 마지막 모습의 기보가 오른다
+  ---
+  duration_ms: 0.32152
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 계주: 대국에 한 번 쓴 뒤에도 사슬마다 이어 먹는다
+ok 433 - 각성 효과 · 계주: 대국에 한 번 쓴 뒤에도 사슬마다 이어 먹는다
+  ---
+  duration_ms: 0.40574
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 역행: 어느 모습이든 아래 대각으로도 먹는다
+ok 434 - 각성 효과 · 역행: 어느 모습이든 아래 대각으로도 먹는다
+  ---
+  duration_ms: 0.215
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 결투: 사슬 끝 배수 ×3
+ok 435 - 각성 효과 · 결투: 사슬 끝 배수 ×3
+  ---
+  duration_ms: 0.424153
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 사신: 체크메이트한 사슬 배수 ×3
+ok 436 - 각성 효과 · 사신: 체크메이트한 사슬 배수 ×3
+  ---
+  duration_ms: 0.471665
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 도약: 둘째 먹기까지 두 칸 안 어디든
+ok 437 - 각성 효과 · 도약: 둘째 먹기까지 두 칸 안 어디든
+  ---
+  duration_ms: 0.241165
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 파문: 먹을 때마다 둘레 적 둘이 못 지킨다
+ok 438 - 각성 효과 · 파문: 먹을 때마다 둘레 적 둘이 못 지킨다
+  ---
+  duration_ms: 0.59028
+  type: 'test'
+  ...
+# Subtest: 각성 효과 · 귀환: 대국마다 두 번 돌아온다
+ok 439 - 각성 효과 · 귀환: 대국마다 두 번 돌아온다
+  ---
+  duration_ms: 28.072539
+  type: 'test'
+  ...
+# Subtest: 각성 효과: 열여섯 혼 모두 각성 한 줄이 있다
+ok 440 - 각성 효과: 열여섯 혼 모두 각성 한 줄이 있다
+  ---
+  duration_ms: 0.146799
+  type: 'test'
+  ...
+# Subtest: 금: 먹은 사슬마다 한 칸, 다섯째에 금이 간다
+ok 441 - 금: 먹은 사슬마다 한 칸, 다섯째에 금이 간다
+  ---
+  duration_ms: 12.736121
+  type: 'test'
+  ...
+# Subtest: 각성 길 · 금빛 적을 먹고 이긴 대국: 금이 간 혼이 깨어난다
+ok 442 - 각성 길 · 금빛 적을 먹고 이긴 대국: 금이 간 혼이 깨어난다
+  ---
+  duration_ms: 34.997262
+  type: 'test'
+  ...
+# Subtest: 각성 길 · 마스터의 상자 세 칸 이상: 마지막 칸이 깨우기
+ok 443 - 각성 길 · 마스터의 상자 세 칸 이상: 마지막 칸이 깨우기
+  ---
+  duration_ms: 88.489411
+  type: 'test'
+  ...
+# Subtest: 각성 길 · 두루마리 깨우기: 금이 간 혼이 있을 때만 진열되고, 금이 간 기물에만 쓴다
+ok 444 - 각성 길 · 두루마리 깨우기: 금이 간 혼이 있을 때만 진열되고, 금이 간 기물에만 쓴다
+  ---
+  duration_ms: 63.748339
+  type: 'test'
+  ...
+# Subtest: 각성: 새 혼을 깃들이면 금 · 각성이 지워진다
+ok 445 - 각성: 새 혼을 깃들이면 금 · 각성이 지워진다
+  ---
+  duration_ms: 7.159492
+  type: 'test'
+  ...
+# Subtest: 각성: 저장 왕복 — 금 · 각성이 판과 대국을 오가고 JSON으로 그대로
+ok 446 - 각성: 저장 왕복 — 금 · 각성이 판과 대국을 오가고 JSON으로 그대로
+  ---
+  duration_ms: 16.546276
+  type: 'test'
+  ...
+# Subtest: 벽: 먹을 수 없고 미끄러짐을 막으며 포의 받침이 된다
+ok 447 - 벽: 먹을 수 없고 미끄러짐을 막으며 포의 받침이 된다
+  ---
+  duration_ms: 4.197574
+  type: 'test'
+  ...
+# Subtest: 보석: 먹으면 상금 +2, 모습은 그대로, 아무도 지키지 않는다
+ok 448 - 보석: 먹으면 상금 +2, 모습은 그대로, 아무도 지키지 않는다
+  ---
+  duration_ms: 1.720505
+  type: 'test'
+  ...
+# Subtest: 2관부터 판에 사물이 드물게 섞인다
+ok 449 - 2관부터 판에 사물이 드물게 섞인다
+  ---
+  duration_ms: 315.653102
+  type: 'test'
+  ...
+# Subtest: 묘수: 빙결 · 재장전 · 도발은 대국 중 떨구기 전에만, 쓰면 사라진다
+ok 450 - 묘수: 빙결 · 재장전 · 도발은 대국 중 떨구기 전에만, 쓰면 사라진다
+  ---
+  duration_ms: 14.654649
+  type: 'test'
+  ...
+# Subtest: 진화: 주머니 기물 하나를 그 종류의 이형으로(결정적)
+ok 451 - 진화: 주머니 기물 하나를 그 종류의 이형으로(결정적)
+  ---
+  duration_ms: 0.380793
+  type: 'test'
+  ...
+# Subtest: 도박 물건: 사는 순간 결과가 정해진다(같은 판 · 같은 칸이면 같은 결과)
+ok 452 - 도박 물건: 사는 순간 결과가 정해진다(같은 판 · 같은 칸이면 같은 결과)
+  ---
+  duration_ms: 0.805976
+  type: 'test'
+  ...
+# Subtest: 방패: 사슬의 첫 먹이로는 못 먹는다(떨구기 판정도)
+ok 453 - 방패: 사슬의 첫 먹이로는 못 먹는다(떨구기 판정도)
+  ---
+  duration_ms: 198.760056
+  type: 'test'
+  ...
+# Subtest: 폭약: 먹히면 둘레 적도 함께 먹힌다
+ok 454 - 폭약: 먹히면 둘레 적도 함께 먹힌다
+  ---
+  duration_ms: 0.809994
+  type: 'test'
+  ...
+# Subtest: 거울: 먹어도 모습이 바뀌지 않는다
+ok 455 - 거울: 먹어도 모습이 바뀌지 않는다
+  ---
+  duration_ms: 0.511987
+  type: 'test'
+  ...
+# Subtest: 성채: 둘레 여덟 칸을 지킨다
+ok 456 - 성채: 둘레 여덟 칸을 지킨다
+  ---
+  duration_ms: 2.633202
+  type: 'test'
+  ...
+# Subtest: 배신자: 먹으면 대국 뒤 내 주머니로
+ok 457 - 배신자: 먹으면 대국 뒤 내 주머니로
+  ---
+  duration_ms: 17.049113
+  type: 'test'
+  ...
+# Subtest: 특성은 4관부터, 관이 오를수록 자주
+ok 458 - 특성은 4관부터, 관이 오를수록 자주
+  ---
+  duration_ms: 160.727395
+  type: 'test'
+  ...
+# Subtest: 대본 대국: 걸음대로 두면 실제 규칙으로 목표를 넘기고, 판에 평소처럼 든다
+ok 459 - 대본 대국: 걸음대로 두면 실제 규칙으로 목표를 넘기고, 판에 평소처럼 든다
+  ---
+  duration_ms: 377.390193
+  type: 'test'
+  ...
+# Subtest: 대본 대국 ②: 룩부터 먹으면 끊기고, 복사본이라 진짜 대국은 그대로
+ok 460 - 대본 대국 ②: 룩부터 먹으면 끊기고, 복사본이라 진짜 대국은 그대로
+  ---
+  duration_ms: 5.088438
+  type: 'test'
+  ...
+# Subtest: 대본 대국 ④: 폰은 떨굴 곳이 없다(버려야 한다)
+ok 461 - 대본 대국 ④: 폰은 떨굴 곳이 없다(버려야 한다)
+  ---
+  duration_ms: 4.92412
+  type: 'test'
+  ...
+# Subtest: 건너뛰면 평범한 1관 연습: 대본 없는 판과 같은 대국
+ok 462 - 건너뛰면 평범한 1관 연습: 대본 없는 판과 같은 대국
+  ---
+  duration_ms: 27.299336
+  type: 'test'
+  ...
+# Subtest: 대본은 기본 오프닝 · 단 0 판의 1관 연습 하나뿐
+ok 463 - 대본은 기본 오프닝 · 단 0 판의 1관 연습 하나뿐
+  ---
+  duration_ms: 0.40784
+  type: 'test'
+  ...
+# Subtest: 첫 실행은 수업을 거치지 않는다: 타이틀 → 새 판 → 곧바로 대본 대국
+ok 464 - 첫 실행은 수업을 거치지 않는다: 타이틀 → 새 판 → 곧바로 대본 대국
+  ---
+  duration_ms: 78.763854
+  type: 'test'
+  ...
+# Subtest: 설정 「킹과 다시 두기」가 다음 새 판을 대본으로 켠다
+ok 465 - 설정 「킹과 다시 두기」가 다음 새 판을 대본으로 켠다
+  ---
+  duration_ms: 9.059498
+  type: 'test'
+  ...
+# Subtest: 설정 「움직임 줄이기」는 기기 설정이 없어도 켠다
+ok 466 - 설정 「움직임 줄이기」는 기기 설정이 없어도 켠다
+  ---
+  duration_ms: 3.427827
+  type: 'test'
+  ...
+# Subtest: 대본 대국의 판 조정: 켜 둔 거르기와 상관없이 정해 둔 판
+ok 467 - 대본 대국의 판 조정: 켜 둔 거르기와 상관없이 정해 둔 판
+  ---
+  duration_ms: 2.488613
+  type: 'test'
+  ...
+1..467
+# tests 467
+# suites 0
+# pass 467
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16063.964946
