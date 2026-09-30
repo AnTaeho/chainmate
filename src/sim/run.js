@@ -16,7 +16,7 @@ import { parseSq } from './board.js';
 import { SCRIPT } from '../data/tutorial.js';
 import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints } from './battle.js';
 import { getModifier } from './scoring.js';
-import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult } from './shop.js';
+import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul } from './shop.js';
 import { gradeOf, markFairy } from './chain.js';
 import { MAXIM_BY_ID } from '../data/maxims.js';
 import { CHART_TABLE, CHART_FORMS } from '../data/charts.js';
@@ -29,7 +29,6 @@ import { familyCounts, familyMods } from '../data/families.js';
 import { JOSEKIS, JOSEKI_BY_ID, DRAFT_ANTES, DRAFT_TIERS } from '../data/josekis.js';
 import { useTactic, evolveTo } from '../data/tactics.js';
 import { TRAIT_CHANCE } from '../data/traits.js';
-import { SOULS } from '../data/souls.js';
 import { FAIRIES } from '../data/pieces.js';
 
 // ── 수치
@@ -536,7 +535,7 @@ function gamble(run, id, slot, events) {
   const r = fork(root(run), `gamble:${run.ante}:${run.blind}:${run.shop.rerolls}:${slot}`);
   const p = run.deck[int(r, run.deck.length)];
   if (id === 'potion') {
-    if (next(r) < 0.5) { const s = SOULS[int(r, SOULS.length)].id; p.soul = s; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, soul: s }); }
+    if (next(r) < 0.5) { const s = rollSoul(r); p.soul = s; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, soul: s }); }
     else { const ids = Object.keys(ENGRAVING_BY_ID); const e = ids[int(r, ids.length)]; p.eng = { id: e }; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, eng: e }); }
   } else {
     const to = FAIRIES[int(r, FAIRIES.length)];

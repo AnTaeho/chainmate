@@ -7,11 +7,19 @@ import { PIECES } from './pieces.js';
 import { isEnemy, reach } from '../sim/board.js';
 
 export const SOULS = [];
-function soul(id, name, col, families, text, { more = null, ...def }) {
-  SOULS.push({ id, name, col, families, text, more });
+function soul(id, name, col, families, text, { more = null, rarity, ...def }) {
+  SOULS.push({ id, name, col, families, text, more, rarity });
   defineModifier(`soul:${id}`, { kind: 'soul', ...def });
 }
-export const SOUL_PRICE = 4;
+// 혼 등급(CHM-17 1단계): 세기는 그대로 두고 만나는 확률과 값을 나눈다. 격언 등급과 같은 이름 · 같은 빛깔(palette RARITY).
+// weight = 등급 무게(상점 두루마리 · 혼 깃든 진열 기물 · 수상한 물약이 같이 쓴다. 등급을 먼저 고르고 그 안에서 고르게), price = 값.
+export const SOUL_RARITY = {
+  common: { weight: 6, price: 4 },
+  uncommon: { weight: 3, price: 6 },
+  rare: { weight: 1, price: 9 },
+};
+export const RARITY_NAME = { common: '흔함', uncommon: '드묾', rare: '귀함', legendary: '전설' };
+export const soulPrice = (id) => SOUL_RARITY[SOUL_BY_ID[id].rarity].price;
 
 // 순교(혼 「순교자」 · 정석 「순교의 맹세」): 끊기는 순간 킹을 뺀 둘레의 적을 모두 먹는다. 벽은 남긴다.
 // 99a6436에서 「킹을 지키는 적은 남기고 둘까지」로 줄였다가 되돌렸다(2026-09-28, 사람: 지금도 깨기 힘들고 단이 오르면 더 어렵다).
@@ -44,10 +52,12 @@ export const ABSORB_TEXT = '세 번까지: 모습이 안 바뀐다 · 먹은 적
 export const ABSORB_MORE = '마지막에 얻은 행마는 사슬 끝까지 남는다';
 
 soul('absorb', '흡수', '#d27fd6', ['change'], ABSORB_TEXT, {
+  rarity: 'rare',
   more: ABSORB_MORE,
   onDrop(ctx) { ctx.flags.absorb = true; },
 });
 soul('echo', '메아리', '#9fb8ff', ['change'], '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 잇는다', {
+  rarity: 'uncommon',
   onBlocked(ctx) {
     const c = ctx.chain;
     if (ctx.flags.echoUsed || c.form === c.dropType) return;
@@ -60,26 +70,32 @@ soul('echo', '메아리', '#9fb8ff', ['change'], '더 먹을 적이 없으면 �
   },
 });
 soul('transcend', '초월', '#fff1b8', ['change', 'crown'], TRANSCEND_TEXT, {
+  rarity: 'rare',
   more: TRANSCEND_MORE,
   onDrop(ctx) { ctx.flags.transcend = true; },
 });
 soul('hunger', '굶주림', '#df8a45', ['hunt'], '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …', {
+  rarity: 'common',
   onCapture(ctx) { ctx.addValue(10 * ctx.event.index); },
 });
 soul('hunter', '사냥꾼', '#8ec07c', ['hunt'], '같은 종류를 잇달아 먹으면 배수 ×2', {
+  rarity: 'common',
   onCapture(ctx) {
     const caps = ctx.chain.captures;
     if (caps.length >= 2 && caps[caps.length - 2].piece === ctx.event.piece) ctx.mulMult(2);
   },
 });
 soul('martyr', '순교자', '#df5a45', ['sacrifice'], MARTYR_TEXT, {
+  rarity: 'rare',
   more: MARTYR_MORE,
   onCut(ctx) { martyrBurst(ctx); },
 });
 soul('crown', '선봉', '#efbd55', ['crown', 'march'], '폰 모습이면 여섯째 줄에서 아마존으로 프로모션', {
+  rarity: 'uncommon',
   onDrop(ctx) { ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, 5); ctx.flags.promoteTo = 'Z'; },
 });
 soul('shade', '잠행', '#8a5cc8', ['sacrifice', 'leap'], '지키는 적을 무시한다 · 배수 −1', {
+  rarity: 'rare',
   // 99a6436에서 「사슬마다 한 번 · 배수 그대로」로 줄였다가 되돌렸다(2026-09-28). 지켜진 킹은 여전히 못 먹는다(board.js kingTakeable)
   more: '지켜진 킹은 먹을 수 없다',
   onThreat(ctx) { ctx.ignoreThreat(); },
@@ -89,10 +105,12 @@ soul('shade', '잠행', '#8a5cc8', ['sacrifice', 'leap'], '지키는 적을 무�
 
 // ── 밤샘 2: 여덟 더(docs/design-notes/content-expansion.md)
 soul('inherit', '계승', '#f2d6c4', ['change'], '사슬이 끝나면 이 기물이 마지막 모습이 된다', {
+  rarity: 'rare',
   more: '주머니의 기물이 바뀐다 · 킹 모습은 빼고',
   onChainEnd(ctx) { const c = ctx.chain; if (c.form !== c.dropType && c.form !== 'K' && PIECES[c.form] && !PIECES[c.form].thing) c.becomes = c.form; },
 });
 soul('relay', '계주', '#6fd1bf', ['march'], '더 먹을 적이 없으면 손의 다음 기물이 그 칸에서 이어 먹는다', {
+  rarity: 'uncommon',
   more: '대국마다 한 번 · 이어 먹은 기물도 쓴 것이 된다',
   onBlocked(ctx) {
     const t = ctx.t, c = ctx.chain;
@@ -109,14 +127,17 @@ soul('relay', '계주', '#6fd1bf', ['march'], '더 먹을 적이 없으면 손�
   },
 });
 soul('retro', '역행', '#c8b48a', ['march'], '폰 모습이면 아래 대각으로도 먹는다', {
+  rarity: 'common',
   onDrop(ctx) { ctx.flags.pawnBack = true; },
 });
 soul('duel', '결투', '#e8e070', ['hunt'], '같은 종류를 두 번 못 먹는다 · 배수 ×2', {
+  rarity: 'uncommon',
   more: '킹은 빼고',
   allowCapture(ctx) { return ctx.event.piece === 'K' || !ctx.chain.captures.some((x) => x.piece === ctx.event.piece); },
   onChainEnd(ctx) { ctx.mulMult(2); },
 });
 soul('reaper', '사신', '#b070f0', ['counter'], '킹을 지키는 적을 먹을 때마다 배수 +3', {
+  rarity: 'common',
   onCapture(ctx) {
     const { piece, to } = ctx.event;
     if (piece === 'K') return;
@@ -125,13 +146,16 @@ soul('reaper', '사신', '#b070f0', ['counter'], '킹을 지키는 적을 먹을
   },
 });
 soul('spring', '도약', '#7fe0e8', ['leap'], '첫 먹기: 두 칸 안의 적이면 어디든 먹는다', {
+  rarity: 'uncommon',
   onDrop(ctx) { ctx.flags.spring = true; },
 });
 soul('homing', '귀환', '#f0a060', ['sacrifice'], '사슬이 끝나면 손으로 돌아온다', {
+  rarity: 'common',
   more: '대국마다 한 번 · 수는 쓴다',
   onChainEnd(ctx) { ctx.chain.returnHome = true; },
 });
 soul('ripple', '파문', '#8fb0ff', ['counter'], '먹을 때마다 둘레 적 하나가 이번 수 동안 못 지킨다', {
+  rarity: 'common',
   more: '값이 가장 큰 적부터',
   onCapture(ctx) {
     const b = ctx.t.board, to = ctx.event.to;

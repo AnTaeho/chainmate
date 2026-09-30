@@ -6,7 +6,7 @@ import { CHARTS, CHART_FORMS, CHART_PRICE } from '../data/charts.js';
 import { ENGRAVINGS, ENGRAVING_PRICE } from '../data/engravings.js';
 import { EDITIONS, EDITION_BY_ID } from '../data/editions.js';
 import { LEGENDS } from '../data/legends.js';
-import { SOULS } from '../data/souls.js';
+import { SOULS, SOUL_RARITY, soulPrice } from '../data/souls.js';
 import { TACTICS, TACTIC_PRICE, EVOLVE_PRICE } from '../data/tactics.js';
 
 // 수치(내가 정한 것 — DESIGN에 없는 값)
@@ -22,8 +22,7 @@ export const SHOP = {
   // 진열 칸에 무엇이 나오나(무게)
   kindWeights: [['maxim', 55], ['chart', 20], ['engraving', 12], ['piece', 13], ['soul', 6], ['evolve', 5], ['tactic', 5], ['gamble', 4]],
   gamblePrice: 2, // 도박 물건(깊이 G): 사는 순간 결과가 굴러 나온다
-  soulOnPiece: 0.12, // 진열 기물에 혼이 깃들어 나올 확률(값 + soulPrice)
-  soulPrice: 4,
+  soulOnPiece: 0.12, // 진열 기물에 혼이 깃들어 나올 확률(값 + 그 혼의 값 — 혼 등급 souls.js SOUL_RARITY)
   // 격언 등급(무게). 전설은 상점에 나오지 않는다(step 2b)
   rarityWeights: [['common', 70], ['uncommon', 25], ['rare', 5]],
   // 낱개 기물 값과 기물 꾸러미의 무게
@@ -56,6 +55,13 @@ export function weighted(rng, pairs) {
   let r = next(rng) * total;
   for (const [k, w] of pairs) { if ((r -= w) < 0) return k; }
   return pairs[pairs.length - 1][0];
+}
+
+// 혼 하나: 등급을 무게(souls.js SOUL_RARITY)로 먼저 고르고 그 안에서 고르게. 두루마리 · 혼 깃든 기물 · 수상한 물약이 같이 쓴다
+export function rollSoul(rng) {
+  const rarity = weighted(rng, Object.entries(SOUL_RARITY).map(([k, v]) => [k, v.weight]));
+  const pool = SOULS.filter((s) => s.rarity === rarity);
+  return pool[int(rng, pool.length)].id;
 }
 
 export const rollEdition = (rng) => weighted(rng, EDITIONS.map((e) => [e.id, e.weight]));
@@ -104,12 +110,12 @@ export function rollItem(run, rng, exclude) {
   }
   if (kind === 'chart') return { kind: 'chart', form: CHART_FORMS[int(rng, CHART_FORMS.length)], price: CHART_PRICE };
   if (kind === 'engraving') return { kind: 'engraving', id: rollEngravingId(rng), price: ENGRAVING_PRICE };
-  if (kind === 'soul') return { kind: 'soul', id: SOULS[int(rng, SOULS.length)].id, price: SHOP.soulPrice };
+  if (kind === 'soul') { const id = rollSoul(rng); return { kind: 'soul', id, price: soulPrice(id) }; }
   if (kind === 'evolve') return { kind: 'evolve', price: EVOLVE_PRICE };
   if (kind === 'gamble') return { kind: 'gamble', id: next(rng) < 0.5 ? 'potion' : 'roulette', price: SHOP.gamblePrice };
   if (kind === 'tactic') return { kind: 'tactic', id: TACTICS[int(rng, TACTICS.length)].id, price: TACTIC_PRICE };
   const t = rollPiece(run, rng);
-  if (next(rng) < SHOP.soulOnPiece) return { kind: 'piece', t, soul: SOULS[int(rng, SOULS.length)].id, price: SHOP.piecePrice[t] + SHOP.soulPrice };
+  if (next(rng) < SHOP.soulOnPiece) { const soul = rollSoul(rng); return { kind: 'piece', t, soul, price: SHOP.piecePrice[t] + soulPrice(soul) }; }
   return { kind: 'piece', t, price: SHOP.piecePrice[t] };
 }
 
