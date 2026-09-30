@@ -267,7 +267,7 @@ export class BattleScreen {
         path: [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.to)],
         shots: c.captures.filter((x) => x.stay).map((x) => [x.from, x.to]),
         forced: c.forced ? c.forced.slice() : null, awaiting: c.awaiting ? chainRedrops(b) : null,
-        cut: false, eng: c.engraving ? c.engraving.id : null, soul: c.soul ? c.soul.id.replace('soul:', '') : null, absorbed: c.absorbed ? c.absorbed.slice() : null,
+        cut: false, eng: c.engraving ? c.engraving.id : null, soul: c.soul ? c.soul.id.replace('soul:', '') : null, awake: !!(c.soul && c.soul.data && c.soul.data.awake), absorbed: c.absorbed ? c.absorbed.slice() : null,
       };
     } else v.chain = null;
     this.targets = null;
@@ -382,7 +382,7 @@ export class BattleScreen {
     const v = this.view;
     const run = this.run;
     if (cmd.type === 'drop') this.slow = this.src.kind === 'lesson' || (!!run && !run.log.some((x) => !x.skipped) && bRef.history.length < 3);
-    if (cmd.type === 'drop') { const hp = bRef.hand[cmd.handIndex]; this.dropEng = hp && hp.eng ? hp.eng.id : null; this.dropSoul = hp && hp.soul ? hp.soul : null; }
+    if (cmd.type === 'drop') { const hp = bRef.hand[cmd.handIndex]; this.dropEng = hp && hp.eng ? hp.eng.id : null; this.dropSoul = hp && hp.soul ? hp.soul : null; this.dropAwake = !!(hp && hp.awake); }
     if (cmd.type === 'drop' && run && !this.rehearsal) this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
     const events = this.src.cmd(cmd);
     if (run && !this.rehearsal) this.record(events, run);
@@ -435,7 +435,7 @@ export class BattleScreen {
         case 'drop': add(0.14, {
           begin: () => {
             v.board[e.sq] = { t: e.piece, mine: true };
-            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], forced: null, awaiting: null, cut: false, eng: this.dropEng || null, soul: this.dropSoul || null };
+            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], forced: null, awaiting: null, cut: false, eng: this.dropEng || null, soul: this.dropSoul || null, awake: this.dropAwake || false };
             v.dropIn = { sq: e.sq, p: 0 };
             this.snd('drop');
           },
@@ -674,7 +674,7 @@ export class BattleScreen {
   // 내 기물의 모습: 떨군 기물의 각인 톤 + 지금 모습의 기보 단계
   look(form, time = null) {
     const run = this.run, v = this.view;
-    return { eng: v.chain ? v.chain.eng || null : null, soul: v.chain ? v.chain.soul || null : null, tier: run ? tierOf(run.charts[chartForm(form)]) : 0, time };
+    return { eng: v.chain ? v.chain.eng || null : null, soul: v.chain ? v.chain.soul || null : null, awake: !!(v.chain && v.chain.awake), tier: run ? tierOf(run.charts[chartForm(form)]) : 0, time };
   }
   shatter(sq, type, side) {
     const { x, y } = sqXY(sq);

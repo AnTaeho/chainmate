@@ -47,6 +47,8 @@ export function observe(rec, run, events, fresh = []) {
     if (e.type === 'win' && e.reason === 'mate') rec.mates++;
     if (e.type === 'grade') rec.grades[e.mark] = (rec.grades[e.mark] || 0) + 1;
     if (e.type === 'legend') { rec.legends++; if (!rec.codex.legendsDone[e.legend]) { rec.codex.legendsDone[e.legend] = true; fresh.push(`legendsDone:${e.legend}`); } }
+    // 혼 각성(CHM-17): 깨운 혼은 도감 혼 탭의 각성 칸에 남는다
+    if (e.type === 'awaken') mark(rec, 'awake', e.soul, fresh);
     if (e.type === 'fragment') {
       const n = (e.have.first ? 1 : 0) + (e.have.feat ? 1 : 0) + (e.have.gold ? 1 : 0);
       const was = rec.codex.legends[e.legend] || 0;

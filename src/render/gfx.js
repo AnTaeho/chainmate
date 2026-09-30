@@ -99,13 +99,17 @@ export const measure = (s, bold = false) => textWidth(s, bold);
 
 // 기물. sx: 가로 배율(뒤집힘 1 → 0 → 1), lift: 위로 띄우기, alpha
 // eng: 각인 id(몸 톤) · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게(없으면 멈춘 모습)
-export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null } = {}) {
+export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null, awake = false } = {}) {
   const c = spriteCanvas(type, side, eng, tier);
   if (alpha <= 0) return;
   const px = R(x), py = R(y);
   if (tier === 3 && sx === 1 && sy === 1) { if (alpha !== 1) ctx.globalAlpha = alpha; tierSparkle(ctx, px, py, time); if (alpha !== 1) ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = alpha;
-  if (soul && sx === 1 && sy === 1) soulSpark(ctx, px, py, SOUL_BY_ID[soul] ? SOUL_BY_ID[soul].col : '#ffffff', time);
+  if (soul && sx === 1 && sy === 1) {
+    soulSpark(ctx, px, py, SOUL_BY_ID[soul] ? SOUL_BY_ID[soul].col : '#ffffff', time);
+    // 깨어난 혼(CHM-17): 오른쪽 위에 금빛 기운 한 점 더(엇박으로 깜빡인다)
+    if (awake) soulSpark(ctx, px + 12, py - 2, PAL.gold, time == null ? null : time + 1.3);
+  }
   if (sx === 1 && sy === 1) ctx.drawImage(c, px, py);
   else {
     const w = Math.max(1, Math.round(SW * Math.abs(sx)));

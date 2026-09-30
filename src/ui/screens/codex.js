@@ -12,6 +12,7 @@ import { EDITIONS } from '../../data/editions.js';
 import { button } from '../ui.js';
 import { tipLines, miniShard, moveTip, fitText, cardBase, fragmentSteps, rarityLine, soulGlyph } from '../parts.js';
 import { SOULS, soulPrice } from '../../data/souls.js';
+import { L } from '../lang.js';
 import { drawIcon } from '../../render/icons.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
 import { pageHead, pageButtons, tabRow } from './common.js';
@@ -28,7 +29,8 @@ export class CodexScreen {
     // 기물: 체스 여섯과 이형 아홉(이형은 행마 한 줄)
     if (this.tab === 'pieces') return Object.values(PIECES).map((p) => ({ id: p.id, seen: true, name: PIECE_NAME[p.id], piece: p.id, tip: () => moveTip(PIECE_NAME[p.id], p.id, [PIECE_MOVE[p.id] || '', `값 ${p.value}`]), col: p.fairy ? PAL.gold : PAL.dim }));
     // 혼: 만난 혼만. 왼쪽 막대는 등급 빛깔(격언과 같은 규칙), 오른쪽은 혼의 문양
-    if (this.tab === 'souls') return SOULS.map((s) => ({ id: s.id, seen: !!(c.souls || {})[s.id], name: s.name, soul: s.id, tip: () => tipLines(`${s.name}의 혼`, [s.text, s.more], 150, [rarityLine(s.rarity), [`$${soulPrice(s.id)}`, PAL.cardDim]]), col: RARITY[s.rarity] }));
+    // 각성 칸: 깨운 적이 있는 혼은 금테와 각성 한 줄, 아직이면 「각성 · ?」(도감의 빈칸)
+    if (this.tab === 'souls') return SOULS.map((s) => { const aw = !!(c.awake || {})[s.id]; return { id: s.id, seen: !!(c.souls || {})[s.id] || aw, name: s.name, soul: s.id, awake: aw, tip: () => tipLines(`${s.name}의 혼`, [s.text, s.more], 150, [rarityLine(s.rarity), [`$${soulPrice(s.id)}`, PAL.cardDim], [aw ? `각성 · ${L(s.awake)}` : '각성 · ?', aw ? PAL.goldDk : PAL.cardDim]]), col: RARITY[s.rarity] }; });
     // 세력: 만난 세력만(세력 전 기록은 만난 명인의 세력으로 친다). 말풍선에 버릇과 우두머리
     if (this.tab === 'factions') {
       const met = (f) => !!((c.factions || {})[f.id] || (c.masters || {})[f.boss]);
@@ -69,6 +71,7 @@ export class CodexScreen {
         return;
       }
       cardBase(ctx, x, y, cw, ch, { fill: e.done ? '#f6d98a' : PAL.card, hover: ui.isHover(id) });
+      if (e.awake) { frame(ctx, x + 1, y + 1, cw - 2, ch - 2, PAL.gold); frame(ctx, x + 2, y + 2, cw - 4, ch - 4, PAL.goldDk); }
       rect(ctx, x + 1, y + 2, 2, ch - 3, e.col);
       // 오른쪽 그림(아이콘 12 · 기물 16 · 조각 셋)은 오른쪽 안 여백 안, 이름은 그 왼쪽까지
       const right = e.piece ? 16 + 2 : e.soul ? 9 + 3 : e.crest || this.tab === 'maxims' || this.tab === 'legends' ? 12 + 3 : e.parts != null ? 18 + 3 : 0;
