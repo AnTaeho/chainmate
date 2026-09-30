@@ -3,7 +3,7 @@
 // 누르거나 Enter면 끝 장면으로 건너뛰고, 한 번 더 누르면 다음으로. 움직임 줄이기면 번쩍 · 흔들림 없이.
 // 시안 셋(가운데 막간 / 가로 띠 / 문양 빛기둥) 가운데 어느 기물이 깨어났는지 보이는 막간을 골랐다 — docs/shots/souls/draft-*-awaken
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect } from '../../render/gfx.js';
+import { W, H, text, box, rect, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
 import { PIECE_NAME } from '../words.js';
@@ -80,7 +80,8 @@ export class AwakenScreen {
     const t = this.t, done = t >= DONE;
     const tone = done ? 'gold' : 'plain';
     // 가운데 막간: 금 테 상자 안에 제목 → 큰 카드 → 이름 · 각성 한 줄 · 어디서 → 계속
-    const w = 232, P = PAD_BOX, IW = w - P * 2;
+    // 폭은 글에 맞춘다(영어 제목 「The soul awakens」가 두 배 글씨로 232를 넘는다)
+    const P = PAD_BOX, w = Math.max(232, measure('혼이 깨어났다', true) * 2 + P * 2 + 8), IW = w - P * 2;
     const L1 = this.lines(IW);
     const f = flow(P);
     const title = f.space(LINE * 2);
