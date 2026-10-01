@@ -200,7 +200,7 @@ maxim('homecoming', '되돌이', '처음 모습으로 돌아오면 배수 ×2 ·
 maxim('collector_forms', '모습 모으기', '새 모습이 될 때마다 값 +20', '갈아입기', 'common', 4, {
   onTransform(ctx) { if (!ctx.chain.forms.includes(ctx.event.to)) ctx.addValue(20); },
 });
-maxim('reply_master', '되받아치기', '지키는 적을 먹을 때마다 배수 +2', '지키는 적', 'uncommon', 5, {
+maxim('reply_master', '되받아치기', '지키는 적을 먹을 때마다 배수 +2', '지키는 적', 'common', 4, {
   onCapture(ctx) { if (ctx.event.forced) ctx.addMult(2); },
 });
 maxim('promotion_road', '퀸으로 가는 길', '프로모션할 때마다 값 +80', '프로모션', 'common', 4, {
@@ -248,7 +248,7 @@ maxim('encircle', '포위', '둘레에 적이 셋 이상인 칸에서 먹으면 
 maxim('loner', '외톨이', '지키는 적이 없는 적을 먹을 때마다 값 +15', '지키는 적', 'common', 3, {
   onCapture(ctx) { if (ctx.event.piece !== 'K' && ctx.attackers(ctx.event.to).length === 0) ctx.addValue(15); },
 });
-maxim('full_board', '가득 찬 판', '판에 적이 열여섯 이상: 배수 ×1.5', '증원', 'uncommon', 5, {
+maxim('full_board', '가득 찬 판', '판에 적이 열여섯 이상: 배수 ×1.5', '증원', 'common', 4, {
   more: '떨굴 때 판의 적을 센다',
   onDrop(ctx) { if (ctx.t.board.filter(foe).length >= 16) ctx.flags.fullBoard = true; },
   onChainEnd(ctx) { if (ctx.flags.fullBoard) ctx.mulMult(1.5); },
@@ -333,7 +333,7 @@ maxim('ambusher', '매복병', '증원 자리에 떨구면 값 +40', '증원', '
   onDrop(ctx) { if ((ctx.t.incoming || []).some((r) => r.sq === ctx.event.sq)) ctx.flags.ambushDrop = true; },
   onChainEnd(ctx) { if (ctx.flags.ambushDrop) ctx.addValue(40); },
 });
-maxim('counter_book', '반격의 서', '지키는 적을 두 번 먹은 사슬: 배수 ×2', '지키는 적', 'uncommon', 5, {
+maxim('counter_book', '반격의 서', '지키는 적을 두 번 먹은 사슬: 배수 ×2', '지키는 적', 'common', 4, {
   onChainEnd(ctx) { if (num(ctx.chain.forcedReplies) >= 2) ctx.mulMult(2); },
 });
 
