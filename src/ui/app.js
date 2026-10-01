@@ -383,6 +383,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   function foldUnder(ctx) {
     if (app.overlay || !app.screen || noteMode(app.screen) !== 'side') return;
     const ui = app.ui;
+    // 가리킨 것을 이번 프레임 구역으로 다시 잡는다(화면이 막 바뀐 프레임에 지난 화면의 구역 · 말풍선을 쓰지 않게 — end()와 같은 값)
+    ui.hover = ui.hitIn(ui.regions, ui.mouse.x, ui.mouse.y);
     const ground = (r) => { ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip(); ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8); flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16); ctx.restore(); };
     const c = coachPlan(app);
     if (c && c.rect) foldSide(ctx, ui.side, c.rect, c.r, ground);
