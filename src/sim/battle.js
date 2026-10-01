@@ -38,9 +38,9 @@ export const DEFAULT_RULES = {
 
 // 희생(CHM-35, docs/design-notes/sacrifice.md): 손의 기물 하나를 바치고 새로 뽑는다. 바친 기물의 힘이 이번 대국의 다음 사슬에 붙는다.
 // 다음 수를 떨구기 전에 여러 번 바치면 쌓이고(b.offering), 다음 사슬이 끝나면 비운다. 붙는 몫은 떨군 순간 사슬의 값 · 배수에 든다(chain.js startChain).
-//   A  값 + 바친 기물 값 · 배수 + mult
-//   B  값 + 바친 기물 값 × valueX
-//   C  배수 + 기물 무게(WEIGHT)
+//   A  값 + 바친 기물 값 · 배수 + mult   ← 고른 세기(docs/reports/sacrifice.md)
+//   B  값 + 바친 기물 값 × valueX         ┐ 버린 후보. 하네스 비교용으로만 남긴다(run.mjs --tune '{"sac":"B"}')
+//   C  배수 + 기물 무게(WEIGHT)           ┘
 export const SACRIFICE = { mode: 'A', mult: 1, valueX: 2 };
 export const SACRIFICE_WEIGHT = { P: 1, N: 2, B: 2, R: 3, Q: 5, A: 3, C: 4, Z: 4, L: 2, H: 3, G: 2, O: 3, S: 2, W: 3 };
 export function offeringOf(t) {
