@@ -292,8 +292,8 @@ export const EN = {
   '대리석': 'Marble', '모습이 안 바뀐 먹기마다 배수 +2': '+2 Mult per take that keeps your form',
   // 시너지
   '역습': 'Counter', '매복': 'Ambush',
-  '지키는 적을 먹으면 값 +20': 'Take a guard: +20 Value', '지키는 적을 먹을 때마다 배수 +2': 'Each guard taken: +2 Mult', '지키는 적을 먹을 때마다 배수 ×1.3': 'Each guard taken: ×1.3 Mult',
-  '증원을 먹으면 값 +30': 'Take a recruit: +30 Value', '증원 자리에 떨구면 배수 +3': 'Drop on a recruit square: +3 Mult', '증원을 먹을 때마다 배수 ×1.5': 'Each recruit taken: ×1.5 Mult',
+  '지키는 적을 먹을 때마다 값 +40': 'Each guard taken: +40 Value', '지키는 적을 먹을 때마다 배수 +3': 'Each guard taken: +3 Mult', '지키는 적을 먹을 때마다 배수 ×1.3': 'Each guard taken: ×1.3 Mult',
+  '증원을 먹을 때마다 배수 +3': 'Each recruit taken: +3 Mult', '증원 자리에 떨구면 배수 +4': 'Drop on a recruit square: +4 Mult', '증원을 먹을 때마다 배수 ×2': 'Each recruit taken: ×2 Mult',
   '역습 시너지': 'Counter synergy', '매복 시너지': 'Ambush synergy',
   '시계': 'Clock', '다시 놓기': 'New Board', '목표 ×1.1': 'Target ×1.1', '대가 목표 ×1.25': 'Final ×1.25', '시간이 다했다': 'Out of time', '짐 · 시계 −1': 'Clock −1',
   '대국을 지면 한 칸을 잃고 다음 대국으로 간다': 'Lose a match: lose one cell and play on', '다 잃으면 판이 끝난다': 'Lose them all and the run ends',
@@ -462,7 +462,7 @@ export const EN = {
   '끊긴 사슬: 값 ×2': 'Broken chain: ×2 Value', '끊길 때마다 배수 ×2': 'Each break: ×2 Mult',
   '프로모션하거나 퀸 · 아마존을 먹으면 값 +60': 'Promote, or take a queen or amazon: +60 Value',
   '일곱째 줄에서 프로모션한다': 'Promote on the 7th rank', '체크메이트하면 적이 다시 차고 사슬이 이어진다 · 대국마다 한 번': 'A mate refills the board and the chain goes on · once per match',
-  '폰 모습으로 먹을 때마다 배수 +2': 'Each take as a pawn: +2 Mult', '폰으로 시작: 배수 ×3': 'Start with a pawn: ×3 Mult',
+  '폰 모습으로 먹을 때마다 배수 +2': 'Each take as a pawn: +2 Mult', '폰으로 시작: 배수 +3': 'Start with a pawn: +3 Mult', '폰으로 시작: 배수 ×3': 'Start with a pawn: ×3 Mult',
   '같은 종류를 잇달아 먹으면 값 +30': 'Same kind twice in a row: +30 Value', '판에서 값이 가장 큰 적을 먹으면 배수 +4': 'Take the highest-value enemy: +4 Mult',
   '같은 종류를 잇달아 먹을 때마다 배수 ×1.5': 'Each same-kind take in a row: ×1.5 Mult',
   // 행마(두 문장까지)
