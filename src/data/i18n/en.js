@@ -1,6 +1,6 @@
 // 영어 문구 표. 열쇠는 한국어 화면 글 그대로(화면이 그리기 직전에 바꾼다: src/ui/lang.js).
 // 낱말과 대소문자 규칙은 docs/design-notes/english-review.md가 기준이다(CHM-30).
-// 세계의 말: 판 Run · 관 Hall · 대국 Match · 마스터 Master · 마스터전 Master Match · 수 Move · 버리기 Discard · 손 Hand · 주머니 Bag · 사슬 Chain
+// 세계의 말: 판 Run · 관 Hall · 대국 Match · 마스터 Master · 마스터전 Master Match · 수 Move · 희생 Sacrifice · 손 Hand · 주머니 Bag · 사슬 Chain
 // 값 Value · 배수 Mult · 목표 Target · 상금 Purse($) · 끊김 Break · 지키는 적 Guard · 증원 Recruit · 체크메이트 Checkmate(짧게 Mate) · 격언 Maxim
 // 기보 Tome · 각인 Engraving · 혼 Soul · 레퍼토리 Repertoire · 전술 Tactic · 프로모션 Promotion · 레이팅 Rating · 먹기 Take · 모습 Form
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
@@ -47,7 +47,7 @@ export const EN = {
   '나이트를 먹고': 'Take the knight',
   '폰까지 먹어라': 'Then the pawn',
   '폰은 떨굴 곳이 없다. 폰을 들어라': 'A pawn has nowhere to drop. Pick up a pawn',
-  '버리면 새로 뽑는다': 'Discard it and draw anew',
+  '바치면 새로 뽑는다. 다음 수가 세진다': 'Sacrifice it and draw anew. Your next move grows',
   '새로 쥔 비숍을 들어라': 'Pick up the bishop you drew',
   '떨구어라': 'Drop it',
   '폰을 먹어라': 'Take the pawn',
@@ -74,7 +74,7 @@ export const EN = {
   '폰을 먹으면 첫 수가 끝나고 수 구슬 하나가 꺼진다': 'Take the pawn: your first move ends and one bead goes dark',
   '남은 수로 목표를 채운다: 비숍을 든다': 'Use your last move to reach the Target: pick up the bishop',
   '룩을 먹으면 목표에 닿는다': 'Take the rook to reach the Target',
-  '폰은 떨굴 곳이 없다. 버릴 폰을 누른다': 'A pawn has nowhere to drop. Tap a pawn to discard',
+  '폰은 떨굴 곳이 없다. 바칠 폰을 누른다': 'A pawn has nowhere to drop. Tap a pawn to sacrifice',
   '새로 쥔 나이트를 든다': 'Pick up the knight you drew', '퀸을 먹는다': 'Take the queen',
   '▼ 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다': '▼ A shadow marks a recruit. An enemy arrives there when this move ends',
   '폰을 먹는다. 수가 끝나면 증원이 떨어진다': 'Take the pawn. When the move ends, the recruit arrives',
@@ -240,7 +240,7 @@ export const EN = {
   '대장장이': 'Smith', '각인 기물로 시작: 배수 ×1.5': 'Start with an engraved piece: ×1.5 Mult',
   '혼 수집가': 'Soul Collector', '주머니의 혼 하나마다 배수 +2': '+2 Mult per soul in your bag',
   '주특기': 'Specialty', '기보 레벨이 가장 높은 모습으로 먹을 때마다 값 +25': 'Each take in your top tome form: +25 Value',
-  '절약': 'Thrift', '대국을 이기면 남은 버리기마다 상금 +1': 'Win a match: +$1 per discard left',
+  '절약': 'Thrift', '대국을 이기면 남은 희생마다 상금 +1': 'Win a match: +$1 per sacrifice left',
   '금욕': 'Austerity', '격언 칸이 하나라도 비었으면: 배수 ×2': 'Any empty maxim slot: ×2 Mult',
   '도박사': 'Gambler', '사슬이 끝날 때 넷에 하나: 배수 ×3': 'Chain ends: 1 in 4 for ×3 Mult',
   '행운의 동전': 'Lucky Coin', '먹을 때마다 여섯에 하나: 상금 +1': 'Each take: 1 in 6 for +$1',
@@ -258,7 +258,7 @@ export const EN = {
   '횃불': 'Torch', '대국마다 값이 가장 큰 적 둘은 아무것도 지키지 못한다': 'Each match, the two highest-value enemies guard nothing',
   '함정': 'Trap', '대국마다 빈칸 둘이 함정 · 증원이 들면 먹은 것으로 친다': 'Two traps each match · a recruit landing there counts as taken', '붙잡은 증원의 값이 곧바로 점수가 된다': 'A trapped recruit scores its Value at once',
   '속기': 'Blitz', '수 +1 · 손 −1': '+1 Move · −1 Hand',
-  '장고': 'Long Think', '수 −1 · 손 +2 · 버리기 +1': '−1 Move · +2 Hand · +1 Discard',
+  '장고': 'Long Think', '수 −1 · 손 +2 · 희생 +1': '−1 Move · +2 Hand · +1 Sacrifice',
   '선수': 'First Strike', '대국 시작에 값이 가장 큰 적 하나가 판에서 빠진다': 'Each match starts with the highest-value enemy removed',
   '포로': 'Captive', '대국 첫 사슬이 마지막에 먹은 적이 주머니에 들어온다': "The last enemy your match's first chain takes joins your bag", '주머니 열넷까지': 'Up to 14 pieces in your bag',
   // 혼
@@ -327,7 +327,7 @@ export const EN = {
   '퀸과 룩은 떨굴 수 없다': 'Queens and rooks cannot be dropped',
   '끊긴 사슬은 점수가 4분의 1': 'Broken chains score a quarter', '응수가 없다': 'No replies', '노려진 칸을 먹으면 곧바로 끊긴다': 'Taking a guarded square breaks the chain at once', '손을 새로 쥔다': 'A fresh hand',
   // ── 불멸의 기보
-  '불멸의 대국': 'The Immortal Game', '앤더슨이 룩 둘 · 비숍 · 퀸을 버리고 이겼다': 'Anderssen gave up both rooks, a bishop and his queen, and won',
+  '불멸의 대국': 'The Immortal Game', '앤더슨이 룩 둘 · 비숍 · 퀸을 바치고 이겼다': 'Anderssen gave up both rooks, a bishop and his queen, and won',
   '끊겨도 사슬이 이어진다': 'Breaks never end the chain', '한 사슬에서 끊기지 않고 룩 둘을 먹는다': 'Take two rooks in one unbroken chain',
   '오페라 대국': 'The Opera Game', '모피가 오페라 관람석에서 17수 만에 이겼다': 'Morphy won in 17 moves from a box at the opera',
   '지켜진 킹도 먹는다': 'Take even guarded kings', '대국 첫 수에 체크메이트': 'Checkmate on the first move of a match',
@@ -355,21 +355,21 @@ export const EN = {
   '물건': 'Items',
 
   // ── 목소리 손질(docs/design-notes/voice.md): 「조건: 효과」 한 줄
-  // 시너지(옛 모음) · 버리기
-  '기사': 'Rider', '사제': 'Cleric', '시너지': 'Synergy', '버리기': 'Discard', '빼기': 'Remove',
+  // 시너지(옛 모음) · 희생(CHM-35: 옛 버리기, 시너지 「희생」은 「불굴」)
+  '기사': 'Rider', '사제': 'Cleric', '시너지': 'Synergy', '불굴': 'Resolve', '빼기': 'Remove',
   '파수꾼': 'Sentinel', '오뚝이': 'Unbowed', '선봉': 'Vanguard', '뽑은 대로': 'As Dealt', '미련 없이': 'No Regrets',
-  '손과 버리기': 'Hand and Discards', '상점과 시너지': 'Shop and Synergy',
+  '손과 희생': 'Hand and Sacrifice', '상점과 시너지': 'Shop and Synergy',
   '레퍼토리는 판 끝까지 간다. 레퍼토리마다 시너지가 다르다': 'A repertoire lasts the whole run. Each one brings its own synergy',
   '같은 시너지를 2 · 4 · 6개 모으면 효과가 켜진다': 'Collect 2, 4 and 6 of one synergy to switch on its effects',
-  '버리기: 든 기물 하나를 버리고 새로 뽑는다. 붉은 구슬만큼 쓸 수 있다': 'Discard: throw away the piece you hold and draw a new one. One per red bead',
+  '희생: 든 기물을 바치고 새로 뽑는다. 다음 사슬이 세진다': 'Sacrifice: give up the piece you hold and draw a new one. Your next chain grows',
   '기사도와 낙타로 기사 시너지가 2개. 첫 효과가 켜졌고, 4개 · 6개면 더 켜진다': 'Chivalry and the camel make Rider synergy 2. Its first effect is on. More at 4 and 6',
   '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다': 'Drops left this match. When they run out, the match ends',
-  '손에서 하나를 버리고 새로 뽑을 수 있는 횟수': 'How many times you can throw a piece away and draw again',
+  '손의 기물을 바쳐 다음 사슬을 키울 수 있는 횟수': 'How many times you can sacrifice a piece to power your next chain',
   '기물 하나에 새긴다': 'Engraves one piece', '기물 하나에 깃든다': 'Binds to one piece',
   '체스 기물 하나가 특수 기물로 자란다': 'One chess piece evolves into a special piece',
   '아무 기물에 무작위 혼이나 각인': 'A random soul or engraving on a random piece', '아무 기물이 무작위 특수 기물로': 'A random piece becomes a random special piece',
   '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존': 'Pawn › archer · knight › nightrider, camel · bishop › cardinal · rook › chancellor, cannon, ghost · queen › amazon',
-  '버리기 −1': '−1 Discard', '수 2 · 버리기 1뿐': 'Only 2 moves · 1 discard',
+  '희생 −1': '−1 Sacrifice', '수 2 · 희생 1뿐': 'Only 2 moves · 1 sacrifice',
   '지켜지지 않은 킹은 빛난다': 'Unguarded kings glow',
   '사슬마다 한 번': 'Once per chain',
   '마지막에 얻은 행마는 사슬 끝까지 남는다': 'The last move gained lasts to the end of the chain',
@@ -392,8 +392,8 @@ export const EN = {
   '체크메이트 승리마다 커진다: 배수 ×1.5 · ×2 · ×2.5 …': 'Per mate win: ×1.5 · ×2 … Mult',
   '대국 첫 수: 배수 ×2': 'First move of a match: ×2 Mult',
   '대국 마지막 수: 배수 ×3': 'Last move of a match: ×3 Mult',
-  '버리기를 안 쓴 대국: 배수 +4': 'No discards used this match: +4 Mult',
-  '버리기 +1 · 버린 기물마다 배수 +2': '+1 Discard · +2 Mult per discard',
+  '희생 없는 대국: 배수 +4': 'No sacrifices this match: +4 Mult',
+  '희생 +1 · 희생할 때마다 배수 +2': '+1 Sacrifice · +2 Mult per sacrifice',
   '주머니에 남은 기물마다 배수 +1': '+1 Mult per piece left in your bag',
   '주머니 기물 여덟 이하: 배수 ×1.5': '8 or fewer pieces in your bag: ×1.5 Mult',
   '막 들어온 증원을 먹으면 값 +40': 'Take a fresh recruit: +40 Value',
@@ -496,9 +496,9 @@ export const PRE = [
   [/^각성 · (.+)$/, (m, tr) => `Awakened · ${tr(m[1])}`],
 
   // 시너지 이름 · 칩(「기사 시너지」 · 「기사 +1」 · 「기사 2/4」). 「성채」는 세력 이름과 한국어가 같아 영어도 Fortress 하나로 둔다
-  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥|역습|매복) 시너지$/, (m, tr) => `${tr(m[1])} synergy`],
-  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥|역습|매복) \+(\d+)$/, (m, tr) => `${tr(m[1])} +${m[2]}`],
-  [/^(기사|성채|사제|변신|희생|왕관|행진|사냥|역습|매복) (\d+)\/(\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}/${m[3]}`],
+  [/^(기사|성채|사제|변신|불굴|왕관|행진|사냥|역습|매복) 시너지$/, (m, tr) => `${tr(m[1])} synergy`],
+  [/^(기사|성채|사제|변신|불굴|왕관|행진|사냥|역습|매복) \+(\d+)$/, (m, tr) => `${tr(m[1])} +${m[2]}`],
+  [/^(기사|성채|사제|변신|불굴|왕관|행진|사냥|역습|매복) (\d+)\/(\d+)$/, (m, tr) => `${tr(m[1])} ${m[2]}/${m[3]}`],
   [/^([^\s:\d]+(?: [^\s:\d]+)?): (.+)$/, (m, tr) => `${tr(m[1])}: ${tr(m[2])}`],
   [/^(\d+)관 · (연습 대국|정식 대국|마스터전)$/, (m) => `Hall ${m[1]} · ${KIND[m[2]]}`],
   // 왼쪽 판 제목 「3/8관 · 연습 대국」: 영어는 「Hall 3/8 · Practice」가 판 폭(112)을 넘어 「/8」을 뺀다
@@ -564,7 +564,7 @@ export const TEMPLATES = [
   [/^지키는 적 (\d+)$/, (m) => `Guards ${m[1]}`],
   [/^배수 \+(.+)$/, (m) => `+${m[1]} Mult`],
   [/^손 (\d+)$/, (m) => `Hand ${m[1]}`],
-  [/^버리기 (\d+)$/, (m) => `Discards ${m[1]}`],
+  [/^희생 (\d+)$/, (m) => `Sacrifices ${m[1]}`],
   [/^수 (\d+)$/, (m) => `Moves ${m[1]}`],
   [/^격언 칸 (\d+)$/, (m) => `Maxim slots ${m[1]}`],
   [/^(.+) 모습으로 먹을 때마다 값 \+(\d+)$/, (m, tr) => `Each take as ${an(tr(m[1]).toLowerCase())}: +${m[2]} Value`],

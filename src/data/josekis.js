@@ -146,7 +146,7 @@ joseki('trap', '함정', 'gold', ['ambush'], '대국마다 빈칸 둘이 함정 
 joseki('blitz', '속기', 'gold', ['change'], '수 +1 · 손 −1', {
   onBattleStart(ctx) { ctx.rules.moves = (ctx.rules.moves ?? 4) + 1; ctx.rules.hand = Math.max(2, (ctx.rules.hand ?? 4) - 1); },
 });
-joseki('long_think', '장고', 'gold', ['hunt'], '수 −1 · 손 +2 · 버리기 +1', {
+joseki('long_think', '장고', 'gold', ['hunt'], '수 −1 · 손 +2 · 희생 +1', {
   onBattleStart(ctx) { ctx.rules.moves = Math.max(1, (ctx.rules.moves ?? 4) - 1); ctx.rules.hand = (ctx.rules.hand ?? 4) + 2; ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
 });
 joseki('first_mover', '선수', 'rainbow', ['crown'], '대국 시작에 값이 가장 큰 적 하나가 판에서 빠진다', {

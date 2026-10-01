@@ -1,6 +1,6 @@
 // 판(런): 8관 × (연습 · 정식 · 명인), 보상, 상점, 꾸러미, 끝없는 대국.
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 applyRun(run, cmd) 하나뿐, 둘 수 있는 명령은 legalRunCommands(run).
-// 대국은 run.battle에 들어 있고 대국 명령(drop · capture · discard)은 그대로 넘긴다.
+// 대국은 run.battle에 들어 있고 대국 명령(drop · capture · discard — discard는 희생)은 그대로 넘긴다.
 //
 // 국면(run.phase)과 명령
 //   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
@@ -88,7 +88,7 @@ export const DANS = [
   { n: 3, text: '상자 다섯 칸 · 첫 조각이 반' },
   { n: 4, text: '시계 −1' },
   { n: 5, text: '목표 ×1.1' },
-  { n: 6, text: '버리기 −1' },
+  { n: 6, text: '희생 −1' },
   { n: 7, text: '대가 목표 ×1.25' },
   { n: 8, text: '목표 ×1.25' },
 ];

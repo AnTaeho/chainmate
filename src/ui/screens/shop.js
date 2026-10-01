@@ -1,5 +1,5 @@
 // 상점: 진열 2 + 꾸러미 2 + 다시 진열 + 다음 대국. 오른쪽 격언 칸(끌어서 순서 바꾸기 · 눌러 팔기), 두루마리 칸(눌러 쓰기),
-// 아래 주머니(눌러 승급 · 버리기).
+// 아래 주머니(눌러 승급 · 빼기).
 import { sway } from '../sway.js';
 import { hint as coachHint } from '../coach.js';
 import { PAL, RARITY } from '../../render/palette.js';

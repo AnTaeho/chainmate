@@ -1,7 +1,7 @@
 // 첫 판 대본 대국의 걸음과 킹의 말(CHM-22, docs/design-notes/tutorial.md). 판 · 손 · 증원은 src/data/tutorial.js.
 // 대국 화면(screens/script.js)이 걸음마다 누를 곳 하나만 밝히고, 킹이 그 곁에서 한두 문장으로 말한다. 규칙은 실제 대국 그대로.
 //   pick   손에서 그 종류를 든다          drop  그 칸에 떨군다        cap  그 적을 먹는다
-//   discard 버리기 단추                   moves 「행마」 단추(행마 보기가 열리면 넘어간다)
+//   discard 희생 단추                   moves 「행마」 단추(행마 보기가 열리면 넘어간다)
 //   ok     「알았다」로 넘어간다(target: 가리킬 구역 id, sq: 가리킬 칸) · okLabel 단추 글
 //   try    이 걸음부터 대국 복사본에서 둔다(한 번 끊겨 보기) · rewind 「되돌린다」로 복사본을 버리고 진짜 대국으로
 //   end    대국이 끝난 뒤 킹의 마지막 말(joy: 금관이 반짝인다) — 누르면 평소의 막간(보상 · 상점)으로
@@ -32,9 +32,9 @@ export const TUTORIAL_STEPS = [
   { move: 2, drop: 'h1', say: '떨구어라. 곧게 가면 나이트다' },
   { move: 2, cap: 'h2', say: '나이트를 먹고' },
   { move: 2, cap: 'g4', say: '폰까지 먹어라' },
-  // ④ 버리기 · 목표
+  // ④ 희생 · 목표
   { move: 3, pick: 'P', say: '폰은 떨굴 곳이 없다. 폰을 들어라' },
-  { move: 3, discard: true, say: '버리면 새로 뽑는다' },
+  { move: 3, discard: true, say: '바치면 새로 뽑는다. 다음 수가 세진다' },
   { move: 3, pick: 'B', say: '새로 쥔 비숍을 들어라' },
   { move: 3, drop: 'c3', say: '떨구어라' },
   { move: 3, cap: 'e5', say: '폰을 먹어라' },

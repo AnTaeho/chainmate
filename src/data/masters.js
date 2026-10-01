@@ -25,7 +25,7 @@ master('mirror', '거울', '한 사슬에서 같은 종류를 두 번 먹지 못
     return !ctx.chain.captures.some((c) => c.piece === piece);
   },
 });
-master('hourglass', '모래시계', '수 2 · 버리기 1뿐', {
+master('hourglass', '모래시계', '수 2 · 희생 1뿐', {
   onBattleStart(ctx) { ctx.rules.moves = 2; ctx.rules.discards = 1; },
 });
 master('heavy_hand', '무거운 손', '퀸과 룩은 떨굴 수 없다', {

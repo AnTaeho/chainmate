@@ -3,7 +3,7 @@
 //   re / en   글 안에서 찾는 꼴(한국어 · 영어). null이면 글 안에서 찾지 않고, 구역이 이름으로 넘길 때만(수 · 손 · 판처럼 흔한 말)
 //   group     낱말 풀이 화면의 탭: battle 대국 · run 판 · item 물건 · set 시너지
 //   풀이(say · enSay)는 낱말 상자(너비 170)에 세 줄 안으로 들어가게 짧게.
-// 시너지 이름(「희생 시너지」)은 같은 자리에서 시작하는 짧은 낱말(시너지)보다 먼저 둔다(splitTerms는 앞의 것을 고른다).
+// 시너지 이름(「불굴 시너지」)은 같은 자리에서 시작하는 짧은 낱말(시너지)보다 먼저 둔다(splitTerms는 앞의 것을 고른다).
 import { wrap } from '../render/text.js';
 import { PAL } from '../render/palette.js';
 import { text, measure, box, rect } from '../render/gfx.js';
@@ -21,7 +21,7 @@ export const TERMS = [
   T('fam_line', 'set', '성채 시너지', 'Fortress', /성채 시너지/, /\bFortress synergy\b/i, '가로 · 세로로 길게 미끄러질수록 커진다', 'Grows as you slide far in straight lines'),
   T('fam_diag', 'set', '사제 시너지', 'Cleric', /사제 시너지/, /\bCleric synergy\b/i, '대각선으로 먹을 때 값 · 배수가 붙는다', 'Diagonal takes earn Value and Mult'),
   T('fam_change', 'set', '변신 시너지', 'Shift', /변신 시너지/, /\bShift synergy\b/i, '모습이 자주 바뀔수록 커진다', 'Grows as your form keeps changing'),
-  T('fam_sacrifice', 'set', '희생 시너지', 'Sacrifice', /희생 시너지/, /\bSacrifice synergy\b/i, '사슬이 끊겨도 점수가 커진다', 'Broken chains still score big'),
+  T('fam_sacrifice', 'set', '불굴 시너지', 'Resolve', /불굴 시너지/, /\bResolve synergy\b/i, '사슬이 끊겨도 점수가 커진다', 'Broken chains still score big'),
   T('fam_crown', 'set', '왕관 시너지', 'Crown', /왕관 시너지/, /\bCrown synergy\b/i, '프로모션 · 퀸 · 체크메이트에 점수가 붙는다', 'Promotions, queens and checkmates score more'),
   T('fam_march', 'set', '행진 시너지', 'March', /행진 시너지/, /\bMarch synergy\b/i, '폰으로 시작한 사슬이 커진다', 'Chains started by a pawn grow bigger'),
   T('fam_hunt', 'set', '사냥 시너지', 'Hunt', /사냥 시너지/, /\bHunt synergy\b/i, '같은 적을 잇달아 먹으면 커진다', 'Grows as you take the same kind in a row'),
@@ -43,7 +43,7 @@ export const TERMS = [
   B('move', 'battle', '수', 'Move', null, null, '기물 하나를 떨궈 사슬을 푸는 한 번. 대국마다 정해져 있다', 'One drop and its chain. Each match gives you a set number'),
   B('hand', 'battle', '손', 'Hand', null, null, '지금 쥔 기물. 주머니에서 뽑는다', 'The pieces you hold, drawn from your bag'),
   B('bag', 'battle', '주머니', 'Bag', /주머니/, /\bbag\b/i, '이번 판에 가진 기물 전부', 'Every piece you own this run'),
-  B('swap', 'battle', '버리기', 'Discard', /버리기/, /\bdiscards?\b/i, '손에서 고른 기물 하나를 버리고 새로 뽑는다', 'Throw away the piece you hold and draw a new one'),
+  B('swap', 'battle', '희생', 'Sacrifice', /희생(?! 시너지)/, /\bsacrific(?:e|es|ed)\b(?! synergy)/i, '손의 기물 하나를 바치고 새로 뽑는다. 다음 사슬이 세진다', 'Give up a piece in hand and draw anew. Your next chain grows'),
   B('goal', 'battle', '목표', 'Target', null, null, '대국을 이기는 점수', 'The score that wins the match'),
   // ── 판
   T('run', 'run', '판', 'Run', null, null, '1관부터 8관까지의 한 도전. 지면 처음부터', 'One attempt from Hall 1 to Hall 8. Lose it and start over'),
