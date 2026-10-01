@@ -7,6 +7,7 @@ import { MAXIM_BY_ID } from './maxims.js';
 import { LEGEND_BY_ID } from './legends.js';
 import { JOSEKI_BY_ID } from './josekis.js';
 import { SOUL_BY_ID } from './souls.js';
+import { TACTIC_BY_ID } from './tactics.js';
 
 export const THRESHOLDS = [2, 4, 6];
 export const FAMILIES = [
@@ -42,7 +43,7 @@ export const MAXIM_FAMILIES = {
   cavalry_charge: ['leap'], long_diagonal: ['diag'], encircle: ['hunt'], loner: ['hunt'], full_board: ['ambush'], youngest: ['march'],
   eldest: ['crown'], second_wind: ['sacrifice'], all_in: ['sacrifice'], combo: ['hunt'], disguise: ['change'], checkerboard: ['diag'],
   last_square: ['sacrifice'], nobility: ['crown'], farmer: ['march'], blacksmith: ['line'], soul_collector: ['change'], specialty: ['leap'],
-  thrift: ['sacrifice'], asceticism: ['crown'], gambler: ['change'], lucky_coin: ['ambush'], reversal: ['counter'], pilgrimage: ['line'],
+  thrift: ['sacrifice'], asceticism: ['crown'], gambler: ['change'], lucky_coin: ['sacrifice'], reversal: ['counter'], pilgrimage: ['line'],
   kings_step: ['counter'], ambusher: ['ambush'], counter_book: ['counter'],
 };
 export const maximFamilies = (id) => MAXIM_FAMILIES[id] || (MAXIM_BY_ID[id] && MAXIM_BY_ID[id].families) || (LEGEND_BY_ID[id] && LEGEND_BY_ID[id].families) || [];
@@ -58,6 +59,7 @@ export function familyCounts(build, extra = []) {
     if (p.soul && SOUL_BY_ID[p.soul]) add(SOUL_BY_ID[p.soul].families);
   }
   for (const t of fairy) add(PIECES[t].families);
+  for (const c of build.consumables || []) if (c.kind === 'tactic' && TACTIC_BY_ID[c.id]) add(TACTIC_BY_ID[c.id].families);
   for (const id of build.josekis || []) if (JOSEKI_BY_ID[id]) add(JOSEKI_BY_ID[id].families);
   add(extra);
   return n;
