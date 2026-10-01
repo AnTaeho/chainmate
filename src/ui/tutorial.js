@@ -34,7 +34,7 @@ export const TUTORIAL_STEPS = [
   { move: 2, cap: 'g4', say: '폰까지 먹어라' },
   // ④ 희생 · 목표
   { move: 3, pick: 'P', say: '폰은 떨굴 곳이 없다. 폰을 들어라' },
-  { move: 3, discard: true, say: '바치면 새로 뽑는다. 다음 수가 세진다' },
+  { move: 3, discard: true, say: '바치면 새로 뽑는다' },
   { move: 3, pick: 'B', say: '새로 쥔 비숍을 들어라' },
   { move: 3, drop: 'c3', say: '떨구어라' },
   { move: 3, cap: 'e5', say: '폰을 먹어라' },

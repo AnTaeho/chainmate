@@ -1443,7 +1443,7 @@ export class BattleScreen {
     };
     const rows = [
       { id: 'pips:moves', label: '수', tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다'), draw: (ctx2, ty) => { text(ctx2, '수', LX + P, ty, PAL.dim); pips(v.moves, v.movesLeft, PAL.gold)(ctx2, ty); } },
-      { id: 'pips:discards', label: '희생', tip: () => tipLines('희생', '손의 기물을 바쳐 다음 사슬을 키울 수 있는 횟수'), draw: (ctx2, ty) => { text(ctx2, '희생', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); } },
+      { id: 'pips:discards', label: '희생', tip: () => tipLines('희생', '손의 기물을 바치고 새로 뽑을 수 있는 횟수'), draw: (ctx2, ty) => { text(ctx2, '희생', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); } },
     ];
     if (hasClock(run)) rows.push(clockRow(app, run));
     if (run) rows.push({ money: run });

@@ -18,6 +18,8 @@ export function emptyRecords() {
     runs: 0, wins: 0, bestAnte: 0,
     bestMove: null,            // { score, steps: [모습…], ante }
     mates: 0, legends: 0, grades: {},
+    brilliants: 0,             // 탁월수 !!(희생한 바로 다음 수로 체크메이트, CHM-35)
+    bestBrilliant: null,       // { score, weight, pieces, ante } 가장 큰 탁월수
     codex: { maxims: {}, masters: {}, factions: {}, legends: {}, legendsDone: {}, openings: { standard: true }, editions: {}, souls: {}, awake: {} },
     unlocked: { openings: ['standard'], dan: 0 },
     danWins: {},
@@ -46,6 +48,10 @@ export function observe(rec, run, events, fresh = []) {
   for (const e of events) {
     if (e.type === 'win' && e.reason === 'mate') rec.mates++;
     if (e.type === 'grade') rec.grades[e.mark] = (rec.grades[e.mark] || 0) + 1;
+    if (e.type === 'brilliant') {
+      rec.brilliants = (rec.brilliants || 0) + 1;
+      if (!rec.bestBrilliant || e.score > rec.bestBrilliant.score) rec.bestBrilliant = { score: e.score, weight: e.weight, pieces: e.pieces.slice(), ante: run ? run.ante : null };
+    }
     if (e.type === 'legend') { rec.legends++; if (!rec.codex.legendsDone[e.legend]) { rec.codex.legendsDone[e.legend] = true; fresh.push(`legendsDone:${e.legend}`); } }
     // 혼 각성(CHM-17): 깨운 혼은 도감 혼 탭의 각성 칸에 남는다
     if (e.type === 'awaken') mark(rec, 'awake', e.soul, fresh);

@@ -43,7 +43,8 @@ export const TERMS = [
   B('move', 'battle', '수', 'Move', null, null, '기물 하나를 떨궈 사슬을 푸는 한 번. 대국마다 정해져 있다', 'One drop and its chain. Each match gives you a set number'),
   B('hand', 'battle', '손', 'Hand', null, null, '지금 쥔 기물. 주머니에서 뽑는다', 'The pieces you hold, drawn from your bag'),
   B('bag', 'battle', '주머니', 'Bag', /주머니/, /\bbag\b/i, '이번 판에 가진 기물 전부', 'Every piece you own this run'),
-  B('swap', 'battle', '희생', 'Sacrifice', /희생(?! 시너지)/, /\bsacrific(?:e|es|ed)\b(?! synergy)/i, '손의 기물 하나를 바치고 새로 뽑는다. 다음 사슬이 세진다', 'Give up a piece in hand and draw anew. Your next chain grows'),
+  B('swap', 'battle', '희생', 'Sacrifice', /희생(?! 시너지)/, /\bsacrific(?:e|es|ed)\b(?! synergy)/i, '손의 기물을 바치고 새로 뽑는다. 바친 기물은 이번 대국에 돌아오지 않는다', 'Give up a piece in hand and draw anew. It stays out for this match'),
+  T('brilliant', 'battle', '탁월수', 'Brilliant', /탁월수/, /\bBrilliant\b/, '희생한 바로 다음 수로 체크메이트. 바친 기물이 무거울수록 배수가 크게 곱해진다', 'Checkmate right after a sacrifice. The heavier the piece you gave up, the bigger the Mult'),
   B('goal', 'battle', '목표', 'Target', null, null, '대국을 이기는 점수', 'The score that wins the match'),
   // ── 판
   T('run', 'run', '판', 'Run', null, null, '1관부터 8관까지의 한 도전. 지면 처음부터', 'One attempt from Hall 1 to Hall 8. Lose it and start over'),
