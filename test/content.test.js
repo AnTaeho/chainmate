@@ -103,8 +103,9 @@ const CASES = [
   ['last_move', 'knight', 30, { movesLeft: 2 }],
   ['no_regrets', 'knight', 150, { discardsUsed: 0 }],
   ['no_regrets', 'knight', 30, { discardsUsed: 1 }],
-  ['second_thought', 'knight', 210, { discarded: 3 }],
-  ['second_thought', 'knight', 30, { discarded: 0 }],
+  // 희생의 몫(값 · 배수 0으로 두고 바친 수만)에 배수 +2씩
+  ['second_thought', 'knight', 210, { offering: { value: 0, mult: 0, count: 3 } }],
+  ['second_thought', 'knight', 30, { discarded: 3 }],
   ['empty_bag', 'knight', 180, { bag: [1, 2, 3, 4, 5] }],
   ['small_bag', 'knight', 45, { deckSize: 8 }],
   ['small_bag', 'knight', 30, { deckSize: 9 }],

@@ -97,7 +97,7 @@ test('왕의 목: 킹을 지키던 적을 먹으면 연쇄 +2', () => {
   assert.equal(d.mult, 1);
 });
 
-test('다시 생각: 무르기 +1 · 무른 기물마다 값 +10', async () => {
+test('미련 없이: 희생 +1', async () => {
   const { createBattle } = await import('../src/sim/battle.js');
   assert.equal(createBattle({ seed: 1, mods: [{ id: 'second_thought' }] }).discardsLeft, 4);
 });

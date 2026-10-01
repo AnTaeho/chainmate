@@ -66,7 +66,7 @@ test('단 규칙은 차례로 쌓인다(여덟)', () => {
   }
 });
 
-test('단 1: 증원 +1 / 단 4: 시계 −1 / 단 6: 버리기 −1', () => {
+test('단 1: 증원 +1 / 단 4: 시계 −1 / 단 6: 희생 −1', () => {
   const plain = createRun({ draft: false, seed: 9 }); applyRun(plain, { type: 'play' });
   assert.equal(plain.clock, 3);
   const r1 = createRun({ draft: false, seed: 9, dan: 1 }); applyRun(r1, { type: 'play' });

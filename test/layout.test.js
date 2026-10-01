@@ -77,13 +77,13 @@ test('오른쪽 칸: 격언 다섯 칸 · 시너지 띠 · 손 이름표 · 손�
 });
 
 // CHM-40: 다시 놓기 단추는 손 이름표 줄에 있어 격언 칸 자리를 먹지 않는다 — 첫 수 전 · 기본 다섯 칸도 한 줄(이름이 다 보인다)
-test('오른쪽 칸: 다시 놓기가 보이는 첫 수 전에도 격언 다섯 칸은 한 줄 · 단추는 버리기 앞에 들어간다', () => {
+test('오른쪽 칸: 다시 놓기가 보이는 첫 수 전에도 격언 다섯 칸은 한 줄 · 단추는 희생 앞에 들어간다', () => {
   const { RX, RW } = M.battle;
   const run = M.run.createRun({ seed: 1, draft: false });
   const self = { run, canReboard: () => true };
   const lay = M.battle.BattleScreen.prototype.rightLayout.call(self, run);
   assert.equal(M.parts.maximColumnH(run, lay.room).cols, 1);
-  // 묘수 0 · 1 · 2개와 다시 놓기가 버리기 단추(폭 62, 틈 3) 앞에 들어간다
+  // 묘수 0 · 1 · 2개와 다시 놓기가 희생 단추(폭 62, 틈 3) 앞에 들어간다
   for (const lang of LANGS) {
     M.lang.setLang(lang);
     for (const n of [0, 1, 2]) {
