@@ -101,3 +101,4 @@ export function drawIcon(ctx, id, x, y, alpha = 1) {
   return true;
 }
 export const ICON_IDS = Object.keys(I);
+export const ICON_ROWS = I;
