@@ -15,6 +15,7 @@ import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
 import { SOUL_BY_ID, isCracked } from '../../data/souls.js';
+import { kindBand, kindTab, BAND, TAB, PACK_KIND } from '../kinds.js';
 import { awakenFlow } from './awaken.js';
 import { TACTIC_BY_ID, evolveTo } from '../../data/tactics.js';
 const ENG_NAME = (id) => engravingInfo(id).name;
@@ -23,6 +24,7 @@ import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js'
 import { runSide, pauseButton, shardTo } from './common.js';
 import { RIGHT, CENTER, CARD, TOP, PAD_CARD, LINE, GAP_IN, GAP_GROUP, LIST_GAP, flow, textY, inkY, rowBoxH, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
+import { L } from '../lang.js';
 
 const RX = RIGHT.x, RW = RIGHT.w;
 // 판 틀(docs/design-notes/layout.md 「상점」): 가운데 칸 위 띠에 「진열」 이름표 · 다시 진열 · 다음 대국, 그 아래로 진열 카드 줄(hug) →
@@ -98,28 +100,50 @@ export function growPillar(ctx, x, y, w, h, p) {
   ctx.globalAlpha = 1;
 }
 
-// 두루마리 한 칸(이름 한 줄 — 높이 rowBoxH(PAD_CARD)): 넓은 칸은 왼쪽 그림(각인 = 재료, 혼 = 기운, 진화 = 자라는 화살, 기보 = 모습 윤곽) + 이름,
-// 좁은 칸(셋 이상 — 두 칸씩)은 이름만. 효과는 가리키면 왼쪽 칸 설명에
-export function consumableCard(ctx, c, x, y, w, h, hover) {
+// 두루마리 이름(한국어 열쇠 — 그릴 때 옮긴다)
+export const scrollName = (c) => (c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'awaken' ? '깨우기' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name);
+// 두루마리 칸이 좁은가(셋 이상 — 두 칸씩)
+const scrollNarrow = (w) => w < 80;
+// 이름 자리 폭(그리는 자리와 같다): 띠(1 + BAND) · 틈 2 뒤부터. 좁은 칸은 테 안쪽 한 칸까지(55 → 36),
+// 넓은 칸은 그림(18) · 틈 4 뒤부터 오른쪽 여백 PAD_CARD까지(112 → 65)
+export const scrollNameRoom = (w) => (scrollNarrow(w) ? w - 2 - (1 + BAND + 2) : w - PAD_CARD - (1 + BAND + 2 + 1 + 18 + 4));
+// 좁은 칸 한 줄(두 칸)에 이름을 쓰는가(CHM-41): 그 줄의 모든 이름이 굵게 들어갈 때만. 하나라도 안 들어가면 줄 전체를 띠 + 그림으로 —
+// 한 줄 안에서 이름 칸과 그림 칸이 섞이지 않게. 빈 칸은 따지지 않는다
+export const scrollRowNames = (cs, w) => cs.filter(Boolean).every((c) => measure(scrollName(c), true) <= scrollNameRoom(w));
+
+// 두루마리 한 칸(이름 한 줄 — 높이 rowBoxH(PAD_CARD)): 왼쪽 띠(종류 바탕 + 문양, kinds.js — CHM-37) → 혼은 등급 막대 →
+// 넓은 칸은 그림(각인 = 재료, 혼 = 기운, 진화 = 자라는 화살, 기보 = 모습 윤곽) + 이름. 좁은 칸(셋 이상 — 두 칸씩)은 줄의 이름이 다 굵게 들어가면
+// 이름만, 아니면 그림만(띠 뒤 자리 가운데, CHM-41 — scrollRowNames). 효과 · 이름은 가리키면 왼쪽 칸 설명에.
+// 띠는 혼 · 각인 테(x + 1) 왼변을 덮고 위 · 오른쪽 · 아래 테는 남는다
+export function consumableCard(ctx, c, x, y, w, h, hover, { names = true } = {}) {
   const edge = c.kind === 'engraving' ? ENG_EDGE[c.id] || PAL.gold : c.kind === 'soul' ? SOUL_BY_ID[c.id].col : c.kind === 'awaken' ? PAL.gold : null;
-  openBox('card', x, y, w, h, PAD_CARD, { name: `두루마리 ${c.kind}` });
+  const P = PAD_CARD, narrow = scrollNarrow(w);
+  // 좁은 칸은 이름 자리가 좁아(55 − 띠) 안 여백을 테 안쪽 한 칸까지 쓴다(한글 석 자 36)
+  openBox('card', x, y, w, h, narrow ? { x: 2, y: P } : P, { name: `두루마리 ${c.kind}` });
   cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge });
-  const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'awaken' ? '깨우기' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
-  // 혼 두루마리: 왼쪽 안쪽에 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙)
-  if (c.kind === 'soul') rect(ctx, x + 2, y + 2, 2, h - 4, RARITY[SOUL_BY_ID[c.id].rarity]);
-  const P = PAD_CARD, narrow = w < 80;
-  if (narrow) { fitText(ctx, name, x + Math.floor(w / 2), y + textY(P), w - P * 2, PAL.cardInk, { align: 'center' }); closeBox(); return; }
-  const ax = x + 2, ay = y + Math.floor((h - 18) / 2);
-  rect(ctx, ax + 2, ay, 18, 18, '#1b2b27');
-  if (c.kind === 'engraving') engravingEmblem(ctx, c.id, ax - 1, ay - 5, { sq: false });
-  else if (c.kind === 'soul') soulEmblem(ctx, c.id, ax - 1, ay - 4, 0, { sq: false });
-  else if (c.kind === 'awaken') awakenArt(ctx, ax - 1, ay - 4, 0, { sq: false });
-  else if (c.kind === 'evolve') { rect(ctx, ax + 5, ay + 11, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, ax + 9 + i, ay + 10 - i, 1, 1, PAL.gold); rect(ctx, ax + 12, ay + 4, 5, 6, PAL.gold); }
-  else if (c.kind === 'tactic') tacticIcon(ctx, c.id, ax + 3, ay + 4);
-  else if (c.kind === 'chart') { dots(ctx, ax + 2, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', ax + 3, ay - 3, { alpha: 0.9 }); }
-  const nx = x + 26;
-  fitText(ctx, name, nx, y + textY(P), x + w - P - nx, PAL.cardInk);
+  const name = scrollName(c);
+  kindBand(ctx, c.kind, x + 1, y + 1, h - 2);
+  // 혼 두루마리: 띠 오른끝(문양 옆 빈 줄)에 겹쳐 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙) — 이름과 한 칸 띄운다
+  if (c.kind === 'soul') rect(ctx, x + BAND, y + 2, 2, h - 4, RARITY[SOUL_BY_ID[c.id].rarity]);
+  const bx = x + 1 + BAND + 2; // 띠(와 등급 막대) 뒤 글 · 그림이 서는 왼끝
+  const ay = y + Math.floor((h - 18) / 2);
+  if (narrow && names) { const nx = bx, nw = scrollNameRoom(w); fitText(ctx, name, nx + Math.floor(nw / 2), y + textY(P), nw, PAL.cardInk, { align: 'center' }); closeBox(); return; }
+  if (narrow) { scrollArt(ctx, c, bx + Math.floor((scrollNameRoom(w) - 18) / 2), ay); closeBox(); return; }
+  const ax = bx + 1;
+  scrollArt(ctx, c, ax, ay);
+  const nx = ax + 18 + 4;
+  fitText(ctx, name, nx, y + textY(P), scrollNameRoom(w), PAL.cardInk);
   closeBox();
+}
+// 두루마리 그림(18 × 18): 각인 = 재료, 혼 = 기운, 깨우기, 진화 = 자라는 화살, 전술, 기보 = 모습 윤곽
+function scrollArt(ctx, c, ax, ay) {
+  rect(ctx, ax, ay, 18, 18, '#1b2b27');
+  if (c.kind === 'engraving') engravingEmblem(ctx, c.id, ax - 3, ay - 5, { sq: false });
+  else if (c.kind === 'soul') soulEmblem(ctx, c.id, ax - 3, ay - 4, 0, { sq: false });
+  else if (c.kind === 'awaken') awakenArt(ctx, ax - 3, ay - 4, 0, { sq: false });
+  else if (c.kind === 'evolve') { rect(ctx, ax + 3, ay + 11, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, ax + 7 + i, ay + 10 - i, 1, 1, PAL.gold); rect(ctx, ax + 10, ay + 4, 5, 6, PAL.gold); }
+  else if (c.kind === 'tactic') tacticIcon(ctx, c.id, ax + 1, ay + 4);
+  else if (c.kind === 'chart') { dots(ctx, ax, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', ax + 1, ay - 3, { alpha: 0.9 }); }
 }
 // 꾸러미 칸 쌓기(재기와 그리기가 같이 쓴다): 왼쪽 봉투(ENV), 오른쪽 이름 → 값(두 줄, 봉투 높이 가운데).
 // 봉투 속 「무엇 셋 중 하나」는 가리키면 왼쪽 칸 설명에(packTip)
@@ -129,14 +153,22 @@ export const packTip = (pk) => tipLines(PACK_NAME[pk.kind], PACK_INSIDE[pk.kind]
 const PACK_GAP = 4;
 // 좁은 칸(셋 — 폭 100 아래)은 봉투 없이 이름 → 값
 const packEnv = (w) => w >= 100;
-export function packCellLayout(pk, w) {
-  const P = PAD_CARD, tx = packEnv(w) ? P + ENV.w + 4 : P, tw = w - tx - P;
+// 좁은 칸 한 줄(셋)의 이름이 하나라도 굵게 안 들어가면(영어 「Engraving」 63 > 58, CHM-42) 그 줄 셋을 다 작은 봉투(ENV_S) + 값으로 —
+// 봉랍 자리 딱지가 종류를, 금빛 봉투가 금빛 꾸러미를 말한다. 두루마리 좁은 칸(CHM-41 scrollRowNames)과 같은 규칙: 한 줄 안에서 섞지 않는다
+const ENV_S = { w: 24, h: 20 };
+export function packCellLayout(pk, w, { names = true } = {}) {
+  const P = PAD_CARD, env = packEnv(w), small = !env && !names;
+  const tx = env ? P + ENV.w + 4 : small ? P + ENV_S.w + 4 : P, tw = w - tx - P;
   const f = flow(P);
   const name = f.line(), price = f.line();
-  const h = Math.max(f.y, packEnv(w) ? P + ENV.h : 0) + P;
-  return { tx, tw, price, name, env: packEnv(w) ? Math.floor((h - ENV.h) / 2) : null, h };
+  const h = Math.max(f.y, env ? P + ENV.h : 0) + P;
+  return { tx, tw, price, name, small, env: env ? Math.floor((h - ENV.h) / 2) : small ? Math.floor((h - ENV_S.h) / 2) : null, h };
 }
 export const packCellH = (pk, w) => packCellLayout(pk, w).h;
+// 좁은 칸 이름(꾸러미 이름의 앞 낱말 — 「각인 꾸러미」 → 「각인」)과 그 자리 폭
+export const packShortName = (pk) => L(PACK_NAME[pk.kind].split(' ')[0]);
+export const packNameRoom = (w) => packCellLayout({}, w).tw;
+export const packRowNames = (packs, w) => packEnv(w) || packs.every((pk) => measure(packShortName(pk), true) <= packNameRoom(w));
 // 주머니의 기물을 골라 쓰는 두루마리(처음 안내 「두루마리를 누르고 주머니의 기물을 골라 쓴다」의 대상)
 const SCROLL_ON_PIECE = ['engraving', 'soul', 'evolve', 'awaken'];
 export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' || c.kind === 'awaken' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
@@ -268,7 +300,7 @@ export class ShopScreen {
         ui.region(id, x, y, pw, lay.packH, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack'), tip: () => packTip(pk), preview: true });
         const hov = ui.isHover(id) && ok;
         sway(ctx, ui.time, `${id}:${pk.kind}`, x, y, pw, lay.packH, (c) => {
-          this.packCard(c, pk, x, y, pw, lay.packH, hov);
+          this.packCard(c, pk, x, y, pw, lay.packH, hov, packRowNames(shop.packs, pw));
           if (!pk.sold && !ok) { c.globalAlpha = 0.35; rect(c, x, y, pw, lay.packH, PAL.shadow); c.globalAlpha = 1; }
         }, { hover: hov, press: hov && ui.press && ui.press.id === id, amt: 0.6 });
       });
@@ -300,7 +332,9 @@ export class ShopScreen {
       if (!c) { frame(ctx, x, y, cw, rl.ch, PAL.feltHi); continue; }
       const id = `cons:${i}`;
       ui.region(id, x, y, cw, rl.ch, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c), preview: true });
-      consumableCard(ctx, c, x, y, cw, rl.ch, ui.isHover(id) || (this.target && this.target.index === i));
+      // 좁은 칸은 줄(두 칸)마다 이름 · 그림을 함께 고른다(CHM-41)
+      const row = i - (i % 2), names = rl.wide || scrollRowNames(run.consumables.slice(row, Math.min(row + 2, run.consumableSlots)), cw);
+      consumableCard(ctx, c, x, y, cw, rl.ch, ui.isHover(id) || (this.target && this.target.index === i), { names });
     }
     this.drawMenu(ctx, ui);
     // 처음 안내(한 번에 하나, 앞의 것부터). 말하는 것이 화면에 있을 때만 — 없으면 아껴 두었다가 처음 보이는 상점에서(CHM-36)
@@ -325,20 +359,29 @@ export class ShopScreen {
   }
 
   // 꾸러미 칸: 왼쪽 봉투, 오른쪽 이름 → 값(packCellLayout). 봉투 속은 가리키면(packTip)
-  packCard(ctx, pk, x, y, w, h, hover) {
-    const lay = packCellLayout(pk, w);
+  packCard(ctx, pk, x, y, w, h, hover, names = true) {
+    const lay = packCellLayout(pk, w, { names });
     openBox('card', x, y, w, h, PAD_CARD, { name: `꾸러미 ${pk.kind}` });
     box(ctx, x, y, w, h, PAL.feltDk, hover ? PAL.gold : PAL.frameDk);
     const P = PAD_CARD;
-    if (lay.env != null) envelope(ctx, x + P, y + lay.env, ENV.w, ENV.h, pk.kind, { hover });
+    // 연 꾸러미는 작은 봉투 칸이어도 봉투 없이 칸 가운데 「열었다」(봉투 오른쪽 34에 영어 「Opened」가 안 들어간다)
+    if (lay.env != null && !(pk.sold && lay.small)) envelope(ctx, x + P, y + lay.env, lay.small ? ENV_S.w : ENV.w, lay.small ? ENV_S.h : ENV.h, pk.kind, { hover });
     if (pk.sold) {
       ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
       // 봉투가 있으면 글 칸(봉투 오른쪽) 가운데 — 영어 「Opened」가 봉투에 걸치지 않게
-      text(ctx, '열었다', x + lay.tx + Math.floor(lay.tw / 2), inkY(y, h), PAL.dim, { align: 'center', bold: true });
+      text(ctx, '열었다', lay.small ? x + Math.floor(w / 2) : x + lay.tx + Math.floor(lay.tw / 2), inkY(y, h), PAL.dim, { align: 'center', bold: true });
       closeBox();
       return;
     }
-    fitText(ctx, PACK_NAME[pk.kind].split(' ')[0], x + lay.tx, y + lay.name, lay.tw, PAL.ink);
+    // 작은 봉투 칸: 이름 없이 봉투 오른쪽에 값 한 줄(칸 높이 가운데)
+    if (lay.small) {
+      text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, inkY(y, h), PAL.gold, { bold: true });
+      closeBox();
+      return;
+    }
+    // 봉투가 없는 좁은 칸(셋)은 종류 딱지를 값 줄 오른쪽에(이름 줄은 폭을 다 쓴다)
+    if (lay.env == null) kindTab(ctx, PACK_KIND[pk.kind], x + w - P - TAB, y + lay.price - ((LINE - 11) >> 1));
+    fitText(ctx, packShortName(pk), x + lay.tx, y + lay.name, lay.tw, PAL.ink);
     text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, y + lay.price, PAL.gold, { bold: true });
     closeBox();
   }

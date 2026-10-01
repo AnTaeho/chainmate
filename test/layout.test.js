@@ -117,6 +117,48 @@ test('격언 이름: 한 줄 격언 칸에 「…」 없이 들어간다(한국�
   M.lang.setLang('ko');
 });
 
+// CHM-41: 두루마리 이름. 넓은 칸(두루마리 둘 이하, 폭 112)은 그림 옆 이름 자리(65)에 「…」 없이 들어간다(보통 굵기까지).
+// 좁은 칸(셋 이상, 폭 55 — 이름 자리 36)은 줄의 이름이 다 굵게 들어가면 이름, 아니면 줄 전체를 띠 + 그림으로 그린다.
+// 기보 두루마리는 옛 저장에만 남아 재지 않는다(기보는 얻는 순간 쓰인다, CHM-33)
+const scrollItems = async () => {
+  const { TACTICS } = await import('../src/data/tactics.js');
+  const { SOULS } = await import('../src/data/souls.js');
+  const { ENGRAVINGS } = await import('../src/data/engravings.js');
+  return [{ kind: 'evolve' }, { kind: 'awaken' }, ...TACTICS.map((t) => ({ kind: 'tactic', id: t.id })), ...SOULS.map((s) => ({ kind: 'soul', id: s.id })), ...ENGRAVINGS.map((e) => ({ kind: 'engraving', id: e.id }))];
+};
+test('두루마리 이름: 넓은 칸 이름 자리에 「…」 없이 들어간다(한국어 · 영어)', async () => {
+  const S = await import('../src/ui/screens/shop.js');
+  const { RW } = M.battle;
+  const room = S.scrollNameRoom(RW);
+  assert.equal(room, 65);
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const c of await scrollItems()) {
+      const name = M.lang.L(S.scrollName(c));
+      assert.ok(M.text.textWidth(name, false) <= room, `${lang} ${c.kind} ${c.id || ''} 「${name}」 ${M.text.textWidth(name, false)} > ${room}`);
+    }
+  }
+  M.lang.setLang('ko');
+});
+test('두루마리 좁은 칸: 줄의 이름이 다 굵게 들어갈 때만 이름, 하나라도 넘치면 줄 전체가 그림', async () => {
+  const S = await import('../src/ui/screens/shop.js');
+  const { RW } = M.battle;
+  const w = Math.floor((RW - M.frame.LIST_GAP) / 2);
+  assert.equal(S.scrollNameRoom(w), 36);
+  const freeze = { kind: 'tactic', id: 'freeze' }, evolve = { kind: 'evolve' }, glass = { kind: 'engraving', id: 'glass' }, echo = { kind: 'soul', id: 'echo' }, awaken = { kind: 'awaken' };
+  M.lang.setLang('ko');
+  assert.equal(S.scrollRowNames([freeze, evolve], w), true);
+  // 한국어는 모든 두루마리 이름이 좁은 칸에 굵게 들어간다 — 좁은 칸도 늘 이름
+  for (const c of await scrollItems()) assert.ok(M.text.textWidth(S.scrollName(c), true) <= 36, `ko 「${S.scrollName(c)}」`);
+  M.lang.setLang('en');
+  assert.equal(S.scrollRowNames([freeze, evolve], w), false); // Freeze 44 · Evolve 42
+  assert.equal(S.scrollRowNames([glass, echo], w), true); // Glass 32 · Echo 31
+  assert.equal(S.scrollRowNames([glass, awaken], w), false); // 하나만 넘쳐도 줄 전체가 그림
+  assert.equal(S.scrollRowNames([glass, undefined], w), true); // 빈 칸은 따지지 않는다
+  assert.equal(S.scrollRowNames([undefined, awaken], w), false);
+  M.lang.setLang('ko');
+});
+
 test('정석 카드: 셋이 같은 높이로 본 칸 안(모든 정석, 한국어 · 영어)', async () => {
   const { JOSEKIS } = await import('../src/data/josekis.js');
   for (const lang of LANGS) {
@@ -195,7 +237,9 @@ async function allItems(price = true) {
   for (const s of D.engravings.ENGRAVINGS) a.push({ kind: 'engraving', id: s.id });
   for (const f of Object.keys(D.charts.CHARTS)) a.push({ kind: 'chart', form: f });
   for (const l of D.legends.LEGENDS) a.push({ kind: 'fragment', legend: l.id });
-  a.push({ kind: 'evolve' }, { kind: 'gamble', id: 'potion' }, { kind: 'gamble', id: 'roulette' });
+  // 깨우기 · 혼 깃든 기물도 진열에 나온다(깨우기는 금이 간 혼이 있을 때 — CHM-42 전엔 이 목록에 없어 160 한도도 재지 않았다)
+  for (const s of D.souls.SOULS) a.push({ kind: 'piece', t: 'N', soul: s.id });
+  a.push({ kind: 'evolve' }, { kind: 'awaken' }, { kind: 'gamble', id: 'potion' }, { kind: 'gamble', id: 'roulette' });
   if (price) for (const it of a) it.price = 13;
   return a;
 }
@@ -213,6 +257,61 @@ test('상점: 모든 진열 카드(판본 · 명국 조각 포함) → 꾸러미
       assert.ok(TOP + h + GAP_GROUP + pack + GAP_GROUP + 28 <= BOTTOM, `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend} ${it.edition || ''} ${h}`);
     }
   }
+});
+
+// CHM-42: 진열 카드 글은 카드 폭 안에서 낱말 단위로만 줄을 바꾼다. 머릿말 「Awakening」이 값과 딱지 사이(60)에 안 들어가 「Awakenin / g」로,
+// 쓰는 법 「Use on a cracked soul」(143) · 「금이 간 혼에 쓴다」(99)가 줄 바꿈 없이 카드(안쪽 94) 밖으로 나갔다. 값은 두 자리(가장 넓은 꼴)
+test('진열 카드 글: 머릿말은 낱말 단위로만 줄을 바꾸고 · 모든 줄이 카드 안쪽 폭 안(모든 물건 · 한국어 · 영어)', async () => {
+  const { CARD } = M.frame;
+  const { TAB, TAB_GAP } = await import('../src/ui/kinds.js');
+  const { EDITION_BY_ID } = await import('../src/data/editions.js');
+  const run = M.run.createRun({ seed: 1, draft: false });
+  const items = await allItems(true);
+  let n = 0;
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const it of items) {
+      const lay = M.parts.itemCardLayout(it, CARD.w, { run });
+      const tag = `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend || ''} ${it.edition || ''}`;
+      const head = lay.kinds.map(([l]) => l);
+      // 낱말이 줄 사이에서 끊기지 않았다: 줄마다 원래 머릿말의 낱말들로만 이뤄진다
+      const whole = [M.parts.ITEM_KIND[it.kind], it.edition ? EDITION_BY_ID[it.edition].name : ''].flatMap((s) => M.lang.L(s).split(' '));
+      for (const word of head.filter(Boolean).join(' ').split(' ')) assert.ok(whole.includes(word), `${tag}: 머릿말이 낱말 가운데서 끊겼다 ${JSON.stringify(head)}`);
+      // 첫 줄은 값 옆, 다음 줄은 딱지 뒤 끝까지
+      const priceW = M.text.textWidth(`$${it.price}`, true) + 2 + TAB + TAB_GAP;
+      head.forEach((l, k) => assert.ok(M.text.textWidth(l) <= (k ? lay.IW - TAB - TAB_GAP : lay.IW - priceW), `${tag}: 머릿말 ${k + 1}째 줄 「${l}」 ${M.text.textWidth(l)}`));
+      for (const [l] of lay.lines) assert.ok(M.text.textWidth(l) <= lay.IW, `${tag}: 「${l}」 ${M.text.textWidth(l)} > ${lay.IW}`);
+      n++;
+    }
+  }
+  assert.ok(n > 200, `잰 물건 ${n}`);
+  M.lang.setLang('ko');
+});
+
+// CHM-42: 금빛 꾸러미가 붙어 꾸러미 칸이 셋(폭 72)이면 봉투 없이 이름 → 값. 이름(앞 낱말)이 하나라도 굵게 안 들어가면
+// 그 줄 셋을 다 작은 봉투 + 값으로(두루마리 좁은 칸과 같은 규칙) — 영어 「Engraving」(63 > 58)이 「Engrav…」로 잘렸다
+test('꾸러미 좁은 칸: 줄의 이름이 다 굵게 들어갈 때만 이름, 하나라도 넘치면 줄 전체가 봉투 + 값', async () => {
+  const S = await import('../src/ui/screens/shop.js');
+  const { CENTER, CARD } = M.frame;
+  const w = Math.floor((CENTER.w - 2 * 4) / 3);
+  assert.equal(w, 72);
+  assert.equal(S.packNameRoom(w), 58);
+  const kinds = ['piece', 'chart', 'engraving', 'golden'].map((kind) => ({ kind, price: 4 }));
+  M.lang.setLang('ko');
+  for (const pk of kinds) assert.ok(M.text.textWidth(S.packShortName(pk), true) <= 58, `ko 「${S.packShortName(pk)}」`);
+  assert.equal(S.packRowNames(kinds, w), true);
+  M.lang.setLang('en');
+  assert.equal(S.packRowNames([{ kind: 'piece' }, { kind: 'chart' }, { kind: 'golden' }], w), true); // Piece 35 · Tome 36 · Golden 43
+  assert.equal(S.packRowNames([{ kind: 'piece' }, { kind: 'engraving' }, { kind: 'golden' }], w), false); // Engraving 63
+  assert.equal(S.packRowNames([{ kind: 'engraving' }, { kind: 'chart' }], CARD.w), true); // 넓은 칸(봉투 + 이름)은 따지지 않는다
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    // 작은 봉투 칸: 값(「공짜」 · 「Free」 · 두 자리 값)이 봉투 오른쪽 자리에 들어가고, 칸 높이는 그대로(상점 줄 끝 268)
+    const lay = S.packCellLayout({ kind: 'engraving' }, w, { names: false });
+    assert.ok(lay.small && lay.h === S.packCellH({ kind: 'engraving' }, w), `${lang} 작은 봉투 칸 ${lay.h}`);
+    for (const s of [M.lang.L('공짜'), '$12']) assert.ok(M.text.textWidth(s, true) <= lay.tw, `${lang} 「${s}」 ${M.text.textWidth(s, true)} > ${lay.tw}`);
+  }
+  M.lang.setLang('ko');
 });
 
 // 금빛 꾸러미: 판본 격언 셋(+ 명국 조각은 카드 줄 밖 건너뛰기 줄 왼쪽 칸). 격언 칸은 위 띠 이름표로 접혀 있고, 칸이 찬 채로 고르면 펼친다.

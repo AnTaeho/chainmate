@@ -194,8 +194,8 @@ export function spriteCanvas(type, side, eng = null, tier = 0, hi = LOOK.n >= 2)
   return c;
 }
 
-// 반 도트 작은 그림(기운 점 · 혼 기운)을 한 번 굽는다: rows의 문자 → 빛깔. 그릴 때는 정수 칸 상자에 늘인다(N = 3에서 번지지 않게)
-function baked(key, rows, cols) {
+// 반 도트 작은 그림(기운 점 · 혼 기운 · 아이콘 · 문장 …)을 한 번 굽는다: rows의 문자 → [빛깔, 세기]. 그릴 때는 정수 칸 상자에 늘인다(N = 3에서 번지지 않게)
+export function baked(key, rows, cols) {
   let c = CACHE.get(key);
   if (c) return c;
   c = makeCanvas(rows[0].length, rows.length);

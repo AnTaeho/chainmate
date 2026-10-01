@@ -1,6 +1,8 @@
 // 세력 문장(紋章) 12×12 도트 여덟: 낫(농민군) · 말굽(기병대) · 등불(수도원) · 성탑(성채) · 활(숲 사냥꾼) · 뿔나팔(전령단) · 금화(용병단) · 왕관(왕궁 근위).
 // 글자: o 테(짙은 먹) · # 세력 빛깔 · h 밝은 빛 · s 은빛(쇠 · 시위) · w 나무 · . 빈칸.
-import { rect } from './gfx.js';
+import { rect, place } from './gfx.js';
+import { baked, hiFor } from './sprites.js';
+import { CREST_HI } from './art-hi.js';
 import { FACTION_BY_ID } from '../data/factions.js';
 
 export const CREST = {
@@ -134,6 +136,13 @@ export function drawCrest(ctx, id, x, y, { scale = 1, alpha = 1, dim = false } =
   const col = { o: INK, '#': dim ? '#3a4a44' : f.hue, h: dim ? '#4a5a54' : lighten(f.hue, 0.55), s: dim ? '#4a5a54' : STEEL, w: dim ? '#3a4a44' : WOOD };
   const a0 = ctx.globalAlpha;
   ctx.globalAlpha = a0 * alpha;
+  // 그리는 곳의 실제 배율이 2 이상이면 24×24 반 도트 문장(art-hi.js, CHM-39 2단계)
+  if (CREST_HI[f.crest] && hiFor(ctx, scale)) {
+    const c = baked(`crest:${f.crest}:${f.hue}:${dim ? 1 : 0}`, CREST_HI[f.crest], Object.fromEntries(Object.entries(col).map(([k, v]) => [k, [v, 1]])));
+    ctx.drawImage(c, place(x), place(y), 12 * scale, 12 * scale);
+    ctx.globalAlpha = a0;
+    return;
+  }
   rows.forEach((row, j) => {
     for (let i = 0; i < row.length; i++) {
       const c = col[row[i]];

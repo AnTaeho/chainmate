@@ -15,6 +15,8 @@ const { FAMILIES, familyCounts } = await import('../src/data/families.js');
 const { L } = await import('../src/ui/lang.js');
 const { LEGENDS } = await import('../src/data/legends.js');
 const codexDone = { cells: 0, cover: 0 };
+// 진열 카드 종류 장면(CHM-42): 장면마다 잰 카드 상자 · 글 · 넘침
+const shopCards = { scenes: [], boxes: 0, lines: 0, bad: 0 };
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -888,6 +890,29 @@ click('next');
   const scene = (setup) => { app.overlay = null; app.nextSeed = 11; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 }); fill(app.run); setup(app.run); pump(90); notesCheck(); };
   scene((r) => { r.phase = 'shop'; stock(r); app.go('shop'); });
   scene((r) => { r.phase = 'shop'; stock(r); app.go('shop'); pump(2); click('cons:0'); click(`deck:${r.deck[1].id}`); });
+  // 진열 카드 종류마다(CHM-42): 깨우기는 금이 간 혼이 있어야 진열에 나와(sim/shop.js) 봇 판이 거의 그리지 않는다.
+  // 첫 장면은 tools/shots-kinds.mjs 「2b-shop」과 같은 그림(명경기 조각 · 깨우기 진열, 봉투 없는 꾸러미 셋, 두루마리 넷).
+  // 장면마다 마지막 프레임의 진열 카드 상자 · 그 안의 글 수를 적어 둔다(글 넘침 검사가 그 줄을 잰 증거)
+  const shopKinds = [
+    [[{ kind: 'fragment', legend: 'immortal', price: 6 }, { kind: 'awaken', price: 8 }], [{ kind: 'tactic', id: 'freeze' }, { kind: 'soul', id: 'martyr' }, { kind: 'chart', form: 'N' }, { kind: 'engraving', id: 'marble' }], ['piece', 'engraving', 'golden']],
+    [[{ kind: 'evolve', price: 6 }, { kind: 'tactic', id: 'taunt', price: 4 }], null, ['chart', 'engraving', 'golden']],
+    [[{ kind: 'soul', id: 'martyr', price: 9 }, { kind: 'engraving', id: 'glass', price: 5 }], null, ['piece', 'chart']],
+    [[{ kind: 'gamble', id: 'potion', price: 5 }, { kind: 'piece', t: 'N', soul: 'spring', price: 9 }], null, ['engraving', 'golden']],
+    [[{ kind: 'chart', form: 'R', price: 4 }, { kind: 'maxim', id: 'shadow_reading', edition: 'obsidian', price: 12 }], null, ['piece', 'chart', 'golden']],
+  ];
+  for (const [display, cons, packs] of shopKinds) {
+    scene((r) => {
+      if (cons) { r.consumableSlots = 4; r.consumables = cons.map((c) => ({ ...c })); }
+      r.phase = 'shop';
+      r.shop = { rng: null, display: display.map((it) => ({ ...it, sold: false })), packs: packs.map((kind) => ({ kind, price: kind === 'golden' ? 0 : 4, sold: false })), rerolls: 0, promoted: false, removed: false };
+      app.go('shop');
+    });
+    const cards = LL.LOG.boxes.filter((b) => /^카드 /.test(b.name));
+    const lines = LL.LOG.texts.filter((q) => q.box && cards.includes(q.box) && q.s.trim());
+    const bad = LL.checkLayout().filter((q) => cards.some((b) => q.msg.includes(`${b.name}@${b.x},${b.y} `)));
+    shopCards.scenes.push(`${display.map((it) => it.kind).join(' · ')}: 카드 상자 ${cards.length} · 글 ${lines.length}${bad.length ? ` · 넘침 ${bad.length}` : ''}`);
+    shopCards.boxes += cards.length; shopCards.lines += lines.length; shopCards.bad += bad.length;
+  }
   scene((r) => { r.phase = 'pack'; stock(r); r.pack = { kind: 'golden', options: [{ kind: 'maxim', id: 'chivalry', edition: 'foil' }, { kind: 'maxim', id: 'light_step', edition: 'pearl' }, { kind: 'fragment', legend: 'immortal' }] }; app.go('pack'); });
   scene((r) => { r.phase = 'pack'; stock(r); r.pack = { kind: 'engraving', options: [{ kind: 'engraving', id: 'glass' }, { kind: 'engraving', id: 'gold' }, { kind: 'engraving', id: 'feather' }] }; app.go('pack'); pump(90); click('pack:pick:1'); click(`deck:${r.deck[2].id}`); });
   // 카드 넷인 금빛 꾸러미(CHM-12): 가장 긴 판본 격언 · 명국 조각 · 격언 칸 다섯이 찬 채로 — 조각은 건너뛰기 줄, 격언 칸은 위 띠 이름표.
@@ -1443,6 +1468,8 @@ console.log(`금빛 꾸러미 격언 칸: 바꾸기 ${goldSeen.swap} · 팔기 $
 if (!goldSeen.swap || !goldSeen.sell || goldSeen.bad.length) { console.log('금빛 꾸러미의 격언 칸(펼치기 · 바꾸기 · 팔기)이 어긋났다'); fail = true; }
 console.log(`큰 수 장면: 대국 ${bigSeen.battle} · 관 선택 ${bigSeen.select} · 결과 ${bigSeen.result} · 기록 ${bigSeen.records} · 보상 ${bigSeen.reward} · 글끼리 겹침 ${bigSeen.overlap.length}${bigSeen.overlap.length ? `: ${bigSeen.overlap.join(' | ')}` : ''}`);
 if (!bigSeen.battle || !bigSeen.select || !bigSeen.result || !bigSeen.records || !bigSeen.reward || bigSeen.overlap.length) { console.log('큰 수 장면을 다 지나지 못했거나, 이름표와 수치가 겹쳤다'); fail = true; }
+console.log(`진열 카드 종류 장면 ${shopCards.scenes.length}: 카드 상자 ${shopCards.boxes} · 글 ${shopCards.lines} · 넘침 ${shopCards.bad}\n  ${shopCards.scenes.join('\n  ')}`);
+if (shopCards.boxes < shopCards.scenes.length * 2) { console.log('진열 카드 종류 장면에서 카드 상자를 다 재지 못했다'); fail = true; }
 console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held}(${Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`).join(' · ') || '없음'})`);
 if (flow.held) fail = true;
 if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 5000 : 40).join('\n  ')); fail = true; }

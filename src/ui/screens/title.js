@@ -4,7 +4,7 @@ import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, rect, sprite } from '../../render/gfx.js';
 import { makeCanvas, context } from '../../render/surface.js';
-import { spritePixels } from '../../render/sprites.js';
+import { spritePixels, hiFor } from '../../render/sprites.js';
 import { textImage } from '../../render/text.js';
 import { L } from '../lang.js';
 import { createBattle, apply } from '../../sim/battle.js';
@@ -281,11 +281,13 @@ export class TitleScreen {
     ctx.drawImage(shadeCv, 0, 0);
     // 기물은 눕힌 판 위에 세워서(먼 것부터, 멀수록 작게)
     const placed = sink.map((p) => ({ ...p, at: project(p.x + 8 - SRC.x, p.y + 21 - SRC.y) })).sort((a, b) => a.at.y - b.at.y);
+    // 기물 그림(16×22 · 32×44)은 판 하나에 하나: 줄마다 배율(0.75~1.1)로 고르면 2배 화면(N 2)에서 먼 줄과 가까운 줄의 그림이 갈렸다
+    const hi = hiFor(ctx);
     for (const p of placed) {
       const { x, y, s } = p.at;
       const sc = Math.max(0.6, s);
       const sx = (p.opts.sx ?? 1) * sc, sy = sc;
-      sprite(ctx, p.type, p.side, Math.round(x - 8), Math.round(y - 21), { ...p.opts, sx, sy });
+      sprite(ctx, p.type, p.side, Math.round(x - 8), Math.round(y - 21), { ...p.opts, sx, sy, hi });
     }
   }
   key(k) {

@@ -1,9 +1,10 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { richText } from './glossary.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, frame, dots, sprite, measure, line, digits } from '../render/gfx.js';
+import { box, rect, text, frame, dots, sprite, measure, line, digits, place } from '../render/gfx.js';
 import { button } from './ui.js';
-import { ENG_EDGE, tierOf } from '../render/sprites.js';
+import { ENG_EDGE, tierOf, baked, hiFor } from '../render/sprites.js';
+import { EMBLEM_HI, TACTIC_HI, SHARD_HI } from '../render/art-hi.js';
 import { maximFamilies } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID, RARITY_NAME, isCracked, CRACK } from '../data/souls.js';
@@ -21,6 +22,7 @@ import { shade, glow, flicker } from '../render/light.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox } from '../render/layoutlog.js';
+import { kindTab, TAB, TAB_GAP, PACK_KIND } from './kinds.js';
 
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
 // 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
@@ -151,7 +153,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
   const P = PAD_CARD;
   if (narrow) {
-    const c = iconCanvas(m.id);
+    const c = iconCanvas(m.id, hiFor(ctx, 2));
     if (c) {
       if (off) ctx.globalAlpha = 0.35;
       ctx.drawImage(c, Math.round(x + (w - 24) / 2), Math.round(y + (h - 24) / 2), 24, 24);
@@ -306,7 +308,7 @@ export function cornerTicks(ctx, x, y, w, h, col, n = 2) {
 }
 // 각인 그림: 기물 없이 재료 하나(금화 · 은판 · 상아 조각 · 흑단 나뭇조각 · 유리 조각 · 깃털). 16×16 도트, 22×26 어두운 칸 안에.
 // 각인은 주머니의 어느 기물에나 새기므로 기물을 그리지 않는다(나이트를 그리면 나이트에만 붙는 것처럼 보였다).
-const EMBLEM = {
+export const EMBLEM = {
   gold: { c: { o: '#6b4410', m: '#c8902c', h: '#efbd55', w: '#fff1b8' }, g: ['.....oooooo.....', '...oommmmmmoo...', '..ommhhhhhhmmo..', '.omhhwwhhhhhhmo.', '.omhwwhhhhhhhmo.', 'omhhhhmmmmhhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhhmmmmhhhhmo', '.omhhhhhhhhhhmo.', '.omhhhhhhhhhhmo.', '..ommhhhhhhmmo..', '...oommmmmmoo...', '.....oooooo.....'] },
   silver: { c: { o: '#4a5560', m: '#9aa6b0', h: '#d8dee6', w: '#ffffff' }, g: ['................', '................', '..oooooooooooo..', '.ohhhhhhhhhhhmo.', '.ohwwhhhhhhhhmo.', '.ohwhhhhhhhhhmo.', '.ohhhhhwhhhhhmo.', '.ohhhhwhhhhhhmo.', '.ohhhwhhhhhhhmo.', '.ohhhhhhhhhwhmo.', '.ohhhhhhhhwhhmo.', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '................', '................', '................'] },
   ivory: { c: { o: '#8a6a4a', m: '#d8c4a4', h: '#f7efdb', w: '#ffffff' }, g: ['..........oo....', '.........ohho...', '........ohwho...', '.......ohwhho...', '......ohwhhmo...', '.....ohhhhmo....', '....ohhhhmo.....', '...ohhhhmo......', '..ohhhhmo.......', '..ohhhmo........', '.ohhhmo.........', '.ohhmmo.........', '.ohmmo..........', '..oooo..........', '................', '................'] },
@@ -325,6 +327,8 @@ export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
   if (sq) { rect(ctx, x, y, 22, 26, '#1b2b27'); rect(ctx, x + 1, y + 1, 20, 1, '#2a3a33'); }
   const e = EMBLEM[id];
   if (!e) return;
+  // 화면 배율 2 이상: 32×32 반 도트 그림(art-hi.js, CHM-39 2단계)을 같은 16×16 자리에
+  if (EMBLEM_HI[id] && hiFor(ctx)) { ctx.drawImage(baked(`emblem:${id}`, EMBLEM_HI[id], Object.fromEntries(Object.entries(e.c).map(([k, v]) => [k, [v, 1]]))), place(x + 3), place(y + 5), 16, 16); return; }
   e.g.forEach((r, j) => { for (let i = 0; i < 16; i++) { const k = r[i]; if (k !== '.') rect(ctx, x + 3 + i, y + 5 + j, 1, 1, e.c[k]); } });
 }
 // 혼 등급(흔함 · 드묾 · 귀함): 격언 등급 테와 같은 빛깔(palette RARITY). 혼 깃든 기물은 그 혼의 등급
@@ -445,8 +449,8 @@ export function panel(ctx, x, y, w, h) {
 
 export const labelW = (s) => measure(s);
 
-// ── 꾸러미 봉투: 접힌 덮개 · 봉랍(기물 상아 · 기보 청록 · 각인 자줏빛 · 금빛 금별).
-// open 0 → 1: 봉랍이 금 가며 깨지고(0~0.4) 덮개가 젖혀진다(0.4~1)
+// ── 꾸러미 봉투: 접힌 덮개 · 봉랍 자리의 종류 딱지(기물 · 기보 · 각인 · 금빛은 판본 격언).
+// open 0 → 1: 딱지가 갈라지고(0~0.4) 덮개가 젖혀진다(0.4~1). SEAL은 기보 표 · 봉투 밖 연출이 쓰는 빛깔(청록 등)
 export const SEAL = { piece: ['#c8b48a', '#efe3c7', '#6b5132'], chart: ['#3f8f86', '#8fd3c6', '#1d4a45'], engraving: ['#8a4a6a', '#d690b4', '#4a2438'], golden: ['#c8902c', '#fff1b8', '#6b4410'] };
 export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}) {
   const gold = kind === 'golden';
@@ -467,25 +471,13 @@ export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}
     if (flap < 0.5) { rect(ctx, x + 1 + i, y + 1, 1, Math.max(0, yy - y - 1), paper); rect(ctx, x + 1 + i, yy, 1, 1, paperDk); }
     else { rect(ctx, x + 1 + i, yy, 1, Math.max(0, y + 1 - yy), paperHi); rect(ctx, x + 1 + i, yy, 1, 1, paperDk); }
   }
-  // 봉랍
-  const [col, hi, dk] = SEAL[kind] || SEAL.piece;
+  // 봉랍 자리에 안에 든 물건의 종류 딱지(kinds.js — 진열 카드의 딱지와 같은 것). 열리면 봉랍처럼 반으로 갈라져 떨어진다
   const sx = x + Math.floor(w / 2), sy = cy - 2;
   const crack = Math.min(1, open / 0.4);
   if (flap < 0.3) {
-    const R = 6;
-    for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
-      const d = i * i + j * j;
-      if (d > R * R) continue;
-      const half = i < 0 ? -1 : 1;
-      const off = crack > 0.3 ? Math.round(half * crack * 3) : 0;
-      const drop = crack > 0.3 ? Math.round(crack * crack * 4) : 0;
-      rect(ctx, sx + i + off, sy + j + drop, 1, 1, d > (R - 1) * (R - 1) ? dk : (i + j < -3 ? hi : col));
-    }
-    // 봉랍 무늬: 금빛은 별, 나머지는 작은 기물 머리
-    if (crack < 0.3) {
-      if (gold) { for (const [i, j] of [[0, -3], [-1, -1], [0, -1], [1, -1], [-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [-1, 1], [0, 1], [1, 1], [-2, 3], [2, 3], [-1, 2], [1, 2]]) rect(ctx, sx + i, sy + j, 1, 1, dk); }
-      else { rect(ctx, sx - 1, sy - 3, 2, 2, dk); rect(ctx, sx - 2, sy - 1, 4, 1, dk); rect(ctx, sx - 1, sy, 2, 2, dk); rect(ctx, sx - 3, sy + 2, 6, 1, dk); }
-    } else rect(ctx, sx, sy - 5, 1, 11, dk);
+    const split = crack > 0.3 ? Math.round(crack * 3) : 0;
+    const drop = crack > 0.3 ? Math.round(crack * crack * 4) : 0;
+    kindTab(ctx, PACK_KIND[kind] || 'piece', sx - TAB / 2, sy - TAB / 2, { split, drop });
   }
 }
 
@@ -553,8 +545,11 @@ export function itemExtraTip(it) {
 }
 
 // 명국 조각 모양(금빛 깨진 판 조각)
+export const SHARD_ROWS = ['..####..', '.######.', '########', '#######.', '.#####..', '..###...', '...#....'];
 export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
-  const rows = ['..####..', '.######.', '########', '#######.', '.#####..', '..###...', '...#....'];
+  // 화면 배율 2 이상: 두 번 다듬은 32×28 반 도트 조각(art-hi.js, CHM-39 2단계)을 같은 16×14 자리에
+  if (hiFor(ctx)) { ctx.drawImage(baked(`shard:${col}:${dk}`, SHARD_HI, { c: [col, 1], h: [PAL.goldHi, 1], d: [dk, 1] }), place(x), place(y), 16, 14); return; }
+  const rows = SHARD_ROWS;
   rows.forEach((r, j) => { for (let i = 0; i < 8; i++) if (r[i] === '#') rect(ctx, x + i * 2, y + j * 2, 2, 2, (i + j) % 4 === 0 ? PAL.goldHi : j > 3 ? dk : col); });
 }
 
@@ -675,17 +670,24 @@ function itemNameOf(it) { return it.kind === 'chart' ? `${PIECE_NAME[it.form]} �
 const artW = (it) => (it.kind === 'evolve' ? 44 : 22);
 // 카드의 칩 줄 수(못 놓은 시너지는 「+N」 — 전부는 가리키면 말풍선에)
 export const CARD_CHIP_ROWS = 1;
-function itemCardLayout(it, w, { run = null, price = true } = {}) {
+export function itemCardLayout(it, w, { run = null, price = true } = {}) {
   const P = PAD_CARD, IW = w - P * 2;
   const f = flow(P);
   const out = { IW };
   // 종류(머릿말)는 값 왼쪽까지(길면 줄바꿈 — 영어 「Classic Fragment」), 값은 첫 줄 오른쪽
-  const priceW = price && it.price != null ? measure(`$${it.price}`, true) + 4 : 0;
+  // 머릿말 자리는 종류 딱지 뒤부터(딱지 바탕 끝과 글 사이 2 — 문양은 바탕 안쪽 한 칸이라 눈에는 3), 값과는 2 띄운다.
+  // 영어 판본 이름(「Obsidian」 54)과 두 자리 값이 한 줄에 들어야 진열 카드가 160을 넘지 않는다(test/layout.test.js)
+  const priceW = (price && it.price != null ? measure(`$${it.price}`, true) + 2 : 0) + TAB + TAB_GAP;
   // 판본 격언은 머릿말이 판본 이름(금빛, 「무지개 격언」 — 값 옆에 안 들어가면 「무지개」), 판본 효과는 효과 글 끝 줄(금빛)
   let kind = ITEM_KIND[it.kind];
   if (it.edition) { const ed = EDITION_BY_ID[it.edition].name; kind = measure(`${ed} ${kind}`) <= IW - priceW ? `${ed} ${kind}` : ed; }
   out.kindCol = it.edition ? PAL.goldDk : PAL.cardDim;
-  out.kinds = wrap(kind, IW - priceW).map((l) => [l, f.line()]);
+  // 종류 딱지(kinds.js — 14 = 머릿말 줄 높이)는 첫 줄 왼쪽, 머릿말 글은 그 오른쪽
+  out.tabY = f.y;
+  out.kindX = P + TAB + TAB_GAP;
+  // 첫 줄은 값 옆(IW − priceW), 둘째 줄부터는 값 아래라 딱지 뒤 끝까지(IW − 딱지). 낱말 단위로만 줄을 바꾼다 —
+  // 첫 낱말이 값 옆에 안 들어가면 첫 줄을 비우고 둘째 줄에(영어 「Awakening」 66 > 60, CHM-42: 글자 단위로 「Awakenin / g」가 됐었다)
+  out.kinds = wrapHead(kind, IW - priceW, IW - TAB - TAB_GAP).map((l) => [l, f.line()]);
   f.gap(GAP_IN);
   const nx = artW(it) + 4, nw = IW - nx - (PAD_CARD > 4 ? 0 : 0);
   out.nameX = P + nx;
@@ -702,12 +704,30 @@ function itemCardLayout(it, w, { run = null, price = true } = {}) {
   for (const l of wrap(itemEffect(it), IW)) lines.push([l, PAL.cardInk]);
   if (it.kind === 'chart' && run) lines.push([`${run.charts[it.form] || 0} › ${(run.charts[it.form] || 0) + 1}단계`, PAL.cardDim]);
   if (it.edition) for (const l of wrap(L(EDITION_BY_ID[it.edition].text), IW)) lines.push([l, PAL.goldDk]);
-  if (itemUse(it)) lines.push([itemUse(it), PAL.cardDim]);
+  // 쓰는 법도 카드 폭에서 줄을 바꾼다(「금이 간 혼에 쓴다」 99 · 「Use on a cracked soul」 143 > 94가 카드 밖으로 넘쳤다, CHM-42)
+  if (itemUse(it)) for (const l of wrap(itemUse(it), IW)) lines.push([l, PAL.cardDim]);
   out.lines = lines.map(([l, c]) => [l, c, f.line()]);
   const fams = itemFams(it);
   out.fams = fams;
   if (fams.length) { f.gap(GAP_GROUP); out.chips = f.space(chipBlockH(chipRows(fams, IW, CARD_CHIP_ROWS))); }
   out.h = f.y + P;
+  return out;
+}
+// 머릿말 줄 바꿈: 첫 줄 폭 w1(값 옆), 다음 줄부터 w2. 낱말 단위로만 — 첫 낱말이 w1에 안 들어가면 첫 줄은 비운다.
+// w2에도 안 들어가는 낱말만 wrap()이 글자 단위로 끊는다(test/layout.test.js가 모든 물건에서 그런 낱말이 없는지 잰다)
+export function wrapHead(s, w1, w2) {
+  const out = [];
+  let line = '';
+  for (const word of L(String(s)).split(' ')) {
+    const w = out.length ? w2 : w1;
+    const tryLine = line ? `${line} ${word}` : word;
+    if (measure(tryLine) <= w) { line = tryLine; continue; }
+    if (line || !out.length) { out.push(line); line = ''; }
+    if (measure(word) <= w2) { line = word; continue; }
+    const parts = wrap(word, w2);
+    out.push(...parts.slice(0, -1)); line = parts[parts.length - 1];
+  }
+  out.push(line);
   return out;
 }
 // 넓은 카드 높이(폭 w). 한 줄의 카드는 가장 긴 카드에 맞춘다(itemRowH)
@@ -725,7 +745,8 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
   const lay = itemCardLayout(it, w, { run, price });
   const P = PAD_CARD;
-  for (const [l, ly] of lay.kinds) text(ctx, l, x + P, y + ly, lay.kindCol);
+  kindTab(ctx, it.kind, x + P, y + lay.tabY);
+  for (const [l, ly] of lay.kinds) if (l) text(ctx, l, x + lay.kindX, y + ly, lay.kindCol);
   const showPrice = price && it.price != null && !sold;
   if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
   itemArt(ctx, it, x + P, y + lay.art, t, run);
@@ -857,12 +878,16 @@ export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9, ste
 }
 
 // 묘수 그림 16×16: 빙결 = 눈송이 · 재장전 = 수 구슬 더하기 · 도발 = 손짓하는 폰
+export const TACTIC_G = {
+  freeze: ['.......#........', '...#...#...#....', '....#..#..#.....', '.....#.#.#......', '......###.......', '.#############..', '......###.......', '.....#.#.#......', '....#..#..#.....', '...#...#...#....', '.......#........'],
+  reload: ['................', '..##########....', '..#........#....', '..##########....', '................', '.......##.......', '.......##.......', '....########....', '....########....', '.......##.......', '.......##.......'],
+  taunt: ['......##........', '.....####....#..', '.....####...#...', '......##...#....', '....######......', '......##........', '......##........', '.....####.......', '....######......', '...########.....', '................'],
+};
+export const TACTIC_COL = { freeze: '#9fd3e0', reload: '#efbd55', taunt: '#df8a45' };
 export function tacticIcon(ctx, id, x, y) {
-  const G = {
-    freeze: ['.......#........', '...#...#...#....', '....#..#..#.....', '.....#.#.#......', '......###.......', '.#############..', '......###.......', '.....#.#.#......', '....#..#..#.....', '...#...#...#....', '.......#........'],
-    reload: ['................', '..##########....', '..#........#....', '..##########....', '................', '.......##.......', '.......##.......', '....########....', '....########....', '.......##.......', '.......##.......'],
-    taunt: ['......##........', '.....####....#..', '.....####...#...', '......##...#....', '....######......', '......##........', '......##........', '.....####.......', '....######......', '...########.....', '................'],
-  }[id] || [];
-  const col = { freeze: '#9fd3e0', reload: '#efbd55', taunt: '#df8a45' }[id] || '#ffffff';
+  const G = TACTIC_G[id] || [];
+  const col = TACTIC_COL[id] || '#ffffff';
+  // 화면 배율 2 이상: 32×22 반 도트 그림(art-hi.js, CHM-39 2단계)을 같은 16×11 자리에
+  if (TACTIC_HI[id] && hiFor(ctx)) { ctx.drawImage(baked(`tactic:${id}`, TACTIC_HI[id], { '#': [col, 1] }), place(x), place(y), 16, 11); return; }
   G.forEach((r, j) => { for (let i = 0; i < 16; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, col); });
 }
