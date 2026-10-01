@@ -294,7 +294,7 @@ test('줄 바꿈: 문장부호(마침표 · 쉼표 · 가운뎃점 …)는 줄 �
   const inc = wrap('Dotted shadows are reinforcements. Enemies land there when this move ends', 100);
   assert.ok(inc.every((l) => !CLOSE_PUNCT.test(l)), JSON.stringify(inc));
   // 지금 영어 안내는 낱말을 글자로 끊지 않는다
-  assert.ok(wrap(HINTS.incoming, 100).includes('reinforcements'), JSON.stringify(wrap(HINTS.incoming, 100)));
+  assert.equal(wrap(HINTS.incoming, 100).join(' '), M.lang.L(HINTS.incoming), JSON.stringify(wrap(HINTS.incoming, 100)));
   // 글자 단위로 끊는 긴 낱말: 쉼표 · 마침표가 여럿 이어져도 앞 글자와 함께 내린다
   assert.deepEqual(wrap('abcdefghij.,', 60).filter((l) => CLOSE_PUNCT.test(l)), []);
   M.lang.setLang('ko');
