@@ -1,10 +1,10 @@
 // 화면 맞춤 스크린샷(CHM-28): 기기를 흉내 내어 창 전체를 찍는다(게임 캔버스 밖의 가장자리까지).
 //   node tools/shots-mobile.mjs [--prefix before|after] [--out docs/shots/mobile] [--only 기기이름] [--engine webkit|chromium]
 //                               [--scenes title,battle,shop,pause,legend,chest,result] [--no-touch]
-// 기기마다 타이틀 · 대국 · 상점 · 멈춤 · 전설 · 상자 · 결과를 찍고, 캔버스 크기(CSS · 뒷면)를 표로 적는다. 폰 세로는 세로 안내 화면이 뜬다.
+// 기기마다 타이틀 · 대국 · 상점 · 멈춤 · 전설 · 상자 · 결과를 찍고, 캔버스 크기(CSS · 뒷면)를 표로 적는다. 폰 세로는 화면을 90도 돌려 그린다(스크린샷도 세로 그대로).
 // 전설 · 상자는 금빛 번쩍임 한가운데(-flash)와 가라앉은 뒤를 따로 찍는다(여백 판도 같이 밝아지나). 번쩍임은 update를 멈춰 세운다.
 // 타이틀은 여백 판 장면을 칠한 시간(ms, padStats.sceneMs)을 표에 적는다.
-// 터치가 있는 기기는 page.touchscreen.tap으로 「새 판」 → 대본 대국 첫 수(나이트 떨구기 → 룩 → 퀸)까지 눌러 본다.
+// 터치가 있는 기기는 page.touchscreen.tap으로 「새 판」 → 대본 대국 첫 수(나이트 떨구기 → 룩 → 퀸)까지 눌러 본다. 돌려 그린 폰 세로는 돌린 축으로 누른다(src/ui/fit.js toClient).
 // 폰 · 태블릿은 webkit(없으면 chromium 기기 흉내), 데스크톱은 chromium.
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
 import http from 'node:http';
@@ -28,6 +28,8 @@ const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleW
 const UA_IPAD = 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 const DEVICES = [
   { name: 'iphone15-portrait', w: 393, h: 659, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE },
+  // 홈 화면에서 세로로 열었을 때(iOS는 manifest의 가로를 따르지 않는다)
+  { name: 'iphone15-portrait-home', w: 393, h: 852, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE },
   { name: 'iphone15-landscape', w: 734, h: 343, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE },
   // 홈 화면에 추가해 전체 화면으로 열었을 때(주소창 없음)
   { name: 'iphone15-fullscreen', w: 852, h: 393, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE },
@@ -98,9 +100,10 @@ async function shotsFor(d) {
   const size = await ev(() => {
     const c = document.getElementById('screen');
     const r = c.getBoundingClientRect();
-    const turn = document.getElementById('turn');
-    const turned = !!(turn && getComputedStyle(turn).display !== 'none');
-    return { cssW: Math.round(r.width * 100) / 100, cssH: Math.round(r.height * 100) / 100, left: r.left, top: r.top, back: `${c.width}×${c.height}`, turned, scale: window.__app.scale };
+    const f = window.__fit;
+    // 돌려 그리면 보이는 사각형은 세로로 서 있다 — 표에는 게임 가로 × 세로로 적는다
+    const rot = !!(f && f.rot);
+    return { cssW: Math.round((rot ? r.height : r.width) * 100) / 100, cssH: Math.round((rot ? r.width : r.height) * 100) / 100, left: r.left, top: r.top, back: `${c.width}×${c.height}`, rot, k: f && f.k, scale: window.__app.scale };
   });
   table.push({ name: d.name, view: `${d.w}×${d.h}`, dpr: d.dpr, ...size });
   const want = (n) => SCENES.has(n);
@@ -176,14 +179,14 @@ async function shotsFor(d) {
 // 터치로 새 판 → 대본 대국 첫 수. 걸음 번호가 5(첫 수 끝 — 「점수」 설명)에 닿으면 된 것
 async function touchFlow(d) {
   const { context, page, ev, settle } = await session(d, { fresh: true });
-  const turned = await ev(() => { const t = document.getElementById('turn'); return !!(t && getComputedStyle(t).display !== 'none'); });
-  if (turned) { await context.close(); return { name: d.name, result: '세로 안내(건너뜀)' }; }
-  const toXY = async (id) => {
-    const r = await ev((id) => { const q = window.__app.ui.regions.find((x) => x.id === id); return q && { x: q.x, y: q.y, w: q.w, h: q.h }; }, id);
-    if (!r) return null;
-    const b = await page.locator('#screen').boundingBox();
-    return [b.x + ((r.x + r.w / 2) * b.width) / 480, b.y + ((r.y + Math.min(r.h / 2, 16)) * b.height) / 270];
-  };
+  const rot = await ev(() => !!(window.__fit && window.__fit.rot));
+  const toXY = (id) => ev(async (id) => {
+    const q = window.__app.ui.regions.find((x) => x.id === id);
+    if (!q) return null;
+    const { toClient } = await import('/src/ui/fit.js');
+    const b = document.getElementById('screen').getBoundingClientRect();
+    return toClient(q.x + q.w / 2, q.y + Math.min(q.h / 2, 16), b, !!window.__fit.rot);
+  }, id);
   const tap = async (id) => { const p = await toXY(id); if (!p) throw new Error(`no region ${id}`); await page.touchscreen.tap(p[0], p[1]); await settle(120); };
   const ready = () => page.waitForFunction(() => { const a = window.__app, g = a.guide; return !g || (!a.overlay && !(g.hold && g.hold(a)) && a.hintRect); }, null, { timeout: 30000 });
   const log = [];
@@ -204,8 +207,18 @@ async function touchFlow(d) {
     await page.screenshot({ path: path.join(OUT, `${PREFIX}-${d.name}-touch-first-move.png`) });
   } catch (e) { log.push(`막힘 ${String(e).split('\n')[0]}`); }
   const i = await ev(() => window.__app.guide && window.__app.guide.i);
+  // 돌려 그린 폰은 가로로 들어 본다: 판 상태(화면 · 걸음 · 손)가 그대로이고 돌리기가 풀려야 한다
+  let flip = '';
+  if (rot) {
+    const before = await ev(() => { const a = window.__app; return JSON.stringify({ s: a.screen && a.screen.constructor.name, i: a.guide && a.guide.i, b: a.screen && a.screen.bRef && a.screen.bRef.board, h: a.screen && a.screen.bRef && a.screen.bRef.hand }); });
+    await page.setViewportSize({ width: d.h, height: d.w });
+    await settle(800);
+    const after = await ev(() => { const a = window.__app; return { st: JSON.stringify({ s: a.screen && a.screen.constructor.name, i: a.guide && a.guide.i, b: a.screen && a.screen.bRef && a.screen.bRef.board, h: a.screen && a.screen.bRef && a.screen.bRef.hand }), rot: window.__fit.rot, k: window.__fit.k, tf: document.getElementById('stage').style.transform }; });
+    await page.screenshot({ path: path.join(OUT, `${PREFIX}-${d.name}-flip-landscape.png`) });
+    flip = ` · 가로로 들면 돌리기 ${after.rot ? '그대로(틀림)' : '풀림'} K ${after.k} transform「${after.tf}」 판 상태 ${after.st === before ? '그대로' : '바뀜(틀림)'}`;
+  }
   await context.close();
-  return { name: d.name, result: i >= 5 ? `첫 수 끝(걸음 ${i})` : `멈춤(걸음 ${i})`, log: log.join(' → ') };
+  return { name: d.name, result: `${i >= 5 ? `첫 수 끝(걸음 ${i})` : `멈춤(걸음 ${i})`}${rot ? ' · 돌려 그림' : ''}${flip}`, log: log.join(' → ') };
 }
 
 const touchResults = [];
@@ -216,8 +229,8 @@ for (const d of DEVICES) {
 }
 for (const b of Object.values(browsers)) await b.close();
 srv.close();
-console.log('\n기기 | 창 | dpr | 캔버스 CSS | 뒷면 | 왼쪽·위 | 세로 안내 | 타이틀 여백 장면 ms');
-for (const r of table) console.log(`${r.name} | ${r.view} | ${r.dpr} | ${r.cssW}×${r.cssH} | ${r.back} | ${r.left},${r.top} | ${r.turned ? '예' : '아니오'} | ${r.sceneMs ?? '-'}`);
+console.log('\n기기 | 창 | dpr | K | 캔버스 CSS | 뒷면 | 왼쪽·위(창) | 돌려 그림 | 타이틀 여백 장면 ms');
+for (const r of table) console.log(`${r.name} | ${r.view} | ${r.dpr} | ${r.k} | ${r.cssW}×${r.cssH} | ${r.back} | ${r.left},${r.top} | ${r.rot ? '예' : '아니오'} | ${r.sceneMs ?? '-'}`);
 console.log('\n터치 흐름');
 for (const r of touchResults) console.log(`${r.name}: ${r.result}${r.log ? ` (${r.log})` : ''}`);
 if (errors.length) { console.log('오류', errors.length); for (const e of errors.slice(0, 5)) console.log(e); process.exitCode = 1; }
