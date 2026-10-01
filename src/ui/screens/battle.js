@@ -45,6 +45,7 @@ export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S
 // 게임 좌표 → 판 칸(판 밖이면 -1)
 export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
+const DISCARD_W = 62; // 손 이름표 줄 오른쪽 버리기 단추 폭
 const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 · ×5 · ×10) = 넘친 층
 // 대국 왼쪽 칸(판 틀 공통 쌓기 — common.js sideStack): 머리 칸(관 · 대국 종류 · 목표 · 점수) → 값 × 배수 → 사슬 칸(남는 높이)
 // … 아래 칸(수 · 버리기 · 상금 · 주머니). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
@@ -1142,14 +1143,11 @@ export class BattleScreen {
   }
 
   // 묘수(깊이 F): 손 이름표 옆의 작은 칸. 떨구기 전에 눌러 쓴다
-  drawTactics(ctx, ui, y) {
+  drawTactics(ctx, ui, y, row = this.handRowLayout()) {
     const run = this.run, live = this.live();
     if (!run) return;
-    let k = 0;
-    run.consumables.forEach((c, i) => {
-      if (c.kind !== 'tactic') return;
-      const x = RX + measure('손') + 6 + k * 17;
-      k++;
+    row.tactics.forEach(({ i, x }) => {
+      const c = run.consumables[i];
       const ok = !this.busy && live && live.status === 'play';
       const id = `tactic:${i}`;
       // 묘수 칸(15)은 손 이름표 줄(BTN_S) 가운데
@@ -1455,21 +1453,36 @@ export class BattleScreen {
 
   // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠 → 손 이름표 줄(묘수 · 버리기) → 손. 묶음 사이 GAP_GROUP
   // 시너지 띠는 칩(FAM_H) 두 줄 — 그러면 격언 칸이 한 줄로 안 들어가는 판(칸 다섯 이상)은 한 줄에 못 놓은 것을 「+N」로
-  // 다시 놓기(밤샘 2 D2): 첫 수 전에만 손 이름표 줄 위에 단추 줄(쓰거나 첫 수를 두면 사라지고 띠 · 격언 칸이 제자리로).
+  // 다시 놓기(밤샘 2 D2): 첫 수 전에만, 손 이름표 줄의 「손」 · 묘수 오른쪽에 아이콘 단추(이름은 말풍선 — CHM-40).
+  // 전에는 손 이름표 줄 위에 단추 줄을 따로 두었는데, 그 줄 때문에 기본 격언 다섯 칸이 두 줄로 접혀 이름이 잘렸다.
   // 시안(docs/shots/night2/draft-*): 1 왼쪽 사슬 칸 가운데(골랐다가 옮김 — 왼쪽 칸은 판 틀의 설명 자리라 말풍선이 단추를 덮었다) ·
   // 2 사슬 칸 구석 아이콘만 · 3 사슬 칸을 채운 금빛 단추
   rightLayout(run = this && this.run) {
     const HAND_H = 36, ROW_H = BTN_S;
-    const rb = !!(this && this.canReboard && this.canReboard());
     const at = (rows) => {
       const strip = rows * FAM_H + (rows - 1) * LIST_GAP;
-      // 아래에서부터: 손(화면 아래 2px 위까지) → 손 이름표 줄 → (다시 놓기 줄) → 시너지 띠. 격언 칸은 TOP부터 띠 위까지(room)
-      const handY = 270 - 2 - HAND_H, rowY = handY - GAP_IN - ROW_H, rbY = rb ? rowY - GAP_IN - ROW_H : null;
-      const stripY = (rb ? rbY : rowY) - GAP_GROUP - strip;
-      return { room: stripY - GAP_GROUP - TOP, stripY, rows, rowY, handY, HAND_H, rbY };
+      // 아래에서부터: 손(화면 아래 2px 위까지) → 손 이름표 줄 → 시너지 띠. 격언 칸은 TOP부터 띠 위까지(room)
+      const handY = 270 - 2 - HAND_H, rowY = handY - GAP_IN - ROW_H;
+      const stripY = rowY - GAP_GROUP - strip;
+      return { room: stripY - GAP_GROUP - TOP, stripY, rows, rowY, handY, HAND_H };
     };
     const two = at(2);
     return run && maximColumnH(run, two.room).cols === 1 ? two : at(1);
+  }
+  // 손 이름표 줄 왼쪽(버리기 단추 앞, 틈 3): 「손」 → 묘수 칸들 → 다시 놓기 단추(칸마다 15, 사이 2).
+  // 칸이 다 들어가지 않으면 「손」 글자를 빼고(손 카드가 바로 아래 있다), 그래도 모자라면 칸 사이를 1로
+  handRowLayout() {
+    const run = this.run;
+    const tactics = run ? run.consumables.map((c, i) => (c.kind === 'tactic' ? i : -1)).filter((i) => i >= 0) : [];
+    const rb = this.canReboard();
+    const n = tactics.length + (rb ? 1 : 0);
+    const itemsW = (gap) => (n ? n * 15 + (n - 1) * gap : 0);
+    const space = RW - DISCARD_W - 3;
+    const lw = measure('손') + 6;
+    const label = lw + itemsW(2) <= space;
+    const x0 = label ? RX + lw : RX;
+    const step = 15 + (label || itemsW(2) <= space ? 2 : 1);
+    return { label, tactics: tactics.map((i, k) => ({ i, x: x0 + k * step })), rb: rb ? x0 + tactics.length * step : null };
   }
   drawRight(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, run = this.run;
@@ -1493,14 +1506,15 @@ export class BattleScreen {
       familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: lay.rows });
     }
     this.drawPreviewPanel(ctx);
-    if (lay.rbY != null) button(ctx, ui, 'btn:reboard', RX, lay.rbY, RW, BTN_S, '다시 놓기', { onClick: () => this.reboard(), icon: reboardIcon });
     // 손
     const ry = lay.rowY;
-    text(ctx, '손', RX, inkY(ry, BTN_S), PAL.dim);
-    this.drawTactics(ctx, ui, ry);
+    const row = this.handRowLayout();
+    if (row.label) text(ctx, '손', RX, inkY(ry, BTN_S), PAL.dim);
+    this.drawTactics(ctx, ui, ry, row);
+    if (row.rb != null) button(ctx, ui, 'btn:reboard', row.rb, ry, 15, BTN_S, '', { onClick: () => this.reboard(), icon: reboardIcon, tip: () => tipLines('다시 놓기', []) });
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    button(ctx, ui, 'btn:discard', RX + RW - 62, ry, 62, BTN_S, '버리기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
+    button(ctx, ui, 'btn:discard', RX + RW - DISCARD_W, ry, DISCARD_W, BTN_S, '버리기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
     const n = Math.max(1, v.hand.length);
     const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
     const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;

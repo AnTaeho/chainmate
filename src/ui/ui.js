@@ -82,8 +82,9 @@ export class UI {
 }
 
 // 버튼: 글자 버튼(도트 테두리). 누를 수 없으면 흐리게.
-export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null } = {}) {
-  const r = ui.region(id, x, y, w, h, { enabled, onClick });
+// label이 비면 아이콘(7)만 가운데 — 이름은 tip(말풍선)으로
+export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null } = {}) {
+  const r = ui.region(id, x, y, w, h, { enabled, onClick, ...(tip ? { tip } : {}) });
   const hov = enabled && ui.isHover(id);
   const pressed = hov && ui.press && ui.press.id === id;
   const fills = {
@@ -100,11 +101,11 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
   // 윗변 한 줄 빛 · 아랫변 한 줄 그늘(누르면 1px 내려앉고 빛이 사라진다)
   if (!pressed) rect(ctx, x + 1, y + 1 + oy, w - 2, 1, hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)');
   rect(ctx, x + 1, y + h - 2 + oy, w - 2, 1, 'rgba(0,0,0,0.28)');
-  const tw = measure(label, true) + (icon ? 10 : 0);
+  const tw = label ? measure(label, true) + (icon ? 10 : 0) : 7;
   let tx = x + Math.floor((w - tw) / 2);
   const ty = inkY(y, h) + oy;
   if (icon) { icon(ctx, tx, ty + 2, ink); tx += 10; }
-  text(ctx, label, tx, ty, ink, { bold: true });
+  if (label) text(ctx, label, tx, ty, ink, { bold: true });
   closeBox();
   return r;
 }

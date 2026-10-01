@@ -16,7 +16,7 @@ import { CHARTS, chartText } from '../data/charts.js';
 import { PIECE_NAME, PIECE_MOVE, FRAG_SOURCE } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
-import { drawIcon } from '../render/icons.js';
+import { drawIcon, iconCanvas } from '../render/icons.js';
 import { shade, glow, flicker } from '../render/light.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
@@ -124,8 +124,11 @@ export function editionShine(ctx, edition, x, y, w, h, t) {
 
 // 격언 칸 하나: 이름 한 줄(안 여백 PAD_CARD, 높이 = 여백 × 2 + 본문 줄 — maximCellH). 효과 · 판본 · 잠듦 까닭은 가리키면 왼쪽 칸 설명에.
 // 잠들었으면 붉은 줄을 긋는다. overlay: 끄는 중인 카드(다른 칸 위에 뜬다)
+// narrow(격언 칸이 두 줄로 나란히 — maximColumn): 이름 없이 아이콘만 두 배로 가운데(이름은 가리키면 말풍선에 — CHM-40)
 export const maximCellH = () => rowBoxH(PAD_CARD);
-export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift = 0, t = 0, overlay = false } = {}) {
+// 이름 자리: 아이콘(12 + 틈 3)은 이름이 굵게 들어갈 때만 둔다(아이콘은 이름보다 덜 중요하다 — CHM-40)
+export const maximIconW = (name, w) => (w >= 60 && measure(L(String(name)), true) <= w - PAD_CARD * 2 - 15 ? 15 : 0);
+export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift = 0, t = 0, overlay = false, narrow = false } = {}) {
   const info = maximInfo(m.id);
   const legendary = info.rarity === 'legendary';
   const obsidian = m.edition === 'obsidian';
@@ -147,10 +150,19 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   if (hot) frame(ctx, x, y, w, h, PAL.gold);
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
   const P = PAD_CARD;
-  // 아이콘(12)은 오른쪽 안 여백 안에, 이름은 그 왼쪽까지(넘치면 fitText가 보통 굵기 → 「…」)
-  const iconW = w >= 60 ? 12 + 3 : 0;
-  if (iconW) drawIcon(ctx, m.id, x + w - P - 12, y + Math.floor((h - 12) / 2), off ? 0.35 : 1);
-  fitText(ctx, info.name, x + P, y + textY(P), w - P * 2 - iconW, ink);
+  if (narrow) {
+    const c = iconCanvas(m.id);
+    if (c) {
+      if (off) ctx.globalAlpha = 0.35;
+      ctx.drawImage(c, Math.round(x + (w - 24) / 2), Math.round(y + (h - 24) / 2), 24, 24);
+      ctx.globalAlpha = 1;
+    }
+  } else {
+    // 아이콘(12)은 오른쪽 안 여백 안에, 이름은 그 왼쪽까지(넘치면 fitText가 보통 굵기 → 「…」)
+    const iconW = maximIconW(info.name, w);
+    if (iconW) drawIcon(ctx, m.id, x + w - P - 12, y + Math.floor((h - 12) / 2), off ? 0.35 : 1);
+    fitText(ctx, info.name, x + P, y + textY(P), w - P * 2 - iconW, ink);
+  }
   if (off) { rect(ctx, x + 4, y + Math.floor(h / 2), w - 8, 1, PAL.red); }
   closeBox();
 }
@@ -170,7 +182,7 @@ export function rarityTrim(ctx, rarity, x, y, w, h) {
 }
 
 // 격언 칸 목록(오른쪽 칸): 칸 높이는 maximCellH(내용에 맞춘 높이), 칸 사이 LIST_GAP.
-// 한 줄로 hTotal 안에 다 안 들어가면(전설 · 흑요 판본으로 칸이 늘면) 두 줄로 나란히. 돌려주는 값: 칸 자리들 · 쓴 높이(used)
+// 한 줄로 hTotal 안에 다 안 들어가면(전설 · 흑요 판본으로 칸이 늘면) 두 줄로 나란히(칸은 아이콘만). 돌려주는 값: 칸 자리들 · 쓴 높이(used)
 export function maximColumnH(run, hTotal) {
   const slots = maximSlotsOf(run);
   const h = maximCellH(), one = slots * h + (slots - 1) * LIST_GAP;
@@ -197,13 +209,13 @@ export function maximColumn(ctx, ui, run, x, y, w, hTotal, { idPrefix = 'maxim',
     const r = ui.region(id, xx, yy, cw, h, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null, drag: drag ? true : false, onDrop: drag ? (mx, my) => drag(i, mx, my) : null });
     const dragging = ui.drag && ui.drag.region === r && ui.drag.moved;
     if (dragging) { dots(ctx, xx, yy, cw, h, PAL.gold, 2); spots.push({ i, x: xx, y: yy, w: cw, h }); continue; }
-    maximCard(ctx, m, xx, yy, cw, h, { off: offUids.includes(m.uid), hot: ui.isHover(id) || hotIndex === i, lift: ui.isHover(id) && (onClick || drag) ? 1 : 0, t: ui.time + i * 0.37 });
+    maximCard(ctx, m, xx, yy, cw, h, { narrow: cols === 2, off: offUids.includes(m.uid), hot: ui.isHover(id) || hotIndex === i, lift: ui.isHover(id) && (onClick || drag) ? 1 : 0, t: ui.time + i * 0.37 });
     spots.push({ i, x: xx, y: yy, w: cw, h });
   }
   // 끌고 있는 카드는 마우스를 따라 그린다
   if (ui.drag && ui.drag.moved && ui.drag.region.id.startsWith(idPrefix + ':')) {
     const i = Number(ui.drag.region.id.split(':')[1]);
-    if (maxims[i]) maximCard(ctx, maxims[i], ui.mouse.x - Math.floor(cw / 2), ui.mouse.y - Math.floor(h / 2), cw, h, { hot: true, t: ui.time, overlay: true });
+    if (maxims[i]) maximCard(ctx, maxims[i], ui.mouse.x - Math.floor(cw / 2), ui.mouse.y - Math.floor(h / 2), cw, h, { narrow: cols === 2, hot: true, t: ui.time, overlay: true });
   }
   return { spots, h, gap, slots, used, count: maximCount(run), cap };
 }
