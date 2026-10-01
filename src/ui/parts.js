@@ -1,9 +1,10 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { richText } from './glossary.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, frame, dots, sprite, measure, line, digits } from '../render/gfx.js';
+import { box, rect, text, frame, dots, sprite, measure, line, digits, place } from '../render/gfx.js';
 import { button } from './ui.js';
-import { ENG_EDGE, tierOf } from '../render/sprites.js';
+import { ENG_EDGE, tierOf, baked, hiFor } from '../render/sprites.js';
+import { EMBLEM_HI, TACTIC_HI, SHARD_HI } from '../render/art-hi.js';
 import { maximFamilies } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID, RARITY_NAME, isCracked, CRACK } from '../data/souls.js';
@@ -152,7 +153,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
   const P = PAD_CARD;
   if (narrow) {
-    const c = iconCanvas(m.id);
+    const c = iconCanvas(m.id, hiFor(ctx, 2));
     if (c) {
       if (off) ctx.globalAlpha = 0.35;
       ctx.drawImage(c, Math.round(x + (w - 24) / 2), Math.round(y + (h - 24) / 2), 24, 24);
@@ -326,6 +327,8 @@ export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
   if (sq) { rect(ctx, x, y, 22, 26, '#1b2b27'); rect(ctx, x + 1, y + 1, 20, 1, '#2a3a33'); }
   const e = EMBLEM[id];
   if (!e) return;
+  // 화면 배율 2 이상: 32×32 반 도트 그림(art-hi.js, CHM-39 2단계)을 같은 16×16 자리에
+  if (EMBLEM_HI[id] && hiFor(ctx)) { ctx.drawImage(baked(`emblem:${id}`, EMBLEM_HI[id], Object.fromEntries(Object.entries(e.c).map(([k, v]) => [k, [v, 1]]))), place(x + 3), place(y + 5), 16, 16); return; }
   e.g.forEach((r, j) => { for (let i = 0; i < 16; i++) { const k = r[i]; if (k !== '.') rect(ctx, x + 3 + i, y + 5 + j, 1, 1, e.c[k]); } });
 }
 // 혼 등급(흔함 · 드묾 · 귀함): 격언 등급 테와 같은 빛깔(palette RARITY). 혼 깃든 기물은 그 혼의 등급
@@ -544,6 +547,8 @@ export function itemExtraTip(it) {
 // 명국 조각 모양(금빛 깨진 판 조각)
 export const SHARD_ROWS = ['..####..', '.######.', '########', '#######.', '.#####..', '..###...', '...#....'];
 export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
+  // 화면 배율 2 이상: 두 번 다듬은 32×28 반 도트 조각(art-hi.js, CHM-39 2단계)을 같은 16×14 자리에
+  if (hiFor(ctx)) { ctx.drawImage(baked(`shard:${col}:${dk}`, SHARD_HI, { c: [col, 1], h: [PAL.goldHi, 1], d: [dk, 1] }), place(x), place(y), 16, 14); return; }
   const rows = SHARD_ROWS;
   rows.forEach((r, j) => { for (let i = 0; i < 8; i++) if (r[i] === '#') rect(ctx, x + i * 2, y + j * 2, 2, 2, (i + j) % 4 === 0 ? PAL.goldHi : j > 3 ? dk : col); });
 }
@@ -862,5 +867,7 @@ export const TACTIC_COL = { freeze: '#9fd3e0', reload: '#efbd55', taunt: '#df8a4
 export function tacticIcon(ctx, id, x, y) {
   const G = TACTIC_G[id] || [];
   const col = TACTIC_COL[id] || '#ffffff';
+  // 화면 배율 2 이상: 32×22 반 도트 그림(art-hi.js, CHM-39 2단계)을 같은 16×11 자리에
+  if (TACTIC_HI[id] && hiFor(ctx)) { ctx.drawImage(baked(`tactic:${id}`, TACTIC_HI[id], { '#': [col, 1] }), place(x), place(y), 16, 11); return; }
   G.forEach((r, j) => { for (let i = 0; i < 16; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, col); });
 }

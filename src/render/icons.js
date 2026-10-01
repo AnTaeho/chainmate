@@ -1,5 +1,8 @@
 // 격언 아이콘 12×12(코드로 그린 도트). # 먹 · g 금 · r 붉음 · w 흰 · s 은 · p 보라. 캐시해서 쓴다.
 import { makeCanvas, context } from './surface.js';
+import { baked, hiFor } from './sprites.js';
+import { place } from './gfx.js';
+import { ICON_HI } from './art-hi.js';
 
 const COL = { '#': '#2a1c10', g: '#d9a23a', r: '#c94a37', w: '#fff8e8', s: '#8a9aa6', p: '#7a4fb0', b: '#4a6fa5', G: '#5f8f4a' };
 const I = {
@@ -82,7 +85,10 @@ const I = {
 };
 
 const CACHE = new Map();
-export function iconCanvas(id) {
+const HI_COL = Object.fromEntries(Object.entries(COL).map(([k, v]) => [k, [v, 1]]));
+// hi: 24×24 반 도트 그림(art-hi.js, CHM-39 2단계) — 그리는 곳은 늘 12×12(또는 그 정수배) 자리를 준다
+export function iconCanvas(id, hi = false) {
+  if (hi) return ICON_HI[id] ? baked(`icon:${id}`, ICON_HI[id], HI_COL) : null;
   if (CACHE.has(id)) return CACHE.get(id);
   const rows = I[id];
   if (!rows) { CACHE.set(id, null); return null; }
@@ -93,10 +99,10 @@ export function iconCanvas(id) {
   return c;
 }
 export function drawIcon(ctx, id, x, y, alpha = 1) {
-  const c = iconCanvas(id);
+  const c = iconCanvas(id, hiFor(ctx));
   if (!c) return false;
   if (alpha !== 1) ctx.globalAlpha = alpha;
-  ctx.drawImage(c, Math.round(x), Math.round(y));
+  ctx.drawImage(c, place(x), place(y), 12, 12);
   if (alpha !== 1) ctx.globalAlpha = 1;
   return true;
 }

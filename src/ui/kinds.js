@@ -1,7 +1,9 @@
 // 물건 종류 표시(CHM-37, docs/design-notes/layout.md 「종류 표시」): 종류마다 12×12 문양 하나와 빛깔 둘(밝은 문양 · 짙은 바탕).
 // 종류 빛깔은 늘 짙은 바탕 위 밝은 문양으로만 쓴다 — 얇은 선으로 쓰는 등급 · 판본 · 혼/각인 테와 다른 층이다.
 // 카드 · 꾸러미 봉투는 딱지(kindTab, 14×14), 두루마리 칸은 왼쪽 띠(kindBand). 종류 빛깔과 문양은 이 표 한 곳에만 둔다.
-import { rect } from '../render/gfx.js';
+import { rect, place } from '../render/gfx.js';
+import { baked, hiFor } from '../render/sprites.js';
+import { KIND_HI } from '../render/art-hi.js';
 
 // 혼은 드묾 등급(#6fb3c8)과 갈리게 흰 청백(KIND_SOUL). 혼마다의 빛깔(src/data/souls.js col)은 혼 하나하나의 것이라 그대로 둔다
 export const KIND_SOUL = '#e4f4fa';
@@ -35,7 +37,16 @@ export const TAB = 14;  // 딱지 한 변(문양 12 + 둘레 1)
 export const TAB_GAP = 2; // 딱지와 그 옆 글 사이
 export const BAND = 14; // 두루마리 칸 왼쪽 띠 폭
 
-function glyph(ctx, g, x, y, col, split = 0, drop = 0) {
+// 문양: 화면 배율 2 이상이면 24×24 반 도트 그림(art-hi.js, CHM-39 2단계)을 12×12 자리에 — 갈라질 때는 왼쪽 · 오른쪽 반을 따로
+function glyph(ctx, g, x, y, col, split = 0, drop = 0, kind = null) {
+  if (kind && KIND_HI[kind] && hiFor(ctx)) {
+    const c = baked(`kind:${kind}:${col}`, KIND_HI[kind], { '#': [col, 1] });
+    if (split || drop) {
+      ctx.drawImage(c, 0, 0, 12, 24, place(x - split), place(y + drop), 6, 12);
+      ctx.drawImage(c, 12, 0, 12, 24, place(x + 6 + split), place(y + drop), 6, 12);
+    } else ctx.drawImage(c, place(x), place(y), 12, 12);
+    return;
+  }
   for (let j = 0; j < 12; j++) {
     const r = g[j];
     for (let i = 0; i < 12; i++) if (r[i] === '#') rect(ctx, x + i + (i < 6 ? -split : split), y + j + drop, 1, 1, col);
@@ -49,12 +60,12 @@ export function kindTab(ctx, kind, x, y, { split = 0, drop = 0 } = {}) {
     rect(ctx, x - split, y + drop, TAB / 2, TAB, K.bg);
     rect(ctx, x + TAB / 2 + split, y + drop, TAB / 2, TAB, K.bg);
   } else rect(ctx, x, y, TAB, TAB, K.bg);
-  glyph(ctx, K.g, x + 1, y + 1, K.col, split, drop);
+  glyph(ctx, K.g, x + 1, y + 1, K.col, split, drop, kind);
 }
 // 두루마리 칸 왼쪽 띠: 폭 BAND, 높이 h를 종류 바탕으로 칠하고 문양을 세로 가운데
 export function kindBand(ctx, kind, x, y, h) {
   const K = KIND[kind];
   if (!K) return;
   rect(ctx, x, y, BAND, h, K.bg);
-  glyph(ctx, K.g, x + 1, y + Math.floor((h - 12) / 2), K.col);
+  glyph(ctx, K.g, x + 1, y + Math.floor((h - 12) / 2), K.col, 0, 0, kind);
 }
