@@ -4,7 +4,8 @@
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle } from './bot.mjs';
 import { lineCommands } from '../src/sim/solver.js';
-import { canBuy } from '../src/sim/run.js';
+import { canBuy, canSell, factionFor } from '../src/sim/run.js';
+import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
 import { isHidden, canReboard } from '../src/sim/battle.js';
 import { reboardOn } from '../src/sim/tuning.js';
@@ -72,7 +73,7 @@ const seen = () => { for (const v of app.visited) visited.add(v); };
 const hintsShown = new Set();
 const previewSeen = { scroll: 0, pack: 0 };
 const goldSeen = { swap: 0, sell: 0, bad: [] };
-function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); } } }
+function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); hintSubject(); } } }
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
 function click(id) {
   const r = region(id);
@@ -241,6 +242,47 @@ function hintCheck() {
   const side = s && s.notes === 'side';
   if (side ? r.x !== P.SIDE_X || r.w !== P.SIDE_W : r.w !== P.NOTE_W) { place.hintBad++; if (place.bad.length < 12) place.bad.push(`${screen()} 안내 ${h.id} x ${r.x} w ${r.w}`); }
   if (r.y < 0 || r.y + r.h > 270) place.hintBad++;
+}
+// 처음 안내가 말하는 것이 그 순간 화면에 있나(CHM-36). coach.js와 따로, 판 상태로 잰다:
+// 가리키는 구역이 이 프레임 화면 안에 그려졌고, 그 구역이 안내가 말하는 바로 그것이다(격언 안내 → 진열의 안 산 격언 카드 …).
+// 본 것으로 적힌 안내가 또 뜨면(같은 안내 두 번) 그것도 어긋남.
+const subj = { n: 0, bad: [], ids: new Set() };
+const num = (id, pre) => (id.startsWith(pre) && /^\d+$/.test(id.slice(pre.length)) ? Number(id.slice(pre.length)) : -1);
+const scrName = () => (app.overlay ? app.overlay.name : app.screen.name);
+function cellAt(sq) { const v = app.screen.view; return sq >= 0 && v && v.board ? v.board[sq] : null; }
+const enemyAt = (sq, f) => { const c = cellAt(sq), b = app.run && app.run.battle; return !!(c && !c.mine && b && !isHidden(b, sq) && f(c)); };
+const HINT_SUBJECT = {
+  shop: (id, run) => scrName() === 'shop' && run.shop.display[num(id, 'shop:buy:')]?.kind === 'maxim' && !run.shop.display[num(id, 'shop:buy:')].sold,
+  pack: (id, run) => scrName() === 'pack' && !!run.pack && !!run.pack.options[num(id, 'pack:pick:')] && run.pack.options.filter((o) => !(run.pack.kind === 'golden' && o.kind === 'fragment')).length === 3,
+  scroll: (id, run) => ['engraving', 'soul', 'evolve', 'awaken'].includes(run.consumables[num(id, 'cons:')]?.kind),
+  draft: (id, run) => scrName() === 'draft' && !!run.draft && !!run.draft.options[num(id, 'draft:')],
+  family: (id) => id.startsWith('fam:'),
+  master: (id, run) => scrName() === 'select' && id === 'select:play' && run.blind === 2,
+  golden: (id) => enemyAt(num(id, 'sq:'), (c) => c.gold),
+  trait: (id) => enemyAt(num(id, 'sq:'), (c) => c.trait),
+  things: (id) => enemyAt(num(id, 'sq:'), (c) => PIECES[c.t] && PIECES[c.t].thing),
+  incoming: (id, run) => { const sq = num(id, 'sq:'); return !!(run.battle && (run.battle.incoming || []).some((r) => r.sq === sq) && !cellAt(sq)); },
+  fairy: (id) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')]; return !!(p && PIECES[p.t] && PIECES[p.t].fairy); },
+  maximSell: (id, run) => canSell(run.maxims[num(id, 'maxim:')]),
+  joseki: (id, run) => id.startsWith('joseki:') && run.josekis.length > 0,
+  tactic: (id, run) => id.startsWith('tactic:') && run.consumables.some((c) => c.kind === 'tactic'),
+  bigText: (id) => scrName() === 'title' && id === 'title:settings',
+  clock: (id, run) => id === 'clock' && run.log.some((x) => x.clockLost),
+  crack: (id, run) => { const p = run.deck.find((x) => `deck:${x.id}` === id); return !!(p && isCracked(p)); },
+};
+function hintSubject() {
+  const h = app.hintShown;
+  if (!h) return;
+  const key = `${h.id}@${h.regionId}@${scrName()}`;
+  const r = region(h.regionId), run = app.run;
+  let ok = !!r && r.x >= 0 && r.y >= 0 && r.x + r.w <= 480 && r.y + r.h <= 270;
+  if (ok && h.id.startsWith('faction_')) ok = scrName() === 'select' && h.regionId === 'faction' && !!run && factionFor(run, run.ante) === h.id.slice(8);
+  else if (ok) ok = !!HINT_SUBJECT[h.id] && (h.id === 'bigText' || !!run) && HINT_SUBJECT[h.id](h.regionId, run);
+  if (!subj.ids.has(key)) { subj.ids.add(key); subj.n++; }
+  if (!ok && subj.bad.length < 20 && !subj.bad.includes(key)) subj.bad.push(key);
+  // 같은 안내 두 번: 본 것으로 적힌 뒤 또 떴다
+  const twice = `두 번 ${h.id}`;
+  if (app.records.coachSeen && app.records.coachSeen[h.id] && !subj.bad.includes(twice)) subj.bad.push(twice);
 }
 // 화면 종류마다 몇 번까지(판마다 짜임이 달라 여러 번)
 const notesCount = {};
@@ -679,7 +721,10 @@ function firstPlay() {
   scriptSeen.won = !!(last && last.won); scriptSeen.score = last ? last.score : 0; scriptSeen.target = last ? last.target : 0;
   for (let n = 0; n < 8 && screen() !== 'shop'; n++) { if (region('next')) click('next'); else pump(30); }
   for (let n = 0; n < 60 && !app.hintShown; n++) pump(1);
-  scriptSeen.shop = screen() === 'shop' && !!app.hintShown && app.hintShown.id === 'shop';
+  // 격언 안내는 진열에 격언이 있을 때만(CHM-36): 없으면 뜨지 않고 아껴 둔다
+  const hasMaxim = screen() === 'shop' && app.run.shop.display.some((it) => it.kind === 'maxim' && !it.sold);
+  scriptSeen.shop = screen() === 'shop' && (hasMaxim ? !!app.hintShown && app.hintShown.id === 'shop' : !(app.hintShown && app.hintShown.id === 'shop'));
+  scriptSeen.shopMaxim = hasMaxim;
   // 대본 대국은 관 선택을 건너뛴다: 농민군 처음 안내는 그 뒤 처음 보는 관 선택(1관 정식)에서 뜬다(상점 → 레퍼토리 → 관 선택)
   for (let n = 0; n < 40; n++) {
     pump(80);
@@ -1125,6 +1170,154 @@ const mainApp = app;
   seen();
   app = mainApp;
 }
+// ── 대본 대국의 경로마다(CHM-36): 새로 켠 앱에서 경로를 지나 보상 → 상점 → 레퍼토리 → 1관 정식 관 선택까지,
+// 뜬 처음 안내를 차례로 적는다. 안내가 말하는 것이 화면에 없으면 hintSubject가 어긋남으로 잡는다.
+const paths = { rows: [], bad: [] };
+async function freshBoot() {
+  seen();
+  app.pointer = () => {}; app.key = () => {};
+  for (const k of [...dom.store.keys()]) dom.store.delete(k);
+  await start();
+  if (screen() !== 'title') throw new Error('fresh boot did not open the title');
+}
+// 아무 구역도 · 말풍선도 없는 빈 곳을 눌러 안내를 닫는다(누른 것이 아무 일도 하지 않게)
+function dismissHint() {
+  const inR = (x, y, r) => r && x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h;
+  for (let y = 266; y > 4; y -= 6) for (let x = 4; x < 476; x += 6) {
+    if (app.ui.regions.some((r) => inR(x, y, r)) || inR(x, y, app.hintRect)) continue;
+    dom.mouse('mousemove', x, y); dom.mouse('mousedown', x, y); dom.mouse('mouseup', x, y); pump(1);
+    return;
+  }
+  throw new Error('no blank spot to dismiss a hint');
+}
+// 지금 화면에서 뜨는 안내를 차례로 보고 닫는다
+function hintsHere() {
+  const ids = [];
+  for (let k = 0; k < 8; k++) {
+    for (let n = 0; n < 90 && !app.hintShown; n++) pump(1);
+    if (!app.hintShown) break;
+    ids.push(app.hintShown.id);
+    dismissHint(); pump(2);
+  }
+  return ids;
+}
+// 대본 걸음을 k째 걸음 앞까지(걸음대로 누른다)
+function advanceScript(k = Infinity) {
+  const s = app.screen;
+  for (let n = 0; n < 200 && app.guide; n++) {
+    for (let j = 0; j < 900 && app.guide && app.guide.hold(app); j++) pump(1);
+    idle();
+    if (!app.guide || app.guide.i >= k) break;
+    pump(2);
+    const st = app.guide.steps[app.guide.i], step = s.step;
+    if (st.ok) { click('guide:ok'); continue; }
+    click(st.target(app));
+    if (step && step.moves) { pump(2); click('moves:back'); }
+  }
+}
+// 대국이 끝난 뒤: 보상 → 상점(사지 않고 떠난다) → 레퍼토리 → 관 선택. 상점마다 진열에 격언이 있었나와 뜬 안내를 적는다.
+// 1관 정식 관 선택에 닿거나 상점 shops개를 지나면 멈춘다(그 전 대국은 봇이 둔다)
+function walkShops(name, { until = 'select', shops = 1 } = {}) {
+  const out = [];
+  let lastShop = null, seenShops = 0;
+  for (let steps = 0; steps < 600; steps++) {
+    const sc = screen();
+    if (sc === 'result') break;
+    if (sc === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
+    if (sc === 'reward' || sc === 'chest' || sc === 'legend') { click('next'); pump(1); if (screen() === sc && region('next')) click('next'); continue; }
+    if (sc === 'awaken') { pump(60); if (region('next')) click('next'); else pump(60); continue; }
+    if (sc === 'pause') { click('pause:resume'); continue; }
+    if (sc === 'shop') {
+      const key = `${app.run.ante}:${app.run.blind}`;
+      if (key !== lastShop) {
+        lastShop = key; seenShops++;
+        const maxim = app.run.shop.display.some((it) => it.kind === 'maxim' && !it.sold);
+        out.push({ where: `상점 ${key}`, maxim, ids: hintsHere() });
+      }
+      click('shop:leave'); pump(2);
+      if (until === 'shopHint' && (out.some((o) => o.ids.includes('shop')) || seenShops >= shops)) break;
+      continue;
+    }
+    if (sc === 'pack') { click('pack:skip'); continue; }
+    if (sc === 'draft') { if (app.screen.chosen) { pump(10); continue; } pump(40); out.push({ where: '레퍼토리', ids: hintsHere() }); if (screen() === 'draft' && region('draft:0')) click('draft:0'); pump(30); continue; }
+    if (sc === 'select') {
+      if (until === 'select' && app.run.ante === 1 && app.run.blind >= 1) { out.push({ where: `관 선택 ${app.run.ante}:${app.run.blind}`, ids: hintsHere() }); break; }
+      pump(30); hintsHere(); click('select:play'); pump(2); continue;
+    }
+    throw new Error(`${name}: stuck on ${sc}`);
+  }
+  return out;
+}
+const fmtPath = (out) => out.map((o) => `${o.where}${o.maxim === false ? '(격언 없음)' : o.maxim ? '(격언)' : ''} [${o.ids.join(' ') || '-'}]`).join(' → ');
+function checkShops(name, out, { firstNoMaxim = false } = {}) {
+  const shops = out.filter((o) => o.where.startsWith('상점'));
+  for (const o of shops) if (!o.maxim && o.ids.includes('shop')) paths.bad.push(`${name}: 격언 없는 ${o.where}에 격언 안내`);
+  const first = shops.find((o) => o.maxim);
+  if (first && !first.ids.includes('shop')) paths.bad.push(`${name}: 격언이 처음 보인 ${first.where}에 격언 안내가 없다`);
+  if (firstNoMaxim && (!shops.length || shops[0].maxim)) paths.bad.push(`${name}: 첫 상점에 격언이 없는 장면을 못 만들었다`);
+  const ids = out.flatMap((o) => o.ids);
+  const twice = ids.filter((id, i) => ids.indexOf(id) !== i);
+  if (twice.length) paths.bad.push(`${name}: 같은 안내 두 번 ${twice.join(' ')}`);
+  paths.rows.push(`${name}: ${fmtPath(out)}`);
+}
+{
+  // ② 걸음마다 건너뛰기: 첫 걸음 · 손 들기 · 사슬 한가운데 · 복사본(한 번 끊겨 보기) · 되돌리기 앞 · 증원 · 행마 · 넷째 수
+  await freshBoot();
+  const at = [0, 1, 3, 4, 7, 8, 9, 14, 15, 21, 25];
+  const ok = [];
+  for (const k of at) {
+    app.newRun({ script: true });
+    advanceScript(k);
+    pump(2);
+    if (!app.guide || app.guide.i !== k || !region('guide:skip')) { paths.bad.push(`건너뛰기 ${k}: 그 걸음에 닿지 못함(${app.guide ? app.guide.i : '길 없음'})`); app.toTitle(); pump(1); continue; }
+    click('guide:skip'); pump(2);
+    const b = app.run.battle;
+    if (app.guide || screen() !== 'battle' || !b || b.script || b.target !== 150 || app.run.ante !== 1 || b.movesUsed !== 0 || app.screen.hold) paths.bad.push(`건너뛰기 ${k}: 평범한 1관 연습이 아니다`);
+    else ok.push(k);
+    app.toTitle(); pump(1);
+  }
+  paths.rows.push(`걸음마다 건너뛰기: ${ok.length}/${at.length} (걸음 ${ok.join(' · ')})`);
+  // ② 건너뛰기 → 진열에 격언이 없는 첫 상점(시드 6) → 격언이 처음 보이는 상점
+  await freshBoot();
+  app.nextSeed = 6;
+  click('title:new');
+  advanceScript(0);
+  click('guide:skip'); pump(2);
+  checkShops('건너뛰기 → 상점', walkShops('skip', { until: 'shopHint', shops: 6 }), { firstNoMaxim: true });
+  // ① 끝까지 두기는 firstPlay. 건너뛰기 뒤 1관 정식 관 선택까지(시드 6, 새로 켠 앱)
+  await freshBoot();
+  app.nextSeed = 6;
+  click('title:new');
+  advanceScript(0);
+  click('guide:skip'); pump(2);
+  checkShops('건너뛰기 → 관 선택', walkShops('skip-select'));
+  // ③ 대본 중 멈춤 → 타이틀로 → 이어 하기 → 끝까지 → 관 선택
+  await freshBoot();
+  click('title:new');
+  advanceScript(8);
+  dom.key('Escape'); pump(1); click('pause:title');
+  click('title:continue');
+  for (let n = 0; n < 900 && app.guide && app.guide.hold(app); n++) pump(1);
+  if (!app.guide || !app.run.battle || !app.run.battle.script) paths.bad.push('이어 하기: 대본으로 돌아오지 않았다');
+  advanceScript();
+  const resumed = walkShops('resume');
+  checkShops('멈춤 → 이어 하기', resumed);
+  // ④ 같은 앱에서 설정 「킹과 다시 두기」 → 다시 대본(본 안내는 다시 뜨지 않는다)
+  app.toTitle(); pump(1);
+  click('title:settings'); click('set:king'); click('set:back'); pump(1);
+  click('title:new');
+  if (!app.guide || !app.run.battle || !app.run.battle.script) paths.bad.push('킹과 다시 두기: 대본이 열리지 않았다');
+  advanceScript();
+  const again = walkShops('again');
+  const before = new Set(resumed.flatMap((o) => o.ids));
+  const rep = again.flatMap((o) => o.ids).filter((id) => before.has(id));
+  if (rep.length) paths.bad.push(`킹과 다시 두기: 본 안내가 또 떴다 ${rep.join(' ')}`);
+  paths.rows.push(`킹과 다시 두기: ${fmtPath(again)}`);
+  app.toTitle(); pump(1);
+  seen();
+  app = mainApp;
+}
+
 seen();
 const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves'];
 const missing = need.filter((n) => !visited.has(n));
@@ -1183,6 +1376,11 @@ console.log(`길 중 멈춤: Esc ${pauseSeen.esc} · ≡ ${pauseSeen.button} · 
 if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseSeen.title || !pauseSeen.resume || !pauseSeen.skip || !pauseSeen.lessonTitle) { console.log('길 중에 멈춤이 열리지 않았거나, 닫은 뒤 · 타이틀로 · 건너뛰기가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
+console.log(`처음 안내가 말하는 것: ${subj.n}곳 · 화면에 없음 ${subj.bad.length}${subj.bad.length ? `: ${subj.bad.join(' | ')}` : ''}`);
+if (subj.bad.length) { console.log('처음 안내가 화면에 없는 것을 가리켰거나 같은 안내가 두 번 떴다'); fail = true; }
+console.log(`대본 대국 경로: 끝까지 둔 뒤 상점 ${scriptSeen.shopMaxim ? '격언 있음 → 격언 안내' : '격언 없음 → 격언 안내 없음'}`);
+for (const r of paths.rows) console.log(`  ${r}`);
+if (paths.bad.length) { console.log(`대본 대국 경로 어긋남: ${paths.bad.join(' | ')}`); fail = true; }
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
 console.log(`혼 각성: 금 ${awakeSeen.crack} · 금 글 ${awakeSeen.toast} · 처음 안내 ${awakeSeen.hint} · 금 없는 기물 못 고름 ${awakeSeen.skip} · 미리 보기 ${awakeSeen.preview} · 막간 ${awakeSeen.screen} · 상점으로 ${awakeSeen.back} · 상자 칸 ${awakeSeen.chest}${awakeSeen.bad.length ? ` · 어긋남: ${awakeSeen.bad.join(' | ')}` : ''}`);
 if (awakeSeen.bad.length || !awakeSeen.crack || !awakeSeen.screen || !awakeSeen.back || !awakeSeen.chest) { console.log('혼에 금이 가고 깨어나는 걸음이 어긋났다'); fail = true; }
