@@ -322,7 +322,7 @@ function endBattle(run, events) {
   for (const t of b.traitors || []) if (run.deck.length < TRAIT_CHANCE.traitorDeckMax) addPiece(run, t, events);
   for (const id of b.crowned || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t === 'P') { p.t = 'Q'; events.push({ type: 'evolve', pieceId: id, from: 'P', to: 'Q' }); } }
   // 혼의 금: 대국에서 센 사슬 수를 주머니로(이기든 지든)
-  for (const bp of [...b.hand, ...b.bag, ...b.used]) { const p = bp.links && run.deck.find((x) => x.id === bp.id); if (p && p.soul === bp.soul) p.links = Math.max(p.links || 0, bp.links); }
+  for (const bp of [...b.hand, ...b.bag, ...b.used, ...(b.offered || [])]) { const p = bp.links && run.deck.find((x) => x.id === bp.id); if (p && p.soul === bp.soul) p.links = Math.max(p.links || 0, bp.links); }
   for (const e of b.cracks || []) (run.cracked || (run.cracked = [])).push({ soul: e.soul, ante: run.ante, blind: run.blind });
   // 혼 「계승」 각성: 마지막 모습의 기보 +1(대국마다 한 번)
   for (const form of b.chartUps || []) useChart(run, form, events);
@@ -341,6 +341,7 @@ function endBattle(run, events) {
     souls: [...new Set(run.deck.filter((p) => p.soul).map((p) => p.soul))],
     mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
     discarded: b.discarded,
+    brilliants: b.brilliants || [],
     reboards: b.reboards || 0,
     worn,
   };

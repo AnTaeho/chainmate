@@ -5,7 +5,7 @@
 //   chainCapture(t, sq)                     → events   먹기 한 번
 //   chainRedrops(t)                         → [sq]     다시 떨굴 칸(onChainStop에서 redrop한 뒤에만)
 //   chainRedrop(t, sq)                      → events   다시 떨구기
-// 이벤트: drop · capture · golden · grade · transform · promote · forced · cut · cutIgnored · mate · refill ·
+// 이벤트: drop · capture · golden · grade · transform · promote · forced · cut · cutIgnored · mate · brilliant · refill ·
 //         redropReady · redrop · end · score
 // 사슬이 끝나면 t.chain.done = true, 내 기물은 판에서 내려간다.
 import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy, kingTakeable, at } from './board.js';
@@ -14,6 +14,7 @@ import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
 import { UP, ABSORB } from '../data/souls.js';
+import { brilliantMult } from '../data/sacrifice.js';
 
 const NO_OPTS = {};
 // 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
@@ -52,14 +53,9 @@ export function startChain(t, { type, sq, engraving = null, soul = null }) {
   };
   t.board[sq] = { t: type, mine: true };
   events.push({ type: 'drop', piece: type, sq });
-  // 희생(CHM-35): 대국에 쌓인 몫(t.offering)이 이 사슬에 붙는다. 비우는 곳은 battle.js endMove
+  // 희생(CHM-35): 바로 앞에 바친 기물(t.offering) — 이 사슬이 체크메이트로 끝나면 탁월수(finish). 비우는 곳은 battle.js endMove
   const off = t.offering;
-  if (off && off.count) t.chain.offered = off.count; // 바친 기물 수(격언 「미련 없이」)
-  if (off && (off.value || off.mult)) {
-    t.chain.value += off.value || 0;
-    t.chain.mult += off.mult || 0;
-    events.push({ type: 'score', src: 'sacrifice', ...(off.value ? { value: off.value } : {}), ...(off.mult ? { mult: off.mult } : {}) });
-  }
+  if (off && off.count) { t.chain.offered = off.count; t.chain.offerWeight = off.weight || 0; t.chain.offerPieces = off.pieces || []; }
   runHook(t, 'onDrop', { type, sq }, events);
   if (chainCaptures(t).length === 0) stop(t, 'blocked', events);
   return events;
@@ -349,7 +345,15 @@ function finish(t, reason, events) {
   c.forced = null;
   c.awaiting = false;
   runHook(t, 'onChainEnd', { reason }, events);
+  // 탁월수 !!: 바친 바로 다음 사슬이 체크메이트로 끝났다 — 마지막 배수에 ×(1 + 바친 무게)
+  if (reason === 'mate' && c.offerWeight) {
+    const x = brilliantMult(c.offerWeight);
+    c.mult *= x;
+    events.push({ type: 'score', src: 'brilliant', xmult: x });
+    c.brilliant = { weight: c.offerWeight, x, pieces: (c.offerPieces || []).slice() };
+  }
   c.score = finalScore(c);
+  if (c.brilliant) events.push({ type: 'brilliant', ...c.brilliant, score: c.score });
   if (t.board[c.sq] && t.board[c.sq].mine) t.board[c.sq] = null;
   events.push({ type: 'end', reason, value: c.value, mult: c.mult, score: c.score, captures: c.captures.length, money: c.money });
 }

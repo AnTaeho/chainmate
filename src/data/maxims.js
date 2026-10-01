@@ -138,11 +138,11 @@ maxim('last_move', '마지막 수', '대국 마지막 수: 배수 ×3', '수', '
 maxim('no_regrets', '뽑은 대로', '희생 없는 대국: 배수 +4', '희생', 'common', 4, {
   onChainEnd(ctx) { if (num(ctx.t.discardsUsed) === 0) ctx.addMult(4); },
 });
-// 미련 없이: 옛 「버리기 +1 · 버린 기물마다 배수 +2」(대국 내내 모든 사슬에). CHM-35에서 희생의 몫에 실었다 —
-// 희생할 때마다 그 몫이 붙는 다음 사슬에 배수 +2(몫과 함께 비운다)
-maxim('second_thought', '미련 없이', '희생 +1 · 희생할 때마다 배수 +2', '희생', 'common', 3, {
+// 미련 없이: 옛 「버리기 +1 · 버린 기물마다 배수 +2」. CHM-35 탁월수 설계에서 탁월수에 걸었다 —
+// 희생한 바로 다음 사슬이 체크메이트면 배수 ×2(탁월수 배수와 곱으로)
+maxim('second_thought', '미련 없이', '희생 +1 · 탁월수: 배수 ×2', '희생', 'common', 3, {
   onBattleStart(ctx) { ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
-  onChainEnd(ctx) { ctx.addMult(2 * num(ctx.chain.offered)); },
+  onChainEnd(ctx) { if (ctx.event.reason === 'mate' && num(ctx.chain.offered) > 0) ctx.mulMult(2); },
 });
 
 // ── 주머니

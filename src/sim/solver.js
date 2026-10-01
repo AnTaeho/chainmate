@@ -132,6 +132,6 @@ export function previewDrop(b, handIndex, sq) {
   const piece = b.hand[handIndex];
   const t = cloneTable({ ...b, hand: b.hand.filter((_, i) => i !== handIndex), chain: null });
   startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece) });
-  // value · mult: 떨군 순간 사슬에 든 몫(희생으로 쌓인 몫 · onDrop 반응)
+  // value · mult: 떨군 순간 사슬에 든 몫(onDrop 반응) · offering: 기다리는 희생(이 수가 체크메이트면 탁월수)
   return { sq, form: piece.t, value: t.chain.done ? 0 : t.chain.value, mult: t.chain.done ? 0 : t.chain.mult, offering: b.offering ? { ...b.offering } : null, next: t.chain.done ? [] : chainCaptures(t) };
 }
