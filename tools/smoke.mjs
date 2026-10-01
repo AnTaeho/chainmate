@@ -167,18 +167,21 @@ function keyBoxesAt(id, kind) {
 //   판 틀(screen.notes 'side')은 왼쪽 칸(x 6 · 폭 116)에 가리킨 것의 윗변 높이로(왼쪽 칸 안의 것은 그 아래 · 위),
 //   판 밖 틀은 가리킨 것 바로 아래(왼끝 · 오른끝 맞춤) 또는 바로 위. 묶음은 같은 x · 폭, 2px 틈으로 이어진다.
 //   화면 밖 · 가리킨 것 · 누를 수 있는 다른 구역(켜진 단추 · 카드 · 칸)을 덮으면 어긴 것.
-const place = { n: 0, side: 0, below: 0, rule: 0, chain: 0, off: 0, self: 0, cover: 0, none: 0, squeezed: 0, squeezedIds: [], hint: 0, hintBad: 0, screens: new Set(), kinds: new Map(), bad: [] };
+const place = { n: 0, side: 0, below: 0, rule: 0, chain: 0, off: 0, self: 0, cover: 0, none: 0, cut: 0, lean: 0, cutIds: new Map(), hint: 0, hintBad: 0, screens: new Set(), kinds: new Map(), bad: [] };
 const CAP_KIND = { sq: 14, deck: 6, codex: 8, hand: 4 };
 const kindOf = (id) => id.replace(/:[^:]*$/, '');
 function placeBad(what, id, detail = '') { place[what]++; if (place.bad.length < 12) place.bad.push(`${screen()} ${id} ${what} ${detail}`); }
 // 설명이 덮은 글(CHM-34): 묶음 · 처음 안내가 그 아래 화면의 글(다른 판넬 · 카드 · 칩 · 가리킨 것)을 덮은 수. 화면마다
-const cov = { n: 0, hit: 0, texts: 0, self: 0, hint: 0, hintHit: 0, by: new Map(), ex: [], hintSeen: new Set(), hintPrev: null };
+const cov = { n: 0, hit: 0, texts: 0, self: 0, folded: 0, hint: 0, hintHit: 0, by: new Map(), ex: [], hintSeen: new Set(), hintPrev: null };
 function covTally(kind, id, rects, anchor) {
   const got = LL.coveredTexts(rects, anchor);
   const k = screen();
-  if (!cov.by.has(k)) cov.by.set(k, { n: 0, hit: 0, texts: 0, self: 0 });
+  if (!cov.by.has(k)) cov.by.set(k, { n: 0, hit: 0, texts: 0, self: 0, folded: 0 });
   const b = cov.by.get(k);
   b.n++; if (kind === 'note') cov.n++; else cov.hint++;
+  // 접은 글(fold.js): 묶음이 걸친 왼쪽 칸 판넬에서 비운 글 — 덮은 것으로 세지 않고 따로
+  const folded = LL.LOG.folded.filter((q) => q.s.trim()).length;
+  b.folded += folded; cov.folded += folded;
   if (!got.length) return;
   const self = got.filter((q) => q.self).length;
   b.hit++; b.texts += got.length; b.self += self;
@@ -199,8 +202,9 @@ function checkStack(id) {
   const h = app.ui.hover, tip = h && h.tip ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null;
   if (tip && (!st || !st.rects.length)) { placeBad('none', id); return false; }
   if (!st || !st.rects.length) return false;
-  // 왼쪽 칸 안의 것인데 위 · 아래 어디에도 안 들어가 당겨 놓은 것: 가리킨 것을 덮어도 어긴 것으로 치지 않고 센다
-  if (st.squeezed) { place.squeezed++; if (place.squeezedIds.length < 6) place.squeezedIds.push(`${screen()} ${id}`); return true; }
+  // 말풍선 하나도 그 자리에 다 안 들어가 자른 것(「…」로 마침 — placement.js clip): 자리 규칙은 그대로 재고 따로 센다
+  if (st.lean) place.lean++;
+  if (st.cut) { place.cut++; const k = `${screen()} ${kindOf(id)}`; place.cutIds.set(k, (place.cutIds.get(k) || 0) + 1); if (VERBOSE) console.log(`잘림 ${screen()} ${id} ${st.full} → ${st.clip} (가리킨 것 y ${st.anchor.y})`); }
   const a = st.anchor, rs = st.rects;
   place.n++; place[st.mode === 'side' ? 'side' : 'below']++; place.screens.add(screen());
   const top = rs[0].y, bot = rs[rs.length - 1].y + rs[rs.length - 1].h, total = bot - top;
@@ -220,7 +224,7 @@ function checkStack(id) {
   const k = `${screen()} ${kindOf(id)}`;
   if (!place.kinds.has(k)) place.kinds.set(k, new Set());
   if (rel) place.kinds.get(k).add(rel.replace('(당김)', ''));
-  if (top < 0 || bot > 270 || rs[0].x < 0 || rs[0].x + rs[0].w > 480) placeBad('off', id);
+  if (top < 0 || bot > 270 || rs[0].x < 0 || rs[0].x + rs[0].w > 480) placeBad('off', id, `hs ${rs.map((r) => r.h).join('+')} top ${top} bot ${bot} anchor ${a.x},${a.y},${a.w},${a.h}`);
   const stack = { x: rs[0].x, y: top, w: rs[0].w, h: total };
   if (cross(stack, a)) placeBad('self', id);
   const inA = (r) => r.x >= a.x && r.y >= a.y && r.x + r.w <= a.x + a.w && r.y + r.h <= a.y + a.h;
@@ -1419,13 +1423,18 @@ if (mt.length && mt[mt.length - 1] > 4) { console.log('한 수 연출이 4초를
 if (pct(0.99) > 16) { console.log('프레임 p99가 16ms를 넘는다'); fail = true; }
 if (ims.length && ims[Math.floor(ims.length * 0.99)] > 50) { console.log('누르기 처리 p99가 50ms를 넘는다'); fail = true; }
 const kinds = [...place.kinds].map(([k, v]) => `${k}=${[...v].join('/')}`);
-console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · 판 밖 ${place.below}, 화면 ${place.screens.size}) · 어김 ${place.rule} · 묶음 끊김 ${place.chain} · 화면 밖 ${place.off} · 가리킨 것 덮음 ${place.self} · 누를 것 덮음 ${place.cover} · 안 뜸 ${place.none} · 당겨 놓음 ${place.squeezed}${place.squeezedIds.length ? ` (${place.squeezedIds.join(', ')})` : ''} · 처음 안내 ${place.hint}(어김 ${place.hintBad})`);
+console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · 판 밖 ${place.below}, 화면 ${place.screens.size}) · 어김 ${place.rule} · 묶음 끊김 ${place.chain} · 화면 밖 ${place.off} · 가리킨 것 덮음 ${place.self} · 누를 것 덮음 ${place.cover} · 안 뜸 ${place.none} · 덜 중요한 줄을 뺌 ${place.lean} · 잘림(…) ${place.cut}${place.cutIds.size ? ` (${[...place.cutIds].map(([k, n]) => `${k} ${n}`).join(', ')})` : ''} · 처음 안내 ${place.hint}(어김 ${place.hintBad})`);
 if (VERBOSE) console.log('종류별 자리: ' + kinds.join(' · '));
 if (place.bad.length) console.log('어긴 곳: ' + place.bad.join(' | '));
 if (place.n < 100 || place.rule || place.chain || place.off || place.self || place.cover || place.none || place.hintBad) { console.log('설명이 규약의 자리에 뜨지 않았거나 누를 것 · 화면 밖을 덮었다'); fail = true; }
-console.log(`설명이 덮은 글: 가리킨 것 ${cov.n} · 덮음 ${cov.hit}(글 ${cov.texts} · 가리킨 것의 글 ${cov.self}) · 처음 안내 ${cov.hint}(덮음 ${cov.hintHit})`);
-console.log(`  화면별: ${[...cov.by].map(([k, b]) => `${k} ${b.hit}/${b.n}(글 ${b.texts}${b.self ? ` · 가리킨 것 ${b.self}` : ''})`).join(' · ')}`);
+console.log(`설명이 덮은 글: 가리킨 것 ${cov.n} · 덮음 ${cov.hit}(글 ${cov.texts} · 가리킨 것의 글 ${cov.self}) · 처음 안내 ${cov.hint}(덮음 ${cov.hintHit}) · 접은 글 ${cov.folded}`);
+console.log(`  화면별: ${[...cov.by].map(([k, b]) => `${k} ${b.hit}/${b.n}(글 ${b.texts}${b.self ? ` · 가리킨 것 ${b.self}` : ''} · 접음 ${b.folded})`).join(' · ')}`);
 if (cov.ex.length) console.log('  덮은 곳: ' + cov.ex.slice(0, VERBOSE ? 400 : 12).join('\n    '));
+// 피할 수 없는 곳(docs/design-notes/layout.md 「설명 자리 규칙」): 도감 격자는 칸이 본 칸을 채워 바로 아래 · 위 어디든 이웃 칸을 덮는다(덜 덮는 자리를 고른다).
+// 그 밖에서 다른 글을 덮거나, 어디서든 가리킨 것의 글 · 처음 안내가 덮으면 실패
+const COVER_OK = new Set(['codex']);
+const covBad = [...cov.by].filter(([k, b]) => b.hit && !COVER_OK.has(k));
+if (covBad.length || cov.self || cov.hintHit) { console.log(`설명이 다른 글을 덮었다: ${covBad.map(([k, b]) => `${k} ${b.hit}`).join(' · ') || '-'} · 가리킨 것의 글 ${cov.self} · 처음 안내 ${cov.hintHit}`); fail = true; }
 console.log(`시너지 +N 말풍선: ${moreSeen.n}번(${[...moreSeen.screens].join(' ')}) · 시너지 여섯 이상 대국 ${moreSeen.battle6} · 어긋남 ${moreSeen.bad.length}${moreSeen.bad.length ? `: ${moreSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
 if (!moreSeen.battle6 || moreSeen.bad.length) { console.log('시너지 여섯 이상 대국에서 「+N」을 가리켜 보지 못했거나, 가려진 시너지가 말풍선에 다 없다'); fail = true; }
 const flowN = flow.text + flow.pad + flow.overlap + flow.screen;
