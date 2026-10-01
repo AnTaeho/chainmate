@@ -1,18 +1,16 @@
-// 브라우저 진입: 화면 맞춤 · 여백 판 · 세로 안내 · 입력 · 루프. 화면과 흐름은 src/ui/app.js.
-// 연기 시험(tools/smoke.mjs)은 가짜 window/document를 넘겨 boot()를 그대로 부른다 — 가짜에는 body · 여백 판 · visualViewport가 없다.
+// 브라우저 진입: 화면 맞춤(폰 세로면 돌려 그리기) · 여백 판 · 입력 · 루프. 화면과 흐름은 src/ui/app.js.
+// 연기 시험(tools/smoke.mjs)은 가짜 window/document를 넘겨 boot()를 그대로 부른다 — 가짜에는 body · 여백 판 · 돌리는 틀 · visualViewport가 없다.
 import { createApp } from './ui/app.js';
-import { chooseFit } from './ui/fit.js';
+import { chooseFit, stageTransform, toGame as pointToGame } from './ui/fit.js';
 import { drawPad, resetPad } from './render/backdrop.js';
-import { drawTurn } from './render/turn.js';
 
 export async function boot(env = {}) {
   const win = env.window || globalThis.window;
   const doc = env.document || globalThis.document;
   const canvas = doc.getElementById('screen');
-  const W = 480, H = 270;
   // 가짜 DOM의 getElementById는 무엇을 물어도 게임 캔버스를 준다 — 다른 것이면 쓰지 않는다
   const own = (id) => { const el = doc.getElementById(id); return el && el !== canvas ? el : null; };
-  const pad = own('pad'), turnBox = own('turn'), turnArt = own('turn-art'), turnText = own('turn-text'), safe = own('safe');
+  const pad = own('pad'), stage = own('stage'), safe = own('safe');
   const media = (q) => { try { return !!(win.matchMedia && win.matchMedia(q).matches); } catch { return false; } };
   const coarse = () => media('(pointer: coarse)') || (win.navigator && win.navigator.maxTouchPoints > 0 && !media('(pointer: fine)'));
 
@@ -46,15 +44,14 @@ export async function boot(env = {}) {
       pad.style.left = `${p.left}px`; pad.style.top = `${p.top}px`;
       resetPad();
     }
-    if (turnBox && doc.body) {
-      doc.body.classList.toggle('turned', fit.turn);
-      if (fit.turn && turnArt) {
-        // 그림은 32도트, 짧은 변의 절반쯤을 정수 기기 화소 배로
-        const dpr = win.devicePixelRatio || 1;
-        const m = Math.max(1, Math.floor((Math.min(vw, vh) * 0.45 * dpr) / 32));
-        turnArt.style.width = turnArt.style.height = `${(32 * m) / dpr}px`;
-      }
+    // 폰 세로: 캔버스 · 여백 판이 든 틀을 시계 방향 90도 돌린다(틀 크기 = 창의 가로 · 세로를 바꾼 것). 가로로 돌아오면 틀을 풀어 둔다
+    if (stage) {
+      stage.style.width = `${fit.frame.width}px`;
+      stage.style.height = `${fit.frame.height}px`;
+      stage.style.transform = fit.rot ? stageTransform(vw) : '';
     }
+    if (doc.body && doc.body.classList) doc.body.classList.toggle('rot', fit.rot);
+    win.__fit = fit;
     // 뒷면 캔버스 배율 N(빛과 움직임, src/ui/fit.js backScale). 480×270 좌표는 그대로, 움직이는 것만 1/N 칸에 선다
     if (app) app.setScale(fit.n); else pendingScale = fit.n;
   }
@@ -83,11 +80,8 @@ export async function boot(env = {}) {
   refit();
   if (audio) audio.apply(app.settings);
 
-  // 누른 자리 → 게임 좌표(보이는 캔버스 사각형 기준 — 확대 · DPR · 가장자리 여백과 상관없다)
-  const toGame = (e) => {
-    const r = canvas.getBoundingClientRect();
-    return [Math.floor(((e.clientX - r.left) * W) / r.width), Math.floor(((e.clientY - r.top) * H) / r.height)];
-  };
+  // 누른 자리 → 게임 좌표(보이는 캔버스 사각형 기준 — 확대 · DPR · 가장자리 여백과 상관없다). 돌려 그렸으면 돌린 축으로 되돌린다
+  const toGame = (e) => pointToGame(e.clientX, e.clientY, canvas.getBoundingClientRect(), !!(fit && fit.rot));
   canvas.addEventListener('mousemove', (e) => { const [x, y] = toGame(e); app.pointer('move', x, y); });
   canvas.addEventListener('mousedown', (e) => { e.preventDefault(); const [x, y] = toGame(e); app.pointer('down', x, y, e.button); });
   win.addEventListener('mouseup', (e) => { const [x, y] = toGame(e); app.pointer('up', x, y, e.button); });
@@ -107,7 +101,7 @@ export async function boot(env = {}) {
   canvas.addEventListener('touchend', (e) => { e.preventDefault(); const t = own1(e); if (!t) return; finger = null; const [x, y] = toGame(t); app.pointer('up', x, y); }, { passive: false });
   // 끊긴 손가락(전화 · 알림): 아무것도 누르지 않은 것으로
   canvas.addEventListener('touchcancel', () => { if (finger == null) return; finger = null; app.pointer('up', -1, -1); app.pointer('move', -1, -1); });
-  // 캔버스 밖(여백 판 · 세로 안내)에서도 화면이 끌려가거나 확대되지 않게
+  // 캔버스 밖(여백 판)에서도 화면이 끌려가거나 확대되지 않게
   if (doc.addEventListener) {
     const stop = (e) => { if (e.cancelable) e.preventDefault(); };
     doc.addEventListener('touchmove', stop, { passive: false });
@@ -123,15 +117,8 @@ export async function boot(env = {}) {
   });
 
   const loop = (t) => {
-    if (fit && fit.turn) {
-      // 세로 안내 중: 판은 멈춰 둔다(상태는 그대로 — 돌리면 그 자리에서 이어진다)
-      app.last = null;
-      if (turnArt) drawTurn(turnArt, t / 1000, app.reducedMotion);
-      if (turnText) { const s = app.settings.lang === 'en' ? 'Turn your phone sideways' : '가로로 돌려 주세요'; if (turnText.textContent !== s) turnText.textContent = s; }
-    } else {
-      app.frame(t);
-      if (pad) drawPad(pad, fit.pad, app.surround());
-    }
+    app.frame(t);
+    if (pad) drawPad(pad, fit.pad, app.surround());
     win.requestAnimationFrame(loop);
   };
   win.requestAnimationFrame(loop);

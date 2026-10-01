@@ -19,9 +19,38 @@ export function backScale(k) {
 //   canvas  { left, top, width, height } CSS 화소. left · top은 기기 화소 정수 자리(반 화소에 걸려 흐려지지 않게)
 //   pad     여백 판: 도트 해상도 캔버스 { cols, rows, ox, oy, left, top, width, height } — 게임 도트 격자와 같은 격자,
 //           게임 (0, 0) 도트가 여백 판 (ox, oy) 칸. 창 끝까지 덮는다
-//   turn    폰 세로라 글을 읽기 어렵다(가로로 돌려 달라는 그림을 띄운다)
+//   rot     폰 세로: 화면을 시계 방향 90도 돌려 그린다(사람은 폰을 왼쪽으로 돌려 잡는다 — 홈 막대가 오른쪽).
+//           이때 canvas · pad는 돌린 틀(폭 = 창 높이, 높이 = 창 폭) 안의 자리다. 틀을 돌리는 것은 main.js(stageTransform)
+//   frame   { width, height } 캔버스 · 여백 판이 놓이는 틀의 CSS 크기(돌리지 않으면 창 그대로)
+// 돌리는 기준: 손가락 기기 + 세로 + 도트 하나가 1 CSS 화소 미만(K / dpr < 1 — 12px 글이 12px보다 작다). 아이패드 세로 · 좁은 데스크톱 창은 그대로
 export function chooseFit({ vw, vh, dpr = 1, inset = null, coarse = false }) {
   dpr = dpr > 0 ? dpr : 1;
+  const flat = place({ vw, vh, dpr, inset });
+  if (!(coarse && vh > vw && flat.css < 1)) return { ...flat, rot: false, frame: { width: vw, height: vh } };
+  // 시계 방향 90도: 돌린 틀의 위 = 창의 오른쪽, 오른쪽 = 창 아래, 아래 = 창 왼쪽, 왼쪽 = 창 위
+  const ri = inset ? { top: inset.right || 0, right: inset.bottom || 0, bottom: inset.left || 0, left: inset.top || 0 } : null;
+  return { ...place({ vw: vh, vh: vw, dpr, inset: ri }), rot: true, frame: { width: vh, height: vw } };
+}
+
+// 돌린 틀을 창에 얹는 CSS transform(transform-origin 0 0). 틀 (u, v) → 창 (vw - v, u)
+export function stageTransform(vw) {
+  return `translateX(${vw}px) rotate(90deg)`;
+}
+
+// 누른 자리(창 좌표) → 게임 도트. rect는 보이는 캔버스의 getBoundingClientRect(돌렸으면 창 위의 세운 사각형)
+export function toGame(clientX, clientY, rect, rot = false) {
+  if (!rot) return [Math.floor(((clientX - rect.left) * GW) / rect.width), Math.floor(((clientY - rect.top) * GH) / rect.height)];
+  // 게임 가로는 창 아래쪽으로, 게임 세로는 창 왼쪽으로 자란다
+  return [Math.floor(((clientY - rect.top) * GW) / rect.height), Math.floor(((rect.left + rect.width - clientX) * GH) / rect.width)];
+}
+
+// 게임 좌표(소수 가능) → 창 좌표. 도구(스크린샷 터치)와 시험이 쓴다
+export function toClient(gx, gy, rect, rot = false) {
+  if (!rot) return [rect.left + (gx * rect.width) / GW, rect.top + (gy * rect.height) / GH];
+  return [rect.left + rect.width - (gy * rect.width) / GH, rect.top + (gx * rect.height) / GW];
+}
+
+function place({ vw, vh, dpr, inset }) {
   const L = inset ? inset.left || 0 : 0, R = inset ? inset.right || 0 : 0, T = inset ? inset.top || 0 : 0, B = inset ? inset.bottom || 0 : 0;
   const vwD = Math.round(vw * dpr), vhD = Math.round(vh * dpr);
   const aw = Math.max(1, Math.round((vw - L - R) * dpr)), ah = Math.max(1, Math.round((vh - T - B) * dpr));
@@ -38,6 +67,5 @@ export function chooseFit({ vw, vh, dpr = 1, inset = null, coarse = false }) {
   const rows = oy + GH + Math.max(0, Math.ceil((vhD - topD - hD) / k));
   const pad = { cols, rows, ox, oy, left: (leftD - ox * k) / dpr, top: (topD - oy * k) / dpr, width: (cols * k) / dpr, height: (rows * k) / dpr };
   const css = k / dpr;
-  const turn = !!coarse && vh > vw && css < 1;
-  return { k, n, css, canvas, pad, turn };
+  return { k, n, css, canvas, pad };
 }
