@@ -11,6 +11,8 @@
 //   7-pack-golden 금빛 꾸러미(판본 격언 셋 + 명경기 조각)
 //   8-reward   대국 승리 보상(물건이 없는 막간 — 바뀌지 않는다)
 //   9-codex    도감 혼 탭
+//   10-scrolls 상점: 두루마리 넷(좁은 칸: 깨우기 · 선봉 혼 · 역행 혼 · 깃 각인 — 영어 이름이 긴 것, CHM-41)
+//   11-scrolls 상점: 두루마리 넷(좁은 칸: 진화 · 빙결 · 굶주림 혼 · 호박 각인, CHM-41)
 // Playwright는 저장소 의존성에 넣지 않는다(전역 또는 NPM_CONFIG_PREFIX).
 import http from 'node:http';
 import fs from 'node:fs';
@@ -69,6 +71,8 @@ const SCENES = [
   { name: '7-pack-golden', src: PACK('golden', [{ kind: 'maxim', id: 'memory', edition: 'foil' }, { kind: 'maxim', id: 'chivalry', edition: 'rainbow' }, { kind: 'maxim', id: 'quick_change', edition: 'pearl' }, { kind: 'fragment', legend: 'immortal' }]) },
   { name: '8-reward', src: `r.last = { score: 640, target: 600, overflow: 1, reason: 'clear' }; a.go('reward', { reward: { base: 4, moves: 2, interest: 2, total: 8 }, events: [] });`, wait: 2500 },
   { name: '9-codex', src: `a.records.codex.souls = { hunger: true, hunter: true, retro: true, echo: true, relay: true, martyr: true, transcend: true, homing: true }; a.records.codex.awake = { martyr: true, hunger: true }; a.go('codex'); a.screen.tab = 'souls';` },
+  { name: '10-scrolls', src: SHOP([{ kind: 'evolve', price: 6 }, { kind: 'tactic', id: 'taunt', price: 4 }], [{ kind: 'awaken' }, { kind: 'soul', id: 'crown' }, { kind: 'soul', id: 'retro' }, { kind: 'engraving', id: 'feather' }]) },
+  { name: '11-scrolls', src: SHOP([{ kind: 'evolve', price: 6 }, { kind: 'tactic', id: 'taunt', price: 4 }], [{ kind: 'evolve' }, { kind: 'tactic', id: 'freeze' }, { kind: 'soul', id: 'hunger' }, { kind: 'engraving', id: 'amber' }]) },
 ];
 
 for (const sc of SCALES) {
