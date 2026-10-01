@@ -31,7 +31,7 @@ export const levelOf = (n, drop = 0) => THRESHOLDS.filter((x) => n >= x - drop).
 export const MAXIM_FAMILIES = {
   chivalry: ['leap'], pawn_march: ['march'], quick_change: ['change'], whim: ['change'], steadfast: ['hunt'], coronation: ['crown'],
   low_stance: ['march'], diagonal: ['diag'], wall_breaker: ['line'], long_chain: ['hunt'], long_road: ['line'], edge: ['line'],
-  center: ['diag'], vault: ['hunt'], back_rank_dream: ['crown', 'sacrifice'], promotion_feast: ['crown'], sacrifice: ['sacrifice'],
+  center: ['diag'], vault: ['hunt'], back_rank_dream: ['crown', 'sacrifice'], promotion_feast: ['crown'], sacrifice: ['sacrifice', 'counter'],
   payback: ['sacrifice'], close_call: ['leap'], mate_hunter: ['crown', 'counter'], kings_neck: ['crown', 'counter'], memory: ['crown'],
   first_move: ['leap'], last_move: ['sacrifice'], no_regrets: ['line'], second_thought: ['change'], empty_bag: ['march'],
   small_bag: ['hunt'], welcome: ['ambush'], shadow_reading: ['ambush'], ivory_tower: ['diag'], collector: ['change'],
