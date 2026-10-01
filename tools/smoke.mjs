@@ -954,12 +954,12 @@ const chartSeen = { run: 0, scene: 0, grow: 0, tick: 0, growBad: 0 };
     for (const c of lineCommands(d.play.line)) { if (app.screen.name !== 'battle' || !app.run.battle || app.run.battle.status !== 'chain') break; click(`sq:${c.sq}`); idle(); }
   }
   chartSeen.scene = (app.stats.chartPops || 0) - before;
-  // 상점에서 기보 두루마리: 나이트 2 → 3(동 → 은, 크게) · 3 → 4(수준만)
+  // 상점 진열에서 기보를 사는 순간(CHM-33): 나이트 2 → 3(동 → 은, 크게) · 3 → 4(수준만). 두루마리 칸이 차 있어도 사고, 칸은 그대로
   for (const [from, big] of [[2, true], [3, false]]) {
-    setup((r) => { r.phase = 'shop'; r.battle = null; r.charts.N = from; r.consumables = [{ kind: 'chart', form: 'N' }]; r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; app.go('shop'); });
-    click('cons:0');
+    setup((r) => { r.phase = 'shop'; r.battle = null; r.money = 20; r.charts.N = from; r.consumables = [{ kind: 'engraving', id: 'glass' }, { kind: 'soul', id: 'echo' }]; r.shop = { rng: null, display: [{ kind: 'chart', form: 'N', price: 3, sold: false }], packs: [], rerolls: 0, promoted: false, removed: false }; app.go('shop'); });
+    click('shop:buy:0');
     const g = app.screen.grow;
-    if (!g || g.form !== 'N' || g.big !== big || g.from !== from || g.to !== from + 1) chartSeen.growBad++;
+    if (!g || g.form !== 'N' || g.big !== big || g.from !== from || g.to !== from + 1 || app.run.charts.N !== from + 1 || app.run.consumables.length !== 2) chartSeen.growBad++;
     else if (big) chartSeen.grow++; else chartSeen.tick++;
     pump(70);
   }

@@ -199,7 +199,7 @@ function makeCtx(run) {
   };
 }
 
-// 소모품은 곧바로 쓴다(기보는 대상 없음, 각인은 가장 좋은 기물에)
+// 소모품은 곧바로 쓴다(각인은 가장 좋은 기물에. 기보는 얻는 순간 쓰이고, 옛 저장에 남은 것만 여기서)
 function useConsumables(run, ctx) {
   while (run.consumables.length) {
     const c = run.consumables[0];
@@ -307,7 +307,7 @@ function smartShop(run, hunt = false) {
     run.shop.display.forEach((it, slot) => {
       if (it.sold || run.money < it.price) return;
       if (it.kind === 'tactic') return;
-      if ((it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'awaken') && run.consumables.length >= run.consumableSlots) return;
+      if ((it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'awaken') && run.consumables.length >= run.consumableSlots) return;
       const v = variantFor(run, build, it, ctx);
       if (!v) return;
       const refund = v.sell != null ? sellPrice(run.maxims[v.sell]) : 0;
