@@ -18,7 +18,8 @@ import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
 import { SCREENS } from './screens/index.js';
-import { coachDown, updateGuide, drawCoach } from './coach.js';
+import { coachDown, updateGuide, drawCoach, coachPlan } from './coach.js';
+import { foldSide } from './fold.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -283,6 +284,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8);
     flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16);
     if (app.screen) app.screen.draw(ctx, ui);
+    foldUnder(ctx);
     // 연출(떠오르는 수 · 날아가는 조각)은 칸을 넘나든다 — 글 넘침은 재지 않는다
     openBox('fx', 0, 0, W, H, 0, { loose: true, name: '연출' });
     // 연출은 움직이는 것이라 소수점 자리에(떠오르는 수 · 튀는 불티 · 날아가는 조각 — 3배 화면에서 계단 없이)
@@ -317,15 +319,38 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.keyBoxes = [];
     app.tipRect = null;
     app.noteStack = null;
+    if (app.settings.big) { const h = ui.hover, tip = h && h.tip && !ui.drag && !(app.guide && !app.overlay) ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null; if (tip) app.tipRect = bigTooltip(ctx, tip); return; }
+    const plan = planNotes();
+    if (!plan) return;
+    const { lay, hs, tip, ids, hot, clip, mode, anchor, h } = plan;
+    let y = lay.y, k = 0;
+    const rects = [];
+    // 묶음 받침: 상자 사이 틈까지 한 번에 깔아 뒤 판넬이 새지 않고 한 묶음으로 읽히게
+    lift(ctx, lay.x, lay.y, lay.w, plan.total);
+    if (tip) { app.tipRect = tooltip(ctx, lay.x, y, tip, lay.w, clip); rects.push(app.tipRect); y += app.tipRect.h + NOTE_GAP; k++; }
+    // 시너지 상자: 지금 모은 수(「5/6」)를 낱말 옆에
+    const counts = app.run && ids.some((id) => id.startsWith('fam_')) ? familyCounts(app.run) : null;
+    const famNote = (id) => { if (!counts || !id.startsWith('fam_')) return null; const n = counts[id.slice(4)] || 0, next = THRESHOLDS[levelOf(n)]; return next ? `${n}/${next}` : `${n}`; };
+    for (const id of ids) {
+      if (k >= lay.n) break;
+      const r = drawKeyBox(ctx, id, lay.x, y, lay.w, id === hot, famNote(id), k ? Infinity : clip);
+      app.keyBoxes.push(r); rects.push(r);
+      y += r.h + NOTE_GAP; k++;
+    }
+    app.noteStack = { mode, anchor, id: h ? h.id : null, rects, side: lay.side, cut: rects.some((r) => r.cut), lean: !!(app.tipRect && app.tipRect.lean), full: plan.full, clip, dropped: hs.length - lay.n };
+  };
+
+  // 설명 묶음의 자리(그리기 전에 잰다): 가리킨 것 · 말풍선 · 낱말 상자 · placement.js 자리. 띄울 것이 없으면 null.
+  // 화면을 그린 바로 뒤(접기 — fold.js)와 맨 위(그리기)에서 같은 셈을 쓴다
+  function planNotes() {
+    const ui = app.ui;
     const h = ui.hover;
-    if (ui.drag || (app.guide && !app.overlay)) return; // 따라 하는 길 중에는 말풍선을 띄우지 않는다(덮개 — 행마 보기 — 는 띄운다)
+    if (ui.drag || (app.guide && !app.overlay)) return null; // 따라 하는 길 중에는 말풍선을 띄우지 않는다(덮개 — 행마 보기 — 는 띄운다)
     const mx = ui.mouse.x, my = ui.mouse.y;
     const span = ui.termSpans.find((q) => mx >= q.x && my >= q.y && mx < q.x + q.w && my < q.y + q.h);
     const hot = span ? span.id : null;
     const tip = h && h.tip ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null;
     const keys = h && h.keys ? (typeof h.keys === 'function' ? h.keys() : h.keys) : null;
-    // 큰 글자 설정: 말풍선 하나를 화면 아래 가운데에(상자 없음)
-    if (app.settings.big) { if (tip) app.tipRect = bigTooltip(ctx, tip); return; }
     let ids = [], anchor = null;
     if (tip || keys) {
       // 카드 글(keys) 다음에 말풍선 글. 가리킨 것이 곧 그 낱말이면(시너지 칩: noKeys) 말풍선 하나만
@@ -336,31 +361,35 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       ids = [span.id];
       anchor = { x: span.x, y: span.y, w: span.w, h: span.h };
     }
-    if (!tip && !ids.length) return;
+    if (!tip && !ids.length) return null;
     const mode = noteMode(app.overlay || app.screen);
     const w = noteWidth(mode);
     const hs = [...(tip ? [tipHeight(tip, w)] : []), ...ids.map((id) => keyHeight(id, w))];
     // 덮으면 안 되는 것: 누를 수 있는 다른 구역(가리킨 것 · 그 안의 것은 빼고)
     const inAnchor = (r) => r.x >= anchor.x && r.y >= anchor.y && r.x + r.w <= anchor.x + anchor.w && r.y + r.h <= anchor.y + anchor.h;
     const avoid = ui.regions.filter((r) => r !== h && r.onClick && r.enabled && !inAnchor(r));
-    const lay = placeNotes(mode, anchor, hs, { W, H, avoid });
-    if (!lay) return;
-    let y = lay.y, k = 0;
-    const rects = [];
-    // 묶음 받침: 상자 사이 틈까지 한 번에 깔아 뒤 판넬이 새지 않고 한 묶음으로 읽히게
-    lift(ctx, lay.x, lay.y, lay.w, hs.slice(0, lay.n).reduce((u, v) => u + v, 0) + NOTE_GAP * Math.max(0, lay.n - 1));
-    if (tip) { app.tipRect = tooltip(ctx, lay.x, y, tip, lay.w); rects.push(app.tipRect); y += app.tipRect.h + NOTE_GAP; k++; }
-    // 시너지 상자: 지금 모은 수(「5/6」)를 낱말 옆에
-    const counts = app.run && ids.some((id) => id.startsWith('fam_')) ? familyCounts(app.run) : null;
-    const famNote = (id) => { if (!counts || !id.startsWith('fam_')) return null; const n = counts[id.slice(4)] || 0, next = THRESHOLDS[levelOf(n)]; return next ? `${n}/${next}` : `${n}`; };
-    for (const id of ids) {
-      if (k >= lay.n) break;
-      const r = drawKeyBox(ctx, id, lay.x, y, lay.w, id === hot, famNote(id));
-      app.keyBoxes.push(r); rects.push(r);
-      y += r.h + NOTE_GAP; k++;
-    }
-    app.noteStack = { mode, anchor, id: h ? h.id : null, rects, side: lay.side, squeezed: !!lay.squeezed, dropped: hs.length - lay.n };
-  };
+    // 덮지 않으면 좋은 것(판 밖 틀): 다른 카드 · 칸(말풍선이 뜨는 구역) · 꺼진 단추
+    const soft = mode === 'below' ? ui.regions.filter((r) => r !== h && (r.tip || r.keys || (r.onClick && !r.enabled)) && !inAnchor(r)) : [];
+    let lay = placeNotes(mode, anchor, hs, { W, H, avoid, soft });
+    if (!lay) return null;
+    // 말풍선 하나도 그 자리에 다 안 들어가면 자리의 높이로 자른다(「…」로 마친다) — 잘린 높이로 다시 놓는다
+    let clip = Infinity;
+    const full = hs[0];
+    if (lay.clip != null) { clip = lay.clip; hs[0] = tip ? tipHeight(tip, w, clip) : keyHeight(ids[0], w, clip); lay = placeNotes(mode, anchor, hs.slice(0, 1), { W, H, avoid, soft }); }
+    const total = hs.slice(0, lay.n).reduce((u, v) => u + v, 0) + NOTE_GAP * Math.max(0, lay.n - 1);
+    return { lay, hs, tip, ids, hot, clip, mode, anchor, h, total, full };
+  }
+  // 설명 자리 접기(fold.js): 판 틀에서 묶음 · 처음 안내가 걸친 왼쪽 칸 판넬의 속을 비운다. 화면을 그린 바로 뒤에 부른다
+  function foldUnder(ctx) {
+    if (app.overlay || !app.screen || noteMode(app.screen) !== 'side') return;
+    const ui = app.ui;
+    const ground = (r) => { ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip(); ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8); flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16); ctx.restore(); };
+    const c = coachPlan(app);
+    if (c && c.rect) foldSide(ctx, ui.side, c.rect, c.r, ground);
+    if (app.settings.big) return;
+    const p = planNotes();
+    if (p) foldSide(ctx, ui.side, { x: p.lay.x, y: p.lay.y, w: p.lay.w, h: p.total }, p.anchor, ground);
+  }
 
   app.frame = (t) => {
     const dt = app.last == null ? 1 / 60 : (t - app.last) / 1000;

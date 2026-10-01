@@ -32,7 +32,7 @@ import { button } from '../ui.js';
 import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton, headLayout, footLayout, sideStack, drawFoot, shardTo, hallText, clockRow, hasClock, clockPips, clockTip } from './common.js';
-import { TOP, PAUSE, PAD_BOX, LINE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S, EDGE_PAD } from '../frame.js';
+import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S, EDGE_PAD, rowSpan } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
@@ -1334,6 +1334,7 @@ export class BattleScreen {
     const hot = v.target && score >= v.target;
     openBox('panel', LX, hy, LW, lay.head.h, P, { name: '머리 칸' });
     panel(ctx, LX, hy, LW, lay.head.h);
+    ui.sideItem(LX, hy, LW, lay.head.h, { rows: [rowSpan(hy + hl.kicker), ...hl.titles.map((t) => rowSpan(hy + t, LINE_TITLE)), ...hl.rows.map((t) => rowSpan(hy + t))] });
     text(ctx, spec.kicker, LX + P, hy + hl.kicker, PAL.dim);
     if (spec.rightInline) text(ctx, spec.right, LX + LW - P, hy + hl.kicker, PAL.goldDk, { align: 'right' });
     spec.titles.forEach((l, k) => fitText(ctx, l, LX + P, hy + hl.titles[k], LW - P * 2, spec.titleCol));
@@ -1367,6 +1368,8 @@ export class BattleScreen {
     const gp = g ? g.p : 0;
     const dx = gp * 32;
     const VY = lay.val.y, VT = VY + Math.floor((VAL_H - 12) / 2) - 1;
+    // 설명 자리 접기(fold.js): 빈 값 칸 · 배수 칸(수 · 「×」 없이)
+    ui.sideItem(LX, VY, LW, VAL_H, { blank: (ctx2, ground) => { box(ctx2, LX, VY, 48, VAL_H, PAL.val, PAL.frameDk); box(ctx2, LX + 64, VY, 48, VAL_H, PAL.link, PAL.frameDk); if (ground) ground({ x: LX + 48, y: VY, w: 16, h: VAL_H }); } });
     // 값 × 배수 빛: 수가 오를 때 잠깐 밝아졌다가 가라앉는다. 사슬이 이어지는 동안은 옅게 남는다(칸 뒤 층)
     {
       const t = app.time, live = c && !g ? 0.22 * flicker(t, 3.2) : 0;
@@ -1414,6 +1417,7 @@ export class BattleScreen {
     const cy = lay.chain.y, ch = lay.chain.h;
     openBox('panel', LX, cy, LW, ch, P, { name: '사슬 칸' });
     panel(ctx, LX, cy, LW, ch);
+    ui.sideItem(LX, cy, LW, ch);
     const steps = c ? c.steps : this.lastEnd ? this.lastEnd.steps : [];
     const a = c ? 1 : 0.45;
     const past = steps.slice(Math.max(0, steps.length - 4), -1);

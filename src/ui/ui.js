@@ -19,10 +19,14 @@ export class UI {
     this.drag = null;      // { region, x, y, moved }
     this.time = 0;
     this.termSpans = [];   // 글 안 낱말 자리(richText가 적는다)
+    this.side = [];        // 판 틀 왼쪽 칸 판넬(설명 자리 접기 — fold.js)
     this.touch = false;    // 손가락으로 누르는 중(app이 넘긴다)
     this.previewId = null; // 손가락: 한 번 누른 카드(한 번 더 누르면 산다 · 고른다)
   }
-  begin() { this.last = this.regions; this.regions = []; this.termSpans = []; }
+  begin() { this.last = this.regions; this.regions = []; this.termSpans = []; this.side = []; }
+  // 판 틀 왼쪽 칸의 판넬 하나(설명 자리 접기 — fold.js). rows: 판넬 안 줄들의 [윗변, 아랫변](있으면 묶음에 닿은 줄만 비운다),
+  // blank(ctx): 통째로 비운 모습을 그린다(없으면 판넬 바탕으로 칠한다)
+  sideItem(x, y, w, h, { rows = null, blank = null } = {}) { const it = { x, y, w, h, rows, blank }; this.side.push(it); return it; }
   end() { this.hover = this.hitIn(this.regions, this.mouse.x, this.mouse.y); }
   region(id, x, y, w, h, opts = {}) {
     const r = { id, x, y, w, h, enabled: opts.enabled !== false, ...opts };
@@ -110,12 +114,17 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
 // 행마 그림(tip.diagram)은 폭이 넉넉하면(150 이상) 본문 왼쪽, 좁으면 제목 아래 한 줄을 다 쓰고 글은 그 아래.
 // 쌓기(frame.js 토큰): 안 여백 PAD_BOX → 제목(제목 줄) → 묶음 틈 → [그림 → 묶음 안 틈] → 본문 줄들 → 묶음 틈 → 칩 줄 → 안 여백
 const diagSide = (tip, w) => !!tip.diagram && w >= 150;
-export function tipRows(tip, w) {
+// 덜 중요한 줄({ opt: 줄 } — parts.js optLine): 자리가 모자라면 「…」로 자르기 전에 먼저 뺀다
+const unOpt = (l) => (l && l.opt !== undefined ? l.opt : l);
+export function tipRows(tip, w, { dropOpt = false } = {}) {
   const tw = w - PAD_BOX * 2 - (diagSide(tip, w) ? DIAG_W : 0);
-  const src = tip.body ? [...tip.body, ...(tip.extra || [])] : tip.lines || [];
+  const src0 = tip.body ? [...tip.body, ...(tip.extra || [])] : tip.lines || [];
+  const src = (dropOpt ? src0.filter((l) => !(l && l.opt !== undefined)) : src0).map(unOpt);
   const out = [];
+  out.starts = []; // 글 한 줄(줄바꿈 앞)이 시작하는 줄 번호 — 자를 때 문장 가운데서 끊지 않게
   for (const l of src) {
     if (!l) continue;
+    out.starts.push(out.length);
     if (l.chips) { out.push(l); continue; }
     // 걸음 줄(명국 조각): 앞에 표시 네모, 넘친 글은 표시 오른쪽에 맞춰 내려 쓴다
     if (l.step) { wrap(String(l.s), tw - STEP_IN, l.step === 'next').forEach((q, k) => out.push({ step: l.step, s: q, mark: k === 0 })); continue; }
@@ -140,19 +149,42 @@ function stepMark(ctx, st, x, y) {
   if (st === 'next') frame(ctx, x + 1, my + 1, 5, 5, PAL.goldDk);
 }
 const isChips = (l) => !!(l && l.chips);
-// 말풍선 자리 재기: 재기와 그리기가 같은 흐름을 쓴다. 돌려주는 값 { h, title, diag, rows: [{ l, y }] }(y는 글 · 칩 윗변)
-function tipLayout(tip, w) {
-  const side = diagSide(tip, w);
+// 말풍선 자리 재기: 재기와 그리기가 같은 흐름을 쓴다. 돌려주는 값 { h, title, diag, rows: [{ l, y }], cut }(y는 글 · 칩 윗변)
+// maxH: 자리 규칙이 준 높이(placement.js clip). 넘치면 뒤의 줄부터 빼고 「…」 한 줄로 마친다(cut) — 재는 높이와 그리는 높이가 늘 같다
+export const TIP_CUT = '…';
+function tipLayout(tip, w, maxH = Infinity) {
+  let all = tipRows(tip, w);
+  let lay = tipLayoutRows(tip, w, all, !!tip.diagram, false);
+  if (lay.h <= maxH) return lay;
+  // 덜 중요한 줄(optLine)부터, 다음은 행마 그림(행마는 대국 「행마」 보기에 있다), 그래도 넘치면 뒤의 줄부터 「…」로
+  const lean = tipRows(tip, w, { dropOpt: true });
+  const thin = lean.length < all.length;
+  const mark = (q) => { q.lean = thin || !!tip.diagram; return q; };
+  if (thin) { all = lean; lay = tipLayoutRows(tip, w, all, !!tip.diagram, false); if (lay.h <= maxH) return mark(lay); }
+  if (tip.diagram) { lay = tipLayoutRows(tip, w, all, false, false); if (lay.h <= maxH) return mark(lay); }
+  // 글 한 줄 단위로 뒤에서부터 뺀다(문장 가운데서 끊지 않는다). 첫 글 줄도 안 들어가면 줄바꿈한 줄 단위로
+  const starts = all.starts || [0], firstEnd = starts.length > 1 ? starts[1] : all.length;
+  const cuts = [];
+  for (let i = starts.length - 1; i >= 1; i--) cuts.push(starts[i]);
+  for (let k = firstEnd - 1; k >= 0; k--) cuts.push(k);
+  for (const k of cuts) {
+    lay = tipLayoutRows(tip, w, all.slice(0, k), false, true);
+    if (lay.h <= maxH) return mark(lay);
+  }
+  return mark(lay);
+}
+function tipLayoutRows(tip, w, rows, diagOn, cut) {
+  const side = diagOn && diagSide(tip, w);
   const tw = w - PAD_BOX * 2 - (side ? DIAG_W : 0);
   const f = flow(PAD_BOX);
-  const out = { rows: [], diag: null, tw, side };
+  const out = { rows: [], diag: null, tw, side, cut, diagOn };
   // 제목은 제목 줄(길면 줄바꿈)
   out.titles = tip.title ? wrap(String(tip.title), w - PAD_BOX * 2, true).map((l) => [l, f.line(true)]) : [];
-  const rows = tipRows(tip, w);
+  if (cut) rows = [...rows, [TIP_CUT, PAL.cardDim]];
   f.gap(GAP_GROUP);
   const bodyTop = f.y;
-  if (tip.diagram && !side) { out.diag = f.space(DIAG_SIZE + 1) + 1; f.gap(GAP_IN); }
-  else if (tip.diagram) out.diag = bodyTop + 1;
+  if (diagOn && !side) { out.diag = f.space(DIAG_SIZE + 1) + 1; f.gap(GAP_IN); }
+  else if (diagOn) out.diag = bodyTop + 1;
   rows.forEach((l, i) => {
     if (isChips(l)) {
       if (i && !isChips(rows[i - 1])) f.gap(GAP_GROUP);
@@ -166,16 +198,16 @@ function tipLayout(tip, w) {
   out.h = f.y + PAD_BOX;
   return out;
 }
-export const tipHeight = (tip, w) => tipLayout(tip, w).h;
-// 말풍선 하나를 (x, y)에 폭 w로 그린다(자리는 placement.js가 정해 넘긴다). 그린 네모를 돌려준다
-export function tooltip(ctx, x, y, tip, w) {
-  const lay = tipLayout(tip, w);
+export const tipHeight = (tip, w, maxH = Infinity) => tipLayout(tip, w, maxH).h;
+// 말풍선 하나를 (x, y)에 폭 w로 그린다(자리는 placement.js가 정해 넘긴다 — 높이가 모자라면 maxH로 자른다). 그린 네모를 돌려준다
+export function tooltip(ctx, x, y, tip, w, maxH = Infinity) {
+  const lay = tipLayout(tip, w, maxH);
   const P = PAD_BOX, h = lay.h, dx = lay.side ? DIAG_W : 0;
   openBox('note', x, y, w, h, P, { overlay: true, name: '말풍선' });
   box(ctx, x, y, w, h, PAL.card, PAL.frameDk);
   rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
   for (const [l, ly] of lay.titles) text(ctx, l, x + P, y + ly, tip.titleCol || PAL.cardInk, { bold: true });
-  if (tip.diagram) moveDiagram(ctx, tip.diagram.t, x + P, y + lay.diag, { dir: tip.diagram.dir || 1 });
+  if (lay.diagOn) moveDiagram(ctx, tip.diagram.t, x + P, y + lay.diag, { dir: tip.diagram.dir || 1 });
   for (const { l, y: ly } of lay.rows) {
     if (isChips(l)) { familyChips(ctx, l.chips, x + P + dx, y + ly, lay.tw); continue; }
     if (l.step) { if (l.mark) stepMark(ctx, l.step, x + P + dx, y + ly); text(ctx, l.s, x + P + dx + STEP_IN, y + ly, STEP_INK[l.step], { bold: l.step === 'next' }); continue; }
@@ -184,11 +216,11 @@ export function tooltip(ctx, x, y, tip, w) {
   }
   frame(ctx, x, y, w, h, PAL.frameDk);
   closeBox();
-  return { x, y, w, h };
+  return { x, y, w, h, cut: lay.cut, lean: !!lay.lean && !lay.cut };
 }
 // 말풍선 글(낱말 상자가 찾을 낱말): 줄바꿈 앞의 글이라 줄에 잘린 낱말(「기사 / 시너지」)도 찾는다. 글 조각마다 하나씩
 export function tipTexts(tip) {
-  const src = tip.body ? [...tip.body, ...(tip.extra || [])] : tip.lines || [];
+  const src = (tip.body ? [...tip.body, ...(tip.extra || [])] : tip.lines || []).map(unOpt);
   return src.filter((l) => l && !l.chips).map((l) => String(l.step ? l.s : Array.isArray(l) ? l[0] : l));
 }
 

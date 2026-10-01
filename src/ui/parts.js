@@ -47,6 +47,8 @@ export function fitText(ctx, s, x, y, w, col, { bold = true, align = 'left' } = 
 
 // 말풍선 내용: 제목 · 글(body) · 덧줄(extra: [글, 빛깔] · { chips }). 줄바꿈은 그릴 때 자리 규칙의 폭으로(ui.js tipRows).
 // w는 옛 호출과 맞추려고 남긴 값(말풍선 폭은 placement.js가 정한다)
+// 덜 중요한 줄: 말풍선 자리가 모자라면 「…」로 자르기 전에 먼저 뺀다(ui.js tipLayout — CHM-34)
+export const optLine = (l) => ({ opt: l });
 export function tipLines(title, body, w = 150, extra = []) {
   return { title, body: [].concat(body).filter(Boolean), extra, w };
 }
@@ -523,9 +525,9 @@ export function itemKeys(it) {
 // 카드에 이미 적힌 것 말고 덧붙일 것만(이야기 · 진화 갈래 · 행마 그림). 시너지는 카드의 칩이 말한다. 없으면 null
 export function itemExtraTip(it) {
   const lines = [];
-  // 기물 카드: 카드에 다 못 적은 행마 글 전부를 그림과 함께
+  // 기물 카드: 행마 그림. 행마 글은 카드에 이미 있으면 되풀이하지 않는다(혼이 깃든 기물은 카드에 혼 글이 서므로 행마 글을 여기에 — CHM-34)
   const more = it.kind === 'maxim' ? maximInfo(it.id).more : it.kind === 'soul' ? SOUL_BY_ID[it.id].more : null;
-  if (it.kind === 'piece' && PIECE_MOVE[it.t]) lines.push(PIECE_MOVE[it.t]);
+  if (it.kind === 'piece' && PIECE_MOVE[it.t] && it.soul) lines.push(PIECE_MOVE[it.t]);
   // 덧말이 있으면 효과 글 전부 다음에(덧말만 홀로 뜨지 않게)
   else if (more) lines.push(itemEffect(it));
   if (more) lines.push(more);
@@ -821,7 +823,8 @@ export function fragmentSteps(l, f) {
   return steps.map(([k, s], i) => ({ step: !f ? 'step' : f[k] ? 'done' : i === next ? 'next' : 'todo', s }));
 }
 export function fragmentTip(run, l) {
-  return tipLines(l.name, ['조각 셋이면 전설', ...fragmentSteps(l, run.fragments[l.id] || {})]);
+  // 첫 줄은 걸음 셋이 말하는 것을 되풀이한다 — 자리가 모자라면 먼저 뺀다
+  return tipLines(l.name, [optLine('조각 셋이면 전설'), ...fragmentSteps(l, run.fragments[l.id] || {})]);
 }
 // max: 놓을 수 있는 조각 수(좁은 칸 — 상금 칸 안)
 export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9, step = 15 } = {}) {

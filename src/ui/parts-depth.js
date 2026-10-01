@@ -2,7 +2,7 @@
 import { PAL } from '../render/palette.js';
 import { rect, text, box, frame, measure } from '../render/gfx.js';
 import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf, setName } from '../data/families.js';
-import { tipLines } from './parts.js';
+import { tipLines, optLine } from './parts.js';
 import { L } from './lang.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { TRAIT_BY_ID } from '../data/traits.js';
@@ -41,7 +41,9 @@ export function familyTip(id, n, drop = 0) {
   const f = FAMILY_BY_ID[id];
   const lines = [];
   // 문턱과 효과: 「2개: …」. 효과 글에 「 · 」가 들어 있어 영어로 옮길 때 쪼개지지 않게 먼저 옮긴다
-  THRESHOLDS.forEach((th, i) => lines.push([`${L(`${Math.max(1, th - drop)}개`)}: ${L(f.text[i])}`, n >= th - drop ? PAL.goldDk : PAL.cardDim]));
+  // 다음 문턱 너머의 줄은 자리가 모자라면 먼저 뺀다(optLine — 왼쪽 칸 시너지 줄 아래 · 위에 다 안 들어갈 때)
+  const next = THRESHOLDS.findIndex((th) => n < th - drop);
+  THRESHOLDS.forEach((th, i) => { const l = [`${L(`${Math.max(1, th - drop)}개`)}: ${L(f.text[i])}`, n >= th - drop ? PAL.goldDk : PAL.cardDim]; lines.push(next >= 0 && i > next ? optLine(l) : l); });
   return tipLines(`${setName(id)} ${n}`, [], 200, lines);
 }
 

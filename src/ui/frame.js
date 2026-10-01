@@ -49,6 +49,8 @@ export function flow(y0 = 0) {
   };
   return f;
 }
+// 줄 하나의 [윗변, 아랫변](text y와 줄 높이로) — 설명 자리 접기(fold.js)가 판넬 안 줄을 가린다
+export const rowSpan = (ty, lh = LINE) => { const top = ty - ((lh - INK_H) >> 1); return [top, top + lh]; };
 // 한 줄 상자(판넬 한 줄 · 격언 칸): 높이
 export const rowBoxH = (pad = PAD_BOX, lines = 1) => pad * 2 + lines * LINE;
 

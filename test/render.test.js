@@ -145,10 +145,38 @@ test('설명 자리: 판 틀은 왼쪽 칸에 가리킨 것의 윗변 높이로,
   assert.equal(c.y + 30, 197);
   // 다 안 들어가면 뒤의 것부터 뺀다
   assert.equal(placeNotes('side', { x: 200, y: 50, w: 28, h: 28 }, [120, 100, 90]).n, 2);
-  // 왼쪽 칸 안의 것인데 위 · 아래 어디에도 안 들어가면 넓은 쪽으로 화면 끝까지 당긴다(안 뜨지는 않는다)
+  // 왼쪽 칸 안의 것인데 위 · 아래 어디에도 안 들어가면 넓은 쪽에 그 자리 높이로 자른다(clip) — 가리킨 것은 덮지 않는다
   const sq = placeNotes('side', { x: 14, y: 77, w: 100, h: 13 }, [180]);
-  assert.ok(sq.squeezed && sq.y + 180 === 268);
+  assert.deepEqual([sq.y, sq.clip, sq.side], [93, 268 - 93, 'below']);
+  const up = placeNotes('side', { x: 14, y: 190, w: 100, h: 13 }, [200]);
+  assert.deepEqual([up.y, up.clip, up.side], [2, 190 - 3 - 2, 'above']);
+  // 화면 높이를 넘는 말풍선(영어 긴 기물 풀이)도 화면 높이로 자른다
+  const tall = placeNotes('side', { x: 200, y: 50, w: 28, h: 28 }, [318]);
+  assert.deepEqual([tall.y, tall.clip], [2, 266]);
   // 처음 안내도 같은 자리(판 틀은 왼쪽 칸, 화살표는 오른쪽)
   const h = placeBubble('side', { x: 300, y: 100, w: 28, h: 28 }, 40);
   assert.deepEqual([h.x, h.y, h.arrow], [SIDE_X, 100, 'right']);
+});
+
+test('설명 높이 계약: 자리가 모자라면 덜 중요한 줄 → 행마 그림 → 뒤의 글 줄 차례로 빼고 「…」, 재는 높이 = 그리는 높이 ≤ 자리', async () => {
+  const { makeFakeDom } = await import('../tools/fakedom.mjs');
+  const { setCanvasFactory } = await import('../src/render/surface.js');
+  const dom = makeFakeDom();
+  setCanvasFactory(() => dom.document.createElement('canvas'));
+  const { tipHeight, tooltip, tipTexts } = await import('../src/ui/ui.js');
+  const { tipLines, optLine } = await import('../src/ui/parts.js');
+  const ctx = dom.document.createElement('canvas').getContext('2d');
+  const tip = tipLines('제목', ['첫 줄은 꼭 남는다', '둘째 줄', optLine('덜 중요한 줄'), '넷째 줄은 꽤 길어서 좁은 폭에서는 두 줄로 넘어간다']);
+  const full = tipHeight(tip, 116);
+  // 덜 중요한 줄만 빼면 들어가는 자리: 「…」 없이
+  const lean = tipHeight(tip, 116, full - 1);
+  assert.equal(full - lean, 14);
+  const r1 = tooltip(ctx, 0, 0, tip, 116, full - 1);
+  assert.deepEqual([r1.h, r1.cut], [lean, false]);
+  // 더 좁으면 뒤의 글 줄을 통째로 빼고 「…」
+  const r2 = tooltip(ctx, 0, 0, tip, 116, lean - 1);
+  assert.ok(r2.cut && r2.h <= lean - 1 && r2.h === tipHeight(tip, 116, lean - 1));
+  // 낱말을 찾는 글은 그대로(덜 중요한 줄 포함)
+  assert.ok(tipTexts(tip).includes('덜 중요한 줄'));
+  setCanvasFactory(null);
 });

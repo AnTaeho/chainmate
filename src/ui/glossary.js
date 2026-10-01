@@ -133,15 +133,22 @@ export function termsIn(list) {
 export const KEY_MAX = 2; // 카드 하나에 상자 둘까지
 const keyLines = (id, w) => wrap(termSay(id), w - PAD_BOX * 2);
 // 낱말 상자 자리: 낱말(제목 줄) → 묶음 틈 → 풀이 줄들. 재기와 그리기가 같이 쓴다
-function keyLayout(id, w) {
-  const f = flow(PAD_BOX);
-  const words = wrap(termWord(id), w - PAD_BOX * 2, true).map((l) => [l, f.line(true)]);
-  f.gap(GAP_GROUP);
-  const lines = keyLines(id, w).map((l) => [l, f.line()]);
-  return { words, lines, h: f.y + PAD_BOX };
+// maxH: 자리 규칙이 준 높이(placement.js clip). 넘치면 뒤의 줄부터 빼고 「…」 한 줄로 마친다(말풍선과 같다)
+function keyLayout(id, w, maxH = Infinity) {
+  const all = keyLines(id, w);
+  const make = (src) => {
+    const f = flow(PAD_BOX);
+    const words = wrap(termWord(id), w - PAD_BOX * 2, true).map((l) => [l, f.line(true)]);
+    f.gap(GAP_GROUP);
+    const lines = src.map((l) => [l, f.line()]);
+    return { words, lines, h: f.y + PAD_BOX };
+  };
+  let lay = make(all);
+  for (let k = all.length - 1; k >= 0 && lay.h > maxH; k--) lay = make([...all.slice(0, k), '…']);
+  return lay;
 }
 // 낱말 상자 높이(폭 w). 폭은 설명 묶음이 정한다(말풍선과 같은 폭 — placement.js)
-export const keyHeight = (id, w) => keyLayout(id, w).h;
+export const keyHeight = (id, w, maxH = Infinity) => keyLayout(id, w, maxH).h;
 // 상자에 띄울 낱말: 앞에서 KEY_MAX개, 가리킨 낱말(hot)은 꼭 넣는다
 export function keyList(ids, hot = null, max = KEY_MAX) {
   let list = ids.slice(0, max);
@@ -150,8 +157,8 @@ export function keyList(ids, hot = null, max = KEY_MAX) {
 }
 // 낱말 상자 하나를 (x, y)에 폭 w로. 그린 네모를 돌려준다(연기 시험이 센다).
 // note: 낱말 옆에 붙이는 지금 값(시너지 상자의 「5/6」 — 판 틀에서 설명이 왼쪽 칸의 시너지 줄을 덮으므로)
-export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null) {
-  const lay = keyLayout(id, w), h = lay.h, P = PAD_BOX;
+export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null, maxH = Infinity) {
+  const lay = keyLayout(id, w, maxH), h = lay.h, P = PAD_BOX;
   openBox('note', x, y, w, h, P, { overlay: true, name: `낱말 ${id}` });
   // 말풍선과 같은 카드 빛깔(한 묶음): 뒤 판넬(어두운 초록)과 톤이 갈린다. 낱말은 말풍선 글 속 낱말과 같은 짙은 금빛
   box(ctx, x, y, w, h, PAL.card, hot ? PAL.gold : PAL.frameDk);
@@ -161,5 +168,5 @@ export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null) {
   if (note && last && measure(last[0], true) + 6 + measure(note) <= w - P * 2) text(ctx, note, x + w - P, y + last[1], PAL.cardInk, { align: 'right' });
   for (const [l, ly] of lay.lines) text(ctx, l, x + P, y + ly, PAL.cardInk);
   closeBox();
-  return { id, x, y, w, h };
+  return { id, x, y, w, h, cut: lay.lines.some(([l]) => l === '…') };
 }

@@ -3,11 +3,11 @@ import { PAL } from '../../render/palette.js';
 import { W, text, rect, measure } from '../../render/gfx.js';
 import { ANTES } from '../../sim/run.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
-import { panel, tipLines, fragmentStrip, fitText } from '../parts.js';
+import { panel, tipLines, optLine, fragmentStrip, fitText } from '../parts.js';
 import { button } from '../ui.js';
 import { familyList } from '../parts-depth.js';
 import { familyCounts } from '../../data/families.js';
-import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, flow } from '../frame.js';
+import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, flow, rowSpan } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 // 세력 빛깔을 짙은 판넬 위 글자로 읽히게 조금 밝힌다
@@ -77,6 +77,7 @@ export function drawFoot(ctx, ui, rows, name = '아래 칸') {
   const L = LEFT.x, LW = LEFT.w, y0 = SIDE.bottom - lay.h, P = PAD_BOX;
   openBox('panel', L, y0, LW, lay.h, P, { name });
   panel(ctx, L, y0, LW, lay.h);
+  ui.sideItem(L, y0, LW, lay.h, { rows: lay.rows.map((q) => [y0 + q.top, y0 + q.top + LINE]) });
   rows.forEach((r, i) => {
     const { top, y } = lay.rows[i];
     const ry = y0 + top, ty = y0 + y;
@@ -128,6 +129,7 @@ export function runSide(ctx, ui, app, title) {
   const st = sideStack(head.h, foot.h);
   openBox('panel', L, st.head.y, LW, head.h, P, { name: '머리 칸' });
   panel(ctx, L, st.head.y, LW, head.h);
+  ui.sideItem(L, st.head.y, LW, head.h, { rows: [rowSpan(st.head.y + head.kicker), rowSpan(st.head.y + head.titles[0], LINE_TITLE)] });
   text(ctx, hallText(run), L + P, st.head.y + head.kicker, PAL.dim);
   fitText(ctx, title, L + P, st.head.y + head.titles[0], LW - P * 2, PAL.gold);
   closeBox();
@@ -135,6 +137,7 @@ export function runSide(ctx, ui, app, title) {
   const { y: top, h: midH } = st.mid;
   openBox('panel', L, top, LW, midH, P, { name: '짜임 칸' });
   panel(ctx, L, top, LW, midH);
+  const rows = ui.sideItem(L, top, LW, midH, { rows: [] }).rows;
   const js = run.josekis || [];
   const labelH = LINE + GAP_IN;
   const jsH = js.length ? GAP_GROUP + labelH + js.length * LINE : 0;
@@ -145,16 +148,21 @@ export function runSide(ctx, ui, app, title) {
     f.gap(GAP_IN);
     const shown = familyList(ctx, ui, run, L + P, f.y, LW - P * 2, famRows, { time: app.time, fx: app.screen && app.screen.famFx });
     text(ctx, '시너지', L + P, ly, PAL.dim);
+    rows.push(rowSpan(ly));
+    for (let k = 0; k < shown; k++) rows.push([f.y + k * FAM_ROW, f.y + k * FAM_ROW + FAM_H]);
     f.space(shown * FAM_ROW - (FAM_ROW - FAM_H));
   }
   if (js.length) {
     f.gap(GAP_GROUP);
-    text(ctx, '레퍼토리', L + P, f.line(), PAL.dim);
+    const jy = f.line();
+    text(ctx, '레퍼토리', L + P, jy, PAL.dim);
+    rows.push(rowSpan(jy));
     f.gap(GAP_IN);
     js.forEach((id) => {
       const j = JOSEKI_BY_ID[id];
       const top1 = f.y, ty = f.line();
-      ui.region(`joseki:${id}`, L + 4, top1, LW - 8, LINE, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [{ chips: j.families }] : []) });
+      rows.push([top1, top1 + LINE]);
+      ui.region(`joseki:${id}`, L + 4, top1, LW - 8, LINE, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [optLine({ chips: j.families })] : []) });
       fitText(ctx, j.name, L + P, ty, LW - P * 2, ui.isHover(`joseki:${id}`) ? PAL.goldHi : TIER_COL[j.tier]);
     });
   }

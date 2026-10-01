@@ -12,14 +12,14 @@
 //   openBox를 잊은 그리기 길(옛 격언 칸 둘째 줄처럼)도 잡는다.
 // overlay: 다른 상자 위에 뜨는 것(말풍선 · 낱말 상자 · 처음 안내 · 차림표 · 끄는 카드). 상자끼리 겹침을 재지 않는다.
 // loose: 연출 중(뒤집히는 카드 등)이라 이번 프레임은 재지 않는다.
-export const LOG = { on: false, boxes: [], texts: [], frames: [], stack: [], layer: 0 };
+export const LOG = { on: false, boxes: [], texts: [], frames: [], stack: [], layer: 0, folded: [] };
 export const EDGE_CLEAR = 2;          // 'edge' 칸: 글과 테 사이 최소 틈
 export const INK_H = 11, INK_DESC = 2; // 글자 잉크 높이 · 아래로 빠지는 글자의 더 내려가는 줄(12px, 1배)
 const DESC = /[gjpqy,]/;
 
 export function logBegin() {
   if (!LOG.on) return;
-  LOG.boxes = []; LOG.texts = []; LOG.frames = []; LOG.stack = []; LOG.layer = 0;
+  LOG.boxes = []; LOG.texts = []; LOG.frames = []; LOG.stack = []; LOG.layer = 0; LOG.folded = [];
 }
 export function openBox(kind, x, y, w, h, pad = 0, { overlay = false, loose = false, name = '' } = {}) {
   if (!LOG.on) return;
@@ -107,4 +107,16 @@ export function coveredTexts(rects, anchor = null) {
     out.push({ s: t.s, x: t.x, y: t.y, w: t.w, h: ink.h, self: !!(anchor && cross(ink, anchor)) });
   }
   return out;
+}
+
+// 설명 자리 접기(src/ui/fold.js): 그 네모를 판넬 바탕으로 다시 칠해 지운 글은 화면에 없다 — 기록에서 빼고 접은 글로 옮긴다
+export function foldLog(r) {
+  if (!LOG.on) return;
+  const keep = [];
+  for (const t of LOG.texts) {
+    const ink = { x: t.x, y: t.y, w: t.w, h: t.h + t.d };
+    if (t.layer === LOG.layer && !(t.box && (t.box.overlay || t.box.loose)) && cross(ink, r)) LOG.folded.push(t);
+    else keep.push(t);
+  }
+  LOG.texts = keep;
 }

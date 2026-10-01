@@ -80,7 +80,9 @@ export class ChestScreen {
         text(ctx, '·', x + cw / 2, y + 24, PAL.dimDk, { align: 'center', bold: true });
       }
     });
-    if (this.stopped >= c.cells.length) {
+    // 받은 것 줄은 칸을 가리키는 동안 접는다 — 그 칸의 설명이 바로 아래에 같은 것을 말한다(CHM-34)
+    const pointing = ui.hover && ui.hover.id.startsWith('chest:cell:');
+    if (this.stopped >= c.cells.length && !pointing) {
       const items = c.cells.filter((x) => x.lit).map((x) => chestItemText(x.item));
       // 칸 수(다섯이면 두 배) → 묶음 틈 → 받은 것 한 줄씩(본문 줄)
       const cy = y + ch + 8 + GAP_GROUP, big = c.count >= 5;

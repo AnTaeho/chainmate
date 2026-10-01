@@ -95,6 +95,32 @@ export function updateGuide(app, dt) {
   if (g.i >= g.steps.length) { app.guide = null; if (g.onDone) g.onDone(); }
 }
 
+// 이번 프레임에 뜰 킹 말풍선의 자리(그리기 전에 — 설명 자리 접기 fold.js가 쓴다). 없으면 null. 상태는 바꾸지 않는다
+export function coachPlan(app) {
+  const g = app.guide;
+  let r = null, say = null, opts = {};
+  if (g) {
+    const st = g.steps[g.i];
+    if (!st || (g.hold && g.hold(app))) return null;
+    if (st.screen && app.screen && app.screen.name !== st.screen) return null;
+    r = guideRegion(app, st); say = st.say;
+    opts = { ok: st.ok ? '알았다' : null, okLabel: st.okLabel, skip: st.noSkip ? null : g.skip };
+  } else {
+    const onScreen = (q) => q && q.w > 0 && q.h > 0 && q.x >= 0 && q.y >= 0 && q.x + q.w <= W && q.y + q.h <= H;
+    for (const c of app.hintNow || []) { const q = app.ui.regions.find((x) => x.id === c.regionId); if (onScreen(q)) { r = q; say = HINTS[c.id]; break; } }
+    if (!r) return null;
+  }
+  return { r, rect: bubbleRect(app, r, say, opts) };
+}
+// 킹 말풍선 네모(bubble과 같은 셈)
+function bubbleRect(app, r, say, { ok = null, okLabel = null, skip = null } = {}) {
+  const mode = noteMode(app.screen);
+  const w = noteWidth(mode);
+  const lay = bubbleLayout(say, w, { ok: ok ? okLabel || '알았다' : null, skip: skip ? '건너뛰기' : null });
+  const p = placeBubble(mode, r, lay.h, { W, H });
+  return { x: p.x, y: p.y, w, h: lay.h, arrow: p.arrow, lay };
+}
+
 // 그리기(맨 위, 말풍선보다 먼저)
 export function drawCoach(ctx, app) {
   const ui = app.ui;
@@ -177,13 +203,9 @@ export function drawKing(ctx, app, x, y, { joy = false } = {}) {
 }
 export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip = null, joy = false } = {}) {
   if (say !== talkSay) { talkSay = say; talkT0 = app.time; }
-  const mode = noteMode(app.screen);
-  const w = noteWidth(mode);
   const okText = ok ? okLabel || '알았다' : null, skipText = skip ? '건너뛰기' : null;
-  const lay = bubbleLayout(say, w, { ok: okText, skip: skipText });
-  const h = lay.h;
-  const p = placeBubble(mode, r, h, { W, H });
-  const { x, y } = p;
+  const p = bubbleRect(app, r, say, { ok, okLabel, skip });
+  const { x, y, w, h, lay } = p;
   app.hintRect = { x, y, w, h };
   if (r && p.arrow === 'right') {
     // 가리키는 것: 금빛 테(1px)가 깜박인다

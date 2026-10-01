@@ -4,6 +4,7 @@
 //           윗변은 가리킨 것의 윗변 높이. 왼쪽 칸 안의 것을 가리키면 그 바로 아래(모자라면 바로 위).
 //   'below' 판 밖 틀 · 막간: 가리킨 것 바로 아래(왼끝 맞춤, 넘치면 오른끝 맞춤). 모자라거나 누를 것을 덮으면 바로 위.
 // 설명 묶음 = 말풍선 → 낱말 상자, 같은 폭 · 2px 틈의 세로 한 줄. 다 안 들어가면 뒤의 것부터 뺀다.
+// 첫 네모 하나도 안 들어가면 그 자리 높이(clip)를 돌려준다 — 그리는 쪽이 그 높이로 자른다(ui.js tooltip · glossary.js drawKeyBox, CHM-34).
 // 기하만 다룬다(그리기 · 글 줄바꿈은 ui.js · glossary.js). DOM 없음.
 import { LEFT } from './frame.js';
 
@@ -24,7 +25,8 @@ const sum = (hs, n) => hs.slice(0, n).reduce((u, v) => u + v, 0) + NOTE_GAP * Ma
 // 묶음 자리. hs: 묶음 안 네모들의 높이(차례대로, noteWidth(mode) 폭으로 잰 것).
 // avoid: 덮으면 안 되는 네모(누를 수 있는 구역 — 'below'에서 위로 뒤집는 데 쓴다).
 // 돌려주는 값: { x, y, w, n, side } — n은 들어간 네모 수, side는 가리킨 것에서 본 쪽('right' 왼쪽 칸 · 'below' · 'above').
-export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [] } = {}) {
+// soft: 덮지 않으면 좋은 것(다른 카드 · 칸 — 판 밖 틀의 격자). 'below'에서 아래 · 위 × 왼끝 · 오른끝 맞춤 중 덜 덮는 자리를 고른다
+export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [], soft = [] } = {}) {
   if (!hs.length) return null;
   const w = noteWidth(mode);
   if (mode === 'side') {
@@ -41,26 +43,42 @@ export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [] } = 
       if (total > H - EDGE * 2) continue;
       return { x, y: Math.max(EDGE, Math.min(H - EDGE - total, anchor.y)), w, n, side: 'right' };
     }
-    // 왼쪽 칸 안의 것인데 말풍선 하나가 위 · 아래 어디에도 안 들어가면(영어의 긴 시너지 풀이): 넓은 쪽으로 화면 끝까지 당긴다.
-    // 가리킨 것을 덮지만 설명이 안 뜨는 것보다 낫다(squeezed — 연기 시험이 따로 센다)
-    const h0 = Math.min(hs[0], H - EDGE * 2);
+    // 말풍선 하나도 안 들어가면(긴 기물 · 시너지 풀이): 그 자리의 높이로 자른다(clip — 그리는 쪽이 「…」로 마친다).
+    // 왼쪽 칸 안의 것은 위 · 아래 중 넓은 쪽 — 가리킨 것은 덮지 않는다
+    if (!inSide(anchor)) { const clip = H - EDGE * 2; return { x, y: EDGE, w, n: 1, side: 'right', clip }; }
     const roomBelow = H - EDGE - (anchor.y + anchor.h + NOTE_OFF), roomAbove = anchor.y - NOTE_OFF - EDGE;
-    return { x, y: roomBelow >= roomAbove ? H - EDGE - h0 : EDGE, w, n: 1, side: roomBelow >= roomAbove ? 'below' : 'above', squeezed: true };
+    return roomBelow >= roomAbove
+      ? { x, y: anchor.y + anchor.h + NOTE_OFF, w, n: 1, side: 'below', clip: roomBelow }
+      : { x, y: EDGE, w, n: 1, side: 'above', clip: roomAbove };
   }
   let x = anchor.x;
   if (x + w > W - EDGE) x = anchor.x + anchor.w - w;
   x = Math.max(EDGE, Math.min(W - EDGE - w, x));
+  // 오른끝 맞춤(가리킨 것의 오른끝 = 묶음 오른끝): 왼끝 맞춤이 다른 카드를 더 덮으면 이쪽
+  const xr = Math.max(EDGE, Math.min(W - EDGE - w, anchor.x + anchor.w - w));
   const clear = (r) => !avoid.some((a) => overlaps(r, a));
+  const softHits = (r) => soft.filter((a) => overlaps(r, a)).length;
   for (let n = hs.length; n >= 1; n--) {
     const total = sum(hs, n);
-    const below = anchor.y + anchor.h + NOTE_OFF;
-    if (below + total <= H - EDGE && clear({ x, y: below, w, h: total })) return { x, y: below, w, n, side: 'below' };
-    const above = anchor.y - NOTE_OFF - total;
-    if (above >= EDGE && clear({ x, y: above, w, h: total })) return { x, y: above, w, n, side: 'above' };
+    const below = anchor.y + anchor.h + NOTE_OFF, above = anchor.y - NOTE_OFF - total;
+    // 차례: 아래 왼끝 · 아래 오른끝 · 위 왼끝 · 위 오른끝 — 다른 카드를 가장 덜 덮는 것(같으면 앞의 것)
+    const cands = [];
+    if (below + total <= H - EDGE) cands.push({ x, y: below, side: 'below' }, { x: xr, y: below, side: 'below' });
+    if (above >= EDGE) cands.push({ x, y: above, side: 'above' }, { x: xr, y: above, side: 'above' });
+    let best = null, bestHits = Infinity;
+    for (const q of cands) {
+      const r = { x: q.x, y: q.y, w, h: total };
+      if (!clear(r)) continue;
+      const k = softHits(r);
+      if (k < bestHits) { best = q; bestHits = k; }
+    }
+    if (best) return { x: best.x, y: best.y, w, n, side: best.side };
   }
-  // 어디에도 깨끗이 안 들어가면: 첫 네모만, 아래 · 위 중 넓은 쪽(화면 안으로 당긴다)
+  // 어디에도 깨끗이 안 들어가면: 첫 네모만, 아래 · 위 중 넓은 쪽(화면 안으로 당긴다 — 넘치면 그 높이로 자른다)
   const h0 = hs[0];
   const roomBelow = H - EDGE - (anchor.y + anchor.h + NOTE_OFF), roomAbove = anchor.y - NOTE_OFF - EDGE;
+  const room = Math.max(roomBelow, roomAbove);
+  if (h0 > room) return roomBelow >= roomAbove ? { x, y: anchor.y + anchor.h + NOTE_OFF, w, n: 1, side: 'below', clip: room } : { x, y: EDGE, w, n: 1, side: 'above', clip: room };
   const y = roomBelow >= roomAbove ? Math.min(H - EDGE - h0, anchor.y + anchor.h + NOTE_OFF) : Math.max(EDGE, anchor.y - NOTE_OFF - h0);
   return { x, y, w, n: 1, side: roomBelow >= roomAbove ? 'below' : 'above' };
 }
