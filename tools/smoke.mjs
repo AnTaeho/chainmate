@@ -4,7 +4,7 @@
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle } from './bot.mjs';
 import { lineCommands } from '../src/sim/solver.js';
-import { canBuy, canSell, factionFor } from '../src/sim/run.js';
+import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
 import { isHidden, canReboard } from '../src/sim/battle.js';
@@ -1174,7 +1174,7 @@ const mainApp = app;
   if (!app.guide || !region('guide:skip')) throw new Error('scripted battle has no skip');
   click('guide:skip');
   pump(2);
-  if (app.guide || screen() !== 'battle' || !app.run.battle || app.run.battle.script || app.run.ante !== 1 || app.run.battle.target !== 150) throw new Error('skip did not start a plain practice battle');
+  if (app.guide || screen() !== 'battle' || !app.run.battle || app.run.battle.script || app.run.ante !== 1 || app.run.battle.target !== targetFor(1, 'practice')) throw new Error('skip did not start a plain practice battle');
   app.settings.coach = false;
   for (let n = 0; n < 200; n++) { pump(1); if (app.hintShown) throw new Error('hint shown while off'); }
   // 행마 보기는 평범한 대국에서도 열린다
@@ -1298,7 +1298,7 @@ function checkShops(name, out, { firstNoMaxim = false } = {}) {
     if (!app.guide || app.guide.i !== k || !region('guide:skip')) { paths.bad.push(`건너뛰기 ${k}: 그 걸음에 닿지 못함(${app.guide ? app.guide.i : '길 없음'})`); app.toTitle(); pump(1); continue; }
     click('guide:skip'); pump(2);
     const b = app.run.battle;
-    if (app.guide || screen() !== 'battle' || !b || b.script || b.target !== 150 || app.run.ante !== 1 || b.movesUsed !== 0 || app.screen.hold) paths.bad.push(`건너뛰기 ${k}: 평범한 1관 연습이 아니다`);
+    if (app.guide || screen() !== 'battle' || !b || b.script || b.target !== targetFor(1, 'practice') || app.run.ante !== 1 || b.movesUsed !== 0 || app.screen.hold) paths.bad.push(`건너뛰기 ${k}: 평범한 1관 연습이 아니다`);
     else ok.push(k);
     app.toTitle(); pump(1);
   }
