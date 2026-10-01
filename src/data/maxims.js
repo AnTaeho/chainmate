@@ -134,15 +134,15 @@ maxim('last_move', '마지막 수', '대국 마지막 수: 배수 ×3', '수', '
   onChainEnd(ctx) { if (ctx.t.movesLeft === 1) ctx.mulMult(3); },
 });
 
-// ── 버리기
-maxim('no_regrets', '뽑은 대로', '버리기를 안 쓴 대국: 배수 +4', '버리기', 'common', 4, {
+// ── 희생(CHM-35: 옛 버리기)
+maxim('no_regrets', '뽑은 대로', '희생 없는 대국: 배수 +4', '희생', 'common', 4, {
   onChainEnd(ctx) { if (num(ctx.t.discardsUsed) === 0) ctx.addMult(4); },
 });
-// 미련 없이: 버리기가 한 번에 한 장이 되며(b4fdfd3) 대국당 버린 기물이 16에서 4로 줄어 옛 「값 +10」(최대 +40)은 힘이 없었다.
-// 배수 +2는 최대 +8로 되갚음(+8)과 같은 크기, 뒤 관까지 힘이 남는다. 봇이 거의 버리지 않아(대국당 0.03장) 하네스로는 재지 못했다(2026-09-28)
-maxim('second_thought', '미련 없이', '버리기 +1 · 버린 기물마다 배수 +2', '버리기', 'common', 3, {
+// 미련 없이: 옛 「버리기 +1 · 버린 기물마다 배수 +2」(대국 내내 모든 사슬에). CHM-35에서 희생의 몫에 실었다 —
+// 희생할 때마다 그 몫이 붙는 다음 사슬에 배수 +2(몫과 함께 비운다)
+maxim('second_thought', '미련 없이', '희생 +1 · 희생할 때마다 배수 +2', '희생', 'common', 3, {
   onBattleStart(ctx) { ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
-  onChainEnd(ctx) { ctx.addMult(2 * num(ctx.t.discarded)); },
+  onChainEnd(ctx) { ctx.addMult(2 * num(ctx.chain.offered)); },
 });
 
 // ── 주머니
@@ -302,7 +302,7 @@ maxim('specialty', '주특기', '기보 레벨이 가장 높은 모습으로 먹
     if (top > 0 && f && lv[f] === top) ctx.addValue(25);
   },
 });
-maxim('thrift', '절약', '대국을 이기면 남은 버리기마다 상금 +1', '버리기', 'common', 4, {
+maxim('thrift', '절약', '대국을 이기면 남은 희생마다 상금 +1', '희생', 'common', 4, {
   onBattleEnd(ctx) { if (ctx.event.status === 'won') ctx.addBattleMoney(num(ctx.t.discardsLeft)); },
 });
 maxim('asceticism', '금욕', '격언 칸이 하나라도 비었으면: 배수 ×2', '격언', 'rare', 7, {

@@ -52,6 +52,14 @@ export function startChain(t, { type, sq, engraving = null, soul = null }) {
   };
   t.board[sq] = { t: type, mine: true };
   events.push({ type: 'drop', piece: type, sq });
+  // 희생(CHM-35): 대국에 쌓인 몫(t.offering)이 이 사슬에 붙는다. 비우는 곳은 battle.js endMove
+  const off = t.offering;
+  if (off && off.count) t.chain.offered = off.count; // 바친 기물 수(격언 「미련 없이」)
+  if (off && (off.value || off.mult)) {
+    t.chain.value += off.value || 0;
+    t.chain.mult += off.mult || 0;
+    events.push({ type: 'score', src: 'sacrifice', ...(off.value ? { value: off.value } : {}), ...(off.mult ? { mult: off.mult } : {}) });
+  }
   runHook(t, 'onDrop', { type, sq }, events);
   if (chainCaptures(t).length === 0) stop(t, 'blocked', events);
   return events;

@@ -101,7 +101,7 @@ export function bestMove(b, opts = {}) {
   return best;
 }
 
-// 손 기물마다 최선 수(바꾸기 판단용).
+// 손 기물마다 최선 수(희생 판단용).
 export function bestPerPiece(b, opts = {}) {
   return b.hand.map((_, i) => bestMove(b, { ...opts, handIndices: [i] }));
 }
@@ -132,5 +132,6 @@ export function previewDrop(b, handIndex, sq) {
   const piece = b.hand[handIndex];
   const t = cloneTable({ ...b, hand: b.hand.filter((_, i) => i !== handIndex), chain: null });
   startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece) });
-  return { sq, form: piece.t, next: t.chain.done ? [] : chainCaptures(t) };
+  // value · mult: 떨군 순간 사슬에 든 몫(희생으로 쌓인 몫 · onDrop 반응)
+  return { sq, form: piece.t, value: t.chain.done ? 0 : t.chain.value, mult: t.chain.done ? 0 : t.chain.mult, offering: b.offering ? { ...b.offering } : null, next: t.chain.done ? [] : chainCaptures(t) };
 }
