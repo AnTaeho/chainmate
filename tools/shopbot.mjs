@@ -99,7 +99,7 @@ export function evalBuild(run, build, seeds, ante, master = null, faction = null
     b.movesUsed = m;
     b.movesLeft = b.rules.moves - m;
     const best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes }) : null;
-    total += best ? best.score : 0;
+    total += b.score + (best ? best.score : 0); // b.score: 함정이 지나간 수에서 붙잡은 증원의 값
   });
   return total / seeds.length;
 }
