@@ -59,20 +59,20 @@ test('단 규칙은 차례로 쌓인다(여덟)', () => {
   assert.equal(DANS.length, 8);
   const r0 = danRules(0), r8 = danRules(8);
   assert.deepEqual(r0, { reinforce: 0, price: 0, chestFive: 1, fragment: 1, clock: 0, target: 1, discards: 0, moves: 0, finalTarget: 1 });
-  assert.deepEqual(r8, { reinforce: 1, price: 1, chestFive: 0.5, fragment: 0.5, clock: -2, target: 1.1, discards: -1, moves: 0, finalTarget: 1.25 });
+  assert.deepEqual(r8, { reinforce: 1, price: 1, chestFive: 0.5, fragment: 0.5, clock: -1, target: 1.25, discards: -1, moves: 0, finalTarget: 1.25 });
   for (let d = 1; d <= 8; d++) {
     const r = danRules(d), p = danRules(d - 1);
     assert.ok(Object.keys(r).some((k) => r[k] !== p[k]), `단 ${d}에서 바뀐 것 없음`);
   }
 });
 
-test('단 1: 증원 +1 / 단 4 · 7: 시계 −1 / 단 6: 버리기 −1', () => {
+test('단 1: 증원 +1 / 단 4: 시계 −1 / 단 6: 버리기 −1', () => {
   const plain = createRun({ draft: false, seed: 9 }); applyRun(plain, { type: 'play' });
   assert.equal(plain.clock, 3);
   const r1 = createRun({ draft: false, seed: 9, dan: 1 }); applyRun(r1, { type: 'play' });
   assert.equal(r1.battle.incoming.length, plain.battle.incoming.length + 1);
   assert.equal(createRun({ draft: false, seed: 9, dan: 4 }).clock, 2);
-  assert.equal(createRun({ draft: false, seed: 9, dan: 7 }).clock, 1);
+  assert.equal(createRun({ draft: false, seed: 9, dan: 8 }).clock, 2);
   const r6 = createRun({ draft: false, seed: 9, dan: 6 }); applyRun(r6, { type: 'play' });
   assert.equal(r6.battle.discardsLeft, 2);
   const r8 = createRun({ draft: false, seed: 9, dan: 8 }); applyRun(r8, { type: 'play' });
@@ -120,7 +120,7 @@ test('단은 저장 왕복 뒤에도 같다', () => {
   applyRun(back, { type: 'play' });
   assert.equal(back.battle.movesLeft, 4);
   assert.equal(back.battle.discardsLeft, 2);
-  assert.equal(back.clock, 1);
+  assert.equal(back.clock, 2);
 });
 
 test('기록: 외통 · 평가 · 도감 · 해금 · 단', () => {

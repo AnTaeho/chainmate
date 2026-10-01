@@ -143,8 +143,8 @@ test('고유 적: 1관부터 그 세력의 이형만 조금 섞인다', () => {
   assert.ok(!enemyWeights(1).some(([t]) => FAIRIES.includes(t)), '세력 없이는 4관부터');
 });
 
-test('단 8 「대가 목표 ×1.25」는 왕궁 근위의 우두머리 대국에만', () => {
-  const run = createRun({ seed: 2, dan: 8, draft: false });
+test('단 7 「대가 목표 ×1.25」는 왕궁 근위의 우두머리 대국에만', () => {
+  const run = createRun({ seed: 2, dan: 7, draft: false });
   const plain = createRun({ seed: 2, dan: 5, draft: false });
   assert.ok(blindInfo(run, 8, 2).target > blindInfo(plain, 8, 2).target);
   assert.equal(blindInfo(run, 8, 1).target, blindInfo(plain, 8, 1).target);
