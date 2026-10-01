@@ -603,7 +603,8 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
     if (name === 'select') { notesOnce('select', 4); if (n2.waitNext || !(app.run.blind < 2 && rnd() < 0.15)) click('select:play'); else click('select:skip'); pump(2); if (n2.waitNext && screen() === 'battle') { n2.clockNext++; n2.waitNext = false; n2.clockBefore = null; } continue; }
     if (name === 'chest') { click('next'); pump(2); notesOnce('chest', 4); click('next'); pump(1); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
-    if (name === 'reward' || name === 'chest' || name === 'legend') { click('next'); pump(1); if (screen() === name) click('next'); continue; }
+    // 각성 막간(금이 간 혼이 금빛 적을 먹고 이긴 뒤 저절로 열린다 — 판 흐름에 따라 이 길에서도 나온다)
+    if (name === 'reward' || name === 'chest' || name === 'legend' || name === 'awaken') { if (name === 'awaken') pump(60); click('next'); pump(1); if (screen() === name) click('next'); continue; }
     if (name === 'shop') { if (!reloaded && !inject) { await reload(); continue; } shopStep(); continue; }
     if (name === 'pack') { packStep(); continue; }
     if (name === 'pause') { click('pause:resume'); continue; }
@@ -855,7 +856,7 @@ if (app.run.phase === 'won') {
     if (name === 'draft') { pump(40); click('draft:0'); pump(60); continue; }
     if (name === 'select') { click('select:play'); pump(2); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
-    if (name === 'reward' || name === 'chest' || name === 'legend') { click('next'); pump(1); if (screen() === name) click('next'); continue; }
+    if (name === 'reward' || name === 'chest' || name === 'legend' || name === 'awaken') { if (name === 'awaken') pump(60); click('next'); pump(1); if (screen() === name) click('next'); continue; }
     if (name === 'shop') { shopStep(); continue; }
     if (name === 'pack') { packStep(); continue; }
     throw new Error(`stuck on ${name}`);

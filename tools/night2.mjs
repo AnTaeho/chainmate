@@ -3,7 +3,7 @@
 import { CLOCK } from '../src/sim/run.js';
 import { BOARD_TUNING } from '../src/sim/tuning.js';
 import { REBOARD } from './bot.mjs';
-import { SACRIFICE } from '../src/sim/battle.js';
+import { BRILLIANT } from '../src/data/sacrifice.js';
 
 export function applyNight2(tune) {
   if (!tune) return;
@@ -11,6 +11,6 @@ export function applyNight2(tune) {
   if (tune.reboard != null) BOARD_TUNING.reboard = !!tune.reboard;
   if (tune.reboardRatio != null) REBOARD.ratio = tune.reboardRatio;
   if (tune.filter != null) BOARD_TUNING.filter = tune.filter;
-  // CHM-35 희생 세기: "A" | "B" | "C" 또는 { mode, mult, valueX }
-  if (tune.sac != null) Object.assign(SACRIFICE, typeof tune.sac === 'string' ? { mode: tune.sac } : tune.sac);
+  // CHM-35 탁월수 세기: 마지막 배수 ×(1 + brilliant × 바친 무게)
+  if (tune.brilliant != null) BRILLIANT.per = tune.brilliant;
 }

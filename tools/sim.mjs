@@ -8,7 +8,7 @@
 //   점수/수 평균, 대국 총점 평균, 총점 p10/p50/p90(외통으로 끝난 대국 제외), 사슬 길이 평균,
 //   끊김률(끊김으로 끝난 수 / 수), 응수율(응수로 먹은 먹기 / 먹기), 응수 있는 수 비율,
 //   외통률(대국), 막힘 패배율(대국), 희생 평균(대국당), 결정당 ms(평균 / 최대).
-//   --nosac: 봇이 희생을 쓰지 않는다(막혔을 때만).
+//   --nosac: 봇이 탁월수를 노리지 않는다(옛 버리기 규칙으로만 바친다).
 import { createBattle, apply, DEFAULT_BAG } from '../src/sim/battle.js';
 import { decideBattle } from './bot.mjs';
 import { lineCommands } from '../src/sim/solver.js';
