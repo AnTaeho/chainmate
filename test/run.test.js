@@ -107,14 +107,51 @@ test('상점: 사기 · 다시 진열(5, +1) · 팔기(절반) · 칸 제한', (
   run.shop.display[1] = { kind: 'maxim', id: 'center', price: 5, sold: false };
   assert.ok(!legalRunCommands(run).some((c) => c.type === 'buy' && c.slot === 1));
   assert.throws(() => applyRun(run, { type: 'buy', slot: 1 }), /cannot buy/);
-  // 소모품 칸 2
-  run.consumables = [{ kind: 'chart', form: 'N' }, { kind: 'chart', form: 'B' }];
-  run.shop.display[1] = { kind: 'chart', form: 'R', price: 3, sold: false };
+  // 두루마리 칸 2: 차면 각인은 못 산다
+  run.consumables = [{ kind: 'engraving', id: 'ebony' }, { kind: 'soul', id: 'echo' }];
+  run.shop.display[1] = { kind: 'engraving', id: 'glass', price: 3, sold: false };
   assert.throws(() => applyRun(run, { type: 'buy', slot: 1 }), /cannot buy/);
+  // 기보는 칸이 차도 산다 — 사는 순간 그 모습의 단계가 오르고 칸은 그대로(CHM-33)
+  run.shop.display[1] = { kind: 'chart', form: 'R', price: 3, sold: false };
+  assert.ok(legalRunCommands(run).some((c) => c.type === 'buy' && c.slot === 1));
+  const ev = applyRun(run, { type: 'buy', slot: 1 });
+  assert.equal(run.charts.R, 1);
+  assert.equal(run.consumables.length, 2);
+  assert.deepEqual(ev.map((e) => e.type), ['chart', 'buy']);
+  assert.deepEqual(ev[0], { type: 'chart', form: 'R', level: 1 });
   // 다음 상점에서 다시 진열 값은 5로 돌아간다
   applyRun(run, { type: 'leave' });
   assert.equal(run.phase, 'select');
   assert.equal(run.blind, 1);
+});
+
+test('기보는 얻는 길마다 곧바로 쓰인다: 진열 · 꾸러미 · 건너뛰기 보상(기보 수집가 +1)', () => {
+  const run = shopRun(2);
+  run.money = 50;
+  run.maxims.push({ uid: 1, id: 'collector', data: {}, edition: null, paid: 7 });
+  run.consumables = [{ kind: 'engraving', id: 'ebony' }, { kind: 'engraving', id: 'glass' }];
+  run.shop.display[0] = { kind: 'chart', form: 'N', price: 3, sold: false };
+  applyRun(run, { type: 'buy', slot: 0 });
+  assert.equal(run.charts.N, 1);
+  run.shop.packs[0] = { kind: 'chart', price: 4, sold: false };
+  applyRun(run, { type: 'buyPack', slot: 0 });
+  const form = run.pack.options[0].form;
+  const lv = run.charts[form];
+  const ev = applyRun(run, { type: 'pick', index: 0 });
+  assert.equal(run.charts[form], lv + 1);
+  assert.ok(ev.some((e) => e.type === 'chart' && e.form === form));
+  assert.ok(!run.consumables.some((c) => c.kind === 'chart'));
+  assert.deepEqual(run.maxims[0].data, { n: 2 });
+});
+
+test('옛 저장: 두루마리 칸에 남은 기보는 눌러 쓴다', () => {
+  const run = JSON.parse(JSON.stringify(shopRun(2)));
+  run.consumables = [{ kind: 'chart', form: 'B' }];
+  assert.ok(legalRunCommands(run).some((c) => c.type === 'use' && c.index === 0));
+  const ev = applyRun(run, { type: 'use', index: 0 });
+  assert.equal(run.charts.B, 1);
+  assert.equal(run.consumables.length, 0);
+  assert.ok(ev.some((e) => e.type === 'chart' && e.form === 'B' && e.level === 1));
 });
 
 test('소모품: 기보는 레벨을 올리고(기보 수집가 +1), 각인 두루마리는 주머니의 기물에', () => {

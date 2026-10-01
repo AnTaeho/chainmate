@@ -186,7 +186,7 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
     josekis: [],              // 고른 정석 id(깊이 E)
     draft: null,              // { ante, options: [id…] } 정석을 고르는 중
     maximSlots: conf.maximSlots,
-    consumables: [],          // [{ kind: 'chart', form } | { kind: 'engraving', id }]
+    consumables: [],          // [{ kind: 'engraving' | 'soul' | 'tactic', id } | { kind: 'evolve' | 'awaken' }] — 기보는 얻는 순간 쓰인다(옛 저장엔 { kind: 'chart', form }이 남을 수 있다)
     consumableSlots: conf.consumableSlots,
     charts: Object.fromEntries(CHART_FORMS.map((f) => [f, 0])),
     factions: factionOrder(seed), // 관마다 세력 id(1관 농민군 · 8관 왕궁 근위)
@@ -610,7 +610,8 @@ const pay = (run, n) => {
 export function canBuy(run, it) {
   if (!it || it.sold || run.money < it.price) return false;
   if (it.kind === 'maxim') return hasMaximRoom(run, it.edition);
-  if (it.kind === 'chart' || it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'tactic' || it.kind === 'awaken') return run.consumables.length < run.consumableSlots;
+  // 기보는 사는 순간 쓰여 두루마리 칸을 차지하지 않는다(CHM-33)
+  if (it.kind === 'engraving' || it.kind === 'soul' || it.kind === 'evolve' || it.kind === 'tactic' || it.kind === 'awaken') return run.consumables.length < run.consumableSlots;
   return true;
 }
 
@@ -695,7 +696,8 @@ export function applyRun(run, cmd) {
       else if (it.kind === 'piece') addPiece(run, it.t, events, it.soul || null);
       else if (it.kind === 'fragment') grantFragment(run, it.legend, 'first', events);
       else if (it.kind === 'gamble') gamble(run, it.id, cmd.slot, events);
-      else run.consumables.push(it.kind === 'chart' ? { kind: 'chart', form: it.form } : it.kind === 'evolve' || it.kind === 'awaken' ? { kind: it.kind } : { kind: it.kind, id: it.id });
+      else if (it.kind === 'chart') useChart(run, it.form, events); // 기보는 곧바로 그 모습의 단계를 올린다
+      else run.consumables.push(it.kind === 'evolve' || it.kind === 'awaken' ? { kind: it.kind } : { kind: it.kind, id: it.id });
       events.push({ type: 'buy', item: { ...it } });
       break;
     }
@@ -763,7 +765,7 @@ export function applyRun(run, cmd) {
         p.t = to;
       } else if (c.kind === 'awaken') awaken(run, cmd.target, 'scroll', events);
       else if (c.kind === 'tactic') throw new Error('tactics are used in a battle');
-      else useChart(run, c.form, events);
+      else useChart(run, c.form, events); // 옛 저장: 두루마리 칸에 남은 기보는 눌러 쓴다
       run.consumables.splice(cmd.index, 1);
       break;
     }
