@@ -204,7 +204,7 @@ test('꾸러미: 3개 중 하나(기물은 주머니에, 기보는 곧바로, �
   assert.equal(run.phase, 'shop');
 });
 
-test('기물 조작: 승급(P→N/B→R→Q) · 버리기, 상점마다 한 번씩, 주머니는 여섯 밑으로 못 줄인다', () => {
+test('기물 조작: 승급(P→N/B→R→Q) · 빼기, 상점마다 한 번씩, 주머니는 여섯 밑으로 못 줄인다', () => {
   const run = shopRun(4);
   run.money = 100;
   const pawn = run.deck.find((p) => p.t === 'P');

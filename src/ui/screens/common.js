@@ -35,7 +35,7 @@ export function pageHead(ctx, title, right = null) {
 export const hallText = (run) => (run && !run.endless ? `${run.ante}/${ANTES}관` : `${run ? run.ante : 1}관`);
 
 // ── 판 틀의 왼쪽 칸 쌓기(docs/design-notes/layout.md 「왼쪽 칸」): 판넬마다 내용에 맞춘 높이(hug).
-// 머리 칸은 위(y 8)에서부터, 아래 칸(상금 · 주머니 — 대국은 그 위에 수 · 버리기)은 아래(y 262)에서부터 쌓고,
+// 머리 칸은 위(y 8)에서부터, 아래 칸(상금 · 주머니 — 대국은 그 위에 수 · 희생)은 아래(y 262)에서부터 쌓고,
 // 가운데 칸(짜임 칸 · 대국의 사슬 칸)이 남는 높이를 가진다. 판넬 사이는 GAP_GROUP.
 export const SIDE = { top: M, bottom: 270 - M };
 // 머리 칸: 머릿말(관) → 묶음 안 틈 → 제목(화면 이름, 제목 줄 · 줄 수 titleLines) → [묶음 틈 → 본문 줄 rows개]
@@ -95,7 +95,7 @@ const familyCount = (run) => Object.values(familyCounts(run)).filter((n) => n > 
 // 모두 가리키면 말풍선이 뜨는 것뿐이고 누를 것은 없다 — 이 칸이 판 틀의 설명 자리다(placement.js 'side').
 // 시계(밤샘 2 D1): 판의 목숨. 칸마다 작은 시계 판(9×9) — 남은 칸은 상아 판에 먹 바늘, 잃은 칸은 어둡게 꺼진다.
 // 잃는 순간(app.clockFx)에는 그 칸이 붉게 깜빡이며 금이 간다. 오른쪽 끝(x2)에 붙인다.
-// 시안(docs/shots/night2/draft-*): 1 시계 판(고름) · 2 숫자 「2 / 3」 · 3 수 · 버리기와 같은 네모 구슬
+// 시안(docs/shots/night2/draft-*): 1 시계 판(고름) · 2 숫자 「2 / 3」 · 3 수 · 희생(옛 버리기)과 같은 네모 구슬
 const DIAL = ['..#####..', '.#.....#.', '#...#...#', '#...#...#', '#...##..#', '#.......#', '#.......#', '.#.....#.', '..#####..'];
 export function clockPips(ctx, run, x2, ty, time = 0, fx = null) {
   const max = run.clockMax || run.clock || 0;

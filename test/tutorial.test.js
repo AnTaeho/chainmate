@@ -95,7 +95,7 @@ test('대본 대국 ②: 룩부터 먹으면 끊기고, 복사본이라 진짜 �
   assert.equal(JSON.stringify(run.battle), before, '진짜 대국은 그대로');
 });
 
-test('대본 대국 ④: 폰은 떨굴 곳이 없다(버려야 한다)', () => {
+test('대본 대국 ④: 폰은 떨굴 곳이 없다(바쳐야 한다)', () => {
   const run = createRun({ seed: 5, script: true });
   applyRun(run, { type: 'play' });
   walk(run, STEPS.filter((s) => s.move < 3));

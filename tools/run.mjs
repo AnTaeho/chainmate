@@ -1,5 +1,6 @@
 // 판(런) 하네스: 판을 N개 끝까지 돌려 곡선을 잰다.
-//   node tools/run.mjs --runs 1000 --policy smart|hunt|random|none --seed 1 [--workers 10] [--k 6]
+//   node tools/run.mjs --runs 1000 --policy smart|hunt|random|none|nosac --seed 1 [--workers 10] [--k 6]
+//   nosac: smart 상점 + 막혔을 때만 바치는 대국 봇(CHM-35 비교용). --tune '{"brilliant":1}': 탁월수 세기(src/data/sacrifice.js BRILLIANT.per)
 // 대국 안은 풀이기 봇(tools/bot.mjs), 상점은 tools/shopbot.mjs의 정책.
 // 찍는 것: 판 승률, 관 도달 분포, 관별 대국 점수/목표, 종류별 통과율, 외통 · 첫수외통 · 막힘 비율,
 //          명인별 통과율, 많이 산 격언과 산 판의 승률, 관별 최고 한 수, 판당 ms.
@@ -160,8 +161,16 @@ function report(R, args, wall) {
   const lostKinds = {}; for (const b of battles) if (b.clockLost) lostKinds[b.kind] = (lostKinds[b.kind] || 0) + 1;
   console.log(`시계: 판당 잃은 칸 ${f2(clk.reduce((a, x) => a + x, 0) / n)} (0칸 ${pc(clk.filter((x) => x === 0).length / n)} · 1칸 ${pc(clk.filter((x) => x === 1).length / n)} · 2칸 ${pc(clk.filter((x) => x === 2).length / n)} · 3칸+ ${pc(clk.filter((x) => x >= 3).length / n)}), 이긴 판 중 시계를 쓴 판 ${pc(wonR.filter((r) => r.log.some((x) => x.clockLost)).length / Math.max(1, wonR.length))}, 잃은 대국 종류 ${Object.entries(lostKinds).map(([k, v]) => `${k} ${v}`).join(' · ')}. 다시 놓기 대국당 ${f2(battles.reduce((a, b) => a + (b.reboards || 0), 0) / battles.length)}`);
   const allMates = battles.filter((b) => b.reason === 'mate').length;
+  // 희생(CHM-35, 기록 칸 이름은 옛 discarded): 대국당 바친 기물 수
   const disc = battles.map((b) => b.discarded || 0);
-  console.log(`버리기: 대국당 버린 기물 평균 ${f2(disc.reduce((a, x) => a + x, 0) / battles.length)}, 하나라도 버린 대국 ${pc(disc.filter((x) => x > 0).length / battles.length)}, 4개 이상 ${pc(disc.filter((x) => x >= 4).length / battles.length)}`);
+  const dshare = (k) => pc(disc.filter((x) => (k >= 3 ? x >= 3 : x === k)).length / battles.length);
+  console.log(`희생: 대국당 ${f2(disc.reduce((a, x) => a + x, 0) / battles.length)}번 (0번 ${dshare(0)} · 1번 ${dshare(1)} · 2번 ${dshare(2)} · 3번+ ${dshare(3)}), 이긴 대국 ${f2(disc.filter((_, i) => battles[i].won).reduce((a, x) => a + x, 0) / Math.max(1, battles.filter((b) => b.won).length))} · 진 대국 ${f2(disc.filter((_, i) => !battles[i].won).reduce((a, x) => a + x, 0) / Math.max(1, battles.filter((b) => !b.won).length))}`);
+  // 탁월수 !!(CHM-35): 희생한 바로 다음 수로 체크메이트
+  const brR = R.filter((r) => r.log.some((x) => (x.brilliants || []).length));
+  const brAll = battles.flatMap((x) => x.brilliants || []);
+  const brPieces = {}; for (const x of brAll) for (const t of x.pieces) brPieces[t] = (brPieces[t] || 0) + 1;
+  const brPer = R.map((r) => r.log.reduce((a, x) => a + (x.brilliants || []).length, 0));
+  console.log(`탁월수: 나온 판 ${pc(brR.length / n)} (판당 ${f2(brPer.reduce((a, x) => a + x, 0) / n)}번 · 2번+ 판 ${pc(brPer.filter((x) => x >= 2).length / n)}), 대국당 ${(brAll.length / battles.length).toFixed(3)}, 바친 기물 ${Object.entries(brPieces).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${v}`).join(' · ') || '-'}, 무게 합 p50 ${pctile(brAll.map((x) => x.weight), 0.5)} · 최대 ${Math.max(0, ...brAll.map((x) => x.weight))}, 탁월수 판 승률 ${pc(brR.filter((r) => r.won).length / Math.max(1, brR.length))} (없는 판 ${pc(R.filter((r) => r.won && !brR.includes(r)).length / Math.max(1, n - brR.length))})`);
   const lostBy = {};
   for (const r of R) if (!r.won) { const last = r.log.at(-1); lostBy[last.reason] = (lostBy[last.reason] || 0) + 1; }
   console.log(`전체 대국 ${battles.length}: 외통으로 이김 ${pc(allMates / battles.length)}, 막힘 패배 ${pc(battles.filter((b) => b.reason === 'stuck').length / battles.length)}. 판이 끝난 이유: ${Object.entries(lostBy).map(([k, v]) => `${k} ${pc(v / n)}`).join(', ')}`);

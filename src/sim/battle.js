@@ -1,6 +1,7 @@
 // 대국 하나: 손 · 주머니 · 수 · 바꾸기 · 증원 · 승패.
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 apply(b, cmd) 하나뿐.
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }  { type: 'reboard' }
+// 'discard'는 화면 낱말 「희생」(CHM-35)이다. 코드 id · discardsLeft · discardsUsed · discarded는 옛 저장과 맞추려고 그대로 둔다.
 import { createRng, fork, int, next, shuffle } from './rng.js';
 import { dropSquares, fileOf, rankOf, reach } from './board.js';
 import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts, markFairy } from './chain.js';
@@ -20,8 +21,8 @@ export const BASE_REWARD = { practice: 3, official: 4, master: 5 };
 export const DEFAULT_RULES = {
   hand: 4,          // 손
   moves: 4,         // 수
-  discards: 3,      // 바꾸기
-  maxDiscard: 1,    // 한 번에 버리는 최대 수(한 장씩)
+  discards: 3,      // 희생(옛 버리기) 횟수
+  maxDiscard: 1,    // 한 번에 바치는 기물 수(한 장씩)
   kings: 1,         // 킹 수(명인 「대가」 2)
   enemies: null,    // null이면 enemyCount(관)
   guards: null,     // 킹 하나를 지키는 적 수(폰 하나 포함). null이면 kingGuards(관)
@@ -34,6 +35,11 @@ export const DEFAULT_RULES = {
   lookahead: 1,     // 증원 예고가 몇 수 앞까지 보이나(격언 「그림자 읽기」 2)
   reboards: 1,      // 다시 놓기: 첫 수 전에 판을 새로 까는 횟수(대국마다)
 };
+
+// 희생(CHM-35): 바친 기물은 b.offered(이번 대국 동안 주머니로 돌아오지 않는다), 다음 수를 기다리는 희생은 b.offering.
+// 탁월수(희생으로 새로 뽑은 기물로 시작한 바로 다음 사슬이 체크메이트)는 chain.js finish가 매긴다. 규칙 수치는 src/data/sacrifice.js
+export { SACRIFICE_WEIGHT, BRILLIANT, addOffering } from '../data/sacrifice.js';
+import { addOffering } from '../data/sacrifice.js';
 
 // 나쁜 판 거르기(밤샘 2 D3): 판(런)의 대국은 판 후보 n개(판(런)은 넷)를 지어 「첫 손 최선 사슬 점수」(풀이기, docs/reports/luck.md ④)가
 // 가장 낮은 것을 버리고 나머지 중 하나를 시드로 고른다. 좋은 판은 그대로 남고 아래 꼬리만 잘린다.
@@ -155,7 +161,9 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
     nextId: 100,
     money: 0,          // 대국 중에 번 상금(격언 「금고」 · 각인 「금」 …). 판(런)이 보상에 더한다
     deckSize: bag.length,
-    discarded: 0,      // 바꾸기로 버린 기물 수
+    discarded: 0,      // 희생한 기물 수
+    offering: null,    // 다음 수를 기다리는 희생 { weight, count, pieces }(옛 저장엔 없다 = 없음)
+    offered: [],       // 바친 기물(이번 대국 동안 돌아오지 않는다)
     shattered: [],     // 깨진 기물 id(각인 「유리」). 판(런)이 주머니에서 뺀다
     regrip: false,     // 막혀서 손을 새로 쥐었나(대국마다 한 번)
     reboards: 0,       // 다시 놓기를 쓴 횟수
@@ -308,7 +316,7 @@ export function apply(b, cmd) {
       b.hand.splice(cmd.handIndex, 1);
       b.chainPiece = piece;
       b.status = 'chain';
-      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng, soul: pieceSoul(piece) }));
+      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng, soul: pieceSoul(piece), pieceId: piece.id }));
       reveal(b);
       if (b.chain.done) endMove(b, events);
       break;
@@ -329,20 +337,24 @@ export function apply(b, cmd) {
       else refreshHints(b);
       break;
     }
-    case 'discard': {
+    case 'discard': { // 희생
       if (b.status !== 'play') throw new Error('not expecting a discard');
       if (b.discardsLeft <= 0) throw new Error('no discards left');
-      // 주머니가 비면 바꾸기는 손만 줄인다: legalCommands · 막힘 판정과 같이 막는다
+      // 주머니가 비면 희생은 손만 줄인다: legalCommands · 막힘 판정과 같이 막는다
       if (b.bag.length === 0) throw new Error('bag is empty');
       const idx = [...new Set(cmd.handIndices)].sort((x, y) => y - x);
       if (!idx.length || idx.length > b.rules.maxDiscard || idx.some((i) => !b.hand[i])) throw new Error('bad discard');
       const gone = idx.map((i) => b.hand.splice(i, 1)[0]);
-      b.used.push(...gone);
+      (b.offered || (b.offered = [])).push(...gone);
       b.discardsLeft--;
       b.discardsUsed++;
       b.discarded += gone.length;
+      for (const p of gone) b.offering = addOffering(b.offering, p.t);
+      const had = new Set(b.hand.map((p) => p.id));
       draw(b);
-      events.push({ type: 'discard', pieces: gone.map((p) => p.t) });
+      // 희생으로 새로 뽑은 기물: 이것으로 시작한 다음 사슬이 체크메이트면 탁월수
+      b.offering.drawn = [...(b.offering.drawn || []), ...b.hand.filter((p) => !had.has(p.id)).map((p) => p.id)];
+      events.push({ type: 'discard', pieces: gone.map((p) => p.t), offering: { ...b.offering } });
       checkStuck(b, events);
       break;
     }
@@ -409,6 +421,9 @@ function endMove(b, events) {
   if (c.throne) (b.crowned || (b.crowned = [])).push(b.chainPiece.id);
   if (c.traitors) (b.traitors || (b.traitors = [])).push(...c.traitors);
   b.history.push(chainSummary(c, b.movesUsed - 1));
+  // 탁월수 !!: 판(런)이 기록 칸에 옮긴다
+  if (c.brilliant) (b.brilliants || (b.brilliants = [])).push({ ...c.brilliant, score: c.score, move: b.movesUsed - 1 });
+  b.offering = null; // 희생은 바로 다음 수 하나만 기다린다
   b.golden += c.golden;
   b.chain = null;
   b.chainPiece = null;

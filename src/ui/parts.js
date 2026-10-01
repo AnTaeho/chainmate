@@ -406,7 +406,7 @@ export function effectPart(s) {
   s = L(String(s)).split(' · ')[0];
   const c = s.match(/^[^:]{1,60}?:\s+(.+)$/);
   if (c) return c[1];
-  const n = s.match(/((?:값|배수|상금|버리기|수) [+×−][\d.]+)$/) || s.match(/([+×−][\d.]+ (?:Mult|Value|Purse))$/);
+  const n = s.match(/((?:값|배수|상금|희생|수) [+×−][\d.]+)$/) || s.match(/([+×−][\d.]+ (?:Mult|Value|Purse))$/);
   return n ? n[1] : s;
 }
 // 좁은 칸에 적는 효과 앞머리: 「언제」를 떼고 「무엇」부터(두루마리 칸). 전부는 가리키면 보인다.

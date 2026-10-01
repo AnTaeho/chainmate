@@ -448,7 +448,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
       continue;
     }
     if (run.phase === 'battle') {
-      const opts = policy === 'hunt' ? { rank: huntRank(run) } : {};
+      const opts = policy === 'hunt' ? { rank: huntRank(run) } : policy === 'nosac' ? { sacrifice: false } : {};
       if (!stepBattle(run.battle, (c) => act(run, c), opts)) throw new Error('bot has no move but battle is live');
       continue;
     }
@@ -456,7 +456,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'shop') {
       noteDisplay(run);
       const before = run.maxims.map((m) => m.uid);
-      if (policy === 'smart' || policy === 'hunt' || policy === 'nofam') smartShop(run, policy === 'hunt');
+      if (policy === 'smart' || policy === 'hunt' || policy === 'nofam' || policy === 'nosac') smartShop(run, policy === 'hunt');
       else if (policy === 'random') randomShop(run, r);
       else act(run, { type: 'leave' });
       trackBuys(before);

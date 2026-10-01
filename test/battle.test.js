@@ -106,14 +106,15 @@ test('목표 넘기면 즉시 이김, 수를 다 쓰면 짐', () => {
   assert.ok(lostByMoves > 0);
 });
 
-test('버리기: 하나를 골라 버리고 다시 뽑는다, 떨굴 수 없고 버리기도 없으면 짐', () => {
+test('희생: 하나를 골라 바치고 다시 뽑는다, 떨굴 수 없고 희생도 없으면 짐', () => {
   const b = createBattle({ seed: 4 });
   const before = b.hand.map((p) => p.id);
   apply(b, { type: 'discard', handIndices: [2] });
   assert.equal(b.discardsLeft, 2);
   assert.equal(b.discarded, 1);
   assert.equal(b.hand.length, 4);
-  assert.deepEqual(b.used.map((p) => p.id), [before[2]]);
+  assert.deepEqual(b.offered.map((p) => p.id), [before[2]]); // 바친 기물은 이번 대국에 돌아오지 않는다
+  assert.deepEqual(b.used, []);
   const saved = b.bag;
   b.bag = [];
   assert.throws(() => apply(b, { type: 'discard', handIndices: [0] }), /bag is empty/);
@@ -126,7 +127,7 @@ test('버리기: 하나를 골라 버리고 다시 뽑는다, 떨굴 수 없고 
   assert.equal(b.result.reason, 'stuck');
 });
 
-test('버리기는 한 번에 하나: 둘 이상은 거부, 둘 수 있는 버리기는 손 기물마다 하나', () => {
+test('희생은 한 번에 하나: 둘 이상은 거부, 둘 수 있는 희생은 손 기물마다 하나', () => {
   const b = createBattle({ seed: 4 });
   const hand = b.hand.map((p) => p.id), bag = b.bag.length;
   assert.throws(() => apply(b, { type: 'discard', handIndices: [0, 1] }), /bad discard/);

@@ -4,7 +4,7 @@
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle } from './bot.mjs';
 import { lineCommands } from '../src/sim/solver.js';
-import { canBuy, canSell, factionFor } from '../src/sim/run.js';
+import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
 import { isHidden, canReboard } from '../src/sim/battle.js';
@@ -605,7 +605,8 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
     if (name === 'select') { notesOnce('select', 4); if (n2.waitNext || !(app.run.blind < 2 && rnd() < 0.15)) click('select:play'); else click('select:skip'); pump(2); if (n2.waitNext && screen() === 'battle') { n2.clockNext++; n2.waitNext = false; n2.clockBefore = null; } continue; }
     if (name === 'chest') { click('next'); pump(2); notesOnce('chest', 4); click('next'); pump(1); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
-    if (name === 'reward' || name === 'chest' || name === 'legend') { click('next'); pump(1); if (screen() === name) click('next'); continue; }
+    // 각성 막간(금이 간 혼이 금빛 적을 먹고 이긴 뒤 저절로 열린다 — 판 흐름에 따라 이 길에서도 나온다)
+    if (name === 'reward' || name === 'chest' || name === 'legend' || name === 'awaken') { if (name === 'awaken') pump(60); click('next'); pump(1); if (screen() === name) click('next'); continue; }
     if (name === 'shop') { if (!reloaded && !inject) { await reload(); continue; } shopStep(); continue; }
     if (name === 'pack') { packStep(); continue; }
     if (name === 'pause') { click('pause:resume'); continue; }
@@ -857,7 +858,7 @@ if (app.run.phase === 'won') {
     if (name === 'draft') { pump(40); click('draft:0'); pump(60); continue; }
     if (name === 'select') { click('select:play'); pump(2); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
-    if (name === 'reward' || name === 'chest' || name === 'legend') { click('next'); pump(1); if (screen() === name) click('next'); continue; }
+    if (name === 'reward' || name === 'chest' || name === 'legend' || name === 'awaken') { if (name === 'awaken') pump(60); click('next'); pump(1); if (screen() === name) click('next'); continue; }
     if (name === 'shop') { shopStep(); continue; }
     if (name === 'pack') { packStep(); continue; }
     throw new Error(`stuck on ${name}`);
@@ -1199,7 +1200,7 @@ const mainApp = app;
   if (!app.guide || !region('guide:skip')) throw new Error('scripted battle has no skip');
   click('guide:skip');
   pump(2);
-  if (app.guide || screen() !== 'battle' || !app.run.battle || app.run.battle.script || app.run.ante !== 1 || app.run.battle.target !== 150) throw new Error('skip did not start a plain practice battle');
+  if (app.guide || screen() !== 'battle' || !app.run.battle || app.run.battle.script || app.run.ante !== 1 || app.run.battle.target !== targetFor(1, 'practice')) throw new Error('skip did not start a plain practice battle');
   app.settings.coach = false;
   for (let n = 0; n < 200; n++) { pump(1); if (app.hintShown) throw new Error('hint shown while off'); }
   // 행마 보기는 평범한 대국에서도 열린다
@@ -1323,7 +1324,7 @@ function checkShops(name, out, { firstNoMaxim = false } = {}) {
     if (!app.guide || app.guide.i !== k || !region('guide:skip')) { paths.bad.push(`건너뛰기 ${k}: 그 걸음에 닿지 못함(${app.guide ? app.guide.i : '길 없음'})`); app.toTitle(); pump(1); continue; }
     click('guide:skip'); pump(2);
     const b = app.run.battle;
-    if (app.guide || screen() !== 'battle' || !b || b.script || b.target !== 150 || app.run.ante !== 1 || b.movesUsed !== 0 || app.screen.hold) paths.bad.push(`건너뛰기 ${k}: 평범한 1관 연습이 아니다`);
+    if (app.guide || screen() !== 'battle' || !b || b.script || b.target !== targetFor(1, 'practice') || app.run.ante !== 1 || b.movesUsed !== 0 || app.screen.hold) paths.bad.push(`건너뛰기 ${k}: 평범한 1관 연습이 아니다`);
     else ok.push(k);
     app.toTitle(); pump(1);
   }

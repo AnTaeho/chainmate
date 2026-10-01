@@ -98,7 +98,7 @@ test('낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고
   }
   for (const f of FAMILIES) assert.ok(ids.includes(`fam_${f.id}`), f.id);
   // 시너지 이름은 같은 자리에서 시작하는 짧은 낱말(시너지)보다 먼저 잡히고, 「기사도」 · 「야간기사」에는 걸리지 않는다
-  assert.deepEqual(splitTerms('희생 시너지 · 왕관 시너지').filter(([, id]) => id).map(([, id]) => id), ['fam_sacrifice', 'fam_crown']);
+  assert.deepEqual(splitTerms('불굴 시너지 · 왕관 시너지').filter(([, id]) => id).map(([, id]) => id), ['fam_sacrifice', 'fam_crown']);
   assert.deepEqual(splitTerms('기사도 · 야간기사').filter(([, id]) => id), []);
 });
 

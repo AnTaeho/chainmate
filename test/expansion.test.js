@@ -176,7 +176,7 @@ function winOnce(seed, mods, target = 1) {
   while (b.status === 'chain') ev.push(...apply(b, legalCommands(b)[0]));
   return { b, ev };
 }
-test('절약: 대국을 이기면 남은 버리기마다 상금 +1', () => {
+test('절약: 대국을 이기면 남은 희생마다 상금 +1', () => {
   const { b } = winOnce(3, [{ id: 'thrift' }]);
   assert.equal(b.status, 'won');
   assert.equal(b.money >= b.discardsLeft && b.discardsLeft === 3, true);
@@ -229,7 +229,7 @@ test('정석 함정: 빈칸 둘 · 증원이 들면 값이 점수로', () => {
   assert.equal(b.score, 50);
   assert.equal(b.board[tr[0]], null);
 });
-test('정석 속기 · 장고: 수 · 손 · 버리기', () => {
+test('정석 속기 · 장고: 수 · 손 · 희생', () => {
   const a = createBattle({ seed: 1, mods: [{ id: 'joseki:blitz' }] });
   assert.equal(a.movesLeft, 5); assert.equal(a.hand.length, 3);
   const b = createBattle({ seed: 1, mods: [{ id: 'joseki:long_think' }] });

@@ -1,6 +1,6 @@
 // 판(런): 8관 × (연습 · 정식 · 명인), 보상, 상점, 꾸러미, 끝없는 대국.
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 applyRun(run, cmd) 하나뿐, 둘 수 있는 명령은 legalRunCommands(run).
-// 대국은 run.battle에 들어 있고 대국 명령(drop · capture · discard)은 그대로 넘긴다.
+// 대국은 run.battle에 들어 있고 대국 명령(drop · capture · discard — discard는 희생)은 그대로 넘긴다.
 //
 // 국면(run.phase)과 명령
 //   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
@@ -88,7 +88,7 @@ export const DANS = [
   { n: 3, text: '상자 다섯 칸 · 첫 조각이 반' },
   { n: 4, text: '시계 −1' },
   { n: 5, text: '목표 ×1.1' },
-  { n: 6, text: '버리기 −1' },
+  { n: 6, text: '희생 −1' },
   { n: 7, text: '대가 목표 ×1.25' },
   { n: 8, text: '목표 ×1.25' },
 ];
@@ -322,7 +322,7 @@ function endBattle(run, events) {
   for (const t of b.traitors || []) if (run.deck.length < TRAIT_CHANCE.traitorDeckMax) addPiece(run, t, events);
   for (const id of b.crowned || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t === 'P') { p.t = 'Q'; events.push({ type: 'evolve', pieceId: id, from: 'P', to: 'Q' }); } }
   // 혼의 금: 대국에서 센 사슬 수를 주머니로(이기든 지든)
-  for (const bp of [...b.hand, ...b.bag, ...b.used]) { const p = bp.links && run.deck.find((x) => x.id === bp.id); if (p && p.soul === bp.soul) p.links = Math.max(p.links || 0, bp.links); }
+  for (const bp of [...b.hand, ...b.bag, ...b.used, ...(b.offered || [])]) { const p = bp.links && run.deck.find((x) => x.id === bp.id); if (p && p.soul === bp.soul) p.links = Math.max(p.links || 0, bp.links); }
   for (const e of b.cracks || []) (run.cracked || (run.cracked = [])).push({ soul: e.soul, ante: run.ante, blind: run.blind });
   // 혼 「계승」 각성: 마지막 모습의 기보 +1(대국마다 한 번)
   for (const form of b.chartUps || []) useChart(run, form, events);
@@ -341,6 +341,7 @@ function endBattle(run, events) {
     souls: [...new Set(run.deck.filter((p) => p.soul).map((p) => p.soul))],
     mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
     discarded: b.discarded,
+    brilliants: b.brilliants || [],
     reboards: b.reboards || 0,
     worn,
   };

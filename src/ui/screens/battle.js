@@ -15,7 +15,7 @@ import { FAMILY_BY_ID } from '../../data/families.js';
 import { familyStrip, josekiBadges, traitMark } from '../parts-depth.js';
 import { TRAIT_BY_ID } from '../../data/traits.js';
 import { JOSEKI_BY_ID } from '../../data/josekis.js';
-import { L } from '../lang.js';
+import { L, getLang } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
@@ -45,10 +45,10 @@ export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S
 // 게임 좌표 → 판 칸(판 밖이면 -1)
 export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
-const DISCARD_W = 62; // 손 이름표 줄 오른쪽 버리기 단추 폭
+const DISCARD_W = 62; // 손 이름표 줄 오른쪽 희생 단추 폭
 const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 · ×5 · ×10) = 넘친 층
 // 대국 왼쪽 칸(판 틀 공통 쌓기 — common.js sideStack): 머리 칸(관 · 대국 종류 · 목표 · 점수) → 값 × 배수 → 사슬 칸(남는 높이)
-// … 아래 칸(수 · 버리기 · 상금 · 주머니). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
+// … 아래 칸(수 · 희생 · 상금 · 주머니). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
 export const VAL_H = 22;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -1433,8 +1433,8 @@ export class BattleScreen {
       ctx.globalAlpha = 1;
     }
     closeBox();
-    // 아래 칸: 수 · 버리기(구슬) → 상금 → 주머니
-    const pipX = Math.max(52, Math.max(measure('수'), measure('버리기')) + PAD_BOX + 6);
+    // 아래 칸: 수 · 희생(구슬) → 상금 → 주머니
+    const pipX = Math.max(52, Math.max(measure('수'), measure('희생')) + PAD_BOX + 6);
     const pipN = Math.max(v.moves, v.discards, 1);
     const pipStep = Math.min(14, Math.floor((LW - PAD_BOX - pipX) / pipN));
     const pipW = Math.max(4, pipStep - 4);
@@ -1443,7 +1443,7 @@ export class BattleScreen {
     };
     const rows = [
       { id: 'pips:moves', label: '수', tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다'), draw: (ctx2, ty) => { text(ctx2, '수', LX + P, ty, PAL.dim); pips(v.moves, v.movesLeft, PAL.gold)(ctx2, ty); } },
-      { id: 'pips:discards', label: '버리기', tip: () => tipLines('버리기', '손에서 하나를 버리고 새로 뽑을 수 있는 횟수'), draw: (ctx2, ty) => { text(ctx2, '버리기', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); } },
+      { id: 'pips:discards', label: '희생', tip: () => tipLines('희생', '손의 기물을 바치고 새로 뽑을 수 있는 횟수'), draw: (ctx2, ty) => { text(ctx2, '희생', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); } },
     ];
     if (hasClock(run)) rows.push(clockRow(app, run));
     if (run) rows.push({ money: run });
@@ -1451,7 +1451,7 @@ export class BattleScreen {
     drawFoot(ctx, ui, rows);
   }
 
-  // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠 → 손 이름표 줄(묘수 · 버리기) → 손. 묶음 사이 GAP_GROUP
+  // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠 → 손 이름표 줄(묘수 · 희생) → 손. 묶음 사이 GAP_GROUP
   // 시너지 띠는 칩(FAM_H) 두 줄 — 그러면 격언 칸이 한 줄로 안 들어가는 판(칸 다섯 이상)은 한 줄에 못 놓은 것을 「+N」로
   // 다시 놓기(밤샘 2 D2): 첫 수 전에만, 손 이름표 줄의 「손」 · 묘수 오른쪽에 아이콘 단추(이름은 말풍선 — CHM-40).
   // 전에는 손 이름표 줄 위에 단추 줄을 따로 두었는데, 그 줄 때문에 기본 격언 다섯 칸이 두 줄로 접혀 이름이 잘렸다.
@@ -1469,7 +1469,7 @@ export class BattleScreen {
     const two = at(2);
     return run && maximColumnH(run, two.room).cols === 1 ? two : at(1);
   }
-  // 손 이름표 줄 왼쪽(버리기 단추 앞, 틈 3): 「손」 → 묘수 칸들 → 다시 놓기 단추(칸마다 15, 사이 2).
+  // 손 이름표 줄 왼쪽(희생 단추 앞, 틈 3): 「손」 → 묘수 칸들 → 다시 놓기 단추(칸마다 15, 사이 2).
   // 칸이 다 들어가지 않으면 「손」 글자를 빼고(손 카드가 바로 아래 있다), 그래도 모자라면 칸 사이를 1로
   handRowLayout() {
     const run = this.run;
@@ -1514,7 +1514,8 @@ export class BattleScreen {
     if (row.rb != null) button(ctx, ui, 'btn:reboard', row.rb, ry, 15, BTN_S, '', { onClick: () => this.reboard(), icon: reboardIcon, tip: () => tipLines('다시 놓기', []) });
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    button(ctx, ui, 'btn:discard', RX + RW - DISCARD_W, ry, DISCARD_W, BTN_S, '버리기', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
+    // 영어 「Sacrifice」는 단추 폭(62)에 아이콘과 함께 들어가지 않아 체스 말 「Sac」으로 줄인다(단추는 2부에서 다시 그린다)
+    button(ctx, ui, 'btn:discard', RX + RW - DISCARD_W, ry, DISCARD_W, BTN_S, getLang() === 'en' ? 'Sac' : '희생', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
     const n = Math.max(1, v.hand.length);
     const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
     const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;
