@@ -73,7 +73,7 @@ const seen = () => { for (const v of app.visited) visited.add(v); };
 const hintsShown = new Set();
 const previewSeen = { scroll: 0, pack: 0 };
 const goldSeen = { swap: 0, sell: 0, bad: [] };
-function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); hintSubject(); } } }
+function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); hintSubject(); } if (app) hintCover(); } }
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
 function click(id) {
   const r = region(id);
@@ -171,8 +171,30 @@ const place = { n: 0, side: 0, below: 0, rule: 0, chain: 0, off: 0, self: 0, cov
 const CAP_KIND = { sq: 14, deck: 6, codex: 8, hand: 4 };
 const kindOf = (id) => id.replace(/:[^:]*$/, '');
 function placeBad(what, id, detail = '') { place[what]++; if (place.bad.length < 12) place.bad.push(`${screen()} ${id} ${what} ${detail}`); }
+// 설명이 덮은 글(CHM-34): 묶음 · 처음 안내가 그 아래 화면의 글(다른 판넬 · 카드 · 칩 · 가리킨 것)을 덮은 수. 화면마다
+const cov = { n: 0, hit: 0, texts: 0, self: 0, hint: 0, hintHit: 0, by: new Map(), ex: [], hintSeen: new Set(), hintPrev: null };
+function covTally(kind, id, rects, anchor) {
+  const got = LL.coveredTexts(rects, anchor);
+  const k = screen();
+  if (!cov.by.has(k)) cov.by.set(k, { n: 0, hit: 0, texts: 0, self: 0 });
+  const b = cov.by.get(k);
+  b.n++; if (kind === 'note') cov.n++; else cov.hint++;
+  if (!got.length) return;
+  const self = got.filter((q) => q.self).length;
+  b.hit++; b.texts += got.length; b.self += self;
+  if (kind === 'note') { cov.hit++; cov.texts += got.length; cov.self += self; } else cov.hintHit++;
+  if (cov.ex.length < 400) cov.ex.push(`${k} ${kind === 'hint' ? '안내 ' : ''}${id}: ${got.map((q) => `${q.self ? '*' : ''}「${q.s}」`).join(' ')}`);
+}
+function hintCover() {
+  const h = app.hintShown, r = app.hintRect;
+  const key = h && r ? `${h.id}@${h.regionId}@${screen()}` : null;
+  // 안내 자리는 그 전 프레임의 것으로 접는다 — 같은 안내가 두 프레임 이어 뜬 때 잰다
+  if (key && key === cov.hintPrev && !cov.hintSeen.has(key)) { cov.hintSeen.add(key); covTally('hint', h.id, [r], region(h.regionId)); }
+  cov.hintPrev = key;
+}
 function checkStack(id) {
   const st = app.noteStack;
+  if (st && st.rects.length) covTally('note', id, st.rects, st.anchor);
   // 말풍선이 있는 구역인데 아무것도 안 떴다(자리가 없어 버린 것)
   const h = app.ui.hover, tip = h && h.tip ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null;
   if (tip && (!st || !st.rects.length)) { placeBad('none', id); return false; }
@@ -1401,6 +1423,9 @@ console.log(`자리 규칙: 가리킨 것 ${place.n}(판 틀 ${place.side} · �
 if (VERBOSE) console.log('종류별 자리: ' + kinds.join(' · '));
 if (place.bad.length) console.log('어긴 곳: ' + place.bad.join(' | '));
 if (place.n < 100 || place.rule || place.chain || place.off || place.self || place.cover || place.none || place.hintBad) { console.log('설명이 규약의 자리에 뜨지 않았거나 누를 것 · 화면 밖을 덮었다'); fail = true; }
+console.log(`설명이 덮은 글: 가리킨 것 ${cov.n} · 덮음 ${cov.hit}(글 ${cov.texts} · 가리킨 것의 글 ${cov.self}) · 처음 안내 ${cov.hint}(덮음 ${cov.hintHit})`);
+console.log(`  화면별: ${[...cov.by].map(([k, b]) => `${k} ${b.hit}/${b.n}(글 ${b.texts}${b.self ? ` · 가리킨 것 ${b.self}` : ''})`).join(' · ')}`);
+if (cov.ex.length) console.log('  덮은 곳: ' + cov.ex.slice(0, VERBOSE ? 400 : 12).join('\n    '));
 console.log(`시너지 +N 말풍선: ${moreSeen.n}번(${[...moreSeen.screens].join(' ')}) · 시너지 여섯 이상 대국 ${moreSeen.battle6} · 어긋남 ${moreSeen.bad.length}${moreSeen.bad.length ? `: ${moreSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
 if (!moreSeen.battle6 || moreSeen.bad.length) { console.log('시너지 여섯 이상 대국에서 「+N」을 가리켜 보지 못했거나, 가려진 시너지가 말풍선에 다 없다'); fail = true; }
 const flowN = flow.text + flow.pad + flow.overlap + flow.screen;

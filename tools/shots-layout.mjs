@@ -1,5 +1,6 @@
 // 레이아웃 점검 스크린샷: 모든 화면과, 화면마다 가리킬 수 있는 것(말풍선 · 낱말 상자가 뜨는 구역)을 하나씩 가리킨 모습.
-//   node tools/shots-layout.mjs [--prefix before|after] [--lang ko|en] [--out docs/shots/layout] [--only 이름] [--spacing pad8,card7,line14,title18,in3,group8] [--det]
+//   node tools/shots-layout.mjs [--prefix before|after] [--lang ko|en] [--out docs/shots/layout] [--only 이름] [--spacing pad8,card7,line14,title18,in3,group8] [--det] [--x3] [--fold blank|dim|gone|off]
+//   --x3: 장마다 3배도. --fold: 설명 자리 접기 모양(시안). 끝에 「설명이 덮은 글」 장면별 표를 찍고 <prefix>[-en]-cover.json에 남긴다(CHM-34)
 //   --spacing: 글 간격 토큰을 덮어쓴 모습(src/ui/frame.js SPACING — 시안 찍기용). --det: 시계 · 무작위를 멈춰 같은 코드면 같은 그림(고치기 전후 픽셀 견주기)
 // 파일: <prefix>-<번호>-<화면>.png(가리키지 않은 모습)와 <prefix>-<번호>-<화면>~<구역>.png(그 구역을 가리킨 모습). 480×270 1배.
 // 번호는 장면 차례에 묶여 before · after가 같은 이름으로 짝이 된다. 영어(--lang en)는 대표 화면만, 이름 앞에 en-.
@@ -22,6 +23,8 @@ const TAG = LANG === 'en' ? 'en-' : '';
 const SPACING = opt('--spacing', null);
 const DET = args.includes('--det');
 const QUICK = args.includes('--quick'); // 가리킨 모습은 빼고 장면마다 한 장만
+const X3 = args.includes('--x3');       // 장마다 3배(이웃 화소 그대로 키운 것)도 <이름>@3x.png로
+const FOLD_STYLE = opt('--fold', null);  // 설명 자리 접기 모양(src/ui/fold.js FOLD.style — 시안 찍기용): blank · dim · gone · off
 
 async function loadPlaywright() {
   try { return await import('playwright'); } catch { /* 전역 */ }
@@ -94,11 +97,43 @@ function encodePng(rgba, w, h) {
 }
 // 글 넘침(src/render/layoutlog.js): 찍는 장마다 실제 글꼴로 잰다 — 연기 시험(가짜 글 폭)과 짝
 const overflow = new Map();
+// 설명이 덮은 글(CHM-34, layoutlog.js coveredTexts): 장마다 그린 설명 묶음 · 처음 안내가 그 아래 글을 덮었나. 장면마다 모은다
+const cover = new Map();
+const sceneOf = (file) => file.replace(/^[^-]+-\d+-/, '').replace(/~.*$/, '');
+async function coverAt(file, rects) {
+  const got = await ev(async (rects) => {
+    const LL = await import('/src/render/layoutlog.js');
+    const a = window.__app;
+    const stack = [a.tipRect, ...(a.keyBoxes || [])].filter(Boolean);
+    const anchor = a.noteStack ? a.noteStack.anchor : null;
+    const n = LL.coveredTexts ? LL.coveredTexts(stack, anchor) : [];
+    const hr = a.hintRect ? [a.hintRect] : [];
+    const hint = LL.coveredTexts && hr.length ? LL.coveredTexts(hr, null) : [];
+    return { on: !!stack.length, hint: !!hr.length, texts: n.map((q) => `${q.self ? '*' : ''}${q.s}`), hintTexts: hint.map((q) => q.s), folded: (LL.LOG.folded || []).filter((q) => q.s.trim()).length };
+  }, rects);
+  const k = sceneOf(file);
+  if (!cover.has(k)) cover.set(k, { n: 0, hit: 0, texts: 0, self: 0, folded: 0, ex: [] });
+  const c = cover.get(k);
+  if (got.on || got.hint) c.n++;
+  c.folded += got.folded;
+  const all = [...got.texts, ...got.hintTexts];
+  if (!all.length) return;
+  c.hit++; c.texts += all.length; c.self += got.texts.filter((q) => q.startsWith('*')).length;
+  if (c.ex.length < 6) c.ex.push(`${file.replace(/^.*~/, '')}: ${all.slice(0, 6).join(' / ')}`);
+}
+function upscale(buf, w, h, k) {
+  const out = Buffer.alloc(w * k * h * k * 4);
+  for (let y = 0; y < h * k; y++) for (let x = 0; x < w * k; x++) buf.copy(out, (y * w * k + x) * 4, (((y / k) | 0) * w + ((x / k) | 0)) * 4, (((y / k) | 0) * w + ((x / k) | 0)) * 4 + 4);
+  return out;
+}
 async function shot(file, rects = null) {
   if (ONLY && !file.includes(ONLY)) return;
   for (const q of await ev(async () => (await import('/src/render/layoutlog.js')).checkLayout())) if (!overflow.has(q.msg)) overflow.set(q.msg, file);
+  await coverAt(file, rects);
   const b64 = await ev(() => { const c = document.getElementById('screen'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = ''; for (let i = 0; i < d.length; i += 8192) s += String.fromCharCode.apply(null, d.subarray(i, i + 8192)); return btoa(s); });
-  fs.writeFileSync(path.join(OUT, `${file}.png`), encodePng(Buffer.from(b64, 'base64'), 480, 270));
+  const px = Buffer.from(b64, 'base64');
+  fs.writeFileSync(path.join(OUT, `${file}.png`), encodePng(px, 480, 270));
+  if (X3) fs.writeFileSync(path.join(OUT, `${file}@3x.png`), encodePng(upscale(px, 480, 270, 3), 1440, 810));
   if (rects) log[file] = rects;
   shots++;
 }
@@ -170,6 +205,7 @@ await ev((lang) => {
 await page.reload();
 await until(() => window.__app && window.__app.screen);
 await ev(async () => { (await import('/src/render/layoutlog.js')).LOG.on = true; });
+if (FOLD_STYLE) await ev(async (st) => { try { (await import('/src/ui/fold.js')).FOLD.style = st; } catch { /* 접기 전 코드 */ } }, FOLD_STYLE);
 await ev(async () => {
   const a = window.__app;
   const { HINTS } = await import('/src/ui/coach.js');
@@ -302,6 +338,14 @@ const logFile = path.join(OUT, `${PREFIX}${LANG === 'en' ? '-en' : ''}.json`);
 const prev = ONLY && fs.existsSync(logFile) ? JSON.parse(fs.readFileSync(logFile, 'utf8')) : {};
 fs.writeFileSync(logFile, JSON.stringify({ ...prev, ...log }, null, 1));
 console.log(`찍음 ${shots}장 · 장면 ${no}`);
+// 설명이 덮은 글: 장면마다 설명이 뜬 장 수 · 덮은 장 수(덮은 글 · 가리킨 것의 글) · 접은 글
+const covAll = [...cover.values()].reduce((a, c) => ({ n: a.n + c.n, hit: a.hit + c.hit, texts: a.texts + c.texts, self: a.self + c.self, folded: a.folded + c.folded }), { n: 0, hit: 0, texts: 0, self: 0, folded: 0 });
+console.log(`설명이 덮은 글: 설명이 뜬 장 ${covAll.n} · 덮음 ${covAll.hit}(글 ${covAll.texts} · 가리킨 것의 글 ${covAll.self}) · 접은 글 ${covAll.folded}`);
+console.log('| 장면 | 설명이 뜬 장 | 덮은 장 | 덮은 글 | 가리킨 것의 글 | 접은 글 |');
+console.log('|---|---|---|---|---|---|');
+for (const [k, c] of cover) if (c.n) console.log(`| ${k} | ${c.n} | ${c.hit} | ${c.texts} | ${c.self} | ${c.folded} |`);
+for (const [k, c] of cover) if (c.ex.length) console.log(`  ${k}: ${c.ex.join(' | ')}`);
+fs.writeFileSync(path.join(OUT, `${PREFIX}${LANG === 'en' ? '-en' : ''}-cover.json`), JSON.stringify(Object.fromEntries(cover), null, 1));
 // 보류(docs/design-notes/layout.md 「보류」): 따로 세는 장면(연기 시험과 같은 목록). 지금은 없다
 const heldFile = () => false;
 const bad = [...overflow].filter(([, f]) => !heldFile(f)), held = [...overflow].filter(([, f]) => heldFile(f));

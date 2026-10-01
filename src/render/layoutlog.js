@@ -90,3 +90,21 @@ export function checkLayout({ W = 480, H = 270 } = {}) {
   }
   return out;
 }
+
+// 설명이 덮은 글(docs/design-notes/layout.md 「설명 자리 규칙」 · 「검사」): 이번 프레임에 그린 설명 묶음 · 처음 안내 네모(rects)가
+// 그 아래 화면의 글(다른 판넬 · 카드 · 칩 · 가리킨 것)을 덮었는지. 같은 층(덮개를 열었으면 덮개 층)에서, 뜨지 않는 상자의 글만 잰다.
+// 돌려주는 값: [{ s, x, y, w, h, self }] — self는 가리킨 것(anchor) 안의 글
+export function coveredTexts(rects, anchor = null) {
+  if (!LOG.on || !rects || !rects.length) return [];
+  const top = LOG.layer;
+  const out = [];
+  for (const t of LOG.texts) {
+    if (!t.s.trim() || t.layer !== top) continue;
+    const b = t.box;
+    if (b && (b.overlay || b.loose)) continue;
+    const ink = { x: t.x, y: t.y, w: t.w, h: t.h + t.d };
+    if (!rects.some((r) => cross(ink, r))) continue;
+    out.push({ s: t.s, x: t.x, y: t.y, w: t.w, h: ink.h, self: !!(anchor && cross(ink, anchor)) });
+  }
+  return out;
+}
