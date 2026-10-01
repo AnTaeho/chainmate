@@ -7,7 +7,7 @@
 //   none   — 아무것도 사지 않는다(격언 없이 어디까지 가나 보는 기준선).
 //   smart도 조각이 진열에 보이면 적립을 다 남기고도 살 수 있을 때 산다(운 좋은 판). 꾸러미에서는 나머지가 짜임을 올리지 못할 때만 조각.
 import { createRng, fork, int, next } from '../src/sim/rng.js';
-import { createBattle, soulOf } from '../src/sim/battle.js';
+import { createBattle, soulOf, arrive } from '../src/sim/battle.js';
 import { isCracked } from '../src/data/souls.js';
 import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult } from '../src/sim/run.js';
 import { EDITION_BY_ID } from '../src/data/editions.js';
@@ -89,9 +89,12 @@ export function evalBuild(run, build, seeds, ante, master = null, faction = null
       rules: run.rules, mods,
     });
     const m = Math.min(k % b.rules.moves, b.rules.moves - 1);
+    // 지나간 수마다 증원도 들인다(CHM-26): 들이지 않으면 증원을 먹는 몫(매복 · 증원 사냥 …)이 짜임 재기에 보이지 않는다
     for (let i = 0; i < m && b.hand.length; i++) {
       b.used.push(b.hand.shift());
       while (b.hand.length < b.rules.hand && b.bag.length) b.hand.push(b.bag.shift());
+      b.movesUsed = i + 1;
+      arrive(b);
     }
     b.movesUsed = m;
     b.movesLeft = b.rules.moves - m;
