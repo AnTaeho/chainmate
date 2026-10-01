@@ -117,6 +117,48 @@ test('격언 이름: 한 줄 격언 칸에 「…」 없이 들어간다(한국�
   M.lang.setLang('ko');
 });
 
+// CHM-41: 두루마리 이름. 넓은 칸(두루마리 둘 이하, 폭 112)은 그림 옆 이름 자리(65)에 「…」 없이 들어간다(보통 굵기까지).
+// 좁은 칸(셋 이상, 폭 55 — 이름 자리 36)은 줄의 이름이 다 굵게 들어가면 이름, 아니면 줄 전체를 띠 + 그림으로 그린다.
+// 기보 두루마리는 옛 저장에만 남아 재지 않는다(기보는 얻는 순간 쓰인다, CHM-33)
+const scrollItems = async () => {
+  const { TACTICS } = await import('../src/data/tactics.js');
+  const { SOULS } = await import('../src/data/souls.js');
+  const { ENGRAVINGS } = await import('../src/data/engravings.js');
+  return [{ kind: 'evolve' }, { kind: 'awaken' }, ...TACTICS.map((t) => ({ kind: 'tactic', id: t.id })), ...SOULS.map((s) => ({ kind: 'soul', id: s.id })), ...ENGRAVINGS.map((e) => ({ kind: 'engraving', id: e.id }))];
+};
+test('두루마리 이름: 넓은 칸 이름 자리에 「…」 없이 들어간다(한국어 · 영어)', async () => {
+  const S = await import('../src/ui/screens/shop.js');
+  const { RW } = M.battle;
+  const room = S.scrollNameRoom(RW);
+  assert.equal(room, 65);
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const c of await scrollItems()) {
+      const name = M.lang.L(S.scrollName(c));
+      assert.ok(M.text.textWidth(name, false) <= room, `${lang} ${c.kind} ${c.id || ''} 「${name}」 ${M.text.textWidth(name, false)} > ${room}`);
+    }
+  }
+  M.lang.setLang('ko');
+});
+test('두루마리 좁은 칸: 줄의 이름이 다 굵게 들어갈 때만 이름, 하나라도 넘치면 줄 전체가 그림', async () => {
+  const S = await import('../src/ui/screens/shop.js');
+  const { RW } = M.battle;
+  const w = Math.floor((RW - M.frame.LIST_GAP) / 2);
+  assert.equal(S.scrollNameRoom(w), 36);
+  const freeze = { kind: 'tactic', id: 'freeze' }, evolve = { kind: 'evolve' }, glass = { kind: 'engraving', id: 'glass' }, echo = { kind: 'soul', id: 'echo' }, awaken = { kind: 'awaken' };
+  M.lang.setLang('ko');
+  assert.equal(S.scrollRowNames([freeze, evolve], w), true);
+  // 한국어는 모든 두루마리 이름이 좁은 칸에 굵게 들어간다 — 좁은 칸도 늘 이름
+  for (const c of await scrollItems()) assert.ok(M.text.textWidth(S.scrollName(c), true) <= 36, `ko 「${S.scrollName(c)}」`);
+  M.lang.setLang('en');
+  assert.equal(S.scrollRowNames([freeze, evolve], w), false); // Freeze 44 · Evolve 42
+  assert.equal(S.scrollRowNames([glass, echo], w), true); // Glass 32 · Echo 31
+  assert.equal(S.scrollRowNames([glass, awaken], w), false); // 하나만 넘쳐도 줄 전체가 그림
+  assert.equal(S.scrollRowNames([glass, undefined], w), true); // 빈 칸은 따지지 않는다
+  assert.equal(S.scrollRowNames([undefined, awaken], w), false);
+  M.lang.setLang('ko');
+});
+
 test('정석 카드: 셋이 같은 높이로 본 칸 안(모든 정석, 한국어 · 영어)', async () => {
   const { JOSEKIS } = await import('../src/data/josekis.js');
   for (const lang of LANGS) {
