@@ -76,6 +76,47 @@ test('오른쪽 칸: 격언 다섯 칸 · 시너지 띠 · 손 이름표 · 손�
   assert.ok(seven.used <= lay.room);
 });
 
+// CHM-40: 다시 놓기 단추는 손 이름표 줄에 있어 격언 칸 자리를 먹지 않는다 — 첫 수 전 · 기본 다섯 칸도 한 줄(이름이 다 보인다)
+test('오른쪽 칸: 다시 놓기가 보이는 첫 수 전에도 격언 다섯 칸은 한 줄 · 단추는 버리기 앞에 들어간다', () => {
+  const { RX, RW } = M.battle;
+  const run = M.run.createRun({ seed: 1, draft: false });
+  const self = { run, canReboard: () => true };
+  const lay = M.battle.BattleScreen.prototype.rightLayout.call(self, run);
+  assert.equal(M.parts.maximColumnH(run, lay.room).cols, 1);
+  // 묘수 0 · 1 · 2개와 다시 놓기가 버리기 단추(폭 62, 틈 3) 앞에 들어간다
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const n of [0, 1, 2]) {
+      run.consumables = ['freeze', 'reload'].slice(0, n).map((id) => ({ kind: 'tactic', id }));
+      const row = M.battle.BattleScreen.prototype.handRowLayout.call(self);
+      assert.ok(row.rb != null && row.rb + 15 <= RX + RW - 62 - 3, `${lang} 묘수 ${n}: 다시 놓기 ${row.rb}`);
+      // 「손」 글자: 한국어는 묘수가 없으면 단추와 같이 들어간다. 영어 「Hand」(31)는 단추와 같이 못 들어가 첫 수 전에만 빠진다
+      if (n === 0 && lang === 'ko') assert.ok(row.label, `${lang}: 「손」 글자`);
+      if (n === 0) assert.ok(M.battle.BattleScreen.prototype.handRowLayout.call({ run, canReboard: () => false }).label, `${lang}: 첫 수 뒤 「손」 글자`);
+    }
+  }
+  M.lang.setLang('ko');
+});
+
+// CHM-40: 격언 이름이 한 줄 격언 칸(대국 · 상점 오른쪽 칸 폭, 아이콘은 이름이 굵게 들어갈 때만)에 들어간다.
+// 보통 굵기까지 허용. 영어의 체스 명경기 넷은 실제 이름을 지키고 「…」를 허용한다(docs/design-notes/english-review.md)
+test('격언 이름: 한 줄 격언 칸에 「…」 없이 들어간다(한국어 · 영어)', async () => {
+  const { MAXIMS } = await import('../src/data/maxims.js');
+  const { LEGENDS } = await import('../src/data/legends.js');
+  const { RW } = M.battle;
+  const KEEP = new Set(['immortal', 'opera', 'century', 'evergreen']);
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const m of [...MAXIMS, ...LEGENDS]) {
+      if (lang === 'en' && KEEP.has(m.id)) continue;
+      const name = M.lang.L(String(m.name));
+      const room = RW - M.frame.PAD_CARD * 2 - M.parts.maximIconW(m.name, RW);
+      assert.ok(M.text.textWidth(name, false) <= room || M.text.textWidth(name, true) <= room, `${lang} ${m.id} 「${name}」 ${M.text.textWidth(name, false)} > ${room}`);
+    }
+  }
+  M.lang.setLang('ko');
+});
+
 test('정석 카드: 셋이 같은 높이로 본 칸 안(모든 정석, 한국어 · 영어)', async () => {
   const { JOSEKIS } = await import('../src/data/josekis.js');
   for (const lang of LANGS) {
