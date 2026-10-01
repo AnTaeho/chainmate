@@ -113,7 +113,8 @@ test('희생: 하나를 골라 바치고 다시 뽑는다, 떨굴 수 없고 희
   assert.equal(b.discardsLeft, 2);
   assert.equal(b.discarded, 1);
   assert.equal(b.hand.length, 4);
-  assert.deepEqual(b.used.map((p) => p.id), [before[2]]);
+  assert.deepEqual(b.offered.map((p) => p.id), [before[2]]); // 바친 기물은 이번 대국에 돌아오지 않는다
+  assert.deepEqual(b.used, []);
   const saved = b.bag;
   b.bag = [];
   assert.throws(() => apply(b, { type: 'discard', handIndices: [0] }), /bag is empty/);

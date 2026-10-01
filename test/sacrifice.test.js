@@ -1,178 +1,168 @@
-// 희생(CHM-35, docs/design-notes/sacrifice.md): 손 기물 하나를 바치고 새로 뽑는다. 바친 기물의 힘이 이번 대국의 다음 사슬에 붙는다.
+// 희생 · 탁월수 !!(CHM-35, docs/design-notes/sacrifice.md 「바뀐 설계」).
+// 희생: 손 기물 하나를 바치고 새로 뽑는다. 바친 기물은 이번 대국 동안 돌아오지 않는다. 평소엔 몫이 없다.
+// 탁월수: 바친 바로 다음 수의 사슬이 체크메이트로 끝나면 마지막 배수 ×(1 + 바친 무게 합).
 // 명령 id는 옛 이름 discard 그대로다(옛 저장과 맞추려고).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { boardFrom, parseSq as S } from '../src/sim/board.js';
-import { createBattle, apply, offeringOf, addOffering, SACRIFICE } from '../src/sim/battle.js';
+import { createBattle, apply } from '../src/sim/battle.js';
 import { bestMove, previewDrop } from '../src/sim/solver.js';
 import { createRun, applyRun, DANS } from '../src/sim/run.js';
+import { SACRIFICE_WEIGHT, brilliantMult, addOffering } from '../src/data/sacrifice.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { MASTER_BY_ID } from '../src/data/masters.js';
 import { FAMILIES } from '../src/data/families.js';
+import { emptyRecords, observe } from '../src/ui/records.js';
+import { decideBattle } from '../tools/bot.mjs';
 import { setLang, L } from '../src/ui/lang.js';
 const tr = (s) => { setLang('en'); try { return L(s); } finally { setLang('ko'); } };
 
-// 판: e5 비숍 하나(나이트를 d3에 떨구면 먹고 막힌다 — 값 30 · 배수 1). 손 N P P P, 주머니 P P P P
-function scene(extra = {}) {
+const P = (t, id) => ({ t, id, eng: null });
+// 판: map(적). 손 N R P Q, 주머니 P 넷. 나이트 d3 → e5를 먹는다
+function scene(map, extra = {}) {
   const b = createBattle({ seed: 3, ...extra });
-  b.board = boardFrom({ e5: 'B' });
-  b.hand = [{ t: 'N', id: 1, eng: null }, { t: 'P', id: 2, eng: null }, { t: 'P', id: 3, eng: null }, { t: 'P', id: 4, eng: null }];
-  b.bag = [5, 6, 7, 8].map((id) => ({ t: 'P', id, eng: null }));
+  b.board = boardFrom(map);
+  b.hand = [P('N', 1), P('R', 2), P('P', 3), P('Q', 4)];
+  b.bag = [5, 6, 7, 8].map((id) => P('P', id));
   b.incoming = []; b.incomingNext = [];
   return b;
 }
-const expect = (pieces) => {
-  let off = null;
-  for (const t of pieces) off = addOffering(off, t);
-  return (30 + off.value) * (1 + off.mult);
-};
+const KING = { e5: 'K' };   // 나이트로 킹을 먹으면 체크메이트: 값 150 · 배수 1
+const BISHOP = { e5: 'B', h1: 'K' }; // 비숍을 먹고 막힘: 값 30 · 배수 1(킹은 비숍 모습이 닿지 않는 h1에 남는다)
+const play = (b) => { apply(b, { type: 'drop', handIndex: 0, sq: S('d3') }); return apply(b, { type: 'capture', sq: S('e5') }); };
 
-test('희생: 바친 기물은 쓴 것으로 가고 주머니에서 새로 뽑는다 · 몫이 상태에 JSON으로 남는다', () => {
-  const b = scene();
-  const ev = apply(b, { type: 'discard', handIndices: [1] });
+test('희생: 바친 기물은 이번 대국에 돌아오지 않고 새로 뽑는다 · 몫은 없다', () => {
+  const b = scene(BISHOP);
+  apply(b, { type: 'discard', handIndices: [1] });
   assert.equal(b.discardsLeft, 2);
   assert.equal(b.discarded, 1);
-  assert.deepEqual(b.used.map((p) => p.id), [2]);
+  assert.deepEqual(b.offered.map((p) => p.id), [2]);
+  assert.deepEqual(b.used, []);
   assert.equal(b.hand.length, 4);
-  assert.deepEqual(b.offering, { ...offeringOf('P'), count: 1, pieces: ['P'] });
-  assert.deepEqual(JSON.parse(JSON.stringify(b.offering)), b.offering);
-  assert.deepEqual(ev.find((e) => e.type === 'discard').offering, b.offering);
-});
-
-test('희생의 몫: 다음 사슬에 붙고 여러 번 바치면 쌓인다', () => {
-  const plain = scene();
-  apply(plain, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(plain, { type: 'capture', sq: S('e5') });
-  assert.equal(plain.score, 30);
-
-  const one = scene();
-  apply(one, { type: 'discard', handIndices: [1] });
-  apply(one, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(one, { type: 'capture', sq: S('e5') });
-  assert.equal(one.score, expect(['P']));
-
-  const two = scene();
-  apply(two, { type: 'discard', handIndices: [1] });
-  apply(two, { type: 'discard', handIndices: [1] });
-  assert.equal(two.offering.count, 2);
-  const ev = apply(two, { type: 'drop', handIndex: 0, sq: S('d3') });
-  // 떨군 순간 몫이 점수 사건으로 든다(화면이 값 · 배수 칸에 더한다)
-  const sc = ev.find((e) => e.type === 'score' && e.src === 'sacrifice');
-  assert.ok(sc);
-  apply(two, { type: 'capture', sq: S('e5') });
-  assert.equal(two.score, expect(['P', 'P']));
-  assert.ok(two.score > one.score && one.score > plain.score);
-});
-
-test('희생의 몫: 다음 사슬이 끝나면 비운다(그다음 사슬엔 붙지 않는다)', () => {
-  const b = scene();
-  apply(b, { type: 'discard', handIndices: [1] });
-  apply(b, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(b, { type: 'capture', sq: S('e5') });
-  assert.equal(b.offering, null);
-  assert.equal(b.history.at(-1).score, expect(['P']));
-  // 둘째 사슬: 같은 장면을 다시 깔고 나이트로
-  b.board = boardFrom({ e5: 'B' });
-  b.hand[0] = { t: 'N', id: 9, eng: null };
-  apply(b, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(b, { type: 'capture', sq: S('e5') });
-  assert.equal(b.history.at(-1).score, 30);
+  assert.deepEqual(b.offering, { weight: 3, count: 1, pieces: ['R'] });
+  play(b);
+  assert.equal(b.score, 30, '체크메이트가 아니면 몫이 없다');
+  assert.equal(b.offering, null, '바로 다음 수가 끝나면 비운다');
+  assert.ok(![...b.hand, ...b.bag, ...b.used].some((p) => p.id === 2), '바친 룩은 대국 안에 다시 오지 않는다');
 });
 
 test('희생 횟수: 대국마다 3번, 다 쓰면 거부', () => {
-  const b = scene();
+  const b = scene(BISHOP);
   assert.equal(b.discardsLeft, 3);
-  for (let i = 0; i < 3; i++) apply(b, { type: 'discard', handIndices: [1] });
-  assert.throws(() => apply(b, { type: 'discard', handIndices: [1] }), /no discards left/);
+  for (let i = 0; i < 3; i++) apply(b, { type: 'discard', handIndices: [3] });
+  assert.throws(() => apply(b, { type: 'discard', handIndices: [3] }), /no discards left/);
   assert.equal(b.offering.count, 3);
 });
 
-test('미리 보기(previewDrop)와 풀이기도 쌓인 몫을 본다', () => {
-  const b = scene();
-  const before = previewDrop(b, 0, S('d3'));
-  assert.equal(before.value, 0);
-  assert.equal(before.mult, 0);
-  apply(b, { type: 'discard', handIndices: [1] });
-  const off = offeringOf('P');
+test('탁월수: 바친 바로 다음 수가 체크메이트면 마지막 배수 ×(1 + 무게), 사건 brilliant', () => {
+  const plain = scene(KING);
+  play(plain);
+  assert.equal(plain.status, 'won');
+  assert.equal(plain.score, 150);
+  assert.equal(plain.brilliants, undefined);
+
+  const b = scene(KING);
+  apply(b, { type: 'discard', handIndices: [3] }); // 퀸(무게 5)
+  const ev = play(b);
+  const x = brilliantMult(SACRIFICE_WEIGHT.Q);
+  assert.equal(b.score, Math.floor(150 * x));
+  const br = ev.find((e) => e.type === 'brilliant');
+  assert.deepEqual({ weight: br.weight, x: br.x, pieces: br.pieces, score: br.score }, { weight: 5, x, pieces: ['Q'], score: b.score });
+  assert.ok(ev.some((e) => e.type === 'score' && e.src === 'brilliant' && e.xmult === x));
+  assert.equal(b.brilliants.length, 1);
+});
+
+test('탁월수: 같은 수 전에 여러 번 바치면 무게를 더한다', () => {
+  const b = scene(KING);
+  apply(b, { type: 'discard', handIndices: [3] }); // Q 5
+  apply(b, { type: 'discard', handIndices: [1] }); // R 3
+  play(b);
+  assert.equal(b.score, Math.floor(150 * brilliantMult(8)));
+  assert.equal(b.brilliants[0].weight, 8);
+});
+
+test('탁월수는 바로 다음 수만: 바친 뒤 다른 수를 두면 사라진다', () => {
+  const b = scene(BISHOP);
+  apply(b, { type: 'discard', handIndices: [3] });
+  play(b); // 비숍을 먹고 끝(체크메이트 아님)
+  b.board = boardFrom(KING);
+  b.hand[0] = P('N', 9);
+  play(b);
+  assert.equal(b.history.at(-1).score, 150);
+  assert.equal(b.brilliants, undefined);
+});
+
+test('미리 보기 · 풀이기: 기다리는 희생을 본다(체크메이트 줄 점수에 탁월수가 든다)', () => {
+  const b = scene(KING);
+  apply(b, { type: 'discard', handIndices: [3] });
   const pv = previewDrop(b, 0, S('d3'));
-  assert.equal(pv.value, off.value);
-  assert.equal(pv.mult, off.mult);
+  assert.equal(pv.offering.weight, 5);
   assert.deepEqual(pv.next, [S('e5')]);
-  assert.equal(pv.offering.count, 1);
-  assert.equal(bestMove(b).score, expect(['P']));
+  const m = bestMove(b);
+  assert.ok(m.mate);
+  assert.equal(m.score, Math.floor(150 * brilliantMult(5)));
 });
 
-test('세기 후보 A · B · C: 바친 기물에 따라 붙는 몫', () => {
-  const keep = { ...SACRIFICE };
-  try {
-    Object.assign(SACRIFICE, { mode: 'A', mult: 1 });
-    assert.deepEqual(offeringOf('R'), { value: 50, mult: 1 });
-    Object.assign(SACRIFICE, { mode: 'B', valueX: 2 });
-    assert.deepEqual(offeringOf('R'), { value: 100, mult: 0 });
-    Object.assign(SACRIFICE, { mode: 'C' });
-    assert.deepEqual(offeringOf('Q'), { value: 0, mult: 5 });
-    assert.deepEqual(offeringOf('P'), { value: 0, mult: 1 });
-  } finally { Object.assign(SACRIFICE, keep); }
+test('봇: 체크메이트가 보이면 메이트에 쓰지 않는 가장 무거운 기물을 먼저 바친다 · nosac은 바치지 않는다', () => {
+  const b = scene(KING);
+  b.target = 10000;
+  assert.deepEqual(decideBattle(b), { discard: [3] }); // 퀸
+  assert.ok(decideBattle(b, { sacrifice: false }).play.mate);
 });
 
-test('저장 왕복: 몫이 쌓인 대국을 JSON으로 되살려도 같은 결과 · 몫 없는 옛 저장도 돈다', () => {
-  const a = scene();
-  apply(a, { type: 'discard', handIndices: [1] });
+test('저장 왕복: 기다리는 희생이 있는 대국을 JSON으로 되살려도 같다 · 희생 전 옛 저장도 돈다', () => {
+  const a = scene(KING);
+  apply(a, { type: 'discard', handIndices: [3] });
   const b = JSON.parse(JSON.stringify(a));
-  for (const x of [a, b]) {
-    apply(x, { type: 'drop', handIndex: 0, sq: S('d3') });
-    apply(x, { type: 'capture', sq: S('e5') });
-  }
+  play(a); play(b);
   assert.equal(JSON.stringify(a), JSON.stringify(b));
-  assert.equal(b.score, expect(['P']));
 
-  const old = JSON.parse(JSON.stringify(scene()));
-  delete old.offering; // 희생 전 저장
-  apply(old, { type: 'discard', handIndices: [1] });
-  assert.equal(old.offering.count, 1);
-  const old2 = JSON.parse(JSON.stringify(scene()));
-  delete old2.offering;
-  apply(old2, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(old2, { type: 'capture', sq: S('e5') });
-  assert.equal(old2.score, 30);
+  const old = JSON.parse(JSON.stringify(scene(KING)));
+  delete old.offering; delete old.offered;
+  apply(old, { type: 'discard', handIndices: [3] });
+  assert.equal(old.offered.length, 1);
+  play(old);
+  assert.equal(old.brilliants.length, 1);
+  assert.deepEqual(addOffering(null, 'P'), { weight: 1, count: 1, pieces: ['P'] });
 });
 
-test('격언 셋: 뽑은 대로 · 미련 없이 · 절약이 희생에 걸린다', () => {
+test('기록: 탁월수 수와 가장 큰 탁월수', () => {
+  const rec = emptyRecords();
+  observe(rec, null, [{ type: 'brilliant', weight: 2, x: 3, pieces: ['N'], score: 900 }]);
+  observe(rec, null, [{ type: 'brilliant', weight: 5, x: 6, pieces: ['Q'], score: 5400 }, { type: 'brilliant', weight: 1, x: 2, pieces: ['P'], score: 100 }]);
+  assert.equal(rec.brilliants, 3);
+  assert.deepEqual(rec.bestBrilliant, { score: 5400, weight: 5, pieces: ['Q'], ante: null });
+});
+
+test('격언 셋: 뽑은 대로 · 미련 없이 · 절약', () => {
   assert.equal(MAXIM_BY_ID.no_regrets.text, '희생 없는 대국: 배수 +4');
-  assert.equal(MAXIM_BY_ID.second_thought.text, '희생 +1 · 희생할 때마다 배수 +2');
+  assert.equal(MAXIM_BY_ID.second_thought.text, '희생 +1 · 탁월수: 배수 ×2');
   assert.equal(MAXIM_BY_ID.thrift.text, '대국을 이기면 남은 희생마다 상금 +1');
 
   // 뽑은 대로: 희생하면 배수 +4를 잃는다
-  const keep = scene({ mods: [{ id: 'no_regrets' }] });
-  apply(keep, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(keep, { type: 'capture', sq: S('e5') });
+  const keep = scene(BISHOP, { mods: [{ id: 'no_regrets' }] });
+  play(keep);
   assert.equal(keep.score, 30 * 5);
-  const gave = scene({ mods: [{ id: 'no_regrets' }] });
-  apply(gave, { type: 'discard', handIndices: [1] });
-  apply(gave, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(gave, { type: 'capture', sq: S('e5') });
-  assert.equal(gave.score, expect(['P']));
+  const gave = scene(BISHOP, { mods: [{ id: 'no_regrets' }] });
+  apply(gave, { type: 'discard', handIndices: [3] });
+  play(gave);
+  assert.equal(gave.score, 30);
 
-  // 미련 없이: 희생 +1, 바칠 때마다 다음 사슬 배수 +2 — 몫과 함께 비운다
-  const st = scene({ mods: [{ id: 'second_thought' }] });
+  // 미련 없이: 희생 +1, 탁월수면 배수 ×2 더(체크메이트가 아니면 없다)
+  const st = scene(KING, { mods: [{ id: 'second_thought' }] });
   assert.equal(st.discardsLeft, 4);
-  apply(st, { type: 'discard', handIndices: [1] });
-  apply(st, { type: 'discard', handIndices: [1] });
-  apply(st, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(st, { type: 'capture', sq: S('e5') });
-  const off = addOffering(addOffering(null, 'P'), 'P');
-  assert.equal(st.score, (30 + off.value) * (1 + off.mult + 4));
-  st.board = boardFrom({ e5: 'B' });
-  st.hand[0] = { t: 'N', id: 9, eng: null };
-  apply(st, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(st, { type: 'capture', sq: S('e5') });
-  assert.equal(st.history.at(-1).score, 30);
+  apply(st, { type: 'discard', handIndices: [2] }); // 폰 1
+  play(st);
+  assert.equal(st.score, Math.floor(150 * 2 * brilliantMult(1)));
+  const st2 = scene(BISHOP, { mods: [{ id: 'second_thought' }] });
+  apply(st2, { type: 'discard', handIndices: [2] });
+  play(st2);
+  assert.equal(st2.score, 30);
 
   // 절약: 이긴 대국의 남은 희생마다 상금 +1
-  const th = scene({ mods: [{ id: 'thrift' }], target: 10 });
-  apply(th, { type: 'discard', handIndices: [1] });
-  apply(th, { type: 'drop', handIndex: 0, sq: S('d3') });
-  apply(th, { type: 'capture', sq: S('e5') });
+  const th = scene(BISHOP, { mods: [{ id: 'thrift' }], target: 10 });
+  apply(th, { type: 'discard', handIndices: [3] });
+  play(th);
   assert.equal(th.status, 'won');
   assert.equal(th.money, 2);
 });
@@ -192,12 +182,13 @@ test('레이팅 계단: 6단(레이팅 2000)부터 희생 −1', () => {
   assert.equal(r6.battle.discardsLeft, 2);
 });
 
-test('이름: 시너지 「희생」은 「불굴」(Resolve), 행동은 「희생」(Sacrifice)', () => {
+test('이름: 시너지 「희생」은 「불굴」(Resolve), 행동은 「희생」(Sacrifice), 탁월수는 Brilliant', () => {
   const fam = FAMILIES.find((f) => f.id === 'sacrifice');
   assert.equal(fam.name, '불굴');
   assert.ok(!FAMILIES.some((f) => f.name === '희생'));
   assert.equal(tr('불굴'), 'Resolve');
   assert.equal(tr('희생'), 'Sacrifice');
+  assert.equal(tr('탁월수'), 'Brilliant');
   assert.equal(tr('불굴 시너지'), 'Resolve synergy');
   assert.equal(tr('희생 −1'), '−1 Sacrifice');
 });

@@ -103,8 +103,9 @@ const CASES = [
   ['last_move', 'knight', 30, { movesLeft: 2 }],
   ['no_regrets', 'knight', 150, { discardsUsed: 0 }],
   ['no_regrets', 'knight', 30, { discardsUsed: 1 }],
-  // 희생의 몫(값 · 배수 0으로 두고 바친 수만)에 배수 +2씩
-  ['second_thought', 'knight', 210, { offering: { value: 0, mult: 0, count: 3 } }],
+  // 탁월수(희생한 바로 다음 사슬이 체크메이트): 배수 ×2 — 무게 0으로 두어 탁월수 배수는 빼고 잰다
+  ['second_thought', 'mate', 4080, { offering: { weight: 0, count: 1 } }],
+  ['second_thought', 'knight', 30, { offering: { weight: 0, count: 1 } }],
   ['second_thought', 'knight', 30, { discarded: 3 }],
   ['empty_bag', 'knight', 180, { bag: [1, 2, 3, 4, 5] }],
   ['small_bag', 'knight', 45, { deckSize: 8 }],
