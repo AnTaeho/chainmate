@@ -17,7 +17,7 @@ export const PIECES = {
   H: { id: 'H', value: 60, name: '야간기사', chart: 'N', families: ['leap'], fairy: true },
   G: { id: 'G', value: 40, name: '메뚜기', chart: 'B', families: ['line', 'diag'], fairy: true },
   O: { id: 'O', value: 50, name: '포', chart: 'R', families: ['line'], fairy: true },
-  S: { id: 'S', value: 40, name: '궁수', chart: 'P', families: ['hunt'], fairy: true },
+  S: { id: 'S', value: 40, name: '궁수', chart: 'P', families: ['hunt', 'march'], fairy: true },
   W: { id: 'W', value: 60, name: '유령', chart: 'R', families: ['line', 'change'], fairy: true },
   // 판 위 사물(깊이 F): 벽은 먹을 수 없고 아무도 지키지 않으며 미끄러짐을 막는다(포 · 메뚜기의 받침은 된다).
   // 보석은 먹을 수 있지만 모습이 바뀌지 않고 상금 +2, 아무도 지키지 않는다.

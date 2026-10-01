@@ -116,7 +116,7 @@ soul('crown', '선봉', '#efbd55', ['crown', 'march'], '폰 모습이면 여섯�
   awake: '폰 모습이면: 다섯째 줄에서 아마존으로',
   onDrop(ctx) { ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, ctx.data.awake ? 4 : 5); ctx.flags.promoteTo = 'Z'; },
 });
-soul('shade', '잠행', '#8a5cc8', ['sacrifice', 'leap'], '지키는 적을 무시한다 · 배수 −1', {
+soul('shade', '잠행', '#8a5cc8', ['sacrifice', 'counter'], '지키는 적을 무시한다 · 배수 −1', {
   rarity: 'rare',
   // 99a6436에서 「사슬마다 한 번 · 배수 그대로」로 줄였다가 되돌렸다(2026-09-28). 지켜진 킹은 여전히 못 먹는다(board.js kingTakeable)
   more: '지켜진 킹은 먹을 수 없다',

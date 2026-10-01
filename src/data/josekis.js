@@ -55,7 +55,7 @@ joseki('rampart', '성벽 쌓기', 'silver', ['line', 'leap'], '룩 하나가 �
 joseki('mitre', '주교관', 'silver', ['diag', 'leap'], '비숍 하나가 대주교가 된다', {
   pick(run, events) { evolve(run, 'B', 'A', 1, events); },
 });
-joseki('archery', '활터', 'silver', ['hunt'], '폰 둘이 궁수가 된다', {
+joseki('archery', '활터', 'silver', ['hunt', 'march'], '폰 둘이 궁수가 된다', {
   pick(run, events) { evolve(run, 'P', 'S', 2, events); },
 });
 joseki('highway', '고속도로', 'silver', ['line'], 'b · g 세로줄: 어느 모습이든 세로로 미끄러져 먹는다', {
