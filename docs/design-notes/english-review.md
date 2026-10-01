@@ -93,10 +93,17 @@
 | 적 특성 | 폭약 | Powder | **Bomb** | 코드 id와 같은 말. 「Bomb · Rook」이 곧바로 읽힌다 |
 | 도박 | 수상한 물약 | Dubious Potion | **Shady Potion** | |
 | 명경기 | 폰 여덟의 행진 | March of Eight Pawns | **March of the Eight** | 시너지 March와 같은 뿌리, 짧게 |
+| 격언 | 끝줄의 꿈 | Back Rank Dream | **Back Rank** | CHM-40: 격언 칸 이름 자리(아이콘 없이 98)를 넘었다(굵게 112). 체스 말 back rank는 지킨다 |
+| 격언 | 그림자 읽기 | Shadow Reading | **Foresight** | CHM-40: 넘침(105). 증원을 두 수 앞까지 본다 |
+| 격언 | 기보 수집가 | Tome Collector | **Tome Hoard** | CHM-40: 넘침(99). 기보 → Tome은 지킨다 |
+| 격언 | 퀸으로 가는 길 | Road to the Queen | **Queen's Road** | CHM-40: 넘침(122) |
+| 격언 | 가득 찬 판 | Crowded Board | **Full Board** | CHM-40: 넘침(99). 한국어 그대로, 짝 Bare Board |
+| 격언 | 왕의 발자국 | King's Footsteps | **King's Steps** | CHM-40: 넘침(110) |
+| 명경기 | 폰 여덟의 행진 | March of the Eight | **March of Eight** | CHM-40: 넘침(122). March 뿌리는 지킨다 |
 | 마스터 | 사냥꾼 두령 | Hunt Chief | (그대로) | Huntmaster를 재 봤는데 마스터 카드 초상 옆 칸에 굵게 안 들어가 관 선택 시험(253)을 넘었다 |
 | 수업 제목 | 잡으면 그것이 된다 | Take it, be it | **You Are What You Take** | 먹다 = eat. 「You are what you eat」을 비튼 말 |
 
-지킨 이름: 체스 명경기의 실제 영어 이름(The Immortal Game · The Opera Game · The Game of the Century · The Evergreen Game), 오프닝(London · Sicilian · Queen's Gambit · Rook Endgame), 체스 말 이름(Passed Pawn · Rook Lift · Battery · Back Rank Dream · Queen's Gambit), 세력 여덟과 마스터 여덟.
+지킨 이름: 체스 명경기의 실제 영어 이름(The Immortal Game · The Opera Game · The Game of the Century · The Evergreen Game)(격언 칸에서 「…」로 잘려도 지킨다 — 가리키면 말풍선에 온 이름, CHM-40), 오프닝(London · Sicilian · Queen's Gambit · Rook Endgame), 체스 말 이름(Passed Pawn · Rook Lift · Battery · Back Rank · Queen's Gambit), 세력 여덟과 마스터 여덟.
 
 이름 겹침: 격언 · 레퍼토리 · 혼 · 각인 · 판본 · 세력 · 마스터 · 명경기 · 특성 · 전술 · 시너지 이름을 영어로 모아 소문자로 견줬다. 겹치는 것은 성채(세력 Fortress · 시너지 Fortress, 한국어도 같은 낱말) 하나다.
 
