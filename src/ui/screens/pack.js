@@ -150,7 +150,9 @@ export class PackScreen {
     else this.drawCards(ctx, ui, lay, gold);
     if (this.panel) button(ctx, ui, 'pack:back', lay.skip.x, lay.skip.y, lay.skip.w, BTN_H, '그만', { onClick: () => this.togglePanel() });
     else button(ctx, ui, 'pack:skip', lay.skip.x, lay.skip.y, lay.skip.w, BTN_H, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
-    if (this.t > 1.2 && !this.panel) hint(this.app, 'pack', 'pack:pick:0');
+    // 「셋 중 하나」 안내는 카드 줄이 셋일 때 그 첫 카드에(금빛 꾸러미의 명경기 조각은 줄 밖)
+    const row = pack.options.map((o, i) => i).filter((i) => !(gold && pack.options[i].kind === 'fragment'));
+    if (this.t > 1.2 && !this.panel && row.length === 3) hint(this.app, 'pack', `pack:pick:${row[0]}`);
   }
   // 카드가 차례로 뒤집힌다. 금빛 꾸러미의 명국 조각은 건너뛰기 줄 왼쪽 칸
   drawCards(ctx, ui, lay, gold) {

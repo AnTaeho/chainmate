@@ -45,10 +45,12 @@ export const HINTS = {
 
 const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id]);
 
-// 화면이 그리는 중에 부른다: 이번 프레임에 보일 수 있는 안내 후보
+// 화면이 그리는 중에 부른다: 이번 프레임에 보일 수 있는 안내 후보(부른 차례대로).
+// 화면은 말하는 것이 그 순간 화면에 있을 때만 부른다(격언 안내는 진열에 격언이 있을 때 — CHM-36).
 export function hint(app, id, regionId) {
   if (app.guide || app.settings.coach === false || seen(app, id) || !HINTS[id]) return;
-  if (!app.hintNow) app.hintNow = { id, regionId };
+  if (!app.hintNow) app.hintNow = [];
+  app.hintNow.push({ id, regionId });
 }
 
 export function markSeen(app, id) {
@@ -116,12 +118,14 @@ export function drawCoach(ctx, app) {
     bubble(ctx, ui, app, r, st.say, { ok: st.ok ? okFn : null, okLabel: st.okLabel, skip: st.noSkip ? null : g.skip, joy: !!st.joy });
     return;
   }
-  const h = app.hintNow;
+  const list = app.hintNow || [];
   app.hintNow = null;
   app.hintRect = null;
+  // 앞의 후보부터, 가리킬 구역이 이번 프레임 화면 안에 그려진 것 하나
+  const onScreen = (q) => q && q.w > 0 && q.h > 0 && q.x >= 0 && q.y >= 0 && q.x + q.w <= W && q.y + q.h <= H;
+  let h = null, r = null;
+  for (const c of list) { const q = ui.regions.find((x) => x.id === c.regionId); if (onScreen(q)) { h = c; r = q; break; } }
   if (!h) { app.hintShown = null; return; }
-  const r = ui.regions.find((q) => q.id === h.regionId);
-  if (!r) return;
   app.hintShown = h;
   bubble(ctx, ui, app, r, HINTS[h.id]);
 }

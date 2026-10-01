@@ -137,6 +137,8 @@ export function packCellLayout(pk, w) {
   return { tx, tw, price, name, env: packEnv(w) ? Math.floor((h - ENV.h) / 2) : null, h };
 }
 export const packCellH = (pk, w) => packCellLayout(pk, w).h;
+// 주머니의 기물을 골라 쓰는 두루마리(처음 안내 「두루마리를 누르고 주머니의 기물을 골라 쓴다」의 대상)
+const SCROLL_ON_PIECE = ['engraving', 'soul', 'evolve', 'awaken'];
 export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' || c.kind === 'awaken' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 export class ShopScreen {
@@ -301,18 +303,24 @@ export class ShopScreen {
       consumableCard(ctx, c, x, y, cw, rl.ch, ui.isHover(id) || (this.target && this.target.index === i));
     }
     this.drawMenu(ctx, ui);
-    // 처음 안내(한 번에 하나, 앞의 것부터)
+    // 처음 안내(한 번에 하나, 앞의 것부터). 말하는 것이 화면에 있을 때만 — 없으면 아껴 두었다가 처음 보이는 상점에서(CHM-36)
     if (!this.menu && !this.target) {
       // 대국을 지고 들어온 상점(CHM-20): 시계 줄을 먼저 가리킨다
       if (run.last && run.last.clockLost) coachHint(app, 'clock', 'clock');
       // 혼에 처음 금이 간 뒤(CHM-17): 금이 간 기물을 가리킨다
       const cracked = run.deck.find(isCracked);
       if (cracked) coachHint(app, 'crack', `deck:${cracked.id}`);
-      coachHint(app, 'shop', 'shop:buy:0');
-      if (run.consumables.length) coachHint(app, 'scroll', 'cons:0');
+      // 격언 안내는 진열에 아직 안 산 격언이 있을 때 그 카드를
+      const mx = shop.display.findIndex((it) => it.kind === 'maxim' && !it.sold);
+      if (mx >= 0) coachHint(app, 'shop', `shop:buy:${mx}`);
+      // 두루마리 안내는 기물을 골라 쓰는 두루마리(각인 · 혼 · 진화 · 깨우기)에
+      const sc = run.consumables.findIndex((c) => SCROLL_ON_PIECE.includes(c.kind));
+      if (sc >= 0) coachHint(app, 'scroll', `cons:${sc}`);
       const fam = ui.regions.find((r) => r.id.startsWith('fam:'));
       if (fam) coachHint(app, 'family', fam.id);
-      if (run.maxims.length) coachHint(app, 'maximSell', 'maxim:0');
+      // 팔기 안내는 팔 수 있는 격언에(전설은 못 판다)
+      const sell = run.maxims.findIndex(canSell);
+      if (sell >= 0) coachHint(app, 'maximSell', `maxim:${sell}`);
     }
   }
 
