@@ -43,7 +43,10 @@ import { FAIRIES } from '../data/pieces.js';
 // CHM-20: 진 뒤 상점을 열고, 대국 하나의 체감 운을 줄이려고 4~8관 인상 폭을 절반쯤으로 — 옛 곡선 대비 ×1.12 · 1.25 · 1.25 · 1.27 · 1.32
 //   (targetFor가 유효 숫자 둘로 반올림해 연습 목표로는 ×1.15 · 1.26 · 1.27 · 1.29 · 1.29). 8관 1080000은 smart 52%(50판)라
 //   명인(대가) 목표만 한 칸(2.2M → 2.3M) 올리는 1125000으로 — smart 50.0%(50판) · 단 8 10.0%(30판), docs/reports/night2.md 「CHM-20 손질」
-export const B = [150, 700, 5000, 14500, 62500, 275000, 535000, 1125000];
+// CHM-35 희생(세기 A): 옛 곡선이면 smart 60% · 단 8 20%(50판). 관마다 ×1.15 하나로 올렸다(유효 숫자 둘로 반올림) —
+//   ×1.3 38% · ×1.6 28%, ×1.15 단 0 46% · 단 8 14%(50판). docs/reports/sacrifice.md
+//   옛 값 [150, 700, 5000, 14500, 62500, 275000, 535000, 1125000]
+export const B = [170, 800, 5800, 17000, 72000, 320000, 620000, 1300000];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;

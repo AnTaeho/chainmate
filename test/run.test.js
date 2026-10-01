@@ -39,7 +39,7 @@ test('판 시작: 주머니 8, 상금 4, 세력은 1관 농민군 · 8관 왕궁
 
 test('목표: B × 종류 배율, 9관부터 늘어난다', () => {
   assert.equal(targetFor(1, 'practice'), B[0]);
-  assert.equal(targetFor(3, 'master'), B[2] * 2);
+  assert.equal(targetFor(2, 'master'), B[1] * 2); // 유효 숫자 둘로 반올림하므로 떨어지는 관으로 잰다(3관 5800 × 2 = 11600 → 12000)
   assert.ok(targetFor(9, 'practice') > B[7]);
   const run = createRun({ draft: false, seed: 1 });
   const info = blindInfo(run);
