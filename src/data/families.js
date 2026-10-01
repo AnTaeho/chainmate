@@ -16,11 +16,11 @@ export const FAMILIES = [
   { id: 'change', name: '변신', col: '#d27fd6', text: ['모습이 바뀔 때마다 배수 +2', '거친 모습 셋이면 배수 ×1.5 · 넷이면 ×2 …', '더 먹을 적이 없으면 한 번, 거친 모든 모습의 행마로 잇는다'] },
   { id: 'sacrifice', name: '희생', col: '#df5a45', text: ['끊긴 사슬: 값 ×2', '대국마다 한 번, 끊겨도 사슬이 이어진다', '끊길 때마다 배수 ×2'] },
   { id: 'crown', name: '왕관', col: '#efbd55', text: ['프로모션하거나 퀸 · 아마존을 먹으면 값 +60', '일곱째 줄에서 프로모션한다', '체크메이트하면 적이 다시 차고 사슬이 이어진다 · 대국마다 한 번'] },
-  { id: 'march', name: '행진', col: '#c8b48a', text: ['폰으로 시작: 값 +40', '폰 모습으로 먹을 때마다 배수 +2', '폰으로 시작: 배수 ×3'] },
+  { id: 'march', name: '행진', col: '#c8b48a', text: ['폰으로 시작: 배수 +3', '폰 모습으로 먹을 때마다 배수 +2', '폰으로 시작: 배수 ×3'] },
   { id: 'hunt', name: '사냥', col: '#8ec07c', text: ['같은 종류를 잇달아 먹으면 값 +30', '판에서 값이 가장 큰 적을 먹으면 배수 +4', '같은 종류를 잇달아 먹을 때마다 배수 ×1.5'] },
   // 밤샘 2: 지키는 적(응수)과 증원에 하나씩
-  { id: 'counter', name: '역습', col: '#f080a8', text: ['지키는 적을 먹으면 값 +20', '지키는 적을 먹을 때마다 배수 +2', '지키는 적을 먹을 때마다 배수 ×1.3'] },
-  { id: 'ambush', name: '매복', col: '#c0c8d0', text: ['증원을 먹으면 값 +30', '증원 자리에 떨구면 배수 +3', '증원을 먹을 때마다 배수 ×1.5'] },
+  { id: 'counter', name: '역습', col: '#f080a8', text: ['지키는 적을 먹을 때마다 값 +40', '지키는 적을 먹을 때마다 배수 +3', '지키는 적을 먹을 때마다 배수 ×1.3'] },
+  { id: 'ambush', name: '매복', col: '#c0c8d0', text: ['증원을 먹을 때마다 배수 +3', '증원 자리에 떨구면 배수 +4', '증원을 먹을 때마다 배수 ×2'] },
 ];
 export const FAMILY_BY_ID = Object.fromEntries(FAMILIES.map((f) => [f.id, f]));
 // 화면 이름: 「기사 시너지」(옛 이름 가족 · 모음 — docs/design-notes/voice.md). 칩 · 띠는 이름만(「기사 +1」 · 「기사 2/4」)
@@ -154,7 +154,7 @@ def('march', {
   onCapture(ctx) { if (lv(ctx) >= 2 && ctx.event.form === 'P') ctx.addMult(2); },
   onChainEnd(ctx) {
     if (ctx.chain.dropType !== 'P') return;
-    ctx.addValue(40);
+    ctx.addMult(3);
     if (lv(ctx) >= 3) ctx.mulMult(3);
   },
 });
@@ -173,8 +173,8 @@ def('hunt', {
 def('counter', {
   onCapture(ctx) {
     if (!ctx.event.forced) return;
-    ctx.addValue(20);
-    if (lv(ctx) >= 2) ctx.addMult(2);
+    ctx.addValue(40);
+    if (lv(ctx) >= 2) ctx.addMult(3);
     if (lv(ctx) >= 3) ctx.mulMult(1.3);
   },
 });
@@ -182,8 +182,8 @@ def('ambush', {
   onDrop(ctx) { if (lv(ctx) >= 2 && (ctx.t.incoming || []).some((r) => r.sq === ctx.event.sq)) ctx.flags.ambushSet = true; },
   onCapture(ctx) {
     if (!(ctx.event.born >= 0)) return;
-    ctx.addValue(30);
-    if (lv(ctx) >= 3) ctx.mulMult(1.5);
+    ctx.addMult(3);
+    if (lv(ctx) >= 3) ctx.mulMult(2);
   },
-  onChainEnd(ctx) { if (ctx.flags.ambushSet) ctx.addMult(3); },
+  onChainEnd(ctx) { if (ctx.flags.ambushSet) ctx.addMult(4); },
 });
