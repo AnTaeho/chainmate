@@ -5,7 +5,7 @@ import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine } from '../../render/gfx.js';
-import { spriteChips, spriteCanvas, outlineCanvas, TONE, tierOf } from '../../render/sprites.js';
+import { spriteChips, spriteCanvas, outlineCanvas, hiFor, SW, SH, TONE, tierOf } from '../../render/sprites.js';
 import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
@@ -780,7 +780,7 @@ export class BattleScreen {
         ctx.globalAlpha = e.t < 0.7 ? 1 : Math.max(0, 1 - (e.t - 0.7) / 0.3);
         ctx.translate(x + 6 + 14, y + 3 + 21);
         ctx.rotate(ang);
-        ctx.drawImage(spriteCanvas('K', 'b'), -14, -21);
+        ctx.drawImage(spriteCanvas('K', 'b', null, 0, hiFor(ctx)), -14, -21, SW, SH);
         ctx.restore();
       },
     });
@@ -1026,7 +1026,7 @@ export class BattleScreen {
     for (const [sq, g] of ghosts) {
       const { x, y } = sqXY(sq);
       dots(ctx, x, y, S, S, g.k ? PAL.dimDk : PAL.shadow, 2);
-      ctx.drawImage(outlineCanvas(g.t, TONE.b.o, g.k > 0), x + 5, y + 5);
+      ctx.drawImage(outlineCanvas(g.t, TONE.b.o, g.k > 0, hiFor(ctx)), x + 5, y + 5, SW + 2, SH + 2);
       const bob = Math.floor(time * 3 + sq * 0.37) % 2;
       ctx.globalAlpha = g.k ? 0.5 : 1;
       dropMark(ctx, x + 12, y + 1 + bob, TONE.b.o);
@@ -1431,7 +1431,7 @@ export class BattleScreen {
       const cw = big ? 32 : 16, chh = big ? 44 : 22, cx0 = LX + LW - 6 - cw, cy0 = cy + Math.floor((ch - chh) / 2);
       if (c && c.cut) { ctx.globalAlpha = 0.35; rect(ctx, cx0 - 2, cy + 2, cw + 4, ch - 4, PAL.red); ctx.globalAlpha = 1; }
       ctx.globalAlpha = a;
-      ctx.drawImage(spriteCanvas(cur, 'w', eng, tierAt(cur)), cx0, cy0, cw, chh);
+      ctx.drawImage(spriteCanvas(cur, 'w', eng, tierAt(cur), hiFor(ctx, cw / SW)), cx0, cy0, cw, chh);
       ctx.globalAlpha = 1;
     }
     closeBox();

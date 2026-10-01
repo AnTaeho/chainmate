@@ -1,7 +1,7 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL } from './palette.js';
 import { textImage, textWidth } from './text.js';
-import { spriteCanvas, tierSparkle, SW, SH } from './sprites.js';
+import { spriteCanvas, tierSparkle, soulOrb, hiFor, SW, SH } from './sprites.js';
 import { L } from '../ui/lang.js';
 import { LOG, logText, logFrame } from './layoutlog.js';
 import { SOUL_BY_ID } from '../data/souls.js';
@@ -16,13 +16,17 @@ const R = (v) => (FINE ? snap(v) : Math.round(v));
 export const place = R;
 
 // 혼이 깃든 기물: 몸 뒤 왼쪽 위에 혼 빛깔 기운 한 점(천천히 떠오르며 깜빡인다)
-export function soulSpark(ctx, x, y, col, t = null) {
+// hi(두 배 도트): 같은 3×3 자리에 반 도트로 구운 둥근 빛(sprites.js soulOrb)
+export function soulSpark(ctx, x, y, col, t = null, hi = false) {
   const k = t == null ? 0 : t;
   const bob = Math.round(Math.sin(k * 2.5));
   const a = t == null ? 1 : 0.65 + 0.35 * Math.sin(k * 3.1);
   ctx.globalAlpha *= a;
-  ctx.fillStyle = col;
-  ctx.fillRect(x + 1, y + 6 + bob, 2, 2); ctx.fillRect(x + 2, y + 5 + bob, 1, 1); ctx.fillRect(x, y + 7 + bob, 1, 1);
+  if (hi) ctx.drawImage(soulOrb(col), x, y + 5 + bob, 3, 3);
+  else {
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 1, y + 6 + bob, 2, 2); ctx.fillRect(x + 2, y + 5 + bob, 1, 1); ctx.fillRect(x, y + 7 + bob, 1, 1);
+  }
   ctx.globalAlpha /= a;
 }
 
@@ -99,18 +103,20 @@ export const measure = (s, bold = false) => textWidth(s, bold);
 
 // 기물. sx: 가로 배율(뒤집힘 1 → 0 → 1), lift: 위로 띄우기, alpha
 // eng: 각인 id(몸 톤) · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게(없으면 멈춘 모습)
+// 두 배 도트(CHM-39): 그리는 곳의 배율이 2 이상이면(hiFor) 32×44 그림을 16×22 자리에 반 도트로. 자리 · 크기는 늘 16×22
 export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null, awake = false } = {}) {
-  const c = spriteCanvas(type, side, eng, tier);
   if (alpha <= 0) return;
+  const hi = hiFor(ctx, sy);
+  const c = spriteCanvas(type, side, eng, tier, hi);
   const px = R(x), py = R(y);
-  if (tier === 3 && sx === 1 && sy === 1) { if (alpha !== 1) ctx.globalAlpha = alpha; tierSparkle(ctx, px, py, time); if (alpha !== 1) ctx.globalAlpha = 1; }
+  if (tier === 3 && sx === 1 && sy === 1) { if (alpha !== 1) ctx.globalAlpha = alpha; tierSparkle(ctx, px, py, time, hi); if (alpha !== 1) ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = alpha;
   if (soul && sx === 1 && sy === 1) {
-    soulSpark(ctx, px, py, SOUL_BY_ID[soul] ? SOUL_BY_ID[soul].col : '#ffffff', time);
+    soulSpark(ctx, px, py, SOUL_BY_ID[soul] ? SOUL_BY_ID[soul].col : '#ffffff', time, hi);
     // 깨어난 혼(CHM-17): 오른쪽 위에 금빛 기운 한 점 더(엇박으로 깜빡인다)
-    if (awake) soulSpark(ctx, px + 12, py - 2, PAL.gold, time == null ? null : time + 1.3);
+    if (awake) soulSpark(ctx, px + 12, py - 2, PAL.gold, time == null ? null : time + 1.3, hi);
   }
-  if (sx === 1 && sy === 1) ctx.drawImage(c, px, py);
+  if (sx === 1 && sy === 1) ctx.drawImage(c, px, py, SW, SH);
   else {
     const w = Math.max(1, Math.round(SW * Math.abs(sx)));
     const h = Math.max(1, Math.round(SH * sy));

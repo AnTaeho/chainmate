@@ -94,7 +94,7 @@ await ev(async () => {
     ['P', 'N', 'B', 'R', 'Q', 'K'].forEach((t, i) => ['w', 'b', 'g', 's', 'q'].forEach((side, row) => [0, 1].forEach((k) => {
       const x = 36 + (i * 2 + k) * 34, y = 40 + row * 34;
       g.fillStyle = k ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
-      g.drawImage(spriteCanvas(t, side), x + 6, y + 3);
+      g.drawImage(spriteCanvas(t, side), x + 6, y + 3, 16, 22);
     })));
   };
 });
@@ -110,7 +110,7 @@ await ev(async () => {
     ['P', 'N', 'B', 'R', 'Q', 'K', 'A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W'].forEach((t, i) => ['w', 'b', 'g'].forEach((side, row) => [0, 1].forEach((k) => {
       const x = 8 + i * 31, y = 30 + (row * 2 + k) * 34;
       g.fillStyle = (i + k) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
-      g.drawImage(spriteCanvas(t, side), x + 6, y + 3);
+      g.drawImage(spriteCanvas(t, side), x + 6, y + 3, 16, 22);
     })));
   };
 });
@@ -464,13 +464,13 @@ await ev(async () => {
     ['P', 'N', 'B', 'R', 'Q', 'K'].forEach((t, i) => [0, 1, 2, 3].forEach((tier, row) => {
       const x = 20 + i * 34, y = 16 + row * 34;
       g.fillStyle = (i + row) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
-      g.drawImage(spriteCanvas(t, 'w', null, tier), x + 6, y + 3);
+      g.drawImage(spriteCanvas(t, 'w', null, tier), x + 6, y + 3, 16, 22);
       if (tier === 3) tierSparkle(g, x + 6, y + 3);
     }));
     ['gold', 'silver', 'ivory', 'ebony', 'glass', 'feather'].forEach((eng, i) => [0, 3].forEach((tier, row) => {
       const x = 240 + i * 34, y = 16 + row * 34;
       g.fillStyle = (i + row) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
-      g.drawImage(spriteCanvas('N', 'w', eng, tier), x + 6, y + 3);
+      g.drawImage(spriteCanvas('N', 'w', eng, tier), x + 6, y + 3, 16, 22);
       if (tier === 3) tierSparkle(g, x + 6, y + 3);
     }));
     [0, 3].forEach((tier, i) => { g.drawImage(spriteCanvas('N', 'w', null, tier), 250 + i * 80, 100, 64, 88); g.drawImage(spriteCanvas('Q', 'w', null, tier), 290 + i * 80, 196, 32, 44); });
