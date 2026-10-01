@@ -670,7 +670,7 @@ function itemNameOf(it) { return it.kind === 'chart' ? `${PIECE_NAME[it.form]} �
 const artW = (it) => (it.kind === 'evolve' ? 44 : 22);
 // 카드의 칩 줄 수(못 놓은 시너지는 「+N」 — 전부는 가리키면 말풍선에)
 export const CARD_CHIP_ROWS = 1;
-function itemCardLayout(it, w, { run = null, price = true } = {}) {
+export function itemCardLayout(it, w, { run = null, price = true } = {}) {
   const P = PAD_CARD, IW = w - P * 2;
   const f = flow(P);
   const out = { IW };
@@ -685,7 +685,9 @@ function itemCardLayout(it, w, { run = null, price = true } = {}) {
   // 종류 딱지(kinds.js — 14 = 머릿말 줄 높이)는 첫 줄 왼쪽, 머릿말 글은 그 오른쪽
   out.tabY = f.y;
   out.kindX = P + TAB + TAB_GAP;
-  out.kinds = wrap(kind, IW - priceW).map((l) => [l, f.line()]);
+  // 첫 줄은 값 옆(IW − priceW), 둘째 줄부터는 값 아래라 딱지 뒤 끝까지(IW − 딱지). 낱말 단위로만 줄을 바꾼다 —
+  // 첫 낱말이 값 옆에 안 들어가면 첫 줄을 비우고 둘째 줄에(영어 「Awakening」 66 > 60, CHM-42: 글자 단위로 「Awakenin / g」가 됐었다)
+  out.kinds = wrapHead(kind, IW - priceW, IW - TAB - TAB_GAP).map((l) => [l, f.line()]);
   f.gap(GAP_IN);
   const nx = artW(it) + 4, nw = IW - nx - (PAD_CARD > 4 ? 0 : 0);
   out.nameX = P + nx;
@@ -702,12 +704,30 @@ function itemCardLayout(it, w, { run = null, price = true } = {}) {
   for (const l of wrap(itemEffect(it), IW)) lines.push([l, PAL.cardInk]);
   if (it.kind === 'chart' && run) lines.push([`${run.charts[it.form] || 0} › ${(run.charts[it.form] || 0) + 1}단계`, PAL.cardDim]);
   if (it.edition) for (const l of wrap(L(EDITION_BY_ID[it.edition].text), IW)) lines.push([l, PAL.goldDk]);
-  if (itemUse(it)) lines.push([itemUse(it), PAL.cardDim]);
+  // 쓰는 법도 카드 폭에서 줄을 바꾼다(「금이 간 혼에 쓴다」 99 · 「Use on a cracked soul」 143 > 94가 카드 밖으로 넘쳤다, CHM-42)
+  if (itemUse(it)) for (const l of wrap(itemUse(it), IW)) lines.push([l, PAL.cardDim]);
   out.lines = lines.map(([l, c]) => [l, c, f.line()]);
   const fams = itemFams(it);
   out.fams = fams;
   if (fams.length) { f.gap(GAP_GROUP); out.chips = f.space(chipBlockH(chipRows(fams, IW, CARD_CHIP_ROWS))); }
   out.h = f.y + P;
+  return out;
+}
+// 머릿말 줄 바꿈: 첫 줄 폭 w1(값 옆), 다음 줄부터 w2. 낱말 단위로만 — 첫 낱말이 w1에 안 들어가면 첫 줄은 비운다.
+// w2에도 안 들어가는 낱말만 wrap()이 글자 단위로 끊는다(test/layout.test.js가 모든 물건에서 그런 낱말이 없는지 잰다)
+export function wrapHead(s, w1, w2) {
+  const out = [];
+  let line = '';
+  for (const word of L(String(s)).split(' ')) {
+    const w = out.length ? w2 : w1;
+    const tryLine = line ? `${line} ${word}` : word;
+    if (measure(tryLine) <= w) { line = tryLine; continue; }
+    if (line || !out.length) { out.push(line); line = ''; }
+    if (measure(word) <= w2) { line = word; continue; }
+    const parts = wrap(word, w2);
+    out.push(...parts.slice(0, -1)); line = parts[parts.length - 1];
+  }
+  out.push(line);
   return out;
 }
 // 넓은 카드 높이(폭 w). 한 줄의 카드는 가장 긴 카드에 맞춘다(itemRowH)
@@ -726,7 +746,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   const lay = itemCardLayout(it, w, { run, price });
   const P = PAD_CARD;
   kindTab(ctx, it.kind, x + P, y + lay.tabY);
-  for (const [l, ly] of lay.kinds) text(ctx, l, x + lay.kindX, y + ly, lay.kindCol);
+  for (const [l, ly] of lay.kinds) if (l) text(ctx, l, x + lay.kindX, y + ly, lay.kindCol);
   const showPrice = price && it.price != null && !sold;
   if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
   itemArt(ctx, it, x + P, y + lay.art, t, run);

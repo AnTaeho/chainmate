@@ -24,6 +24,7 @@ import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js'
 import { runSide, pauseButton, shardTo } from './common.js';
 import { RIGHT, CENTER, CARD, TOP, PAD_CARD, LINE, GAP_IN, GAP_GROUP, LIST_GAP, flow, textY, inkY, rowBoxH, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
+import { L } from '../lang.js';
 
 const RX = RIGHT.x, RW = RIGHT.w;
 // 판 틀(docs/design-notes/layout.md 「상점」): 가운데 칸 위 띠에 「진열」 이름표 · 다시 진열 · 다음 대국, 그 아래로 진열 카드 줄(hug) →
@@ -152,14 +153,22 @@ export const packTip = (pk) => tipLines(PACK_NAME[pk.kind], PACK_INSIDE[pk.kind]
 const PACK_GAP = 4;
 // 좁은 칸(셋 — 폭 100 아래)은 봉투 없이 이름 → 값
 const packEnv = (w) => w >= 100;
-export function packCellLayout(pk, w) {
-  const P = PAD_CARD, tx = packEnv(w) ? P + ENV.w + 4 : P, tw = w - tx - P;
+// 좁은 칸 한 줄(셋)의 이름이 하나라도 굵게 안 들어가면(영어 「Engraving」 63 > 58, CHM-42) 그 줄 셋을 다 작은 봉투(ENV_S) + 값으로 —
+// 봉랍 자리 딱지가 종류를, 금빛 봉투가 금빛 꾸러미를 말한다. 두루마리 좁은 칸(CHM-41 scrollRowNames)과 같은 규칙: 한 줄 안에서 섞지 않는다
+const ENV_S = { w: 24, h: 20 };
+export function packCellLayout(pk, w, { names = true } = {}) {
+  const P = PAD_CARD, env = packEnv(w), small = !env && !names;
+  const tx = env ? P + ENV.w + 4 : small ? P + ENV_S.w + 4 : P, tw = w - tx - P;
   const f = flow(P);
   const name = f.line(), price = f.line();
-  const h = Math.max(f.y, packEnv(w) ? P + ENV.h : 0) + P;
-  return { tx, tw, price, name, env: packEnv(w) ? Math.floor((h - ENV.h) / 2) : null, h };
+  const h = Math.max(f.y, env ? P + ENV.h : 0) + P;
+  return { tx, tw, price, name, small, env: env ? Math.floor((h - ENV.h) / 2) : small ? Math.floor((h - ENV_S.h) / 2) : null, h };
 }
 export const packCellH = (pk, w) => packCellLayout(pk, w).h;
+// 좁은 칸 이름(꾸러미 이름의 앞 낱말 — 「각인 꾸러미」 → 「각인」)과 그 자리 폭
+export const packShortName = (pk) => L(PACK_NAME[pk.kind].split(' ')[0]);
+export const packNameRoom = (w) => packCellLayout({}, w).tw;
+export const packRowNames = (packs, w) => packEnv(w) || packs.every((pk) => measure(packShortName(pk), true) <= packNameRoom(w));
 // 주머니의 기물을 골라 쓰는 두루마리(처음 안내 「두루마리를 누르고 주머니의 기물을 골라 쓴다」의 대상)
 const SCROLL_ON_PIECE = ['engraving', 'soul', 'evolve', 'awaken'];
 export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' || c.kind === 'awaken' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
@@ -291,7 +300,7 @@ export class ShopScreen {
         ui.region(id, x, y, pw, lay.packH, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack'), tip: () => packTip(pk), preview: true });
         const hov = ui.isHover(id) && ok;
         sway(ctx, ui.time, `${id}:${pk.kind}`, x, y, pw, lay.packH, (c) => {
-          this.packCard(c, pk, x, y, pw, lay.packH, hov);
+          this.packCard(c, pk, x, y, pw, lay.packH, hov, packRowNames(shop.packs, pw));
           if (!pk.sold && !ok) { c.globalAlpha = 0.35; rect(c, x, y, pw, lay.packH, PAL.shadow); c.globalAlpha = 1; }
         }, { hover: hov, press: hov && ui.press && ui.press.id === id, amt: 0.6 });
       });
@@ -350,22 +359,29 @@ export class ShopScreen {
   }
 
   // 꾸러미 칸: 왼쪽 봉투, 오른쪽 이름 → 값(packCellLayout). 봉투 속은 가리키면(packTip)
-  packCard(ctx, pk, x, y, w, h, hover) {
-    const lay = packCellLayout(pk, w);
+  packCard(ctx, pk, x, y, w, h, hover, names = true) {
+    const lay = packCellLayout(pk, w, { names });
     openBox('card', x, y, w, h, PAD_CARD, { name: `꾸러미 ${pk.kind}` });
     box(ctx, x, y, w, h, PAL.feltDk, hover ? PAL.gold : PAL.frameDk);
     const P = PAD_CARD;
-    if (lay.env != null) envelope(ctx, x + P, y + lay.env, ENV.w, ENV.h, pk.kind, { hover });
+    // 연 꾸러미는 작은 봉투 칸이어도 봉투 없이 칸 가운데 「열었다」(봉투 오른쪽 34에 영어 「Opened」가 안 들어간다)
+    if (lay.env != null && !(pk.sold && lay.small)) envelope(ctx, x + P, y + lay.env, lay.small ? ENV_S.w : ENV.w, lay.small ? ENV_S.h : ENV.h, pk.kind, { hover });
     if (pk.sold) {
       ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
       // 봉투가 있으면 글 칸(봉투 오른쪽) 가운데 — 영어 「Opened」가 봉투에 걸치지 않게
-      text(ctx, '열었다', x + lay.tx + Math.floor(lay.tw / 2), inkY(y, h), PAL.dim, { align: 'center', bold: true });
+      text(ctx, '열었다', lay.small ? x + Math.floor(w / 2) : x + lay.tx + Math.floor(lay.tw / 2), inkY(y, h), PAL.dim, { align: 'center', bold: true });
+      closeBox();
+      return;
+    }
+    // 작은 봉투 칸: 이름 없이 봉투 오른쪽에 값 한 줄(칸 높이 가운데)
+    if (lay.small) {
+      text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, inkY(y, h), PAL.gold, { bold: true });
       closeBox();
       return;
     }
     // 봉투가 없는 좁은 칸(셋)은 종류 딱지를 값 줄 오른쪽에(이름 줄은 폭을 다 쓴다)
     if (lay.env == null) kindTab(ctx, PACK_KIND[pk.kind], x + w - P - TAB, y + lay.price - ((LINE - 11) >> 1));
-    fitText(ctx, PACK_NAME[pk.kind].split(' ')[0], x + lay.tx, y + lay.name, lay.tw, PAL.ink);
+    fitText(ctx, packShortName(pk), x + lay.tx, y + lay.name, lay.tw, PAL.ink);
     text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, y + lay.price, PAL.gold, { bold: true });
     closeBox();
   }
