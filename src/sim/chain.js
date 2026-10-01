@@ -1,6 +1,6 @@
 // 사슬 한 수를 한 칸씩 진행하는 상태 기계.
 // 다루는 대상 t는 { board, rules, mods, chain, ... } 모양이면 된다(대국 상태 자체, 또는 풀이기가 복사한 탁자).
-//   startChain(t, { type, sq, engraving }) → events   떨구기
+//   startChain(t, { type, sq, engraving, soul, pieceId }) → events   떨구기(pieceId: 탁월수 판정용 손 기물 id)
 //   chainCaptures(t)                        → [sq]     지금 먹을 수 있는 칸(응수 제한 · 조정자 거름 반영)
 //   chainCapture(t, sq)                     → events   먹기 한 번
 //   chainRedrops(t)                         → [sq]     다시 떨굴 칸(onChainStop에서 redrop한 뒤에만)
@@ -39,7 +39,7 @@ export const gradeOf = (n) => GRADES.reduce((g, x) => (n >= x.n ? x : g), null);
 
 export const PROMOTE_RANK = 7;
 
-export function startChain(t, { type, sq, engraving = null, soul = null }) {
+export function startChain(t, { type, sq, engraving = null, soul = null, pieceId = null }) {
   const events = [];
   t.chain = {
     dropType: type, dropSq: sq, engraving: engraving || null, soul: soul || null,
@@ -53,9 +53,13 @@ export function startChain(t, { type, sq, engraving = null, soul = null }) {
   };
   t.board[sq] = { t: type, mine: true };
   events.push({ type: 'drop', piece: type, sq });
-  // 희생(CHM-35): 바로 앞에 바친 기물(t.offering) — 이 사슬이 체크메이트로 끝나면 탁월수(finish). 비우는 곳은 battle.js endMove
+  // 희생(CHM-35): 바로 앞에 바친 기물(t.offering). 희생으로 새로 뽑은 기물(off.drawn)로 시작한 사슬이 체크메이트로 끝나면 탁월수(finish).
+  // 비우는 곳은 battle.js endMove
   const off = t.offering;
-  if (off && off.count) { t.chain.offered = off.count; t.chain.offerWeight = off.weight || 0; t.chain.offerPieces = off.pieces || []; }
+  if (off && off.count) {
+    t.chain.offered = off.count;
+    if (pieceId != null && (off.drawn || []).includes(pieceId)) { t.chain.offerWeight = off.weight || 0; t.chain.offerPieces = off.pieces || []; }
+  }
   runHook(t, 'onDrop', { type, sq }, events);
   if (chainCaptures(t).length === 0) stop(t, 'blocked', events);
   return events;

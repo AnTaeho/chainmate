@@ -37,7 +37,7 @@ export const DEFAULT_RULES = {
 };
 
 // 희생(CHM-35): 바친 기물은 b.offered(이번 대국 동안 주머니로 돌아오지 않는다), 다음 수를 기다리는 희생은 b.offering.
-// 탁월수(바친 바로 다음 사슬이 체크메이트)는 chain.js finish가 매긴다. 규칙 수치는 src/data/sacrifice.js
+// 탁월수(희생으로 새로 뽑은 기물로 시작한 바로 다음 사슬이 체크메이트)는 chain.js finish가 매긴다. 규칙 수치는 src/data/sacrifice.js
 export { SACRIFICE_WEIGHT, BRILLIANT, addOffering } from '../data/sacrifice.js';
 import { addOffering } from '../data/sacrifice.js';
 
@@ -316,7 +316,7 @@ export function apply(b, cmd) {
       b.hand.splice(cmd.handIndex, 1);
       b.chainPiece = piece;
       b.status = 'chain';
-      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng, soul: pieceSoul(piece) }));
+      events.push(...startChain(b, { type: piece.t, sq: cmd.sq, engraving: piece.eng, soul: pieceSoul(piece), pieceId: piece.id }));
       reveal(b);
       if (b.chain.done) endMove(b, events);
       break;
@@ -350,7 +350,10 @@ export function apply(b, cmd) {
       b.discardsUsed++;
       b.discarded += gone.length;
       for (const p of gone) b.offering = addOffering(b.offering, p.t);
+      const had = new Set(b.hand.map((p) => p.id));
       draw(b);
+      // 희생으로 새로 뽑은 기물: 이것으로 시작한 다음 사슬이 체크메이트면 탁월수
+      b.offering.drawn = [...(b.offering.drawn || []), ...b.hand.filter((p) => !had.has(p.id)).map((p) => p.id)];
       events.push({ type: 'discard', pieces: gone.map((p) => p.t), offering: { ...b.offering } });
       checkStuck(b, events);
       break;

@@ -89,7 +89,7 @@ export function bestMove(b, opts = {}) {
     for (const sq of dropSquaresFor(b, piece)) {
       const t = cloneTable({ ...b, hand: rest, chain: null });
       // 각인 명세는 복사해서 쓴다(탐색 중 조정자 state가 실제 손 기물에 새지 않게)
-      startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece) });
+      startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece), pieceId: piece.id });
       const r = dfs(t, stats, preferMate, rank);
       if (!r) continue;
       // opts.collect: 떨구기마다 그 자리의 최선(재미 하네스가 「의미 있는 선택지」를 센다)
@@ -131,7 +131,7 @@ export function previewCapture(t, sq) {
 export function previewDrop(b, handIndex, sq) {
   const piece = b.hand[handIndex];
   const t = cloneTable({ ...b, hand: b.hand.filter((_, i) => i !== handIndex), chain: null });
-  startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece) });
+  startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece), pieceId: piece.id });
   // value · mult: 떨군 순간 사슬에 든 몫(onDrop 반응) · offering: 기다리는 희생(이 수가 체크메이트면 탁월수)
   return { sq, form: piece.t, value: t.chain.done ? 0 : t.chain.value, mult: t.chain.done ? 0 : t.chain.mult, offering: b.offering ? { ...b.offering } : null, next: t.chain.done ? [] : chainCaptures(t) };
 }

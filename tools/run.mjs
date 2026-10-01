@@ -1,6 +1,6 @@
 // 판(런) 하네스: 판을 N개 끝까지 돌려 곡선을 잰다.
 //   node tools/run.mjs --runs 1000 --policy smart|hunt|random|none|nosac --seed 1 [--workers 10] [--k 6]
-//   nosac: smart 상점 + 탁월수를 노리지 않는 대국 봇(CHM-35 비교용). --tune '{"brilliant":1}': 탁월수 세기(src/data/sacrifice.js BRILLIANT.per)
+//   nosac: smart 상점 + 막혔을 때만 바치는 대국 봇(CHM-35 비교용). --tune '{"brilliant":1}': 탁월수 세기(src/data/sacrifice.js BRILLIANT.per)
 // 대국 안은 풀이기 봇(tools/bot.mjs), 상점은 tools/shopbot.mjs의 정책.
 // 찍는 것: 판 승률, 관 도달 분포, 관별 대국 점수/목표, 종류별 통과율, 외통 · 첫수외통 · 막힘 비율,
 //          명인별 통과율, 많이 산 격언과 산 판의 승률, 관별 최고 한 수, 판당 ms.

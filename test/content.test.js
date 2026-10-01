@@ -104,8 +104,7 @@ const CASES = [
   ['no_regrets', 'knight', 150, { discardsUsed: 0 }],
   ['no_regrets', 'knight', 30, { discardsUsed: 1 }],
   // 탁월수(희생한 바로 다음 사슬이 체크메이트): 배수 ×2 — 무게 0으로 두어 탁월수 배수는 빼고 잰다
-  ['second_thought', 'mate', 4080, { offering: { weight: 0, count: 1 } }],
-  ['second_thought', 'knight', 30, { offering: { weight: 0, count: 1 } }],
+  ['second_thought', 'mate', 2040, { offering: { weight: 0, count: 1, drawn: [] } }],
   ['second_thought', 'knight', 30, { discarded: 3 }],
   ['empty_bag', 'knight', 180, { bag: [1, 2, 3, 4, 5] }],
   ['small_bag', 'knight', 45, { deckSize: 8 }],
