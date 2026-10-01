@@ -89,16 +89,15 @@ export const DANS = [
   { n: 4, text: '시계 −1' },
   { n: 5, text: '목표 ×1.1' },
   { n: 6, text: '버리기 −1' },
-  { n: 7, text: '시계 −1' },
-  { n: 8, text: '대가 목표 ×1.25' },
+  { n: 7, text: '대가 목표 ×1.25' },
+  { n: 8, text: '목표 ×1.25' },
 ];
-// 밤샘 2: 시계가 들어오며 다시 짰다. 시계 3 → 4단 2 → 7단 1(한 번 지면 끝, 옛 규칙과 같다).
-// 옛 표(목표 ×1.25 · 수 −1 · 대가 ×1.5 …)에 시계 1을 얹으면 8단 smart 3~7%(30판)라, 목표 ×1.1 · 대가 ×1.25로 누그러뜨리고 수 −1을 뺐다 → 10%.
-// 단 0에 시계 1만 걸면 16.7%(30판) — 8단은 옛 단 0(17.5%)보다 조금 어렵다
+// 밤샘 2: 시계가 들어오며 다시 짰다(시계 3 → 4단 2). CHM-32: 7단에 시계를 한 칸 더 빼면(→ 1, 한 번 지면 끝) 단 6 20% → 단 7 6% → 단 8 4%로 벽이 되어,
+// 7단을 「대가 목표 ×1.25」로, 8단을 「목표 ×1.25」(×1.1에서 올림)로 바꿨다 → 단 0 50 · 2 32 · 4 24 · 6 20 · 7 16 · 8 10.5%(seed 1 · 2 각 100판). docs/reports/dan8.md
 export function danRules(dan) {
   return {
-    reinforce: dan >= 1 ? 1 : 0, price: dan >= 2 ? 1 : 0, chestFive: dan >= 3 ? 0.5 : 1, fragment: dan >= 3 ? 0.5 : 1, clock: dan >= 7 ? -2 : dan >= 4 ? -1 : 0,
-    target: dan >= 5 ? 1.1 : 1, discards: dan >= 6 ? -1 : 0, moves: 0, finalTarget: dan >= 8 ? 1.25 : 1,
+    reinforce: dan >= 1 ? 1 : 0, price: dan >= 2 ? 1 : 0, chestFive: dan >= 3 ? 0.5 : 1, fragment: dan >= 3 ? 0.5 : 1, clock: dan >= 4 ? -1 : 0,
+    target: dan >= 8 ? 1.25 : dan >= 5 ? 1.1 : 1, discards: dan >= 6 ? -1 : 0, moves: 0, finalTarget: dan >= 7 ? 1.25 : 1,
   };
 }
 
@@ -145,7 +144,7 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
   const faction = factionFor(run, ante);
   const master = kind === 'master' ? masterFor(run, ante) : null;
   const st = run.stake;
-  // 단 8 「대가 목표 ×1.25」: 왕궁 근위의 우두머리 대국
+  // 단 7 「대가 목표 ×1.25」: 왕궁 근위의 우두머리 대국
   const mult = (st ? st.target * (master && faction === FINAL_FACTION ? st.finalTarget : 1) : 1) * josekiTargetMult(run);
   return {
     ante, blind, kind,

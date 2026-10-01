@@ -295,7 +295,7 @@ export const EN = {
   '지키는 적을 먹을 때마다 값 +40': 'Each guard taken: +40 Value', '지키는 적을 먹을 때마다 배수 +3': 'Each guard taken: +3 Mult', '지키는 적을 먹을 때마다 배수 ×1.3': 'Each guard taken: ×1.3 Mult',
   '증원을 먹을 때마다 배수 +3': 'Each recruit taken: +3 Mult', '증원 자리에 떨구면 배수 +4': 'Drop on a recruit square: +4 Mult', '증원을 먹을 때마다 배수 ×2': 'Each recruit taken: ×2 Mult',
   '역습 시너지': 'Counter synergy', '매복 시너지': 'Ambush synergy',
-  '시계': 'Clock', '다시 놓기': 'New Board', '목표 ×1.1': 'Target ×1.1', '대가 목표 ×1.25': 'Final ×1.25', '시간이 다했다': 'Out of time', '짐 · 시계 −1': 'Clock −1',
+  '시계': 'Clock', '다시 놓기': 'New Board', '목표 ×1.1': 'Target ×1.1', '목표 ×1.25': 'Target ×1.25', '대가 목표 ×1.25': 'Final ×1.25', '시간이 다했다': 'Out of time', '짐 · 시계 −1': 'Clock −1',
   '대국을 지면 한 칸을 잃고 다음 대국으로 간다': 'Lose a match: lose one cell and play on', '다 잃으면 판이 끝난다': 'Lose them all and the run ends',
   '대국을 지면 시계 한 칸이 준다. 시계를 다 쓰면 판이 끝난다': 'Lose a match and your clock loses a cell. When it runs out, the run ends',
   '아무것도 지키지 못한다': 'Guards nothing',

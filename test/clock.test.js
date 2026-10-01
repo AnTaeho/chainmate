@@ -86,9 +86,10 @@ test('시계: 명인에서 지면 명인의 상자 없이 다음 관 · 8관 명
   assert.notEqual(JSON.stringify(fin.battle.board), first);
 });
 
-test('시계 1(단 7부터)은 한 번 지면 판이 끝난다', () => {
-  const run = createRun({ seed: 5, draft: false, dan: 7 });
-  assert.equal(run.clock, 1);
+test('시계 1(마지막 칸)은 한 번 지면 판이 끝난다', () => {
+  const run = createRun({ seed: 5, draft: false, dan: 8 });
+  assert.equal(run.clock, 2);
+  run.clock = 1;
   loseBattle(run);
   assert.equal(run.phase, 'lost');
 });
