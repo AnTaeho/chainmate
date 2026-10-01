@@ -15,6 +15,7 @@ import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
 import { SOUL_BY_ID, isCracked } from '../../data/souls.js';
+import { kindBand, kindTab, BAND, TAB, PACK_KIND } from '../kinds.js';
 import { awakenFlow } from './awaken.js';
 import { TACTIC_BY_ID, evolveTo } from '../../data/tactics.js';
 const ENG_NAME = (id) => engravingInfo(id).name;
@@ -98,26 +99,30 @@ export function growPillar(ctx, x, y, w, h, p) {
   ctx.globalAlpha = 1;
 }
 
-// 두루마리 한 칸(이름 한 줄 — 높이 rowBoxH(PAD_CARD)): 넓은 칸은 왼쪽 그림(각인 = 재료, 혼 = 기운, 진화 = 자라는 화살, 기보 = 모습 윤곽) + 이름,
-// 좁은 칸(셋 이상 — 두 칸씩)은 이름만. 효과는 가리키면 왼쪽 칸 설명에
+// 두루마리 한 칸(이름 한 줄 — 높이 rowBoxH(PAD_CARD)): 왼쪽 띠(종류 바탕 + 문양, kinds.js — CHM-37) → 혼은 등급 막대 →
+// 넓은 칸은 그림(각인 = 재료, 혼 = 기운, 진화 = 자라는 화살, 기보 = 모습 윤곽) + 이름, 좁은 칸(셋 이상 — 두 칸씩)은 이름만. 효과는 가리키면 왼쪽 칸 설명에.
+// 띠는 혼 · 각인 테(x + 1) 왼변을 덮고 위 · 오른쪽 · 아래 테는 남는다
 export function consumableCard(ctx, c, x, y, w, h, hover) {
   const edge = c.kind === 'engraving' ? ENG_EDGE[c.id] || PAL.gold : c.kind === 'soul' ? SOUL_BY_ID[c.id].col : c.kind === 'awaken' ? PAL.gold : null;
-  openBox('card', x, y, w, h, PAD_CARD, { name: `두루마리 ${c.kind}` });
+  const P = PAD_CARD, narrow = w < 80;
+  // 좁은 칸은 이름 자리가 좁아(55 − 띠) 안 여백을 테 안쪽 한 칸까지 쓴다(한글 석 자 36)
+  openBox('card', x, y, w, h, narrow ? { x: 2, y: P } : P, { name: `두루마리 ${c.kind}` });
   cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge });
   const name = c.kind === 'chart' ? `${PIECE_NAME[c.form]}` : c.kind === 'evolve' ? '진화' : c.kind === 'awaken' ? '깨우기' : c.kind === 'tactic' ? TACTIC_BY_ID[c.id].name : c.kind === 'soul' ? SOUL_BY_ID[c.id].name : engravingInfo(c.id).name;
-  // 혼 두루마리: 왼쪽 안쪽에 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙)
-  if (c.kind === 'soul') rect(ctx, x + 2, y + 2, 2, h - 4, RARITY[SOUL_BY_ID[c.id].rarity]);
-  const P = PAD_CARD, narrow = w < 80;
-  if (narrow) { fitText(ctx, name, x + Math.floor(w / 2), y + textY(P), w - P * 2, PAL.cardInk, { align: 'center' }); closeBox(); return; }
-  const ax = x + 2, ay = y + Math.floor((h - 18) / 2);
-  rect(ctx, ax + 2, ay, 18, 18, '#1b2b27');
-  if (c.kind === 'engraving') engravingEmblem(ctx, c.id, ax - 1, ay - 5, { sq: false });
-  else if (c.kind === 'soul') soulEmblem(ctx, c.id, ax - 1, ay - 4, 0, { sq: false });
-  else if (c.kind === 'awaken') awakenArt(ctx, ax - 1, ay - 4, 0, { sq: false });
-  else if (c.kind === 'evolve') { rect(ctx, ax + 5, ay + 11, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, ax + 9 + i, ay + 10 - i, 1, 1, PAL.gold); rect(ctx, ax + 12, ay + 4, 5, 6, PAL.gold); }
-  else if (c.kind === 'tactic') tacticIcon(ctx, c.id, ax + 3, ay + 4);
-  else if (c.kind === 'chart') { dots(ctx, ax + 2, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', ax + 3, ay - 3, { alpha: 0.9 }); }
-  const nx = x + 26;
+  kindBand(ctx, c.kind, x + 1, y + 1, h - 2);
+  // 혼 두루마리: 띠 오른끝(문양 옆 빈 줄)에 겹쳐 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙) — 이름과 한 칸 띄운다
+  if (c.kind === 'soul') rect(ctx, x + BAND, y + 2, 2, h - 4, RARITY[SOUL_BY_ID[c.id].rarity]);
+  const bx = x + 1 + BAND + 2; // 띠(와 등급 막대) 뒤 글 · 그림이 서는 왼끝
+  if (narrow) { const nx = bx, nw = x + w - 2 - nx; fitText(ctx, name, nx + Math.floor(nw / 2), y + textY(P), nw, PAL.cardInk, { align: 'center' }); closeBox(); return; }
+  const ax = bx + 1, ay = y + Math.floor((h - 18) / 2);
+  rect(ctx, ax, ay, 18, 18, '#1b2b27');
+  if (c.kind === 'engraving') engravingEmblem(ctx, c.id, ax - 3, ay - 5, { sq: false });
+  else if (c.kind === 'soul') soulEmblem(ctx, c.id, ax - 3, ay - 4, 0, { sq: false });
+  else if (c.kind === 'awaken') awakenArt(ctx, ax - 3, ay - 4, 0, { sq: false });
+  else if (c.kind === 'evolve') { rect(ctx, ax + 3, ay + 11, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, ax + 7 + i, ay + 10 - i, 1, 1, PAL.gold); rect(ctx, ax + 10, ay + 4, 5, 6, PAL.gold); }
+  else if (c.kind === 'tactic') tacticIcon(ctx, c.id, ax + 1, ay + 4);
+  else if (c.kind === 'chart') { dots(ctx, ax, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', ax + 1, ay - 3, { alpha: 0.9 }); }
+  const nx = ax + 18 + 4;
   fitText(ctx, name, nx, y + textY(P), x + w - P - nx, PAL.cardInk);
   closeBox();
 }
@@ -338,6 +343,8 @@ export class ShopScreen {
       closeBox();
       return;
     }
+    // 봉투가 없는 좁은 칸(셋)은 종류 딱지를 값 줄 오른쪽에(이름 줄은 폭을 다 쓴다)
+    if (lay.env == null) kindTab(ctx, PACK_KIND[pk.kind], x + w - P - TAB, y + lay.price - ((LINE - 11) >> 1));
     fitText(ctx, PACK_NAME[pk.kind].split(' ')[0], x + lay.tx, y + lay.name, lay.tw, PAL.ink);
     text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, y + lay.price, PAL.gold, { bold: true });
     closeBox();

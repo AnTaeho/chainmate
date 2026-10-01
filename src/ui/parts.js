@@ -21,6 +21,7 @@ import { shade, glow, flicker } from '../render/light.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox } from '../render/layoutlog.js';
+import { kindTab, TAB, TAB_GAP, PACK_KIND } from './kinds.js';
 
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
 // 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
@@ -445,8 +446,8 @@ export function panel(ctx, x, y, w, h) {
 
 export const labelW = (s) => measure(s);
 
-// ── 꾸러미 봉투: 접힌 덮개 · 봉랍(기물 상아 · 기보 청록 · 각인 자줏빛 · 금빛 금별).
-// open 0 → 1: 봉랍이 금 가며 깨지고(0~0.4) 덮개가 젖혀진다(0.4~1)
+// ── 꾸러미 봉투: 접힌 덮개 · 봉랍 자리의 종류 딱지(기물 · 기보 · 각인 · 금빛은 판본 격언).
+// open 0 → 1: 딱지가 갈라지고(0~0.4) 덮개가 젖혀진다(0.4~1). SEAL은 기보 표 · 봉투 밖 연출이 쓰는 빛깔(청록 등)
 export const SEAL = { piece: ['#c8b48a', '#efe3c7', '#6b5132'], chart: ['#3f8f86', '#8fd3c6', '#1d4a45'], engraving: ['#8a4a6a', '#d690b4', '#4a2438'], golden: ['#c8902c', '#fff1b8', '#6b4410'] };
 export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}) {
   const gold = kind === 'golden';
@@ -467,25 +468,13 @@ export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}
     if (flap < 0.5) { rect(ctx, x + 1 + i, y + 1, 1, Math.max(0, yy - y - 1), paper); rect(ctx, x + 1 + i, yy, 1, 1, paperDk); }
     else { rect(ctx, x + 1 + i, yy, 1, Math.max(0, y + 1 - yy), paperHi); rect(ctx, x + 1 + i, yy, 1, 1, paperDk); }
   }
-  // 봉랍
-  const [col, hi, dk] = SEAL[kind] || SEAL.piece;
+  // 봉랍 자리에 안에 든 물건의 종류 딱지(kinds.js — 진열 카드의 딱지와 같은 것). 열리면 봉랍처럼 반으로 갈라져 떨어진다
   const sx = x + Math.floor(w / 2), sy = cy - 2;
   const crack = Math.min(1, open / 0.4);
   if (flap < 0.3) {
-    const R = 6;
-    for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
-      const d = i * i + j * j;
-      if (d > R * R) continue;
-      const half = i < 0 ? -1 : 1;
-      const off = crack > 0.3 ? Math.round(half * crack * 3) : 0;
-      const drop = crack > 0.3 ? Math.round(crack * crack * 4) : 0;
-      rect(ctx, sx + i + off, sy + j + drop, 1, 1, d > (R - 1) * (R - 1) ? dk : (i + j < -3 ? hi : col));
-    }
-    // 봉랍 무늬: 금빛은 별, 나머지는 작은 기물 머리
-    if (crack < 0.3) {
-      if (gold) { for (const [i, j] of [[0, -3], [-1, -1], [0, -1], [1, -1], [-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [-1, 1], [0, 1], [1, 1], [-2, 3], [2, 3], [-1, 2], [1, 2]]) rect(ctx, sx + i, sy + j, 1, 1, dk); }
-      else { rect(ctx, sx - 1, sy - 3, 2, 2, dk); rect(ctx, sx - 2, sy - 1, 4, 1, dk); rect(ctx, sx - 1, sy, 2, 2, dk); rect(ctx, sx - 3, sy + 2, 6, 1, dk); }
-    } else rect(ctx, sx, sy - 5, 1, 11, dk);
+    const split = crack > 0.3 ? Math.round(crack * 3) : 0;
+    const drop = crack > 0.3 ? Math.round(crack * crack * 4) : 0;
+    kindTab(ctx, PACK_KIND[kind] || 'piece', sx - TAB / 2, sy - TAB / 2, { split, drop });
   }
 }
 
@@ -680,11 +669,16 @@ function itemCardLayout(it, w, { run = null, price = true } = {}) {
   const f = flow(P);
   const out = { IW };
   // 종류(머릿말)는 값 왼쪽까지(길면 줄바꿈 — 영어 「Classic Fragment」), 값은 첫 줄 오른쪽
-  const priceW = price && it.price != null ? measure(`$${it.price}`, true) + 4 : 0;
+  // 머릿말 자리는 종류 딱지 뒤부터(딱지 바탕 끝과 글 사이 2 — 문양은 바탕 안쪽 한 칸이라 눈에는 3), 값과는 2 띄운다.
+  // 영어 판본 이름(「Obsidian」 54)과 두 자리 값이 한 줄에 들어야 진열 카드가 160을 넘지 않는다(test/layout.test.js)
+  const priceW = (price && it.price != null ? measure(`$${it.price}`, true) + 2 : 0) + TAB + TAB_GAP;
   // 판본 격언은 머릿말이 판본 이름(금빛, 「무지개 격언」 — 값 옆에 안 들어가면 「무지개」), 판본 효과는 효과 글 끝 줄(금빛)
   let kind = ITEM_KIND[it.kind];
   if (it.edition) { const ed = EDITION_BY_ID[it.edition].name; kind = measure(`${ed} ${kind}`) <= IW - priceW ? `${ed} ${kind}` : ed; }
   out.kindCol = it.edition ? PAL.goldDk : PAL.cardDim;
+  // 종류 딱지(kinds.js — 14 = 머릿말 줄 높이)는 첫 줄 왼쪽, 머릿말 글은 그 오른쪽
+  out.tabY = f.y;
+  out.kindX = P + TAB + TAB_GAP;
   out.kinds = wrap(kind, IW - priceW).map((l) => [l, f.line()]);
   f.gap(GAP_IN);
   const nx = artW(it) + 4, nw = IW - nx - (PAD_CARD > 4 ? 0 : 0);
@@ -725,7 +719,8 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
   const lay = itemCardLayout(it, w, { run, price });
   const P = PAD_CARD;
-  for (const [l, ly] of lay.kinds) text(ctx, l, x + P, y + ly, lay.kindCol);
+  kindTab(ctx, it.kind, x + P, y + lay.tabY);
+  for (const [l, ly] of lay.kinds) text(ctx, l, x + lay.kindX, y + ly, lay.kindCol);
   const showPrice = price && it.price != null && !sold;
   if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
   itemArt(ctx, it, x + P, y + lay.art, t, run);
