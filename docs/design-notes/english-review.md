@@ -94,7 +94,7 @@
 | 도박 | 수상한 물약 | Dubious Potion | **Shady Potion** | |
 | 명경기 | 폰 여덟의 행진 | March of Eight Pawns | **March of the Eight** | 시너지 March와 같은 뿌리, 짧게 |
 | 마스터 | 사냥꾼 두령 | Hunt Chief | (그대로) | Huntmaster를 재 봤는데 마스터 카드 초상 옆 칸에 굵게 안 들어가 관 선택 시험(253)을 넘었다 |
-| 수업 · 타이틀 | 잡으면 그것이 된다 | Take it, be it | **You Are What You Take** | 먹다 = eat. 「You are what you eat」을 비튼 말 |
+| 수업 제목 | 잡으면 그것이 된다 | Take it, be it | **You Are What You Take** | 먹다 = eat. 「You are what you eat」을 비튼 말 |
 
 지킨 이름: 체스 명경기의 실제 영어 이름(The Immortal Game · The Opera Game · The Game of the Century · The Evergreen Game), 오프닝(London · Sicilian · Queen's Gambit · Rook Endgame), 체스 말 이름(Passed Pawn · Rook Lift · Battery · Back Rank Dream · Queen's Gambit), 세력 여덟과 마스터 여덟.
 
