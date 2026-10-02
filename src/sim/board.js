@@ -175,26 +175,38 @@ export function attackers(board, sq, opts = {}) {
 const ORTHO_T = new Set(['R', 'Q', 'C', 'Z']);
 const DIAG_T = new Set(['B', 'Q', 'A', 'Z']);
 
-// t 종류의 적(특성 없음)이 from에 서면 attackers(…, to)가 from을 돌려줄 수 있나 — 판과 상관없는 기하 겉금.
-// attackers가 칸을 넣는 곳은 아래 표들뿐이라, 겉금 밖의 칸은 어떤 판에서도 답에 들지 않는다(판 짓기 defenderSquares가 쓴다).
-const SPANS = new Map();
-export function attackSpan(t, to) {
-  let rows = SPANS.get(t);
-  if (!rows) SPANS.set(t, (rows = new Array(64)));
-  let m = rows[to];
-  if (m) return m;
-  m = new Uint8Array(64);
-  const mark = (list) => { for (const s of list) m[s] = 1; };
-  const markRays = (set) => { for (const ray of set[to]) mark(ray); };
-  if (KNIGHTLIKE.has(t)) mark(KNIGHT[to]);
-  if (t === 'K') mark(KING[to]);
-  if (t === 'P') { mark(PAWN_UP[to]); mark(PAWN_SIDE[to]); }
-  if (ORTHO_T.has(t) || t === 'W' || t === 'O' || t === 'G') markRays(RAY_O);
-  if (DIAG_T.has(t) || t === 'G') markRays(RAY_D);
-  if (t === 'L') mark(CAMEL[to]);
-  if (t === 'S') mark(RING2[to]);
-  if (t === 'H') markRays(RAY_N);
-  rows[to] = m;
+// 빈칸 sq에 t 종류의 적(특성 없음 · 얼지 않음)을 새로 세우면 attackers(board, to, opts)에 sq가 드는가 — 그런 빈칸 전부를 한 번에.
+// 칸마다 세워 보고 노림 전체를 재던 것(판 짓기의 킹 수비 칸 찾기)과 같은 답을, to에서 뻗는 선을 한 번씩만 걸어 낸다(CHM-44).
+// 돌려주는 값: 64칸 표(1 = 그 칸에 세우면 노린다). 차지된 칸은 늘 0.
+export function guardSquares(board, t, to, opts = {}) {
+  const m = new Uint8Array(64);
+  const leap = (list) => { for (const s of list) if (!board[s]) m[s] = 1; };
+  // 미끄러지는 선: to에서 처음 만나는 기물 앞의 빈칸은 세우면 그 기물이 첫 기물이 된다
+  const slide = (set) => { for (const ray of set[to]) for (const s of ray) { if (board[s]) break; m[s] = 1; } };
+  if (KNIGHTLIKE.has(t)) leap(KNIGHT[to]);
+  if (t === 'K') leap(KING[to]);
+  if (t === 'P') { leap(PAWN_UP[to]); if (opts.pawnSides) leap(PAWN_SIDE[to]); }
+  if (ORTHO_T.has(t)) slide(RAY_O);
+  if (DIAG_T.has(t)) slide(RAY_D);
+  if (opts.fairy === false) return m;
+  if (t === 'L') leap(CAMEL[to]);
+  if (t === 'S') leap(RING2[to]);
+  if (t === 'H') slide(RAY_N);
+  if (t === 'W') for (const ray of RAY_O[to]) leap(ray);
+  // 메뚜기: 선의 첫 칸(받침)이 이미 차 있으면, 그 뒤 첫 기물 앞의 빈칸
+  if (t === 'G') for (const set of HOP_SETS) for (const ray of set[to]) {
+    if (!board[ray[0]]) continue;
+    for (let i = 1; i < ray.length; i++) { const s = ray[i]; if (board[s]) break; m[s] = 1; }
+  }
+  // 포: 선의 첫 기물(받침) 너머, 다음 기물 앞의 빈칸
+  if (t === 'O') for (const ray of RAY_O[to]) {
+    let screen = false;
+    for (const s of ray) {
+      if (!screen) { if (board[s]) screen = true; continue; }
+      if (board[s]) break;
+      m[s] = 1;
+    }
+  }
   return m;
 }
 

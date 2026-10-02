@@ -1,6 +1,6 @@
 // 대국판 짓기: 적 수 · 킹 수비 · 적의 무게. 대국 시작(battle.js)과 판을 다시 채우는 규칙(chain.js)이 같이 쓴다.
 import { int, next } from './rng.js';
-import { at, attackers, attackSpan, emptyBoard, fileOf, rankOf } from './board.js';
+import { at, attackers, guardSquares, emptyBoard, fileOf, rankOf } from './board.js';
 import { TRAITS, traitChance } from '../data/traits.js';
 
 // 판 생성 수치(하네스로 맞춤, step 2a):
@@ -69,16 +69,10 @@ export function randomEmpty(rng, board, minRank, exclude = []) {
 // 킹 수비: 킹마다 둘 이상이 지키고 그중 하나는 폰(킹 한 줄 위 대각).
 // 폰 모습은 위로만 먹으니 그 폰을 먹은 자리에서는 킹에 닿지 못한다 — 수비수 하나만 치워 곧바로 외통이 나는 판을 막는다.
 function defenderSquares(board, t, ksq, opts, reserve = []) {
+  // 칸마다 세워 보고 노림을 재던 것과 같은 답(guardSquares, CHM-44)
+  const hit = guardSquares(board, t, ksq, opts);
   const out = [];
-  // 겉금 밖의 칸은 놓아 봐도 킹을 노릴 수 없다(attackSpan) — 48칸 전부 노림을 재던 것이 판 짓기 시간의 대부분이었다(CHM-44)
-  const span = attackSpan(t, ksq);
-  for (let sq = 16; sq < 64; sq++) {
-    if (!span[sq] || board[sq] || reserve.includes(sq)) continue;
-    board[sq] = { t, id: 0, born: -1 };
-    const ok = attackers(board, ksq, opts).includes(sq);
-    board[sq] = null;
-    if (ok) out.push(sq);
-  }
+  for (let sq = 16; sq < 64; sq++) if (hit[sq] && !reserve.includes(sq)) out.push(sq);
   return out;
 }
 
