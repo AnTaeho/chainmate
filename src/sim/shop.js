@@ -28,11 +28,11 @@ export const SHOP = {
   // 격언 등급(무게). 전설은 상점에 나오지 않는다(step 2b)
   rarityWeights: [['common', 70], ['uncommon', 25], ['rare', 5]],
   // 낱개 기물 값과 기물 꾸러미의 무게
-  piecePrice: { P: 2, N: 3, B: 3, R: 4, Q: 6, Z: 9, L: 4, O: 5, S: 5, W: 6, T: 6, E: 5, V: 5, M: 6, D: 5 },
+  piecePrice: { P: 2, N: 3, B: 3, R: 4, Q: 6, Z: 9, L: 4, O: 5, S: 5, W: 6, T: 4, E: 4, V: 4, M: 4, D: 4 },
   pieceWeights: [['P', 20], ['N', 25], ['B', 25], ['R', 20], ['Q', 10]],
   // 이형(깊이 A): 기물 한 칸이 이형일 확률 = fairyBase + fairyStep × (관 − 1), 최대 fairyMax. 아마존은 드물게
   fairyBase: 0.15, fairyStep: 0.05, fairyMax: 0.5,
-  fairyWeights: [['Z', 1], ['L', 3], ['O', 3], ['S', 3], ['W', 2], ['T', 2], ['E', 3], ['V', 3], ['M', 3], ['D', 2]],
+  fairyWeights: [['Z', 1], ['L', 3], ['O', 3], ['S', 3], ['W', 2], ['T', 3], ['E', 3], ['V', 2], ['M', 2], ['D', 2]],
   engravingWeights: { common: 3, uncommon: 2 },
   packKinds: ['piece', 'chart', 'engraving'],
   // 격언 판본(HOOKS 「드문 것들의 사다리」 귀함 층, 칸당 ~5%): 진열에 나온 격언에 이 확률로 판본이 붙는다.

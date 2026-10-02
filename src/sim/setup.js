@@ -15,8 +15,8 @@ export const reinforceCount = () => 2;
 // 관이 오를수록 무거운 적. 초안 — step 2에서 시뮬로 맞춘다.
 // 깊이 A: 4관부터 이형 적이 섞인다(관마다 무게 +FAIRY_ENEMY.step, 겹친 기물은 반). 먹으면 그 이형이 된다.
 export const FAIRY_ENEMY = { from: 4, step: 0.12 };
-// CHM-55: 지키는 칸이 넓은 꺾쇠 · 모습 따라 지키는 광대 · 먹으면 사슬이 끝나는 화약병은 반
-export const FAIRY_ENEMY_W = { Z: 0.25, L: 1, O: 1, S: 1, W: 0.5, T: 0.5, E: 1, V: 1, M: 0.5, D: 0.5 };
+// CHM-55: 적으로 나온 새 기물은 먹으면 센 모습을 입혀 준다(꺾쇠 두 번 꺾기 · 물수제비 두 번 튕기기 · 광대 붙은 칸) — 화약병만 입으면 사슬이 끝나 낮게
+export const FAIRY_ENEMY_W = { Z: 0.25, L: 1, O: 1, S: 1, W: 0.5, T: 1, E: 1.5, V: 1, M: 1, D: 0.25 };
 // 세력(docs/design-notes/factions.md): 대국 규칙 깃발로 적 구성을 비튼다(세력 id는 모른다).
 //   rules.mix     { 종류: 곱 } 관별 무게에 곱한다(주력 적). fairy 키는 이형 전부에 곱한다
 //   rules.unique  { 이형: 무게 } 고유 적 — 1관부터 UNIQUE.base × (1 + UNIQUE.step × (관 − 1)) × 무게로 섞인다(4관부터의 이형 무게에 더한다)
@@ -52,9 +52,9 @@ export function rollFrom(rng, w) {
   return w[w.length - 1][0];
 }
 // rules: 대국 규칙(세력 깃발). 없으면 관별 기본 무게
-// guard: 킹을 지킬 적을 굴린다 — 광대는 지킬 모습을 몰라 킹 수비수로 서지 않는다(CHM-55)
+// guard: 킹을 지킬 적을 굴린다(옛 호출과 맞추려고 남겼다 — 광대도 붙은 칸을 지켜 수비수로 선다)
 export function rollType(rng, ante, rules = null, guard = false) {
-  const w = guard ? enemyWeights(ante, rules).filter(([t]) => t !== 'M') : enemyWeights(ante, rules);
+  const w = enemyWeights(ante, rules);
   let total = 0;
   for (const [, x] of w) total += x;
   let r = next(rng) * total;

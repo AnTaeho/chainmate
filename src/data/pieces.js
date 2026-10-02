@@ -17,11 +17,11 @@ export const PIECES = {
   O: { id: 'O', value: 50, name: '포', chart: 'R', families: ['line'], fairy: true },
   S: { id: 'S', value: 40, name: '궁수', chart: 'P', families: ['hunt', 'march'], fairy: true },
   W: { id: 'W', value: 60, name: '유령', chart: 'R', families: ['line', 'change'], fairy: true },
-  T: { id: 'T', value: 60, name: '꺾쇠', chart: 'R', families: ['line'], fairy: true },
-  E: { id: 'E', value: 40, name: '물수제비', chart: 'B', families: ['diag'], fairy: true },
-  V: { id: 'V', value: 40, name: '까마귀', chart: 'B', families: ['diag', 'leap'], fairy: true },
-  M: { id: 'M', value: 50, name: '광대', chart: 'N', families: ['change'], fairy: true },
-  D: { id: 'D', value: 40, name: '화약병', chart: 'P', families: ['hunt'], fairy: true },
+  T: { id: 'T', value: 70, name: '꺾쇠', chart: 'R', families: ['line'], fairy: true },
+  E: { id: 'E', value: 50, name: '물수제비', chart: 'B', families: ['diag'], fairy: true },
+  V: { id: 'V', value: 50, name: '까마귀', chart: 'B', families: ['diag', 'leap'], fairy: true },
+  M: { id: 'M', value: 60, name: '광대', chart: 'N', families: ['change'], fairy: true },
+  D: { id: 'D', value: 50, name: '화약병', chart: 'P', families: ['hunt'], fairy: true },
   // 판 위 사물(깊이 F): 벽은 먹을 수 없고 아무도 지키지 않으며 미끄러짐을 막는다(포의 받침은 된다).
   // 보석은 먹을 수 있지만 모습이 바뀌지 않고 상금 +2, 아무도 지키지 않는다.
   X: { id: 'X', value: 0, name: '벽', chart: null, families: [], thing: true },

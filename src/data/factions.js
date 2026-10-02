@@ -25,7 +25,7 @@ function faction(id, f) {
 }
 
 // 이형 무게(setup.js FAIRY_ENEMY_W)와 같은 비. 용병단의 고유 적은 이형 아무거나
-const ANY_FAIRY = { Z: 0.08, L: 0.3, O: 0.3, S: 0.3, W: 0.15, T: 0.15, E: 0.3, V: 0.3, M: 0.15, D: 0.15 };
+const ANY_FAIRY = { Z: 0.08, L: 0.3, O: 0.3, S: 0.3, W: 0.15, T: 0.3, E: 0.45, V: 0.3, M: 0.3, D: 0.08 };
 
 faction('peasants', {
   name: '농민군', crest: 'sickle', hue: '#8fae4a',
@@ -41,25 +41,25 @@ faction('cavalry', {
 });
 faction('abbey', {
   name: '수도원', crest: 'lantern', hue: '#d8c070',
-  mix: { P: 0.8, N: 0.6, B: 3.5, R: 0.6, Q: 0.8 }, unique: { E: 1 },
+  mix: { P: 0.8, N: 0.6, B: 3.5, R: 0.6, Q: 0.8 }, unique: { E: 1.5 },
   habit: { text: '돌기둥 셋~다섯이 늘 선다', apply(r) { r.walls = [3, 5]; } },
   boss: 'silence',
 });
 faction('fortress', {
   name: '성채', crest: 'tower', hue: '#9aa4b0',
-  mix: { P: 0.8, N: 0.6, B: 0.6, R: 1.8, Q: 0.5 }, unique: { T: 0.3, O: 1 },
+  mix: { P: 0.8, N: 0.6, B: 0.6, R: 1.8, Q: 0.5 }, unique: { T: 0.5, O: 1 },
   habit: { text: '성벽 한 줄이 판을 가른다 · 문은 하나', apply(r) { r.wallRow = { ranks: [3] }; } },
   boss: 'iron_wall',
 });
 faction('hunters', {
   name: '숲 사냥꾼', crest: 'bow', hue: '#4f9a5a',
-  mix: { P: 0.5, N: 1.2, B: 0.6, R: 0.5, Q: 0.5 }, unique: { S: 6, D: 2.5 },
+  mix: { P: 0.5, N: 1.2, B: 0.6, R: 0.5, Q: 0.5 }, unique: { S: 6, D: 1 },
   habit: { text: '위 두 줄은 숲이다 · 닿으면 걷힌다', apply(r) { r.fog = Math.max(r.fog || 0, 2); } },
   boss: 'fog',
 });
 faction('heralds', {
   name: '전령단', crest: 'horn', hue: '#5a8ec8',
-  mix: { P: 0.4, N: 0.8, B: 1, R: 0.4, Q: 0.3 }, unique: { V: 6 },
+  mix: { P: 0.4, N: 0.8, B: 1, R: 0.4, Q: 0.3 }, unique: { E: 4, V: 2 },
   habit: { text: '증원 +1 · 두 수 앞까지 보인다', apply(r) { r.reinforceBonus = (r.reinforceBonus || 0) + 1; r.lookahead = Math.max(r.lookahead || 1, 2); } },
   boss: 'hourglass',
 });
