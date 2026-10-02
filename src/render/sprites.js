@@ -97,7 +97,7 @@ export function registerSprites(masks) {
   }
 }
 registerSprites(SPR);
-registerSprites(FAIRY_SPR); // 이형 아홉(깊이 A)
+registerSprites(FAIRY_SPR); // 이형 열(CHM-55: 낙타 · 포 · 궁수 · 유령 · 아마존 + 꺾쇠 · 물수제비 · 까마귀 · 광대 · 화약병)
 registerSprites(SPR_HI);    // 두 배 도트(CHM-39)
 // 16×22 화소 목록(타이틀 거대 실루엣 · 홈 화면 아이콘은 늘 이것)
 export const spritePixels = (type) => SPRPIX[type];
@@ -113,8 +113,11 @@ export function hiFor(ctx, s = 1) {
   return a * Math.abs(s) >= 2 - 1e-6;
 }
 
-// 머리 꼭대기(보석 자리): 가장 위 몸 줄의 가운데
-function crownOf(rows) {
+// 머리 꼭대기(보석 자리): 가장 위 몸 줄의 가운데.
+// 꼭대기가 머리가 아닌 기물은 자리를 따로 준다(1배 · 두 배): 까마귀 = 머리(꼭대기는 든 날개) · 광대 = 고깔 띠 가운데(두 갈래 사이 빈 곳) · 화약병 = 마개(꼭대기는 불꽃)
+const CROWN = { V: [{ x: 12, y: 2 }, { x: 22, y: 4 }], M: [{ x: 7, y: 3 }, { x: 15, y: 8 }], D: [{ x: 7, y: 5 }, { x: 15, y: 10 }] };
+function crownOf(rows, type) {
+  if (CROWN[type]) return CROWN[type][rows.length === SH ? 0 : 1];
   for (let y = 0; y < rows.length; y++) {
     const xs = [...rows[y]].map((ch, x) => (ch !== '.' && ch !== 'l' ? x : -1)).filter((x) => x >= 0);
     if (xs.length) return { x: Math.floor((xs[0] + xs[xs.length - 1]) / 2), y };
@@ -179,7 +182,7 @@ export function spriteCanvas(type, side, eng = null, tier = 0, hi = LOOK.n >= 2)
       if (k === 1) for (const [i, j] of PLUME) ctx.fillRect(i, j, 1, 1);
       else pat(PLUME_HI, 7, 0, { '#': plume });
     } else {
-      const { x, y } = crownOf(k === 2 ? SPR_HI[type] : SPR[type]);
+      const { x, y } = crownOf(k === 2 ? SPR_HI[type] : SPR[type], type);
       const gem = tier === 3 ? ['#efbd55', '#fff1b8', '#9c6f24'] : ['#9eabb6', '#ffffff', '#6f7f8a'];
       if (k === 1) { ctx.fillStyle = gem[0]; ctx.fillRect(x, y, 2, 1); ctx.fillStyle = gem[1]; ctx.fillRect(x, y, 1, 1); }
       else {
@@ -239,6 +242,7 @@ export function soulOrb(col) {
 // dotted: 윤곽도 한 칸 걸러, 속은 비운다(두 수 앞 증원)
 // 두 배: 36×48 캔버스, 윤곽은 몸 바로 밖 반 도트 한 줄(바깥 반 도트는 비운다), 그물 · 점선 간격은 1배와 같은 도트 간격
 export function outlineCanvas(type, col, dotted = false, hi = LOOK.n >= 2) {
+  if (!SPR[type]) type = 'P'; // 그림이 없는 id(뺀 기물이 data에 남은 동안)는 폰 윤곽 — spriteCanvas와 같다
   const k = hi && SPR_HI[type] ? 2 : 1;
   const key = `o:${type}:${col}:${dotted ? 1 : 0}:${k}`;
   let c = CACHE.get(key);

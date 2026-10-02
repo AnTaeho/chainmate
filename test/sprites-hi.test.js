@@ -106,3 +106,21 @@ test('조각은 두 배에서도 16×22 칸 안의 자리', () => {
     for (const c of chips) assert.ok(c.x >= 0 && c.x < 16 && c.y >= 0 && c.y < 22 && Number.isInteger(c.x) && typeof c.col === 'string');
   }
 });
+
+// 특수 기물 다시 짜기(CHM-55, docs/design-notes/fairies.md): 뺀 넷(대주교 A · 재상 C · 야간기사 H · 메뚜기 G)은 그림이 없고,
+// 새 다섯(꺾쇠 T · 물수제비 E · 까마귀 V · 광대 M · 화약병 D)은 1배 · 두 배 둘 다 있다
+const FAIRY_ART = ['L', 'O', 'S', 'W', 'Z', 'T', 'E', 'V', 'M', 'D'];
+test('특수 기물 그림: 남는 다섯 + 새 다섯, 뺀 넷은 없다', async () => {
+  const { FAIRY_SPR } = await import('../src/render/fairy-sprites.js');
+  const fairy = Object.keys(FAIRY_SPR).filter((k) => k !== 'X' && k !== 'J'); // 벽 · 보석은 판 위 사물
+  assert.deepEqual(fairy.sort(), [...FAIRY_ART].sort());
+  for (const t of FAIRY_ART) { assert.ok(S.SPR[t], `1배 ${t}`); assert.ok(HI[t], `두 배 ${t}`); }
+  for (const t of ['A', 'C', 'H', 'G']) { assert.ok(!S.SPR[t], `1배 ${t}`); assert.ok(!HI[t], `두 배 ${t}`); }
+});
+test('data의 기물은 모두 그림이 있다(뺀 넷은 data에서 빠지기 전까지 건너뛴다)', async () => {
+  const { PIECES } = await import('../src/data/pieces.js');
+  for (const t of Object.keys(PIECES)) {
+    if (['A', 'C', 'H', 'G'].includes(t)) continue;
+    assert.ok(S.SPR[t] && HI[t], t);
+  }
+});
