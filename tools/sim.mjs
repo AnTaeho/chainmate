@@ -13,6 +13,7 @@ import { createBattle, apply, DEFAULT_BAG } from '../src/sim/battle.js';
 import { decideBattle } from './bot.mjs';
 import { lineCommands } from '../src/sim/solver.js';
 import '../src/data/josekis.js'; // --mod joseki:… 조정자를 등록한다
+import { writeFileSync } from 'node:fs';
 
 function parseArgs(argv) {
   const a = { battles: 300, ante: [1, 8], seed: 1, nomate: false, soul: null, mods: [], sac: true };
@@ -24,6 +25,7 @@ function parseArgs(argv) {
     else if (k === '--nosac') a.sac = false;
     else if (k === '--soul') a.soul = argv[++i];
     else if (k === '--mod') a.mods.push({ id: argv[++i] });
+    else if (k === '--dump') a.dump = argv[++i]; // 대국별 결과(수마다 기록 · 점수 · 끝난 이유)를 JSON으로 — 결정성 비교(CHM-44)
     else if (k === '--ante') {
       const v = argv[++i];
       const m = v.match(/^(\d+)(?:\.\.(\d+))?$/);
@@ -43,7 +45,7 @@ function pct(sorted, p) {
 function runAnte(ante, n, seed, nomate, soul = null, mods = [], sacrifice = true) {
   const s = {
     moves: 0, moveScore: 0, totals: [], totalsNoMate: [], captures: 0, cuts: 0, forcedCaps: 0, forcedMoves: 0,
-    mates: 0, mates1: 0, stuck: 0, discards: 0, decisions: 0, ms: 0, maxMs: 0, best: 0,
+    mates: 0, mates1: 0, stuck: 0, discards: 0, decisions: 0, ms: 0, maxMs: 0, best: 0, dump: [],
   };
   for (let i = 0; i < n; i++) {
     const bag = soul ? DEFAULT_BAG.map((t) => ({ t, soul })) : undefined;
@@ -65,6 +67,7 @@ function runAnte(ante, n, seed, nomate, soul = null, mods = [], sacrifice = true
       s.best = Math.max(s.best, h.score);
     }
     s.discards += b.discardsUsed;
+    if (DUMP) s.dump.push({ ante, i, score: b.score, result: b.result, discardsUsed: b.discardsUsed, history: b.history });
     s.totals.push(b.score);
     if (b.result && b.result.reason === 'mate') { s.mates++; if (b.history.length === 1) s.mates1++; }
     else s.totalsNoMate.push(b.score);
@@ -75,14 +78,17 @@ function runAnte(ante, n, seed, nomate, soul = null, mods = [], sacrifice = true
 }
 
 const args = parseArgs(process.argv.slice(2));
+const DUMP = !!args.dump;
 const f = (x, d = 0) => (Number.isFinite(x) ? x.toFixed(d) : '-');
 const pc = (x) => (100 * x).toFixed(1) + '%';
 const cols = ['관', '점수/수', '총점', 'p10', 'p50', 'p90', '최고한수', '사슬', '끊김', '응수/먹기', '응수수', '외통', '첫수외통', '막힘', '희생', 'ms/결정', 'ms최대'];
 const rows = [];
+const dumped = [];
 const t0 = performance.now();
 for (let ante = args.ante[0]; ante <= args.ante[1]; ante++) {
   const s = runAnte(ante, args.battles, args.seed, args.nomate, args.soul, args.mods, args.sac);
   const n = args.battles;
+  dumped.push(...s.dump);
   rows.push([
     String(ante), f(s.moveScore / s.moves, 1), f(s.totals.reduce((a, x) => a + x, 0) / n, 0),
     f(pct(s.totalsNoMate, 0.1)), f(pct(s.totalsNoMate, 0.5)), f(pct(s.totalsNoMate, 0.9)), String(s.best),
@@ -98,3 +104,4 @@ console.log(`대국 ${args.battles}판 × 관 ${args.ante[0]}..${args.ante[1]}, 
 console.log(line(cols));
 for (const r of rows) console.log(line(r));
 console.log(`p10/p50/p90 = 외통 없이 끝난 대국의 총점. 끊김·응수수 = 수 기준, 응수/먹기 = 먹기 기준, 외통·첫수외통·막힘 = 대국 기준. 전체 ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+if (args.dump) writeFileSync(args.dump, JSON.stringify(dumped) + '\n');
