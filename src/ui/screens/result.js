@@ -60,11 +60,11 @@ export class ResultScreen {
     // 지나온 길
     let pos = r.drop.sq, form = r.drop.piece;
     const path = [pos];
-    for (let i = 0; i < Math.min(done, n); i++) { pos = r.caps[i].to; form = r.caps[i].after; path.push(pos); }
+    for (let i = 0; i < Math.min(done, n); i++) { pos = r.caps[i].at ?? r.caps[i].to; form = r.caps[i].after; path.push(pos); }
     for (let i = 0; i + 1 < path.length; i++) { const a = this.xy(path[i]), b = this.xy(path[i + 1]); line(ctx, a.x + 8, a.y + 8, b.x + 8, b.y + 8, PAL.gold); }
     let x = this.xy(pos).x, y = this.xy(pos).y;
     if (cur) {
-      const a = this.xy(cur.from), b = this.xy(cur.to);
+      const a = this.xy(cur.from), b = this.xy(cur.at ?? cur.to); // 까마귀는 넘은 칸 너머에 앉는다
       x = lerp(a.x, b.x, p); y = lerp(a.y, b.y, p);
       form = p >= 1 ? cur.after : cur.form;
     }

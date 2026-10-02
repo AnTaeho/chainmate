@@ -4,7 +4,7 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine } from '../../render/gfx.js';
+import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, artOf } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, hiFor, SW, SH, TONE, tierOf } from '../../render/sprites.js';
 import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard } from '../../sim/battle.js';
@@ -165,8 +165,8 @@ function moveDur(form, from, to, stay = false) {
 const isLine = (a, b) => { const df = (b & 7) - (a & 7), dr = (b >> 3) - (a >> 3); return df === 0 || dr === 0 || Math.abs(df) === Math.abs(dr); };
 export function moverXY(form, from, to, p) {
   const a = sqXY(from), c = sqXY(to);
-  if (!LEAPERS.has(form) || (isLine(from, to) && form !== 'G')) return { x: lerp(a.x, c.x, p), y: lerp(a.y, c.y, p) };
-  // 나이트 L자가 아닌 도약(낙타 · 야간기사 · 메뚜기)은 한 번의 높은 포물선
+  if (!LEAPERS.has(form) || (isLine(from, to) && form !== 'V')) return { x: lerp(a.x, c.x, p), y: lerp(a.y, c.y, p) };
+  // 나이트 L자가 아닌 도약(낙타 · 까마귀)은 한 번의 높은 포물선
   const ddf = Math.abs((to & 7) - (from & 7)), ddr = Math.abs((to >> 3) - (from >> 3));
   if (!((ddf === 1 && ddr === 2) || (ddf === 2 && ddr === 1))) { const q = ease.inOut(p); return { x: lerp(a.x, c.x, q), y: lerp(a.y, c.y, q) - Math.sin(p * Math.PI) * 14, arc: Math.sin(p * Math.PI) * 14 }; }
   const df = (to & 7) - (from & 7);
@@ -293,7 +293,7 @@ export class BattleScreen {
       v.chain = {
         sq: c.sq, form: c.form, value: c.value, mult: c.mult,
         steps: [...c.captures.map((x) => x.form), c.form],
-        path: [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.to)],
+        path: [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.at ?? x.to)],
         shots: c.captures.filter((x) => x.stay).map((x) => [x.from, x.to]),
         forced: c.forced ? c.forced.slice() : null, awaiting: c.awaiting ? chainRedrops(b) : null,
         cut: false, eng: c.engraving ? c.engraving.id : null, soul: c.soul ? c.soul.id.replace('soul:', '') : null, awake: !!(c.soul && c.soul.data && c.soul.data.awake), absorbed: c.absorbed ? c.absorbed.slice() : null,
@@ -427,7 +427,7 @@ export class BattleScreen {
     const r = this.rec;
     if (!r) return;
     for (const e of events) {
-      if (e.type === 'capture') r.caps.push({ from: e.from, to: e.to, piece: e.piece, form: e.form, after: e.form });
+      if (e.type === 'capture') r.caps.push({ from: e.from, to: e.to, at: e.at ?? e.to, piece: e.piece, form: e.form, after: e.form });
       else if ((e.type === 'transform' || e.type === 'promote') && r.caps.length) r.caps[r.caps.length - 1].after = e.type === 'promote' ? 'Q' : e.to;
       else if (e.type === 'refill' || e.type === 'redrop') r.broken = true;
       else if (e.type === 'end') {
@@ -481,12 +481,13 @@ export class BattleScreen {
           tick: (p) => { v.dropIn.p = p; },
           done: () => { v.dropIn = null; },
         }); break;
-        case 'capture': add(moveDur(v.chain ? v.chain.form : 'N', e.from, e.to, e.stay), {
+        // 까마귀 모습은 먹은 칸(e.to) 너머에 앉는다(e.at): 움직임은 앉는 칸까지, 깨지는 그림은 먹은 칸에
+        case 'capture': add(moveDur(v.chain ? v.chain.form : 'N', e.from, e.at ?? e.to, e.stay), {
           begin: () => {
             const c = v.chain;
             if (e.stay) { v.arrow = { from: e.from, to: e.to, p: 0 }; c.forced = null; return; }
             v.board[e.from] = null;
-            v.mover = { from: e.from, to: e.to, form: c.form, p: 0 };
+            v.mover = { from: e.from, to: e.at ?? e.to, form: c.form, p: 0 };
             c.forced = null;
           },
           tick: (p) => { if (v.arrow) v.arrow.p = p; else v.mover.p = LEAPERS.has(v.mover.form) ? p : ease.out(p); },
@@ -495,7 +496,7 @@ export class BattleScreen {
             const victim = v.board[e.to];
             // 궁수 모습: 제자리에서 쏜다(판 위 기물은 그대로, 먹힌 칸만 빈다)
             if (e.stay) { v.board[e.to] = null; v.arrow = null; (c.shots || (c.shots = [])).push([e.from, e.to]); c.steps.push(c.form); }
-            else { v.board[e.to] = { t: c.form, mine: true }; v.mover = null; c.sq = e.to; c.path.push(e.to); c.steps.push(c.form); }
+            else { const at = e.at ?? e.to; v.board[e.to] = null; v.board[at] = { t: c.form, mine: true }; v.mover = null; c.sq = at; c.path.push(at); c.steps.push(c.form); }
             c.value += e.value; c.mult += 1;
             this.shatter(e.to, victim ? victim.t : e.piece, victim && victim.gold ? 'g' : 'b');
             this.flash(e.to, PAL.white);
@@ -546,7 +547,7 @@ export class BattleScreen {
         case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('지키는 적을 피했다', PAL.silver); } }); break;
         case 'pierce': add(0.12, { begin: () => {
           const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b');
-          const bomb = e.src === 'bomb', col = bomb ? PAL.red : e.src && e.src.includes('martyr') ? PAL.red : FAMILY_BY_ID.line.col;
+          const bomb = e.src === 'bomb' || e.src === 'powder', col = bomb ? PAL.red : e.src && e.src.includes('martyr') ? PAL.red : FAMILY_BY_ID.line.col;
           this.flash(e.sq, col); this.word(bomb ? '폭발' : e.src && e.src.includes('martyr') ? '순교' : '꿰뚫었다', col); this.snd(bomb ? 'cut' : 'capture', 2); if (bomb) this.shake(2, 0.12);
         } }); break;
         case 'mirrored': add(0.1, { begin: () => { this.sparkle(e.sq, '#9fd3e0', 8); this.word('허수아비', '#9fd3e0'); } }); break;
@@ -717,7 +718,7 @@ export class BattleScreen {
   }
   shatter(sq, type, side) {
     const { x, y } = sqXY(sq);
-    const chips = spriteChips(type, side);
+    const chips = spriteChips(artOf(type), side);
     const n = 14;
     let seed = sq * 97 + chips.length;
     const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
@@ -768,7 +769,7 @@ export class BattleScreen {
       const p = v.hand[i];
       if (!p) continue;
       const r = this.handRect(i, n);
-      const chips = spriteChips(p.t, 'w');
+      const chips = spriteChips(artOf(p.t), 'w');
       for (let k = 0; k < 18; k++) {
         const card = k < 8, c = card ? null : chips[Math.floor(rnd() * chips.length)];
         const x = card ? r.x + 2 + rnd() * (r.w - 4) : r.x + Math.floor((r.w - 16) / 2) + c.x;
@@ -1137,7 +1138,7 @@ export class BattleScreen {
     for (const [sq, g] of ghosts) {
       const { x, y } = sqXY(sq);
       dots(ctx, x, y, S, S, g.k ? PAL.dimDk : PAL.shadow, 2);
-      ctx.drawImage(outlineCanvas(g.t, TONE.b.o, g.k > 0, hiFor(ctx)), x + 5, y + 5, SW + 2, SH + 2);
+      ctx.drawImage(outlineCanvas(artOf(g.t), TONE.b.o, g.k > 0, hiFor(ctx)), x + 5, y + 5, SW + 2, SH + 2);
       const bob = Math.floor(time * 3 + sq * 0.37) % 2;
       ctx.globalAlpha = g.k ? 0.5 : 1;
       dropMark(ctx, x + 12, y + 1 + bob, TONE.b.o);
@@ -1548,7 +1549,7 @@ export class BattleScreen {
       const cw = big ? 32 : 16, chh = big ? 44 : 22, cx0 = LX + LW - 6 - cw, cy0 = cy + Math.floor((ch - chh) / 2);
       if (c && c.cut) { ctx.globalAlpha = 0.35; rect(ctx, cx0 - 2, cy + 2, cw + 4, ch - 4, PAL.red); ctx.globalAlpha = 1; }
       ctx.globalAlpha = a;
-      ctx.drawImage(spriteCanvas(cur, 'w', eng, tierAt(cur), hiFor(ctx, cw / SW)), cx0, cy0, cw, chh);
+      ctx.drawImage(spriteCanvas(artOf(cur), 'w', eng, tierAt(cur), hiFor(ctx, cw / SW)), cx0, cy0, cw, chh);
       ctx.globalAlpha = 1;
     }
     closeBox();
@@ -1577,7 +1578,7 @@ export class BattleScreen {
     const hi = hiFor(ctx, 0.5);
     row.xs.forEach((x, i) => {
       ctx.globalAlpha = 0.55;
-      ctx.drawImage(spriteCanvas(list[i], 'w', null, 0, hi), x, ty - 1, SW / 2, SH / 2);
+      ctx.drawImage(spriteCanvas(artOf(list[i]), 'w', null, 0, hi), x, ty - 1, SW / 2, SH / 2);
       ctx.globalAlpha = 1;
     });
     if (row.more && row.fits) drawMore(ctx, row.more, row.moreX, ty + 4, PAL.dim, digits);

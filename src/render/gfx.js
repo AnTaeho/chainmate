@@ -1,7 +1,8 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL } from './palette.js';
 import { textImage, textWidth } from './text.js';
-import { spriteCanvas, tierSparkle, soulOrb, hiFor, SW, SH } from './sprites.js';
+import { spriteCanvas, tierSparkle, soulOrb, hiFor, SW, SH, spritePixels } from './sprites.js';
+import { chartForm } from '../data/pieces.js';
 import { L } from '../ui/lang.js';
 import { LOG, logText, logFrame } from './layoutlog.js';
 import { SOUL_BY_ID } from '../data/souls.js';
@@ -105,8 +106,11 @@ export const measure = (s, bold = false) => textWidth(s, bold);
 // eng: 각인 id(몸 톤) · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게(없으면 멈춘 모습)
 // 두 배 도트(CHM-39): 그리는 곳의 배율이 2 이상이면(hiFor) 32×44 그림을 16×22 자리에 반 도트로. 자리 · 크기는 늘 16×22
 // hi: 그림 크기를 정해 줄 때. 없으면 그리는 곳의 실제 배율로
+// 그림이 아직 없는 기물(새 특수 기물, CHM-55)은 바탕 기물(기보 모습)의 그림을 빌려 그린다 — 그림이 들어오면 저절로 제 그림으로
+export const artOf = (t) => (spritePixels(t) ? t : chartForm(t) || 'P');
 export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null, awake = false, hi: pick = null } = {}) {
   if (alpha <= 0) return;
+  type = artOf(type);
   const hi = pick ?? hiFor(ctx, sy);
   const c = spriteCanvas(type, side, eng, tier, hi);
   const px = R(x), py = R(y);
