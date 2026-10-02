@@ -58,9 +58,9 @@ const CLIP_OK = [
 // 언어 · 종류 · 상자 이름 · 원문이 모두 맞을 때만
 // 2026-10-02 처음 켰을 때 찾은 것(CHM-45). 줄마다 [언어, 종류, 상자 이름(없으면 ''), 원문 …]
 const CLIP_HELD = [
-  // 도감 격자 칸 이름(폭 59 · 기물 56 · 74)
-  ['ko', 'cut', '도감', ['세기의 대국', '모습 모으기', '폰 여덟의 행진', '상록의 대국', '불멸의 대국', '메이트 사냥꾼', '오페라 대국', '빠른 갈아입기']],
-  ['en', 'cut', '도감', ['Chancellor', 'Cavalry Charge', 'The Game of the Century', 'Close Call', 'March of Eight', 'The Evergreen Game', 'First Move', 'Nightrider', 'The Immortal Game', 'Long Road', 'Low Stance', 'Wild Horse', 'Mate Hunter', 'Mercenaries', 'The Opera Game', 'Pawn March', 'Queen Hunt', "Queen's Gambit", 'Quick Change', 'Foresight', 'Welcome Party']],
+  // 도감 격자 칸 이름(폭 59 · 기물 56 · 74): smoke가 가리키는 칸이 판마다 달라 잘리는 이름도 달라진다 — 격자 전체를 보류(CHM-46)
+  ['ko', 'cut', '도감', '*'],
+  ['en', 'cut', '도감', '*'],
   // 판 틀 왼쪽 칸 머리 칸(폭 96): 마스터전 제목 · 꾸러미 이름
   ['ko', 'cut', '머리 칸', ['마스터 사냥꾼 두령']],
   ['en', 'cut', '머리 칸', ['Master Cavalry Captain', 'Master Chief Herald', 'Master Free Captain', 'Master Grandmaster', 'Master Hunt Chief', 'Master Village Elder', 'Engraving Bundle']],
@@ -74,7 +74,7 @@ const CLIP_HELD = [
   ['en', 'char', '', ['1,000,000,000,000', 'Thirteen-year-old']],
 ];
 // 상자 이름은 앞머리로 맞춘다(「도감 opera」 ← 「도감」, 「수업 묶음 basic」 ← 「수업 묶음 」). 상자 없이 잰 글자 끊김은 ''만
-const clipHeld = (c) => CLIP_HELD.find(([lang, kind, box, srcs]) => lang === LANG && kind === c.kind && (box ? c.box === box || c.box.startsWith(`${box} `) || (box.endsWith(' ') && c.box.startsWith(box)) : !c.box) && srcs.includes(c.src)) || null;
+const clipHeld = (c) => CLIP_HELD.find(([lang, kind, box, srcs]) => lang === LANG && kind === c.kind && (box ? c.box === box || c.box.startsWith(`${box} `) || (box.endsWith(' ') && c.box.startsWith(box)) : !c.box) && (srcs === '*' || srcs.includes(c.src))) || null;
 const clips = { seen: new Map(), by: new Map(), frames: new Map(), maximW: new Set(), measured: new Set() };
 function clipCheck() {
   const sc = screen();
