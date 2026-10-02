@@ -13,8 +13,6 @@ export async function boot(env = {}) {
   const pad = own('pad'), stage = own('stage'), safe = own('safe');
   const media = (q) => { try { return !!(win.matchMedia && win.matchMedia(q).matches); } catch { return false; } };
   const coarse = () => media('(pointer: coarse)') || (win.navigator && win.navigator.maxTouchPoints > 0 && !media('(pointer: fine)'));
-  // 앱(Tauri 2)은 __TAURI_INTERNALS__로 안다(withGlobalTauri가 꺼져 있어도 들어온다).
-  const platform = win.__TAURI_INTERNALS__ ? 'app' : 'web';
 
   // 보이는 창: 주소창이 접히고 펴질 때도 보이는 만큼(visualViewport). 손가락으로 확대한 동안(scale ≠ 1)은 창 크기를 쓴다
   const visible = () => {
@@ -69,8 +67,7 @@ export async function boot(env = {}) {
   let app = null, fit = null, pendingScale = 1;
   function refit() {
     const { vw, vh, full } = viewport();
-    // 앱은 Info.plist로 가로에 묶여 있어 돌려 그리지 않는다(CHM-54) — 아이패드 좁은 나눠 보기에서 세로로 길쭉해져도 그대로. 돌려 그리기는 웹(아이폰 사파리)만
-    fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: platform !== 'app' && coarse() });
+    fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: coarse() });
     // 화면 글 12px가 몇 배로 보이나(CSS 화소). 작은 창에서 처음 안내가 큰 글자를 권한다
     if (app) { app.pixelScale = fit.css; app.coarse = coarse(); }
     const c = fit.canvas;
@@ -118,6 +115,8 @@ export async function boot(env = {}) {
 
   const reduced = media('(prefers-reduced-motion: reduce)');
   const now = () => (win.performance || globalThis.performance).now();
+  // 앱(Tauri 2)은 __TAURI_INTERNALS__로 안다(withGlobalTauri가 꺼져 있어도 들어온다).
+  const platform = win.__TAURI_INTERNALS__ ? 'app' : 'web';
   // 기록 내보내기(CHM-50 · CHM-54): 손가락 기기는 공유 시트(navigator.share, 파일 하나), 그 밖은 파일로 받기(Blob · <a download>), 둘 다 없으면 클립보드.
   // 공유 시트는 손가락 기기에서만 연다 — 데스크톱 크롬 · 사파리에도 share가 있지만 거기서는 받기가 낫다(CHM-50에서 확인한 길).
   // share(name, text): 열 수 없으면 null, 열면 Promise<'shared' | 'cancel' | 'fail'>. 누른 그 순간 안에서 불러야 한다(앞에 await를 두지 않는다)
