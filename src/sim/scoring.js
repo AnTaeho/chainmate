@@ -174,7 +174,27 @@ export function runHook(t, hook, event, events = []) {
 
 // 탐색 · 조회용 가지치기: 명세 겉과 state만 새로 만들고 data는 같이 쓴다(대국 안의 훅은 data를 바꾸지 않는다).
 // 탐색 중 훅이 state를 바꿔도(또는 새로 만들어도) 원래 대국의 명세에 새지 않는다.
-export const forkSpec = (s) => (s ? (s.state ? { ...s, state: JSON.parse(JSON.stringify(s.state)) } : { ...s }) : s);
+// state 복사: JSON 왕복과 똑같은 결과를 더 싸게(탐색 마디마다 부르는 곳이라 왕복이 시간의 10%였다, CHM-44).
+// 평범한 객체 · 배열 안의 문자열 · 참거짓 · null · 유한한 수(−0 빼고)만 직접 베끼고, 그 밖의 값이 하나라도 보이면 통째로 JSON 왕복한다.
+const BAIL = Symbol('bail');
+function plainCopy(v) {
+  if (v === null) return null;
+  const ty = typeof v;
+  if (ty === 'string' || ty === 'boolean') return v;
+  if (ty === 'number') return Number.isFinite(v) && !Object.is(v, -0) ? v : BAIL;
+  if (ty !== 'object') return BAIL;
+  if (Array.isArray(v)) {
+    const out = new Array(v.length);
+    for (let i = 0; i < v.length; i++) { if (!(i in v)) return BAIL; const x = plainCopy(v[i]); if (x === BAIL) return BAIL; out[i] = x; }
+    return out;
+  }
+  if (Object.getPrototypeOf(v) !== Object.prototype) return BAIL;
+  const out = {};
+  for (const k of Object.keys(v)) { const x = plainCopy(v[k]); if (x === BAIL) return BAIL; out[k] = x; }
+  return out;
+}
+const copyState = (st) => { const x = plainCopy(st); return x === BAIL ? JSON.parse(JSON.stringify(st)) : x; };
+export const forkSpec = (s) => (s ? (s.state ? { ...s, state: copyState(s.state) } : { ...s }) : s);
 export const forkSpecs = (mods) => {
   if (!mods || !mods.length) return mods;
   const out = mods.map(forkSpec);
