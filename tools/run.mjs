@@ -268,10 +268,13 @@ function report(R, args, wall) {
   const noFam = R.filter((r) => Math.max(...Object.values(r.fam)) < 2);
   console.log(`\n가족(판 끝): 가장 많이 모은 가족별 판 승률 · 문턱 2 이상 판 승률 — 가족 없음(모두 2 미만) ${noFam.length}판 승률 ${pc(noFam.filter((r) => r.won).length / noFam.length)}`);
   table(['가족', '으뜸 판', '승률', '2 이상 판', '승률', '평균 수'], famRows);
-  const fr = FAIRIES.map((t) => { const has = R.filter((r) => r.fairies.includes(t)); return [PIECES[t].name, pc(has.length / n), pc(has.filter((r) => r.won).length / has.length)]; });
+  // 그 모습으로 먹은 수(took: 먹을 때의 모습) · 적으로 먹혀 입은 수(worn) — 판 전체 대국 합(CHM-55)
+  const sumKey = (key, t) => R.reduce((a, r) => a + r.log.reduce((x, bt) => x + ((bt[key] || {})[t] || 0), 0), 0);
+  const allWin = wins / n;
+  const fr = FAIRIES.map((t) => { const has = R.filter((r) => r.fairies.includes(t)); const w = has.filter((r) => r.won).length / has.length; return [`${PIECES[t].name} ${t}`, pc(has.length / n), pc(w), Number.isFinite(w) ? `${w - allWin >= 0 ? '+' : ''}${(100 * (w - allWin)).toFixed(1)}` : '-', String(sumKey('took', t)), String(sumKey('worn', t))]; });
   const anyF = R.filter((r) => r.fairies.length);
   console.log(`이형(판 끝 주머니): 하나라도 가진 판 ${pc(anyF.length / n)} 승률 ${pc(anyF.filter((r) => r.won).length / anyF.length)} · 없는 판 승률 ${pc(R.filter((r) => !r.fairies.length && r.won).length / (n - anyF.length))} · 판 최고 한 수 p50 이형 ${pctile(anyF.map((r) => r.best), 0.5)} / 없음 ${pctile(R.filter((r) => !r.fairies.length).map((r) => r.best), 0.5)}`);
-  table(['이형', '가진 판', '그 판 승률'], fr);
+  table(['이형', '가진 판', '그 판 승률', '전체 대비 %p', '그 모습으로 먹은 수', '입은 수'], fr);
   if (!args.nodraft) {
     // 외통 = 정석을 고른 뒤(1 · 3 · 5관부터)의 대국 중 외통으로 이긴 몫
     const afterJ = (r, id) => { const k = r.josekis.indexOf(id); return r.log.filter((b) => !b.skipped && b.ante >= DRAFT_ANTES[k]); };

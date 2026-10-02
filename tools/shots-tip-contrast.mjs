@@ -106,7 +106,7 @@ async function hover(prefix, test = null) {
 }
 
 const fresh = (seed, extra = '') => `localStorage.removeItem('chainmate.run.v1'); const a = window.__app; a.closeOverlay(); a.nextSeed = ${seed}; a.newRun(); const r = a.run; ${extra}`;
-const stock = "r.shop = { display: [{ kind: 'maxim', id: 'reinforce_hunt', price: 5, sold: false }, { kind: 'piece', t: 'C', price: 6, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };";
+const stock = "r.shop = { display: [{ kind: 'maxim', id: 'reinforce_hunt', price: 5, sold: false }, { kind: 'piece', t: 'T', price: 6, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };";
 const shopSrc = (extra = '') => fresh(11, `if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); window.__fill(r); r.phase = 'shop'; ${stock} ${extra} a.goPhase();`);
 const selectSrc = fresh(7, "if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); window.__fill(r); a.goPhase();");
 const battleSrc = fresh(11, "if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); window.__fill(r); r.ante = 5; r.blind = 0; a.cmd({ type: 'play' }); a.go('battle', { events: [] });");

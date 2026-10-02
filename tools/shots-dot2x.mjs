@@ -160,7 +160,7 @@ for (const sc of SCALES) {
     Object.assign(r.charts, { N: 5, B: 3, R: 1 });
     const e0 = a.cmd({ type: 'play' });
     const b = r.battle;
-    const kinds = ['P', 'N', 'B', 'R', 'Q', 'A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W'];
+    const kinds = ['P', 'N', 'B', 'R', 'Q', 'Z', 'L', 'O', 'S', 'W', 'T', 'E', 'V', 'M', 'D'];
     let k = 0;
     b.board.forEach((c, sq) => {
       if (!c || c.mine || c.t === 'K' || c.t === 'X' || c.t === 'J') return;
@@ -170,7 +170,7 @@ for (const sc of SCALES) {
     });
     const free = [];
     b.board.forEach((c, sq) => { if (!c && sq >= 16) free.push(sq); });
-    for (const t of ['A', 'C', 'H', 'G', 'O', 'W', 'Z', 'L', 'S']) { if (k >= kinds.length + 6 || !free.length) break; const sq = free.splice(Math.floor(free.length / 2), 1)[0]; b.board[sq] = { t, id: b.nextId++, born: -1, gold: k % 3 === 0 }; k++; }
+    for (const t of ['T', 'E', 'V', 'M', 'D', 'O', 'W', 'Z', 'L', 'S']) { if (k >= kinds.length + 6 || !free.length) break; const sq = free.splice(Math.floor(free.length / 2), 1)[0]; b.board[sq] = { t, id: b.nextId++, born: -1, gold: k % 3 === 0 }; k++; }
     if (free.length) b.board[free.shift()] = { t: 'X', id: b.nextId++, born: -1 };
     if (free.length) b.board[free.pop()] = { t: 'J', id: b.nextId++, born: -1 };
     const hand = [['N', null], ['R', 'gold'], ['B', 'glass'], ['Q', 'feather'], ['P', 'ebony']];

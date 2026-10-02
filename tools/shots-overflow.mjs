@@ -86,7 +86,7 @@ async function boot(lang) {
 const RUN = `localStorage.removeItem('chainmate.run.v1'); const a = window.__app; a.closeOverlay(); a.nextSeed = 11; a.newRun(); const r = a.run; if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
   r.maxims = []; for (const [id, ed] of [['collector_forms'], ['long_chain'], ['first_move'], ['empty_bag'], ['kings_neck', 'foil']]) r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: ed || null, paid: 5 });
   r.josekis = ['gates', 'stepping']; r.ante = 5; r.blind = 0; r.money = 23;`;
-const SHOP = `r.phase = 'shop'; r.shop = { rng: null, display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'C', price: 6, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: SOLD }], rerolls: 0, promoted: false, removed: false }; a.goPhase();`;
+const SHOP = `r.phase = 'shop'; r.shop = { rng: null, display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'T', price: 6, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: SOLD }], rerolls: 0, promoted: false, removed: false }; a.goPhase();`;
 const scenes = [
   ['battle-editions', `${RUN} a.cmd({ type: 'play' }); a.go('battle', { events: [] });`, 2800, null],
   ['battle-chip', `${RUN} a.cmd({ type: 'play' }); a.go('battle', { events: [] });`, 2800, 'fam:'],

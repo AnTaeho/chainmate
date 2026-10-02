@@ -279,7 +279,7 @@ if (ko) {
 // ── 상점 · 꾸러미
 const shopSrc = (seed, extra = '') => fresh(seed, `const a = window.__app, r = a.run; if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); window.__fill(r); r.phase = 'shop'; ${extra} a.goPhase();`);
 // 상점은 진열이 비어 있을 수 있어 직접 채운다(격언 · 기물 이형)
-const stock = "r.shop = r.shop || {}; r.shop.display = [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'C', price: 6, sold: false }]; r.shop.packs = [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }]; r.shop.rerolls = 0; r.shop.promoted = false; r.shop.removed = false;";
+const stock = "r.shop = r.shop || {}; r.shop.display = [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'T', price: 6, sold: false }]; r.shop.packs = [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }]; r.shop.rerolls = 0; r.shop.promoted = false; r.shop.removed = false;";
 await scene('shop', js(shopSrc(11, stock)), {
   wait: 500,
   before: async () => { await ev(async () => { const r = window.__app.run; if (!r.shop.rng) { const { createRng, fork } = await import('/src/sim/rng.js'); r.shop.rng = fork(createRng(3), 'layout'); } }); },
@@ -289,7 +289,7 @@ if (ko) await scene('shop-few', js(fresh(7, `const a = window.__app, r = a.run; 
   before: async () => { await ev(async () => { const r = window.__app.run; const { createRng, fork } = await import('/src/sim/rng.js'); r.shop.rng = fork(createRng(3), 'layout'); r.money = 30; }); },
 });
 const packSrc = (kind, options) => shopSrc(11, `${stock} r.phase = 'pack'; r.pack = { kind: '${kind}', options: ${JSON.stringify(options)} };`);
-await scene('pack-piece', js(packSrc('piece', [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'C' }, { kind: 'piece', t: 'B' }])), { wait: 1600 });
+await scene('pack-piece', js(packSrc('piece', [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'T' }, { kind: 'piece', t: 'B' }])), { wait: 1600 });
 if (ko) await scene('pack-chart', js(packSrc('chart', [{ kind: 'chart', form: 'N' }, { kind: 'chart', form: 'Q' }, { kind: 'chart', form: 'P' }])), { wait: 1600 });
 await scene('pack-engraving', js(packSrc('engraving', [{ kind: 'engraving', id: 'glass' }, { kind: 'engraving', id: 'gold' }, { kind: 'engraving', id: 'feather' }])), { wait: 1600 });
 // 영어 금빛 꾸러미(한국어는 아래 순서 그대로)
@@ -316,7 +316,7 @@ if (ko) {
   await scene('hint-draft', js(fresh(7)), { wait: 1800, hover: false, before: () => hintOn(['draft']) });
   await scene('hint-shop', js(shopSrc(11, stock)), { wait: 600, hover: false, before: async () => { await ev(async () => { const r = window.__app.run; const { createRng, fork } = await import('/src/sim/rng.js'); r.shop.rng = fork(createRng(3), 'layout'); }); await hintOn(['shop']); } });
   await scene('hint-shop-family', js(shopSrc(11, stock)), { wait: 600, hover: false, before: async () => { await ev(async () => { const r = window.__app.run; const { createRng, fork } = await import('/src/sim/rng.js'); r.shop.rng = fork(createRng(3), 'layout'); }); await hintOn(['family']); } });
-  await scene('hint-pack', js(packSrc('piece', [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'C' }, { kind: 'piece', t: 'B' }])), { wait: 1800, hover: false, before: () => hintOn(['pack']) });
+  await scene('hint-pack', js(packSrc('piece', [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'T' }, { kind: 'piece', t: 'B' }])), { wait: 1800, hover: false, before: () => hintOn(['pack']) });
   await scene('hint-battle', js(battleSrc(7, '')), { wait: 2800, hover: false, before: () => hintOn(['incoming', 'family']) });
   // 새 장면(고치기 전 짝 없음): 혼 · 묘수 진열(그림자 카드 글), 수업 ⑩ 따라 하는 길의 말풍선, 도감 둘째 쪽
   await hintOn([]);

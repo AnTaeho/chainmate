@@ -107,7 +107,7 @@ await ev(async () => {
   window.__app.draw = () => {
     const g = c.getContext('2d');
     g.fillStyle = '#0e1513'; g.fillRect(0, 0, 480, 270);
-    ['P', 'N', 'B', 'R', 'Q', 'K', 'A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W'].forEach((t, i) => ['w', 'b', 'g'].forEach((side, row) => [0, 1].forEach((k) => {
+    ['P', 'N', 'B', 'R', 'Q', 'K', 'Z', 'L', 'O', 'S', 'W', 'T', 'E', 'V', 'M', 'D'].forEach((t, i) => ['w', 'b', 'g'].forEach((side, row) => [0, 1].forEach((k) => {
       const x = 8 + i * 31, y = 30 + (row * 2 + k) * 34;
       g.fillStyle = (i + k) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
       g.drawImage(spriteCanvas(t, side), x + 6, y + 3, 16, 22);
@@ -490,10 +490,10 @@ await ev(() => {
   r.ante = 5;
   const add = (id) => r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: null, paid: 4 });
   add('chivalry'); add('light_step'); add('first_move'); add('diagonal'); add('pawn_march');
-  r.deck.push({ id: 90, t: 'H', eng: null }, { id: 91, t: 'A', eng: null }, { id: 92, t: 'O', eng: null }, { id: 93, t: 'S', eng: null });
+  r.deck.push({ id: 90, t: 'M', eng: null }, { id: 91, t: 'E', eng: null }, { id: 92, t: 'O', eng: null }, { id: 93, t: 'S', eng: null });
   a.cmd({ type: 'play' });
   const b = r.battle;
-  b.hand = [{ id: 90, t: 'H', eng: null }, { id: 91, t: 'A', eng: null }, { id: 92, t: 'O', eng: null }, { id: 93, t: 'S', eng: null }];
+  b.hand = [{ id: 90, t: 'M', eng: null }, { id: 91, t: 'E', eng: null }, { id: 92, t: 'O', eng: null }, { id: 93, t: 'S', eng: null }];
   a.go('battle', { events: [] });
 });
 await settle(2400);

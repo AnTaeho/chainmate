@@ -1,6 +1,6 @@
 // 행마 보기 탭 스크린샷(CHM-26): 대국에서 「행마」를 열고 이 판 · 기본 기물 · 특수 기물(쪽마다)을 1배(창 480×270)와 3배(창 1440×810)로 찍는다.
 //   node tools/shots-moves.mjs [--out docs/shots/moves-tabs] [--lang ko,en] [--scale 1,3]
-// 손 두 장을 포 · 메뚜기로 바꿔 「새로」가 보이게 한다. Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
+// 손 두 장을 포 · 까마귀로 바꿔 「새로」가 보이게 한다. Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -66,7 +66,7 @@ for (const lang of LANGS) for (const sc of SCALES) {
     a.cmd({ type: 'play' });
     const b = a.run.battle;
     b.hand[0] = { ...b.hand[0], t: 'O' };
-    if (b.hand[1]) b.hand[1] = { ...b.hand[1], t: 'G' };
+    if (b.hand[1]) b.hand[1] = { ...b.hand[1], t: 'V' };
     a.go('battle', { events: [] });
   });
   await settle(2600);
