@@ -70,14 +70,14 @@
    - `node tools/run.mjs --runs 10 --policy nosac --seed 1 --workers 10 --limit 400 --dump base-nosac.json`
    - `node tools/sim.mjs --battles 100 --seed 1 --dump base-sim.json`
 2. 기준을 한 번 더 뽑아 `cmp`로 같음을 확인했다(하네스 자체가 결정적인지).
-3. 손질마다 작업 트리를 따로 복사해(`src` · `tools`) 같은 셋을 뽑고 기준과 `cmp`. 시간 초과(`timeouts`)가 비어 있는지도 본다 — 빨라져서 옛날엔 넘던 판이 끝나면 diff로 보일 수 있어서.
+3. 손질마다 같은 셋을 뽑고 기준과 `cmp`. f4부터는 작업 트리를 따로 복사해(`src` · `tools`) 그 복사본에서 돌렸다. f1은 작업 트리에서 돌리는 동안 다음 손질을 고치고 있어서, 판마다 일꾼을 새로 띄우는 하네스 특성상 뒤쪽 판은 다음 손질 일부가 섞인 코드로 돌았다(그래도 diff 0). 시간 초과(`timeouts`)가 비어 있는지도 본다 — 빨라져서 옛날엔 넘던 판이 끝나면 diff로 보일 수 있어서.
 
 `--dump`가 담는 것: 판(run.mjs)은 판마다 하네스가 모으는 결과 전부(이김/짐 · 관 · 대국 기록(대국별 점수 · 목표 · 끝난 이유 · 수 · 희생 …) · 산 격언 · 판본 · 조각 · 전설 · 주머니 · 기보 · 가족 · 정석 · 혼 · 금 · 각성 · 남은 돈)에서 `ms`만 뺀 것, seed 순. 대국(sim.mjs)은 대국마다 관 · 점수 · 결과 · 희생 수 · 수마다 기록(`history`) 전체.
 
 원문(손질 단계마다, 기준 대비):
 
 ```
-== f1 (ordered)
+== f1 (ordered + 다음 손질 일부가 섞인 작업 트리)
 smart: diff 0 (163700 bytes)
 nosac: diff 0 (81083 bytes)
 sim: diff 0 (738002 bytes)
