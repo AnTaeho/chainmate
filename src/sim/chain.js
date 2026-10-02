@@ -98,10 +98,12 @@ function takeableAt(t, s, from, bo) {
   return true;
 }
 
-export function chainCapture(t, sq) {
+// legal: 부르는 쪽이 방금 같은 상태에서 chainCaptures로 받은 칸이면 true — 다시 재지 않는다(풀이기 탐색, CHM-44).
+// chainCaptures는 상태를 바꾸지 않으니(allowCapture 훅은 읽기만) 결과는 같다.
+export function chainCapture(t, sq, legal = false) {
   const c = t.chain;
   if (!c || c.done) throw new Error('no active chain');
-  if (!chainCaptures(t).includes(sq)) throw new Error(`illegal capture ${sq}`);
+  if (!legal && !chainCaptures(t).includes(sq)) throw new Error(`illegal capture ${sq}`);
   const events = [];
   const board = t.board;
   const from = c.sq;

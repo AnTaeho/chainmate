@@ -62,7 +62,7 @@ function dfs(t, stats, preferMate, rank) {
   for (const sq of chainCaptures(t)) {
     if (greedy && best) break;
     const u = cloneTable(t);
-    chainCapture(u, sq);
+    chainCapture(u, sq, true); // sq는 바로 위 chainCaptures(t)에서 — u는 t의 복사본이라 같은 목록
     const r = dfs(u, stats, preferMate, rank);
     r.line = [sq, ...r.line];
     if (better(r, best, preferMate, rank)) best = r;
