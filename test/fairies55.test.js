@@ -27,48 +27,49 @@ test('목록: 뺀 넷은 없고 새 다섯이 있다', () => {
 });
 
 // ── 꺾쇠
-test('꺾쇠: 룩처럼 가다 빈칸에서 한 번 직각으로 꺾는다 · 꺾기 전후 처음 만나는 기물에서 멈춘다', () => {
-  const b = boardFrom({ d6: 'P', f4: 'N', h5: 'B', e7: 'R', g7: 'Q', d2: 'P' });
-  // d6 · f4 · d2는 곧게, h5는 d5에서 꺾어, e7은 e4에서 꺾어. g7은 꺾음 둘이 필요해 닿지 않는다
-  assert.deepEqual(names(captures(b, 'T', S('d4'))), ['d2', 'd6', 'e7', 'f4', 'h5']);
-  // 꺾는 칸이 막혀 있으면 거기서 꺾지 못한다: d5에 기물이 서면 h5에 닿는 길이 없다
+test('꺾쇠: 룩처럼 가다 빈칸에서 직각으로 꺾는다(두 번까지) · 꺾기 전후 처음 만나는 기물에서 멈춘다', () => {
+  const b = boardFrom({ d6: 'P', f4: 'N', h5: 'B', e7: 'R', d2: 'P' });
+  // d6 · f4 · d2는 곧게, h5는 d5에서 꺾어, e7은 e4에서 꺾어
+  assert.deepEqual(names(captures(b, 'T', S('d4'))).filter((n) => ['d2', 'd6', 'e7', 'f4', 'h5'].includes(n)), ['d2', 'd6', 'e7', 'f4', 'h5']);
+  // 두 번 꺾어 닿는다: d5에서 오른쪽, g5에서 위로 g7
+  assert.ok(captures(boardFrom({ d6: 'P', g7: 'Q' }), 'T', S('d4')).includes(S('g7')));
+  // 세 번은 못 꺾는다: 벽으로 길을 하나만 남기면(a1 → a3 → c3 → c2 → d2) d2는 꺾음 셋이라 닿지 않고, c2는 둘이라 닿는다
+  const walls = { b1: 'X', b2: 'X', a4: 'X', d3: 'X', c1: 'X', b4: 'X', c4: 'X' };
+  assert.ok(!captures(boardFrom({ ...walls, d2: 'P' }), 'T', S('a1')).includes(S('d2')));
+  assert.ok(captures(boardFrom({ ...walls, c2: 'P' }), 'T', S('a1')).includes(S('c2')));
+  // 꺾는 칸이 막혀 있으면 거기서 꺾지 못한다: 둘레가 모두 막히면 그 기물들만
   const b2 = boardFrom({ d5: 'P', h5: 'B', e4: 'P', c4: 'P', d3: 'P' });
   assert.deepEqual(names(captures(b2, 'T', S('d4'))), ['c4', 'd3', 'd5', 'e4']);
-  // 꺾은 뒤에도 처음 만나는 기물에서 멈춘다: e4에서 위로 꺾으면 e6에 막혀 e8까지 가지 못한다(d8에서 꺾는 길은 d7이 막는다)
-  const b3 = boardFrom({ e6: 'P', e8: 'Q', d7: 'P' });
-  assert.ok(!captures(b3, 'T', S('d4')).includes(S('e8')));
-  assert.ok(captures(b3, 'T', S('d4')).includes(S('e6')));
 });
 
-test('꺾쇠가 적일 때: 곧게 또는 한 번 꺾어 닿는 칸을 지킨다(빈 꺾는 칸이 막히면 못 지킨다)', () => {
+test('꺾쇠가 적일 때: 곧게 또는 꺾어 닿는 칸을 지킨다 · 길이 막히면 못 지킨다', () => {
   const b = mine(boardFrom({ h5: 'T' }), 'd4', 'N');
-  assert.deepEqual(names(attackers(b, S('d4'))), ['h5'], 'd5에서 꺾거나 h4에서 꺾어 닿는다');
-  const b2 = mine(boardFrom({ h5: 'T', e5: 'P', g4: 'P' }), 'd4', 'N');
-  assert.deepEqual(attackers(b2, S('d4')).filter((s) => b2[s].t === 'T'), [], 'd5 → h5 길은 e5가, h4 → d4 길은 g4가 막는다');
+  assert.deepEqual(names(attackers(b, S('d4'))), ['h5']);
+  const b2 = mine(boardFrom({ h5: 'T', d5: 'P', d3: 'P', c4: 'P', e4: 'P' }), 'd4', 'N');
+  assert.deepEqual(attackers(b2, S('d4')).filter((s) => b2[s].t === 'T'), [], 'd4 둘레가 다 막혔다');
   // 먹은 칸(capture capWay): 꺾어도 가로 · 세로 먹기
   assert.deepEqual(capWay({ from: S('a1'), to: S('d4'), form: 'T', via: S('a4') }), { ortho: true, diag: false, leap: false });
 });
 
 // ── 물수제비
-test('물수제비: 비숍처럼 가다 가장자리에서 한 번 튕긴다 · 구석에서는 튕기지 않는다 · 두 번은 없다', () => {
+test('물수제비: 비숍처럼 가다 가장자리에서 튕긴다(두 번까지) · 구석에서는 튕기지 않는다', () => {
   // d4 → e3 · f2 · g1(아래 가장자리) → 튕겨 h2
-  const b = boardFrom({ h2: 'R' });
-  assert.ok(captures(b, 'E', S('d4')).includes(S('h2')));
+  assert.ok(captures(boardFrom({ h2: 'R' }), 'E', S('d4')).includes(S('h2')));
   // 튕기기 전에 막히면 그 기물에서 멈춘다
-  const b2 = boardFrom({ h2: 'R', f2: 'P' });
-  assert.deepEqual(names(captures(b2, 'E', S('d4'))), ['f2']);
-  // 구석 h8에 닿으면 튕기지 않는다(그 너머 g7 · f6 …은 처음 길에 이미 있다)
-  const r = reach(boardFrom({}), 'E', S('d4'));
-  assert.ok(r.includes(S('h8')) && r.includes(S('b8')), 'c5 · b6 · a7에서 튕겨 b8');
-  // 두 번 튕기지 않는다: a7 → b8에서 다시 튕기면 c7이지만 닿지 않는다
-  assert.ok(!r.includes(S('c7')));
+  const b2 = boardFrom({ h2: 'R', f2: 'P', c5: 'P' });
+  assert.deepEqual(names(captures(b2, 'E', S('d4'))), ['c5', 'f2']);
+  const r = reach(boardFrom({ f2: 'P' }), 'E', S('d4'));
+  // 구석 h8 · a1에 닿으면 튕기지 않는다 · c5 · b6 · a7에서 튕겨 b8, 다시 튕겨 c7 · d6 · … · h2
+  assert.ok(r.includes(S('h8')) && r.includes(S('b8')) && r.includes(S('c7')) && r.includes(S('h2')));
+  // 세 번은 없다: h2에서 다시 튕기면 g1이지만 닿지 않는다(e3 · f2 길은 f2가 막았다)
+  assert.ok(!r.includes(S('g1')));
 });
 
 test('물수제비가 적일 때: 튕겨 닿는 칸도 지킨다(길을 뒤집어도 같은 튕김)', () => {
   const b = mine(boardFrom({ h2: 'E' }), 'd4', 'N');
   assert.deepEqual(names(attackers(b, S('d4'))), ['h2']);
-  const b2 = mine(boardFrom({ h2: 'E', g1: 'P' }), 'd4', 'N');
-  assert.ok(!attackers(b2, S('d4')).includes(S('h2')), '튕기는 칸 g1이 막혔다');
+  const b2 = mine(boardFrom({ h2: 'E', g1: 'P', c5: 'P' }), 'd4', 'N');
+  assert.ok(!attackers(b2, S('d4')).includes(S('h2')), '한 번 튕기는 g1 · 두 번 튕기는 c5 길이 막혔다');
 });
 
 // ── 까마귀
@@ -96,6 +97,27 @@ test('까마귀 모습으로 먹으면 앉는 칸이 먹은 칸과 다르다 · 
   assert.deepEqual(capWay(cap), { ortho: false, diag: true, leap: true });
 });
 
+test('까마귀로 넘어 먹은 뒤에는 바뀐 모습으로도 대각선으로 붙은 적을 이어 넘는다 · 넘지 않는 먹기를 하면 끝', () => {
+  const t = table({ e5: 'N', g7: 'P', a8: 'K', b7: 'P', e8: 'R' });
+  startChain(t, { type: 'V', sq: S('d4') });
+  chainCapture(t, S('e5'));                       // f6에 앉아 나이트
+  assert.equal(t.chain.form, 'N');
+  assert.ok(chainCaptures(t).includes(S('g7')), '나이트 행마로는 닿지 않는 g7을 넘는다');
+  const cap = chainCapture(t, S('g7')).find((e) => e.type === 'capture');
+  assert.equal(cap.at, S('h8'));
+  assert.equal(cap.hop, true);
+  assert.deepEqual(capWay(cap), { ortho: false, diag: true, leap: true });
+  assert.equal(t.chain.form, 'Q', '폰이 되어 h8 — 프로모션');
+  // 나이트 행마로 먹으면(넘지 않으면) 넘기가 끝난다
+  const u = table({ e5: 'N', g8: 'R', a8: 'K', b7: 'P' });
+  startChain(u, { type: 'V', sq: S('d4') });
+  chainCapture(u, S('e5'));
+  assert.equal(u.chain.hop, true);
+  const c2 = chainCapture(u, S('g8')).find((e) => e.type === 'capture');
+  assert.equal(c2.at, S('g8'));
+  assert.equal(u.chain.hop, false);
+});
+
 test('까마귀가 적일 때: 대각선으로 붙은 칸 중 반대쪽이 빈 칸을 지킨다', () => {
   const b = mine(boardFrom({ e5: 'V' }), 'd4', 'N');
   assert.deepEqual(names(attackers(b, S('d4'))), ['e5']);
@@ -107,10 +129,11 @@ test('까마귀가 적일 때: 대각선으로 붙은 칸 중 반대쪽이 빈 �
 });
 
 // ── 광대
-test('광대: 적을 그 적의 행마로만 먹는다(폰은 대각 앞, 나이트는 L자, 룩은 가로 · 세로)', () => {
-  const b = boardFrom({ e5: 'P', c3: 'P', f5: 'N', d6: 'N', b4: 'R', b5: 'B', b6: 'B' });
-  // c3 폰은 뒤 대각이라, d6 나이트는 L자가 아니라, b5 비숍은 대각이 아니라 못 먹는다. b6 비숍은 대각선 위
-  assert.deepEqual(names(captures(b, 'M', S('d4'))), ['b4', 'b6', 'e5', 'f5']);
+test('광대: 적을 그 적의 행마로 먹고, 붙은 여덟 칸의 적은 그냥 먹는다', () => {
+  const b = boardFrom({ e5: 'P', c2: 'P', f5: 'N', d6: 'N', b4: 'R', b5: 'B', b6: 'B', c3: 'Q' });
+  // c2 폰은 폰 행마로 닿지 않고, d6 나이트는 L자가 아니라, b5 비숍은 대각이 아니라 못 먹는다. b6 비숍은 대각선 위
+  // 붙은 c3 퀸은 그냥 먹는다
+  assert.deepEqual(names(captures(b, 'M', S('d4'))), ['b4', 'b6', 'c3', 'e5', 'f5']);
   // 적 까마귀는 까마귀처럼(넘어 앉는다) · 적 궁수는 궁수처럼(제자리)
   const t = table({ e5: 'V', a8: 'K', b7: 'P' });
   startChain(t, { type: 'M', sq: S('d4') });
@@ -134,8 +157,9 @@ test('광대가 적일 때: 그 칸에 선 내 기물의 지금 모습의 행마
   assert.ok(isAttacked(b4, S('d4'), { form: 'R' }));
   assert.ok(!isAttacked(b4, S('d4'), { form: 'N' }));
   assert.ok(!dropSquares(b4, 'R').includes(S('d4')));
-  // 모습을 모르면(판 짓기의 킹 수비) 광대는 지키지 않는다
-  assert.equal(guardSquares(boardFrom({ d4: 'K' }), 'M', S('d4')).reduce((a, x) => a + x, 0), 0);
+  // 붙은 여덟 칸은 모습과 상관없이 지킨다(그래서 킹 수비수로도 선다)
+  assert.deepEqual(names(attackers(mine(boardFrom({ e5: 'M' }), 'd4', 'N'), S('d4'))), ['e5']);
+  assert.equal(guardSquares(boardFrom({ d4: 'K' }), 'M', S('d4')).reduce((a, x) => a + x, 0), 8);
 });
 
 // ── 화약병
@@ -188,8 +212,9 @@ function brute(board, sq, ignore) {
   for (let s = 0; s < 64; s++) {
     const c = board[s];
     if (!c || c.mine || s === ignore || c.t === 'X' || c.t === 'J') continue;
+    const adj = Math.max(Math.abs((s & 7) - (sq & 7)), Math.abs((s >> 3) - (sq >> 3))) === 1;
     const mv = c.t === 'M' ? (F ? mimicOf(F) : null) : c.t;
-    if (mv && reach(board, mv, s, -1, ignore).includes(sq)) out.push(s);
+    if ((c.t === 'M' && adj) || (mv && reach(board, mv, s, -1, ignore).includes(sq))) out.push(s);
   }
   return out.sort((a, b) => a - b);
 }
@@ -215,7 +240,6 @@ test('킹 수비 칸(guardSquares)은 세워 보고 재는 것과 같다: 무작
     const to = free[int(r, free.length)];
     b[to] = { t: 'K', id: 99, born: -1 };
     for (const t of ALL) {
-      if (t === 'M') continue;
       const m = guardSquares(b, t, to);
       for (let s = 0; s < 64; s++) {
         if (b[s]) { assert.equal(m[s], 0); continue; }
@@ -228,7 +252,7 @@ test('킹 수비 칸(guardSquares)은 세워 보고 재는 것과 같다: 무작
   }
 });
 
-test('판 짓기: 4관 이상 · 세력 고유 적으로도 판이 지어진다(광대는 킹 수비수로 서지 않는다)', () => {
+test('판 짓기: 4관 이상 · 세력 고유 적으로도 판이 지어진다', () => {
   for (const unique of [{ M: 6 }, { V: 6 }, { D: 2.5, S: 6 }, { T: 0.6, Z: 0.3 }, { E: 1 }]) {
     for (let seed = 1; seed <= 6; seed++) {
       const b = { rules: { unique, kings: 1 }, ante: 6, nextId: 1 };
