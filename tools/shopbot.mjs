@@ -15,7 +15,7 @@ import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { FINAL_FACTION } from '../src/data/factions.js';
-import { stepBattle, SACLOG, sacrificeChoice, pieceKey } from './bot.mjs';
+import { stepBattle, SACLOG, SAC, sacrificeChoice, pieceKey } from './bot.mjs';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
 import { evolveTo } from '../src/data/tactics.js';
@@ -105,9 +105,13 @@ export function evalBuild(run, build, seeds, ante, master = null, faction = null
     let collect = [];
     let best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes, collect }) : null;
     // 희생(CHM-51): 대국 봇과 같은 판단으로 바칠 만하면 바치고(주머니 맨 위가 실제로 뽑힌다) 다시 잰다. 대국 봇처럼 주머니가 넉넉할 때만
-    for (let s = 0; SMART.sacEval && best && s < 3 && b.discardsLeft > 0 && b.bag.length >= b.movesLeft; s++) {
+    // 판단이 먼저 거르는 조건(사슬이 약할 때만, SAC.weakChain)을 여기서도 먼저 본다 — 손 칸별 점수를 모으는 값이 짜임 재기마다 들지 않게
+    for (let s = 0; SMART.sacEval && best && best.captures <= SAC.weakChain && s < 3 && b.discardsLeft > 0 && b.bag.length >= b.movesLeft; s++) {
+      const byHand = new Map();
+      for (const c of collect) if (!byHand.has(c.handIndex) || c.score > byHand.get(c.handIndex)) byHand.set(c.handIndex, c.score);
+      // 풀이기는 같은 기물을 한 번만 잰다: 같은 기물이면 잰 칸의 점수를 함께 쓴다
       const byKey = new Map();
-      for (const c of collect) { const key = pieceKey(b.hand[c.handIndex]); if (!byKey.has(key) || c.score > byKey.get(key)) byKey.set(key, c.score); }
+      for (const [i, sc] of byHand) byKey.set(pieceKey(b.hand[i]), sc);
       const per = b.hand.map((p) => (byKey.has(pieceKey(p)) ? byKey.get(pieceKey(p)) : null));
       const pick = sacrificeChoice(b, per, best, { preferMate: 'avoid', nodes: SMART.sacNodes });
       if (!pick) break;
