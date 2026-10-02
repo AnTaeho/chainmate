@@ -14,7 +14,7 @@ function cloneTable(t) {
     ...t,
     board: t.board.slice(),
     mods,
-    _cow: new Uint8Array((mods ? mods.length : 0) + 2),
+    _cow: [], // 갈라 낸 명세 자리(ownSpec). 형식 배열은 만드는 값이 커서 빈 배열로
     chain: c && {
       ...c,
       captures: c.captures.slice(), forms: c.forms.slice(), flags: { ...c.flags },
