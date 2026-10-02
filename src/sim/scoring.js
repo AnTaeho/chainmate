@@ -125,15 +125,19 @@ const specAt = (mods, eng, soul, i) => (i < mods.length ? mods[i] : i === mods.l
 
 // 훅이 받는 ctx. 메서드는 프로토타입에 두어 부를 때마다 닫힘을 만들지 않는다.
 class Ctx {
-  constructor(t, spec, event, events) {
-    this.t = t; this.chain = t.chain; this.event = event; this.spec = spec;
+  constructor(t, spec, event, events, i = -1) {
+    this.t = t; this.chain = t.chain; this.event = event; this.spec = spec; this._i = i;
     this.data = spec.data || {};
     this.rules = t.rules;
     this.flags = t.chain ? t.chain.flags : null;
     this._events = events;
     this._cancel = false;
   }
-  get state() { return this.spec.state || (this.spec.state = {}); }
+  get state() {
+    // 풀이기 탁자(t._cow)는 명세를 부모와 나눠 쓰다가 state에 처음 손대는 순간 제 것으로 갈라 낸다(ownSpec)
+    const spec = this.t._cow ? (this.spec = ownSpec(this.t, this._i, this.spec)) : this.spec;
+    return spec.state || (spec.state = {});
+  }
   addValue(n) { if (!n) return; this.chain.value += n; this._events.push({ type: 'score', src: this.spec.id, value: n }); }
   addMult(n) { if (!n) return; this.chain.mult += n; this._events.push({ type: 'score', src: this.spec.id, mult: n }); }
   mulMult(x) { if (x === 1) return; this.chain.mult *= x; this._events.push({ type: 'score', src: this.spec.id, xmult: x }); }
@@ -160,7 +164,7 @@ export function runHook(t, hook, event, events = []) {
   for (const { i, def } of list) {
     const spec = specAt(mods, eng, soul, i);
     if (spec.off) continue; // 앞선 조정자가 이번 훅 안에서 끈 경우(「침묵」)
-    const ctx = new Ctx(t, spec, event, events);
+    const ctx = new Ctx(t, spec, event, events, i);
     const r = def[hook](ctx);
     if (hook === 'allowCapture' && r === false) allowed = false;
     if (ctx._cancel) cancelled = true;
@@ -201,6 +205,28 @@ export const forkSpecs = (mods) => {
   if (mods._key !== undefined) Object.defineProperty(out, '_key', { value: mods._key, writable: true, enumerable: false, configurable: true });
   return out;
 };
+
+// 풀이기의 탁자 복사(CHM-44): 명세를 마디마다 모두 복사(forkSpecs)하는 대신 배열만 새로 만들어 명세를 부모와 나눠 쓰고,
+// 훅이 state를 읽거나 쓰려는 순간(Ctx.state) 그 명세 하나만 forkSpec으로 갈라 낸다. 탐색 중 명세에서 바뀌는 것은 state뿐이라
+// (data는 대국 안에서 바뀌지 않고, off는 대국 시작 훅만 바꾼다) 모두 복사할 때와 결과가 같다.
+// t._cow[i]: i번째 명세(mods … , 각인, 혼 — specAt 차례)를 이 탁자가 이미 제 것으로 갈라 냈나.
+export const cowSpecs = (mods) => {
+  if (!mods || !mods.length) return mods;
+  const out = mods.slice();
+  if (mods._key !== undefined) Object.defineProperty(out, '_key', { value: mods._key, writable: true, enumerable: false, configurable: true });
+  return out;
+};
+function ownSpec(t, i, spec) {
+  const cow = t._cow;
+  if (i < 0 || cow[i]) return spec;
+  cow[i] = 1;
+  const f = forkSpec(spec);
+  const mods = t.mods || NONE;
+  if (i < mods.length) mods[i] = f;
+  else if (i === mods.length && t.chain && t.chain.engraving) t.chain.engraving = f;
+  else t.chain.soul = f;
+  return f;
+}
 
 export const hasHook = (t, hook) => ordered(t, hook).length > 0;
 
