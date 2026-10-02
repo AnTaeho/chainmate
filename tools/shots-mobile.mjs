@@ -1,6 +1,9 @@
 // 화면 맞춤 스크린샷(CHM-28): 기기를 흉내 내어 창 전체를 찍는다(게임 캔버스 밖의 가장자리까지).
 //   node tools/shots-mobile.mjs [--prefix before|after] [--out docs/shots/mobile] [--only 기기이름] [--engine webkit|chromium]
-//                               [--scenes title,battle,shop,pause,legend,chest,result] [--no-touch]
+//                               [--scenes title,battle,shop,pause,pack,legend,chest,result] [--no-touch] [--root 다른 게임 폴더]
+// --only iphone17 은 아이폰 17(402×874, dpr 3) 흉내다(CHM-52): 브라우저 창은 화면 전체(그릴 수 있는 곳)로 잡고, 페이지가 읽는 보이는 창
+// (innerHeight · visualViewport.height)을 emu.vis로 줄이고, 안전 영역(#safe padding)과 navigator.standalone을 덮어쓴다.
+// 사람 그림(IMG_5075)의 홈 화면 세로는 보이는 창 812 · 화면 874 · 위 섬 62 · 아래 홈 막대 34. 사파리 주소창 높이는 기기에서 재지 못해 어림값이다
 // 기기마다 타이틀 · 대국 · 상점 · 멈춤 · 전설 · 상자 · 결과를 찍고, 캔버스 크기(CSS · 뒷면)를 표로 적는다. 폰 세로는 화면을 90도 돌려 그린다(스크린샷도 세로 그대로).
 // 전설 · 상자는 금빛 번쩍임 한가운데(-flash)와 가라앉은 뒤를 따로 찍는다(여백 판도 같이 밝아지나). 번쩍임은 update를 멈춰 세운다.
 // 타이틀은 여백 판 장면을 칠한 시간(ms, padStats.sceneMs)을 표에 적는다.
@@ -13,11 +16,12 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
+// --root: 다른 판(고치기 전 코드를 풀어 둔 폴더)을 같은 도구로 찍는다
+const ROOT = path.resolve(opt('--root', path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')));
 const PREFIX = opt('--prefix', 'after');
-const OUT = path.resolve(ROOT, opt('--out', 'docs/shots/mobile'));
+const OUT = path.resolve(opt('--out', path.join(ROOT, 'docs/shots/mobile')));
 const ONLY = opt('--only', null);
 const ENGINE = opt('--engine', null);
 const SCENES = new Set(opt('--scenes', 'title,battle,shop,pause,legend,chest,result').split(','));
@@ -25,6 +29,7 @@ const TOUCH = !args.includes('--no-touch');
 
 // 이름 · 창(CSS) · dpr · 터치 · 엔진
 const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+const UA_IPHONE26 = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
 const UA_IPAD = 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 const DEVICES = [
   { name: 'iphone15-portrait', w: 393, h: 659, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE },
@@ -33,6 +38,12 @@ const DEVICES = [
   { name: 'iphone15-landscape', w: 734, h: 343, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE },
   // 홈 화면에 추가해 전체 화면으로 열었을 때(주소창 없음)
   { name: 'iphone15-fullscreen', w: 852, h: 393, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE },
+  // 아이폰 17(CHM-52). emu.vis = 페이지가 읽는 보이는 창 높이, emu.inset = 안전 영역, emu.standalone = 홈 화면 앱
+  { name: 'iphone17-home-portrait', w: 402, h: 874, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE26, emu: { vis: 812, standalone: true, inset: { top: 62, right: 0, bottom: 34, left: 0 } } },
+  { name: 'iphone17-safari-portrait-bar-collapsed', w: 402, h: 874, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE26, emu: { vis: 812, inset: { top: 62, right: 0, bottom: 34, left: 0 } } },
+  { name: 'iphone17-safari-portrait-bar-expanded', w: 402, h: 874, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE26, emu: { vis: 740, inset: { top: 62, right: 0, bottom: 34, left: 0 } } },
+  { name: 'iphone17-safari-landscape-bar-collapsed', w: 874, h: 402, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE26, emu: { vis: 402, inset: { top: 0, right: 62, bottom: 21, left: 62 } } },
+  { name: 'iphone17-safari-landscape-bar-expanded', w: 874, h: 402, dpr: 3, touch: true, engine: 'webkit', ua: UA_IPHONE26, emu: { vis: 352, inset: { top: 0, right: 62, bottom: 21, left: 62 } } },
   { name: 'ipad-portrait', w: 810, h: 1080, dpr: 2, touch: true, engine: 'webkit', ua: UA_IPAD },
   { name: 'ipad-landscape', w: 1080, h: 810, dpr: 2, touch: true, engine: 'webkit', ua: UA_IPAD },
   { name: 'mac-1920x960', w: 1920, h: 960, dpr: 2, touch: false, engine: 'chromium' },
@@ -83,6 +94,19 @@ async function session(d, { fresh = false } = {}) {
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`${d.name}: ${String(e)}`));
   await page.addInitScript((fresh) => { if (!fresh) window.__autoDraft = true; }, fresh);
+  if (d.emu) await page.addInitScript((emu) => {
+    // 보이는 창을 줄인다(화면은 그대로 — 그 아래 띠에도 그림이 그려진다). 안전 영역은 #safe padding으로(env()는 흉내 낼 수 없다)
+    Object.defineProperty(window, 'innerHeight', { configurable: true, get: () => emu.vis });
+    if (window.VisualViewport) Object.defineProperty(VisualViewport.prototype, 'height', { configurable: true, get: () => emu.vis });
+    if (document.documentElement) Object.defineProperty(document.documentElement, 'clientHeight', { configurable: true, get: () => emu.vis });
+    Object.defineProperty(navigator, 'standalone', { configurable: true, get: () => !!emu.standalone });
+    const i = emu.inset;
+    const css = `#safe{padding:${i.top}px ${i.right}px ${i.bottom}px ${i.left}px !important}`;
+    document.addEventListener('readystatechange', () => {
+      if (document.getElementById('emu-safe')) return;
+      const st = document.createElement('style'); st.id = 'emu-safe'; st.textContent = css; (document.head || document.documentElement).appendChild(st);
+    });
+  }, d.emu);
   await page.goto(`http://localhost:${port}/index.html`);
   await page.waitForFunction(() => window.__app && window.__app.screen);
   if (!fresh) await page.evaluate(() => { localStorage.clear(); window.__app.records.coachSeen = new Proxy({}, { get: () => true, has: () => true }); window.__app.settings.coach = false; });
@@ -103,7 +127,8 @@ async function shotsFor(d) {
     const f = window.__fit;
     // 돌려 그리면 보이는 사각형은 세로로 서 있다 — 표에는 게임 가로 × 세로로 적는다
     const rot = !!(f && f.rot);
-    return { cssW: Math.round((rot ? r.height : r.width) * 100) / 100, cssH: Math.round((rot ? r.width : r.height) * 100) / 100, left: r.left, top: r.top, back: `${c.width}×${c.height}`, rot, k: f && f.k, scale: window.__app.scale };
+    const st = document.getElementById('stage').getBoundingClientRect();
+    return { cssW: Math.round((rot ? r.height : r.width) * 100) / 100, cssH: Math.round((rot ? r.width : r.height) * 100) / 100, left: r.left, top: r.top, right: r.right, bottom: r.bottom, stage: `${Math.round(st.width)}×${Math.round(st.height)}`, back: `${c.width}×${c.height}`, rot, k: f && f.k, scale: window.__app.scale };
   });
   table.push({ name: d.name, view: `${d.w}×${d.h}`, dpr: d.dpr, ...size });
   const want = (n) => SCENES.has(n);
@@ -132,6 +157,10 @@ async function shotsFor(d) {
     });
     await settle(900);
     if (want('shop')) await shot('shop');
+    // 멈춤 단추(≡) 누르는 구역: 도트 × 도트 하나의 CSS 크기 = 실제 화면 pt(손가락으로 한 번 누른 뒤)
+    await ev(() => { window.__app.touch = true; });
+    await settle(100);
+    table[table.length - 1].pause = await ev(() => { const r = window.__app.ui.regions.find((x) => x.id === 'btn:pause'); const c = window.__fit.css; return r ? `${r.w}×${r.h}도트 = ${Math.round(r.w * c)}×${Math.round(r.h * c)}pt` : '-'; });
     // 멈춤 덮개(판 밖 가장자리도 같이 어두워지나)
     if (want('pause')) {
       await ev(() => window.__app.openOverlay('pause'));
@@ -139,6 +168,23 @@ async function shotsFor(d) {
       await shot('pause');
       await ev(() => window.__app.closeOverlay());
     }
+  }
+  // 꾸러미 + 멈춤(사람 그림 IMG_5075와 같은 장면): 첫 상점의 첫 꾸러미를 열고 멈춤 덮개
+  if (want('pack')) {
+    await ev(async () => {
+      const { playRun } = await import('/tools/shopbot.mjs');
+      const a = window.__app;
+      a.newRun({ seed: 11 });
+      playRun(a.run, 'none', { stopAt: (r) => r.phase === 'shop' });
+      a.run.money = 30; a.fx.clear(); a.goPhase();
+    });
+    await settle(600);
+    await ev(() => { const a = window.__app; const r = a.ui.regions.find((x) => x.id.startsWith('shop:pack:')); if (r) { a.ui.previewId = r.id; r.onClick(r); } });
+    await settle(1800);
+    await ev(() => window.__app.openOverlay('pause'));
+    await settle(300);
+    await shot('pack-pause');
+    await ev(() => window.__app.closeOverlay());
   }
   // 전설 완성: 금빛 번쩍임 한가운데(멈춰 세움) → 끝 장면
   if (want('legend')) {
@@ -209,7 +255,7 @@ async function touchFlow(d) {
   const i = await ev(() => window.__app.guide && window.__app.guide.i);
   // 돌려 그린 폰은 가로로 들어 본다: 판 상태(화면 · 걸음 · 손)가 그대로이고 돌리기가 풀려야 한다
   let flip = '';
-  if (rot) {
+  if (rot && !d.emu) {
     const before = await ev(() => { const a = window.__app; return JSON.stringify({ s: a.screen && a.screen.constructor.name, i: a.guide && a.guide.i, b: a.screen && a.screen.bRef && a.screen.bRef.board, h: a.screen && a.screen.bRef && a.screen.bRef.hand }); });
     await page.setViewportSize({ width: d.h, height: d.w });
     await settle(800);
@@ -229,8 +275,8 @@ for (const d of DEVICES) {
 }
 for (const b of Object.values(browsers)) await b.close();
 srv.close();
-console.log('\n기기 | 창 | dpr | K | 캔버스 CSS | 뒷면 | 왼쪽·위(창) | 돌려 그림 | 타이틀 여백 장면 ms');
-for (const r of table) console.log(`${r.name} | ${r.view} | ${r.dpr} | ${r.k} | ${r.cssW}×${r.cssH} | ${r.back} | ${r.left},${r.top} | ${r.rot ? '예' : '아니오'} | ${r.sceneMs ?? '-'}`);
+console.log('\n기기 | 창 | dpr | K | 캔버스 CSS | 뒷면 | 캔버스 창 자리(왼·위–오른·아래) | 틀(여백 판) | 돌려 그림 | 타이틀 여백 장면 ms | 멈춤 구역');
+for (const r of table) console.log(`${r.name} | ${r.view} | ${r.dpr} | ${r.k} | ${r.cssW}×${r.cssH} | ${r.back} | ${r.left},${r.top}–${r.right},${r.bottom} | ${r.stage} | ${r.rot ? '예' : '아니오'} | ${r.sceneMs ?? '-'} | ${r.pause ?? '-'}`);
 console.log('\n터치 흐름');
 for (const r of touchResults) console.log(`${r.name}: ${r.result}${r.log ? ` (${r.log})` : ''}`);
 if (errors.length) { console.log('오류', errors.length); for (const e of errors.slice(0, 5)) console.log(e); process.exitCode = 1; }

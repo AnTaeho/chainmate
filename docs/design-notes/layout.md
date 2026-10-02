@@ -331,6 +331,15 @@ x   8 ─ 120 │ 128 ────────────── 352 │ 360 ─
 - 안드로이드 홈 화면 앱은 manifest의 가로를 따르니 돌릴 일이 없다. iOS 홈 화면 앱은 세로로 열리면 돌려 그린다.
 - 버린 안: 세로 안내 그림(CHM-28) — 사람이 폰을 돌리기 전까지 아무것도 못 한다. 캔버스 안에서 돌려 그리기 — 480×270 좌표 · 뒷면 캔버스 · 여백 판을 모두 두 벌로 셈해야 한다.
 
+**아이폰 아래 띠 · 손가락 구역**(2026-10-02, CHM-52 — 사람이 아이폰 17 세로로 든 채 돌려 그린 화면을 보내며 「아래가 잘려 보이는데 가로로 돌리면 꽉 찬다」 · 「멈춤 단추가 작다」고 했다)
+- 원인(수치): 사람 그림(1206×2622 = 402×874pt)에서 틀 · 여백 판은 창 y 0 ~ 812에서 끝나고 812 ~ 874의 62pt는 맨 바탕(#0b1210)이었다. 페이지가 읽은 창 높이(innerHeight · visualViewport)가 화면 874보다 위 안전 영역(섬 62)만큼 짧은 812였다. 캔버스는 창 y 100 ~ 740(= 812 틀에서 위 62 · 아래 34를 비킨 가운데, K 4 = 640×360)이라 480×270은 잘린 곳이 없었다. 결이 812에서 끊기고 아래 띠가 비어 「잘린」 화면으로 보였다. 가로로 들면 위 안전 영역이 0이라 띠가 없다. webkit 흉내(창 402×874에서 innerHeight · visualViewport.height를 812로 덮어씀, 안전 영역 62/34)가 사람 그림과 같은 자리(캔버스 100 ~ 740, 틀 812)를 냈다.
+- 규칙: 창을 둘로 잰다. **보이는 창**(visualViewport, 확대 중이면 innerWidth · innerHeight)은 캔버스가 앉는 곳이고, **그릴 수 있는 창 전체**(`full` = 창 · visualViewport · 문서 clientWidth/Height · `100lvw × 100lvh` 재기 중 가장 큰 것)는 틀(`#stage`) · 여백 판이 덮는 곳이다(`fit.js` `chooseFit({ vw, vh, full })`). 캔버스는 보이는 창과 안전 영역 안쪽이 겹치는 곳의 가운데. 돌리면 보이는 창은 틀 (u 0 ~ vh, v full 폭 − vw ~ full 폭)이고 창 아래 띠는 틀 오른쪽 끝에 남는다. `stageTransform`은 full 폭으로 민다.
+- 홈 화면 앱(`navigator.standalone`)은 주소창이 없다. 창이 화면과 폭이 같고 높이만 120pt 안쪽으로 짧으면 화면 전체(`screen`, 방향에 맞춰)를 보이는 창으로 본다 — 아이폰 17 세로는 캔버스가 창 y 131 ~ 771(화면 가운데). 아이패드 나눠 보기처럼 창이 작으면 쓰지 않는다.
+- 다시 맞추는 때: resize · visualViewport resize(120ms 뒤 한 번) · orientationchange(곧바로 + 350ms) · pageshow(60ms). 정수 K는 그대로 — 주소창이 펴져 섬 아래 남는 길이가 640 미만이면(보이는 창 701 이하) K 3.
+- 진짜 가로 고정: manifest `"orientation": "landscape"`(안드로이드 홈 화면 앱은 따른다). 돌려 그리는 중의 첫 누름(touchend)에 `requestFullscreen()` → `screen.orientation.lock('landscape')`를 한 번 해 보고, 안 되면 조용히 돌려 그리기로 남는다(안드로이드 크롬만 된다). **iOS 사파리 · 홈 화면 앱은 둘 다 따르지 않는다** — 돌려 그리기를 바르게 맞추는 것이 iOS의 답이다.
+- 손가락 구역: 손가락 기기(`pointer: coarse` · 터치 점, 또는 한 번 누른 뒤)면 실제 화면 44pt를 도트로 잰다(`ui.js` `fingerDots` = ceil(44 / 도트 하나의 CSS 크기) — 돌린 아이폰 K 4는 33도트, 가로 사파리 K 3은 44도트). 그림은 그대로 두고 누르는 구역만 이웃과 겹치지 않는 쪽으로 넓힌다(`growHit`, `button(… { grow: { l, r, u, d } })`). 멈춤 ≡은 그림을 14×12로 키우고(오른쪽 · 아래로만) 구역을 오른쪽 · 위로 캔버스 밖 여백까지 넓힌다 — 그래서 손가락은 틀(`#stage`) 전체에서 받는다(여백을 누르면 게임 밖 좌표가 되고 거기 구역이 없으면 아무 일도 없다). 마우스 기기는 그림 · 구역이 예전과 같다.
+- 전후 `docs/shots/mobile-iphone/`(`node tools/shots-mobile.mjs --only iphone17 --scenes title,battle,shop,pause,pack` — 홈 화면 세로 · 사파리 세로 주소창 접힘/펴짐 · 사파리 가로 접힘/펴짐, 주소창 높이는 어림값), 시험 `test/fit-iphone.test.js`. 실기기에서 볼 것: 띠(812 ~ 874)에 여백 판이 실제로 그려지는지, 사파리 주소창이 오르내릴 때 visualViewport resize가 오는지.
+
 **터치 규칙**
 - 창 전체 `touch-action: none` · `overscroll-behavior: none` · `user-select: none` · `-webkit-touch-callout: none`, viewport `maximum-scale=1, user-scalable=no, viewport-fit=cover`, document의 `touchmove` · `gesturestart` · `gesturechange` · `dblclick` 막음. 두 번 누르기 확대 · 벌리기 · 튕김 · 길게 눌러 선택 · 메뉴가 없다.
 - 한 손가락만 받는다(두 번째 손가락은 무시). `touchmove`로 끌기(격언 순서 바꾸기)가 된다. `touchcancel`은 아무것도 누르지 않은 것으로.
