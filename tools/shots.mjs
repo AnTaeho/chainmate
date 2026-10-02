@@ -409,9 +409,9 @@ await ev(() => { localStorage.removeItem('chainmate.run.v1'); const a = window._
 await settle(200);
 await shot('02e-select-endless');
 
-// 타이틀 시연: 흐린 판에서 풀이기가 사슬을 두는 중
+// 첫 화면 하늘의 사슬: 셋째를 먹는 순간(조각 · 불티 · ×4)
 await ev(() => window.__app.go('title'));
-await page.waitForFunction(() => { const c = window.__app.screen.demo.view.chain; return c && c.path.length >= 4 && !window.__app.screen.demo.view.mover; }, null, { timeout: 30000 });
+await page.waitForFunction(() => { const s = window.__app.screen; return s.snap && s.snap.st.eaten.length >= 3 && s.snap.st.hits.some((h) => h.n === 4 && h.age > 0.15); }, null, { timeout: 30000 });
 await shot('22-title-demo');
 
 // 각인 여섯이 손 · 판 · 상점에: 주머니 기물에 각인을 새기고 대국을 연다
