@@ -23,7 +23,7 @@ import { openBox, closeBox } from '../../render/layoutlog.js';
 // 줄 높이 · 열 수는 본 것 · 안 본 것을 가리지 않고 탭의 모든 이름으로 잰다(도감이 차도 쪽이 바뀌지 않는다)
 const GRID = { x: 12, w: W - 24, gap: 4, cols: [5, 4, 3] };
 // 오른쪽 그림 자리(아이콘 12 · 기물 16 · 혼 문양 9 · 문장 · 조각 셋)
-const artW = (tab, e) => (e.piece ? 16 + 2 : e.soul ? 9 + 3 : e.crest || tab === 'maxims' || tab === 'legends' ? 12 + 3 : e.parts != null ? 18 + 3 : 0);
+const artW = (tab, e) => (e.piece ? 16 + 2 : e.soul ? 9 + 2 : e.crest || tab === 'maxims' || tab === 'legends' ? 12 + 2 : e.parts != null ? 18 + 2 : 0);
 // 격자 자리: { cols, cw, pages: [[{ i, x, y, h, name, nameW }]] } — 쪽마다 들어가는 줄까지, 줄 높이는 그 줄의 가장 긴 이름
 export function codexLayout(tab, list) {
   const P = PAD_CARD, room = PAGE.btnY - GAP_GROUP - PAGE.bodyY;
