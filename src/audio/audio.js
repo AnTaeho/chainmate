@@ -149,6 +149,12 @@ export function createAudio(win = globalThis, opts = {}) {
     // 혼의 금(CHM-17): 사기 그릇에 금이 가는 짧은 두 번의 딱 소리 · 각성: 금이 터지며 솟는 쓸기 + 종 화음
     crack: () => { noise({ dur: 0.04, vol: 0.22, freq: 7000, q: 5 }); noise({ t: 0.07, dur: 0.05, vol: 0.18, freq: 5200, q: 5 }); tone(NOTE(79), { t: 0.07, dur: 0.12, type: 'triangle', vol: 0.05, slide: NOTE(74) }); },
     awaken: () => { noise({ dur: 0.35, vol: 0.16, freq: 800, q: 1.5, sweep: 7000 }); bell(NOTE(84), { t: 0.3, dur: 0.9, vol: 0.16 }); bell(NOTE(88), { t: 0.36, dur: 0.9, vol: 0.12 }); bell(NOTE(91), { t: 0.42, dur: 1.1, vol: 0.12 }); },
+    // 탁월수 !!(CHM-43): 메이트 화음 위에 얹히는 맑은 두 종(5도 위로 뛴다) + 위로 쓸어 올리는 반짝임. 메이트 소리와 겹쳐 울린다
+    brilliant: () => {
+      bell(NOTE(91), { dur: 0.7, vol: 0.13 }); bell(NOTE(98), { t: 0.09, dur: 0.9, vol: 0.11 });
+      for (let i = 0; i < 5; i++) tone(NOTE(86 + i * 3), { t: 0.02 + i * 0.03, dur: 0.06, type: 'sine', vol: 0.045 });
+      noise({ t: 0.05, dur: 0.3, vol: 0.05, freq: 5000, q: 0.7, sweep: 9000 });
+    },
     // 전설 한 소절: 느린 금빛 선율 + 종
     legend: () => {
       const mel = [[72, 0], [76, 0.25], [79, 0.5], [84, 0.75], [83, 1.1], [79, 1.35], [81, 1.6], [84, 2.0]];
@@ -187,7 +193,7 @@ export function createAudio(win = globalThis, opts = {}) {
     if (want && TRACKS[want]) glide(lane(want).out.gain, 1, now, fade);
   }
   // 큰 효과음이 나면 음악이 잠깐 내려앉았다 돌아온다
-  const DUCK = new Set(['capture', 'promote', 'cut', 'mate', 'grade', 'boom', 'overflow', 'win', 'lose', 'golden', 'legend', 'fanfare', 'grow', 'fragment', 'start']);
+  const DUCK = new Set(['capture', 'promote', 'cut', 'mate', 'grade', 'boom', 'overflow', 'win', 'lose', 'golden', 'legend', 'fanfare', 'grow', 'fragment', 'start', 'brilliant']);
   function duck() {
     const p = musDuck.gain, now = ctx.currentTime;
     if (p.cancelScheduledValues) p.cancelScheduledValues(now);
