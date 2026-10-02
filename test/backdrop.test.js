@@ -50,6 +50,8 @@ test('여백 판: 창 크기 · 흐름 시각 · 어둡기가 같으면 다시 �
   assert.equal(M.pad.drawPad(cv, f.pad, { time: 21, tint: null, dim: 0, scene, flash: null }), false);
 });
 
+// 아이폰 가로 · 아이패드 세로 · 맥 1920×960 · 좁은 여백: [게임 왼쪽 위 자리 x, y, 여백 판 폭, 높이]
+const WINDOWS = [[127, 36, 734, 343], [30, 225, 540, 720], [34, 2, 548, 274], [5, 24, 490, 318]];
 // 칠하기를 도트마다 기록하는 캔버스: 도트마다 (빛깔, 알파) 순서의 해시. 불투명하게 칠하면 그 전 역사는 지운다
 const ids = new Map();
 function recorder(w, h) {
@@ -70,23 +72,51 @@ function recorder(w, h) {
   return { g, hash, solid, w, h };
 }
 
-test('타이틀 장면: 창 전체로 이어 그려도 게임 판 자리는 게임 캔버스와 같은 도트, 여백에 빈 곳이 없다', async () => {
-  const { paintScene } = await import('../src/ui/screens/title.js');
+test('첫 화면 달밤: 멈춘 바탕을 창 전체로 이어 그려도 게임 판 자리는 게임 캔버스와 같은 도트, 여백에 빈 곳이 없다', async () => {
+  const { paintNight } = await import('../src/render/night.js');
   const game = recorder(480, 270);
-  paintScene(game.g, 0, 0, 480, 270);
+  paintNight(game.g, 0, 0, 480, 270);
   // 아이폰 가로 · 아이패드 세로 · 맥 1920×960처럼 여백이 사방으로 다른 창
-  for (const [ox, oy, cols, rows] of [[127, 36, 734, 343], [30, 225, 540, 720], [34, 2, 548, 274], [5, 24, 490, 318]]) {
+  for (const [ox, oy, cols, rows] of WINDOWS) {
     const pad = recorder(cols, rows);
-    paintScene(pad.g, -ox, -oy, cols, rows);
+    paintNight(pad.g, -ox, -oy, cols, rows);
     let diff = 0;
     for (let y = 0; y < 270; y++) for (let x = 0; x < 480; x++) if (pad.hash[(y + oy) * cols + x + ox] !== game.hash[y * 480 + x]) diff++;
     assert.equal(diff, 0, `게임 자리 도트가 다르다(${cols}×${rows})`);
     assert.equal(pad.solid.indexOf(0), -1, `여백에 칠하지 않은 도트(${cols}×${rows})`);
-    // 늘인 띠가 아니다: 게임 판 왼쪽 바로 밖 열이 게임 첫 열을 그대로 되풀이하지 않는다
-    if (ox >= 2) {
-      let same = 0;
-      for (let y = 0; y < 270; y++) if (pad.hash[(y + oy) * cols + ox - 2] === pad.hash[(y + oy) * cols + ox - 1] && pad.hash[(y + oy) * cols + ox - 1] === pad.hash[(y + oy) * cols + ox]) same++;
-      assert.ok(same < 270, '가장자리 열이 늘인 띠처럼 같다');
+  }
+});
+
+test('첫 화면 달밤: 별 · 실루엣은 여백 판과 게임이 같은 자리에 있고, 실루엣은 게임 밖으로도 이어진다', async () => {
+  const N = await import('../src/render/night.js');
+  const key = (s) => `${s.kind}${s.layer}@${s.x},${s.y}x${s.sc}`;
+  for (const t of [0, 3.7, 41.2]) {
+    const inGame = new Set(N.silhouettesIn(t, 0, 0, 480, 270).map(key));
+    const stars = new Set(N.starsIn(0, 0, 480, 270).map((p) => p.join(',')));
+    for (const [ox, oy, cols, rows] of WINDOWS) {
+      const all = N.silhouettesIn(t, -ox, -oy, cols, rows);
+      const touching = all.filter((s) => s.x < 480 && s.x + 16 * s.sc > 0 && s.y < 270 && s.y + 22 * s.sc > 0).map(key);
+      assert.deepEqual(new Set(touching), inGame, `실루엣이 다르다(t ${t}, ${cols}×${rows})`);
+      const padStars = N.starsIn(-ox, -oy, cols, rows).filter(([x, y]) => x >= 0 && x < 480 && y >= 0 && y < 270).map((p) => p.join(','));
+      assert.deepEqual(new Set(padStars), stars, `별이 다르다(${cols}×${rows})`);
+      if (ox >= 40) assert.ok(all.some((s) => s.x < 0), `왼쪽 여백에 실루엣이 없다(${cols}×${rows})`);
     }
   }
+  // 겹마다 한 도트씩 함께 옮겨 간다: 흐른 거리가 같으면 같은 자리
+  assert.deepEqual(N.silhouettesIn(10, 0, 0, 480, 270), N.silhouettesIn(10.001, 0, 0, 480, 270));
+  assert.notDeepEqual(N.silShift(10), N.silShift(12));
+});
+
+test('여백 판: 움직이는 층은 그 열쇠가 바뀔 때만 다시 칠하고, 흔들림만큼 바탕을 옮겨 깐다', () => {
+  const f = M.fit.chooseFit({ vw: 1470, vh: 956, dpr: 2 });
+  const cv = dom.document.createElement('canvas');
+  M.pad.resetPad();
+  let drawn = 0, over = 0;
+  const scene = (k, shake = [0, 0]) => ({ key: 'night-test', paint: () => {}, live: { key: k, shake, draw: () => { drawn++; }, over: () => { over++; } } });
+  assert.equal(M.pad.drawPad(cv, f.pad, { time: 1, dim: 0, scene: scene('a') }), true);
+  assert.equal(M.pad.drawPad(cv, f.pad, { time: 2, dim: 0, scene: scene('a') }), false);
+  assert.equal(M.pad.drawPad(cv, f.pad, { time: 2, dim: 0, scene: scene('b') }), true);
+  assert.equal(M.pad.drawPad(cv, f.pad, { time: 2, dim: 0, scene: scene('b|2,-1', [2, -1]) }), true);
+  assert.equal(drawn, 3);
+  assert.equal(over, 3);
 });
