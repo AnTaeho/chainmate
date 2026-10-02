@@ -115,7 +115,7 @@ export function hiFor(ctx, s = 1) {
 
 // 머리 꼭대기(보석 자리): 가장 위 몸 줄의 가운데.
 // 꼭대기가 머리가 아닌 기물은 자리를 따로 준다(1배 · 두 배): 까마귀 = 머리(꼭대기는 든 날개) · 광대 = 고깔 띠 가운데(두 갈래 사이 빈 곳) · 화약병 = 마개(꼭대기는 불꽃)
-const CROWN = { V: [{ x: 12, y: 2 }, { x: 22, y: 3 }], M: [{ x: 7, y: 3 }, { x: 15, y: 8 }], D: [{ x: 7, y: 5 }, { x: 15, y: 10 }] };
+const CROWN = { V: [{ x: 12, y: 2 }, { x: 22, y: 4 }], M: [{ x: 7, y: 3 }, { x: 15, y: 8 }], D: [{ x: 7, y: 5 }, { x: 15, y: 10 }] };
 function crownOf(rows, type) {
   if (CROWN[type]) return CROWN[type][rows.length === SH ? 0 : 1];
   for (let y = 0; y < rows.length; y++) {
@@ -242,6 +242,7 @@ export function soulOrb(col) {
 // dotted: 윤곽도 한 칸 걸러, 속은 비운다(두 수 앞 증원)
 // 두 배: 36×48 캔버스, 윤곽은 몸 바로 밖 반 도트 한 줄(바깥 반 도트는 비운다), 그물 · 점선 간격은 1배와 같은 도트 간격
 export function outlineCanvas(type, col, dotted = false, hi = LOOK.n >= 2) {
+  if (!SPR[type]) type = 'P'; // 그림이 없는 id(뺀 기물이 data에 남은 동안)는 폰 윤곽 — spriteCanvas와 같다
   const k = hi && SPR_HI[type] ? 2 : 1;
   const key = `o:${type}:${col}:${dotted ? 1 : 0}:${k}`;
   let c = CACHE.get(key);
