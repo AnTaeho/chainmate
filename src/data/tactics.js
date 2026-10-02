@@ -45,6 +45,6 @@ export function useTactic(b, id) {
 export function thaw(b) { for (let i = 0; i < 64; i++) if (b.board[i] && b.board[i].frozen) b.board[i] = { ...b.board[i], frozen: false }; }
 
 // 진화(깊이 F): 두루마리 「진화」 — 주머니 기물 하나를 그 종류의 이형으로(여럿이면 판 시드 · 기물 번호로 정해진다)
-export const EVOLVE = { P: ['S'], N: ['H', 'L'], B: ['A'], R: ['C', 'O', 'W'], Q: ['Z'] };
+export const EVOLVE = { P: ['S', 'D'], N: ['L', 'M'], B: ['E', 'V'], R: ['O', 'W', 'T'], Q: ['Z'] }; // CHM-55 갈래(docs/design-notes/fairies.md)
 export const EVOLVE_PRICE = 4;
 export const evolveTo = (seed, piece) => { const l = EVOLVE[piece.t]; return l ? l[(seed + piece.id) % l.length] : null; };

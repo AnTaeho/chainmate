@@ -396,13 +396,13 @@ export function awakenArt(ctx, x, y, t = 0, { sq = true } = {}) {
   const k = Math.floor(t * 4) % 4;
   for (let r = 0; r < 4; r++) { const q = (r * Math.PI) / 2 + Math.PI / 4; const d = 7 + ((k + r) % 2); rect(ctx, Math.round(cx + Math.cos(q) * d), Math.round(cy + Math.sin(q) * d), 1, 1, PAL.goldHi); }
 }
-// 진화 그림: 체스 기물 › 이형(나이트 › 야간기사)
+// 진화 그림: 체스 기물 › 이형(나이트 › 낙타)
 export function evolveArt(ctx, x, y, t = 0) {
   rect(ctx, x, y, 44, 26, '#1b2b27');
   sprite(ctx, 'N', 'w', x + 1, y + 2);
   const k = Math.floor(t * 3) % 2;
   for (let i = 0; i < 3; i++) rect(ctx, x + 19 + i + k, y + 11 + i, 1, 1, PAL.gold), rect(ctx, x + 19 + i + k, y + 15 - i, 1, 1, PAL.gold);
-  sprite(ctx, 'H', 'w', x + 26, y + 2, { tier: 1 });
+  sprite(ctx, 'L', 'w', x + 26, y + 2, { tier: 1 });
 }
 
 // 카드에 적는 효과 한 줄(말풍선은 덧붙임만)
@@ -529,7 +529,7 @@ export function itemTip(it) {
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 깃든다'], 150, [rarityLine(s.rarity)]); }
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
   if (it.kind === 'awaken') return tipLines('깨우기', [AWAKEN_TEXT, AWAKEN_MORE]);
-  if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존']);
+  if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 화약병 · 나이트 › 낙타 · 광대 · 비숍 › 물수제비 · 까마귀 · 룩 › 포 · 유령 · 꺾쇠 · 퀸 › 아마존']);
   if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`전술 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(l.name, ['조각 셋이면 전설', ...fragmentSteps(l, {}), `전설: ${l.text}`]); }
   return null;
@@ -557,7 +557,7 @@ export function itemExtraTip(it) {
   if (more) lines.push(more);
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보가 적용된다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${L(info.story)}`); }
-  if (it.kind === 'evolve') lines.push('폰 › 궁수 · 나이트 › 야간기사 · 낙타 · 비숍 › 대주교 · 룩 › 재상 · 포 · 유령 · 퀸 › 아마존');
+  if (it.kind === 'evolve') lines.push('폰 › 궁수 · 화약병 · 나이트 › 낙타 · 광대 · 비숍 › 물수제비 · 까마귀 · 룩 › 포 · 유령 · 꺾쇠 · 퀸 › 아마존');
   // 명국 조각(진열 · 꾸러미): 이 카드가 첫 조각이다 — 세 걸음 중 첫째가 다음 걸음
   if (it.kind === 'fragment') lines.push(...fragmentSteps(LEGEND_BY_ID[it.legend], {}), `전설: ${LEGEND_BY_ID[it.legend].text}`);
   if (it.kind === 'piece') return moveTip(itemName(it), it.t, lines);

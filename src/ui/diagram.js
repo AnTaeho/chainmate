@@ -1,6 +1,7 @@
 // 행마 그림: 8×8 작은 판(칸 4px)에 기물 하나를 d4에 두고, 먹을 수 있는 칸에 점을 찍는다.
 // 대국 규칙과 같은 reach(src/sim/board.js)로 그린다 — 글(「나이트처럼 L자로 뛰되 …」) 옆에서 한눈에.
-// 받침이 있어야 먹는 포 · 메뚜기와 막힘을 뚫는 유령은 받침 · 막는 기물을 둔 보기 판(어두운 네모)으로.
+// 받침이 있어야 먹는 포 · 막힘을 뚫는 유령 · 막히면 꺾는 꺾쇠 · 넘을 너머가 비어야 하는 까마귀 · 적의 행마를 흉내 내는 광대는
+// 받침 · 막는 기물 · 적을 둔 보기 판(어두운 네모)으로.
 import { reach, boardFrom } from '../sim/board.js';
 import { rect, frame } from '../render/gfx.js';
 import { PAL } from '../render/palette.js';
@@ -11,13 +12,15 @@ export const DIAG_W = DIAG_SIZE + 4;           // 말풍선에서 그림이 차�
 const FROM = 27; // d4
 // 보기 판: 받침 · 막는 기물(적 폰)과 그 너머의 적
 const SAMPLE = {
-  G: { d6: 'P', f6: 'P', b4: 'P' },
   O: { d6: 'P', d8: 'P', f4: 'P', h4: 'P' },
   W: { d6: 'P' },
+  T: { d6: 'P', f4: 'P', b4: 'P' },
+  V: { e5: 'P', c3: 'P', c5: 'P', b6: 'P' },
+  M: { e5: 'P', f5: 'N', b4: 'R', c3: 'P' },
 };
 const cache = new Map();
 // 그릴 수 있나: 체스 · 특수 기물(벽 · 보석은 행마가 없다)
-export const hasDiagram = (t) => !!t && 'PNBRQKACZLHGOSW'.includes(t);
+export const hasDiagram = (t) => !!t && 'PNBRQKZLOSWTEVMD'.includes(t);
 
 function plan(t, dir) {
   const key = `${t}${dir}`;

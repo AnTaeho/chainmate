@@ -46,14 +46,14 @@ const collinear5 = (squares) => {
 const pick3 = (rng, free, n) => { const out = []; while (out.length < n && free.length) out.push(free.splice(Math.floor(rng() * free.length), 1)[0]); return out; };
 
 // ── 은: 기물 하나를 바꾸거나 판에 작은 규칙
-joseki('knight_oath', '기사 서약', 'silver', ['leap'], '나이트 둘이 야간기사가 된다', {
-  pick(run, events) { evolve(run, 'N', 'H', 2, events); },
+joseki('knight_oath', '기사 서약', 'silver', ['leap'], '나이트 하나가 광대가 된다', {
+  pick(run, events) { evolve(run, 'N', 'M', 1, events); },
 });
-joseki('rampart', '성벽 쌓기', 'silver', ['line', 'leap'], '룩 하나가 재상이 된다', {
-  pick(run, events) { evolve(run, 'R', 'C', 1, events); },
+joseki('rampart', '성벽 쌓기', 'silver', ['line'], '룩 하나가 꺾쇠가 된다', {
+  pick(run, events) { evolve(run, 'R', 'T', 1, events); },
 });
-joseki('mitre', '주교관', 'silver', ['diag', 'leap'], '비숍 하나가 대주교가 된다', {
-  pick(run, events) { evolve(run, 'B', 'A', 1, events); },
+joseki('mitre', '주교관', 'silver', ['diag'], '비숍 하나가 물수제비가 된다', {
+  pick(run, events) { evolve(run, 'B', 'E', 1, events); },
 });
 joseki('archery', '활터', 'silver', ['hunt', 'march'], '폰 둘이 궁수가 된다', {
   pick(run, events) { evolve(run, 'P', 'S', 2, events); },
@@ -101,7 +101,7 @@ joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 시작해 �
 joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 사슬이 한 줄에 다섯 칸을 밟으면 곧바로 이긴다', {
   onCapture(ctx) {
     const c = ctx.chain;
-    const sqs = [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.to)];
+    const sqs = [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.at ?? x.to)];
     if (!c.flags.gomoku && collinear5(sqs)) { c.flags.gomoku = true; ctx.emit({ type: 'gomoku', squares: sqs }); }
   },
 });
@@ -115,8 +115,8 @@ const heavyFirst = (board) => board.map((c, sq) => (foeAt(c) ? sq : -1)).filter(
 joseki('desert', '사막', 'silver', ['leap'], '나이트 둘이 낙타가 된다', {
   pick(run, events) { evolve(run, 'N', 'L', 2, events); },
 });
-joseki('meadow', '풀밭', 'silver', ['march'], '폰 둘이 메뚜기가 된다', {
-  pick(run, events) { evolve(run, 'P', 'G', 2, events); },
+joseki('meadow', '풀밭', 'silver', ['march'], '폰 둘이 까마귀가 된다', {
+  pick(run, events) { evolve(run, 'P', 'V', 2, events); },
 });
 joseki('battery', '포대', 'silver', ['line'], '룩 하나가 포가 된다', {
   pick(run, events) { evolve(run, 'R', 'O', 1, events); },
