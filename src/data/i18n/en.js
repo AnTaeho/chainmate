@@ -301,7 +301,7 @@ export const EN = {
   '아무것도 지키지 못한다': 'Guards nothing',
   // ── 세력(factions.js): 이름 · 버릇 · 우두머리
   '세력': 'Faction', '농민군': 'Peasants', '기병대': 'Cavalry', '수도원': 'Abbey', '숲 사냥꾼': 'Huntsmen', '전령단': 'Heralds', '용병단': 'Mercenaries', '왕궁 근위': 'Royal Guard',
-  '촌장': 'Village Elder', '기병대장': 'Cavalry Captain', '수도원장': 'Abbot', '성주': 'Warden', '사냥꾼 두령': 'Hunt Chief', '전령장': 'Chief Herald', '용병대장': 'Free Captain',
+  '촌장': 'Village Elder', '기병대장': 'Horse Captain', '수도원장': 'Abbot', '성주': 'Warden', '사냥꾼 두령': 'Hunt Chief', '전령장': 'Chief Herald', '용병대장': 'Free Captain',
   '적 폰이 옆 칸도 지킨다': 'Enemy pawns also guard beside them', '증원이 모두 나이트 무리로 온다': 'Recruits are all knight-kind',
   '돌기둥 셋~다섯이 늘 선다': 'Three to five stone pillars stand', '성벽 한 줄이 판을 가른다 · 문은 하나': 'A wall splits the board · one gate',
   '위 두 줄은 숲이다 · 닿으면 걷힌다': 'Top two ranks are forest · your reach clears it', '증원 +1 · 두 수 앞까지 보인다': '+1 recruit · seen two moves ahead',
@@ -328,7 +328,7 @@ export const EN = {
   '끊긴 사슬은 점수가 4분의 1': 'Broken chains score a quarter', '응수가 없다': 'No replies', '노려진 칸을 먹으면 곧바로 끊긴다': 'Taking a guarded square breaks the chain at once', '손을 새로 쥔다': 'A fresh hand',
   // ── 불멸의 기보
   '불멸의 대국': 'The Immortal Game', '앤더슨이 룩 둘 · 비숍 · 퀸을 바치고 이겼다': 'Anderssen gave up both rooks, a bishop and his queen, and won',
-  '끊겨도 사슬이 이어진다': 'Breaks never end the chain', '한 사슬에서 끊기지 않고 룩 둘을 먹는다': 'Take two rooks in one unbroken chain',
+  '끊겨도 사슬이 이어진다': 'Breaks never end the chain', '한 사슬에서 끊기지 않고 룩 둘을 먹는다': 'Two rooks in one unbroken chain',
   '오페라 대국': 'The Opera Game', '모피가 오페라 관람석에서 17수 만에 이겼다': 'Morphy won in 17 moves from a box at the opera',
   '지켜진 킹도 먹는다': 'Take even guarded kings', '대국 첫 수에 체크메이트': 'Checkmate on the first move of a match',
   '세기의 대국': 'The Game of the Century', '열세 살 피셔의 퀸 희생': "Thirteen-year-old Fischer's queen sacrifice",
