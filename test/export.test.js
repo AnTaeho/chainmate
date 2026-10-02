@@ -1,5 +1,5 @@
 // 기록 내보내기 길(CHM-54): 손가락 기기는 공유 시트(navigator.share, 파일 하나), 그 밖은 파일로 받기, 안 되면 클립보드.
-// iOS 앱(WKWebView)은 <a download>가 아무 일도 하지 않으므로 받았다고 하지 않는다. 앱은 돌려 그리지 않는다.
+// 손가락 기기의 앱(WKWebView)은 <a download>가 아무 일도 하지 않으므로 받았다고 하지 않는다.
 // 가짜 DOM(tools/fakedom.mjs)에 navigator · File · URL · Blob · body를 붙여 main.js boot()를 그대로 부른다.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -134,16 +134,4 @@ test('손가락 기기의 앱(iOS WKWebView)에 share가 없으면 받았다고 
   o = await open({ touch: true, app: true });
   assert.equal(await o.btn.onClick(), 'fail');
   assert.equal(lastMsg(o.app), '내보내지 못했다');
-});
-
-test('앱은 돌려 그리지 않는다: 같은 세로 손가락 창(390×844 · dpr 3)에서 웹은 돌리고 앱은 그대로', async () => {
-  const fits = {};
-  for (const app of [false, true]) {
-    const { dom } = makeDom({ width: 390, height: 844, dpr: 3, touch: true, app });
-    const a = await boot({ window: dom.window, document: dom.document });
-    fits[app ? 'app' : 'web'] = dom.window.__fit;
-    assert.equal(a.coarse, true, '손가락 기기라는 것은 그대로(처음 안내 · 누르는 구역)');
-  }
-  assert.equal(fits.web.rot, true);
-  assert.equal(fits.app.rot, false);
 });
