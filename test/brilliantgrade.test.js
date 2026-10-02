@@ -136,8 +136,8 @@ test('옛 기록: 「!」 · 「!!」 · 「!!!」 열쇠를 별로 옮긴다(�
   assert.deepEqual(fresh.grades, { '★★': 1 });
 });
 
-// CHM-48: 재현 조각 사건은 그 수의 사건 뒤, 대국 승패 앞 — 대국 화면이 승리 연출 전에 알림을 띄우게(뒤면 보상 화면에서 떴다)
-test('재현 조각: 대국을 끝낸 수면 사건이 win 앞(사슬 끝 end 뒤)에 온다', () => {
+// CHM-48: 재현 조각 사건은 그 사슬의 사건 뒤, 사슬 끝(end) 앞 — 대국 화면이 사슬 끝 셈 동안 알림을 띄우게(win 뒤면 보상 화면에서 떴다)
+test('재현 조각: 대국을 끝낸 수면 사건이 탁월수 조각 뒤 · 사슬 끝(end) 앞 · win 앞에 온다', () => {
   const run = brilliantRun(5, 0, { opera: { first: true, feat: false, gold: false } });
   const ev = playBrilliant(run);
   const fi = ev.findIndex((e) => e.type === 'fragment' && e.legend === 'opera' && e.part === 'feat');
@@ -145,11 +145,12 @@ test('재현 조각: 대국을 끝낸 수면 사건이 win 앞(사슬 끝 end �
   const ei = ev.findIndex((e) => e.type === 'end');
   assert.ok(fi >= 0, '첫 수 체크메이트로 오페라 대국 재현 조각');
   assert.ok(wi >= 0, '대국 승리');
-  assert.ok(ei < fi && fi < wi, `end ${ei} < 재현 조각 ${fi} < win ${wi}`);
+  const bi = ev.findIndex((e) => e.type === 'fragment' && e.via === 'brilliant');
+  assert.ok(bi >= 0 && bi < fi && fi < ei && ei < wi, `탁월수 조각 ${bi} < 재현 조각 ${fi} < end ${ei} < win ${wi}`);
   assert.equal(run.fragments.opera.feat, true);
 });
 
-test('재현 조각: 대국이 이어지는 수면 사건은 그 수의 끝(end 뒤)에 온다', () => {
+test('재현 조각: 대국이 이어지는 수면 사건은 사슬 끝(end) 바로 앞에 온다', () => {
   const run = createRun({ draft: false, seed: 5, dan: 0 });
   run.fragments = { immortal: { first: true, feat: false, gold: false } };
   applyRun(run, { type: 'play' });
@@ -165,5 +166,5 @@ test('재현 조각: 대국이 이어지는 수면 사건은 그 수의 끝(end 
   const fi = ev.findIndex((e) => e.type === 'fragment' && e.legend === 'immortal' && e.part === 'feat');
   assert.ok(fi >= 0, '끊기지 않고 룩 둘');
   assert.ok(!ev.some((e) => e.type === 'win' || e.type === 'lose'));
-  assert.ok(ev.findIndex((e) => e.type === 'end') < fi);
+  assert.equal(ev[fi + 1].type, 'end');
 });

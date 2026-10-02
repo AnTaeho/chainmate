@@ -357,8 +357,9 @@ test('재현(둘째 조각): 첫 조각을 가진 판에서만, 해낸 사슬 �
   r2.fragments.eight_pawns = { first: true, feat: false, gold: false };
   const ev2 = drive(r2);
   assert.deepEqual(ev2.find((e) => e.type === 'fragment'), { type: 'fragment', legend: 'eight_pawns', part: 'feat', have: { first: true, feat: true, gold: false } });
+  // 판정은 끝난 사슬 요약으로 하고, 사건은 사슬 끝(end) 바로 앞에 온다 — 화면이 사슬 끝 셈 동안 알림을 띄우게(CHM-48)
   const endAt = ev2.findIndex((e) => e.type === 'end');
-  assert.ok(ev2.findIndex((e) => e.type === 'fragment') > endAt, '사슬이 끝난 뒤');
+  assert.equal(ev2.findIndex((e) => e.type === 'fragment'), endAt - 1, '사슬 끝 바로 앞');
 });
 
 test('셋째 조각: 황금 기물을 먹고 이기면 재현까지 해낸 명국의 금빛 조각 + 금빛 꾸러미', () => {
