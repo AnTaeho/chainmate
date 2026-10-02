@@ -3,11 +3,12 @@
 // 확인: 예외 0 · 모든 화면 방문 · 프레임당 그리기 시간 · 한 수 연출 시간(×1) · 저장 → 이어 하기.
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle } from './bot.mjs';
-import { lineCommands } from '../src/sim/solver.js';
+import { lineCommands, previewDrop } from '../src/sim/solver.js';
 import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
-import { isHidden, canReboard } from '../src/sim/battle.js';
+import { isHidden, canReboard, dropSquaresFor } from '../src/sim/battle.js';
+import { boardFrom } from '../src/sim/board.js';
 import { reboardOn } from '../src/sim/tuning.js';
 import { CRACK, isCracked } from '../src/data/souls.js';
 const { targetOk } = await import('../src/ui/parts.js');
@@ -297,6 +298,8 @@ const HINT_SUBJECT = {
   bigText: (id) => scrName() === 'title' && id === 'title:settings',
   clock: (id, run) => id === 'clock' && run.log.some((x) => x.clockLost),
   crack: (id, run) => { const p = run.deck.find((x) => `deck:${x.id}` === id); return !!(p && isCracked(p)); },
+  // 탁월수(CHM-43): 가리킨 손 카드가 희생으로 새로 뽑은 기물(「!?」 딱지)
+  brilliant: (id, run) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')], off = run.battle && run.battle.offering; return !!(p && off && (off.drawn || []).includes(p.id)); },
 };
 function hintSubject() {
   const h = app.hintShown;
@@ -1180,6 +1183,61 @@ const awakeSeen = { crack: 0, toast: 0, hint: 0, skip: 0, preview: 0, screen: 0,
   app.toTitle(); pump(1);
 }
 
+// 탁월수 걸음(CHM-43): 봇 판은 탁월수가 드물어(판의 3%) 하나를 세운다. 손 폰 넷 · 주머니 맨 앞 나이트 · 판에 지키는 적 없는 킹 하나 →
+//   폰 하나를 바친다(카드가 흩어지고 나이트가 들어온다) → 나이트에 「!?」 · 처음 안내 · 바친 줄 → 나이트를 들어 킹에 닿는 칸에 떨군다(「!?」가 사라진다) →
+//   킹을 먹는다: 메이트 + 탁월수 「!!」(h8 — 오른쪽 끝 · 맨 윗줄이라 딱지가 아래 왼쪽으로 뒤집힌다) · 배수 ×2 · 기록. 한 수 연출(×1)을 잰다
+const brillSeen = { sac: 0, deal: 0, tag: 0, hint: 0, row: 0, gone: 0, fx: 0, flip: 0, mult: 0, record: 0, sec: 0, bad: [] };
+{
+  const bad = (m) => brillSeen.bad.push(m);
+  app.overlay = null; app.nextSeed = 14; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
+  if (app.records.coachSeen) delete app.records.coachSeen.brilliant;
+  app.settings.coach = true;
+  app.goPhase(); pump(30);
+  click('select:play'); pump(2);
+  if (screen() !== 'battle') bad(`대국이 열리지 않았다(${screen()})`);
+  else {
+    idle();
+    for (let n = 0; n < 200 && app.screen.banner; n++) pump(1);
+    const b = app.run.battle, s = app.screen;
+    b.board = boardFrom({ h8: 'K' }); b.incoming = []; b.incomingNext = [];
+    b.hand = ['P', 'P', 'P', 'P'].map((t, i) => ({ t, id: 900 + i, eng: null }));
+    b.bag = [{ t: 'N', id: 950, eng: null }, ...b.bag];
+    b.target = 1e9; b.discardsLeft = Math.max(1, b.discardsLeft);
+    s.sync(); pump(2);
+    const recBefore = app.records.brilliants || 0;
+    click('hand:0'); click('btn:discard'); pump(1);
+    if (s.view.hiding && s.view.hiding[0] === 0) brillSeen.sac++; else bad('바친 카드가 흩어지지 않았다');
+    idle(); pump(3);
+    const i = s.view.hand.findIndex((p) => p.id === 950);
+    if (i >= 0 && s.dealIn && s.dealIn.ids.includes(950)) brillSeen.deal++; else bad('새로 뽑은 나이트가 손에 들어오지 않았다');
+    if (s.view.drawn.includes(950)) brillSeen.tag++; else bad('새로 뽑은 기물에 「!?」가 없다');
+    if (s.offeredLayout && s.offeredLayout.n === 1 && s.offeredLayout.shown === 1) brillSeen.row++; else bad(`바친 기물 줄이 어긋났다(${JSON.stringify(s.offeredLayout)})`);
+    for (let n = 0; n < 30 && !app.hintShown; n++) pump(1);
+    if (app.hintShown && app.hintShown.id === 'brilliant' && app.hintShown.regionId === `hand:${i}`) brillSeen.hint++; else bad(`처음 안내(탁월수)가 「!?」 카드를 가리키지 않았다(${app.hintShown ? `${app.hintShown.id}@${app.hintShown.regionId}` : '없음'})`);
+    notesOnce('brilliant', 1);
+    click(`hand:${i}`); pump(1);
+    const K = 63, sq = dropSquaresFor(b, b.hand[i]).find((q) => previewDrop(b, i, q).next.includes(K));
+    if (sq == null) bad('킹에 닿는 떨굴 칸이 없다');
+    else {
+      s.seq.total = 0; s.seq.trace = [];
+      click(`sq:${sq}`); idle();
+      if (!s.view.drawn.length) brillSeen.gone++; else bad('수를 둔 뒤에도 「!?」가 남았다');
+      const fx0 = (app.stats && app.stats.brilliantFx) || 0;
+      let sawMult = false;
+      click(`sq:${K}`);
+      for (let n = 0; n < 600 && app.screen === s && s.busy; n++) { pump(1); if (s.view.brill && s.view.brill.x === 2) sawMult = true; }
+      measureSeq(s);
+      brillSeen.sec = s.seq.total;
+      if (((app.stats && app.stats.brilliantFx) || 0) > fx0) brillSeen.fx++; else bad('탁월수 「!!」가 뜨지 않았다');
+      if (s.lastBrilliantTag && s.lastBrilliantTag.flipX && s.lastBrilliantTag.flipY) brillSeen.flip++; else bad(`h8 「!!」가 판 안쪽으로 뒤집히지 않았다(${JSON.stringify(s.lastBrilliantTag)})`);
+      if (sawMult) brillSeen.mult++; else bad('배수 칸에 「×2」가 붙지 않았다');
+      if ((app.records.brilliants || 0) === recBefore + 1 && app.records.bestBrilliant) brillSeen.record++; else bad('기록에 탁월수가 남지 않았다');
+    }
+  }
+  for (let k = 0; k < 20 && screen() !== 'shop' && screen() !== 'select'; k++) { pump(30); if (region('next')) click('next'); }
+  app.toTitle(); pump(1);
+}
+
 // 처음 켠 사람이 수업을 건너뛴다 → 곧바로 1관 · 처음 안내를 끄면 뜨지 않는다
 let skipOk = false;
 // 처음 켠 사람이 대본 대국을 건너뛴다 → 평범한 1관 연습 · 처음 안내를 끄면 뜨지 않는다
@@ -1436,6 +1494,8 @@ if (paths.bad.length) { console.log(`대본 대국 경로 어긋남: ${paths.bad
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
 console.log(`혼 각성: 금 ${awakeSeen.crack} · 금 글 ${awakeSeen.toast} · 처음 안내 ${awakeSeen.hint} · 금 없는 기물 못 고름 ${awakeSeen.skip} · 미리 보기 ${awakeSeen.preview} · 막간 ${awakeSeen.screen} · 상점으로 ${awakeSeen.back} · 상자 칸 ${awakeSeen.chest}${awakeSeen.bad.length ? ` · 어긋남: ${awakeSeen.bad.join(' | ')}` : ''}`);
 if (awakeSeen.bad.length || !awakeSeen.crack || !awakeSeen.screen || !awakeSeen.back || !awakeSeen.chest) { console.log('혼에 금이 가고 깨어나는 걸음이 어긋났다'); fail = true; }
+console.log(`탁월수: 희생 ${brillSeen.sac} · 새 카드 ${brillSeen.deal} · !? ${brillSeen.tag} · 바친 줄 ${brillSeen.row} · 처음 안내 ${brillSeen.hint} · 둔 뒤 !? 사라짐 ${brillSeen.gone} · !! ${brillSeen.fx} · 가장자리 뒤집기 ${brillSeen.flip} · ×N ${brillSeen.mult} · 기록 ${brillSeen.record} · 연출 ${brillSeen.sec.toFixed(2)}s${brillSeen.bad.length ? ` · 어긋남: ${brillSeen.bad.join(' | ')}` : ''}`);
+if (brillSeen.bad.length || !brillSeen.fx || !brillSeen.record) { console.log('희생 → 탁월수 걸음이 어긋났다'); fail = true; }
 console.log(`각인 · 혼 바꾸기: 같은 것 흐림 ${swapSeen.same} · 상점 그만 ${swapSeen.shopBack} · Esc ${swapSeen.shopEsc} · 바꾸기 ${swapSeen.shopSwap} · 혼 ${swapSeen.soulSwap} · 꾸러미 그만 ${swapSeen.packBack} · Esc ${swapSeen.packEsc} · 바꾸기 ${swapSeen.packSwap}${swapSeen.bad.length ? ` · 어긋남: ${swapSeen.bad.join(' | ')}` : ''}`);
 if (swapSeen.bad.length || !swapSeen.same || !swapSeen.shopBack || !swapSeen.shopEsc || !swapSeen.packEsc || !swapSeen.shopSwap || !swapSeen.soulSwap || !swapSeen.packBack || !swapSeen.packSwap) { console.log('각인 · 혼을 덮어쓰기 전에 확인하지 않았거나, 「그만」 · 「바꾸기」가 어긋났다'); fail = true; }
 console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 ${chartSeen.scene} · 기보를 쓴 순간 크게 ${chartSeen.grow} · 수준만 ${chartSeen.tick}(어긋남 ${chartSeen.growBad})`);
