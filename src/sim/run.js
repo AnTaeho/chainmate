@@ -342,6 +342,7 @@ function endBattle(run, events) {
     mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
     discarded: b.discarded,
     brilliants: b.brilliants || [],
+    brilliantFrags: b.brilliantFrags || [], // 하네스용: 탁월수로 얻은 명경기 조각(CHM-47)
     reboards: b.reboards || 0,
     worn,
   };
@@ -406,11 +407,11 @@ export const legendInfo = (id) => LEGEND_BY_ID[id];
 const fragOf = (run, id) => run.fragments[id] || (run.fragments[id] = { first: false, feat: false, gold: false });
 
 // 조각 하나를 준다. 셋이 모이면 전설 격언이 칸 수와 따로 들어온다.
-function grantFragment(run, id, part, events) {
+function grantFragment(run, id, part, events, via = null) {
   const f = fragOf(run, id);
   if (f[part]) return false;
   f[part] = true;
-  events.push({ type: 'fragment', legend: id, part, have: { ...f } });
+  events.push({ type: 'fragment', legend: id, part, have: { ...f }, ...(via ? { via } : {}) });
   if (f.first && f.feat && f.gold && !run.legends.includes(id)) {
     run.legends.push(id);
     const m = { uid: run.nextUid++, id, data: {}, edition: null, paid: 0, legendary: true };
@@ -429,6 +430,29 @@ function checkFeats(run, h, events) {
     const f = run.fragments[l.id];
     if (f && f.first && !f.feat && l.check(h)) grantFragment(run, l.id, 'feat', events);
   }
+}
+
+// 탁월수(CHM-47): 명경기 조각 하나. 첫 조각이 없는 명경기가 있으면 그중 하나의 첫 조각(레이팅의 「첫 조각이 반」을 따른다 —
+// 굴림에 지면 없다), 모든 명경기의 첫 조각이 있으면 재현 조각이 빠진 명경기 하나의 재현 조각, 다 있으면 없다.
+// 사다리(첫 → 재현 → 금빛)는 그대로라 셋이 모이면 전설 격언이 들어온다. 돌려주는 값: 준 조각 { legend, part } 또는 null
+export function brilliantFragment(run, events) {
+  const b = run.battle;
+  const k = b && b.brilliants ? b.brilliants.length : 0;
+  const r = fork(root(run), `brilliant:${run.ante}:${run.blind}:${k}`);
+  const has = (l, part) => !!(run.fragments[l.id] && run.fragments[l.id][part]);
+  const noFirst = LEGENDS.filter((l) => !has(l, 'first'));
+  let pick = null;
+  if (noFirst.length) {
+    const l = noFirst[int(r, noFirst.length)];
+    if (next(r) < fragmentMult(run)) pick = { legend: l.id, part: 'first' };
+  } else {
+    const noFeat = LEGENDS.filter((l) => !has(l, 'feat'));
+    if (noFeat.length) pick = { legend: noFeat[int(r, noFeat.length)].id, part: 'feat' };
+  }
+  if (!pick) return null;
+  grantFragment(run, pick.legend, pick.part, events, 'brilliant');
+  if (b) (b.brilliantFrags || (b.brilliantFrags = [])).push(pick);
+  return pick;
 }
 
 // 금빛 적을 먹고 이긴 대국 뒤: 재현까지 해낸 명국 하나의 셋째(금빛) 조각 — 조각은 첫 → 재현 → 금빛 차례로만 모인다
@@ -681,8 +705,16 @@ export function applyRun(run, cmd) {
     case 'drop': case 'capture': case 'redrop': case 'discard': case 'reboard': {
       need('battle');
       const seen = run.battle.history.length;
-      events.push(...applyBattle(run.battle, cmd));
-      for (const h of run.battle.history.slice(seen)) checkFeats(run, h, events);
+      const out = applyBattle(run.battle, cmd);
+      const feats = [];
+      for (const h of run.battle.history.slice(seen)) checkFeats(run, h, feats);
+      // 탁월수 → 명경기 조각(CHM-47). 재현 판정 뒤에 준다(탁월수 사슬이 막 받은 첫 조각의 재현이 되지는 않는다).
+      // 사건은 brilliant 바로 뒤에 끼운다 — 화면이 「!!」 다음, 대국 승리 앞에 조각 얻음을 보이게
+      for (const e of out) {
+        events.push(e);
+        if (e.type === 'brilliant') brilliantFragment(run, events);
+      }
+      events.push(...feats);
       if (run.battle.status === 'won' || run.battle.status === 'lost') endBattle(run, events);
       break;
     }

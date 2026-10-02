@@ -1,13 +1,14 @@
 // 판 밖에 남는 것(힘은 남기지 않는다): 기록 · 도감 · 오프닝 해금 · 단 해금 · 오늘의 대국.
 // 저장은 localStorage 한 덩이(KEYS.records). 순수 함수라 Node에서도 돈다.
 import { KEYS } from './save.js';
+import { OLD_GRADE_MARK } from '../sim/chain.js';
 
 export const OPENING_ORDER = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 // 해금 과제(내가 정한 것): 판마다 하나씩 보이는 「다음 해금까지」
 export const UNLOCKS = [
   { id: 'london', text: '5관에 닿는다', have: (r) => r.bestAnte, need: 5 },
   { id: 'sicilian', text: '체크메이트로 다섯 번 이긴다', have: (r) => r.mates, need: 5 },
-  { id: 'queens_gambit', text: '한 사슬에 여덟을 먹는다(!!!)', have: (r) => (r.grades['!!!'] || 0) + (r.grades['∞'] || 0), need: 1 },
+  { id: 'queens_gambit', text: '한 사슬에 여덟을 먹는다', have: (r) => (r.grades['★★★'] || 0) + (r.grades['∞'] || 0), need: 1 },
   { id: 'rook_endgame', text: '불멸의 기보 하나를 완성한다', have: (r) => r.legends, need: 1 },
 ];
 export const MAX_DAN = 8;
@@ -35,7 +36,14 @@ export function loadRecords(store) {
   const r = store.get(KEYS.records, null);
   const base = emptyRecords();
   if (!r || r.v !== 1) return base;
-  return { ...base, ...r, codex: { ...base.codex, ...(r.codex || {}) }, unlocked: { ...base.unlocked, ...(r.unlocked || {}) }, grades: { ...(r.grades || {}) } };
+  return { ...base, ...r, codex: { ...base.codex, ...(r.codex || {}) }, unlocked: { ...base.unlocked, ...(r.unlocked || {}) }, grades: gradeKeys(r.grades) };
+}
+
+// 사슬 평가 열쇠: 옛 기록의 「!」 · 「!!」 · 「!!!」를 별로 옮긴다(둘 다 있으면 더한다, CHM-47)
+export function gradeKeys(g) {
+  const out = {};
+  for (const [k, v] of Object.entries(g || {})) { const nk = OLD_GRADE_MARK[k] || k; out[nk] = (out[nk] || 0) + v; }
+  return out;
 }
 
 const mark = (rec, kind, id, fresh) => {

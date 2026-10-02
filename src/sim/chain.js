@@ -28,13 +28,15 @@ export const boardOpts = (t) => {
 export const markFairy = (t) => { t.fairyFree = !t.board.some((c) => c && !c.mine && FAIRY_SET.has(c.t)); };
 const FAIRY_SET = new Set(['A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W']);
 
-// 사슬 평가(기보 표기). 먹은 수가 이 값에 닿는 순간 「grade」 이벤트.
+// 사슬 평가(별). 먹은 수가 이 값에 닿는 순간 「grade」 이벤트. 체스 주석(!? · !!)은 희생 · 탁월수만 쓴다(CHM-47).
 export const GRADES = [
-  { n: 3, mark: '!' },
-  { n: 5, mark: '!!' },
-  { n: 8, mark: '!!!' },
+  { n: 3, mark: '★' },
+  { n: 5, mark: '★★' },
+  { n: 8, mark: '★★★' },
   { n: 12, mark: '∞' },
 ];
+// 옛 표기(CHM-47 전 「!」 · 「!!」 · 「!!!」) → 별. 옛 기록의 평가 열쇠를 옮길 때 쓴다
+export const OLD_GRADE_MARK = { '!': '★', '!!': '★★', '!!!': '★★★' };
 export const gradeOf = (n) => GRADES.reduce((g, x) => (n >= x.n ? x : g), null);
 
 export const PROMOTE_RANK = 7;

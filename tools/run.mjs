@@ -177,6 +177,10 @@ function report(R, args, wall) {
   const brPieces = {}; for (const x of brAll) for (const t of x.pieces) brPieces[t] = (brPieces[t] || 0) + 1;
   const brPer = R.map((r) => r.log.reduce((a, x) => a + (x.brilliants || []).length, 0));
   console.log(`탁월수: 나온 판 ${pc(brR.length / n)} (판당 ${f2(brPer.reduce((a, x) => a + x, 0) / n)}번 · 2번+ 판 ${pc(brPer.filter((x) => x >= 2).length / n)}), 대국당 ${(brAll.length / battles.length).toFixed(3)}, 바친 기물 ${Object.entries(brPieces).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${v}`).join(' · ') || '-'}, 무게 합 p50 ${pctile(brAll.map((x) => x.weight), 0.5)} · 최대 ${Math.max(0, ...brAll.map((x) => x.weight))}, 탁월수 판 승률 ${pc(brR.filter((r) => r.won).length / Math.max(1, brR.length))} (없는 판 ${pc(R.filter((r) => r.won && !brR.includes(r)).length / Math.max(1, n - brR.length))})`);
+  // 탁월수 → 명경기 조각(CHM-47)
+  const bfAll = battles.flatMap((x) => x.brilliantFrags || []);
+  const bfR = R.filter((r) => r.log.some((x) => (x.brilliantFrags || []).length));
+  console.log(`  탁월수 조각: ${bfAll.length}개 (첫 ${bfAll.filter((x) => x.part === 'first').length} · 재현 ${bfAll.filter((x) => x.part === 'feat').length}), 얻은 판 ${pc(bfR.length / n)}, 그 판 중 전설 완성 ${bfR.filter((r) => r.legends.length).length}판`);
   const lostBy = {};
   for (const r of R) if (!r.won) { const last = r.log.at(-1); lostBy[last.reason] = (lostBy[last.reason] || 0) + 1; }
   console.log(`전체 대국 ${battles.length}: 외통으로 이김 ${pc(allMates / battles.length)}, 막힘 패배 ${pc(battles.filter((b) => b.reason === 'stuck').length / battles.length)}. 판이 끝난 이유: ${Object.entries(lostBy).map(([k, v]) => `${k} ${pc(v / n)}`).join(', ')}`);
@@ -237,7 +241,7 @@ function report(R, args, wall) {
   console.log(`판본: 진열 격언 ${maximsSeen}개 중 ${pc(edTotal / maximsSeen)} (칸당 ${pc(edTotal / slots)}) — ${EDITIONS.map((e) => `${e.name} ${edSeen[e.id] || 0}/산 ${edBought[e.id] || 0}`).join(' · ')}. 판본 격언을 가진 판 ${pc(R.filter((r) => r.editions.length).length / n)}`);
   const chains = battles.reduce((a, b) => a + b.moves, 0);
   const gr = {}; for (const b of battles) for (const [k, v] of Object.entries(b.grades || {})) gr[k] = (gr[k] || 0) + v;
-  console.log(`사슬 평가(사슬 ${chains}): ${['!', '!!', '!!!', '∞'].map((k) => `「${k}」 ${gr[k] || 0} (${pc((gr[k] || 0) / chains)})`).join(' · ')}`);
+  console.log(`사슬 평가(사슬 ${chains}): ${['★', '★★', '★★★', '∞'].map((k) => `「${k}」 ${gr[k] || 0} (${pc((gr[k] || 0) / chains)})`).join(' · ')}`);
   const wonB = battles.filter((b) => b.won);
   const ov = (t) => wonB.filter((b) => b.overflow === t).length;
   console.log(`넘친 목표(이긴 대국 ${wonB.length}): ×1 ${pc(ov(1) / wonB.length)} · ×2 ${pc(ov(2) / wonB.length)} · ×5 ${pc(ov(5) / wonB.length)} · ×10 ${pc(ov(10) / wonB.length)} · 목표 밑(외통) ${pc(ov(0) / wonB.length)}`);
