@@ -71,7 +71,10 @@ export const undefineModifier = (id) => REGISTRY.delete(id);
 // 돌려주는 값: [{ i, def }] — i는 (mods … , 각인, 혼) 안의 자리. 풀이기가 마디마다 mods를 복사하므로
 // 차례는 (명세 id · 꺼짐 줄 + 훅 + 각인 · 혼)을 열쇠로 한 번만 정렬해 둔다(깊이 층으로 조정자가 늘어 정렬이 탐색 시간의 18%였다).
 const NONE = [];
+// 차례 표: 명세 열쇠(문자열 — 복사본끼리 같은 문자열 객체를 나눠 쓴다) → 훅 → 각인 id → 혼 id → 차례.
+// 열쇠를 마디마다 이어 붙여 새 문자열을 만들면 조정자가 많을 때 그 해시가 탐색 시간의 30%였다(CHM-44). 고르는 차례는 같다.
 const PLANS = new Map();
+let planCount = 0;
 function modsKey(mods) {
   let k = mods._key;
   if (k === undefined) {
@@ -85,8 +88,20 @@ function ordered(t, hook) {
   const eng = t.chain && t.chain.engraving;
   const soul = t.chain && t.chain.soul;
   const cacheable = hook !== 'onBattleStart' && mods !== NONE;
-  const key = cacheable ? `${modsKey(mods)}|${hook}|${eng ? eng.id : ''}|${soul ? soul.id : ''}` : null;
-  if (key) { const hit = PLANS.get(key); if (hit) return hit; }
+  let bySoul = null;
+  const sk = soul ? soul.id : '';
+  if (cacheable) {
+    const mk = modsKey(mods);
+    let byHook = PLANS.get(mk);
+    if (!byHook) PLANS.set(mk, (byHook = new Map()));
+    let byEng = byHook.get(hook);
+    if (!byEng) byHook.set(hook, (byEng = new Map()));
+    const ek = eng ? eng.id : '';
+    bySoul = byEng.get(ek);
+    if (!bySoul) byEng.set(ek, (bySoul = new Map()));
+    const hit = bySoul.get(sk);
+    if (hit) return hit;
+  }
   let withKind = null;
   const order = KIND_ORDER[hook] || DEFAULT_ORDER;
   const n = mods.length + (eng ? 1 : 0) + (soul ? 1 : 0);
@@ -100,7 +115,10 @@ function ordered(t, hook) {
   }
   let plan = NONE;
   if (withKind) { if (withKind.length > 1) withKind.sort((a, b) => a.k - b.k || a.i - b.i); plan = withKind; }
-  if (key) { if (PLANS.size > 5000) PLANS.clear(); PLANS.set(key, plan); }
+  if (bySoul) {
+    if (planCount > 5000) { PLANS.clear(); planCount = 0; }
+    else { bySoul.set(sk, plan); planCount++; }
+  }
   return plan;
 }
 const specAt = (mods, eng, soul, i) => (i < mods.length ? mods[i] : i === mods.length && eng ? eng : soul);
