@@ -1,7 +1,7 @@
 [package]
 name = "chainmate"
 version = "0.1.0"
-description = "체인메이트 — 잡으면 그것이 된다"
+description = "체인메이트 — 먹은 기물로 바뀌며 이어 먹는 체스 퍼즐 로그라이크"
 edition = "2021"
 publish = false
 

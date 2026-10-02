@@ -1,7 +1,7 @@
 {
   "name": "체인메이트",
   "short_name": "체인메이트",
-  "description": "잡으면 그것이 된다 — 체스 기물 로그라이크 퍼즐",
+  "description": "먹은 기물로 바뀌며 이어 먹는 체스 퍼즐 로그라이크",
   "lang": "ko",
   "start_url": "./",
   "scope": "./",

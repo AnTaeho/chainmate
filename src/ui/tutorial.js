@@ -13,7 +13,7 @@ export const TUTORIAL_STEPS = [
   { move: 0, ok: true, target: 'hand:0', say: '나는 킹이다. 첫 대국은 내가 이끈다. 알고 있다면 넘어가자' },
   { move: 0, pick: 'N', say: '손의 나이트를 들어라' },
   { move: 0, drop: 'b2', say: '빛나는 칸에 떨구어라. 거기서 룩에 닿는다' },
-  { move: 0, cap: 'a4', say: '룩을 먹어라. 잡으면 그것이 된다' },
+  { move: 0, cap: 'a4', say: '룩을 먹어라. 먹으면 룩이 된다' },
   { move: 0, cap: 'a8', say: '이제 너는 룩이다. 곧게 미끄러져 퀸까지' },
   { move: 0, ok: true, target: 'goal', say: '먹은 값 × 배수가 점수다. 막대가 목표에 닿으면 이긴다' },
   // ② 지키는 적 · 끊김: 한 번 끊겨 보고 되돌려 순서대로

@@ -22,7 +22,7 @@ export const LESSONS = [
       { drop: 'd3', say: '빛나는 칸에 떨군다. 먹을 적이 닿는 칸만 빛난다' },
       { cap: 'e5', say: '흔들리는 적을 눌러 먹는다' },
     ] },
-  { id: 'become', group: 'basic', title: '잡으면 그것이 된다', target: 160, hand: ['N'], board: { d4: 'R', d8: 'B' }, preview: true, bigFlip: true,
+  { id: 'become', group: 'basic', title: '먹으면 그 기물로 바뀐다', target: 160, hand: ['N'], board: { d4: 'R', d8: 'B' }, preview: true, bigFlip: true,
     steps: [
       { pick: 0, say: '나이트를 든다' },
       { drop: 'c2', say: '떨군다' },
