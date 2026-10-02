@@ -135,3 +135,35 @@ test('옛 기록: 「!」 · 「!!」 · 「!!!」 열쇠를 별로 옮긴다(�
   const fresh = loadRecords({ get: () => ({ ...emptyRecords(), grades: { '★★': 1 } }) });
   assert.deepEqual(fresh.grades, { '★★': 1 });
 });
+
+// CHM-48: 재현 조각 사건은 그 수의 사건 뒤, 대국 승패 앞 — 대국 화면이 승리 연출 전에 알림을 띄우게(뒤면 보상 화면에서 떴다)
+test('재현 조각: 대국을 끝낸 수면 사건이 win 앞(사슬 끝 end 뒤)에 온다', () => {
+  const run = brilliantRun(5, 0, { opera: { first: true, feat: false, gold: false } });
+  const ev = playBrilliant(run);
+  const fi = ev.findIndex((e) => e.type === 'fragment' && e.legend === 'opera' && e.part === 'feat');
+  const wi = ev.findIndex((e) => e.type === 'win');
+  const ei = ev.findIndex((e) => e.type === 'end');
+  assert.ok(fi >= 0, '첫 수 체크메이트로 오페라 대국 재현 조각');
+  assert.ok(wi >= 0, '대국 승리');
+  assert.ok(ei < fi && fi < wi, `end ${ei} < 재현 조각 ${fi} < win ${wi}`);
+  assert.equal(run.fragments.opera.feat, true);
+});
+
+test('재현 조각: 대국이 이어지는 수면 사건은 그 수의 끝(end 뒤)에 온다', () => {
+  const run = createRun({ draft: false, seed: 5, dan: 0 });
+  run.fragments = { immortal: { first: true, feat: false, gold: false } };
+  applyRun(run, { type: 'play' });
+  const b = run.battle;
+  b.board = boardFrom({ e5: 'R', e8: 'R' });
+  b.incoming = []; b.incomingNext = [];
+  b.hand = [P('N', 901), P('P', 902), P('P', 903), P('P', 904)];
+  b.target = 1e9;
+  const ev = [];
+  ev.push(...applyRun(run, { type: 'drop', handIndex: 0, sq: S('c4') }));
+  ev.push(...applyRun(run, { type: 'capture', sq: S('e5') }));
+  ev.push(...applyRun(run, { type: 'capture', sq: S('e8') }));
+  const fi = ev.findIndex((e) => e.type === 'fragment' && e.legend === 'immortal' && e.part === 'feat');
+  assert.ok(fi >= 0, '끊기지 않고 룩 둘');
+  assert.ok(!ev.some((e) => e.type === 'win' || e.type === 'lose'));
+  assert.ok(ev.findIndex((e) => e.type === 'end') < fi);
+});
