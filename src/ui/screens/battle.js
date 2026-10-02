@@ -39,13 +39,19 @@ import { wrap } from '../../render/text.js';
 import { Marks, drawMarkSquares, drawMarkArrows } from '../marks.js';
 import { awakenFlow } from './awaken.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
+import { ANNOT, drawAnnot, annotSize, handTagRect, boardTagRect, offeredRow, drawMore } from '../annot.js';
 
 export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
 // 게임 좌표 → 판 칸(판 밖이면 -1)
 export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
-const DISCARD_W = 62; // 손 이름표 줄 오른쪽 희생 단추 폭
+// 손 이름표 줄 오른쪽 희생 단추: 아이콘 + 이름이 62 안에 들어가면 그대로. 안 들어가면(영어 「Sacrifice」 굵게 57) 아이콘을 빼고
+// 이름에 맞춘 폭(테 1 + 틈 2 양쪽 — 단추 글 안 여백 검사). 손 이름표 줄(handRowLayout)은 이 폭을 뺀 자리를 쓴다(CHM-40)
+export function discardButton() {
+  const tw = measure('희생', true);
+  return tw + 10 + 6 <= 62 ? { w: 62, icon: true } : { w: Math.max(62, tw + 7), icon: false };
+}
 const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 · ×5 · ×10) = 넘친 층
 // 대국 왼쪽 칸(판 틀 공통 쌓기 — common.js sideStack): 머리 칸(관 · 대국 종류 · 목표 · 점수) → 값 × 배수 → 사슬 칸(남는 높이)
 // … 아래 칸(수 · 희생 · 상금 · 주머니). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
@@ -259,6 +265,11 @@ export class BattleScreen {
     v.movesLeft = b.movesLeft; v.moves = b.rules.moves;
     v.discardsLeft = b.discardsLeft; v.discards = b.rules.discards;
     v.bag = b.bag.length; v.deckSize = b.deckSize;
+    // 희생(CHM-43): 새로 뽑은 기물(손 카드의 !?) · 바친 기물(왼쪽 칸 희생 구슬 옆 줄). 규칙 상태를 그대로 읽는다 — 수를 두면 endMove가 b.offering을 비운다
+    // 사슬 중(수를 둔 뒤)에는 기회가 이미 그 수에 걸렸으니 손의 「!?」는 없다
+    v.drawn = b.status === 'play' && b.offering && b.offering.drawn ? b.offering.drawn.slice() : [];
+    v.offered = (b.offered || []).map((p) => p.t);
+    v.hiding = null; v.brill = null;
     v.mover = null; v.arrow = null; v.flip = null; v.dropIn = null; v.cut = null; v.gather = null; v.count = null; v.lift = null;
     const c = b.chain;
     if (c && !c.done) {
@@ -389,7 +400,7 @@ export class BattleScreen {
     if (run && !this.rehearsal) this.record(events, run);
     const post = clone(bRef.board);
     for (const e of events) if (e.type === 'reinforce') post[e.sq] = null;
-    if (cmd.type === 'drop') v.hand.splice(cmd.handIndex, 1);
+    if (cmd.type === 'drop') { v.hand.splice(cmd.handIndex, 1); v.drawn = []; } // 수를 두면 탁월수 기회(!?)가 끝난다
     this.targets = null;
     this.play(events, post, cmd);
   }
@@ -416,7 +427,7 @@ export class BattleScreen {
     // 사슬 끝의 곱 · 외통은 줄이지 않는다(그 순간이 보상이라서).
     if (cmd && cmd.type === 'drop') { this.moveT = 0; this.matesInMove = 0; }
     const pace = () => { const T = this.moveT || 0; return T < 1.3 ? 1 : Math.max(0.01, (2.3 - T) / 1.0); };
-    let label = '';
+    let label = '', mateSq = null;
     const add = (dur, o = {}) => {
       const d = label === 'mate' && !this.matesInMove++ ? dur : dur * pace();
       this.moveT = (this.moveT || 0) + d;
@@ -488,6 +499,7 @@ export class BattleScreen {
               const chart = x.src === 'charts';
               if (x.value) { c.value += x.value; if (chart) cv += x.value; else dv += x.value; }
               if (x.mult) { c.mult += x.mult; if (chart) cm += x.mult; else dm += x.mult; }
+              if (x.xmult && x.src === 'brilliant') { c.mult *= x.xmult; continue; } // 탁월수 배수는 배수 칸의 청록 「×N」 딱지가 말한다
               if (x.xmult) { c.mult *= x.xmult; xm *= x.xmult; }
             }
             if (dv) this.pop(`+${short(dv)}`, 'value');
@@ -533,9 +545,11 @@ export class BattleScreen {
           add(0.15, { begin: () => { v.cut = { sq: e.sq, attackers: e.attackers, p: 0 }; if (v.chain) v.chain.cut = true; this.snd('cut'); this.hitstop(0.12); this.shake(2, 0.15); } });
           add(0.3, { tick: (p) => { v.cut.p = p; } });
           break;
-        case 'mate': add(0.5, {
+        case 'mate': mateSq = e.sq; add(0.5, {
           begin: () => { this.topple(e.sq); this.word('메이트', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
         }); break;
+        // 탁월수 !!: 메이트 연출에 겹쳐 돈다(걸음 길이 0 — 한 수 연출 시간을 늘리지 않는다). 칸의 「!!」 · 빛살은 fx, 배수 칸 「×N」은 v.brill
+        case 'brilliant': { const sq = mateSq; add(0, { begin: () => this.brilliantFx(sq, e) }); break; }
         case 'refill': add(0.35, {
           begin: () => { this.word('적이 다시 찬다', PAL.gold, 1.1, 1); this.snd('refill'); },
           done: () => { v.board = clone(post); if (v.chain) { v.chain.path = [e.sq]; } },
@@ -598,9 +612,16 @@ export class BattleScreen {
           begin: () => { this.word('손을 새로 쥔다', PAL.gold, 1.2, 1); this.snd('discard'); },
           done: () => { const b = this.bRef; v.hand = clone(b.hand); v.bag = b.bag.length; },
         }); break;
+        // 희생: 바친 카드가 흩어지고(걸음 처음) 새 카드가 아래에서 올라온다(걸음 끝, 0.18초 — 손 그리기가 app.time으로)
         case 'discard': add(0.22, {
-          begin: () => { this.snd('discard'); },
-          done: () => { const b = this.bRef; v.hand = clone(b.hand); v.discardsLeft = b.discardsLeft; v.bag = b.bag.length; },
+          begin: () => { this.snd('discard'); this.offerFx((cmd && cmd.handIndices) || []); },
+          done: () => {
+            const b = this.bRef, had = new Set(v.hand.map((p) => p.id));
+            v.hand = clone(b.hand); v.discardsLeft = b.discardsLeft; v.bag = b.bag.length; v.hiding = null;
+            v.drawn = e.offering && e.offering.drawn ? e.offering.drawn.slice() : [];
+            v.offered = (b.offered || []).map((p) => p.t);
+            this.dealIn = { ids: v.hand.filter((p) => !had.has(p.id)).map((p) => p.id), t: this.app.time };
+          },
         }); break;
         case 'win': if (this.src.kind === 'lesson') break; add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); } }); break;
         case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
@@ -716,6 +737,72 @@ export class BattleScreen {
   flash(sq, col) {
     const { x, y } = sqXY(sq);
     this.fx.add({ life: 0.15, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = 0.6 * (1 - e.t / e.life); rect(ctx, x, y, S, S, col); ctx.globalAlpha = 1; } });
+  }
+  // 희생: 바친 손 카드가 조각(카드 바탕 · 기물 빛깔)으로 흩어진다. 카드 자리는 걸음이 끝날 때까지 비워 둔다(v.hiding)
+  offerFx(indices) {
+    const v = this.view;
+    if (this.boardOnly || !indices.length) return;
+    const n = v.hand.length;
+    v.hiding = indices.slice();
+    const parts = [];
+    let seed = 7 + indices[0] * 13 + n;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    for (const i of indices) {
+      const p = v.hand[i];
+      if (!p) continue;
+      const r = this.handRect(i, n);
+      const chips = spriteChips(p.t, 'w');
+      for (let k = 0; k < 18; k++) {
+        const card = k < 8, c = card ? null : chips[Math.floor(rnd() * chips.length)];
+        const x = card ? r.x + 2 + rnd() * (r.w - 4) : r.x + Math.floor((r.w - 16) / 2) + c.x;
+        const y = card ? r.y + 2 + rnd() * (r.h - 4) : r.y + Math.floor((r.h - 22) / 2) + 1 + c.y;
+        parts.push({ x, y, vx: (x - (r.x + r.w / 2)) * 5 + (rnd() - 0.5) * 30, vy: -50 - rnd() * 60, col: card ? (rnd() < 0.5 ? PAL.light : PAL.cardHi) : c.col, s: rnd() < 0.35 ? 2 : 1 });
+      }
+    }
+    this.fx.add({
+      life: 0.45, layer: 1, parts,
+      update: (dt, e) => { for (const q of e.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 300 * dt; } },
+      draw: (ctx, e) => { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life); for (const q of e.parts) rect(ctx, q.x, q.y, q.s, q.s, q.col); ctx.globalAlpha = 1; },
+    });
+  }
+  // 탁월수 !!(CHM-43 시안 B1): 메이트 친 칸에서 청록 「!!」 딱지가 튀어나오고 빛살이 퍼진다. 판 가장자리 칸이면 딱지를 판 안쪽으로 뒤집는다.
+  // 움직임 줄이기면 빛살 · 튀어나옴 없이 딱지만. 배수 칸의 「×N」은 v.brill(drawLeft — 값 × 배수가 모여 점수가 될 때까지)
+  brilliantFx(sq, e) {
+    this.view.brill = { x: e.x };
+    this.snd('brilliant');
+    const st = this.app.stats;
+    if (st) st.brilliantFx = (st.brilliantFx || 0) + 1;
+    if (sq == null || this.boardOnly) return;
+    const calm = this.app.reducedMotion, T = ANNOT.teal;
+    const tag = boardTagRect(sq, { bx: BX, by: BY, S });
+    const s0 = sqXY(sq), cx = s0.x + 14, cy = s0.y + 14;
+    this.lastBrilliantTag = { sq, ...tag };
+    // 딱지는 칸 쪽에서 제자리로 튀어나온다: 처음엔 칸 가운데 쪽으로 6 비켜 있다(뒤집히면 반대쪽)
+    const ox = tag.flipX ? 1 : -1, oy = tag.flipY ? -1 : 1;
+    this.fx.add({
+      life: 0.9, layer: 1, word: true, brilliant: true,
+      draw: (ctx, f) => {
+        const t = f.t, fade = t > 0.7 ? Math.max(0, (0.9 - t) / 0.2) : 1;
+        ctx.globalAlpha = fade;
+        frame(ctx, s0.x, s0.y, S, S, T.fill);
+        if (!calm) {
+          const k = Math.min(1, t / 0.45), r = 9 + 13 * ease.out(k), ra = Math.max(0, 1 - t / 0.6);
+          ctx.globalAlpha = fade * ra;
+          fine(() => {
+            rect(ctx, cx - 1, cy - r - 6, 2, 6, T.fill); rect(ctx, cx - 1, cy + r, 2, 6, T.fill);
+            rect(ctx, cx - r - 6, cy - 1, 6, 2, T.fill); rect(ctx, cx + r, cy - 1, 6, 2, T.fill);
+            const d = r * 0.78;
+            for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) rect(ctx, cx + sx * d - 1.5, cy + sy * d - 1.5, 3, 3, T.fill);
+          });
+          ctx.globalAlpha = fade;
+        }
+        const k = calm ? 1 : Math.min(1, t / 0.14);
+        const pop = calm ? 0 : (1 - ease.back(k)) * 6;
+        if (!calm && k < 1) ctx.globalAlpha = fade * Math.min(1, 0.4 + k);
+        drawAnnot(ctx, '!!', tag.x + ox * pop, tag.y + oy * pop, T, 2);
+        ctx.globalAlpha = 1;
+      },
+    });
   }
   // col: 빛깔(기본은 값 · 배수 빛깔) · delay: 늦게 뜨기(초) · dx · align: 가운데 대신 왼쪽 맞춤으로 옆에 붙일 때
   pop(s, where, dy = 0, { col = null, delay = 0, dx = 0, align = 'center' } = {}) {
@@ -867,6 +954,9 @@ export class BattleScreen {
     const b = this.live();
     if (!b || this.busy || this.banner || b.status !== 'play') return;
     const app = this.app, v = this.view;
+    // 탁월수: 희생으로 새로 뽑은 기물의 「!?」 딱지가 처음 뜬 순간(CHM-43)
+    const nb = v.hand.findIndex((p) => (v.drawn || []).includes(p.id));
+    if (nb >= 0) hint(app, 'brilliant', `hand:${nb}`);
     const ghost = (b.incoming || []).find((r) => !v.board[r.sq] && !isHidden(b, r.sq));
     if (ghost) hint(app, 'incoming', `sq:${ghost.sq}`);
     const find = (f) => v.board.findIndex((c, sq) => c && !c.mine && !isHidden(b, sq) && f(c));
@@ -1315,6 +1405,13 @@ export class BattleScreen {
     const chainY = val.y + VAL_H + GAP_GROUP;
     return { spec, headLay: head, head: st.head, foot: st.foot, val, chain: { y: chainY, h: st.mid.y + st.mid.h - chainY }, score: st.head.y + head.rows[head.rows.length - 1] };
   }
+  // 탁월수 배수(CHM-43): 배수 칸(모인 뒤엔 점수 칸)에 청록 테와 오른쪽 위 「×N」 딱지. 값 × 배수가 점수로 흘러갈 때까지
+  brillTag(ctx, x, y, w) {
+    const T = ANNOT.teal, mark = `×${Number(this.view.brill.x.toFixed(2))}`, sz = annotSize(mark);
+    frame(ctx, x, y, w, VAL_H, T.fill);
+    frame(ctx, x + 1, y + 1, w - 2, VAL_H - 2, T.edge);
+    drawAnnot(ctx, mark, x + w - sz.w + 4, y - 7, T);
+  }
   // 수가 오른 순간부터 스러지는 빛 세기(1 → 0, 0.45초). 움직임 줄이기에도 남는다(한 번 밝아지는 것은 떨림이 아니다)
   pulseAt(key, n, time) {
     const P = this.pulses || (this.pulses = {});
@@ -1394,6 +1491,7 @@ export class BattleScreen {
       // 곱이 칸 폭(테 1 + 틈 EDGE_PAD 양쪽)을 넘으면 짧은 꼴(끝없는 대국의 13자리 곱)
       text(ctx, fitNum(g.score, LW - (1 + EDGE_PAD) * 2), LX + LW / 2, VT, PAL.linkInk, { align: 'center', bold: true });
       closeBox();
+      if (v.brill) this.brillTag(ctx, LX, VY, LW);
     } else {
       ui.region('box:value', LX, VY, 48, VAL_H, { keys: [{ id: 'value' }] });
       ui.region('box:links', LX + 64, VY, 48, VAL_H, { keys: [{ id: 'links' }] });
@@ -1410,6 +1508,7 @@ export class BattleScreen {
         closeBox();
       };
       if (g) fine(drawVM); else drawVM();
+      if (v.brill) fine(() => this.brillTag(ctx, LX + 64 - dx, VY, 48));
     }
     // 사슬 칸: 지나온 모습은 작게(왼쪽 아래), 지금 모습은 크게(2배, 오른쪽). 남는 높이를 가진다(모자라면 지금 모습도 1배)
     const cy = lay.chain.y, ch = lay.chain.h;
@@ -1443,7 +1542,7 @@ export class BattleScreen {
     };
     const rows = [
       { id: 'pips:moves', label: '수', tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다'), draw: (ctx2, ty) => { text(ctx2, '수', LX + P, ty, PAL.dim); pips(v.moves, v.movesLeft, PAL.gold)(ctx2, ty); } },
-      { id: 'pips:discards', label: '희생', tip: () => tipLines('희생', '손의 기물을 바치고 새로 뽑을 수 있는 횟수'), draw: (ctx2, ty) => { text(ctx2, '희생', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); } },
+      { id: 'pips:discards', label: '희생', tip: () => this.offeredTip(), draw: (ctx2, ty) => { text(ctx2, '희생', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); this.offeredRow(ctx2, LX + pipX + Math.max(0, v.discards - 1) * pipStep + pipW + 3, LX + LW - 2, ty); } },
     ];
     if (hasClock(run)) rows.push(clockRow(app, run));
     if (run) rows.push({ money: run });
@@ -1451,6 +1550,25 @@ export class BattleScreen {
     drawFoot(ctx, ui, rows);
   }
 
+  // 바친 기물 줄(CHM-43 시안 A1): 희생 구슬 오른쪽에 반 크기 흐린 실루엣. 자리가 모자라면 앞에서부터 들어가는 만큼 + 작은 「+N」
+  offeredRow(ctx, x0, x1, ty) {
+    const list = this.view.offered || [];
+    const row = offeredRow(list.length, x0, x1);
+    const hi = hiFor(ctx, 0.5);
+    row.xs.forEach((x, i) => {
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(spriteCanvas(list[i], 'w', null, 0, hi), x, ty - 1, SW / 2, SH / 2);
+      ctx.globalAlpha = 1;
+    });
+    if (row.more && row.fits) drawMore(ctx, row.more, row.moreX, ty + 4, PAL.dim, digits);
+    this.offeredLayout = { ...row, x0, x1, n: list.length };
+  }
+  offeredTip() {
+    const list = this.view.offered || [];
+    const body = ['손의 기물을 바치고 새로 뽑을 수 있는 횟수'];
+    if (list.length) body.push(`바친 기물: ${list.map((t) => PIECE_NAME[t]).join(' · ')}`);
+    return tipLines('희생', body);
+  }
   // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠 → 손 이름표 줄(묘수 · 희생) → 손. 묶음 사이 GAP_GROUP
   // 시너지 띠는 칩(FAM_H) 두 줄 — 그러면 격언 칸이 한 줄로 안 들어가는 판(칸 다섯 이상)은 한 줄에 못 놓은 것을 「+N」로
   // 다시 놓기(밤샘 2 D2): 첫 수 전에만, 손 이름표 줄의 「손」 · 묘수 오른쪽에 아이콘 단추(이름은 말풍선 — CHM-40).
@@ -1477,12 +1595,19 @@ export class BattleScreen {
     const rb = this.canReboard();
     const n = tactics.length + (rb ? 1 : 0);
     const itemsW = (gap) => (n ? n * 15 + (n - 1) * gap : 0);
-    const space = RW - DISCARD_W - 3;
+    const space = RW - discardButton().w - 3;
     const lw = measure('손') + 6;
     const label = lw + itemsW(2) <= space;
     const x0 = label ? RX + lw : RX;
     const step = 15 + (label || itemsW(2) <= space ? 2 : 1);
     return { label, tactics: tactics.map((i, k) => ({ i, x: x0 + k * step })), rb: rb ? x0 + tactics.length * step : null };
+  }
+  // 손 카드 i의 자리(n장일 때). 희생 연출(흩어지는 카드)도 같은 셈을 쓴다
+  handRect(i, n, lay = this.rightLayout(this.run)) {
+    n = Math.max(1, n);
+    const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
+    const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;
+    return { x: RX + i * (w + Math.min(gap, 4)), y: lay.handY, w, h: lay.HAND_H };
   }
   drawRight(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, run = this.run;
@@ -1514,14 +1639,16 @@ export class BattleScreen {
     if (row.rb != null) button(ctx, ui, 'btn:reboard', row.rb, ry, 15, BTN_S, '', { onClick: () => this.reboard(), icon: reboardIcon, tip: () => tipLines('다시 놓기', []) });
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    // 영어 「Sacrifice」는 단추 폭(62)에 아이콘과 함께 들어가지 않아 체스 말 「Sac」으로 줄인다(단추는 2부에서 다시 그린다)
-    button(ctx, ui, 'btn:discard', RX + RW - DISCARD_W, ry, DISCARD_W, BTN_S, getLang() === 'en' ? 'Sac' : '희생', { enabled: !!canDiscard, onClick: () => this.discard(), icon: discardIcon, tone: canDiscard ? 'red' : 'plain' });
-    const n = Math.max(1, v.hand.length);
-    const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
-    const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;
+    const db = discardButton();
+    button(ctx, ui, 'btn:discard', RX + RW - db.w, ry, db.w, BTN_S, '희생', { enabled: !!canDiscard, onClick: () => this.discard(), icon: db.icon ? discardIcon : null, tone: canDiscard ? 'red' : 'plain' });
+    const drawn = v.drawn || [], hiding = v.hiding || [], deal = this.dealIn;
     v.hand.forEach((p, i) => {
-      const x = RX + i * (w + Math.min(gap, 4)), y = lay.handY;
-      const id = `hand:${i}`;
+      const hr = this.handRect(i, v.hand.length, lay);
+      const w = hr.w, x = hr.x, id = `hand:${i}`;
+      if (hiding.includes(i)) return; // 바친 카드: 흩어지는 동안 자리만 남는다
+      // 희생으로 새로 뽑은 카드는 아래에서 올라온다(0.18초)
+      const dk = deal && deal.ids.includes(p.id) && !app.reducedMotion ? Math.min(1, (app.time - deal.t) / 0.18) : 1;
+      const y = hr.y + Math.round((1 - ease.out(dk)) * 10);
       const selected = this.sel.includes(i);
       ui.region(id, x, y - 4, w, lay.HAND_H + 4, { onClick: () => this.toggle(i), tip: () => pieceTip(p) });
       const hov = ui.isHover(id);
@@ -1531,7 +1658,10 @@ export class BattleScreen {
       // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
       const pressed = hov && ui.press && ui.press.id === id;
       sway(ctx, app.time, `hand:${i}:${p.id ?? p.t}`, x, y - (selected ? 4 : nudge), w, lay.HAND_H, (c) => {
-        pieceCard(c, p, x, y, w, lay.HAND_H, { lift: selected ? 4 : nudge, selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(chartLevel(run, p.t)), level: chartLevel(run, p.t), time: app.time + i });
+        const level = chartLevel(run, p.t), lift = selected ? 4 : nudge;
+        pieceCard(c, p, x, y, w, lay.HAND_H, { lift, selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(level), level, time: app.time + i, alpha: dk < 1 ? dk : 1 });
+        // !? 흥미로운 수: 희생으로 새로 뽑은 기물(이것으로 시작한 다음 사슬이 체크메이트면 탁월수). 기보 표가 있으면 왼쪽 위
+        if (drawn.includes(p.id)) { const r = handTagRect(x, y - lift, w, level); drawAnnot(c, '!?', r.x, r.y, ANNOT.red); }
       }, { hover: hov && usable, press: pressed });
     });
   }
