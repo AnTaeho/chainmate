@@ -116,16 +116,17 @@ export function reach(board, t, sq, dir = 1, ignore = -1) {
 // sq를 노리는 적들의 칸. ignore 칸은 비어 있는 것으로 본다(움직이기 전 내 기물 자리).
 // opts.pawnSides: 적 폰이 좌우 옆 칸도 지킨다(명인 「철벽」).
 // 이형 적도 같은 행마로 지킨다: 포 · 메뚜기는 받침이 있을 때만, 궁수는 두 칸 고리, 유령은 막힘 무시.
+// 노림 판정의 칸 검사(attackers 안에서 부를 때마다 닫힘을 만들지 않게 밖에 둔다)
+const enemyAt = (board, ignore, s, t) => s !== ignore && threat(board[s]) && board[s].t === t;
+const enemyIn = (board, ignore, s, set) => s !== ignore && threat(board[s]) && set.has(board[s].t);
 export function attackers(board, sq, opts = {}) {
   const ignore = opts.ignore ?? -1;
   const out = [];
-  const enemyAt = (s, t) => s !== ignore && threat(board[s]) && board[s].t === t;
-  const enemyIn = (s, set) => s !== ignore && threat(board[s]) && set.has(board[s].t);
-  for (const s of KNIGHT[sq]) if (enemyIn(s, KNIGHTLIKE)) out.push(s);
-  for (const s of KING[sq]) if (enemyAt(s, 'K') || (s !== ignore && threat(board[s]) && board[s].trait === 'fort' && board[s].t !== 'K' && !out.includes(s))) out.push(s);
+  for (const s of KNIGHT[sq]) if (enemyIn(board, ignore, s, KNIGHTLIKE)) out.push(s);
+  for (const s of KING[sq]) if (enemyAt(board, ignore, s, 'K') || (s !== ignore && threat(board[s]) && board[s].trait === 'fort' && board[s].t !== 'K' && !out.includes(s))) out.push(s);
   // 적 폰은 (f±1, r−1)을 노린다 ⇒ sq를 노리는 폰은 (f±1, r+1)에 있다
-  for (const s of PAWN_UP[sq]) if (enemyAt(s, 'P')) out.push(s);
-  if (opts.pawnSides) for (const s of PAWN_SIDE[sq]) if (enemyAt(s, 'P')) out.push(s);
+  for (const s of PAWN_UP[sq]) if (enemyAt(board, ignore, s, 'P')) out.push(s);
+  if (opts.pawnSides) for (const s of PAWN_SIDE[sq]) if (enemyAt(board, ignore, s, 'P')) out.push(s);
   for (const ray of RAY_O[sq]) for (const s of ray) {
     if (s === ignore || !board[s]) continue;
     if (threat(board[s]) && ORTHO_T.has(board[s].t)) out.push(s);
@@ -138,15 +139,15 @@ export function attackers(board, sq, opts = {}) {
   }
   if (opts.fairy === false) return out;
   // ── 이형(판에 이형이 없으면 여기까지 오지만 칸마다 몇 번의 확인뿐)
-  for (const s of CAMEL[sq]) if (enemyAt(s, 'L')) out.push(s);
-  for (const s of RING2[sq]) if (enemyAt(s, 'S')) out.push(s);
+  for (const s of CAMEL[sq]) if (enemyAt(board, ignore, s, 'L')) out.push(s);
+  for (const s of RING2[sq]) if (enemyAt(board, ignore, s, 'S')) out.push(s);
   for (const ray of RAY_N[sq]) for (const s of ray) {
     if (s === ignore || !board[s]) continue;
-    if (enemyAt(s, 'H')) out.push(s);
+    if (enemyAt(board, ignore, s, 'H')) out.push(s);
     break;
   }
   // 유령: 같은 줄 · 같은 단 어디서든
-  for (const ray of RAY_O[sq]) for (const s of ray) if (enemyAt(s, 'W')) out.push(s);
+  for (const ray of RAY_O[sq]) for (const s of ray) if (enemyAt(board, ignore, s, 'W')) out.push(s);
   // 메뚜기: sq 바로 앞(선 위 한 칸)이 받침이고, 그 뒤로 빈칸을 지나 처음 만나는 기물이 적 메뚜기
   for (const set of [RAY_O, RAY_D]) for (const ray of set[sq]) {
     const h = ray[0];
@@ -154,7 +155,7 @@ export function attackers(board, sq, opts = {}) {
     for (let i = 1; i < ray.length; i++) {
       const s = ray[i];
       if (s === ignore || !board[s]) continue;
-      if (enemyAt(s, 'G')) out.push(s);
+      if (enemyAt(board, ignore, s, 'G')) out.push(s);
       break;
     }
   }
@@ -164,7 +165,7 @@ export function attackers(board, sq, opts = {}) {
     for (const s of ray) {
       if (s === ignore || !board[s]) continue;
       if (!screen) { screen = true; continue; }
-      if (enemyAt(s, 'O')) out.push(s);
+      if (enemyAt(board, ignore, s, 'O')) out.push(s);
       break;
     }
   }
@@ -172,6 +173,29 @@ export function attackers(board, sq, opts = {}) {
 }
 const ORTHO_T = new Set(['R', 'Q', 'C', 'Z']);
 const DIAG_T = new Set(['B', 'Q', 'A', 'Z']);
+
+// t 종류의 적(특성 없음)이 from에 서면 attackers(…, to)가 from을 돌려줄 수 있나 — 판과 상관없는 기하 겉금.
+// attackers가 칸을 넣는 곳은 아래 표들뿐이라, 겉금 밖의 칸은 어떤 판에서도 답에 들지 않는다(판 짓기 defenderSquares가 쓴다).
+const SPANS = new Map();
+export function attackSpan(t, to) {
+  let rows = SPANS.get(t);
+  if (!rows) SPANS.set(t, (rows = new Array(64)));
+  let m = rows[to];
+  if (m) return m;
+  m = new Uint8Array(64);
+  const mark = (list) => { for (const s of list) m[s] = 1; };
+  const markRays = (set) => { for (const ray of set[to]) mark(ray); };
+  if (KNIGHTLIKE.has(t)) mark(KNIGHT[to]);
+  if (t === 'K') mark(KING[to]);
+  if (t === 'P') { mark(PAWN_UP[to]); mark(PAWN_SIDE[to]); }
+  if (ORTHO_T.has(t) || t === 'W' || t === 'O' || t === 'G') markRays(RAY_O);
+  if (DIAG_T.has(t) || t === 'G') markRays(RAY_D);
+  if (t === 'L') mark(CAMEL[to]);
+  if (t === 'S') mark(RING2[to]);
+  if (t === 'H') markRays(RAY_N);
+  rows[to] = m;
+  return m;
+}
 
 export const isAttacked = (board, sq, opts) => attackers(board, sq, opts).length > 0;
 
