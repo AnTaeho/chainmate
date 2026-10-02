@@ -14,6 +14,9 @@ import { makeStore, KEYS } from '../src/ui/save.js';
 import { loadRuns, keepRow, exportText } from '../src/ui/runlog.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+// 봇만 내는 열쇠: sac = 봇이 희생을 고를 때 잰 속값(CHM-51) — 사람 판에는 없다
+const BOT_ONLY = ['sac'];
+const dumpKeys = () => Object.keys(dump).filter((k) => !BOT_ONLY.includes(k));
 const HUMAN_ONLY = ['human', 'id', 'end', 'dan', 'opening', 'daily', 'endless', 'startedAt', 'endedAt', 'sec', 'battles', 'sacrifices', 'brilliants', 'lostAt', 'buys', 'script', 'app'];
 
 // 하네스 판 하나(--policy none · seed 1 → 판 seed 1000003)
@@ -28,10 +31,10 @@ test('요약은 하네스 dump의 판별 열쇠를 모두 같은 값으로 낸�
   const run = createRun({ seed: dump.seed, dan: 0, draft: true });
   const { bought, editions, legendAt, seen } = playRun(run, 'none');
   const row = runRow(run, { ...newTrack(), bought, editions, legendAt, seen }, { end: 'lost' });
-  for (const k of Object.keys(dump)) assert.deepStrictEqual(row[k], dump[k], k);
+  for (const k of dumpKeys()) assert.deepStrictEqual(row[k], dump[k], k);
   // 사람 판에만 있는 열쇠는 dump 열쇠와 겹치지 않는다
   for (const k of HUMAN_ONLY) assert.ok(!(k in dump), k);
-  assert.deepEqual(Object.keys(row).sort(), [...Object.keys(dump), ...HUMAN_ONLY].sort());
+  assert.deepEqual(Object.keys(row).sort(), [...dumpKeys(), ...HUMAN_ONLY].sort());
 });
 
 // 화면이 세는 길(trackCommand)로 같은 판을 다시 둔다: shopbot playRun 'none'과 같은 차례
@@ -53,7 +56,7 @@ test('화면이 명령마다 센 것(trackCommand)도 하네스와 같은 값이
   const track = newTrack({ startedAt: 1 });
   playTracked(run, track);
   const row = runRow(run, track);
-  for (const k of Object.keys(dump)) assert.deepStrictEqual(row[k], dump[k], k);
+  for (const k of dumpKeys()) assert.deepStrictEqual(row[k], dump[k], k);
   assert.equal(row.end, 'lost');
   assert.equal(row.battles, row.log.filter((x) => !x.skipped).length);
   assert.equal(row.lostAt.length, row.log.filter((x) => !x.skipped && !x.won).length);
@@ -143,7 +146,7 @@ test('앱: 판이 끝나면(짐) 한 줄, 판 시간과 앱 판이 함께', asyn
   assert.equal(list.length, 1);
   const r = list[0];
   assert.equal(r.end, 'lost');
-  for (const k of Object.keys(dump)) assert.deepStrictEqual(r[k], dump[k], k); // 하네스 판과 같은 씨앗 · 같은 수 → 같은 값
+  for (const k of dumpKeys()) assert.deepStrictEqual(r[k], dump[k], k); // 하네스 판과 같은 씨앗 · 같은 수 → 같은 값
   assert.ok(r.sec >= 1, `판 시간 ${r.sec}`);
   assert.equal(r.app.platform, 'web');
   assert.equal(r.app.version, '0.1.0');
