@@ -37,7 +37,7 @@ test('같은 시드면 같은 정석 셋', () => {
 test('정석마다 가족 · 글이 있고 가족 수에 들어간다', () => {
   for (const j of JOSEKIS) assert.ok(j.name && j.text && ['silver', 'gold', 'rainbow'].includes(j.tier), j.id);
   const n = familyCounts({ maxims: [], deck: [], josekis: ['rampart', 'knight_oath'] });
-  assert.equal(n.leap, 2);
+  assert.equal(n.leap, 1);
   assert.equal(n.line, 1);
 });
 
@@ -48,7 +48,7 @@ test('기물을 바꾸는 정석: 기사 서약 · 성벽 쌓기 · 주교관 ·
   JOSEKI_BY_ID.mitre.pick(run, []);
   JOSEKI_BY_ID.archery.pick(run, []);
   const kinds = run.deck.map((p) => p.t).sort().join('');
-  assert.equal(kinds, 'ACHHPPSS');
+  assert.equal(kinds, 'EMNPPSST');
 });
 
 test('고속도로: b · g 줄에서는 세로로 룩처럼도 먹는다', () => {

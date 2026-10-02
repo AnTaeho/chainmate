@@ -64,13 +64,13 @@ test('버릇 · 농민군: 적 폰이 옆 칸도 지킨다', () => {
   b.board[side] = saved;
 });
 
-test('버릇 · 기병대: 증원이 모두 나이트 무리(나이트 · 낙타 · 야간기사), 주력은 나이트', () => {
+test('버릇 · 기병대: 증원이 모두 나이트 무리(나이트 · 낙타), 주력은 나이트', () => {
   const seen = new Set();
   for (let seed = 1; seed <= 12; seed++) {
     const b = battleOf('cavalry', 3, seed);
     for (const r of [...b.incoming, ...b.incomingNext]) seen.add(r.t);
   }
-  assert.ok([...seen].every((t) => ['N', 'L', 'H'].includes(t)), [...seen].join());
+  assert.ok([...seen].every((t) => ['N', 'L'].includes(t)), [...seen].join());
   const r = {}; FACTION_BY_ID.cavalry.habit.apply(r);
   const w = enemyWeights(3, { mix: FACTION_BY_ID.cavalry.mix, unique: FACTION_BY_ID.cavalry.unique });
   const top = [...w].sort((a, b) => b[1] - a[1])[0][0];

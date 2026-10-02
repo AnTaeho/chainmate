@@ -16,7 +16,7 @@ test('격언 마흔 모두 가족이 있다 · 가족마다 격언이 셋 이상
 });
 
 test('세기: 격언의 가족 + 주머니 이형 종류(같은 종류 여럿은 하나), 체스 기물은 세지 않는다', () => {
-  const n = familyCounts({ maxims: [{ id: 'chivalry' }, { id: 'light_step' }], deck: [{ t: 'N' }, { t: 'L' }, { t: 'L' }, { t: 'A' }] });
+  const n = familyCounts({ maxims: [{ id: 'chivalry' }, { id: 'light_step' }], deck: [{ t: 'N' }, { t: 'L' }, { t: 'L' }, { t: 'V' }] });
   assert.equal(n.leap, 2 + 1 + 1);
   assert.equal(n.march, 1);
   assert.equal(n.diag, 1);

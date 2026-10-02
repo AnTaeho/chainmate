@@ -112,7 +112,7 @@ test('연타: 같은 모습으로 잇달아 먹으면 배수 +2', () => {
   assert.equal(c.mult, 4);
 });
 test('변장: 특수 기물 모습으로 먹으면 값 +30', () => {
-  assert.equal(chain({ e5: 'B', a8: 'R' }, 'A', 'c3', ['e5'], ['disguise']).value, 60);
+  assert.equal(chain({ e5: 'B', a8: 'R' }, 'E', 'c3', ['e5'], ['disguise']).value, 60);
   assert.equal(chain({ e5: 'B', a8: 'R' }, 'B', 'c3', ['e5'], ['disguise']).value, 30);
 });
 test('체스판: 밝은 칸 값 +10 · 어두운 칸 배수 +1', () => {
@@ -199,7 +199,7 @@ test('도박사: 사슬 넷에 하나 ×3(풀이기는 모른다) · 행운의 �
 
 // ── 정석
 test('정석 사막 · 풀밭 · 포대 · 그늘: 주머니 기물이 이형이 된다', () => {
-  for (const [id, to, n] of [['desert', 'L', 2], ['meadow', 'G', 2], ['battery', 'O', 1], ['gloom', 'W', 1]]) {
+  for (const [id, to, n] of [['desert', 'L', 2], ['meadow', 'V', 2], ['battery', 'O', 1], ['gloom', 'W', 1]]) {
     const run = createRun({ seed: 1, draft: false });
     JOSEKI_BY_ID[id].pick(run, []);
     assert.equal(run.deck.filter((p) => p.t === to).length, n, id);

@@ -1,4 +1,4 @@
-// 깊이 A: 이형 기물 아홉의 행마 · 노림 · 궁수 제자리 · 메뚜기 · 포 받침 · 유령 · 기보 · 판 생성 · 상점 · 결정성
+// 깊이 A: 이형 기물의 행마 · 노림 · 궁수 제자리 · 포 받침 · 유령 · 기보 · 판 생성 · 상점 · 결정성(새 다섯은 fairies55.test.js)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { boardFrom, parseSq as S, sqName, captures, attackers, reach, dropSquares } from '../src/sim/board.js';
@@ -16,10 +16,8 @@ import { CHART_TABLE } from '../src/data/charts.js';
 const names = (list) => list.map(sqName).sort();
 const table = (map) => ({ board: boardFrom(map), rules: {}, mods: [], chain: null });
 
-test('겹친 기물: 대주교 = 비숍 + 나이트, 재상 = 룩 + 나이트, 아마존 = 퀸 + 나이트', () => {
+test('아마존 = 퀸 + 나이트', () => {
   const b = boardFrom({ f6: 'P', e6: 'P', d6: 'P', f7: 'P', d8: 'P' });
-  assert.deepEqual(names(captures(b, 'A', S('d4'))), ['e6', 'f6']);
-  assert.deepEqual(names(captures(b, 'C', S('d4'))), ['d6', 'e6']);
   assert.deepEqual(names(captures(b, 'Z', S('d4'))), ['d6', 'e6', 'f6']);
 });
 
@@ -27,23 +25,6 @@ test('낙타는 (3,1)로 뛰고 늘 같은 색 칸에 선다', () => {
   const b = boardFrom({ e5: 'P', g3: 'P', c3: 'P' });
   assert.deepEqual(names(captures(b, 'L', S('d2'))), ['e5', 'g3']);
   for (const s of reach(b, 'L', S('d2'))) assert.equal(((s & 7) + (s >> 3)) % 2, ((S('d2') & 7) + (S('d2') >> 3)) % 2);
-});
-
-test('야간기사는 나이트 도약을 같은 쪽으로 거듭하고, 막히면 거기까지', () => {
-  const b = boardFrom({ c5: 'R', d7: 'Q' });
-  assert.deepEqual(names(captures(b, 'H', S('a1'))), ['c5'], 'c5 룩이 막아 d7 퀸에 닿지 못한다');
-  const b2 = boardFrom({ d7: 'Q' });
-  assert.deepEqual(names(captures(b2, 'H', S('a1'))), ['d7']);
-});
-
-test('메뚜기: 첫 기물(적이든 아니든)을 넘어 바로 뒤 칸의 적을 먹는다', () => {
-  const b = boardFrom({ d6: 'P', d7: 'R', f4: 'P', h4: 'Q' });
-  assert.deepEqual(names(captures(b, 'G', S('d4'))), ['d7'], '가로의 f4는 받침, 바로 뒤 g4가 비어 h4에 닿지 않는다');
-  // 내 기물도 받침이 된다: 적 메뚜기가 내 기물을 넘어 노린다
-  const b2 = boardFrom({ d4: 'G' });
-  b2[S('d5')] = { t: 'N', mine: true };
-  assert.deepEqual(names(attackers(b2, S('d6'))), ['d4']);
-  assert.deepEqual(names(attackers(b2, S('d7'))), []);
 });
 
 test('포: 가로 · 세로로 기물 하나를 넘어 그 너머 첫 기물이 적이면 먹는다', () => {
@@ -136,7 +117,7 @@ test('상점 기물 칸과 기물 꾸러미에 이형이 나온다(관이 오를
 
 test('이형이 든 주머니로 대국이 끝까지 돌고 JSON 왕복 · 같은 시드 같은 결과', () => {
   const play = () => {
-    const b = createBattle({ seed: 77, ante: 6, bag: ['P', 'N', 'A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W'] });
+    const b = createBattle({ seed: 77, ante: 6, bag: ['P', 'N', 'Z', 'L', 'O', 'S', 'W', 'T', 'E', 'V', 'M', 'D'] });
     const log = [];
     for (let g = 0; g < 40 && b.status !== 'won' && b.status !== 'lost'; g++) {
       if (b.status === 'chain') { const l = chainCaptures(b); log.push(apply(b, { type: 'capture', sq: l[0] })); continue; }

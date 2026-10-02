@@ -447,7 +447,7 @@ test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) �
   const w = await import('../src/ui/words.js');
   for (const lang of LANGS) {
     M.lang.setLang(lang);
-    for (const t of 'PNBRQKACZLHGOSW') {
+    for (const t of 'PNBRQKZLOSWTEVMD') {
       const n = text.wrap(w.PIECE_MOVE[t], moves.textW()).length;
       assert.ok(n <= moves.MOVE_LINES, `${lang} ${t} 행마 글 ${n}줄`);
       assert.ok(text.textWidth(w.PIECE_NAME[t], true) + text.textWidth('새로', true) + 6 <= moves.textW(), `${lang} ${t} 이름 + 새로`);
@@ -462,11 +462,11 @@ test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) �
   assert.ok(Math.floor((270 - h) / 2) >= 8, `상자 높이 ${h}`);
   assert.deepEqual([9, 6, 4, 5, 8, 15].map((n) => { const { pages, per } = moves.movesPages(n); return [pages, per]; }), [[3, 3], [2, 3], [1, 4], [2, 3], [2, 4], [4, 4]]);
   // 기본 · 특수는 늘 전부, 「새로」는 「이 판」에서 온다
-  const list = [{ t: 'G', board: true, hand: false, fairy: true, fresh: true }];
+  const list = [{ t: 'V', board: true, hand: false, fairy: true, fresh: true }];
   assert.deepEqual(moves.movesTab('basic', list).map((x) => x.t), ['P', 'N', 'B', 'R', 'Q', 'K']);
   const fairy = moves.movesTab('fairy', list);
-  assert.equal(fairy.length, 9);
-  assert.deepEqual(fairy.filter((x) => x.fresh).map((x) => x.t), ['G']);
+  assert.equal(fairy.length, 10);
+  assert.deepEqual(fairy.filter((x) => x.fresh).map((x) => x.t), ['V']);
 });
 
 // CHM-46: 도감 격자 칸 이름은 낱말 단위로 두 줄까지 — 한 줄(row)은 가장 긴 이름의 높이, 두 줄로도 안 되는 이름이 있는 탭만 열을 줄인다
