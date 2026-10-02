@@ -82,6 +82,7 @@ if (!isMainThread) {
   applyNight2(tune);
   SMART.K = k;
   if (policy === 'nofam') SMART.famAware = false;
+  if (policy === 'nosac') SMART.sacEval = false; // 희생 끈 봇은 짜임 재기에서도 바치지 않는다(CHM-51)
   if (b) b.forEach((x, i) => { B[i] = x; });
   if (shop) Object.assign(SHOP, shop);
   const out = [];
