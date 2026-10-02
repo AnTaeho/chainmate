@@ -19,13 +19,17 @@ import { familyCounts, THRESHOLDS, levelOf } from '../data/families.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
+import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
+import { keepRow, exportText } from './runlog.js';
+import { VERSION, COMMIT } from '../version.js';
 import { SCREENS } from './screens/index.js';
 import { coachDown, updateGuide, drawCoach, coachPlan } from './coach.js';
 import { foldSide } from './fold.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null }) {
+// platform: 'web' | 'app'(Tauri). download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', download = null, copyText = null }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -80,6 +84,24 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   setLang(app.settings.lang);
   app.fresh = [];   // 이번 판에 새로 채운 도감 칸
   app.saveRecords = () => store.set(KEYS.records, app.records);
+  // 사람 판 기록(CHM-50): 판마다 run.track에 세고, 판이 끝나면 한 줄을 KEYS.runs에 남긴다. 수업 · 대본 대국 · scratch 판은 남기지 않는다
+  app.appInfo = { version: VERSION, commit: COMMIT, platform };
+  app.keepRun = (run, end) => {
+    if (!run || run.scratch || !run.track) return -1;
+    const row = runRow(run, run.track, { end, endedAt: new Date().toISOString() });
+    run.track.kept = row.id;
+    return keepRow(store, row);
+  };
+  // 설정 「기록 내보내기」: 웹 · 앱은 파일로 받고, 받을 길이 없으면 글을 클립보드로
+  // 누른 그 순간 안에서 부른다(클립보드는 누름이 있어야 열린다). 돌려주는 값: 'none' | 'file' | 'copy' | 'fail'(복사는 Promise)
+  app.exportRuns = () => {
+    const { n, name, text: body } = exportText(store, { app: app.appInfo });
+    if (!n) { app.toast('아직 끝낸 판이 없다', PAL.ink); return 'none'; }
+    if (download && download(name, body)) { app.toast(`판 ${n}개를 내보냈다`, PAL.gold); return 'file'; }
+    const failed = () => { app.toast('내보내지 못했다', PAL.red); return 'fail'; };
+    if (!copyText) return failed();
+    return copyText(body).then((ok) => { if (!ok) return failed(); app.toast(`판 ${n}개를 복사했다`, PAL.gold); return 'copy'; });
+  };
   app.noteMove = (score, steps) => {
     if (!app.run) return false;
     const best = noteMove(app.records, score, steps, app.run.ante);
@@ -129,10 +151,14 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const daily = opts.daily ? today() : null;
     const seed = daily ? dailySeed(daily) : opts.seed ?? app.nextSeed ?? ((Math.floor(now() * 7919) ^ Date.now()) >>> 0) % 2147483647;
     app.nextSeed = null;
+    // 끝나지 않은 판을 새 판으로 덮어쓴다: 「그만둠」으로 남긴다(이긴 뒤 끝없는 대국이면 그 판 줄을 갈아 끼운다)
+    const old = app.run && !app.run.scratch ? app.run : store.get(KEYS.run);
+    if (old && old.track && !old.scratch && old.phase !== 'won' && old.phase !== 'lost') app.keepRun(old, old.endless ? 'endless' : 'quit');
     const script = !!opts.script && !daily;
     app.run = createRun({ seed, opening: daily ? 'standard' : opts.opening, dan: daily ? 0 : opts.dan || 0, script });
     if (script) { app.records.kingDone = true; app.records.kingAgain = false; app.saveRecords(); }
     if (daily) app.run.daily = daily;
+    app.run.track = newTrack({ startedAt: Date.now(), app: app.appInfo });
     app.fresh = [];
     observe(app.records, app.run, [], app.fresh);
     // 스크린샷 · 영상 도구(window.__autoDraft): 정석 첫째를 곧바로 골라 예전 흐름으로
@@ -159,9 +185,17 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.saveSettings = () => store.set(KEYS.settings, app.settings);
   // 명령 하나(봇과 같은 명령). 이벤트를 돌려준다.
   app.cmd = (cmd) => {
-    const ev = applyRun(app.run, cmd);
+    const run = app.run;
+    // 사람 판 기록: 옛 저장에서 이어 둔 판은 여기서 세기 시작한다
+    if (!run.scratch && !run.track) run.track = newTrack({ startedAt: null, app: app.appInfo });
+    const prev = run.scratch ? null : trackBefore(run);
+    const ev = applyRun(run, cmd);
+    if (prev) {
+      trackCommand(run.track, run, cmd, ev, prev);
+      if ((run.phase === 'won' || run.phase === 'lost') && prev.phase !== run.phase) app.keepRun(run, run.phase === 'won' ? 'won' : run.endless ? 'endless' : 'lost');
+    }
     app.save();
-    if (app.run.scratch) { if (app.onCommand) app.onCommand(cmd, ev); return ev; }
+    if (run.scratch) { if (app.onCommand) app.onCommand(cmd, ev); return ev; }
     const before = app.fresh.length;
     observe(app.records, app.run, ev, app.fresh);
     if (app.fresh.length !== before || ev.some((e) => e.type === 'win' || e.type === 'grade' || e.type === 'legend')) app.saveRecords();
@@ -256,6 +290,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.update = (dt) => {
     dt = Math.min(dt, 0.1);
     app.time += dt;
+    // 판 시간(사람 판 기록): 판이 살아 있는 동안 흐른 실제 초(화면이 숨으면 프레임이 멈춰 세지 않는다)
+    { const r = app.run; if (r && r.track && !r.scratch && r.phase !== 'won' && r.phase !== 'lost') r.track.sec += dt; }
     LOOK.calm = app.reducedMotion;
     if (app.clockFx) { app.clockFx.t += dt; if (app.clockFx.t > 2.4) app.clockFx = null; } // 시계 칸을 잃는 깜빡임(common.js clockPips)
     app.ui.time = app.time;

@@ -9,4 +9,7 @@ rm -rf "$dist"
 mkdir -p "$dist"
 cp "$root/index.html" "$root/style.css" "$root/manifest.webmanifest" "$dist/"
 rsync -a --exclude '.DS_Store' "$root/src" "$root/assets" "$dist/"
+# 앱 판: 사람 판 기록(CHM-50)에 남길 커밋 해시를 모은 사본에만 적는다(저장소의 src/version.js는 null 그대로)
+commit=$(git -C "$root" rev-parse --short HEAD 2>/dev/null || true)
+if [ -n "$commit" ]; then sed -i.bak "s/COMMIT = null/COMMIT = '$commit'/" "$dist/src/version.js" && rm -f "$dist/src/version.js.bak"; fi
 echo "모음: $dist ($(find "$dist" -type f | wc -l | tr -d ' ')개 파일)"
