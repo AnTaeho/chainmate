@@ -117,10 +117,9 @@ test('특수 기물 그림: 남는 다섯 + 새 다섯, 뺀 넷은 없다', asyn
   for (const t of FAIRY_ART) { assert.ok(S.SPR[t], `1배 ${t}`); assert.ok(HI[t], `두 배 ${t}`); }
   for (const t of ['A', 'C', 'H', 'G']) { assert.ok(!S.SPR[t], `1배 ${t}`); assert.ok(!HI[t], `두 배 ${t}`); }
 });
-test('data의 기물은 모두 그림이 있다(뺀 넷은 data에서 빠지기 전까지 건너뛴다)', async () => {
+test('data의 기물은 모두 그림이 있다', async () => {
   const { PIECES } = await import('../src/data/pieces.js');
   for (const t of Object.keys(PIECES)) {
-    if (['A', 'C', 'H', 'G'].includes(t)) continue;
     assert.ok(S.SPR[t] && HI[t], t);
   }
 });
