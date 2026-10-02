@@ -75,7 +75,25 @@ export async function boot(env = {}) {
 
   const reduced = media('(prefers-reduced-motion: reduce)');
   const now = () => (win.performance || globalThis.performance).now();
-  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio });
+  // 기록 내보내기(CHM-50): 파일로 받기(Blob · <a download>) · 클립보드. 가짜 DOM에는 body · URL이 없어 못 받는다.
+  // 앱(Tauri 2)은 __TAURI_INTERNALS__로 안다(withGlobalTauri가 꺼져 있어도 들어온다).
+  const platform = win.__TAURI_INTERNALS__ ? 'app' : 'web';
+  const download = (name, text) => {
+    try {
+      const U = win.URL;
+      if (!doc.body || !U || !U.createObjectURL || !win.Blob) return false;
+      const url = U.createObjectURL(new win.Blob([text], { type: 'application/json' }));
+      const a = doc.createElement('a');
+      a.href = url; a.download = name; a.style.display = 'none';
+      doc.body.appendChild(a); a.click(); a.remove();
+      win.setTimeout(() => U.revokeObjectURL(url), 30000);
+      return true;
+    } catch { return false; }
+  };
+  const copyText = (text) => {
+    try { return win.navigator.clipboard.writeText(text).then(() => true, () => false); } catch { return Promise.resolve(false); }
+  };
+  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, download, copyText });
   app.setScale(pendingScale);
   refit();
   if (audio) audio.apply(app.settings);

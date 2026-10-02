@@ -92,6 +92,7 @@ export const EN = {
   '기물 꾸러미를 연다. 셋 중 하나를 고른다': 'Open the piece bundle. Keep one of three',
   '낙타를 고른다. 나이트처럼 뛰는 특수 기물이다': 'Take the camel. A special piece that leaps like a knight',
   '알았다': 'Got it', '처음 안내': 'First-time tips', '다시 보기': 'Show again', '처음 안내를 다시 보인다': 'First-time tips will show again',
+  '기록 내보내기': 'Export runs', '아직 끝낸 판이 없다': 'No finished runs yet', '내보내지 못했다': 'Could not export',
   '산 격언은 오른쪽 칸에서 판 내내 힘을 낸다': 'Maxims you buy work all run from the right column',
   '셋 중 하나를 고른다. 넘겨도 된다': 'Keep one of three, or skip',
   '두루마리를 누르고 주머니의 기물을 골라 쓴다': 'Tap a scroll, then choose a piece in your bag',
@@ -514,6 +515,7 @@ export const PRE = [
 ];
 
 export const TEMPLATES = [
+  [/^판 (\d+)개를 (내보냈다|복사했다)$/, (m) => `${m[2] === '내보냈다' ? 'Exported' : 'Copied'} ${m[1]} run${m[1] === '1' ? '' : 's'}`],
   [/^(.+) 기보가 적용된다$/, (m, tr) => `${tr(m[1])} Tome applies`],
   [/^(\d+) › (\d+)단계$/, (m) => `Lv ${m[1]} › ${m[2]}`],
   [/^(.+)에 (.+)의 혼$/, (m, tr) => `${tr(m[2] + '의 혼')} in ${tr(m[1])}`],

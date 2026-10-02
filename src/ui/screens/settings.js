@@ -1,5 +1,6 @@
 // 설정(덮개): 소리 크기 · 음악 · 연출 속도 ×1/×2/×4 · 화면 흔들림 · 큰 글자 · 언어 · 처음 안내 · 움직임 줄이기,
-// 맨 아래 수업 · 킹과 다시 두기(다음 새 판의 첫 대국을 킹과 둔다, CHM-22) · 돌아가기.
+// 맨 아래 수업 · 킹과 다시 두기(다음 새 판의 첫 대국을 킹과 둔다, CHM-22) · 기록 내보내기(사람 판 기록 JSON, CHM-50) · 돌아가기.
+// 기록 내보내기는 줄 하나를 더하면 상자가 화면(270)을 넘어 맨 아래 단추 줄에 둔다.
 import { PAL } from '../../render/palette.js';
 import { W, text, box, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
@@ -15,9 +16,9 @@ export class SettingsScreen {
     const RH = 18, f = flow(PAD_BOX), ty = f.line(true);
     const rowTops = Array.from({ length: 8 }, () => f.gap(GAP_GROUP).space(RH));
     const btnTop = f.gap(GAP_GROUP).space(18);
-    // 맨 아래 단추 셋(글에 맞춘 폭, 글과 테 사이 2 이상 — 영어 「Replay with the King」)
-    const lw = Math.max(64, measure('수업', true) + 8), kw = Math.max(96, measure('킹과 다시 두기', true) + 8), bw = 72;
-    const w = Math.max(240, lw + kw + bw + 8 * 2 + PAD_BOX * 2), h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
+    // 맨 아래 단추 넷(글에 맞춘 폭, 글과 테 사이 2 이상 — 영어 「Replay with the King」 · 「Export runs」)
+    const lw = Math.max(64, measure('수업', true) + 8), kw = Math.max(96, measure('킹과 다시 두기', true) + 8), ew = Math.max(72, measure('기록 내보내기', true) + 8), bw = 72;
+    const w = Math.max(240, lw + kw + ew + bw + 8 * 3 + PAD_BOX * 2), h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
     openBox('panel', x, y, w, h, PAD_BOX, { name: '설정' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
     text(ctx, '설정', W / 2, y + ty, PAL.gold, { align: 'center', bold: true });
@@ -46,11 +47,12 @@ export class SettingsScreen {
     button(ctx, ui, 'set:coachReset', x + w - PAD_BOX - rw, yy, rw, 18, '다시 보기', { onClick: () => { app.records.coachSeen = {}; app.saveRecords(); set('coach', true); app.toast('처음 안내를 다시 보인다', PAL.gold); } });
     yy = row(7, '움직임 줄이기');
     button(ctx, ui, 'set:calm', x + 120, yy, 64, 18, s.calm ? '켬' : '끔', { onClick: () => set('calm', !s.calm), tone: s.calm ? 'gold' : 'plain' });
-    const bx0 = Math.floor(W / 2 - (lw + kw + bw + 16) / 2), by = y + btnTop;
+    const bx0 = Math.floor(W / 2 - (lw + kw + ew + bw + 24) / 2), by = y + btnTop;
     button(ctx, ui, 'set:lessons', bx0, by, lw, 18, '수업', { onClick: () => { app.closeOverlay(); app.guide = null; if (app.run && app.run.scratch) app.run = null; app.fx.clear(); app.go('lessons'); } });
     const again = !!app.records.kingAgain;
     button(ctx, ui, 'set:king', bx0 + lw + 8, by, kw, 18, '킹과 다시 두기', { tone: again ? 'gold' : 'plain', onClick: () => { app.records.kingAgain = !again; app.saveRecords(); if (!again) app.toast('다음 새 판은 킹과 둔다', PAL.gold); } });
-    button(ctx, ui, 'set:back', bx0 + lw + kw + 16, by, bw, 18, '돌아가기', { onClick: () => this.close() });
+    button(ctx, ui, 'set:export', bx0 + lw + kw + 16, by, ew, 18, '기록 내보내기', { onClick: () => app.exportRuns() });
+    button(ctx, ui, 'set:back', bx0 + lw + kw + ew + 24, by, bw, 18, '돌아가기', { onClick: () => this.close() });
     closeBox();
   }
   close() { if (this.back) this.app.openOverlay(this.back); else this.app.closeOverlay(); }
