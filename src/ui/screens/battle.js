@@ -1385,7 +1385,9 @@ export class BattleScreen {
     openBox('panel', RX, y2, RW, h2, P, { overlay: true, name: '그다음' });
     panel(ctx, RX, y2, RW, h2);
     const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['체크메이트', PAL.gold] : pv.redrop ? ['다시 떨군다', PAL.gold]
-      : pv.done ? ['사슬이 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red] : [`다음에 먹을 적 ${pv.next.length}`, PAL.gold];
+      : pv.done ? ['사슬이 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red]
+      // 먹을 적이 두 자리면(넓은 행마의 새 특수 기물, CHM-55) 폭에 맞춰 짧은 말로
+      : [measure(L(`다음에 먹을 적 ${pv.next.length}`), true) <= RW - P * 2 ? `다음에 먹을 적 ${pv.next.length}` : `먹을 적 ${pv.next.length}`, PAL.gold];
     fitText(ctx, msg, RX + P, y2 + textY(P), RW - P * 2, col);
     closeBox();
   }
