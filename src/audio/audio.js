@@ -105,7 +105,7 @@ export function createAudio(win = globalThis, opts = {}) {
       bell(NOTE(76), { t: 0.25, dur: 1.2, vol: 0.14 });
     },
     grade: (mark) => {
-      const k = { '!': 3, '!!': 4, '!!!': 5, '∞': 7 }[mark] || 3;
+      const k = { '★': 3, '★★': 4, '★★★': 5, '∞': 7 }[mark] || 3;
       arp([72, 76, 79, 84, 88, 91, 96].slice(0, k), 0.045, { dur: 0.14, type: 'square', vol: 0.06 });
       if (mark === '∞') noise({ t: 0.2, dur: 0.6, vol: 0.08, freq: 6000, q: 0.5 });
     },

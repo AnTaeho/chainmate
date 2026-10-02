@@ -19,6 +19,7 @@ const { ICON_ROWS } = await import('../src/render/icons.js');
 const { KIND } = await import('../src/ui/kinds.js');
 const { CREST } = await import('../src/render/crests.js');
 const { EMBLEM, TACTIC_G, SHARD_ROWS } = await import('../src/ui/parts.js');
+const { STAR_ROWS } = await import('../src/ui/stars.js');
 
 // Scale2x: rows(문자 줄) → 두 배 줄. 그림 밖은 빈칸(.)
 export function scale2x(rows) {
@@ -74,6 +75,9 @@ const TACTIC_HI = build('tactic', TACTIC_G, { width: 16 });
 // 명경기 조각: 1배는 8×7 마스크를 2도트씩(16×14). 빛깔은 자리로 정한다(h 밝은 금 · d 짙은 금 · c 금) — 두 번 다듬어 32×28 반 도트
 const shardChars = SHARD_ROWS.map((r, j) => [...r].map((ch, i) => (ch !== '#' ? '.' : (i + j) % 4 === 0 ? 'h' : j > 3 ? 'd' : 'c')).join(''));
 const SHARD_HI = scale2x(scale2x(shardChars));
+// 사슬 평가 별(CHM-47, stars.js STAR_ROWS 9×9): 작은 별(1도트)은 한 번 다듬어 18×18, 도장(2도트 이상)은 두 번 다듬어 36×36
+const STAR_HI = scale2x(STAR_ROWS);
+const STAR_HI4 = scale2x(STAR_HI);
 
 const SETS = {
   ICON_HI: [ICON_HI, '격언 · 전설 아이콘 24×24(12×12 자리). 문자는 icons.js와 같다: # 먹 · g 금 · r 붉음 · w 흰 · s 은 · p 보라 · b 파랑 · G 풀빛'],
@@ -90,6 +94,7 @@ for (const [name, [set]] of Object.entries(SETS)) for (const [id, rows] of Objec
 if (process.argv.includes('--print')) {
   for (const [name, [set]] of Object.entries(SETS)) for (const [id, rows] of Object.entries(set)) console.log(`${name}.${id}\n${rows.join('\n')}\n`);
   console.log(`SHARD_HI\n${SHARD_HI.join('\n')}`);
+  console.log(`STAR_HI\n${STAR_HI.join('\n')}\n\nSTAR_HI4\n${STAR_HI4.join('\n')}`);
 } else {
   const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const block = (name, set, note) => `// ${note}\nexport const ${name} = {\n${Object.entries(set).map(([k, v]) => `  ${k}: [\n${v.map((r) => `    '${r}',`).join('\n')}\n  ],`).join('\n')}\n};\n`;
@@ -99,8 +104,15 @@ ${Object.entries(SETS).map(([name, [set, note]]) => block(name, set, note)).join
 export const SHARD_HI = [
 ${SHARD_HI.map((r) => `  '${r}',`).join('\n')}
 ];
+// 사슬 평가 별 18×18(9×9 자리, stars.js STAR_ROWS 한 번 다듬기)과 36×36(도장 — 두 번 다듬기). # 별
+export const STAR_HI = [
+${STAR_HI.map((r) => `  '${r}',`).join('\n')}
+];
+export const STAR_HI4 = [
+${STAR_HI4.map((r) => `  '${r}',`).join('\n')}
+];
 `;
   fs.writeFileSync(path.join(ROOT, 'src/render/art-hi.js'), src);
-  console.log('씀 src/render/art-hi.js', Object.entries(SETS).map(([n, [s]]) => `${n} ${Object.keys(s).length}`).join(' · '), '· SHARD_HI 1');
+  console.log('씀 src/render/art-hi.js', Object.entries(SETS).map(([n, [s]]) => `${n} ${Object.keys(s).length}`).join(' · '), '· SHARD_HI 1 · STAR_HI 2');
 }
 delete globalThis.document; delete globalThis.window;

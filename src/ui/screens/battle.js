@@ -40,6 +40,7 @@ import { Marks, drawMarkSquares, drawMarkArrows } from '../marks.js';
 import { awakenFlow } from './awaken.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
 import { ANNOT, drawAnnot, annotSize, handTagRect, boardTagRect, offeredRow, drawMore } from '../annot.js';
+import { drawStars, starsW, starCount, STAR_N } from '../stars.js';
 
 export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
@@ -913,11 +914,11 @@ export class BattleScreen {
   }
 
   gradeStamp(e) {
-    const cols = { '!': PAL.white, '!!': PAL.gold, '!!!': PAL.red, '∞': null };
+    const cols = { '★': PAL.white, '★★': PAL.gold, '★★★': PAL.red, '∞': null };
     this.stamp = { mark: e.mark, t: 0, life: 1.1, col: cols[e.mark] };
     this.glow = { mark: e.mark, fade: 0 };
     this.snd('grade', e.mark);
-    this.shake({ '!': 1, '!!': 2, '!!!': 3, '∞': 4 }[e.mark] || 1, 0.25);
+    this.shake({ '★': 1, '★★': 2, '★★★': 3, '∞': 4 }[e.mark] || 1, 0.25);
   }
 
   // 판 위 표시(오른쪽 누르기 · 끌기, marks.js). 왼쪽으로 판을 누르거나 수를 두면 지운다. 타이틀 시연에는 없다
@@ -1060,7 +1061,7 @@ export class BattleScreen {
       const g = this.glow;
       const a = Math.max(0, 1 - g.fade / 0.6) * (0.75 + 0.25 * Math.sin(time * 10));
       const hue = Math.floor(time * 360) % 360;
-      const cols = { '!': [PAL.white], '!!': [PAL.gold, PAL.goldHi], '!!!': [PAL.red, PAL.gold, PAL.red], '∞': [`hsl(${hue},85%,60%)`, `hsl(${(hue + 90) % 360},85%,60%)`, `hsl(${(hue + 180) % 360},85%,60%)`] }[g.mark];
+      const cols = { '★': [PAL.white], '★★': [PAL.gold, PAL.goldHi], '★★★': [PAL.red, PAL.gold, PAL.red], '∞': [`hsl(${hue},85%,60%)`, `hsl(${(hue + 90) % 360},85%,60%)`, `hsl(${(hue + 180) % 360},85%,60%)`] }[g.mark];
       ctx.globalAlpha = a;
       cols.forEach((c, i) => frame(ctx, BX - 6 + i, BY - 6 + i, S * 8 + 12 - i * 2, S * 8 + 12 - i * 2, c, 1));
       ctx.globalAlpha = 1;
@@ -1700,10 +1701,12 @@ export class BattleScreen {
       const sc = k < 0.08 ? 7 : 5;
       const col = st.col || `hsl(${Math.floor(this.app.time * 400) % 360},90%,65%)`;
       const fade = k > 0.75 ? (1 - k) / 0.25 : 1;
-      // 사슬 평가(「!」 「!!」) 뒤 빛: 찍히는 순간 가장 밝다
-      const mw = measure(st.mark, true) * sc;
-      glowText(ctx, BX + 200 - mw, BY + 4, mw, 11 * sc, st.col || PAL.goldHi, fade * (k < 0.15 ? 0.9 : 0.55), 14);
-      text(ctx, st.mark, BX + 200, BY + 4, col, { align: 'right', bold: true, scale: sc, shadow: PAL.shadow, alpha: fade });
+      // 사슬 평가(★ · ★★ · ★★★ · ∞) 뒤 빛: 찍히는 순간 가장 밝다. 별은 도트 그림(stars.js), ∞는 글자
+      const n = starCount(st.mark), px = sc - 1;
+      const mw = n ? starsW(n, px) : measure(st.mark, true) * sc, mh = n ? STAR_N * px : 11 * sc;
+      glowText(ctx, BX + 200 - mw, BY + 4, mw, mh, st.col || PAL.goldHi, fade * (k < 0.15 ? 0.9 : 0.55), 14);
+      if (n) drawStars(ctx, n, BX + 200 - mw, BY + 4, col, { px, shadow: PAL.shadow, alpha: fade });
+      else text(ctx, st.mark, BX + 200, BY + 4, col, { align: 'right', bold: true, scale: sc, shadow: PAL.shadow, alpha: fade });
     }
   }
 

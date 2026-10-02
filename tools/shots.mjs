@@ -330,7 +330,7 @@ for (let i = 0; i < Math.min(2, plan2.line.length - 1); i++) { await clickId(`sq
 await hoverId('frag:century');
 await shot('17-battle-full');
 // 평가 불빛 · 점수 불꽃(목표 ×5)
-await ev(() => { const s = window.__app.screen; s.glow = { mark: '!!!', fade: 0 }; s.stamp = { mark: '!!!', t: 0.3, life: 1.1, col: '#df5a45' }; s.view.score = s.view.target * 6; });
+await ev(() => { const s = window.__app.screen; s.glow = { mark: '★★★', fade: 0 }; s.stamp = { mark: '★★★', t: 0.3, life: 1.1, col: '#df5a45' }; s.view.score = s.view.target * 6; });
 await page.mouse.move(1, 1);
 await settle(500);
 await shot('17-battle-fire');
@@ -352,7 +352,7 @@ if ((await ev(() => window.__app.screen.name)) === 'shop') {
 await ev(() => {
   const a = window.__app;
   const r = a.records;
-  r.runs = 7; r.wins = 1; r.bestAnte = 8; r.mates = 3; r.legends = 1; r.grades = { '!!!': 2 };
+  r.runs = 7; r.wins = 1; r.bestAnte = 8; r.mates = 3; r.legends = 1; r.grades = { '★★★': 2 };
   r.unlocked = { openings: ['standard', 'london', 'queens_gambit'], dan: 2 };
   r.bestMove = { score: 48210, steps: ['N', 'B', 'R', 'Q', 'P', 'Q', 'R', 'K'], ante: 6 };
   for (const id of ['quick_change', 'first_move', 'whim', 'wall_breaker', 'sacrifice', 'edge', 'center', 'chivalry', 'payback', 'coronation']) r.codex.maxims[id] = true;
