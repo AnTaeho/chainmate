@@ -34,6 +34,7 @@ node ../tools/icons.mjs --desktop && cargo tauri icon icon-1024.png -o src-tauri
 - **창:** 기본 1440×842 · 최소 960×572. macOS 26에서는 제목 막대(32pt)가 webview 높이를 먹어서, 게임이 보는 크기가 1440×810(480×270의 3배) · 960×540(2배)이 되게 32를 더했다. 그 밖의 크기는 게임의 `fit.js`가 맞춘다.
 - **저장:** 웹과 같은 localStorage. 앱에서는 `~/Library/WebKit/kr.papercut.chainmate/WebsiteData/`에 남아 껐다 켜도 이어진다. 개발 실행(`127.0.0.1:1430`)과 빌드한 앱(`tauri://localhost`)은 출처가 달라 저장을 나누지 않는다.
 - **소리:** WebKit 자동 재생 정책대로 첫 누름 뒤에 소리가 난다(게임의 `audio.unlock()`).
+- **기록 내보내기(CHM-50):** 설정 「기록 내보내기」의 Blob 다운로드가 앱에서도 받아진다 — 묻지 않고 `~/Downloads/chainmate-runs-*.json`에 떨어진다(2026-10-02 debug 빌드로 확인). `collect.sh`가 모은 사본의 `src/version.js`에 커밋 해시를 적어 기록의 앱 판에 남는다.
 - **오프라인:** 외부 요청이 없다(글꼴은 `assets/fonts`).
 - 웹 배포(Vercel)는 `.vercelignore`가 `desktop`을 빼서 그대로다.
 

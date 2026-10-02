@@ -60,6 +60,7 @@
 - 처음 안내는 화면이 그리는 중에 `hint(app, id, 구역 id)`로 부른다 — 말하는 것이 그 순간 화면에 있을 때만 부른다(격언 안내는 진열에 격언이 있을 때, CHM-36). 한 번에 하나, 부른 차례대로 가리킬 구역이 화면 안에 그려진 첫 것. 본 것은 `records.coachSeen`. smoke 「처음 안내가 말하는 것」이 판 상태로 대상을 잰다.
 - 세력(`src/data/factions.js`)은 대국 규칙 깃발(`mix` · `unique` · `walls` · `wallRow` · `reinforceMix` · `traitMult` · `guardsBonus` …)로만 규칙에 닿는다. 봇(풀이기)은 안개 속 적도 보므로 숲 사냥꾼 수치는 사람보다 쉽게 나온다. 하네스 세력 표의 「관 보정」이 세력 공평의 잣대다.
 - 사람 손으로 해 본 적이 없다. 첫 사람 판에서 볼 것은 `docs/reports/onboarding.md` 「알려진 문제」와 `night.md` 「남은 목록」.
+- 사람 판 기록(CHM-50, `docs/design-notes/human-runs.md`): 판이 끝날 때(이김 · 짐 · 끝없는 대국 끝 · 새 판으로 덮어쓴 「그만둠」) 하네스 dump와 같은 열쇠의 한 줄을 `chainmate.runs.v1`에 200판까지 남긴다(수업 · 대본 대국 · scratch 빼고). 설정 「기록 내보내기」로 JSON을 받아 `node tools/humans.mjs <파일> [--vs <run.mjs dump>]`로 하네스와 나란히 본다. 요약 `src/sim/runlog.js` `runRow`는 `run.mjs` `one()`과 따로 두고 `test/runlog.test.js`가 값까지 견준다 — 하네스 판 열쇠를 바꾸면 둘 다.
 
 ### 다음
 1. 사람 판으로 한 번: 처음 켠 10분(수업 열 · 처음 안내 · 카드 글이 읽히나, `docs/reports/ux.md` 「남은 헷갈림」), 미리 보기 · 소리 · 마스터 세기, 5관의 정보량.
