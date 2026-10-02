@@ -57,13 +57,8 @@ const CLIP_OK = [
 ];
 // CLIP_HELD: smoke가 찾았으나 고칠지 설계 담당이 정할 잘림(보류). 세어 보류 줄에 찍고 실패시키지 않는다 — 고치면 여기서 뺀다.
 // 언어 · 종류 · 상자 이름 · 원문이 모두 맞을 때만
-// 2026-10-02 처음 켰을 때 찾은 것(CHM-45) 중 CHM-46이 고치고 남은 것. 줄마다 [언어, 종류, 상자 이름(없으면 ''), 원문 …]
-const CLIP_HELD = [
-  // 판 틀 대국 왼쪽 칸 머리 칸(폭 96) 마스터전 제목. 두 줄이면 사슬 칸이 17(시계 있는 판 — 지나온 모습 22가 안 들어간다),
-  // 「마스터」를 관 줄로 옮기면 상금이 목표 아래로 내려가 21. 영어 「Cavalry Captain」은 이름만으로도 굵게 99 · 보통 102 > 96(CHM-46 — 설계 담당이 정할 것)
-  ['ko', 'cut', '머리 칸', ['마스터 사냥꾼 두령']],
-  ['en', 'cut', '머리 칸', ['Master Cavalry Captain', 'Master Chief Herald', 'Master Free Captain', 'Master Grandmaster', 'Master Hunt Chief', 'Master Village Elder']],
-];
+// 2026-10-02 처음 켰을 때 찾은 것(CHM-45)은 CHM-46이 모두 고쳐 비었다. 줄마다 [언어, 종류, 상자 이름(없으면 ''), 원문 …]
+const CLIP_HELD = [];
 // 상자 이름은 앞머리로 맞춘다(「도감 opera」 ← 「도감」, 「수업 묶음 basic」 ← 「수업 묶음 」). 상자 없이 잰 글자 끊김은 ''만
 const clipHeld = (c) => CLIP_HELD.find(([lang, kind, box, srcs]) => lang === LANG && kind === c.kind && (box ? c.box === box || c.box.startsWith(`${box} `) || (box.endsWith(' ') && c.box.startsWith(box)) : !c.box) && (srcs === '*' || srcs.includes(c.src))) || null;
 const clips = { seen: new Map(), by: new Map(), frames: new Map(), maximW: new Set(), measured: new Set() };

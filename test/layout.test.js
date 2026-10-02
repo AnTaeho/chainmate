@@ -561,3 +561,15 @@ test('짜임 칸: 두 줄 머리 칸 · 두 줄 레퍼토리 이름 · 레퍼토
   }
   assert.equal(FAM_ROW - FAM_H, 2);
 });
+
+// CHM-46: 마스터전 머리 칸 제목은 이름만(「마스터」는 빨간 빛깔과 말풍선) — 여덟 이름이 굵게 한 줄(96)에 들어간다
+test('마스터전 제목: 마스터 여덟 이름이 머리 칸 제목 줄에 굵게 들어간다(한국어 · 영어)', async () => {
+  const { MASTER_BY_ID } = await import('../src/data/masters.js');
+  const { frame, text } = M;
+  const room = frame.LEFT.w - frame.PAD_BOX * 2;
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const m of Object.values(MASTER_BY_ID)) assert.ok(text.textWidth(m.name, true) <= room, `${lang} ${M.lang.L(m.name)} ${text.textWidth(m.name, true)}`);
+  }
+  M.lang.setLang('ko');
+});
