@@ -7,7 +7,7 @@
 //   none   — 아무것도 사지 않는다(격언 없이 어디까지 가나 보는 기준선).
 //   smart도 조각이 진열에 보이면 적립을 다 남기고도 살 수 있을 때 산다(운 좋은 판). 꾸러미에서는 나머지가 짜임을 올리지 못할 때만 조각.
 import { createRng, fork, int, next } from '../src/sim/rng.js';
-import { createBattle, soulOf, arrive } from '../src/sim/battle.js';
+import { createBattle, soulOf, arrive, apply as applyBattle } from '../src/sim/battle.js';
 import { isCracked } from '../src/data/souls.js';
 import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult } from '../src/sim/run.js';
 import { EDITION_BY_ID } from '../src/data/editions.js';
@@ -15,7 +15,7 @@ import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { FINAL_FACTION } from '../src/data/factions.js';
-import { stepBattle } from './bot.mjs';
+import { stepBattle, SACLOG, SAC, sacrificeChoice, pieceKey } from './bot.mjs';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
 import { evolveTo } from '../src/data/tactics.js';
@@ -39,6 +39,10 @@ export const SMART = {
   evalNodes: 1000,
   // 각성(CHM-17): 이만큼 사슬을 이은 혼은 새 혼으로 바꾸지 않는다(금까지 다섯)
   keepLinks: 3,
+  // 짜임 재기에서도 대국 봇의 희생 판단을 쓴다(CHM-51): 희생 횟수 · 희생 격언(뽑은 대로 · 미련 없이)이 점수 기대에 든다.
+  // sacNodes: 희생을 잴 때 주머니 기물 하나에 쓰는 풀이기 마디(짜임 재기는 하네스 시간의 9할이라 작게)
+  sacEval: true,
+  sacNodes: 300,
 };
 const battlesLeft = (run) => Math.max(0, (8 - run.ante) * 3 + (2 - run.blind));
 export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5 + (SMART.luckMaxims[id] || 0);
@@ -98,7 +102,23 @@ export function evalBuild(run, build, seeds, ante, master = null, faction = null
     }
     b.movesUsed = m;
     b.movesLeft = b.rules.moves - m;
-    const best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes }) : null;
+    let collect = [];
+    let best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes, collect }) : null;
+    // 희생(CHM-51): 대국 봇과 같은 판단으로 바칠 만하면 바치고(주머니 맨 위가 실제로 뽑힌다) 다시 잰다. 대국 봇처럼 주머니가 넉넉할 때만
+    // 판단이 먼저 거르는 조건(사슬이 약할 때만, SAC.weakChain)을 여기서도 먼저 본다 — 손 칸별 점수를 모으는 값이 짜임 재기마다 들지 않게
+    for (let s = 0; SMART.sacEval && best && best.captures <= SAC.weakChain && s < 3 && b.discardsLeft > 0 && b.bag.length >= b.movesLeft; s++) {
+      const byHand = new Map();
+      for (const c of collect) if (!byHand.has(c.handIndex) || c.score > byHand.get(c.handIndex)) byHand.set(c.handIndex, c.score);
+      // 풀이기는 같은 기물을 한 번만 잰다: 같은 기물이면 잰 칸의 점수를 함께 쓴다
+      const byKey = new Map();
+      for (const [i, sc] of byHand) byKey.set(pieceKey(b.hand[i]), sc);
+      const per = b.hand.map((p) => (byKey.has(pieceKey(p)) ? byKey.get(pieceKey(p)) : null));
+      const pick = sacrificeChoice(b, per, best, { preferMate: 'avoid', nodes: SMART.sacNodes });
+      if (!pick) break;
+      applyBattle(b, { type: 'discard', handIndices: [pick.index] });
+      collect = [];
+      best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes, collect }) : null;
+    }
     total += b.score + (best ? best.score : 0); // b.score: 함정이 지나간 수에서 붙잡은 증원의 값
   });
   return total / seeds.length;
@@ -433,6 +453,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
   const editions = [];
   let legendAt = null;
   SEEN.reset();
+  SACLOG.reset();
   const trackBuys = (before) => {
     for (const m of run.maxims) if (!before.includes(m.uid)) { bought.add(m.id); if (m.edition) editions.push(m.edition); }
   };
@@ -465,7 +486,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'pack') { act(run, { type: 'skipPack' }); continue; }
   }
   if (legendAt == null && run.legends.length) legendAt = run.ante;
-  return { bought: [...bought], editions, legendAt, seen: JSON.parse(JSON.stringify({ ...SEEN, reset: undefined })) };
+  return { bought: [...bought], editions, legendAt, seen: JSON.parse(JSON.stringify({ ...SEEN, reset: undefined })), sac: SACLOG.rows.slice() };
 }
 
 export { blindInfo, canBuy };
