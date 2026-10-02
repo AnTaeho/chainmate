@@ -16,6 +16,7 @@ const { FAMILIES, familyCounts } = await import('../src/data/families.js');
 const { L } = await import('../src/ui/lang.js');
 const { LEGENDS } = await import('../src/data/legends.js');
 const codexDone = { cells: 0, cover: 0 };
+const codexAll = { pages: 0 };
 // 진열 카드 종류 장면(CHM-42): 장면마다 잰 카드 상자 · 글 · 넘침
 const shopCards = { scenes: [], boxes: 0, lines: 0, bad: 0 };
 
@@ -56,22 +57,12 @@ const CLIP_OK = [
 ];
 // CLIP_HELD: smoke가 찾았으나 고칠지 설계 담당이 정할 잘림(보류). 세어 보류 줄에 찍고 실패시키지 않는다 — 고치면 여기서 뺀다.
 // 언어 · 종류 · 상자 이름 · 원문이 모두 맞을 때만
-// 2026-10-02 처음 켰을 때 찾은 것(CHM-45). 줄마다 [언어, 종류, 상자 이름(없으면 ''), 원문 …]
+// 2026-10-02 처음 켰을 때 찾은 것(CHM-45) 중 CHM-46이 고치고 남은 것. 줄마다 [언어, 종류, 상자 이름(없으면 ''), 원문 …]
 const CLIP_HELD = [
-  // 도감 격자 칸 이름(폭 59 · 기물 56 · 74): smoke가 가리키는 칸이 판마다 달라 잘리는 이름도 달라진다 — 격자 전체를 보류(CHM-46)
-  ['ko', 'cut', '도감', '*'],
-  ['en', 'cut', '도감', '*'],
-  // 판 틀 왼쪽 칸 머리 칸(폭 96): 마스터전 제목 · 꾸러미 이름
+  // 판 틀 대국 왼쪽 칸 머리 칸(폭 96) 마스터전 제목. 두 줄이면 사슬 칸이 17(시계 있는 판 — 지나온 모습 22가 안 들어간다),
+  // 「마스터」를 관 줄로 옮기면 상금이 목표 아래로 내려가 21. 영어 「Cavalry Captain」은 이름만으로도 굵게 99 · 보통 102 > 96(CHM-46 — 설계 담당이 정할 것)
   ['ko', 'cut', '머리 칸', ['마스터 사냥꾼 두령']],
-  ['en', 'cut', '머리 칸', ['Master Cavalry Captain', 'Master Chief Herald', 'Master Free Captain', 'Master Grandmaster', 'Master Hunt Chief', 'Master Village Elder', 'Engraving Bundle']],
-  // 판 틀 왼쪽 칸 짜임(레퍼토리 · 정석) 칸 정석 이름(폭 96)
-  ['en', 'cut', '짜임 칸', ['Stepping Stones']],
-  // 수업 고르기 묶음 제목(폭 96)
-  ['ko', 'cut', '수업 묶음 ', ['잡으면 그것이 된다', '이을수록 곱해진다']],
-  ['en', 'cut', '수업 묶음 ', ['The Longer, the Bigger', 'You Are What You Take', 'Hand and Sacrifice', 'Target and Moves', 'Shop and Synergy']],
-  // 말풍선 글 줄(폭 100)에서 한 낱말이 줄보다 길다: 끝없는 대국 큰 수 · 영어 명경기 이야기
-  ['ko', 'char', '', ['1,000,000,000,000']],
-  ['en', 'char', '', ['1,000,000,000,000', 'Thirteen-year-old']],
+  ['en', 'cut', '머리 칸', ['Master Cavalry Captain', 'Master Chief Herald', 'Master Free Captain', 'Master Grandmaster', 'Master Hunt Chief', 'Master Village Elder']],
 ];
 // 상자 이름은 앞머리로 맞춘다(「도감 opera」 ← 「도감」, 「수업 묶음 basic」 ← 「수업 묶음 」). 상자 없이 잰 글자 끊김은 ''만
 const clipHeld = (c) => CLIP_HELD.find(([lang, kind, box, srcs]) => lang === LANG && kind === c.kind && (box ? c.box === box || c.box.startsWith(`${box} `) || (box.endsWith(' ') && c.box.startsWith(box)) : !c.box) && (srcs === '*' || srcs.includes(c.src))) || null;
@@ -881,6 +872,26 @@ click('codex:back');
   click('codex:back');
   Object.assign(c, JSON.parse(keep));
 }
+// 다 본 도감(CHM-46): 모든 탭 · 모든 쪽을 그려 칸 이름(두 줄까지)이 잘리지 않는지 「잘린 글」로 잰다 — 판에서 본 것만으론 긴 이름이 빠진다
+{
+  const c = app.records.codex, keep = JSON.stringify(c);
+  const { MAXIMS } = await import('../src/data/maxims.js');
+  const { SOULS } = await import('../src/data/souls.js');
+  const { FACTIONS } = await import('../src/data/factions.js');
+  const { EDITIONS } = await import('../src/data/editions.js');
+  for (const m of MAXIMS) c.maxims[m.id] = true;
+  c.souls = Object.fromEntries(SOULS.map((q) => [q.id, true]));
+  c.factions = Object.fromEntries(FACTIONS.map((q) => [q.id, true]));
+  for (const l of LEGENDS) c.legends[l.id] = Math.max(1, c.legends[l.id] || 0);
+  for (const e of EDITIONS) c.editions[e.id] = true;
+  click('title:codex');
+  for (const t of ['maxims', 'pieces', 'souls', 'factions', 'legends', 'openings', 'editions']) {
+    click(`codex:tab:${t}`); pump(1); codexAll.pages++;
+    for (let n = 0; n < 12 && region('codex:next') && region('codex:next').enabled; n++) { click('codex:next'); pump(1); codexAll.pages++; }
+  }
+  click('codex:back');
+  Object.assign(app.records.codex, JSON.parse(keep));
+}
 click('title:records');
 click('records:back');
 click('title:lesson');
@@ -1552,6 +1563,8 @@ if (lessonLog.length !== lessonMod.LESSONS.length) fail = true;
 if (!skipOk) { console.log('대본 대국 건너뛰기 · 처음 안내 끄기를 확인하지 못했다'); fail = true; }
 if (!scriptSeen.won || scriptSeen.moves !== 1 || scriptSeen.rewind !== 1 || scriptSeen.blocked <= 0 || !scriptSeen.shop || !scriptSeen.faction || scriptSeen.bad.length) { console.log('첫 판 대본 대국을 끝까지 지나지 못했거나, 행마 보기 · 되돌리기 · 누를 곳 막기 · 뒤 처음 안내(상점 · 농민군)가 어긋났다'); fail = true; }
 console.log(`완성한 명경기 도감: 칸 ${codexDone.cells} · 누를 것 덮음 ${codexDone.cover}`);
+console.log(`다 본 도감: 쪽 ${codexAll.pages}`);
+if (codexAll.pages < 7) { console.log('다 본 도감의 탭을 다 지나지 못했다'); fail = true; }
 if (codexDone.cells !== LEGENDS.length) { console.log('완성한 명경기 도감 칸을 모두 가리키지 못했다'); fail = true; }
 console.log(`길 중 멈춤: Esc ${pauseSeen.esc} · ≡ ${pauseSeen.button} · 타이틀로 ${pauseSeen.title} · 이어 하기 ${pauseSeen.resume} · 닫고 건너뛰기 ${pauseSeen.skip} · 수업 ⑩ 타이틀로 ${pauseSeen.lessonTitle}${pauseSeen.bad.length ? ` · 어긋남 ${pauseSeen.bad.join(' | ')}` : ''}`);
 if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseSeen.title || !pauseSeen.resume || !pauseSeen.skip || !pauseSeen.lessonTitle) { console.log('길 중에 멈춤이 열리지 않았거나, 닫은 뒤 · 타이틀로 · 건너뛰기가 어긋났다'); fail = true; }
