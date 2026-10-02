@@ -1,5 +1,6 @@
 // CHM-47 스크린샷: 사슬 평가 별 셋(★ 하양 · ★★ 금 · ★★★ 빨강 — 판 오른쪽 위 도장) · 탁월수 뒤 명경기 조각 알림 ·
 // 기록 화면(옛 「!!!」 기록을 별로 옮긴 신의 한 수, 영어도)을 1배 · 3배로 찍는다.
+// CHM-48: 하양 ★ 빛 번짐이 가장 밝은 순간(1-star1-peak) · 재현 조각 알림(6-feat-fragment — 대국 화면에서 뜨는지)을 더했다.
 //   node tools/shots-grade.mjs [--out docs/shots/grade] [--scale 1,3]
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
 import http from 'node:http';
@@ -108,10 +109,26 @@ for (const sc of SCALES) {
     await s.shot(`${i}-star${i}`);
     await s.context.close();
   }
-  // 4 탁월수 뒤 조각: 비숍을 바치고 새로 뽑은 나이트로 메이트 줄을 끝까지 둔다 → 「!!」 다음 조각 얻음 알림이 뜬 지 0.15초(조각이 왼쪽 칸으로 나는 중)에 멈춘다
+  // 1-peak 하양 ★: 빛 번짐이 가장 밝은 순간(찍힌 지 0.05초 — 도장이 크게 찍히는 0.15초 안, CHM-48)
   {
     const s = await session(sc);
     await battle(s);
+    await s.away();
+    await s.ev(() => {
+      const a = window.__app, f = a.frame.bind(a);
+      a.frame = (t) => { f(t); if (a.screen.stamp && a.screen.stamp.t >= 0.05) window.__hold = true; };
+      a.screen.gradeStamp({ type: 'grade', mark: '★' });
+    });
+    await s.page.waitForFunction(() => window.__hold, null, { timeout: 15000, polling: 50 });
+    await s.shot('1-star1-peak');
+    await s.context.close();
+  }
+  // 4 탁월수 뒤 조각: 비숍을 바치고 새로 뽑은 나이트로 메이트 줄을 끝까지 둔다 → 「!!」 다음 조각 얻음 알림이 뜬 지 0.15초(조각이 왼쪽 칸으로 나는 중)에 멈춘다
+  // 6 재현 조각(CHM-48): 같은 수를 오페라 대국 첫 조각을 가진 채 둔다(대국 첫 수 체크메이트 = 재현) → 「재현 조각」 알림이 뜬 지 0.15초
+  for (const [name, part, have] of [['4-brilliant-fragment', '첫 조각', null], ['6-feat-fragment', '재현 조각', 'opera']]) {
+    const s = await session(sc);
+    await battle(s);
+    if (have) await s.ev((id) => { window.__app.run.fragments[id] = { first: true, feat: false, gold: false }; }, have);
     await s.click('hand:3'); await s.click('btn:discard'); await s.idle(); await s.away(); await s.settle(300);
     const plan = await s.ev(async () => {
       const { bestMove } = await import('/src/sim/solver.js');
@@ -120,10 +137,10 @@ for (const sc of SCALES) {
       return { hand: i, sq: d.sq, line: d.line.map((c) => (typeof c === 'number' ? c : c.sq)), mate: !!d.mate };
     });
     if (!plan.mate) throw new Error('탁월수 장면: 새로 뽑은 나이트의 메이트 줄이 없다');
-    await s.ev(() => {
+    await s.ev((part) => {
       const a = window.__app, f = a.frame.bind(a);
-      a.frame = (t) => { f(t); if (a.toasts.some((x) => x.msg.endsWith('첫 조각') && x.t >= 0.15)) window.__hold = true; };
-    });
+      a.frame = (t) => { f(t); if (a.toasts.some((x) => x.msg.endsWith(part) && x.t >= 0.15)) window.__hold = true; };
+    }, part);
     await s.click(`hand:${plan.hand}`); await s.click(`sq:${plan.sq}`); await s.idle();
     for (const sq of plan.line) {
       await s.click(`sq:${sq}`);
@@ -132,8 +149,8 @@ for (const sc of SCALES) {
     }
     await s.page.waitForFunction(() => window.__hold, null, { timeout: 15000, polling: 100 });
     const got = await s.ev(() => Object.entries(window.__app.run.fragments).filter(([, f]) => f.first).map(([k]) => k));
-    console.log('탁월수 조각', got);
-    await s.shot('4-brilliant-fragment');
+    console.log(name, '조각', got, '화면', await s.ev(() => window.__app.screen.name));
+    await s.shot(name);
     await s.context.close();
   }
   // 5 기록 화면: 신의 한 수(★★★) · 탁월수 !! — 옛 기록(「!!!」 열쇠)을 불러와 별로 옮긴 것을 보인다

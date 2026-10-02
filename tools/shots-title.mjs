@@ -34,7 +34,7 @@ const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 fs.mkdirSync(OUT, { recursive: true });
 const errors = [];
-const { DROP, STEP, A_ANT, A_DASH } = await import('../src/ui/skychain.js');
+const { DROP, STEP, A_ANT, A_DASH, CYC } = await import('../src/ui/skychain.js');
 const HIT = (s) => DROP + (s - 1) * STEP + A_ANT + A_DASH; // s번째를 먹는 순간
 
 async function open(viewport, { lang = 'ko', save = false, calm = false } = {}) {
@@ -90,7 +90,9 @@ for (const sc of SCALES) {
   await calm.close();
   // 먹는 순간 셋: 둘째의 멈칫(하얗게 번쩍) · 셋째의 조각과 불티 · 다섯째의 화면 번쩍
   const page = await open(vp);
-  for (const [name, T] of [['hit-stop', HIT(2) + 0.03], ['hit-shards', HIT(3) + 0.22], ['hit-fifth', HIT(5) + 0.04]]) {
+  // 위쪽 자리(y 112 · 108)를 먹고 「×N」이 가장 높이 튄 순간(0.18초, CHM-48): 첫 바퀴 넷째(190, 112) · 둘째 바퀴 둘째(190, 112) · 다섯째(372, 108)
+  for (const [name, T] of [['hit-stop', HIT(2) + 0.03], ['hit-shards', HIT(3) + 0.22], ['hit-fifth', HIT(5) + 0.04],
+    ['hit-high', HIT(4) + 0.18], ['hit-high-2', CYC + HIT(2) + 0.18], ['hit-high-final', CYC + HIT(5) + 0.18]]) {
     await freeze(page, T);
     await shot(page, name, sc);
   }
