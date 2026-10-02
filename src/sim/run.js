@@ -710,15 +710,18 @@ export function applyRun(run, cmd) {
       for (const h of run.battle.history.slice(seen)) checkFeats(run, h, feats);
       // 탁월수 → 명경기 조각(CHM-47). 재현 판정 뒤에 준다(탁월수 사슬이 막 받은 첫 조각의 재현이 되지는 않는다).
       // 사건은 brilliant 바로 뒤에 끼운다 — 화면이 「!!」 다음, 대국 승리 앞에 조각 얻음을 보이게
-      // 재현 조각(CHM-48)은 그 수의 사건 뒤, 대국 승패(win · lose) 앞에 끼운다 — 승패 뒤면 알림이 보상 화면으로 넘어간 뒤에 떴다.
-      // 사건 차례만 바뀐다(판정은 위에서 이미 끝났다)
-      const end = out.findIndex((e) => e.type === 'win' || e.type === 'lose');
+      // 재현 조각(CHM-48)은 그 사슬의 사건 뒤, 사슬 끝(end) 바로 앞에 끼운다 — 대국 승패(win · lose) 뒤면 알림이 보상 화면으로
+      // 넘어간 뒤에 떴다. 승패 바로 앞도 모자라다: 화면은 한 수 연출이 길면 end 뒤 걸음을 몇 ms로 줄여(battle.js play pace)
+      // 알림이 넘어가는 순간에 뜬다. end 앞이면 사슬 끝 셈(0.75초, 줄이지 않음) 동안 대국 화면에 뜬다(탁월수 조각과 같은 때).
+      // 사슬이 끝나지 않은 사건(end 없음)이면 승패 앞, 그것도 없으면 끝에. 사건 차례만 바뀐다(판정은 위에서 이미 끝났다)
+      let at = out.map((e) => e.type).lastIndexOf('end');
+      if (at < 0) at = out.findIndex((e) => e.type === 'win' || e.type === 'lose');
       out.forEach((e, i) => {
-        if (i === end) events.push(...feats);
+        if (i === at) events.push(...feats);
         events.push(e);
         if (e.type === 'brilliant') brilliantFragment(run, events);
       });
-      if (end < 0) events.push(...feats);
+      if (at < 0) events.push(...feats);
       if (run.battle.status === 'won' || run.battle.status === 'lost') endBattle(run, events);
       break;
     }
