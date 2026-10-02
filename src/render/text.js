@@ -55,6 +55,19 @@ export function textImage(s, col, bold = false) {
 // 문장부호(마침표 · 쉼표 · 가운뎃점 · 닫는 괄호 …)는 줄 머리에 두지 않는다 — 글자 단위로 끊을 때 앞 글자와 함께 내린다
 const noDot = (l) => (l.endsWith(' ·') ? l.slice(0, -2) : l);
 export const CLOSE_PUNCT = /^[.,·:;!?…)\]}」』》〉’”%]/;
+// 낱말 안 줄 바꿈 자리: 붙임표 뒤(앞뒤가 글자일 때), 숫자 사이 쉼표 뒤. 나눈 조각을 이으면 원래 낱말이다
+export function breakPieces(word) {
+  const out = [];
+  let from = 0;
+  for (let i = 1; i < word.length - 1; i++) {
+    const c = word[i], a = word[i - 1], b = word[i + 1];
+    const hyphen = c === '-' && /[\p{L}\p{N}]/u.test(a) && /[\p{L}\p{N}]/u.test(b);
+    const comma = c === ',' && /\d/.test(a) && /\d/.test(b);
+    if (hyphen || comma) { out.push(word.slice(from, i + 1)); from = i + 1; }
+  }
+  out.push(word.slice(from));
+  return out;
+}
 export function wrap(s, w, bold = false) {
   s = L(String(s));
   const out = [];
@@ -67,6 +80,16 @@ export function wrap(s, w, bold = false) {
       if (word === '·') { line = ''; continue; }
       if (textWidth(word, bold) <= w) { line = word; continue; }
       line = '';
+      // 줄보다 긴 낱말은 먼저 낱말 안 경계에서 나눈다: 붙임표(-) 뒤 · 숫자 사이 쉼표 뒤(「Thirteen-year- / old」 · 「1,000,000,000, / 000」).
+      // 이것은 글자 끊김이 아니다. 조각 하나가 그래도 줄보다 길 때만 그 조각을 글자 단위로 끊는다
+      const pieces = breakPieces(word);
+      if (pieces.length > 1 && pieces.every((p) => textWidth(p, bold) <= w)) {
+        for (const p of pieces) {
+          if (line && textWidth(line + p, bold) > w) { out.push(line); line = ''; }
+          line += p;
+        }
+        continue;
+      }
       const from = out.length;
       for (const ch of word) {
         if (textWidth(line + ch, bold) > w && line) {
