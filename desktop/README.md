@@ -27,7 +27,7 @@ node ../tools/icons.mjs --desktop && cargo tauri icon icon-1024.png -o src-tauri
 - `src-tauri/target/release/bundle/macos/Chainmate.app`
 - `src-tauri/target/release/bundle/dmg/Chainmate_<버전>_aarch64.dmg`
 
-서명이 없어서 다른 맥에서 처음 열면 Gatekeeper가 막는다(Finder에서 우클릭 → 열기).
+서명이 없어서 내려받은 .dmg로 다른 맥에서 열면 Gatekeeper가 막는다. macOS 15부터는 우클릭 → 열기로 넘어갈 수 없다. 시스템 설정 → 개인정보 보호 및 보안 → 「그래도 열기」를 누르거나, 「손상되었다」고 나오면 `xattr -dr com.apple.quarantine /Applications/Chainmate.app`.
 
 ## 알아 둘 것
 
