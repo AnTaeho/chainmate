@@ -101,9 +101,10 @@
 | 격언 | 왕의 발자국 | King's Footsteps | **King's Steps** | CHM-40: 넘침(110) |
 | 명경기 | 폰 여덟의 행진 | March of the Eight | **March of Eight** | CHM-40: 넘침(122). March 뿌리는 지킨다 |
 | 마스터 | 사냥꾼 두령 | Hunt Chief | (그대로) | Huntmaster를 재 봤는데 마스터 카드 초상 옆 칸에 굵게 안 들어가 관 선택 시험(253)을 넘었다 |
+| 마스터 | 기병대장 | Cavalry Captain | **Horse Captain** | CHM-46: 마스터전 머리 칸 제목이 이름만이 된 뒤에도 굵게 99 > 96. 기병 = horse(굵게 89) |
 | 수업 제목 | 잡으면 그것이 된다 | Take it, be it | **You Are What You Take** | 먹다 = eat. 「You are what you eat」을 비튼 말 |
 
-지킨 이름: 체스 명경기의 실제 영어 이름(The Immortal Game · The Opera Game · The Game of the Century · The Evergreen Game)(격언 칸에서 「…」로 잘려도 지킨다 — 가리키면 말풍선에 온 이름, CHM-40), 오프닝(London · Sicilian · Queen's Gambit · Rook Endgame), 체스 말 이름(Passed Pawn · Rook Lift · Battery · Back Rank · Queen's Gambit), 세력 여덟과 마스터 여덟.
+지킨 이름: 체스 명경기의 실제 영어 이름(The Immortal Game · The Opera Game · The Game of the Century · The Evergreen Game)(격언 칸에서 「…」로 잘려도 지킨다 — 가리키면 말풍선에 온 이름, CHM-40), 오프닝(London · Sicilian · Queen's Gambit · Rook Endgame), 체스 말 이름(Passed Pawn · Rook Lift · Battery · Back Rank · Queen's Gambit), 세력 여덟과 마스터 일곱(기병대장만 Horse Captain으로 바꿨다, CHM-46).
 
 이름 겹침: 격언 · 레퍼토리 · 혼 · 각인 · 판본 · 세력 · 마스터 · 명경기 · 특성 · 전술 · 시너지 이름을 영어로 모아 소문자로 견줬다. 겹치는 것은 성채(세력 Fortress · 시너지 Fortress, 한국어도 같은 낱말) 하나다.
 
@@ -111,6 +112,7 @@
 
 - 카드 이름 칸(굵게 68)에서 끊기던 낱말은 위 이름 바꾸기로 모두 없앴다. smoke 동안 글자 단위로 끊긴 영어 낱말을 모아 보니(그리기 직전 `wrap`을 엿봄, 저장소 밖 도구) 남은 것은 둘이다. 마스터 「Grandmaster」는 `select.js`가 재고 초상 아래 온 폭으로 옮겨 쓰니 화면에서 끊기지 않는다. 다른 하나는 뒤집히는 좁은 카드(연출, 글 넘침을 재지 않는 칸)다.
 - 늘린 글이 높이 한도에 걸려 다시 줄인 곳:
+  - 도감 명경기 칸 말풍선(CHM-46, 자리 119~165): 불멸의 대국 둘째 조각 「Take two rooks in one unbroken chain」 → 「Two rooks in one unbroken chain」(168 → 154, 자리 165).
   - 판본 격언 카드 160: Shadow Reading은 옛 「See 2 waves · Drop on one」으로 되돌렸다. Back Rank Dream · Trophy Case · Passed Pawn · Long Diagonal · Specialty도 줄였다.
   - 혼 카드: Mimic · Echo · Martyr · Relay · Ripple을 줄였다.
   - 카드 아래 쓰는 법 줄(폭 94): Onto a piece · Into a piece · Evolve one · In a match.
