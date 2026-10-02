@@ -47,8 +47,8 @@ export const EN = {
   '나이트를 먹고': 'Take the knight',
   '폰까지 먹어라': 'Then the pawn',
   '폰은 떨굴 곳이 없다. 폰을 들어라': 'A pawn has nowhere to drop. Pick up a pawn',
-  '바치면 새로 뽑는다': 'Sacrifice it and draw anew',
-  '새로 쥔 비숍을 들어라': 'Pick up the bishop you drew',
+  '바쳐라. 바친 폰은 이번 대국에 돌아오지 않는다': 'Sacrifice it. That pawn stays out for this match',
+  '새로 쥔 비숍을 들어라. 이것으로 곧바로 메이트하면 탁월수다': 'Pick up the bishop you drew. Mate with it right away and it is a Brilliant',
   '떨구어라': 'Drop it',
   '폰을 먹어라': 'Take the pawn',
   '들어온 퀸이 노린다. 먼저 먹어라': 'The new queen has her eye on you. Take her first',
@@ -75,7 +75,7 @@ export const EN = {
   '남은 수로 목표를 채운다: 비숍을 든다': 'Use your last move to reach the Target: pick up the bishop',
   '룩을 먹으면 목표에 닿는다': 'Take the rook to reach the Target',
   '폰은 떨굴 곳이 없다. 바칠 폰을 누른다': 'A pawn has nowhere to drop. Tap a pawn to sacrifice',
-  '새로 쥔 나이트를 든다': 'Pick up the knight you drew', '퀸을 먹는다': 'Take the queen',
+  '새로 뽑은 나이트를 든다. 이것으로 곧바로 메이트하면 탁월수': 'Pick up the knight you drew. Mate with it right away for a Brilliant', '퀸을 먹는다': 'Take the queen',
   '▼ 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다': '▼ A shadow marks a recruit. An enemy arrives there when this move ends',
   '폰을 먹는다. 수가 끝나면 증원이 떨어진다': 'Take the pawn. When the move ends, the recruit arrives',
   '들어온 룩을 먹으러 간다': 'Go take the rook that arrived',
@@ -361,7 +361,10 @@ export const EN = {
   '손과 희생': 'Hand and Sacrifice', '상점과 시너지': 'Shop and Synergy',
   '레퍼토리는 판 끝까지 간다. 레퍼토리마다 시너지가 다르다': 'A repertoire lasts the whole run. Each one brings its own synergy',
   '같은 시너지를 2 · 4 · 6개 모으면 효과가 켜진다': 'Collect 2, 4 and 6 of one synergy to switch on its effects',
-  '희생: 든 기물을 바치고 새로 뽑는다. 바친 기물은 이번 대국에 돌아오지 않는다': 'Sacrifice: give up the piece you hold and draw a new one. It stays out for this match',
+  '희생하면 새로 뽑는다. 바친 폰은 이번 대국에 돌아오지 않는다': 'Sacrifice to draw anew. The pawn you gave up stays out for this match',
+  // 희생 2부(CHM-43): 처음 안내 · 기록 · 바친 기물
+  '이 기물로 곧바로 메이트하면 탁월수. 바친 기물이 무거울수록 배수가 커진다': 'Mate with this piece right away for a Brilliant. The heavier the piece you gave up, the bigger the Mult',
+  '탁월수 !!': 'Brilliants !!', '가장 큰 탁월수': 'Biggest Brilliant',
   '기사도와 낙타로 기사 시너지가 2개. 첫 효과가 켜졌고, 4개 · 6개면 더 켜진다': 'Chivalry and the camel make Rider synergy 2. Its first effect is on. More at 4 and 6',
   '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다': 'Drops left this match. When they run out, the match ends',
   '손의 기물을 바치고 새로 뽑을 수 있는 횟수': 'How many times you can give up a piece and draw anew', '탁월수': 'Brilliant',
@@ -494,6 +497,8 @@ export const PRE = [
   // 혼 각성(CHM-17): 효과 글에 「 · 」가 끼어 쪼개기 전에 본다
   [/^금이 갔다 · 깨어나면: (.+)$/, (m, tr) => `Cracked · awakened: ${tr(m[1])}`],
   [/^각성 · (.+)$/, (m, tr) => `Awakened · ${tr(m[1])}`],
+  // 희생 칸 말풍선의 바친 기물 줄(CHM-43): 「 · 」로 쪼개기 전에
+  [/^바친 기물: (.+)$/, (m, tr) => `Given up: ${m[1].split(' · ').map((x) => tr(x)).join(' · ')}`],
 
   // 시너지 이름 · 칩(「기사 시너지」 · 「기사 +1」 · 「기사 2/4」). 「성채」는 세력 이름과 한국어가 같아 영어도 Fortress 하나로 둔다
   [/^(기사|성채|사제|변신|불굴|왕관|행진|사냥|역습|매복) 시너지$/, (m, tr) => `${tr(m[1])} synergy`],

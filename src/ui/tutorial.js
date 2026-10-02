@@ -34,8 +34,8 @@ export const TUTORIAL_STEPS = [
   { move: 2, cap: 'g4', say: '폰까지 먹어라' },
   // ④ 희생 · 목표
   { move: 3, pick: 'P', say: '폰은 떨굴 곳이 없다. 폰을 들어라' },
-  { move: 3, discard: true, say: '바치면 새로 뽑는다' },
-  { move: 3, pick: 'B', say: '새로 쥔 비숍을 들어라' },
+  { move: 3, discard: true, say: '바쳐라. 바친 폰은 이번 대국에 돌아오지 않는다' },
+  { move: 3, pick: 'B', say: '새로 쥔 비숍을 들어라. 이것으로 곧바로 메이트하면 탁월수다' },
   { move: 3, drop: 'c3', say: '떨구어라' },
   { move: 3, cap: 'e5', say: '폰을 먹어라' },
   { move: 3, cap: 'd6', say: '들어온 퀸이 노린다. 먼저 먹어라' },

@@ -1,8 +1,8 @@
 // 첫 수업 열: 기초 넷 · 대국 넷 · 판 둘. 손으로 짠 고정 판(시드 무관), 규칙은 실제 sim(createBattle + 판 넣기) 그대로.
 // 수업마다 시범(흐린 손가락이 한 번 둔다 → 판이 처음으로) → 내 차례(지금 누를 곳만 빛나고, 오른쪽에 할 일 한 줄).
 //   hand    손(처음 쥔 기물들) · bag 주머니(바꾸면 여기서 쥔다) · board 적 { 칸: 종류 } · incoming 증원 그림자 [{ sq, t }]
-//   target  목표 · moves 수 · discards 바꾸기
-//   steps   걸음: { pick: 손 칸 } 손에서 들기 · { drop: 칸 } 떨구기 · { cap: 칸 } 먹기 · { discard: true } 바꾸기 단추
+//   target  목표 · moves 수 · discards 희생
+//   steps   걸음: { pick: 손 칸 } 손에서 들기 · { drop: 칸 } 떨구기 · { cap: 칸 } 먹기 · { discard: true } 희생 단추
 //           say  그 걸음에서 보일 한 줄(할 일). 걸음마다 없으면 앞 걸음의 한 줄이 이어진다
 //   preview 먹기 전 미리 보기(수업 2부터) · bigFlip 첫 갈아입기를 크게 · shop 수업용 상점(판 수업 ②)
 import { createBattle } from '../sim/battle.js';
@@ -59,8 +59,8 @@ export const LESSONS = [
   { id: 'redraw', group: 'battle', title: '손과 희생', target: 90, moves: 1, discards: 1, hand: ['P', 'P', 'P', 'P'], bag: ['N'], board: { h8: 'Q' },
     steps: [
       { pick: 0, say: '폰은 떨굴 곳이 없다. 바칠 폰을 누른다' },
-      { discard: true, say: '희생: 든 기물을 바치고 새로 뽑는다. 바친 기물은 이번 대국에 돌아오지 않는다' },
-      { pick: 3, say: '새로 쥔 나이트를 든다' },
+      { discard: true, say: '희생하면 새로 뽑는다. 바친 폰은 이번 대국에 돌아오지 않는다' },
+      { pick: 3, say: '새로 뽑은 나이트를 든다. 이것으로 곧바로 메이트하면 탁월수' },
       { drop: 'g6' },
       { cap: 'h8', say: '퀸을 먹는다' },
     ] },
