@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Chainmate",
+  "version": "0.1.0",
+  "identifier": "kr.papercut.chainmate",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeDevCommand": "sh collect.sh",
+    "beforeBuildCommand": "sh collect.sh"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "체인메이트",
+        "width": 1440,
+        "height": 842,
+        "minWidth": 960,
+        "minHeight": 572,
+        "resizable": true,
+        "center": true,
+        "backgroundColor": "#0b1210"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "category": "PuzzleGame",
+    "shortDescription": "체스 기물 로그라이크 퍼즐",
+    "copyright": "© papercut.kr",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": null
+    }
+  }
+}

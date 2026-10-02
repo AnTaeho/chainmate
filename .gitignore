@@ -2,3 +2,6 @@
 node_modules/
 .claude/
 .vercel
+desktop/dist
+desktop/src-tauri/target
+desktop/src-tauri/gen

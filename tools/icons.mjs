@@ -1,5 +1,6 @@
 // 홈 화면 아이콘(PWA · iOS): 펠트 위 상아 킹 도트 그림을 PNG로 굽는다. 저장소 의존성 없이 node zlib로 PNG를 쓴다.
 //   node tools/icons.mjs → assets/icons/icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png(180)
+//   node tools/icons.mjs --desktop → desktop/icon-1024.png(데스크톱 앱 아이콘 원본, `cargo tauri icon`에 넣는다)
 // 그림은 도트 격자(32 또는 36 · 64칸)에 그리고 칸마다 정수 화소로 늘린다(흐림 없음).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -48,6 +49,14 @@ function png(grid, px) {
   const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
   const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(n, 0); ihdr.writeUInt32BE(n, 4); ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
+}
+
+// 데스크톱 앱(.icns): 같은 그림을 1024로. 웹 아이콘은 건드리지 않는다
+if (process.argv.includes('--desktop')) {
+  const file = path.join(ROOT, 'desktop/icon-1024.png');
+  fs.writeFileSync(file, png(art(32, 1), 32));
+  console.log('구움', path.relative(ROOT, file), '1024×1024');
+  process.exit(0);
 }
 
 fs.mkdirSync(OUT, { recursive: true });
