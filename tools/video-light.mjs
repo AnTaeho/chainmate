@@ -1,4 +1,4 @@
-// 빛과 움직임 짧은 영상(약 10초): 손 카드 흔들림 · 가리키면 기울기 → 떨구기 · 사슬(미끄러지는 기물 · 그림자 · 값 × 배수 빛) → 상점 카드 흔들림.
+// 빛과 움직임 짧은 영상(약 8초): 가리킨 손 카드가 들린다(CHM-26부터 숨 쉬기 · 기울기는 없다) → 떨구기 · 사슬(미끄러지는 기물 · 그림자 · 값 × 배수 빛 · 흐르는 배경).
 //   node tools/video-light.mjs [--out docs/media]  → <out>/light-motion.mp4 (1440×810, 게임이 3배로 그린 화면, H.264)
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역). ffmpeg는 PATH에서 찾는다.
 import http from 'node:http';
@@ -51,7 +51,7 @@ const toXY = (gx, gy) => [((gx + 0.5) * W) / 480, ((gy + 0.5) * H) / 270];
 async function hover(id, ms = 300, dx = 0.5) { const r = await region(id); if (!r) return false; const [x, y] = toXY(r.x + r.w * dx, r.y + r.h / 2); await page.mouse.move(x, y, { steps: 14 }); await wait(ms); return true; }
 async function click(id, ms = 250) { if (!(await hover(id, ms))) throw new Error('no region ' + id); await page.mouse.down(); await wait(90); await page.mouse.up(); await wait(60); }
 
-// 손 카드: 가만히 숨 쉬는 모습 → 가리키며 좌우로 쓸어 기울기
+// 손 카드: 가만히 멈춘 모습 → 가리킨 카드만 들린다(카드를 옮겨 가며)
 await page.mouse.move(W / 2, 40); await wait(900);
 await hover('hand:0', 350, 0.15); await hover('hand:0', 350, 0.85);
 await hover('hand:1', 350, 0.2); await hover('hand:1', 350, 0.8);
