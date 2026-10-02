@@ -39,7 +39,7 @@ const nearest = (rows) => rows.flatMap((r) => { const d = [...r].map((c) => c + 
 
 // 네모 테 · 칸 무늬 · 글자 같은 그림: 둥글게 다듬으면 판 · 상자의 뜻이 흐려진다 — 그대로 두 배
 const NEAREST = {
-  icon: new Set(['edge', 'bare_board', 'welcome', 'checkerboard', 'full_board', 'encircle', 'last_square', 'asceticism', 'whim']),
+  icon: new Set(['edge', 'bare_board', 'welcome', 'checkerboard', 'full_board', 'encircle', 'last_square', 'asceticism', 'whim', 'menu_codex']),
   crest: new Set(['tower']), // 성탑 창(빈칸 구멍)이 모래시계 꼴로 바뀌었다
   tactic: new Set(['reload']), // 더하기가 마름모로 바뀌었다
 };

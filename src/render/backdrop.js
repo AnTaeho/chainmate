@@ -54,20 +54,37 @@ function flowPad(ctx, pad, t, tint) {
 }
 
 // 제 장면(타이틀): 화면이 준 그리기 함수로 창 전체 좌표 범위를 한 번 칠해 둔다. 게임 캔버스와 같은 함수 · 같은 좌표라
-// 겹치는 곳이 같은 도트다 — 가장자리를 늘리지 않는다(늘린 띠는 긴 줄무늬가 됐다). scene: { key, paint(g, x0, y0, w, h) }
+// 겹치는 곳이 같은 도트다 — 가장자리를 늘리지 않는다(늘린 띠는 긴 줄무늬가 됐다). scene: { key, paint(g, x0, y0, w, h), live? }
+// 둘레 SCENE_M 도트를 더 칠해 둔다: 장면이 흔들리면(live.shake) 그만큼 옮겨 깔아도 창 끝이 비지 않는다.
+// live: { key, shake: [dx, dy], draw(g, x0, y0, w, h), over(g, x0, y0, w, h) } — 움직이는 층(흔들림을 따라 옮긴다)과
+// 그 위의 멈춘 덮개(over, 옮기지 않는다). key가 바뀔 때만 다시 칠한다(타이틀: 실루엣이 한 도트 옮겨 가거나 별이 깜빡일 때)
+const SCENE_M = 8;
 let sceneCv = null, sceneKey = null;
 export const padStats = { sceneMs: 0 };
 function scenePad(pad, scene) {
   const key = `${scene.key}|${pad.cols}x${pad.rows}@${pad.ox},${pad.oy}`;
   if (sceneCv && sceneKey === key) return sceneCv;
   const t0 = globalThis.performance ? performance.now() : 0;
-  sceneCv = makeCanvas(pad.cols, pad.rows);
+  sceneCv = makeCanvas(pad.cols + 2 * SCENE_M, pad.rows + 2 * SCENE_M);
   const g = context(sceneCv);
   g.imageSmoothingEnabled = false;
-  scene.paint(g, -pad.ox, -pad.oy, pad.cols, pad.rows);
+  scene.paint(g, -pad.ox - SCENE_M, -pad.oy - SCENE_M, pad.cols + 2 * SCENE_M, pad.rows + 2 * SCENE_M);
   sceneKey = key;
   padStats.sceneMs = globalThis.performance ? performance.now() - t0 : 0;
   return sceneCv;
+}
+function drawScene(ctx, pad, scene) {
+  const live = scene.live || null;
+  const [dx, dy] = (live && live.shake) || [0, 0];
+  ctx.drawImage(scenePad(pad, scene), dx - SCENE_M, dy - SCENE_M);
+  if (!live) return;
+  if (live.draw) {
+    ctx.save();
+    ctx.translate(dx - SCENE_M, dy - SCENE_M);
+    live.draw(ctx, -pad.ox - SCENE_M, -pad.oy - SCENE_M, pad.cols + 2 * SCENE_M, pad.rows + 2 * SCENE_M);
+    ctx.restore();
+  }
+  if (live.over) live.over(ctx, -pad.ox, -pad.oy, pad.cols, pad.rows);
 }
 
 // 여백 판을 다시 칠한다(바뀐 것이 없으면 건너뛴다). s: { time, tint, dim, scene, flash: { col, a } }
@@ -76,7 +93,7 @@ let lastKey = null;
 export function drawPad(canvas, pad, s) {
   const t = flowTime(s.time || 0);
   const fl = s.flash && s.flash.a > 0 ? s.flash : null;
-  const key = `${pad.cols}x${pad.rows}@${pad.ox},${pad.oy}|${s.scene ? `scene:${s.scene.key}` : `${t}|${s.tint}|${LOOK.flow}`}|${fl ? `${fl.col}@${fl.a.toFixed(3)}` : ''}|${s.dim || 0}`;
+  const key = `${pad.cols}x${pad.rows}@${pad.ox},${pad.oy}|${s.scene ? `scene:${s.scene.key}:${s.scene.live ? s.scene.live.key : ''}` : `${t}|${s.tint}|${LOOK.flow}`}|${fl ? `${fl.col}@${fl.a.toFixed(3)}` : ''}|${s.dim || 0}`;
   if (key === lastKey && canvas.width === pad.cols && canvas.height === pad.rows) return false;
   lastKey = key;
   if (canvas.width !== pad.cols) canvas.width = pad.cols;
@@ -85,7 +102,7 @@ export function drawPad(canvas, pad, s) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = false;
   ctx.globalAlpha = 1;
-  if (s.scene) ctx.drawImage(scenePad(pad, s.scene), 0, 0);
+  if (s.scene) drawScene(ctx, pad, s.scene);
   else { ctx.drawImage(feltPad(pad), 0, 0); flowPad(ctx, pad, t, s.tint || null); }
   if (fl) { ctx.globalAlpha = fl.a; ctx.fillStyle = fl.col; ctx.fillRect(0, 0, pad.cols, pad.rows); ctx.globalAlpha = 1; }
   if (s.dim > 0) { ctx.globalAlpha = s.dim; ctx.fillStyle = PAL.shadow; ctx.fillRect(0, 0, pad.cols, pad.rows); ctx.globalAlpha = 1; }
