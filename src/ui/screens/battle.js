@@ -22,7 +22,7 @@ import { MASTER_BY_ID } from '../../data/masters.js';
 import { FACTION_BY_ID } from '../../data/factions.js';
 import { drawCrest } from '../../render/crests.js';
 
-// 대국의 세력(버릇 조정자 faction:<id>) — 수업 · 타이틀 시연은 없다
+// 대국의 세력(버릇 조정자 faction:<id>) — 수업은 없다
 export const factionOfBattle = (b) => { const s = b && b.mods && b.mods.find((x) => typeof x.id === 'string' && x.id.startsWith('faction:')); return s ? FACTION_BY_ID[s.id.slice(8)] : null; };
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
@@ -183,18 +183,17 @@ const bagTip = (b) => {
   return tipLines('주머니', parts.length ? parts.join(' · ') : '비었다');
 };
 
-// 대국이 어디서 오나: 판(런)의 대국(기본) · 첫 수업 · 타이틀 시연. 화면은 같은 규칙 · 같은 연출을 쓴다.
+// 대국이 어디서 오나: 판(런)의 대국(기본) · 첫 수업. 화면은 같은 규칙 · 같은 연출을 쓴다.
 //   live()   지금 둘 수 있는 대국(끝나 판에서 빠졌으면 null)
 //   cmd(c)   명령 하나 → 사건 배열
 //   run      판(런) 상태(없으면 상금 · 격언 칸 · 막간을 그리지 않는다)
 export const runSource = (app) => ({ kind: 'run', live: () => app.run.battle, cmd: (c) => app.cmd(c), get run() { return app.run; } });
 
 export class BattleScreen {
-  constructor(app, { events = [], source = null, quiet = false, fx = null } = {}) {
+  constructor(app, { events = [], source = null } = {}) {
     this.app = app;
     this.src = source || runSource(app);
-    this.quiet = quiet;            // 소리 · 흔들림 · 알림 없음(타이틀 시연)
-    this.fx = fx || app.fx;
+    this.fx = app.fx;
     this.seq = new Seq();
     this.sel = [];
     this.view = {};
@@ -250,10 +249,10 @@ export class BattleScreen {
   get run() { return this.src.run; }
   live() { return this.src.live(); }
   get b() { return this.live() || this.bRef; }
-  snd(name, arg) { if (!this.quiet) this.app.sfx(name, arg); }
-  shake(px, dur) { if (!this.quiet) this.app.shake(px, dur); }
-  hitstop(sec) { if (!this.quiet) this.app.hitstop(sec); }
-  toast(msg, col, dur) { if (!this.quiet) this.app.toast(msg, col, dur); }
+  snd(name, arg) { this.app.sfx(name, arg); }
+  shake(px, dur) { this.app.shake(px, dur); }
+  hitstop(sec) { this.app.hitstop(sec); }
+  toast(msg, col, dur) { this.app.toast(msg, col, dur); }
   get busy() { return this.seq.busy; }
 
   // 규칙 상태에서 보이는 판을 다시 읽는다(연출이 끝날 때마다)
@@ -378,7 +377,7 @@ export class BattleScreen {
     this.send({ type: 'discard', handIndices: idx });
   }
 
-  // 다시 놓기: 판(런)의 대국에서만(수업 · 타이틀 시연은 규칙이 끈다)
+  // 다시 놓기: 판(런)의 대국에서만(수업은 규칙이 끈다)
   canReboard() {
     const b = this.live();
     return !!this.run && !this.run.scratch && !this.busy && !!b && canReboard(b) && !this.sel.length;
@@ -742,7 +741,7 @@ export class BattleScreen {
   // 희생: 바친 손 카드가 조각(카드 바탕 · 기물 빛깔)으로 흩어진다. 카드 자리는 걸음이 끝날 때까지 비워 둔다(v.hiding)
   offerFx(indices) {
     const v = this.view;
-    if (this.boardOnly || !indices.length) return;
+    if (!indices.length) return;
     const n = v.hand.length;
     v.hiding = indices.slice();
     const parts = [];
@@ -773,7 +772,7 @@ export class BattleScreen {
     this.snd('brilliant');
     const st = this.app.stats;
     if (st) st.brilliantFx = (st.brilliantFx || 0) + 1;
-    if (sq == null || this.boardOnly) return;
+    if (sq == null) return;
     const calm = this.app.reducedMotion, T = ANNOT.teal;
     const tag = boardTagRect(sq, { bx: BX, by: BY, S });
     const s0 = sqXY(sq), cx = s0.x + 14, cy = s0.y + 14;
@@ -807,7 +806,6 @@ export class BattleScreen {
   }
   // col: 빛깔(기본은 값 · 배수 빛깔) · delay: 늦게 뜨기(초) · dx · align: 가운데 대신 왼쪽 맞춤으로 옆에 붙일 때
   pop(s, where, dy = 0, { col = null, delay = 0, dx = 0, align = 'center' } = {}) {
-    if (this.boardOnly) return;
     const lay = this.leftLayout(), vy = lay.val.y - 2;
     const pos = where === 'value' ? { x: LX + 24 + dx, y: vy - dy } : where === 'mult' ? { x: LX + 88 + dx, y: vy - dy } : { x: LX + LW - 20, y: shardTo().y - 6 };
     const c = col || (where === 'value' ? PAL.val : PAL.gold);
@@ -921,10 +919,10 @@ export class BattleScreen {
     this.shake({ '★': 1, '★★': 2, '★★★': 3, '∞': 4 }[e.mark] || 1, 0.25);
   }
 
-  // 판 위 표시(오른쪽 누르기 · 끌기, marks.js). 왼쪽으로 판을 누르거나 수를 두면 지운다. 타이틀 시연에는 없다
+  // 판 위 표시(오른쪽 누르기 · 끌기, marks.js). 왼쪽으로 판을 누르거나 수를 두면 지운다
   get marks() { return this._marks || (this._marks = new Marks()); }
-  rightDown(x, y) { if (this.src.kind !== 'demo') this.marks.down(sqAt(x, y)); }
-  rightUp(x, y) { if (this.src.kind !== 'demo') this.marks.up(sqAt(x, y)); }
+  rightDown(x, y) { this.marks.down(sqAt(x, y)); }
+  rightUp(x, y) { this.marks.up(sqAt(x, y)); }
   pointerDown(x, y) { this.idleT = 0; if (x != null && sqAt(x, y) >= 0) this.marks.clear(); }
   update(dt) {
     this.idleT = (this.idleT || 0) + dt;
@@ -992,7 +990,7 @@ export class BattleScreen {
   // (대국은 사슬이 끝난 뒤에 끝난다 — 규칙과 같다). 눈금이 바뀌면 막대는 한 번에 튀지 않고 늘어난다.
   drawGoalBar(ctx) {
     const v = this.view, tgt = v.target;
-    if (!tgt || this.boardOnly) return;
+    if (!tgt) return;
     const time = this.app.time;
     const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
     const going = !!v.chain && !v.gather;
@@ -1001,7 +999,7 @@ export class BattleScreen {
     const maxMul = BAR_TIERS.find((m) => (going ? total < m * tgt : total <= m * tgt)) ?? BAR_TIERS[BAR_TIERS.length - 1];
     const maxV = this.barScale(tgt * maxMul, time);
     const X = BX, Y = 15, Wd = S * 8, Hh = 7;
-    if (this.src.kind !== 'demo') this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '사슬이 끝날 때 점수가 목표에 닿으면 이긴다. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어난다') });
+    this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '사슬이 끝날 때 점수가 목표에 닿으면 이긴다. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어난다') });
     // 목표를 넘긴 막대 뒤 빛(막대 칸 뒤 층)
     if (score >= tgt) glow(ctx, X, Y, Math.round(Wd * Math.min(1, score / maxV)), Hh, PAL.gold, 0.3 * flicker(time, 4), 5);
     box(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, PAL.feltDk, PAL.frameDk);
@@ -1287,10 +1285,9 @@ export class BattleScreen {
     });
   }
 
-  // 판 위 기물 하나. pieceSink가 있으면 그리지 않고 모은다(타이틀이 눕힌 판 위에 세워 그린다)
+  // 판 위 기물 하나.
   // 발밑 그림자(light.js): lift는 바닥에서 들린 높이(도트) — 들리면 작아지고 옅어진다. 움직이는 기물은 소수점 자리에 선다(fine)
   putPiece(ctx, type, side, x, y, opts = {}, lift = 0) {
-    if (this.pieceSink) { this.pieceSink.push({ type, side, x, y, opts }); return; }
     if (opts.alpha == null || opts.alpha > 0.3) groundShadow(ctx, x + 8, y + lift + 22, lift);
     if (y % 1 || x % 1) fine(() => sprite(ctx, type, side, x, y, opts));
     else sprite(ctx, type, side, x, y, opts);

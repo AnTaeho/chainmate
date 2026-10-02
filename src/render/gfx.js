@@ -104,7 +104,7 @@ export const measure = (s, bold = false) => textWidth(s, bold);
 // 기물. sx: 가로 배율(뒤집힘 1 → 0 → 1), lift: 위로 띄우기, alpha
 // eng: 각인 id(몸 톤) · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게(없으면 멈춘 모습)
 // 두 배 도트(CHM-39): 그리는 곳의 배율이 2 이상이면(hiFor) 32×44 그림을 16×22 자리에 반 도트로. 자리 · 크기는 늘 16×22
-// hi: 그림 크기를 정해 줄 때(타이틀 시연 판 — 줄마다 배율이 달라도 판 하나는 한 그림으로). 없으면 그리는 곳의 실제 배율로
+// hi: 그림 크기를 정해 줄 때. 없으면 그리는 곳의 실제 배율로
 export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null, awake = false, hi: pick = null } = {}) {
   if (alpha <= 0) return;
   const hi = pick ?? hiFor(ctx, sy);
