@@ -9,7 +9,7 @@ import { PAL } from '../render/palette.js';
 import { text, measure, box, rect } from '../render/gfx.js';
 import { L, getLang } from './lang.js';
 import { PAD_BOX, GAP_GROUP, flow } from './frame.js';
-import { openBox, closeBox } from '../render/layoutlog.js';
+import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 
 const T = (id, group, word, enWord, re, en, say, enSay, basic = false) => ({ id, group, word, enWord, re, en, say, enSay, basic });
 // 기본 낱말(basic): 첫 수업이 가르치는 말. 글 안에서 빛깔을 받지 않고 카드 옆 상자도 띄우지 않는다(docs/design-notes/voice.md).
@@ -168,6 +168,8 @@ export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null, maxH = In
   const last = lay.words[lay.words.length - 1];
   if (note && last && measure(last[0], true) + 6 + measure(note) <= w - P * 2) text(ctx, note, x + w - P, y + last[1], PAL.cardInk, { align: 'right' });
   for (const [l, ly] of lay.lines) text(ctx, l, x + P, y + ly, PAL.cardInk);
+  const cut = lay.lines.some(([l]) => l === '…');
+  if (cut) logClip('cut', termWord(id), '…', w); // 자리 높이로 자른 낱말 상자(CHM-34 — 설계)
   closeBox();
-  return { id, x, y, w, h, cut: lay.lines.some(([l]) => l === '…') };
+  return { id, x, y, w, h, cut };
 }

@@ -3,6 +3,7 @@
 import { makeCanvas, context } from './surface.js';
 import { rgb } from './palette.js';
 import { L } from '../ui/lang.js';
+import { logClip } from './layoutlog.js';
 
 export const FONT_PX = 12;
 const H = 16;
@@ -66,6 +67,7 @@ export function wrap(s, w, bold = false) {
       if (word === '·') { line = ''; continue; }
       if (textWidth(word, bold) <= w) { line = word; continue; }
       line = '';
+      const from = out.length;
       for (const ch of word) {
         if (textWidth(line + ch, bold) > w && line) {
           // 문장부호가 줄 머리에 오면 앞 글자를 함께 내린다(앞 글자가 하나뿐이면 그대로)
@@ -76,6 +78,8 @@ export function wrap(s, w, bold = false) {
         }
         line += ch;
       }
+      // 낱말이 글자 단위로 끊겼다(「잘린 글」 검사 — 그 낱말과 끊긴 조각)
+      if (out.length > from) logClip('char', word, [...out.slice(from), line].join(' / '), w);
     }
     out.push(line);
     // 외톨이 끝말(숫자 하나 같은 짧은 낱말)이 홀로 다음 줄로 떨어지지 않게 앞 줄의 끝 낱말을 함께 내린다

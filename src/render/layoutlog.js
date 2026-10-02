@@ -12,14 +12,15 @@
 //   openBox를 잊은 그리기 길(옛 격언 칸 둘째 줄처럼)도 잡는다.
 // overlay: 다른 상자 위에 뜨는 것(말풍선 · 낱말 상자 · 처음 안내 · 차림표 · 끄는 카드). 상자끼리 겹침을 재지 않는다.
 // loose: 연출 중(뒤집히는 카드 등)이라 이번 프레임은 재지 않는다.
-export const LOG = { on: false, boxes: [], texts: [], frames: [], stack: [], layer: 0, folded: [] };
+// clips: 이번 프레임에 줄이거나 자른 글(「잘린 글」 검사, layout.md 「잘린 글 검사」) — logClip
+export const LOG = { on: false, boxes: [], texts: [], frames: [], stack: [], layer: 0, folded: [], clips: [] };
 export const EDGE_CLEAR = 2;          // 'edge' 칸: 글과 테 사이 최소 틈
 export const INK_H = 11, INK_DESC = 2; // 글자 잉크 높이 · 아래로 빠지는 글자의 더 내려가는 줄(12px, 1배)
 const DESC = /[gjpqy,]/;
 
 export function logBegin() {
   if (!LOG.on) return;
-  LOG.boxes = []; LOG.texts = []; LOG.frames = []; LOG.stack = []; LOG.layer = 0; LOG.folded = [];
+  LOG.boxes = []; LOG.texts = []; LOG.frames = []; LOG.stack = []; LOG.layer = 0; LOG.folded = []; LOG.clips = [];
 }
 export function openBox(kind, x, y, w, h, pad = 0, { overlay = false, loose = false, name = '' } = {}) {
   if (!LOG.on) return;
@@ -35,6 +36,13 @@ export function layerUp() { if (LOG.on) LOG.layer++; }
 export function logText(s, x, y, w, scale = 1) {
   if (!LOG.on) return;
   LOG.texts.push({ s, x, y, w, h: INK_H * scale, d: DESC.test(s) ? INK_DESC * scale : 0, box: LOG.stack[LOG.stack.length - 1] || null, layer: LOG.layer });
+}
+// 줄이거나 자른 글 하나(「잘린 글」 검사): kind 'thin' 보통 굵기로 줄임 · 'cut' 끝을 「…」로 · 'char' 낱말을 글자 단위로 끊음.
+// src 원문, shown 그려진 글(끊김은 줄을 「 / 」로 이어), w 자리 폭. 그때 열려 있던 상자(이름 · 연출 여부)에 묶인다
+export function logClip(kind, src, shown, w) {
+  if (!LOG.on) return;
+  const box = LOG.stack[LOG.stack.length - 1] || null;
+  LOG.clips.push({ kind, src: String(src), shown: String(shown), w, box: box ? box.name || box.kind : '', loose: !!(box && box.loose), layer: LOG.layer });
 }
 // 그린 테 하나(gfx.js box()): 그때 열려 있던 상자에 묶인다
 export function logFrame(x, y, w, h) {

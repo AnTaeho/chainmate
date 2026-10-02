@@ -21,7 +21,7 @@ import { drawIcon, iconCanvas } from '../render/icons.js';
 import { shade, glow, flicker } from '../render/light.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
-import { openBox, closeBox } from '../render/layoutlog.js';
+import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 import { kindTab, TAB, TAB_GAP, PACK_KIND } from './kinds.js';
 
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
@@ -41,10 +41,12 @@ export function cardBase(ctx, x, y, w, h, { fill = PAL.card, hover = false, edge
 export function fitText(ctx, s, x, y, w, col, { bold = true, align = 'left' } = {}) {
   s = L(String(s));
   if (measure(s, bold) <= w) return text(ctx, s, x, y, col, { bold, align });
-  if (bold && measure(s, false) <= w) return text(ctx, s, x, y, col, { align });
+  if (bold && measure(s, false) <= w) { logClip('thin', s, s, w); return text(ctx, s, x, y, col, { align }); }
   let t = s;
   while (t.length > 1 && measure(`${t}…`, false) > w) t = t.slice(0, -1);
-  return text(ctx, `${t.trimEnd()}…`, x, y, col, { align });
+  const shown = `${t.trimEnd()}…`;
+  logClip('cut', s, shown, w);
+  return text(ctx, shown, x, y, col, { align });
 }
 
 // 말풍선 내용: 제목 · 글(body) · 덧줄(extra: [글, 빛깔] · { chips }). 줄바꿈은 그릴 때 자리 규칙의 폭으로(ui.js tipRows).

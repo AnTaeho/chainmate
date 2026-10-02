@@ -7,7 +7,7 @@ import { box, rect, text, frame, measure, lift } from '../render/gfx.js';
 import { familyChips, chipRows, chipBlockH, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
 import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, flow, inkY } from './frame.js';
-import { openBox, closeBox } from '../render/layoutlog.js';
+import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 
 export class UI {
   constructor() {
@@ -216,6 +216,8 @@ export function tooltip(ctx, x, y, tip, w, maxH = Infinity) {
     else richText(ctx, l, x + P + dx, y + ly, PAL.cardDim, { termCol: PAL.goldDk });
   }
   frame(ctx, x, y, w, h, PAL.frameDk);
+  // 자리 높이로 자른 말풍선(CHM-34 — 설계): 「잘린 글」 검사가 허용 목록으로 가른다
+  if (lay.cut) logClip('cut', lay.titles.map(([l]) => l).join(' '), TIP_CUT, w);
   closeBox();
   return { x, y, w, h, cut: lay.cut, lean: !!lay.lean && !lay.cut };
 }

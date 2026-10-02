@@ -8,7 +8,7 @@ import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { TRAIT_BY_ID } from '../data/traits.js';
 import { wrap } from '../render/text.js';
 import { CHIP_H, CHIP_ROW, FAM_H, FAM_ROW, CHIP_PAD, LIST_GAP, inkY } from './frame.js';
-import { openBox, closeBox } from '../render/layoutlog.js';
+import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 
 // 5×5 문양
 const GLYPH = {
@@ -191,7 +191,7 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
     const nx = x + CHIP_PAD + 8, room = w - CHIP_PAD * 2 - 8 - measure(cnt) - 4;
     // 이름이 길면(영어) 줄인다
     let nm = L(f.name);
-    if (measure(nm) > room) { while (nm.length > 1 && measure(`${nm}…`) > room) nm = nm.slice(0, -1); nm = `${nm}…`; }
+    if (measure(nm) > room) { const src = nm; while (nm.length > 1 && measure(`${nm}…`) > room) nm = nm.slice(0, -1); nm = `${nm}…`; logClip('cut', src, nm, room); }
     text(ctx, nm, nx, inkY(yy, FAM_H), lv ? PAL.ink : PAL.dim);
     text(ctx, cnt, x + w - CHIP_PAD, inkY(yy, FAM_H), lv ? PAL.ink : PAL.dim, { align: 'right' });
     closeBox();
