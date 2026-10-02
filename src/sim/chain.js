@@ -5,11 +5,11 @@
 //   chainCapture(t, sq)                     → events   먹기 한 번
 //   chainRedrops(t)                         → [sq]     다시 떨굴 칸(onChainStop에서 redrop한 뒤에만)
 //   chainRedrop(t, sq)                      → events   다시 떨구기
-// 이벤트: drop · capture · golden · grade · transform · promote · forced · cut · cutIgnored · mate · brilliant · refill ·
+// 이벤트: drop · capture(from · to = 먹은 칸 · at = 내 기물이 선 칸 · via = 꺾거나 튕긴 칸) · explode(화약병) · golden · grade · transform · promote · forced · cut · cutIgnored · mate · brilliant · refill ·
 //         redropReady · redrop · end · score
 // 사슬이 끝나면 t.chain.done = true, 내 기물은 판에서 내려간다.
-import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy, kingTakeable, at } from './board.js';
-import { PIECES } from '../data/pieces.js';
+import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy, kingTakeable, at, landingOf, pathVia, mimicOf } from './board.js';
+import { PIECES, FAIRIES } from '../data/pieces.js';
 import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
@@ -19,14 +19,29 @@ import { brilliantMult } from '../data/sacrifice.js';
 const NO_OPTS = {};
 // 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
 const NO_FAIRY = { fairy: false };
+// 판에 있는 이형 적의 종류(t.fairyKinds, 글자 줄)를 알면 노림 판정이 없는 종류의 줄을 건너뛴다(CHM-55 — 꺾쇠 · 광대 줄이 길다).
+// 모르면(옛 저장 · 손으로 짠 판) 전부 잰다
+const BY_KINDS = new Map();
 export const boardOpts = (t) => {
   const r = t.rules;
-  if (!r || (!r.pawnSides && !r.openKings && !r.highways)) return t.fairyFree ? NO_FAIRY : NO_OPTS;
-  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings, highways: r.highways || null, fairy: t.fairyFree ? false : undefined };
+  const kinds = t.fairyKinds;
+  if (!r || (!r.pawnSides && !r.openKings && !r.highways)) {
+    if (t.fairyFree) return NO_FAIRY;
+    if (kinds == null) return NO_OPTS;
+    let o = BY_KINDS.get(kinds);
+    if (!o) { o = { kinds }; BY_KINDS.set(kinds, o); }
+    return o;
+  }
+  return { pawnSides: !!r.pawnSides, openKings: !!r.openKings, highways: r.highways || null, fairy: t.fairyFree ? false : undefined, kinds: t.fairyFree ? undefined : kinds };
 };
-// 판의 적 중 이형이 하나라도 있나(판이 바뀌어 적이 들어올 때마다 다시 잰다: 대국 시작 · 증원 · 다시 채움 · 도발)
-export const markFairy = (t) => { t.fairyFree = !t.board.some((c) => c && !c.mine && FAIRY_SET.has(c.t)); };
-const FAIRY_SET = new Set(['A', 'C', 'Z', 'L', 'H', 'G', 'O', 'S', 'W']);
+// 판의 적 중 이형이 하나라도 있나 · 있는 종류(판이 바뀌어 적이 들어올 때마다 다시 잰다: 대국 시작 · 증원 · 다시 채움 · 도발)
+export const markFairy = (t) => {
+  let kinds = '';
+  for (const c of t.board) if (c && !c.mine && FAIRY_SET.has(c.t) && !kinds.includes(c.t)) kinds += c.t;
+  t.fairyFree = !kinds;
+  t.fairyKinds = [...kinds].sort().join('');
+};
+const FAIRY_SET = new Set(FAIRIES);
 
 // 사슬 평가(별). 먹은 수가 이 값에 닿는 순간 「grade」 이벤트. 체스 주석(!? · !!)은 희생 · 탁월수만 쓴다(CHM-47).
 export const GRADES = [
@@ -77,11 +92,11 @@ export function chainCaptures(t) {
   // 흡수: 먹은 행마가 더해진다(모습은 그대로)
   if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
   // 혼 「역행」: 폰 모습이면(각성하면 어느 모습이든) 아래 대각으로도 · 혼 「도약」: 첫 먹기(각성하면 둘째까지)는 두 칸 안의 적 어디든(밤샘 2)
-  if (c.flags.pawnBack && (c.form === 'P' || c.flags.pawnBack === 'any')) for (const df of [-1, 1]) { const s = at((c.sq & 7) + df, (c.sq >> 3) - 1); if (s >= 0 && takeableAt(t, s, c.sq, bo) && !list.includes(s)) list.push(s); }
+  if (c.flags.pawnBack && (c.form === 'P' || c.flags.pawnBack === 'any')) for (const df of [-1, 1]) { const s = at((c.sq & 7) + df, (c.sq >> 3) - 1); if (s >= 0 && takeableAt(t, s, c.sq, bo, c.form) && !list.includes(s)) list.push(s); }
   if (c.flags.spring && c.captures.length < c.flags.spring) {
     for (let df = -2; df <= 2; df++) for (let dr = -2; dr <= 2; dr++) {
       const s = at((c.sq & 7) + df, (c.sq >> 3) + dr);
-      if (s >= 0 && s !== c.sq && takeableAt(t, s, c.sq, bo) && !list.includes(s)) list.push(s);
+      if (s >= 0 && s !== c.sq && takeableAt(t, s, c.sq, bo, c.form) && !list.includes(s)) list.push(s);
     }
   }
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
@@ -92,11 +107,11 @@ export function chainCaptures(t) {
 }
 
 // 행마와 상관없이 s의 적을 먹을 수 있나(벽 · 방패 · 지켜진 킹 규칙은 captures와 같다)
-function takeableAt(t, s, from, bo) {
+function takeableAt(t, s, from, bo, form) {
   const x = t.board[s];
   if (!isEnemy(x) || x.t === 'X') return false;
   if (x.trait === 'shield' && bo.first) return false;
-  if (x.t === 'K' && !bo.openKings && !kingTakeable(t.board, s, from, bo)) return false;
+  if (x.t === 'K' && !bo.openKings && !kingTakeable(t.board, s, from, { ...bo, form })) return false;
   return true;
 }
 
@@ -114,15 +129,18 @@ export function chainCapture(t, sq, legal = false) {
   const wasForced = !!c.forced;
   c.flags.union = false;
 
-  // 궁수 모습은 움직이지 않고 쏜다: 먹힌 칸만 비고 내 기물은 제자리(응수도 제자리 기준)
-  const stay = formBefore === 'S';
-  const at = stay ? from : sq;
+  // 내 기물이 서는 칸(board.js landingOf): 궁수 모습은 움직이지 않고 쏜다(먹힌 칸만 비고 제자리, 응수도 제자리 기준) ·
+  // 까마귀 모습은 넘은 적 너머 빈칸에 앉는다 · 광대는 먹힌 적의 행마를 흉내 내니 그 행마의 자리에 선다
+  const move = formBefore === 'M' ? mimicOf(target.t) : formBefore;
+  const via = pathVia(board, move, from, sq);
+  const at = formBefore === 'S' ? from : landingOf(board, move, from, sq);
+  const stay = at === from;
   board[sq] = null;
   board[from] = null;
   board[at] = { t: c.form, mine: true };
   c.sq = at;
   const dist = Math.max(Math.abs((from & 7) - (sq & 7)), Math.abs((from >> 3) - (sq >> 3)));
-  const cap = { from, to: sq, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold, stay };
+  const cap = { from, to: sq, at, via, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold, stay };
   c.captures.push(cap);
   if (wasForced) c.forcedReplies++;
   events.push({ type: 'capture', ...cap, value: PIECES[target.t].value });
@@ -141,6 +159,9 @@ export function chainCapture(t, sq, legal = false) {
   runHook(t, 'onCapture', cap, events);
   const grade = GRADES.find((g) => g.n === c.captures.length);
   if (grade) events.push({ type: 'grade', n: grade.n, mark: grade.mark });
+
+  // 화약병 모습: 둘레 여덟 칸의 적이 함께 터지고 사슬은 거기서 끝난다(바뀜 · 프로모션 · 응수 없음)
+  if (formBefore === 'D') { powder(t, sq, at, target, events); return events; }
 
   // 외통: 마지막 킹을 먹으면 사슬과 대국이 끝난다(onMate가 keepGoing하면 판을 다시 채워 잇는다)
   if (target.t === 'K' && !board.some((x) => isEnemy(x) && x.t === 'K')) {
@@ -232,6 +253,47 @@ function blast(t, sq, events) {
     events.push({ type: 'score', src: 'bomb', value: PIECES[x.t].value, mult: 1 });
     if (x.trait === 'bomb') blast(t, s, events);
   }
+}
+
+// 화약병(CHM-55): 먹은 칸 둘레 여덟 칸의 적(금빛 적 · 보석 포함, 킹 · 벽 빼고)이 터져 먹힌다.
+// 터진 적마다 먹기와 같은 셈(값 += 그 값, 배수 += 1, 금빛 적은 값 한 번 더, 보석은 상금 +2). 사슬 평가의 먹은 수에는 넣지 않는다.
+// 먹은 적의 특성(폭약 · 배신자 · 보석)은 보통 먹기와 같다. 터진 적 중 폭약은 이어 터진다(적 특성 규칙 그대로).
+// 그 뒤 사슬은 끝난다(reason 'blast'). 마지막 킹을 먹었으면 체크메이트(다시 채우지 않는다).
+function powder(t, sq, at, target, events) {
+  const c = t.chain, board = t.board;
+  if (target.trait === 'traitor' && target.t !== 'K') { (c.traitors || (c.traitors = [])).push(target.t); events.push({ type: 'traitor', sq, piece: target.t }); }
+  if (target.t === 'J') { c.money = (c.money || 0) + 2; events.push({ type: 'money', src: 'gem', money: 2 }); }
+  const hit = [];
+  for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
+    const f = (sq & 7) + df, r = (sq >> 3) + dr;
+    if ((!df && !dr) || f < 0 || f > 7 || r < 0 || r > 7) continue;
+    const s = r * 8 + f, x = board[s];
+    if (!x || x.mine || x.t === 'K' || x.t === 'X') continue;
+    hit.push([s, x]);
+  }
+  events.push({ type: 'explode', sq, at, squares: hit.map(([s]) => s), pieces: hit.map(([, x]) => x.t) });
+  for (const [s, x] of hit) {
+    board[s] = null;
+    const v = PIECES[x.t].value;
+    events.push({ type: 'pierce', sq: s, piece: x.t, gold: !!x.gold, src: 'powder' });
+    c.value += v;
+    c.mult += 1;
+    events.push({ type: 'score', src: 'powder', value: v, mult: 1 });
+    if (x.gold) { c.golden++; c.value += v; events.push({ type: 'golden', sq: s, piece: x.t }); events.push({ type: 'score', src: 'golden', value: v }); }
+    if (x.t === 'J') { c.money = (c.money || 0) + 2; events.push({ type: 'money', src: 'gem', money: 2 }); }
+    if (x.trait === 'traitor') { (c.traitors || (c.traitors = [])).push(x.t); events.push({ type: 'traitor', sq: s, piece: x.t }); }
+  }
+  if (target.trait === 'bomb') blast(t, sq, events);
+  for (const [s, x] of hit) if (x.trait === 'bomb') blast(t, s, events);
+  c.exploded = (c.exploded || 0) + hit.length;
+  if (target.t === 'K' && !board.some((x) => isEnemy(x) && x.t === 'K')) {
+    c.mates++;
+    events.push({ type: 'mate', sq });
+    runHook(t, 'onMate', { sq, mates: c.mates }, events);
+    finish(t, 'mate', events);
+    return;
+  }
+  finish(t, 'blast', events);
 }
 
 // 외통 뒤 판을 새로 채운다. 판은 (대국 시드, 몇째 수, 몇째 채움)으로 정해진다 — 풀이기가 그려 봐도,
@@ -371,7 +433,7 @@ export function chainSummary(c, move = 0) {
   return {
     piece: c.dropType, sq: c.dropSq, value: c.value, mult: c.mult, score: c.score, reason: c.reason, money: c.money || 0,
     captures: c.captures.length, transforms: c.transforms, promotions: c.promotions, forced: c.forcedReplies,
-    caps: c.captures.map((x) => x.piece).join(''), cuts: c.cuts, mates: c.mates, golden: c.golden,
+    caps: c.captures.map((x) => x.piece).join(''), took: c.captures.map((x) => x.form).join(''), cuts: c.cuts, mates: c.mates, golden: c.golden,
     refills: c.refills, redrops: c.redrops, move,
     ...(c.soul ? { soul: c.soul.id.replace(/^soul:/, '') } : {}),
   };

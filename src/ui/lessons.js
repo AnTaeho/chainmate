@@ -103,7 +103,7 @@ export function lessonBattle(L) {
   b.discardsLeft = b.rules.discards;
   b.incoming = (L.incoming || []).map((r) => ({ sq: parseSq(r.sq), t: r.t }));
   b.incomingNext = [];
-  b.fairyFree = false;
+  b.fairyFree = false; delete b.fairyKinds;
   b.lesson = L.id;
   return b;
 }

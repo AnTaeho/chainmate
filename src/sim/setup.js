@@ -15,7 +15,8 @@ export const reinforceCount = () => 2;
 // 관이 오를수록 무거운 적. 초안 — step 2에서 시뮬로 맞춘다.
 // 깊이 A: 4관부터 이형 적이 섞인다(관마다 무게 +FAIRY_ENEMY.step, 겹친 기물은 반). 먹으면 그 이형이 된다.
 export const FAIRY_ENEMY = { from: 4, step: 0.12 };
-const FAIRY_ENEMY_W = { A: 0.5, C: 0.5, Z: 0.25, L: 1, H: 1, G: 1, O: 1, S: 1, W: 0.5 };
+// CHM-55: 지키는 칸이 넓은 꺾쇠 · 모습 따라 지키는 광대 · 먹으면 사슬이 끝나는 화약병은 반
+export const FAIRY_ENEMY_W = { Z: 0.25, L: 1, O: 1, S: 1, W: 0.5, T: 0.5, E: 1, V: 1, M: 0.5, D: 0.5 };
 // 세력(docs/design-notes/factions.md): 대국 규칙 깃발로 적 구성을 비튼다(세력 id는 모른다).
 //   rules.mix     { 종류: 곱 } 관별 무게에 곱한다(주력 적). fairy 키는 이형 전부에 곱한다
 //   rules.unique  { 이형: 무게 } 고유 적 — 1관부터 UNIQUE.base × (1 + UNIQUE.step × (관 − 1)) × 무게로 섞인다(4관부터의 이형 무게에 더한다)
@@ -51,8 +52,9 @@ export function rollFrom(rng, w) {
   return w[w.length - 1][0];
 }
 // rules: 대국 규칙(세력 깃발). 없으면 관별 기본 무게
-export function rollType(rng, ante, rules = null) {
-  const w = enemyWeights(ante, rules);
+// guard: 킹을 지킬 적을 굴린다 — 광대는 지킬 모습을 몰라 킹 수비수로 서지 않는다(CHM-55)
+export function rollType(rng, ante, rules = null, guard = false) {
+  const w = guard ? enemyWeights(ante, rules).filter(([t]) => t !== 'M') : enemyWeights(ante, rules);
   let total = 0;
   for (const [, x] of w) total += x;
   let r = next(rng) * total;
@@ -81,7 +83,7 @@ export function kingDefended(board, ksq, opts = {}, guards = 2) {
   return at.length >= guards && at.some((s) => board[s].t === 'P');
 }
 
-// 판 위 사물(깊이 F): 2관부터 드물게 보석 하나 · 벽 한두 칸(배수를 막는 벽은 포 · 메뚜기의 받침이 된다)
+// 판 위 사물(깊이 F): 2관부터 드물게 보석 하나 · 벽 한두 칸(배수를 막는 벽은 포의 받침이 된다)
 export const THINGS = { from: 2, gem: 0.3, wall: 0.25 };
 function placeTraits(b, rng, board) {
   const p = b.rules.traits === false ? 0 : traitChance(b.ante ?? 1, b.rules);
@@ -142,7 +144,7 @@ export function generateBoard(b, rng = b.rng.board, reserve = []) {
       if (!pawnAt.length) { ok = false; break; }
       put(pawnAt[int(rng, pawnAt.length)], 'P');
       for (let g = 1; g < guards && ok; g++) {
-        const t2 = rollType(rng, b.ante, b.rules);
+        const t2 = rollType(rng, b.ante, b.rules, true);
         const cand = defenderSquares(board, t2, ksq, opts, reserve);
         if (!cand.length) { ok = false; break; }
         put(cand[int(rng, cand.length)], t2);

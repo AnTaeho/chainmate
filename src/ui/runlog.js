@@ -2,10 +2,11 @@
 // 판이 끝날 때(이김 · 짐 · 끝없는 대국 끝 · 새 판으로 덮어씀)만 쓴다. 저장이 꽉 차면 오래된 판부터 덜어 다시 쓴다.
 import { KEYS } from './save.js';
 import { addRow, exportPayload, RUNLOG_MAX } from '../sim/runlog.js';
+import { renameOldPieces } from '../sim/oldsave.js';
 
 export function loadRuns(store) {
   const d = store.get(KEYS.runs, null);
-  return d && d.v === 1 && Array.isArray(d.runs) ? d.runs : [];
+  return d && d.v === 1 && Array.isArray(d.runs) ? renameOldPieces(d.runs) : []; // 뺀 기물(CHM-55)은 새 기물로
 }
 
 // 한 판을 더한다(같은 id면 갈아 끼움). 돌려주는 값: 남은 판 수(쓰지 못했으면 -1)

@@ -10,6 +10,7 @@
 //   pack    꾸러미를 연 뒤. pick | skipPack
 //   won     8관 명인을 이김. endless
 //   lost    끝.
+import { renameOldPieces } from './oldsave.js';
 import { createRng, fork, int, next, shuffle } from './rng.js';
 import { boardFilter } from './tuning.js';
 import { parseSq } from './board.js';
@@ -122,8 +123,11 @@ export function factionOrder(seed) {
   return [FIRST_FACTION, ...shuffle(r, [...MIDDLE_FACTIONS]), FINAL_FACTION];
 }
 // 옛 저장(세력 전, run.masters = 관마다 명인 id): 명인을 우두머리로 둔 세력으로 옮긴다. 싸울 명인 차례가 그대로 남는다.
+// 뺀 기물(CHM-55)이 남은 저장은 새 기물로 바꿔 읽는다(src/sim/oldsave.js).
 export function migrateRun(run) {
-  if (!run || run.factions) return run;
+  if (!run) return run;
+  run = renameOldPieces(run);
+  if (run.factions) return run;
   run.factions = Array.isArray(run.masters) && run.masters.length === ANTES && run.masters.every((id) => FACTION_OF_BOSS[id])
     ? run.masters.map((id) => FACTION_OF_BOSS[id])
     : factionOrder(run.seed ?? 1);
@@ -333,6 +337,9 @@ function endBattle(run, events) {
   // 하네스용: 사슬에서 입은 모습(먹은 종류, 킹 · 보석 빼고)의 수 — 세력마다 퍼즐 모양이 다른지 보는 지표
   const worn = {};
   for (const h of b.history) for (const t of h.caps || '') if (t !== 'K' && t !== 'J') worn[t] = (worn[t] || 0) + 1;
+  // 하네스용(CHM-55): 그 모습으로 먹은 수(먹을 때의 모습)
+  const took = {};
+  for (const h of b.history) for (const t of h.took || '') took[t] = (took[t] || 0) + 1;
   const row = {
     ante: run.ante, blind: run.blind, kind: info.kind, faction: info.faction, master: info.master, target: b.target ?? info.target,
     score: b.score, won, reason: b.result.reason, moves: b.movesUsed, best,
@@ -345,6 +352,7 @@ function endBattle(run, events) {
     brilliantFrags: b.brilliantFrags || [], // 하네스용: 탁월수로 얻은 명경기 조각(CHM-47)
     reboards: b.reboards || 0,
     worn,
+    took,
   };
   run.log.push(row);
   if (!won) {

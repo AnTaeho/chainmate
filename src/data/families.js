@@ -2,6 +2,7 @@
 // 세는 법: 가진 격언의 가족 + 주머니 이형 「종류」의 가족 + 정석의 가족 + 혼의 가족. 체스 기물은 세지 않는다.
 // 문턱 2 · 4 · 6마다 효과가 하나씩 켜진다(쌓인다). 효과는 조정자(kind 'family', id 'family:<가족>', data.level 1~3).
 import { defineModifier } from '../sim/scoring.js';
+import { capWay, lastLeg } from '../sim/board.js';
 import { PIECES } from './pieces.js';
 import { MAXIM_BY_ID } from './maxims.js';
 import { LEGEND_BY_ID } from './legends.js';
@@ -74,12 +75,11 @@ export function familyMods(counts, dropFor = null) {
   return out;
 }
 
-// ── 판정 도우미(먹기 하나: from → to)
-const vec = (e) => [(e.to & 7) - (e.from & 7), (e.to >> 3) - (e.from >> 3)];
-export const isOrtho = (e) => { const [df, dr] = vec(e); return (df === 0) !== (dr === 0); };
-export const isDiag = (e) => { const [df, dr] = vec(e); return df !== 0 && Math.abs(df) === Math.abs(dr); };
-// 뛰어서 먹기: 선 위가 아닌 도약(나이트 · 낙타 · 야간기사 · 겹친 기물의 나이트 몫)이거나 메뚜기 · 포의 넘기
-export const isLeap = (e) => !isOrtho(e) && !isDiag(e) || e.form === 'G' || e.form === 'O';
+// ── 판정 도우미(먹기 하나: from → to). 길 갈래는 board.js capWay 한 곳에서 — 꺾쇠는 가로 · 세로, 물수제비는 대각,
+// 까마귀는 대각 · 뛰기, 포는 넘기(뛰기), 광대는 흉내 낸 행마로. 나머지는 from → to 벡터(나이트 · 낙타 · 아마존의 나이트 몫은 뛰기)
+export const isOrtho = (e) => capWay(e).ortho;
+export const isDiag = (e) => capWay(e).diag;
+export const isLeap = (e) => capWay(e).leap;
 
 const def = (id, hooks) => defineModifier(`family:${id}`, { kind: 'family', ...hooks });
 const lv = (ctx) => ctx.data.level || 0;
@@ -104,7 +104,7 @@ def('line', {
     if (lv(ctx) >= 2) ctx.addValue(10 * e.dist);
     if (lv(ctx) >= 3) {
       // 꿰뚫기: 같은 쪽으로 그 너머 첫 기물이 적(킹 빼고)이면 함께 먹은 것으로(값 · 배수 +1, 모습은 그대로)
-      const [df, dr] = vec(e);
+      const [df, dr] = lastLeg(e); // 꺾쇠는 꺾은 뒤의 걸음 쪽으로
       const sf = Math.sign(df), sr = Math.sign(dr);
       let f = (e.to & 7) + sf, r = (e.to >> 3) + sr;
       const board = ctx.t.board;

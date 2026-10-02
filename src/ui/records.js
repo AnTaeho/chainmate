@@ -2,6 +2,7 @@
 // 저장은 localStorage 한 덩이(KEYS.records). 순수 함수라 Node에서도 돈다.
 import { KEYS } from './save.js';
 import { OLD_GRADE_MARK } from '../sim/chain.js';
+import { renameOldPieces } from '../sim/oldsave.js';
 
 export const OPENING_ORDER = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 // 해금 과제(내가 정한 것): 판마다 하나씩 보이는 「다음 해금까지」
@@ -33,7 +34,7 @@ export function emptyRecords() {
 }
 
 export function loadRecords(store) {
-  const r = store.get(KEYS.records, null);
+  const r = renameOldPieces(store.get(KEYS.records, null)); // 뺀 기물(CHM-55)이 남은 가장 큰 한 수 · 탁월수
   const base = emptyRecords();
   if (!r || r.v !== 1) return base;
   return { ...base, ...r, codex: { ...base.codex, ...(r.codex || {}) }, unlocked: { ...base.unlocked, ...(r.unlocked || {}) }, grades: gradeKeys(r.grades) };

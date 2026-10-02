@@ -4,7 +4,7 @@
 // 필드: id · name(화면 이름) · text(화면 한 줄) · verb(뿌리의 어느 동사) · rarity('common'|'uncommon'|'rare') · price(3~8)
 // 전설(불멸의 기보)은 step 2b: rarity 'legendary', 상점에는 나오지 않는다.
 import { defineModifier } from '../sim/scoring.js';
-import { reach } from '../sim/board.js';
+import { reach, capWay } from '../sim/board.js';
 import { kingGuards } from '../sim/setup.js';
 import { PIECES, chartForm } from './pieces.js';
 
@@ -229,9 +229,9 @@ maxim('rook_lift', '룩 리프트', '룩 모습으로 구석에서 먹을 때마
 
 
 // ── 밤샘 2(가짓수 늘리기, docs/design-notes/content-expansion.md): 스물일곱 더. 시너지 칩은 families.js MAXIM_FAMILIES
-const vecOf = (e) => [(e.to & 7) - (e.from & 7), (e.to >> 3) - (e.from >> 3)];
-const leapOf = (e) => { const [df, dr] = vecOf(e); const o = (df === 0) !== (dr === 0), d = df !== 0 && Math.abs(df) === Math.abs(dr); return (!o && !d) || e.form === 'G' || e.form === 'O'; };
-const diagOf = (e) => { const [df, dr] = vecOf(e); return df !== 0 && Math.abs(df) === Math.abs(dr); };
+// 길 갈래는 board.js capWay 한 곳에서(꺾쇠 · 물수제비 · 까마귀 · 광대도 같은 판정)
+const leapOf = (e) => capWay(e).leap;
+const diagOf = (e) => capWay(e).diag;
 const around = (sq) => { const out = []; for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) { const f = (sq & 7) + df, r = (sq >> 3) + dr; if ((df || dr) && f >= 0 && f < 8 && r >= 0 && r < 8) out.push(r * 8 + f); } return out; };
 const foe = (c) => c && !c.mine && c.t !== 'X' && c.t !== 'J';
 const valueOf = (t) => (PIECES[t] ? PIECES[t].value : 0);
@@ -322,7 +322,7 @@ maxim('pilgrimage', '순례', '판의 네 구역을 모두 밟은 사슬: 배수
   more: '판을 가로 · 세로 반으로 나눈 네 구역',
   onChainEnd(ctx) {
     const c = ctx.chain, q = new Set();
-    for (const s of [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.to)]) q.add(((s & 7) >= 4 ? 1 : 0) + ((s >> 3) >= 4 ? 2 : 0));
+    for (const s of [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.at ?? x.to)]) q.add(((s & 7) >= 4 ? 1 : 0) + ((s >> 3) >= 4 ? 2 : 0));
     if (q.size === 4) ctx.mulMult(4);
   },
 });
