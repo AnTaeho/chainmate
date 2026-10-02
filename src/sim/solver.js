@@ -2,21 +2,23 @@
 // 손 기물 × 떨굴 칸 × 먹기 선택의 깊이 우선 탐색. 점수 파이프라인(조정자 포함)을 그대로 돌린다.
 import { startChain, chainCaptures, chainCapture, chainRedrops, chainRedrop, chainSummary } from './chain.js';
 import { dropSquaresFor } from './battle.js';
-import { forkSpec, forkSpecs } from './scoring.js';
+import { forkSpec, cowSpecs } from './scoring.js';
 import { pieceSoul } from '../data/souls.js';
 
 
+// 명세(mods · 각인 · 혼)는 나눠 쓰고 state에 손대는 순간 갈라 낸다(scoring.js cowSpecs · _cow).
 function cloneTable(t) {
   const c = t.chain;
+  const mods = cowSpecs(t.mods);
   return {
     ...t,
     board: t.board.slice(),
-    mods: forkSpecs(t.mods),
+    mods,
+    _cow: [], // 갈라 낸 명세 자리(ownSpec). 형식 배열은 만드는 값이 커서 빈 배열로
     chain: c && {
       ...c,
       captures: c.captures.slice(), forms: c.forms.slice(), flags: { ...c.flags },
       forced: c.forced && c.forced.slice(), absorbed: c.absorbed && c.absorbed.slice(), traitors: c.traitors && c.traitors.slice(),
-      engraving: forkSpec(c.engraving), soul: forkSpec(c.soul),
     },
   };
 }
@@ -62,7 +64,7 @@ function dfs(t, stats, preferMate, rank) {
   for (const sq of chainCaptures(t)) {
     if (greedy && best) break;
     const u = cloneTable(t);
-    chainCapture(u, sq);
+    chainCapture(u, sq, true); // sq는 바로 위 chainCaptures(t)에서 — u는 t의 복사본이라 같은 목록
     const r = dfs(u, stats, preferMate, rank);
     r.line = [sq, ...r.line];
     if (better(r, best, preferMate, rank)) best = r;

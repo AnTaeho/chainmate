@@ -42,6 +42,7 @@ function parseArgs(argv) {
     else if (k === '--nodraft') a.nodraft = true;
     else if (k === '--limit') a.limit = Number(argv[++i]);             // 판 하나 시간 상한(초)
     else if (k === '--quiet') a.quiet = true;
+    else if (k === '--dump') a.dump = argv[++i];                       // 판별 결과 전부(ms 빼고, seed 순)를 JSON으로 — 손질 전후 결정성 비교(CHM-44)
     else if (k === '--json') a.json = argv[++i];                       // 수치를 JSON으로도(밤샘 2 보고서 · 아티팩트용)                          // 정석 드래프트 없이(깊이 E 이전)
     else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
   }
@@ -110,6 +111,11 @@ if (!isMainThread) {
   });
   process.stderr.write('\n');
   args.timeouts = timeouts;
+  if (args.dump) {
+    const rows = results.map(({ ms, ...r }) => r).sort((x, y) => x.seed - y.seed);
+    mkdirSync(dirname(args.dump), { recursive: true });
+    writeFileSync(args.dump, JSON.stringify({ timeouts: [...timeouts].sort((x, y) => x - y), runs: rows }) + '\n');
+  }
   report(results, args, performance.now() - t0);
 }
 

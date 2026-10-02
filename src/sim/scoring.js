@@ -71,7 +71,10 @@ export const undefineModifier = (id) => REGISTRY.delete(id);
 // 돌려주는 값: [{ i, def }] — i는 (mods … , 각인, 혼) 안의 자리. 풀이기가 마디마다 mods를 복사하므로
 // 차례는 (명세 id · 꺼짐 줄 + 훅 + 각인 · 혼)을 열쇠로 한 번만 정렬해 둔다(깊이 층으로 조정자가 늘어 정렬이 탐색 시간의 18%였다).
 const NONE = [];
+// 차례 표: 명세 열쇠(문자열 — 복사본끼리 같은 문자열 객체를 나눠 쓴다) → 훅 → 각인 id → 혼 id → 차례.
+// 열쇠를 마디마다 이어 붙여 새 문자열을 만들면 조정자가 많을 때 그 해시가 탐색 시간의 30%였다(CHM-44). 고르는 차례는 같다.
 const PLANS = new Map();
+let planCount = 0;
 function modsKey(mods) {
   let k = mods._key;
   if (k === undefined) {
@@ -85,8 +88,20 @@ function ordered(t, hook) {
   const eng = t.chain && t.chain.engraving;
   const soul = t.chain && t.chain.soul;
   const cacheable = hook !== 'onBattleStart' && mods !== NONE;
-  const key = cacheable ? `${modsKey(mods)}|${hook}|${eng ? eng.id : ''}|${soul ? soul.id : ''}` : null;
-  if (key) { const hit = PLANS.get(key); if (hit) return hit; }
+  let bySoul = null;
+  const sk = soul ? soul.id : '';
+  if (cacheable) {
+    const mk = modsKey(mods);
+    let byHook = PLANS.get(mk);
+    if (!byHook) PLANS.set(mk, (byHook = new Map()));
+    let byEng = byHook.get(hook);
+    if (!byEng) byHook.set(hook, (byEng = new Map()));
+    const ek = eng ? eng.id : '';
+    bySoul = byEng.get(ek);
+    if (!bySoul) byEng.set(ek, (bySoul = new Map()));
+    const hit = bySoul.get(sk);
+    if (hit) return hit;
+  }
   let withKind = null;
   const order = KIND_ORDER[hook] || DEFAULT_ORDER;
   const n = mods.length + (eng ? 1 : 0) + (soul ? 1 : 0);
@@ -100,22 +115,29 @@ function ordered(t, hook) {
   }
   let plan = NONE;
   if (withKind) { if (withKind.length > 1) withKind.sort((a, b) => a.k - b.k || a.i - b.i); plan = withKind; }
-  if (key) { if (PLANS.size > 5000) PLANS.clear(); PLANS.set(key, plan); }
+  if (bySoul) {
+    if (planCount > 5000) { PLANS.clear(); planCount = 0; }
+    else { bySoul.set(sk, plan); planCount++; }
+  }
   return plan;
 }
 const specAt = (mods, eng, soul, i) => (i < mods.length ? mods[i] : i === mods.length && eng ? eng : soul);
 
 // 훅이 받는 ctx. 메서드는 프로토타입에 두어 부를 때마다 닫힘을 만들지 않는다.
 class Ctx {
-  constructor(t, spec, event, events) {
-    this.t = t; this.chain = t.chain; this.event = event; this.spec = spec;
+  constructor(t, spec, event, events, i = -1) {
+    this.t = t; this.chain = t.chain; this.event = event; this.spec = spec; this._i = i;
     this.data = spec.data || {};
     this.rules = t.rules;
     this.flags = t.chain ? t.chain.flags : null;
     this._events = events;
     this._cancel = false;
   }
-  get state() { return this.spec.state || (this.spec.state = {}); }
+  get state() {
+    // 풀이기 탁자(t._cow)는 명세를 부모와 나눠 쓰다가 state에 처음 손대는 순간 제 것으로 갈라 낸다(ownSpec)
+    const spec = this.t._cow ? (this.spec = ownSpec(this.t, this._i, this.spec)) : this.spec;
+    return spec.state || (spec.state = {});
+  }
   addValue(n) { if (!n) return; this.chain.value += n; this._events.push({ type: 'score', src: this.spec.id, value: n }); }
   addMult(n) { if (!n) return; this.chain.mult += n; this._events.push({ type: 'score', src: this.spec.id, mult: n }); }
   mulMult(x) { if (x === 1) return; this.chain.mult *= x; this._events.push({ type: 'score', src: this.spec.id, xmult: x }); }
@@ -142,7 +164,7 @@ export function runHook(t, hook, event, events = []) {
   for (const { i, def } of list) {
     const spec = specAt(mods, eng, soul, i);
     if (spec.off) continue; // 앞선 조정자가 이번 훅 안에서 끈 경우(「침묵」)
-    const ctx = new Ctx(t, spec, event, events);
+    const ctx = new Ctx(t, spec, event, events, i);
     const r = def[hook](ctx);
     if (hook === 'allowCapture' && r === false) allowed = false;
     if (ctx._cancel) cancelled = true;
@@ -156,13 +178,55 @@ export function runHook(t, hook, event, events = []) {
 
 // 탐색 · 조회용 가지치기: 명세 겉과 state만 새로 만들고 data는 같이 쓴다(대국 안의 훅은 data를 바꾸지 않는다).
 // 탐색 중 훅이 state를 바꿔도(또는 새로 만들어도) 원래 대국의 명세에 새지 않는다.
-export const forkSpec = (s) => (s ? (s.state ? { ...s, state: JSON.parse(JSON.stringify(s.state)) } : { ...s }) : s);
+// state 복사: JSON 왕복과 똑같은 결과를 더 싸게(탐색 마디마다 부르는 곳이라 왕복이 시간의 10%였다, CHM-44).
+// 평범한 객체 · 배열 안의 문자열 · 참거짓 · null · 유한한 수(−0 빼고)만 직접 베끼고, 그 밖의 값이 하나라도 보이면 통째로 JSON 왕복한다.
+const BAIL = Symbol('bail');
+function plainCopy(v) {
+  if (v === null) return null;
+  const ty = typeof v;
+  if (ty === 'string' || ty === 'boolean') return v;
+  if (ty === 'number') return Number.isFinite(v) && !Object.is(v, -0) ? v : BAIL;
+  if (ty !== 'object') return BAIL;
+  if (Array.isArray(v)) {
+    const out = new Array(v.length);
+    for (let i = 0; i < v.length; i++) { if (!(i in v)) return BAIL; const x = plainCopy(v[i]); if (x === BAIL) return BAIL; out[i] = x; }
+    return out;
+  }
+  if (Object.getPrototypeOf(v) !== Object.prototype) return BAIL;
+  const out = {};
+  for (const k of Object.keys(v)) { const x = plainCopy(v[k]); if (x === BAIL) return BAIL; out[k] = x; }
+  return out;
+}
+const copyState = (st) => { const x = plainCopy(st); return x === BAIL ? JSON.parse(JSON.stringify(st)) : x; };
+export const forkSpec = (s) => (s ? (s.state ? { ...s, state: copyState(s.state) } : { ...s }) : s);
 export const forkSpecs = (mods) => {
   if (!mods || !mods.length) return mods;
   const out = mods.map(forkSpec);
   if (mods._key !== undefined) Object.defineProperty(out, '_key', { value: mods._key, writable: true, enumerable: false, configurable: true });
   return out;
 };
+
+// 풀이기의 탁자 복사(CHM-44): 명세를 마디마다 모두 복사(forkSpecs)하는 대신 배열만 새로 만들어 명세를 부모와 나눠 쓰고,
+// 훅이 state를 읽거나 쓰려는 순간(Ctx.state) 그 명세 하나만 forkSpec으로 갈라 낸다. 탐색 중 명세에서 바뀌는 것은 state뿐이라
+// (data는 대국 안에서 바뀌지 않고, off는 대국 시작 훅만 바꾼다) 모두 복사할 때와 결과가 같다.
+// t._cow[i]: i번째 명세(mods … , 각인, 혼 — specAt 차례)를 이 탁자가 이미 제 것으로 갈라 냈나.
+export const cowSpecs = (mods) => {
+  if (!mods || !mods.length) return mods;
+  const out = mods.slice();
+  if (mods._key !== undefined) Object.defineProperty(out, '_key', { value: mods._key, writable: true, enumerable: false, configurable: true });
+  return out;
+};
+function ownSpec(t, i, spec) {
+  const cow = t._cow;
+  if (i < 0 || cow[i]) return spec;
+  cow[i] = 1;
+  const f = forkSpec(spec);
+  const mods = t.mods || NONE;
+  if (i < mods.length) mods[i] = f;
+  else if (i === mods.length && t.chain && t.chain.engraving) t.chain.engraving = f;
+  else t.chain.soul = f;
+  return f;
+}
 
 export const hasHook = (t, hook) => ordered(t, hook).length > 0;
 

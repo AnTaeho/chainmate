@@ -113,19 +113,21 @@ export function reach(board, t, sq, dir = 1, ignore = -1) {
   return out;
 }
 
+// 노림 판정의 칸 검사(attackers 안에서 부를 때마다 닫힘을 만들지 않게 밖에 둔다)
+const enemyAt = (board, ignore, s, t) => s !== ignore && threat(board[s]) && board[s].t === t;
+const enemyIn = (board, ignore, s, set) => s !== ignore && threat(board[s]) && set.has(board[s].t);
+const HOP_SETS = [RAY_O, RAY_D];
 // sq를 노리는 적들의 칸. ignore 칸은 비어 있는 것으로 본다(움직이기 전 내 기물 자리).
 // opts.pawnSides: 적 폰이 좌우 옆 칸도 지킨다(명인 「철벽」).
 // 이형 적도 같은 행마로 지킨다: 포 · 메뚜기는 받침이 있을 때만, 궁수는 두 칸 고리, 유령은 막힘 무시.
 export function attackers(board, sq, opts = {}) {
   const ignore = opts.ignore ?? -1;
   const out = [];
-  const enemyAt = (s, t) => s !== ignore && threat(board[s]) && board[s].t === t;
-  const enemyIn = (s, set) => s !== ignore && threat(board[s]) && set.has(board[s].t);
-  for (const s of KNIGHT[sq]) if (enemyIn(s, KNIGHTLIKE)) out.push(s);
-  for (const s of KING[sq]) if (enemyAt(s, 'K') || (s !== ignore && threat(board[s]) && board[s].trait === 'fort' && board[s].t !== 'K' && !out.includes(s))) out.push(s);
+  for (const s of KNIGHT[sq]) if (enemyIn(board, ignore, s, KNIGHTLIKE)) out.push(s);
+  for (const s of KING[sq]) if (enemyAt(board, ignore, s, 'K') || (s !== ignore && threat(board[s]) && board[s].trait === 'fort' && board[s].t !== 'K' && !out.includes(s))) out.push(s);
   // 적 폰은 (f±1, r−1)을 노린다 ⇒ sq를 노리는 폰은 (f±1, r+1)에 있다
-  for (const s of PAWN_UP[sq]) if (enemyAt(s, 'P')) out.push(s);
-  if (opts.pawnSides) for (const s of PAWN_SIDE[sq]) if (enemyAt(s, 'P')) out.push(s);
+  for (const s of PAWN_UP[sq]) if (enemyAt(board, ignore, s, 'P')) out.push(s);
+  if (opts.pawnSides) for (const s of PAWN_SIDE[sq]) if (enemyAt(board, ignore, s, 'P')) out.push(s);
   for (const ray of RAY_O[sq]) for (const s of ray) {
     if (s === ignore || !board[s]) continue;
     if (threat(board[s]) && ORTHO_T.has(board[s].t)) out.push(s);
@@ -138,23 +140,23 @@ export function attackers(board, sq, opts = {}) {
   }
   if (opts.fairy === false) return out;
   // ── 이형(판에 이형이 없으면 여기까지 오지만 칸마다 몇 번의 확인뿐)
-  for (const s of CAMEL[sq]) if (enemyAt(s, 'L')) out.push(s);
-  for (const s of RING2[sq]) if (enemyAt(s, 'S')) out.push(s);
+  for (const s of CAMEL[sq]) if (enemyAt(board, ignore, s, 'L')) out.push(s);
+  for (const s of RING2[sq]) if (enemyAt(board, ignore, s, 'S')) out.push(s);
   for (const ray of RAY_N[sq]) for (const s of ray) {
     if (s === ignore || !board[s]) continue;
-    if (enemyAt(s, 'H')) out.push(s);
+    if (enemyAt(board, ignore, s, 'H')) out.push(s);
     break;
   }
   // 유령: 같은 줄 · 같은 단 어디서든
-  for (const ray of RAY_O[sq]) for (const s of ray) if (enemyAt(s, 'W')) out.push(s);
+  for (const ray of RAY_O[sq]) for (const s of ray) if (enemyAt(board, ignore, s, 'W')) out.push(s);
   // 메뚜기: sq 바로 앞(선 위 한 칸)이 받침이고, 그 뒤로 빈칸을 지나 처음 만나는 기물이 적 메뚜기
-  for (const set of [RAY_O, RAY_D]) for (const ray of set[sq]) {
+  for (const set of HOP_SETS) for (const ray of set[sq]) {
     const h = ray[0];
     if (!board[h] || h === ignore) continue;
     for (let i = 1; i < ray.length; i++) {
       const s = ray[i];
       if (s === ignore || !board[s]) continue;
-      if (enemyAt(s, 'G')) out.push(s);
+      if (enemyAt(board, ignore, s, 'G')) out.push(s);
       break;
     }
   }
@@ -164,7 +166,7 @@ export function attackers(board, sq, opts = {}) {
     for (const s of ray) {
       if (s === ignore || !board[s]) continue;
       if (!screen) { screen = true; continue; }
-      if (enemyAt(s, 'O')) out.push(s);
+      if (enemyAt(board, ignore, s, 'O')) out.push(s);
       break;
     }
   }
@@ -173,11 +175,94 @@ export function attackers(board, sq, opts = {}) {
 const ORTHO_T = new Set(['R', 'Q', 'C', 'Z']);
 const DIAG_T = new Set(['B', 'Q', 'A', 'Z']);
 
-export const isAttacked = (board, sq, opts) => attackers(board, sq, opts).length > 0;
+// 빈칸 sq에 t 종류의 적(특성 없음 · 얼지 않음)을 새로 세우면 attackers(board, to, opts)에 sq가 드는가 — 그런 빈칸 전부를 한 번에.
+// 칸마다 세워 보고 노림 전체를 재던 것(판 짓기의 킹 수비 칸 찾기)과 같은 답을, to에서 뻗는 선을 한 번씩만 걸어 낸다(CHM-44).
+// 돌려주는 값: 64칸 표(1 = 그 칸에 세우면 노린다). 차지된 칸은 늘 0.
+export function guardSquares(board, t, to, opts = {}) {
+  const m = new Uint8Array(64);
+  const leap = (list) => { for (const s of list) if (!board[s]) m[s] = 1; };
+  // 미끄러지는 선: to에서 처음 만나는 기물 앞의 빈칸은 세우면 그 기물이 첫 기물이 된다
+  const slide = (set) => { for (const ray of set[to]) for (const s of ray) { if (board[s]) break; m[s] = 1; } };
+  if (KNIGHTLIKE.has(t)) leap(KNIGHT[to]);
+  if (t === 'K') leap(KING[to]);
+  if (t === 'P') { leap(PAWN_UP[to]); if (opts.pawnSides) leap(PAWN_SIDE[to]); }
+  if (ORTHO_T.has(t)) slide(RAY_O);
+  if (DIAG_T.has(t)) slide(RAY_D);
+  if (opts.fairy === false) return m;
+  if (t === 'L') leap(CAMEL[to]);
+  if (t === 'S') leap(RING2[to]);
+  if (t === 'H') slide(RAY_N);
+  if (t === 'W') for (const ray of RAY_O[to]) leap(ray);
+  // 메뚜기: 선의 첫 칸(받침)이 이미 차 있으면, 그 뒤 첫 기물 앞의 빈칸
+  if (t === 'G') for (const set of HOP_SETS) for (const ray of set[to]) {
+    if (!board[ray[0]]) continue;
+    for (let i = 1; i < ray.length; i++) { const s = ray[i]; if (board[s]) break; m[s] = 1; }
+  }
+  // 포: 선의 첫 기물(받침) 너머, 다음 기물 앞의 빈칸
+  if (t === 'O') for (const ray of RAY_O[to]) {
+    let screen = false;
+    for (const s of ray) {
+      if (!screen) { if (board[s]) screen = true; continue; }
+      if (board[s]) break;
+      m[s] = 1;
+    }
+  }
+  return m;
+}
+
+// attackers(board, sq, opts).length > 0 과 같은 답을, 첫 노림수를 만나는 순간 멈추며(목록을 만들지 않고) 낸다.
+// 떨굴 칸 고르기 · 킹 먹기 판정이 칸마다 부르는 곳이라 따로 둔다(CHM-44). 검사 하나하나는 attackers와 같다.
+function anyAttacker(board, sq, opts, ignore) {
+  for (const s of KNIGHT[sq]) if (enemyIn(board, ignore, s, KNIGHTLIKE)) return true;
+  for (const s of KING[sq]) if (enemyAt(board, ignore, s, 'K') || (s !== ignore && threat(board[s]) && board[s].trait === 'fort' && board[s].t !== 'K')) return true;
+  for (const s of PAWN_UP[sq]) if (enemyAt(board, ignore, s, 'P')) return true;
+  if (opts.pawnSides) for (const s of PAWN_SIDE[sq]) if (enemyAt(board, ignore, s, 'P')) return true;
+  for (const ray of RAY_O[sq]) for (const s of ray) {
+    if (s === ignore || !board[s]) continue;
+    if (threat(board[s]) && ORTHO_T.has(board[s].t)) return true;
+    break;
+  }
+  for (const ray of RAY_D[sq]) for (const s of ray) {
+    if (s === ignore || !board[s]) continue;
+    if (threat(board[s]) && DIAG_T.has(board[s].t)) return true;
+    break;
+  }
+  if (opts.fairy === false) return false;
+  for (const s of CAMEL[sq]) if (enemyAt(board, ignore, s, 'L')) return true;
+  for (const s of RING2[sq]) if (enemyAt(board, ignore, s, 'S')) return true;
+  for (const ray of RAY_N[sq]) for (const s of ray) {
+    if (s === ignore || !board[s]) continue;
+    if (enemyAt(board, ignore, s, 'H')) return true;
+    break;
+  }
+  for (const ray of RAY_O[sq]) for (const s of ray) if (enemyAt(board, ignore, s, 'W')) return true;
+  for (const set of HOP_SETS) for (const ray of set[sq]) {
+    const h = ray[0];
+    if (!board[h] || h === ignore) continue;
+    for (let i = 1; i < ray.length; i++) {
+      const s = ray[i];
+      if (s === ignore || !board[s]) continue;
+      if (enemyAt(board, ignore, s, 'G')) return true;
+      break;
+    }
+  }
+  for (const ray of RAY_O[sq]) {
+    let screen = false;
+    for (const s of ray) {
+      if (s === ignore || !board[s]) continue;
+      if (!screen) { screen = true; continue; }
+      if (enemyAt(board, ignore, s, 'O')) return true;
+      break;
+    }
+  }
+  return false;
+}
+
+export const isAttacked = (board, sq, opts = {}) => anyAttacker(board, sq, opts, opts.ignore ?? -1);
 
 // 킹은 아무도 지키지 않을 때만 먹을 수 있다. from = 먹으러 가는 내 기물의 현재 칸(비운 것으로 본다).
 export function kingTakeable(board, ksq, from, opts = {}) {
-  return attackers(board, ksq, { ...opts, ignore: from }).length === 0;
+  return !anyAttacker(board, ksq, opts, from ?? -1);
 }
 
 // 모습 form으로 sq에서 먹을 수 있는 적 칸. 응수 제한은 chain.js가 건다.
