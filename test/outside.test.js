@@ -126,9 +126,9 @@ test('단은 저장 왕복 뒤에도 같다', () => {
 test('기록: 외통 · 평가 · 도감 · 해금 · 단', () => {
   const rec = emptyRecords();
   const run = createRun({ draft: false, seed: 3 });
-  const fresh = observe(rec, run, [{ type: 'win', reason: 'mate' }, { type: 'grade', mark: '!!!' }, { type: 'fragment', legend: 'opera', part: 'first', have: { first: true, feat: false, gold: false } }]);
+  const fresh = observe(rec, run, [{ type: 'win', reason: 'mate' }, { type: 'grade', mark: '★★★' }, { type: 'fragment', legend: 'opera', part: 'first', have: { first: true, feat: false, gold: false } }]);
   assert.equal(rec.mates, 1);
-  assert.equal(rec.grades['!!!'], 1);
+  assert.equal(rec.grades['★★★'], 1);
   assert.equal(rec.codex.legends.opera, 1);
   assert.ok(fresh.includes('legends:opera'));
   // 같은 것은 두 번 새로 치지 않는다

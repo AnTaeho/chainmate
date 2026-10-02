@@ -1253,7 +1253,8 @@ const awakeSeen = { crack: 0, toast: 0, hint: 0, skip: 0, preview: 0, screen: 0,
 // 탁월수 걸음(CHM-43): 봇 판은 탁월수가 드물어(판의 3%) 하나를 세운다. 손 폰 넷 · 주머니 맨 앞 나이트 · 판에 지키는 적 없는 킹 하나 →
 //   폰 하나를 바친다(카드가 흩어지고 나이트가 들어온다) → 나이트에 「!?」 · 처음 안내 · 바친 줄 → 나이트를 들어 킹에 닿는 칸에 떨군다(「!?」가 사라진다) →
 //   킹을 먹는다: 메이트 + 탁월수 「!!」(h8 — 오른쪽 끝 · 맨 윗줄이라 딱지가 아래 왼쪽으로 뒤집힌다) · 배수 ×2 · 기록. 한 수 연출(×1)을 잰다
-const brillSeen = { sac: 0, deal: 0, tag: 0, hint: 0, row: 0, gone: 0, fx: 0, flip: 0, mult: 0, record: 0, sec: 0, bad: [] };
+//   탁월수 뒤 명경기 첫 조각(CHM-47): 판에 첫 조각이 하나 늘고, 조각 얻음 알림(「… · 첫 조각」)이 뜬다
+const brillSeen = { sac: 0, deal: 0, tag: 0, hint: 0, row: 0, gone: 0, fx: 0, flip: 0, mult: 0, record: 0, frag: 0, sec: 0, bad: [] };
 {
   const bad = (m) => brillSeen.bad.push(m);
   app.overlay = null; app.nextSeed = 14; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
@@ -1290,9 +1291,12 @@ const brillSeen = { sac: 0, deal: 0, tag: 0, hint: 0, row: 0, gone: 0, fx: 0, fl
       click(`sq:${sq}`); idle();
       if (!s.view.drawn.length) brillSeen.gone++; else bad('수를 둔 뒤에도 「!?」가 남았다');
       const fx0 = (app.stats && app.stats.brilliantFx) || 0;
-      let sawMult = false;
+      const firsts = () => Object.values(app.run.fragments || {}).filter((f) => f.first).length;
+      const first0 = firsts();
+      let sawMult = false, sawFrag = false;
       click(`sq:${K}`);
-      for (let n = 0; n < 600 && app.screen === s && s.busy; n++) { pump(1); if (s.view.brill && s.view.brill.x === 2) sawMult = true; }
+      for (let n = 0; n < 600 && app.screen === s && s.busy; n++) { pump(1); if (s.view.brill && s.view.brill.x === 2) sawMult = true; if (app.toasts.some((t) => t.msg.endsWith('첫 조각'))) sawFrag = true; }
+      if (firsts() === first0 + 1 && sawFrag) brillSeen.frag++; else bad(`탁월수 뒤 명경기 조각이 보이지 않았다(첫 조각 ${first0} → ${firsts()}, 알림 ${sawFrag})`);
       measureSeq(s);
       brillSeen.sec = s.seq.total;
       if (((app.stats && app.stats.brilliantFx) || 0) > fx0) brillSeen.fx++; else bad('탁월수 「!!」가 뜨지 않았다');
@@ -1561,8 +1565,8 @@ if (paths.bad.length) { console.log(`대본 대국 경로 어긋남: ${paths.bad
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
 console.log(`혼 각성: 금 ${awakeSeen.crack} · 금 글 ${awakeSeen.toast} · 처음 안내 ${awakeSeen.hint} · 금 없는 기물 못 고름 ${awakeSeen.skip} · 미리 보기 ${awakeSeen.preview} · 막간 ${awakeSeen.screen} · 상점으로 ${awakeSeen.back} · 상자 칸 ${awakeSeen.chest}${awakeSeen.bad.length ? ` · 어긋남: ${awakeSeen.bad.join(' | ')}` : ''}`);
 if (awakeSeen.bad.length || !awakeSeen.crack || !awakeSeen.screen || !awakeSeen.back || !awakeSeen.chest) { console.log('혼에 금이 가고 깨어나는 걸음이 어긋났다'); fail = true; }
-console.log(`탁월수: 희생 ${brillSeen.sac} · 새 카드 ${brillSeen.deal} · !? ${brillSeen.tag} · 바친 줄 ${brillSeen.row} · 처음 안내 ${brillSeen.hint} · 둔 뒤 !? 사라짐 ${brillSeen.gone} · !! ${brillSeen.fx} · 가장자리 뒤집기 ${brillSeen.flip} · ×N ${brillSeen.mult} · 기록 ${brillSeen.record} · 연출 ${brillSeen.sec.toFixed(2)}s${brillSeen.bad.length ? ` · 어긋남: ${brillSeen.bad.join(' | ')}` : ''}`);
-if (brillSeen.bad.length || !brillSeen.fx || !brillSeen.record) { console.log('희생 → 탁월수 걸음이 어긋났다'); fail = true; }
+console.log(`탁월수: 희생 ${brillSeen.sac} · 새 카드 ${brillSeen.deal} · !? ${brillSeen.tag} · 바친 줄 ${brillSeen.row} · 처음 안내 ${brillSeen.hint} · 둔 뒤 !? 사라짐 ${brillSeen.gone} · !! ${brillSeen.fx} · 가장자리 뒤집기 ${brillSeen.flip} · ×N ${brillSeen.mult} · 기록 ${brillSeen.record} · 명경기 조각 ${brillSeen.frag} · 연출 ${brillSeen.sec.toFixed(2)}s${brillSeen.bad.length ? ` · 어긋남: ${brillSeen.bad.join(' | ')}` : ''}`);
+if (brillSeen.bad.length || !brillSeen.fx || !brillSeen.record || !brillSeen.frag) { console.log('희생 → 탁월수 걸음이 어긋났다'); fail = true; }
 console.log(`각인 · 혼 바꾸기: 같은 것 흐림 ${swapSeen.same} · 상점 그만 ${swapSeen.shopBack} · Esc ${swapSeen.shopEsc} · 바꾸기 ${swapSeen.shopSwap} · 혼 ${swapSeen.soulSwap} · 꾸러미 그만 ${swapSeen.packBack} · Esc ${swapSeen.packEsc} · 바꾸기 ${swapSeen.packSwap}${swapSeen.bad.length ? ` · 어긋남: ${swapSeen.bad.join(' | ')}` : ''}`);
 if (swapSeen.bad.length || !swapSeen.same || !swapSeen.shopBack || !swapSeen.shopEsc || !swapSeen.packEsc || !swapSeen.shopSwap || !swapSeen.soulSwap || !swapSeen.packBack || !swapSeen.packSwap) { console.log('각인 · 혼을 덮어쓰기 전에 확인하지 않았거나, 「그만」 · 「바꾸기」가 어긋났다'); fail = true; }
 console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 ${chartSeen.scene} · 기보를 쓴 순간 크게 ${chartSeen.grow} · 수준만 ${chartSeen.tick}(어긋남 ${chartSeen.growBad})`);

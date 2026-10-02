@@ -27,11 +27,11 @@ function play(map, drop, line, mods = [], extra = {}) {
 
 // ── 사슬 평가
 test('사슬 평가: 3 「!」 · 5 「!!」 · 8 「!!!」 · 12 「∞」, 닿는 순간 한 번씩', () => {
-  assert.deepEqual(GRADES.map((g) => [g.n, g.mark]), [[3, '!'], [5, '!!'], [8, '!!!'], [12, '∞']]);
+  assert.deepEqual(GRADES.map((g) => [g.n, g.mark]), [[3, '★'], [5, '★★'], [8, '★★★'], [12, '∞']]);
   assert.equal(gradeOf(2), null);
-  assert.equal(gradeOf(3).mark, '!');
-  assert.equal(gradeOf(7).mark, '!!');
-  assert.equal(gradeOf(11).mark, '!!!');
+  assert.equal(gradeOf(3).mark, '★');
+  assert.equal(gradeOf(7).mark, '★★');
+  assert.equal(gradeOf(11).mark, '★★★');
   assert.equal(gradeOf(20).mark, '∞');
   // 룩 모습으로 한 줄을 쓸어 가는 12 사슬: a1 룩 떨굼 → a2…a8, b8…f8 (값은 폰 10씩)
   const map = {};
@@ -39,7 +39,7 @@ test('사슬 평가: 3 「!」 · 5 「!!」 · 8 「!!!」 · 12 「∞」, 닿
   for (const f of 'bcdef') map[f + '8'] = 'R';
   const line = ['a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'b8', 'c8', 'd8', 'e8', 'f8'];
   const { ev, end } = play(map, ['R', 'a1'], line);
-  assert.deepEqual(ev.filter((e) => e.type === 'grade').map((e) => [e.n, e.mark]), [[3, '!'], [5, '!!'], [8, '!!!'], [12, '∞']]);
+  assert.deepEqual(ev.filter((e) => e.type === 'grade').map((e) => [e.n, e.mark]), [[3, '★'], [5, '★★'], [8, '★★★'], [12, '∞']]);
   assert.equal(end.captures, 12);
 });
 
