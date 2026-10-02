@@ -114,26 +114,42 @@ function hopCannon(board, ray, ignore, out) {
 }
 const open = (board, s, ignore) => !board[s] || s === ignore;
 
-// 꺾쇠(CHM-55): 룩처럼 가다가 지나는 빈칸 하나에서 한 번 직각으로 꺾는다. 꺾기 전후 모두 처음 만나는 기물에서 멈춘다.
-// emit(칸, 꺾은 칸 | -1). 같은 칸이 두 길로 닿으면 두 번 부른다(곧은 길이 먼저)
+// 꺾쇠(CHM-55): 룩처럼 가다가 지나는 빈칸에서 직각으로 꺾는다 — 두 번까지(TURNS). 꺾기 전후 모두 처음 만나는 기물에서 멈춘다.
+// emit(칸, 마지막으로 꺾은 칸 | -1). 같은 칸이 여러 길로 닿으면 여러 번 부른다(적게 꺾은 길이 먼저). 꺾은 수로 넓게 걷는다
+export const TURNS = 2;
 function hookWalk(board, sq, ignore, emit) {
-  for (let d = 0; d < 4; d++) {
-    for (const s of OD[sq][d]) {
-      emit(s, -1);
-      if (!open(board, s, ignore)) break;
-      for (const p of PERP[d]) for (const s2 of OD[s][p]) { emit(s2, s); if (!open(board, s2, ignore)) break; }
+  const seen = new Uint8Array(128); // 칸 × 축(가로 0 · 세로 1): 그 칸에서 그 축으로 이미 꺾었나
+  let frontier = [sq, -1];          // [칸, 온 축(-1 = 출발)] 쌍
+  for (let t = 0; t <= TURNS && frontier.length; t++) {
+    const next = [];
+    for (let i = 0; i < frontier.length; i += 2) {
+      const from = frontier[i], came = frontier[i + 1], via = t ? from : -1;
+      for (let d = 0; d < 4; d++) {
+        const axis = d < 2 ? 0 : 1;
+        if (came === axis) continue;
+        for (const s of OD[from][d]) {
+          emit(s, via);
+          if (!open(board, s, ignore)) break;
+          if (t < TURNS && !seen[s * 2 + axis]) { seen[s * 2 + axis] = 1; next.push(s, axis); }
+        }
+      }
     }
+    frontier = next;
   }
 }
-// 물수제비(CHM-55): 비숍처럼 가다가 판 가장자리(구석 빼고)에 닿으면 한 번 튕긴다. 튕기는 칸은 비어 있어야 한다
+// 물수제비(CHM-55): 비숍처럼 가다가 판 가장자리(구석 빼고)에 닿으면 튕긴다 — 두 번까지(BOUNCES). 튕기는 칸은 비어 있어야 한다
+export const BOUNCES = 2;
 function bounceWalk(board, sq, ignore, emit) {
-  for (let d = 0; d < 4; d++) {
-    let last = -1, hit = false;
-    for (const s of DD[sq][d]) { emit(s, -1); if (!open(board, s, ignore)) { hit = true; break; } last = s; }
-    if (hit || last < 0) continue;
-    const nd = REFLECT[last * 4 + d];
-    if (nd < 0) continue; // 구석
-    for (const s of DD[last][nd]) { emit(s, last); if (!open(board, s, ignore)) break; }
+  for (let d0 = 0; d0 < 4; d0++) {
+    let cur = sq, d = d0, via = -1;
+    for (let left = BOUNCES; ; left--) {
+      let last = -1, hit = false;
+      for (const s of DD[cur][d]) { emit(s, via); if (!open(board, s, ignore)) { hit = true; break; } last = s; }
+      if (hit || last < 0 || !left) break;
+      const nd = REFLECT[last * 4 + d];
+      if (nd < 0) break; // 구석
+      cur = last; d = nd; via = last;
+    }
   }
 }
 // 까마귀(CHM-55): 대각선으로 붙은 칸을 뛰어넘어 그 너머 빈칸에 앉는다. 닿는 칸 = 넘을 칸(그 너머가 판 안의 빈칸)
@@ -173,6 +189,8 @@ export function reach(board, t, sq, dir = 1, ignore = -1) {
 // 광대(CHM-55): 적을 그 적의 행마로만 먹는다 — 판의 적 종류마다 그 행마로 sq에서 닿는 그 종류의 적 칸
 function jesterReach(board, sq, dir, ignore) {
   const out = [];
+  // 붙은 여덟 칸의 적은 그냥 먹는다(벽 빼고)
+  for (const x of KING[sq]) { const y = board[x]; if (y && !y.mine && y.t !== 'X' && x !== ignore) out.push(x); }
   let seen = '';
   for (let s = 0; s < 64; s++) {
     const c = board[s];
@@ -195,7 +213,7 @@ export function pathVia(board, form, sq, to, ignore = -1) {
 // 먹기 한 번의 길 갈래(가족 · 격언 판정): { ortho, diag, leap }. e = capture 이벤트(from · to · form · piece · via)
 // 꺾쇠는 가로 · 세로, 물수제비는 대각, 까마귀는 대각 · 뛰기, 포는 뛰기(+ 방향), 나머지는 from → to 벡터로
 export function capWay(e) {
-  const f = e.form === 'M' ? mimicOf(e.piece) : e.form;
+  const f = e.hop ? 'V' : e.move || (e.form === 'M' ? mimicOf(e.piece) : e.form);
   if (f === 'T') return { ortho: true, diag: false, leap: false };
   if (f === 'E') return { ortho: false, diag: true, leap: false };
   if (f === 'V') return { ortho: false, diag: true, leap: true };
@@ -251,6 +269,18 @@ const DIAG_T = new Set(['B', 'Q', 'Z']);
 // (판에 이형이 없으면 여기까지 오지 않는다 — chain.js boardOpts의 fairy: false). opts.kinds: 판에 있는 이형 종류(모르면 전부 잰다)
 const PROBE = { t: 'P', mine: true };
 const hitAdd = (out, s) => { if (!out) return true; if (!out.includes(s)) out.push(s); return false; };
+// 걷기(hookWalk · bounceWalk)가 닿은 칸 중 t 종류의 적(닫힘을 판정마다 만들지 않게 자리를 밖에 둔다)
+const W = { board: null, ignore: -1, t: '', out: null, found: false };
+const wEmit = (s) => {
+  if (W.found || !enemyAt(W.board, W.ignore, s, W.t)) return;
+  if (!W.out) W.found = true; else if (!W.out.includes(s)) W.out.push(s);
+};
+function walkHits(walk, board, sq, ignore, t, out) {
+  W.board = board; W.ignore = ignore; W.t = t; W.out = out; W.found = false;
+  walk(board, sq, ignore, wEmit);
+  W.board = null; W.out = null;
+  return W.found;
+}
 function fairyHits(board, sq, opts, ignore, out) {
   const k = opts.kinds;
   if (k == null || k.includes('L')) for (const s of CAMEL[sq]) if (enemyAt(board, ignore, s, 'L') && hitAdd(out, s)) return true;
@@ -275,33 +305,11 @@ function fairyHits(board, sq, opts, ignore, out) {
     const l = crowLand(s, sq);
     if (l >= 0 && open(board, l, ignore) && hitAdd(out, s)) return true;
   }
-  // 꺾쇠: sq에서 거꾸로 걸어(가로 · 세로, 빈칸에서 한 번 꺾어) 처음 만나는 기물이 적 꺾쇠
-  if (k == null || k.includes('T')) for (let d = 0; d < 4; d++) {
-    for (const s of OD[sq][d]) {
-      if (!open(board, s, ignore)) { if (enemyAt(board, ignore, s, 'T') && hitAdd(out, s)) return true; break; }
-      for (const p of PERP[d]) for (const s2 of OD[s][p]) {
-        if (open(board, s2, ignore)) continue;
-        if (enemyAt(board, ignore, s2, 'T') && hitAdd(out, s2)) return true;
-        break;
-      }
-    }
-  }
-  // 물수제비: sq에서 거꾸로 튕겨 걸어 처음 만나는 기물이 적 물수제비(튕김은 길을 뒤집어도 같은 튕김이다)
-  if (k == null || k.includes('E')) for (let d = 0; d < 4; d++) {
-    let last = -1, hit = false;
-    for (const s of DD[sq][d]) {
-      if (!open(board, s, ignore)) { hit = true; if (enemyAt(board, ignore, s, 'E') && hitAdd(out, s)) return true; break; }
-      last = s;
-    }
-    if (hit || last < 0) continue;
-    const nd = REFLECT[last * 4 + d];
-    if (nd < 0) continue;
-    for (const s of DD[last][nd]) {
-      if (open(board, s, ignore)) continue;
-      if (enemyAt(board, ignore, s, 'E') && hitAdd(out, s)) return true;
-      break;
-    }
-  }
+  // 꺾쇠 · 물수제비: sq에서 거꾸로 걸어 처음 만나는 기물이 그 적(꺾고 튕기는 길은 뒤집어도 같은 길이다)
+  if (k == null || k.includes('T')) { if (walkHits(hookWalk, board, sq, ignore, 'T', out)) return true; }
+  if (k == null || k.includes('E')) { if (walkHits(bounceWalk, board, sq, ignore, 'E', out)) return true; }
+  // 광대: 붙은 여덟 칸은 늘 지킨다
+  if (k == null || k.includes('M')) for (const s of KING[sq]) if (enemyAt(board, ignore, s, 'M') && hitAdd(out, s)) return true;
   // 광대: sq에 선 내 기물의 모습(opts.form)으로 광대가 sq에 닿으면. 빈칸을 잴 때는 그 모습이 서 있는 것으로 본다
   const form = k != null && !k.includes('M') ? null : opts.form || (board[sq] && board[sq].mine ? board[sq].t : null);
   if (form) {
@@ -319,7 +327,7 @@ function fairyHits(board, sq, opts, ignore, out) {
 
 // 빈칸 sq에 t 종류의 적(특성 없음 · 얼지 않음)을 새로 세우면 attackers(board, to, opts)에 sq가 드는가 — 그런 빈칸 전부를 한 번에.
 // 칸마다 세워 보고 노림 전체를 재던 것(판 짓기의 킹 수비 칸 찾기)과 같은 답을, to에서 뻗는 선을 한 번씩만 걸어 낸다(CHM-44).
-// 돌려주는 값: 64칸 표(1 = 그 칸에 세우면 노린다). 차지된 칸은 늘 0. 광대는 지킬 모습을 몰라 늘 비어 있다.
+// 돌려주는 값: 64칸 표(1 = 그 칸에 세우면 노린다). 차지된 칸은 늘 0. 광대는 지킬 모습을 몰라 붙은 칸만.
 export function guardSquares(board, t, to, opts = {}) {
   const m = new Uint8Array(64);
   const leap = (list) => { for (const s of list) if (!board[s]) m[s] = 1; };
@@ -333,7 +341,7 @@ export function guardSquares(board, t, to, opts = {}) {
   if (opts.fairy === false) return m;
   if (t === 'L') leap(CAMEL[to]);
   if (t === 'S') leap(RING2[to]);
-  if (t === 'D') leap(KING[to]);
+  if (t === 'D' || t === 'M') leap(KING[to]);
   if (t === 'W') for (const ray of RAY_O[to]) leap(ray);
   // 포: 선의 첫 기물(받침) 너머, 다음 기물 앞의 빈칸
   if (t === 'O') for (const ray of RAY_O[to]) {

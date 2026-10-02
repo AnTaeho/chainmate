@@ -8,7 +8,7 @@
 // 이벤트: drop · capture(from · to = 먹은 칸 · at = 내 기물이 선 칸 · via = 꺾거나 튕긴 칸) · explode(화약병) · golden · grade · transform · promote · forced · cut · cutIgnored · mate · brilliant · refill ·
 //         redropReady · redrop · end · score
 // 사슬이 끝나면 t.chain.done = true, 내 기물은 판에서 내려간다.
-import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy, kingTakeable, at, landingOf, pathVia, mimicOf } from './board.js';
+import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy, kingTakeable, at, landingOf, pathVia, mimicOf, reach } from './board.js';
 import { PIECES, FAIRIES } from '../data/pieces.js';
 import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
@@ -91,6 +91,8 @@ export function chainCaptures(t) {
   if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
   // 흡수: 먹은 행마가 더해진다(모습은 그대로)
   if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
+  // 까마귀 잇따라 넘기(CHM-55): 까마귀로 넘어 먹은 뒤에는 바뀐 모습으로도 대각선으로 붙은 적을 넘어 먹을 수 있다
+  if (c.hop && c.form !== 'V') for (const s of captures(t.board, 'V', c.sq, { ...bo, form: c.form })) if (!list.includes(s)) list.push(s);
   // 혼 「역행」: 폰 모습이면(각성하면 어느 모습이든) 아래 대각으로도 · 혼 「도약」: 첫 먹기(각성하면 둘째까지)는 두 칸 안의 적 어디든(밤샘 2)
   if (c.flags.pawnBack && (c.form === 'P' || c.flags.pawnBack === 'any')) for (const df of [-1, 1]) { const s = at((c.sq & 7) + df, (c.sq >> 3) - 1); if (s >= 0 && takeableAt(t, s, c.sq, bo, c.form) && !list.includes(s)) list.push(s); }
   if (c.flags.spring && c.captures.length < c.flags.spring) {
@@ -131,7 +133,10 @@ export function chainCapture(t, sq, legal = false) {
 
   // 내 기물이 서는 칸(board.js landingOf): 궁수 모습은 움직이지 않고 쏜다(먹힌 칸만 비고 제자리, 응수도 제자리 기준) ·
   // 까마귀 모습은 넘은 적 너머 빈칸에 앉는다 · 광대는 먹힌 적의 행마를 흉내 내니 그 행마의 자리에 선다
-  const move = formBefore === 'M' ? mimicOf(target.t) : formBefore;
+  // 광대: 그 적의 행마로 닿으면 그 행마로, 아니면 붙은 칸이라 킹처럼 한 칸
+  let move = formBefore === 'M' ? (reach(board, mimicOf(target.t), from, 1).includes(sq) ? mimicOf(target.t) : 'K') : formBefore;
+  // 넘기를 잇는 중이면 대각선으로 붙은 적은 넘어 먹는다(너머가 빈칸일 때) — 넘지 않는 먹기를 하면 넘기가 끝난다
+  if (c.hop && formBefore !== 'S' && landingOf(board, 'V', from, sq) !== sq) move = 'V';
   const via = pathVia(board, move, from, sq);
   const at = formBefore === 'S' ? from : landingOf(board, move, from, sq);
   const stay = at === from;
@@ -140,8 +145,9 @@ export function chainCapture(t, sq, legal = false) {
   board[at] = { t: c.form, mine: true };
   c.sq = at;
   const dist = Math.max(Math.abs((from & 7) - (sq & 7)), Math.abs((from >> 3) - (sq >> 3)));
-  const cap = { from, to: sq, at, via, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold, stay };
+  const cap = { from, to: sq, at, via, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold, stay, ...(move === 'V' && at !== sq && formBefore !== 'V' ? { hop: true } : {}), ...(formBefore === 'M' ? { move } : {}) };
   c.captures.push(cap);
+  c.hop = move === 'V' && at !== sq;
   if (wasForced) c.forcedReplies++;
   events.push({ type: 'capture', ...cap, value: PIECES[target.t].value });
 
@@ -401,6 +407,7 @@ export function chainRedrop(t, sq) {
   if (!chainRedrops(t).includes(sq)) throw new Error(`illegal redrop ${sq}`);
   const events = [];
   c.awaiting = false;
+  c.hop = false;
   c.sq = sq;
   t.board[sq] = { t: c.form, mine: true };
   events.push({ type: 'redrop', piece: c.form, sq });
