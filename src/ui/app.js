@@ -7,7 +7,9 @@ import { factionFor } from '../sim/run.js';
 import { FACTION_BY_ID } from '../data/factions.js';
 import { createRun, applyRun, migrateRun } from '../sim/run.js';
 import { PAL } from '../render/palette.js';
-import { W, H, text, box, rect, lift, fine } from '../render/gfx.js';
+import { W, H, text, box, rect, lift, fine, measure } from '../render/gfx.js';
+import { wrap } from '../render/text.js';
+import { LINE, BTN_S, LIST_GAP, inkY } from './frame.js';
 import { UI, tooltip, bigTooltip, tipHeight, tipTexts } from './ui.js';
 import { miniShard } from './parts.js';
 import { setLang } from './lang.js';
@@ -300,18 +302,41 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       ctx.globalAlpha = 1;
       app.overlay.draw(ctx, ui);
     }
-    // 알림(화면 위에 잠깐 뜬다)
-    openBox('fx', 0, 0, W, H, 0, { loose: true, name: '알림' });
-    app.toasts.forEach((t, i) => {
-      const a = Math.min(1, t.t * 8, (t.life - t.t) * 4);
-      ctx.globalAlpha = Math.max(0, a);
-      const w = Math.min(300, 16 + t.msg.length * 12);
-      const x = Math.floor((W - w) / 2), y = 6 + i * 20;
-      box(ctx, x, y, w, 17, PAL.feltDk, t.col);
-      text(ctx, t.msg, W / 2, y + 2, t.col, { align: 'center', bold: true });
-      ctx.globalAlpha = 1;
-    });
-    closeBox();
+    // 알림(화면 위에 잠깐 뜬다). 화면이 자리를 정하면(toastSpot — 대국은 판 아래쪽, CHM-48) 그 칸 폭 안에서 낱말 단위로 줄을 바꾸고
+    // 아래에서 위로 쌓는다. 그 자리의 알림은 뜨지 않는 상자로 적어 smoke 「글 넘침」이 목표 막대와 겹침을 잰다. 다른 화면은 위 가운데
+    const spot = !app.overlay && app.screen && app.screen.toastSpot ? app.screen.toastSpot() : null;
+    app.toastRects = [];
+    if (spot) {
+      // 새 알림이 아래(자리 밑변)에, 오래된 것이 위로. 윗변(spot.top)을 넘는 오래된 것은 그리지 않는다
+      let bottom = spot.bottom;
+      [...app.toasts].reverse().forEach((t) => {
+        const lines = wrap(t.msg, spot.w - 16, true);
+        const w = Math.min(spot.w, Math.max(...lines.map((l) => measure(l, true))) + 16), h = BTN_S + (lines.length - 1) * LINE;
+        const x = Math.round(spot.cx - w / 2), y = bottom - h;
+        if (spot.top != null && y < spot.top) { bottom = -Infinity; return; }
+        bottom = y - LIST_GAP;
+        app.toastRects.push({ x, y, w, h });
+        ctx.globalAlpha = Math.max(0, Math.min(1, t.t * 8, (t.life - t.t) * 4));
+        openBox('edge', x, y, w, h, 1, { name: '알림' });
+        box(ctx, x, y, w, h, PAL.feltDk, t.col);
+        lines.forEach((l, k) => text(ctx, l, spot.cx, inkY(y, BTN_S) + k * LINE, t.col, { align: 'center', bold: true }));
+        closeBox();
+        ctx.globalAlpha = 1;
+      });
+    } else {
+      openBox('fx', 0, 0, W, H, 0, { loose: true, name: '알림' });
+      app.toasts.forEach((t, i) => {
+        const a = Math.min(1, t.t * 8, (t.life - t.t) * 4);
+        ctx.globalAlpha = Math.max(0, a);
+        const w = Math.min(300, 16 + t.msg.length * 12);
+        const x = Math.floor((W - w) / 2), y = 6 + i * 20;
+        app.toastRects.push({ x, y, w, h: 17 });
+        box(ctx, x, y, w, 17, PAL.feltDk, t.col);
+        text(ctx, t.msg, W / 2, y + 2, t.col, { align: 'center', bold: true });
+        ctx.globalAlpha = 1;
+      });
+      closeBox();
+    }
     if (!app.overlay) drawCoach(ctx, app);
     else { app.hintNow = null; app.hintShown = null; app.coachDim = 0; }
     ui.end();

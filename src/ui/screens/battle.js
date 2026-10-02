@@ -253,6 +253,23 @@ export class BattleScreen {
   shake(px, dur) { this.app.shake(px, dur); }
   hitstop(sec) { this.app.hitstop(sec); }
   toast(msg, col, dur) { this.app.toast(msg, col, dur); }
+  // 알림 자리(CHM-48): 판 아래쪽, 판 폭 안. 위 가운데는 목표 막대 · 얻을 몫(+N)을 덮었다.
+  // 판 가운데는 「메이트」 · 「대국 승리」 글자와 마스터 띠, 왼쪽 칸은 목표 · 점수 · 사슬 칸, 오른쪽 칸은 격언 · 손이 쓴다
+  // top: 쌓인 알림이 넘지 않을 윗변 — 띠가 떠 있으면 띠 아래, 아니면 판 가운데 큰 글자(「메이트」 네 배) 아래. 넘치면 오래된 것부터 접는다
+  toastSpot() {
+    let top = BY + 126;
+    if (this.banner) { const bb = this.bannerBox(); top = bb.by + bb.bh + 2; }
+    return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: BY + S * 8 - 4, top };
+  }
+  // 대국 시작 띠의 자리(drawOver · toastSpot). 명인 띠: 이름(두 배, 초상 왼쪽 146에 안 들어가면 한 배) → 묶음 틈 → 규칙 글(줄마다 LINE) — 띠 높이는 글에 맞춘다(초상 64 이상)
+  bannerBox() {
+    const bn = this.banner, row = bn.news ? 26 : 0;
+    const TW = 146, mBig = bn.master && measure(bn.title, true) * 2 <= TW;
+    const subs = bn.master ? wrap(bn.sub, TW) : [];
+    const mh = Math.max(76, PAD_BOX + LINE * 2 + GAP_GROUP + subs.length * LINE + PAD_BOX);
+    const bh = (bn.master ? mh : 44) + row, by = BY + 106 - bh / 2;
+    return { row, TW, mBig, subs, bh, by };
+  }
   get busy() { return this.seq.busy; }
 
   // 규칙 상태에서 보이는 판을 다시 읽는다(연출이 끝날 때마다)
@@ -999,6 +1016,10 @@ export class BattleScreen {
     const maxMul = BAR_TIERS.find((m) => (going ? total < m * tgt : total <= m * tgt)) ?? BAR_TIERS[BAR_TIERS.length - 1];
     const maxV = this.barScale(tgt * maxMul, time);
     const X = BX, Y = 15, Wd = S * 8, Hh = 7;
+    // 목표 막대를 빈 상자로 적는다(막대 테) — smoke 「글 넘침」이 알림(toastSpot)과 겹치면 「상자 겹침」으로,
+    // 막대 위 얻을 몫(+N, 상자 밖 글)을 알림이 덮으면 「글이 상자 밖」으로 잡는다(CHM-48). 수업 제목 줄(y 1)은 막대 상자 밖이다
+    openBox('tile', X - 1, Y - 1, Wd + 2, Hh + 2, 0, { name: '목표 막대' });
+    closeBox();
     this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '사슬이 끝날 때 점수가 목표에 닿으면 이긴다. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어난다') });
     // 목표를 넘긴 막대 뒤 빛(막대 칸 뒤 층)
     if (score >= tgt) glow(ctx, X, Y, Math.round(Wd * Math.min(1, score / maxV)), Hh, PAL.gold, 0.3 * flicker(time, 4), 5);
@@ -1670,12 +1691,7 @@ export class BattleScreen {
       const bn = this.banner;
       const a = Math.min(1, bn.t * 6, (bn.life - bn.t) * 3);
       ctx.globalAlpha = Math.max(0, a) * 0.85;
-      const row = bn.news ? 26 : 0;
-      // 명인 띠: 이름(두 배, 초상 왼쪽 146에 안 들어가면 한 배) → 묶음 틈 → 규칙 글(줄마다 LINE) — 띠 높이는 글에 맞춘다(초상 64 이상)
-      const TW = 146, mBig = bn.master && measure(bn.title, true) * 2 <= TW;
-      const subs = bn.master ? wrap(bn.sub, TW) : [];
-      const mh = Math.max(76, PAD_BOX + LINE * 2 + GAP_GROUP + subs.length * LINE + PAD_BOX);
-      const bh = (bn.master ? mh : 44) + row, by = BY + 106 - bh / 2;
+      const { row, TW, mBig, subs, bh, by } = this.bannerBox();
       rect(ctx, BX - 6, by, S * 8 + 12, bh, PAL.shadow);
       ctx.globalAlpha = Math.max(0, a);
       if (bn.master) {
@@ -1703,7 +1719,8 @@ export class BattleScreen {
       const n = starCount(st.mark), px = sc - 1;
       const mw = n ? starsW(n, px) : measure(st.mark, true) * sc, mh = n ? STAR_N * px : 11 * sc;
       glowText(ctx, BX + 200 - mw, BY + 4, mw, mh, st.col || PAL.goldHi, fade * (k < 0.15 ? 0.9 : 0.55), 14);
-      if (n) drawStars(ctx, n, BX + 200 - mw, BY + 4, col, { px, shadow: PAL.shadow, alpha: fade });
+      // 하양 ★은 어두운 테 한 도트 — 1배에서 가장 밝은 빛 번짐에 묻혔다(CHM-48)
+      if (n) drawStars(ctx, n, BX + 200 - mw, BY + 4, col, { px, shadow: PAL.shadow, alpha: fade, ring: st.col === PAL.white ? PAL.shadow : null });
       else text(ctx, st.mark, BX + 200, BY + 4, col, { align: 'right', bold: true, scale: sc, shadow: PAL.shadow, alpha: fade });
     }
   }

@@ -26,11 +26,13 @@ function star(ctx, x, y, px, col) {
 }
 
 // 별 n개를 (x, y) 왼쪽 위부터. shadow가 있으면 오른쪽 아래로 반 도트 그림자. 돌려주는 값은 폭
-export function drawStars(ctx, n, x, y, col, { px = 1, shadow = null, alpha = 1 } = {}) {
+// ring: 별 둘레 한 도트 테(네 방향으로 한 도트씩 민 별을 그 빛깔로 먼저). 하양 ★이 밝은 빛 번짐에 묻히지 않게(CHM-48)
+export function drawStars(ctx, n, x, y, col, { px = 1, shadow = null, alpha = 1, ring = null } = {}) {
   if (n <= 0) return 0;
   const step = STAR_N * px + px;
   if (alpha !== 1) ctx.globalAlpha = alpha;
   if (shadow) { const o = Math.max(1, Math.round(px / 2)); for (let i = 0; i < n; i++) star(ctx, x + i * step + o, y + o, px, shadow); }
+  if (ring) for (let i = 0; i < n; i++) for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) star(ctx, x + i * step + dx, y + dy, px, ring);
   for (let i = 0; i < n; i++) star(ctx, x + i * step, y, px, col);
   if (alpha !== 1) ctx.globalAlpha = 1;
   return starsW(n, px);

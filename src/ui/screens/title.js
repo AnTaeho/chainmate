@@ -118,7 +118,9 @@ export class TitleScreen {
     // 하늘의 사슬
     ctx.save();
     ctx.translate(dx, dy);
-    drawSky(ctx, f.st, skyScale());
+    // 「×N」은 부제(그림자 한 줄 포함) 밑변 아래 두 도트까지만 튄다 — 흔들림만큼 옮긴 좌표로(CHM-48)
+    const sw = textWidth('잡고, 바뀌고, 또 잡는다', true);
+    drawSky(ctx, f.st, skyScale(), { x0: W / 2 - sw / 2 - dx, x1: W / 2 + sw / 2 - dx, y1: SUB_Y + 14 - dy });
     ctx.restore();
     drawVignette(ctx, 0, 0, W, H);
     if (f.flash > 0) { ctx.globalAlpha = f.flash; rect(ctx, 0, 0, W, H, '#fff8e8'); ctx.globalAlpha = 1; }

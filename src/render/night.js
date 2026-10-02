@@ -5,7 +5,7 @@
 import { makeCanvas, context } from './surface.js';
 import { spritePixels, spritePixelsHi, spriteCanvas } from './sprites.js';
 import { LOOK, snap } from './look.js';
-import { rect, text, fine } from './gfx.js';
+import { rect, text, fine, measure } from './gfx.js';
 import { PAL } from './palette.js';
 import { openBox, closeBox } from './layoutlog.js';
 
@@ -177,7 +177,8 @@ function rim(g, sc, type, col, x, y, alpha) {
 }
 
 // 먹은 자리 하나: 먼지(떨어진 쿵) · 금빛 고리 · 도트 조각(먹힌 기물 그림 4×4 조각, 중력) · 불티 · 「×N」
-function drawHit(g, sc, h) {
+// keep: 「×N」이 넘지 않을 네모 { x0, x1, y1 }(부제) — 그 아래에서 튀는 높이만 줄인다(시간표 · 다른 자리는 그대로, CHM-48)
+function drawHit(g, sc, h, keep = null) {
   const z = 1.5 * sc.u, p = 1 + (h.n - 2) * 0.35;
   const cx = h.x + 10 * z, cy = h.y + 14 * z;
   if (h.dust) {
@@ -217,14 +218,19 @@ function drawHit(g, sc, h) {
     g.globalAlpha = 1;
   }
   if (h.age < 0.9) {
-    const a = h.age / 0.9, bounce = a < 0.2 ? -12 * Math.sin(((a / 0.2) * Math.PI) / 2) : -12 + (a - 0.2) * 6;
+    const s = `×${h.n}`, scale = h.final ? 2 : 1, top = h.y - 6 * z - (h.final ? 4 : 0);
+    // 튀는 높이 12도트. 부제 바로 아래 자리(y 108 · 112)에서는 부제 밑변까지만
+    let jump = 12;
+    if (keep) { const hw = (measure(s, true) * scale) / 2; if (cx + hw > keep.x0 && cx - hw < keep.x1) jump = Math.max(0, Math.min(12, top - keep.y1)); }
+    const a = h.age / 0.9, bounce = (a < 0.2 ? -12 * Math.sin(((a / 0.2) * Math.PI) / 2) : -12 + (a - 0.2) * 6) * (jump / 12);
     const al = a > 0.7 ? (1 - a) / 0.3 : 1;
-    text(g, `×${h.n}`, cx, h.y - 6 * z - (h.final ? 4 : 0) + bounce, h.final ? PAL.goldHi : PAL.gold, { align: 'center', bold: true, scale: h.final ? 2 : 1, shadow: PAL.shadow, alpha: al });
+    text(g, s, cx, top + bounce, h.final ? PAL.goldHi : PAL.gold, { align: 'center', bold: true, scale, shadow: PAL.shadow, alpha: al });
   }
 }
 
 // 장면 하나(skychain.js skyScene)를 그린다. 흔들림은 부르는 쪽이 옮긴다. 자리는 1/N 칸(fine), 그림 한 칸은 기기 화소 정수
-export function drawSky(g, st, sc = skyScale()) {
+// keep: 「×N」이 넘지 않을 네모(부제, drawHit)
+export function drawSky(g, st, sc = skyScale(), keep = null) {
   const z = 1.5 * sc.u;
   openBox('fx', 0, 0, W, H, 0, { loose: true, name: '하늘의 사슬' });
   fine(() => {
@@ -247,7 +253,7 @@ export function drawSky(g, st, sc = skyScale()) {
       if (h.white) { g.globalAlpha = h.alpha; g.drawImage(maskCanvas(h.t, sc.hi, '#ffffff', false), snap(h.x), snap(h.y), 32 * sc.u, 44 * sc.u); g.globalAlpha = 1; }
       else piece(g, sc, h.t, 'w', h.x, h.y, h.alpha);
     }
-    for (const hit of st.hits) drawHit(g, sc, hit);
+    for (const hit of st.hits) drawHit(g, sc, hit, keep);
   });
   closeBox();
 }
