@@ -31,7 +31,7 @@ export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null, 
     if (!canDiscard) return null;
     let low = 0;
     b.hand.forEach((p, i) => { if (valueOf(p.t) < valueOf(b.hand[low].t)) low = i; });
-    return { discard: [low] };
+    return { discard: [low], why: 'stuck', before: 0 };
   }
   const need = b.target != null ? b.target - b.score : Infinity;
   if (best.score >= need) return { play: best };
@@ -39,7 +39,7 @@ export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null, 
     const weak = per.map((m, i) => (i !== best.handIndex && (!m || m.captures <= 1) ? i : -1)).filter((i) => i >= 0);
     const worth = (i) => (per[i] ? [1, per[i].captures, per[i].score] : [0, 0, 0]);
     const weaker = (i, j) => { const x = worth(i), y = worth(j); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; };
-    if (weak.length) return { discard: [weak.reduce((a, i) => (weaker(i, a) < 0 ? i : a))] };
+    if (weak.length) return { discard: [weak.reduce((a, i) => (weaker(i, a) < 0 ? i : a))], why: 'weak', before: best.score };
   }
   if (b.hand[best.handIndex].t !== 'P') {
     const pawnsLeft = b.hand.filter((p) => p.t === 'P').length + b.bag.filter((p) => p.t === 'P').length;
@@ -52,13 +52,28 @@ export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null, 
   return { play: best };
 }
 
+// 하네스 진단(CHM-51): 희생마다 { why: 'stuck'|'weak'|…, before: 바치기 전 최선 사슬 점수, after: 바친 뒤 둔 첫 사슬 점수 }.
+// 대국 상태에는 아무것도 적지 않는다(WeakMap). playRun이 판마다 비운다.
+export const SACLOG = { rows: [], pending: new WeakMap(), reset() { this.rows = []; this.pending = new WeakMap(); } };
+
 // 결정 하나를 명령으로 적용. 끝났거나 둘 게 없으면 false.
 export function stepBattle(b, apply, opts) {
   const d = decideBattle(b, opts);
   if (!d) return false;
   if (d.reboard) { apply({ type: 'reboard' }); return true; }
-  if (d.discard) { apply({ type: 'discard', handIndices: d.discard }); return true; }
+  if (d.discard) {
+    if (!SACLOG.pending.has(b)) SACLOG.pending.set(b, { why: d.why || 'stuck', before: d.before ?? 0, n: 0 });
+    SACLOG.pending.get(b).n++;
+    apply({ type: 'discard', handIndices: d.discard });
+    return true;
+  }
   apply({ type: 'drop', handIndex: d.play.handIndex, sq: d.play.sq });
   for (const c of lineCommands(d.play.line)) apply(c);
+  const pend = SACLOG.pending.get(b);
+  if (pend) {
+    SACLOG.pending.delete(b);
+    const h = b.history && b.history.at(-1);
+    SACLOG.rows.push({ ...pend, after: h ? h.score : 0, mate: !!(h && h.reason === 'mate') });
+  }
   return true;
 }

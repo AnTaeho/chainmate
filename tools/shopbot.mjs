@@ -15,7 +15,7 @@ import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { FINAL_FACTION } from '../src/data/factions.js';
-import { stepBattle } from './bot.mjs';
+import { stepBattle, SACLOG } from './bot.mjs';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
 import { evolveTo } from '../src/data/tactics.js';
@@ -433,6 +433,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
   const editions = [];
   let legendAt = null;
   SEEN.reset();
+  SACLOG.reset();
   const trackBuys = (before) => {
     for (const m of run.maxims) if (!before.includes(m.uid)) { bought.add(m.id); if (m.edition) editions.push(m.edition); }
   };
@@ -465,7 +466,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'pack') { act(run, { type: 'skipPack' }); continue; }
   }
   if (legendAt == null && run.legends.length) legendAt = run.ante;
-  return { bought: [...bought], editions, legendAt, seen: JSON.parse(JSON.stringify({ ...SEEN, reset: undefined })) };
+  return { bought: [...bought], editions, legendAt, seen: JSON.parse(JSON.stringify({ ...SEEN, reset: undefined })), sac: SACLOG.rows.slice() };
 }
 
 export { blindInfo, canBuy };

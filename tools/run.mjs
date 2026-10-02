@@ -53,11 +53,11 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
   const t0 = performance.now();
   const run = createRun({ seed, opening, dan, draft: !nodraft });
   for (const id of give || []) run.maxims.push({ uid: run.nextUid++, id, data: {}, edition: null, paid: 0 });
-  const { bought, editions, legendAt, seen } = playRun(run, policy);
+  const { bought, editions, legendAt, seen, sac } = playRun(run, policy);
   return {
     seed, won: run.phase === 'won', ante: run.ante, blind: run.blind,
     log: run.log, bought, final: run.maxims.filter((m) => !m.legendary).map((m) => m.id), money: run.money,
-    fragments: run.fragments, legends: run.legends, legendAt, editions, seen,
+    fragments: run.fragments, legends: run.legends, legendAt, editions, seen, sac,
     deck: run.deck.map((p) => p.t + (p.eng ? ':' + p.eng.id : '')).sort().join(' '),
     charts: Object.values(run.charts).reduce((a, x) => a + x, 0), deckSize: run.deck.length,
     fam: familyCounts(run), josekis: run.josekis || [], fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],
@@ -171,6 +171,18 @@ function report(R, args, wall) {
   const disc = battles.map((b) => b.discarded || 0);
   const dshare = (k) => pc(disc.filter((x) => (k >= 3 ? x >= 3 : x === k)).length / battles.length);
   console.log(`희생: 대국당 ${f2(disc.reduce((a, x) => a + x, 0) / battles.length)}번 (0번 ${dshare(0)} · 1번 ${dshare(1)} · 2번 ${dshare(2)} · 3번+ ${dshare(3)}), 이긴 대국 ${f2(disc.filter((_, i) => battles[i].won).reduce((a, x) => a + x, 0) / Math.max(1, battles.filter((b) => b.won).length))} · 진 대국 ${f2(disc.filter((_, i) => !battles[i].won).reduce((a, x) => a + x, 0) / Math.max(1, battles.filter((b) => !b.won).length))}`);
+  // 희생 진단(CHM-51): 바친 대국 / 안 바친 대국의 승률(손이 나쁜 대국이 바치므로 인과는 smart ↔ nosac으로 본다),
+  // 바친 까닭별 바치기 전 최선 사슬 → 바친 뒤 첫 사슬 점수, 희생 격언을 산 판과 그 판 승률
+  {
+    const sacB = battles.filter((b) => (b.discarded || 0) > 0), noB = battles.filter((b) => !(b.discarded || 0));
+    const wr = (xs) => pc(xs.filter((b) => b.won).length / Math.max(1, xs.length));
+    const rows = R.flatMap((r) => r.sac || []);
+    const why = {};
+    for (const x of rows) { const w = why[x.why] || (why[x.why] = { n: 0, before: 0, after: 0, up: 0, mate: 0 }); w.n++; w.before += x.before; w.after += x.after; if (x.after > x.before) w.up++; if (x.mate) w.mate++; }
+    console.log(`희생 진단: 바친 대국 ${sacB.length}(${pc(sacB.length / battles.length)}) 승률 ${wr(sacB)} · 안 바친 대국 ${noB.length} 승률 ${wr(noB)} · 바친 뒤 첫 수 ${rows.length}번 — ${Object.entries(why).map(([k, w]) => `${k} ${w.n}번: 바치기 전 최선 ${f(w.before / w.n)} → 뒤 ${f(w.after / w.n)} (오른 것 ${pc(w.up / w.n)} · 메이트 ${pc(w.mate / w.n)})`).join(' · ') || '-'}`);
+    const sm = ['second_thought', 'no_regrets', 'thrift'].map((id) => { const rs = R.filter((r) => (r.bought || []).includes(id)); return `${MAXIM_BY_ID[id].name} ${pc(rs.length / n)} 승률 ${pc(rs.filter((r) => r.won).length / Math.max(1, rs.length))}`; });
+    console.log(`  희생 격언 산 판: ${sm.join(' · ')}`);
+  }
   // 탁월수 !!(CHM-35): 희생한 바로 다음 수로 체크메이트
   const brR = R.filter((r) => r.log.some((x) => (x.brilliants || []).length));
   const brAll = battles.flatMap((x) => x.brilliants || []);
