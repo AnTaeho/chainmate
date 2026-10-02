@@ -46,8 +46,63 @@ LL.LOG.on = true;
 const HELD = {};
 const heldOf = () => null;
 const flow = { frames: 0, text: 0, pad: 0, overlap: 0, screen: 0, held: 0, heldBy: {}, seen: new Map() };
+// 잘린 글(docs/design-notes/layout.md 「잘린 글 검사」): fitText · 시너지 줄 · 말풍선 · 낱말 상자 · wrap이 줄이거나 자른 글(layoutlog.js logClip).
+// 'thin' 보통 굵기로 줄임(설계상 허용 — 세기만), 'cut' 「…」, 'char' 낱말을 글자 단위로 끊음. 「…」 · 글자 끊김은 아래 둘 밖이면 실패.
+// CLIP_OK: 의도한 잘림(이유와 함께). 고르는 조건은 좁게 — 같은 칸의 다른 이름이 잘리면 실패해야 한다.
+const CLIP_OK = [
+  { why: '영어 명경기 이름 넷 — 1열 격언 칸에서 실제 이름을 지키고 「…」(CHM-40, english-review.md)', ok: (c) => LANG === 'en' && c.kind === 'cut' && /^격언 (immortal|opera|century|evergreen)$/.test(c.box) },
+  { why: '옛 저장 기보 두루마리 — 기보는 얻는 순간 쓰여 두루마리 칸에 들지 않는다(CHM-33), 옛 저장에만 남아 이름을 재지 않는다', ok: (c) => c.kind === 'cut' && c.box === '두루마리 chart' },
+  { why: '설명 높이 자르기 — 자리 규칙이 준 높이에 안 들어가면 뒤 줄을 빼고 「…」(CHM-34, 설계)', ok: (c) => c.kind === 'cut' && (c.box === '말풍선' || c.box.startsWith('낱말 ')) },
+];
+// CLIP_HELD: smoke가 찾았으나 고칠지 설계 담당이 정할 잘림(보류). 세어 보류 줄에 찍고 실패시키지 않는다 — 고치면 여기서 뺀다.
+// 언어 · 종류 · 상자 이름 · 원문이 모두 맞을 때만
+// 2026-10-02 처음 켰을 때 찾은 것(CHM-45). 줄마다 [언어, 종류, 상자 이름(없으면 ''), 원문 …]
+const CLIP_HELD = [
+  // 도감 격자 칸 이름(폭 59 · 기물 56 · 74)
+  ['ko', 'cut', '도감', ['세기의 대국', '모습 모으기', '폰 여덟의 행진', '상록의 대국', '불멸의 대국', '메이트 사냥꾼', '오페라 대국', '빠른 갈아입기']],
+  ['en', 'cut', '도감', ['Chancellor', 'Cavalry Charge', 'The Game of the Century', 'Close Call', 'March of Eight', 'The Evergreen Game', 'First Move', 'Nightrider', 'The Immortal Game', 'Long Road', 'Low Stance', 'Wild Horse', 'Mate Hunter', 'Mercenaries', 'The Opera Game', 'Pawn March', 'Queen Hunt', "Queen's Gambit", 'Quick Change', 'Foresight', 'Welcome Party']],
+  // 판 틀 왼쪽 칸 머리 칸(폭 96): 마스터전 제목 · 꾸러미 이름
+  ['ko', 'cut', '머리 칸', ['마스터 사냥꾼 두령']],
+  ['en', 'cut', '머리 칸', ['Master Cavalry Captain', 'Master Chief Herald', 'Master Free Captain', 'Master Grandmaster', 'Master Hunt Chief', 'Master Village Elder', 'Engraving Bundle']],
+  // 판 틀 왼쪽 칸 짜임(레퍼토리 · 정석) 칸 정석 이름(폭 96)
+  ['en', 'cut', '짜임 칸', ['Stepping Stones']],
+  // 수업 고르기 묶음 제목(폭 96)
+  ['ko', 'cut', '수업 묶음 ', ['잡으면 그것이 된다', '이을수록 곱해진다']],
+  ['en', 'cut', '수업 묶음 ', ['The Longer, the Bigger', 'You Are What You Take', 'Hand and Sacrifice', 'Target and Moves', 'Shop and Synergy']],
+  // 말풍선 글 줄(폭 100)에서 한 낱말이 줄보다 길다: 끝없는 대국 큰 수 · 영어 명경기 이야기
+  ['ko', 'char', '', ['1,000,000,000,000']],
+  ['en', 'char', '', ['1,000,000,000,000', 'Thirteen-year-old']],
+];
+// 상자 이름은 앞머리로 맞춘다(「도감 opera」 ← 「도감」, 「수업 묶음 basic」 ← 「수업 묶음 」). 상자 없이 잰 글자 끊김은 ''만
+const clipHeld = (c) => CLIP_HELD.find(([lang, kind, box, srcs]) => lang === LANG && kind === c.kind && (box ? c.box === box || c.box.startsWith(`${box} `) || (box.endsWith(' ') && c.box.startsWith(box)) : !c.box) && srcs.includes(c.src)) || null;
+const clips = { seen: new Map(), by: new Map(), frames: new Map(), maximW: new Set(), measured: new Set() };
+function clipCheck() {
+  const sc = screen();
+  clips.frames.set(sc, (clips.frames.get(sc) || 0) + 1);
+  for (const b of LL.LOG.boxes) if (/^격언 /.test(b.name || '') && !b.overlay && !b.loose && (sc === 'battle' || sc === 'shop')) clips.maximW.add(`${sc} ${b.w}`);
+  for (const c of LL.LOG.clips) {
+    if (c.loose) continue;
+    const key = `${sc}|${c.kind}|${c.box}|${c.src}`;
+    if (clips.seen.has(key)) continue;
+    // 글자 끊김은 wrap()이 재기만 하고 버린 줄(「Grandmaster」를 초상 옆 폭으로 재 보고 온 폭으로 쓰는 것처럼)일 수 있다 — 끊긴 첫 조각이 이번 프레임에 그려졌을 때만 센다
+    if (c.kind === 'char') {
+      const first = c.shown.split(' / ')[0];
+      // 낱말 풀이 글(richText)은 한 줄을 조각으로 그린다 — 같은 줄(y)의 조각을 x 차례로 이어 맞춘다
+      const rows = new Map();
+      for (const q of LL.LOG.texts) { if (!rows.has(q.y)) rows.set(q.y, []); rows.get(q.y).push(q); }
+      const drawn = [...rows.values()].some((r) => r.some((q) => q.s === first) || r.sort((a, b) => a.x - b.x).map((q) => q.s).join('') === first);
+      if (!drawn) { clips.measured.add(`${sc} 「${c.src}」 폭 ${c.w}`); continue; }
+    }
+    const ok = c.kind === 'thin' ? null : CLIP_OK.find((q) => q.ok(c));
+    const held = c.kind === 'thin' || ok ? null : clipHeld(c);
+    clips.seen.set(key, { ...c, screen: sc, ok: ok ? ok.why : null, held: !!held, bad: c.kind !== 'thin' && !ok && !held });
+    if (!clips.by.has(sc)) clips.by.set(sc, { thin: 0, cut: 0, char: 0 });
+    clips.by.get(sc)[c.kind]++;
+  }
+}
 function flowCheck() {
   if (!app) return;
+  clipCheck();
   flow.frames++;
   const held = heldOf();
   for (const q of LL.checkLayout()) {
@@ -990,6 +1045,18 @@ click('next');
     if (app.overlay || screen() !== 'shop' || JSON.stringify([app.run.money, app.run.maxims.length, app.run.consumables.length]) !== before) throw new Error(`right-click on ${id} did something`);
     marksSeen.shop++;
   }
+  // 긴 이름 격언 1열(잘린 글 검사): 전설 격언은 칸 수와 따로 들어와 기본 칸 다섯이면 여섯 칸(2열)이다. 1열에 전설 격언이 서는 것은
+  // 격언 칸 4 레퍼토리(룩 엔딩) — 격언 셋 + 명경기 하나 = 칸 다섯, 대국 · 상점 오른쪽 칸 1열(폭 112).
+  // 영어 명경기 이름 넷은 1열 칸에서 「…」(허용 목록), 이름이 긴 보통 격언(collector_forms · reinforce_hunt · shadow_reading)은 잘리면 안 된다
+  for (const legend of ['immortal', 'opera', 'century', 'evergreen']) {
+    const fill1 = (r) => {
+      r.maxims = []; r.maximSlots = 4;
+      ['collector_forms', 'reinforce_hunt', 'shadow_reading'].forEach((id) => r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: null, paid: 5 }));
+      r.maxims.push({ uid: r.nextUid++, id: legend, data: {}, edition: null, paid: 0, legendary: true });
+    };
+    scene((r) => { fill1(r); r.ante = 5; r.blind = 0; app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(60); });
+    scene((r) => { fill1(r); r.phase = 'shop'; stock(r); app.go('shop'); });
+  }
   app.go('chest', { chest: { count: 3, tier: 'uncommon', cells: [{ lit: false, item: null }, { lit: true, item: { kind: 'money', money: 2 } }, { lit: true, item: { kind: 'chart', form: 'N' } }, { lit: true, item: { kind: 'engrave', piece: 'P', pieceId: 1, eng: 'ivory' } }, { lit: false, item: null }] } });
   pump(200); notesCheck();
   app.toTitle(); pump(1);
@@ -1530,7 +1597,24 @@ console.log(`큰 수 장면: 대국 ${bigSeen.battle} · 관 선택 ${bigSeen.se
 if (!bigSeen.battle || !bigSeen.select || !bigSeen.result || !bigSeen.records || !bigSeen.reward || bigSeen.overlap.length) { console.log('큰 수 장면을 다 지나지 못했거나, 이름표와 수치가 겹쳤다'); fail = true; }
 console.log(`진열 카드 종류 장면 ${shopCards.scenes.length}: 카드 상자 ${shopCards.boxes} · 글 ${shopCards.lines} · 넘침 ${shopCards.bad}\n  ${shopCards.scenes.join('\n  ')}`);
 if (shopCards.boxes < shopCards.scenes.length * 2) { console.log('진열 카드 종류 장면에서 카드 상자를 다 재지 못했다'); fail = true; }
-console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held}(${Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`).join(' · ') || '없음'})`);
+// 잘린 글: 화면별 · 잘린 곳(화면 · 종류 · 상자 · 원문 → 그려진 글 · 폭)
+const clipAll = [...clips.seen.values()];
+const clipN = (k, f = () => true) => clipAll.filter((c) => c.kind === k && f(c)).length;
+const clipCut = clipN('cut'), clipChar = clipN('char'), clipThin = clipN('thin');
+const clipOk = clipAll.filter((c) => c.ok), clipHeldL = clipAll.filter((c) => c.held), clipBad = clipAll.filter((c) => c.bad);
+const KIND_WORD = { thin: '줄임', cut: '…', char: '글자 끊김' };
+const clipRow = (c) => `${c.screen} ${KIND_WORD[c.kind]} [${c.box || '-'}] 「${c.src}」 → 「${c.shown}」 폭 ${c.w}`;
+console.log(`잘린 글 ${clipCut + clipChar + clipThin}(… ${clipCut} · 줄임 ${clipThin} · 글자 끊김 ${clipChar}) · 허용 ${clipOk.length} · 보류 ${clipHeldL.length} · 목록 밖 ${clipBad.length} — ${LANG}`);
+console.log(`  화면별: ${[...clips.by].map(([k, b]) => `${k} …${b.cut} · 줄임 ${b.thin} · 끊김 ${b.char}`).join(' | ') || '없음'}`);
+console.log(`  잰 화면(프레임): ${[...clips.frames].map(([k, n]) => `${k} ${n}`).join(' · ')}`);
+console.log(`  격언 칸 폭(대국 · 상점): ${[...clips.maximW].sort().join(' · ')}`);
+const clipList = clipAll.filter((c) => c.kind !== 'thin');
+if (clipList.length) console.log('  잘린 곳:\n    ' + clipList.map((c) => `${clipRow(c)}${c.ok ? ' (허용)' : c.held ? ' (보류)' : ' (목록 밖)'}`).join('\n    '));
+if (clips.measured.size) console.log(`  재기만 한 글자 끊김(그리지 않음 — 세지 않는다): ${[...clips.measured].join(' · ')}`);
+if (VERBOSE && clipThin) console.log('  줄인 곳:\n    ' + clipAll.filter((c) => c.kind === 'thin').map(clipRow).join('\n    '));
+if (clipBad.length) { console.log(`허용 목록 밖에서 글이 잘렸다(「…」 · 글자 끊김) ${clipBad.length}`); fail = true; }
+console.log(`글 검사: 넘침 ${flowN} · 잘린 글 …${clipCut} · 글자 끊김 ${clipChar} · 줄임 ${clipThin}(허용 ${clipOk.length} · 보류 ${clipHeldL.length} · 목록 밖 ${clipBad.length}) · 잰 프레임 ${flow.frames}`);
+console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held + clipHeldL.length}(${[...Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`), ...(clipHeldL.length ? [`잘린 글 ${clipHeldL.length} — 실패시키지 않음`] : [])].join(' · ') || '없음'})`);
 if (flow.held) fail = true;
 if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 5000 : 40).join('\n  ')); fail = true; }
 if (VERBOSE && flow.held) console.log('보류 화면에서 넘친 곳: ' + [...flow.seen].filter(([, w]) => w === 'held').map(([k]) => k).slice(0, 60).join('\n  '));
