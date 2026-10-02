@@ -710,11 +710,15 @@ export function applyRun(run, cmd) {
       for (const h of run.battle.history.slice(seen)) checkFeats(run, h, feats);
       // 탁월수 → 명경기 조각(CHM-47). 재현 판정 뒤에 준다(탁월수 사슬이 막 받은 첫 조각의 재현이 되지는 않는다).
       // 사건은 brilliant 바로 뒤에 끼운다 — 화면이 「!!」 다음, 대국 승리 앞에 조각 얻음을 보이게
-      for (const e of out) {
+      // 재현 조각(CHM-48)은 그 수의 사건 뒤, 대국 승패(win · lose) 앞에 끼운다 — 승패 뒤면 알림이 보상 화면으로 넘어간 뒤에 떴다.
+      // 사건 차례만 바뀐다(판정은 위에서 이미 끝났다)
+      const end = out.findIndex((e) => e.type === 'win' || e.type === 'lose');
+      out.forEach((e, i) => {
+        if (i === end) events.push(...feats);
         events.push(e);
         if (e.type === 'brilliant') brilliantFragment(run, events);
-      }
-      events.push(...feats);
+      });
+      if (end < 0) events.push(...feats);
       if (run.battle.status === 'won' || run.battle.status === 'lost') endBattle(run, events);
       break;
     }
