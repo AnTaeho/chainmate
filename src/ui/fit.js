@@ -11,7 +11,10 @@ export function backScale(k) {
   return Math.min(k, 4);
 }
 
-// vw · vh: 창(CSS 화소), dpr: 기기 화소 비, inset: 안전 영역(노치 · 홈 막대, CSS 화소), coarse: 손가락 기기(가리키기 없음)
+// vw · vh: 보이는 창(CSS 화소 — 캔버스는 이 안에 앉는다), dpr: 기기 화소 비, inset: 안전 영역(노치 · 홈 막대, CSS 화소),
+// coarse: 손가락 기기(가리키기 없음), full: { width, height } 그릴 수 있는 창 전체(여백 판 · 틀이 덮는 크기, 보이는 창 이상).
+//   아이폰은 보이는 창(innerHeight · visualViewport)이 화면보다 짧게 잡혀도 그 아래(주소창 뒤 · 홈 막대 띠)에 그림이 그려진다(CHM-52).
+//   full을 주면 여백 판이 그 띠까지 덮어 결이 끊기지 않는다. 없으면 보이는 창과 같다
 // 돌려주는 것:
 //   k       배율(기기 화소 / 도트). 창이 480×270 기기 화소보다 작으면 1 미만의 소수(흐려도 다 보이게)
 //   n       뒷면 캔버스 배율
@@ -21,18 +24,20 @@ export function backScale(k) {
 //           게임 (0, 0) 도트가 여백 판 (ox, oy) 칸. 창 끝까지 덮는다
 //   rot     폰 세로: 화면을 시계 방향 90도 돌려 그린다(사람은 폰을 왼쪽으로 돌려 잡는다 — 홈 막대가 오른쪽).
 //           이때 canvas · pad는 돌린 틀(폭 = 창 높이, 높이 = 창 폭) 안의 자리다. 틀을 돌리는 것은 main.js(stageTransform)
-//   frame   { width, height } 캔버스 · 여백 판이 놓이는 틀의 CSS 크기(돌리지 않으면 창 그대로)
+//   frame   { width, height } 캔버스 · 여백 판이 놓이는 틀의 CSS 크기(돌리지 않으면 full 그대로, 돌리면 가로 · 세로를 바꾼 것)
 // 돌리는 기준: 손가락 기기 + 세로 + 도트 하나가 1 CSS 화소 미만(K / dpr < 1 — 12px 글이 12px보다 작다). 아이패드 세로 · 좁은 데스크톱 창은 그대로
-export function chooseFit({ vw, vh, dpr = 1, inset = null, coarse = false }) {
+export function chooseFit({ vw, vh, dpr = 1, inset = null, coarse = false, full = null }) {
   dpr = dpr > 0 ? dpr : 1;
-  const flat = place({ vw, vh, dpr, inset });
-  if (!(coarse && vh > vw && flat.css < 1)) return { ...flat, rot: false, frame: { width: vw, height: vh } };
-  // 시계 방향 90도: 돌린 틀의 위 = 창의 오른쪽, 오른쪽 = 창 아래, 아래 = 창 왼쪽, 왼쪽 = 창 위
+  const fw = Math.max(vw, full && full.width > 0 ? full.width : 0), fh = Math.max(vh, full && full.height > 0 ? full.height : 0);
+  const flat = place({ fw, fh, vis: { x: 0, y: 0, w: vw, h: vh }, dpr, inset });
+  if (!(coarse && vh > vw && flat.css < 1)) return { ...flat, rot: false, frame: { width: fw, height: fh } };
+  // 시계 방향 90도: 돌린 틀의 위 = 창의 오른쪽, 오른쪽 = 창 아래, 아래 = 창 왼쪽, 왼쪽 = 창 위. 틀 (u, v) → 창 (fw - v, u)
+  // 보이는 창(창 x 0 ~ vw, y 0 ~ vh)은 틀에서 u 0 ~ vh, v fw - vw ~ fw — 창 아래 띠(fh > vh)는 틀의 오른쪽 끝에 남는다
   const ri = inset ? { top: inset.right || 0, right: inset.bottom || 0, bottom: inset.left || 0, left: inset.top || 0 } : null;
-  return { ...place({ vw: vh, vh: vw, dpr, inset: ri }), rot: true, frame: { width: vh, height: vw } };
+  return { ...place({ fw: fh, fh: fw, vis: { x: 0, y: fw - vw, w: vh, h: vw }, dpr, inset: ri }), rot: true, frame: { width: fh, height: fw } };
 }
 
-// 돌린 틀을 창에 얹는 CSS transform(transform-origin 0 0). 틀 (u, v) → 창 (vw - v, u)
+// 돌린 틀을 창에 얹는 CSS transform(transform-origin 0 0). 틀 (u, v) → 창 (vw - v, u). vw = 창 폭 전체(full)
 export function stageTransform(vw) {
   return `translateX(${vw}px) rotate(90deg)`;
 }
@@ -50,10 +55,13 @@ export function toClient(gx, gy, rect, rot = false) {
   return [rect.left + rect.width - (gy * rect.width) / GH, rect.top + (gx * rect.height) / GW];
 }
 
-function place({ vw, vh, dpr, inset }) {
-  const L = inset ? inset.left || 0 : 0, R = inset ? inset.right || 0 : 0, T = inset ? inset.top || 0 : 0, B = inset ? inset.bottom || 0 : 0;
-  const vwD = Math.round(vw * dpr), vhD = Math.round(vh * dpr);
-  const aw = Math.max(1, Math.round((vw - L - R) * dpr)), ah = Math.max(1, Math.round((vh - T - B) * dpr));
+// 틀 fw × fh(CSS) 안에서 보이는 사각형 vis와 안전 영역 안쪽이 겹치는 곳에 캔버스를 앉힌다. 여백 판은 틀 전체를 덮는다
+function place({ fw, fh, vis, dpr, inset }) {
+  const iL = inset ? inset.left || 0 : 0, iR = inset ? inset.right || 0 : 0, iT = inset ? inset.top || 0 : 0, iB = inset ? inset.bottom || 0 : 0;
+  const L = Math.max(vis.x, iL), T = Math.max(vis.y, iT);
+  const R = Math.min(vis.x + vis.w, fw - iR), B = Math.min(vis.y + vis.h, fh - iB);
+  const vwD = Math.round(fw * dpr), vhD = Math.round(fh * dpr);
+  const aw = Math.max(1, Math.round((R - L) * dpr)), ah = Math.max(1, Math.round((B - T) * dpr));
   let k = Math.floor(Math.min(aw / GW, ah / GH));
   if (k < 1) k = Math.min(aw / GW, ah / GH);
   const n = backScale(k);
@@ -61,7 +69,7 @@ function place({ vw, vh, dpr, inset }) {
   const leftD = Math.round(L * dpr) + Math.floor((aw - wD) / 2);
   const topD = Math.round(T * dpr) + Math.floor((ah - hD) / 2);
   const canvas = { left: leftD / dpr, top: topD / dpr, width: wD / dpr, height: hD / dpr };
-  // 여백 판: 게임 도트 격자를 창 끝까지 잇는다
+  // 여백 판: 게임 도트 격자를 틀 끝까지 잇는다
   const ox = Math.max(0, Math.ceil(leftD / k)), oy = Math.max(0, Math.ceil(topD / k));
   const cols = ox + GW + Math.max(0, Math.ceil((vwD - leftD - wD) / k));
   const rows = oy + GH + Math.max(0, Math.ceil((vhD - topD - hD) / k));
