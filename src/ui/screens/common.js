@@ -3,12 +3,13 @@ import { PAL } from '../../render/palette.js';
 import { W, text, rect, measure } from '../../render/gfx.js';
 import { ANTES } from '../../sim/run.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
-import { panel, tipLines, optLine, fragmentStrip, fitText } from '../parts.js';
+import { panel, tipLines, optLine, fragmentStrip, wrapName, drawName } from '../parts.js';
 import { button } from '../ui.js';
-import { familyList } from '../parts-depth.js';
+import { familyList, familyMore } from '../parts-depth.js';
 import { familyCounts } from '../../data/families.js';
 import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, flow, rowSpan } from '../frame.js';
-import { openBox, closeBox } from '../../render/layoutlog.js';
+import { openBox, closeBox, logClip } from '../../render/layoutlog.js';
+import { L as L_ } from '../lang.js';
 
 // 세력 빛깔을 짙은 판넬 위 글자로 읽히게 조금 밝힌다
 export function lightHue(hex, k = 0.25) {
@@ -121,17 +122,20 @@ export const clockTip = (run) => tipLines('시계', [`${run.clock} / ${run.clock
 export const clockRow = (app, run) => ({ id: 'clock', label: '시계', tip: () => clockTip(run), draw: (ctx2, ty) => { text(ctx2, '시계', LEFT.x + PAD_BOX, ty, PAL.dim); clockPips(ctx2, run, LEFT.x + LEFT.w - PAD_BOX, ty, app.time, app.clockFx); } });
 export const hasClock = (run) => !!run && !run.scratch && (run.clockMax || 0) > 0;
 
+const JS_IND = 6; // 두 줄 레퍼토리 이름의 둘째 줄 들임
 export function runSide(ctx, ui, app, title) {
   const run = app.run;
   const L = LEFT.x, LW = LEFT.w, P = PAD_BOX;
   const clock = hasClock(run);
-  const head = headLayout(1, 0), foot = footLayout(clock ? 3 : 2);
+  // 화면 이름은 두 줄까지(낱말 단위 — 영어 「Engraving Bundle」), 머리 칸은 그 줄 수로 hug
+  const tn = wrapName(title, LW - P * 2);
+  const head = headLayout(tn ? tn.lines.length : 1, 0), foot = footLayout(clock ? 3 : 2);
   const st = sideStack(head.h, foot.h);
   openBox('panel', L, st.head.y, LW, head.h, P, { name: '머리 칸' });
   panel(ctx, L, st.head.y, LW, head.h);
-  ui.sideItem(L, st.head.y, LW, head.h, { rows: [rowSpan(st.head.y + head.kicker), rowSpan(st.head.y + head.titles[0], LINE_TITLE)] });
+  ui.sideItem(L, st.head.y, LW, head.h, { rows: [rowSpan(st.head.y + head.kicker), ...head.titles.map((t) => rowSpan(st.head.y + t, LINE_TITLE))] });
   text(ctx, hallText(run), L + P, st.head.y + head.kicker, PAL.dim);
-  fitText(ctx, title, L + P, st.head.y + head.titles[0], LW - P * 2, PAL.gold);
+  drawName(ctx, title, tn, L + P, head.titles.map((t) => st.head.y + t), LW - P * 2, PAL.gold);
   closeBox();
   // 짜임 칸: 시너지(이름표 → 세로 칩) → 묶음 틈 → 정석(이름표 → 이름 줄). 칸은 머리 칸과 아래 칸 사이
   const { y: top, h: midH } = st.mid;
@@ -140,7 +144,10 @@ export function runSide(ctx, ui, app, title) {
   const rows = ui.sideItem(L, top, LW, midH, { rows: [] }).rows;
   const js = run.josekis || [];
   const labelH = LINE + GAP_IN;
-  const jsH = js.length ? GAP_GROUP + labelH + js.length * LINE : 0;
+  // 레퍼토리 이름도 두 줄까지(영어 「Stepping Stones」) — 줄마다 본문 줄 하나. 둘째 줄은 JS_IND만큼 들여 다음 이름과 갈린다
+  const jn = js.map((id) => { const q = wrapName(JOSEKI_BY_ID[id].name, LW - P * 2); return q && q.lines.length > 1 ? wrapName(JOSEKI_BY_ID[id].name, LW - P * 2 - JS_IND) : q; });
+  const jsLines = jn.reduce((n, q) => n + (q ? q.lines.length : 1), 0);
+  const jsH = js.length ? GAP_GROUP + labelH + jsLines * LINE : 0;
   const famRows = Math.max(0, Math.floor((midH - P * 2 - labelH - jsH) / FAM_ROW));
   const f = flow(top + P);
   if (famRows && familyCount(run)) {
@@ -151,6 +158,12 @@ export function runSide(ctx, ui, app, title) {
     rows.push(rowSpan(ly));
     for (let k = 0; k < shown; k++) rows.push([f.y + k * FAM_ROW, f.y + k * FAM_ROW + FAM_H]);
     f.space(shown * FAM_ROW - (FAM_ROW - FAM_H));
+  } else if (familyCount(run) && midH - P * 2 - jsH >= LINE) {
+    // 칩 줄이 하나도 안 들어가면(두 줄 머리 칸 · 두 줄 레퍼토리 이름 · 레퍼토리 셋 — CHM-46) 이름표 줄 오른쪽에 「+N」 — 가리키면 시너지 전부
+    const ly = f.line();
+    text(ctx, '시너지', L + P, ly, PAL.dim);
+    familyMore(ctx, ui, run, L + P + measure('시너지') + 4, ly);
+    rows.push(rowSpan(ly));
   }
   if (js.length) {
     f.gap(GAP_GROUP);
@@ -158,12 +171,14 @@ export function runSide(ctx, ui, app, title) {
     text(ctx, '레퍼토리', L + P, jy, PAL.dim);
     rows.push(rowSpan(jy));
     f.gap(GAP_IN);
-    js.forEach((id) => {
-      const j = JOSEKI_BY_ID[id];
-      const top1 = f.y, ty = f.line();
-      rows.push([top1, top1 + LINE]);
-      ui.region(`joseki:${id}`, L + 4, top1, LW - 8, LINE, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [optLine({ chips: j.families })] : []) });
-      fitText(ctx, j.name, L + P, ty, LW - P * 2, ui.isHover(`joseki:${id}`) ? PAL.goldHi : TIER_COL[j.tier]);
+    js.forEach((id, k) => {
+      const j = JOSEKI_BY_ID[id], n = jn[k] ? jn[k].lines.length : 1;
+      const top1 = f.y, ys = [];
+      for (let q = 0; q < n; q++) { rows.push([f.y, f.y + LINE]); ys.push(f.line()); }
+      ui.region(`joseki:${id}`, L + 4, top1, LW - 8, n * LINE, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [optLine({ chips: j.families })] : []) });
+      const col = ui.isHover(`joseki:${id}`) ? PAL.goldHi : TIER_COL[j.tier];
+      if (n > 1) { if (jn[k].thin) logClip('thin', L_(j.name), L_(j.name), LW - P * 2 - JS_IND); jn[k].lines.forEach((l, q) => text(ctx, l, L + P + (q ? JS_IND : 0), ys[q], col, { bold: !jn[k].thin })); }
+      else drawName(ctx, j.name, jn[k], L + P, ys, LW - P * 2, col);
     });
   }
   closeBox();

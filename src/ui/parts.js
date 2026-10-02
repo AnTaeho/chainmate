@@ -49,6 +49,24 @@ export function fitText(ctx, s, x, y, w, col, { bold = true, align = 'left' } = 
   return text(ctx, shown, x, y, col, { align });
 }
 
+// 이름 두 줄(CHM-46): 낱말 단위로 max줄까지 — 굵게(bold면) → 보통 굵기. 한 낱말이라도 폭을 넘거나 줄이 넘치면 null(그때는 fitText).
+// 칸 높이는 돌려준 줄 수로 hug 한다. thin이면 보통 굵기로 줄인 것(「잘린 글」 검사의 줄임 — 그리는 쪽이 logClip('thin'))
+export function wrapName(s, w, { bold = true, max = 2 } = {}) {
+  s = L(String(s));
+  for (const b of bold ? [true, false] : [false]) {
+    if (s.split(' ').some((word) => measure(word, b) > w)) continue;
+    const lines = wrap(s, w, b);
+    if (lines.length <= max) return { lines, thin: bold && !b };
+  }
+  return null;
+}
+// 이름 줄 그리기: wrapName 결과(없으면 한 줄 fitText). ys는 줄마다 글 y
+export function drawName(ctx, s, nm, x, ys, w, col, { bold = true } = {}) {
+  if (!nm) return fitText(ctx, s, x, ys[0], w, col, { bold });
+  if (nm.thin) logClip('thin', L(String(s)), L(String(s)), w);
+  nm.lines.forEach((l, k) => text(ctx, l, x, ys[k], col, { bold: bold && !nm.thin }));
+}
+
 // 말풍선 내용: 제목 · 글(body) · 덧줄(extra: [글, 빛깔] · { chips }). 줄바꿈은 그릴 때 자리 규칙의 폭으로(ui.js tipRows).
 // w는 옛 호출과 맞추려고 남긴 값(말풍선 폭은 placement.js가 정한다)
 // 덜 중요한 줄: 말풍선 자리가 모자라면 「…」로 자르기 전에 먼저 뺀다(ui.js tipLayout — CHM-34)

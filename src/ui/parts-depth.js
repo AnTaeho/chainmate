@@ -7,7 +7,7 @@ import { L } from './lang.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { TRAIT_BY_ID } from '../data/traits.js';
 import { wrap } from '../render/text.js';
-import { CHIP_H, CHIP_ROW, FAM_H, FAM_ROW, CHIP_PAD, LIST_GAP, inkY } from './frame.js';
+import { CHIP_H, CHIP_ROW, FAM_H, FAM_ROW, CHIP_PAD, LIST_GAP, INK_H, inkY } from './frame.js';
 import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 
 // 5×5 문양
@@ -198,6 +198,13 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
   });
   if (all.length > list.length && maxRows > 0) { moreMark(ctx, ui, idPrefix, all.slice(list.length), n, x + 3, y + list.length * FAM_ROW); return list.length + 1; }
   return list.length;
+}
+
+// 칩 줄이 하나도 안 들어갈 때: 이름표 줄(글 y ty)에 놓는 「+N」(가진 시너지 전부 — 가리키면 말풍선에). familyList와 같은 차례
+export function familyMore(ctx, ui, build, x, ty, idPrefix = 'fam') {
+  const n = familyCounts(build);
+  const all = FAMILIES.filter((f) => n[f.id] > 0).sort((a, b) => levelOf(n[b.id]) - levelOf(n[a.id]) || n[b.id] - n[a.id]);
+  if (all.length) moreMark(ctx, ui, idPrefix, all, n, x, ty - ((FAM_H - INK_H) >> 1));
 }
 
 // 가족 단계가 올랐나(이전 수 → 지금 수). 오른 가족 id 목록

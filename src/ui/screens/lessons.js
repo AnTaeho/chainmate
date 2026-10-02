@@ -9,7 +9,7 @@ import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide } from '../coach.js';
 import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
 import { pageHead, pageButtons } from './common.js';
-import { fitText } from '../parts.js';
+import { wrapName, drawName } from '../parts.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, LIST_GAP, flow, textY, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
@@ -115,7 +115,10 @@ export class LessonsScreen {
         const ty = y + textY(0, LESSON_BTN) + 1;
         if (done) { rect(ctx, x + 14, y + 16, 2, 2, PAL.gold); rect(ctx, x + 16, y + 18, 2, 2, PAL.gold); for (let q = 0; q < 4; q++) rect(ctx, x + 18 + q * 2, y + 16 - q * 2, 2, 2, PAL.gold); }
         else text(ctx, `${i + 1}`, x + 26, ty, PAL.dim, { bold: true, align: 'right' });
-        fitText(ctx, L.title, x + 32, ty, colW - PAD_BOX - 4 - 32, done ? PAL.ink : PAL.dim, { bold: false });
+        // 수업 이름은 두 줄까지(낱말 단위) — 단추 32에 두 줄(14 × 2)이 테와 2씩 띄워 들어간다
+        const nw = colW - PAD_BOX - 4 - 32, nm = wrapName(L.title, nw, { bold: false });
+        const ys = nm && nm.lines.length > 1 ? nm.lines.map((_, k) => y + textY(((LESSON_BTN - nm.lines.length * LINE) >> 1) + k * LINE)) : [ty];
+        drawName(ctx, L.title, nm, x + 32, ys, nw, done ? PAL.ink : PAL.dim, { bold: false });
       });
       closeBox();
     });

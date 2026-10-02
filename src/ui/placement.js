@@ -74,13 +74,27 @@ export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [], sof
     }
     if (best) return { x: best.x, y: best.y, w, n, side: best.side };
   }
-  // 어디에도 깨끗이 안 들어가면: 첫 네모만, 아래 · 위 중 넓은 쪽(화면 안으로 당긴다 — 넘치면 그 높이로 자른다)
+  // 어디에도 깨끗이 안 들어가면: 첫 네모만, 아래 · 위 × 왼끝 · 오른끝 중 자리가 가장 넓은 곳(화면 안으로 당긴다 — 넘치면 그 높이로 자른다).
+  // 자리는 화면 끝이나 그 쪽의 누를 것(단추) 앞까지 — 잘라서라도 누를 것은 덮지 않는다(CHM-46: 두 줄 도감 칸의 둘째 줄 명경기)
   const h0 = hs[0];
-  const roomBelow = H - EDGE - (anchor.y + anchor.h + NOTE_OFF), roomAbove = anchor.y - NOTE_OFF - EDGE;
-  const room = Math.max(roomBelow, roomAbove);
-  if (h0 > room) return roomBelow >= roomAbove ? { x, y: anchor.y + anchor.h + NOTE_OFF, w, n: 1, side: 'below', clip: room } : { x, y: EDGE, w, n: 1, side: 'above', clip: room };
-  const y = roomBelow >= roomAbove ? Math.min(H - EDGE - h0, anchor.y + anchor.h + NOTE_OFF) : Math.max(EDGE, anchor.y - NOTE_OFF - h0);
-  return { x, y, w, n: 1, side: roomBelow >= roomAbove ? 'below' : 'above' };
+  const yB = anchor.y + anchor.h + NOTE_OFF, yA = anchor.y - NOTE_OFF;
+  const roomOf = (cx, below) => {
+    let end = below ? H - EDGE : EDGE;
+    for (const a of avoid) {
+      if (!(cx < a.x + a.w && a.x < cx + w)) continue;
+      if (below && a.y >= yB) end = Math.min(end, a.y - EDGE);
+      if (!below && a.y + a.h <= yA) end = Math.max(end, a.y + a.h + EDGE);
+    }
+    return below ? end - yB : yA - end;
+  };
+  let pick = null;
+  for (const [cx, below] of [[x, true], [xr, true], [x, false], [xr, false]]) {
+    const room = roomOf(cx, below);
+    if (!pick || room > pick.room) pick = { x: cx, below, room };
+  }
+  const side = pick.below ? 'below' : 'above';
+  if (h0 > pick.room) return { x: pick.x, y: pick.below ? yB : yA - pick.room, w, n: 1, side, clip: pick.room };
+  return { x: pick.x, y: pick.below ? yB : yA - h0, w, n: 1, side };
 }
 
 // 처음 안내 말풍선 자리: 묶음과 같은 규칙(네모 하나). arrow는 화살표가 나가는 변('right' · 'up' · 'down' · null)
