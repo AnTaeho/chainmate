@@ -28,8 +28,8 @@ import { foldSide } from './fold.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
-// platform: 'web' | 'app'(Tauri). download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', download = null, copyText = null }) {
+// platform: 'web' | 'app'(Tauri). share(name, text) · download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -92,15 +92,27 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     run.track.kept = row.id;
     return keepRow(store, row);
   };
-  // 설정 「기록 내보내기」: 웹 · 앱은 파일로 받고, 받을 길이 없으면 글을 클립보드로
-  // 누른 그 순간 안에서 부른다(클립보드는 누름이 있어야 열린다). 돌려주는 값: 'none' | 'file' | 'copy' | 'fail'(복사는 Promise)
+  // 설정 「기록 내보내기」: 손가락 기기는 공유 시트, 그 밖은 파일로 받고, 둘 다 없거나 안 되면 글을 클립보드로
+  // 누른 그 순간 안에서 부른다(공유 시트 · 클립보드는 누름이 있어야 열린다 — share는 맨 먼저, 앞에 await 없이).
+  // 돌려주는 값: 'none' | 'file' | 'copy' | 'fail', 공유 시트 · 복사는 Promise('share' | 'cancel' | 'copy' | 'fail'). 공유를 그만두면 알림 없이 'cancel'
   app.exportRuns = () => {
     const { n, name, text: body } = exportText(store, { app: app.appInfo });
     if (!n) { app.toast('아직 끝낸 판이 없다', PAL.ink); return 'none'; }
-    if (download && download(name, body)) { app.toast(`판 ${n}개를 내보냈다`, PAL.gold); return 'file'; }
     const failed = () => { app.toast('내보내지 못했다', PAL.red); return 'fail'; };
-    if (!copyText) return failed();
-    return copyText(body).then((ok) => { if (!ok) return failed(); app.toast(`판 ${n}개를 복사했다`, PAL.gold); return 'copy'; });
+    const copy = () => {
+      if (!copyText) return failed();
+      return copyText(body).then((ok) => { if (!ok) return failed(); app.toast(`판 ${n}개를 복사했다`, PAL.gold); return 'copy'; });
+    };
+    const sent = share ? share(name, body) : null;
+    if (sent) {
+      return sent.then((r) => {
+        if (r === 'shared') { app.toast(`판 ${n}개를 내보냈다`, PAL.gold); return 'share'; }
+        if (r === 'cancel') return 'cancel';
+        return copy();
+      });
+    }
+    if (download && download(name, body)) { app.toast(`판 ${n}개를 내보냈다`, PAL.gold); return 'file'; }
+    return copy();
   };
   app.noteMove = (score, steps) => {
     if (!app.run) return false;
