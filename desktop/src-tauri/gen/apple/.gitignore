@@ -1,0 +1,6 @@
+xcuserdata/
+build/
+Externals/
+# iOS 빌드가 desktop/dist를 여기에 베낀다(폴더 자리만 남긴다)
+assets/*
+!assets/.gitkeep

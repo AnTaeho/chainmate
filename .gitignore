@@ -4,4 +4,4 @@ node_modules/
 .vercel
 desktop/dist
 desktop/src-tauri/target
-desktop/src-tauri/gen
+desktop/src-tauri/gen/schemas

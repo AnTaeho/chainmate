@@ -5,6 +5,11 @@ description = "체인메이트 — 먹은 기물로 바뀌며 이어 먹는 체�
 edition = "2021"
 publish = false
 
+# iOS는 정적 라이브러리로 묶는다(Tauri 2 모바일). 맥 앱은 main.rs가 같은 run()을 부른다
+[lib]
+name = "chainmate_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
