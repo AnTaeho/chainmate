@@ -23,6 +23,7 @@ before(async () => {
     run: await import('../src/sim/run.js'),
     lessons: await import('../src/ui/lessons.js'),
     moves: await import('../src/ui/screens/moves.js'),
+    codex: await import('../src/ui/screens/codex.js'),
   };
 });
 after(async () => { const { setCanvasFactory } = await import('../src/render/surface.js'); setCanvasFactory(null); M.lang.setLang('ko'); });
@@ -466,4 +467,97 @@ test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) �
   const fairy = moves.movesTab('fairy', list);
   assert.equal(fairy.length, 9);
   assert.deepEqual(fairy.filter((x) => x.fresh).map((x) => x.t), ['G']);
+});
+
+// CHM-46: 도감 격자 칸 이름은 낱말 단위로 두 줄까지 — 한 줄(row)은 가장 긴 이름의 높이, 두 줄로도 안 되는 이름이 있는 탭만 열을 줄인다
+test('도감 격자: 모든 탭 · 모든 이름이 두 줄 안(낱말 단위), 줄 높이는 그 줄의 가장 긴 이름, 쪽은 단추 줄 위', async () => {
+  const { codex, frame, parts, text } = M;
+  const { LEGENDS } = await import('../src/data/legends.js');
+  const room = frame.PAGE.btnY - frame.GAP_GROUP;
+  const seen = {};
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    const c = { maxims: {}, legends: {}, legendsDone: {}, editions: {}, souls: {}, factions: {}, masters: {} };
+    for (const l of LEGENDS) c.legends[l.id] = 1;
+    const scr = new codex.CodexScreen({ records: { codex: c, unlocked: { openings: [] } } });
+    for (const tab of ['maxims', 'pieces', 'souls', 'factions', 'legends', 'openings', 'editions']) {
+      scr.tab = tab;
+      const list = scr.entries(), lay = codex.codexLayout(tab, list);
+      const cells = lay.pages.flat();
+      assert.equal(cells.length, list.length, `${lang} ${tab} 칸 수`);
+      assert.ok(lay.cols * lay.cw + (lay.cols - 1) * 4 <= 456, `${lang} ${tab} 격자 폭`);
+      for (const q of cells) {
+        const e = list[q.i], nm = q.name;
+        assert.ok(nm, `${lang} ${tab} 「${M.lang.L(e.name)}」 두 줄에 안 들어간다(열 ${lay.cols})`);
+        assert.ok(nm.lines.length <= 2 && nm.lines.join(' ') === M.lang.L(e.name), `${lang} ${tab} ${JSON.stringify(nm.lines)}`);
+        for (const l of nm.lines) assert.ok(text.textWidth(l, !nm.thin) <= q.nameW, `${lang} ${tab} 「${l}」 ${text.textWidth(l, !nm.thin)} > ${q.nameW}`);
+        // 줄 높이 = 그 줄에서 가장 긴 이름(한 줄 28 · 두 줄 42)
+        const row = cells.filter((o) => o.y === q.y && lay.pages.findIndex((p) => p.includes(o)) === lay.pages.findIndex((p) => p.includes(q)));
+        assert.equal(q.h, frame.rowBoxH(frame.PAD_CARD, Math.max(...row.map((o) => o.name.lines.length))));
+        assert.ok(q.y + q.h <= room, `${lang} ${tab} 칸 아래 ${q.y + q.h} > ${room}`);
+      }
+      // 열을 줄였다면 하나 더 많은 열에선 두 줄에 안 들어가는 이름이 있다
+      if (lay.cols < 5) {
+        const cw = Math.floor((456 - lay.cols * 4) / (lay.cols + 1));
+        assert.ok(list.some((e) => !parts.wrapName(e.name, cw - frame.PAD_CARD * 2 - (lay.cw - frame.PAD_CARD * 2 - cells.find((o) => o.i === list.indexOf(e)).nameW))), `${lang} ${tab} 열 ${lay.cols}`);
+      }
+      seen[`${lang} ${tab}`] = `${lay.cols}열 ${lay.pages.length}쪽 ${cells.filter((q) => q.name.lines.length > 1).length}두줄`;
+    }
+  }
+  // 두 줄이 실제로 쓰이는 탭이 있다(영어 격언 · 명경기)
+  assert.match(seen['en maxims'], /[1-9]\d*두줄/);
+  assert.match(seen['en legends'], /[1-9]\d*두줄/);
+  M.lang.setLang('ko');
+});
+
+// CHM-46: 판 틀 왼쪽 칸 머리 칸 화면 이름 · 짜임 칸 레퍼토리 이름 · 수업 고르기 이름은 두 줄까지(낱말 단위)
+test('두 줄 이름: 머리 칸 화면 이름 · 레퍼토리 이름 · 수업 이름이 낱말 단위 두 줄 안, 머리 칸은 그 줄 수로 hug', async () => {
+  const { parts, frame, common, text } = M;
+  const { JOSEKIS } = await import('../src/data/josekis.js');
+  const { PACK_NAME } = await import('../src/ui/words.js');
+  const room = frame.LEFT.w - frame.PAD_BOX * 2;
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    const titles = ['상점', '레퍼토리', '관 선택', ...Object.values(PACK_NAME)];
+    for (const t of titles) {
+      const nm = parts.wrapName(t, room);
+      assert.ok(nm && nm.lines.length <= 2, `${lang} 머리 칸 「${M.lang.L(t)}」`);
+      // 머리 칸 높이: 제목 줄마다 18
+      assert.equal(common.headLayout(nm.lines.length, 0).h - common.headLayout(1, 0).h, (nm.lines.length - 1) * frame.LINE_TITLE);
+    }
+    for (const j of JOSEKIS) {
+      const nm = parts.wrapName(j.name, room);
+      assert.ok(nm && nm.lines.length <= 2, `${lang} 레퍼토리 「${M.lang.L(j.name)}」`);
+    }
+    // 수업 고르기: 보통 굵기, 단추 32 안에 두 줄(14 × 2)이 테와 2 이상 띄워 들어간다
+    for (const L of M.lessons.LESSONS) {
+      const nm = parts.wrapName(L.title, 140 - frame.PAD_BOX - 4 - 32, { bold: false });
+      assert.ok(nm && nm.lines.length <= 2 && !nm.thin, `${lang} 수업 「${M.lang.L(L.title)}」`);
+      for (const l of nm.lines) assert.ok(text.textWidth(l) <= 96);
+    }
+  }
+  // 영어 「Engraving Bundle」 · 「Stepping Stones」는 두 줄
+  M.lang.setLang('en');
+  assert.deepEqual(parts.wrapName('각인 꾸러미', room).lines, ['Engraving', 'Bundle']);
+  assert.deepEqual(parts.wrapName('발판', room).lines, ['Stepping', 'Stones']);
+  M.lang.setLang('ko');
+  // 두 줄 단추: 첫 줄 잉크 위 · 둘째 줄 잉크 아래가 테(32의 첫 · 끝 줄)와 2 이상, 빠지는 줄(2)은 테에 닿지 않는다
+  const top = (32 - 2 * frame.LINE) >> 1;
+  const ink0 = frame.textY(top), ink1 = frame.textY(top + frame.LINE) + 11;
+  assert.ok(ink0 - 1 >= 2 && 31 - ink1 >= 2 && ink1 + 2 <= 30, `수업 단추 두 줄 ${ink0} · ${ink1}`);
+});
+
+// 짜임 칸: 레퍼토리 이름이 두 줄이 되어도(영어 「Stepping Stones」) 시너지 이름표 줄과 레퍼토리 줄이 칸 안 —
+// 칩 줄이 하나도 안 들어가면 이름표 줄 오른쪽 「+N」(제목 두 줄 · 레퍼토리 넷 줄 = 영어 각인 꾸러미 + Stepping Stones를 낀 레퍼토리 셋)
+test('짜임 칸: 두 줄 머리 칸 · 두 줄 레퍼토리 이름 · 레퍼토리 셋이어도 시너지 이름표 줄과 레퍼토리 줄이 칸 안에 들어간다', () => {
+  const { common, frame } = M;
+  const { PAD_BOX: P, LINE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H } = frame;
+  for (const [titleLines, jsLines] of [[1, 3], [1, 4], [2, 3], [2, 4], [2, 2]]) {
+    const st = common.sideStack(common.headLayout(titleLines, 0).h, common.footLayout(3).h);
+    const jsH = GAP_GROUP + LINE + GAP_IN + jsLines * LINE;
+    assert.ok(P * 2 + LINE + jsH <= st.mid.h, `제목 ${titleLines}줄 · 레퍼토리 ${jsLines}줄: 짜임 칸 ${st.mid.h}`);
+    // 레퍼토리 셋이 한 줄씩이면 칩 줄 하나는 들어간다(지금까지와 같다)
+    if (titleLines === 1 && jsLines === 3) assert.ok(P * 2 + LINE + GAP_IN + FAM_ROW + jsH <= st.mid.h);
+  }
+  assert.equal(FAM_ROW - FAM_H, 2);
 });
