@@ -21,6 +21,7 @@ export class UI {
     this.termSpans = [];   // 글 안 낱말 자리(richText가 적는다)
     this.side = [];        // 판 틀 왼쪽 칸 판넬(설명 자리 접기 — fold.js)
     this.touch = false;    // 손가락으로 누르는 중(app이 넘긴다)
+    this.finger = 0;       // 손가락 기기면 44pt가 몇 도트인지(app이 그릴 때마다 넘긴다 — fingerDots), 마우스면 0
     this.previewId = null; // 손가락: 한 번 누른 카드(한 번 더 누르면 산다 · 고른다)
   }
   begin() { this.last = this.regions; this.regions = []; this.termSpans = []; this.side = []; }
@@ -81,10 +82,33 @@ export class UI {
   }
 }
 
+// 손가락 누르는 구역(CHM-52): 손가락 기기면 실제 화면 44pt(CSS 화소)를 도트로 몇 칸인지. 마우스 기기면 0(구역을 넓히지 않는다).
+// app.pixelScale = 도트 하나의 CSS 크기(main.js), app.coarse = 손가락 기기(첫 그림부터), app.touch = 손가락으로 누른 적 있음
+export const FINGER_PT = 44;
+export function fingerDots(app) {
+  if (!app || !(app.coarse || app.touch)) return 0;
+  return Math.ceil(FINGER_PT / (app.pixelScale > 0 ? app.pixelScale : 1));
+}
+// 누르는 구역 (x, y, w, h)를 need 도트까지 넓힌다. room = 쪽마다 넓힐 수 있는 최대 도트 { l, r, u, d }(없으면 0).
+// 모자라는 몫은 넓힐 수 있는 쪽에 반씩, 한쪽이 막히면 다른 쪽이 나머지를 진다. 그림은 그대로, 구역만 넓어진다
+export function growHit(x, y, w, h, need, room = {}) {
+  const side = (deficit, a, b) => {
+    if (deficit <= 0) return [0, 0];
+    let ea = Math.min(a, Math.ceil(deficit / 2)), eb = Math.min(b, deficit - ea);
+    ea = Math.min(a, deficit - eb);
+    return [ea, eb];
+  };
+  const [l, r] = side(need - w, room.l || 0, room.r || 0);
+  const [u, d] = side(need - h, room.u || 0, room.d || 0);
+  return { x: x - l, y: y - u, w: w + l + r, h: h + u + d };
+}
+
 // 버튼: 글자 버튼(도트 테두리). 누를 수 없으면 흐리게.
-// label이 비면 아이콘(7)만 가운데 — 이름은 tip(말풍선)으로
-export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null } = {}) {
-  const r = ui.region(id, x, y, w, h, { enabled, onClick, ...(tip ? { tip } : {}) });
+// label이 비면 아이콘(7)만 가운데 — 이름은 tip(말풍선)으로.
+// grow: 손가락 기기에서 누르는 구역을 넓힐 수 있는 쪽마다 최대 도트 { l, r, u, d }(이웃 단추 · 칸과 겹치지 않는 만큼, CHM-52). 그림은 그대로
+export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null, grow = null } = {}) {
+  const g = grow && ui.finger ? growHit(x, y, w, h, ui.finger, grow) : { x, y, w, h };
+  const r = ui.region(id, g.x, g.y, g.w, g.h, { enabled, onClick, ...(tip ? { tip } : {}) });
   const hov = enabled && ui.isHover(id);
   const pressed = hov && ui.press && ui.press.id === id;
   const fills = {

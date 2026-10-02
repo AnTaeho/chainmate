@@ -10,7 +10,7 @@ import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, lift, fine, measure } from '../render/gfx.js';
 import { wrap } from '../render/text.js';
 import { LINE, BTN_S, LIST_GAP, inkY } from './frame.js';
-import { UI, tooltip, bigTooltip, tipHeight, tipTexts } from './ui.js';
+import { UI, tooltip, bigTooltip, tipHeight, tipTexts, fingerDots } from './ui.js';
 import { miniShard } from './parts.js';
 import { setLang } from './lang.js';
 import { termsIn, keyList, keyHeight, drawKeyBox } from './glossary.js';
@@ -311,6 +311,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.draw = () => {
     const ui = app.ui;
     ui.begin();
+    ui.finger = fingerDots(app);
     logBegin();
     ctx.setTransform(app.scale, 0, 0, app.scale, 0, 0);
     ctx.imageSmoothingEnabled = false;

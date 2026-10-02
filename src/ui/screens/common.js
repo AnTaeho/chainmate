@@ -4,7 +4,7 @@ import { W, text, rect, measure } from '../../render/gfx.js';
 import { ANTES } from '../../sim/run.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { panel, tipLines, optLine, fragmentStrip, wrapName, drawName } from '../parts.js';
-import { button } from '../ui.js';
+import { button, fingerDots, growHit } from '../ui.js';
 import { familyList, familyMore } from '../parts-depth.js';
 import { familyCounts } from '../../data/families.js';
 import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, flow, rowSpan } from '../frame.js';
@@ -18,10 +18,18 @@ export function lightHue(hex, k = 0.25) {
   return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
+// 멈춤 단추(≡): 마우스 기기는 10×10 그림 · 16×14 구역. 손가락 기기(CHM-52)는 그림을 14×12로 키우고(오른쪽 · 아래로만 — 왼쪽은 정석 표 ·
+// 「행마」 · 수업 건너뛰기가 붙어 있다), 누르는 구역은 실제 화면 44pt까지 오른쪽 · 위로 넓힌다(캔버스 밖 여백까지 — main.js가 틀 전체에서 손가락을 받는다).
+// 아래는 본 칸 윗변(TOP 22) 앞에서 멈춘다
 export function pauseButton(ctx, ui, app, x = PAUSE.x, y = PAUSE.y) {
   const id = 'btn:pause';
-  ui.region(id, x - 2, y - 2, 16, 14, { onClick: () => app.openOverlay('pause') });
+  const need = fingerDots(app);
+  if (need) {
+    const r = growHit(x - 2, y - 2, 18, 18, need, { r: Infinity, u: Infinity, d: 0 });
+    ui.region(id, r.x, r.y, r.w, r.h, { onClick: () => app.openOverlay('pause') });
+  } else ui.region(id, x - 2, y - 2, 16, 14, { onClick: () => app.openOverlay('pause') });
   const col = ui.isHover(id) ? PAL.gold : PAL.dim;
+  if (need) { rect(ctx, x + 1, y + 1, 14, 2, col); rect(ctx, x + 1, y + 6, 14, 2, col); rect(ctx, x + 1, y + 11, 14, 2, col); return; }
   rect(ctx, x + 1, y + 1, 10, 2, col); rect(ctx, x + 1, y + 5, 10, 2, col); rect(ctx, x + 1, y + 9, 10, 2, col);
 }
 

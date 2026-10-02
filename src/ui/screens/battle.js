@@ -1643,7 +1643,8 @@ export class BattleScreen {
       const room = mx - RX - 4, full = `격언 ${maximCount(run)}/${maximCapacity(run)}`, count = `${maximCount(run)}/${maximCapacity(run)}`;
       const label = measure(full) <= room ? full : measure(count) <= room ? count : null;
       if (label) text(ctx, label, RX, 8, PAL.dim);
-      button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves() });
+      // 손가락 구역(CHM-52): 위로는 캔버스 밖 여백까지, 아래로는 본 칸 윗변(TOP) 앞까지, 옆으로는 이름표 쪽(정석 표 · 멈춤은 오른쪽)
+      button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { l: Math.max(0, mx - RX - 4), u: Infinity, d: Math.max(0, TOP - 1 - 2 - BTN_S) } });
       josekiBadges(ctx, ui, run, bx, 9);
       const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
       maximColumn(ctx, ui, run, RX, TOP, RW, lay.room, { offUids: off });
@@ -1656,11 +1657,16 @@ export class BattleScreen {
     const row = this.handRowLayout();
     if (row.label) text(ctx, '손', RX, inkY(ry, BTN_S), PAL.dim);
     this.drawTactics(ctx, ui, ry, row);
-    if (row.rb != null) button(ctx, ui, 'btn:reboard', row.rb, ry, 15, BTN_S, '', { onClick: () => this.reboard(), icon: reboardIcon, tip: () => tipLines('다시 놓기', []) });
+    const db = discardButton();
+    // 손가락 구역(CHM-52): 위로 시너지 띠까지의 틈(GAP_GROUP − 1), 다시 놓기는 옆으로 「손」 글자 · 희생 단추 앞 틈까지
+    const upRoom = GAP_GROUP - 1;
+    if (row.rb != null) {
+      const left = row.tactics.length ? 1 : Math.max(0, row.rb - RX), right = Math.max(0, RX + RW - db.w - (row.rb + 15) - 1);
+      button(ctx, ui, 'btn:reboard', row.rb, ry, 15, BTN_S, '', { onClick: () => this.reboard(), icon: reboardIcon, tip: () => tipLines('다시 놓기', []), grow: { l: left, r: right, u: upRoom } });
+    }
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    const db = discardButton();
-    button(ctx, ui, 'btn:discard', RX + RW - db.w, ry, db.w, BTN_S, '희생', { enabled: !!canDiscard, onClick: () => this.discard(), icon: db.icon ? discardIcon : null, tone: canDiscard ? 'red' : 'plain' });
+    button(ctx, ui, 'btn:discard', RX + RW - db.w, ry, db.w, BTN_S, '희생', { enabled: !!canDiscard, onClick: () => this.discard(), icon: db.icon ? discardIcon : null, tone: canDiscard ? 'red' : 'plain', grow: { u: upRoom } });
     const drawn = v.drawn || [], hiding = v.hiding || [], deal = this.dealIn;
     v.hand.forEach((p, i) => {
       const hr = this.handRect(i, v.hand.length, lay);
