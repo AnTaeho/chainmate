@@ -342,6 +342,13 @@ function endBattle(run, events) {
   // 하네스용(CHM-55): 그 모습으로 먹은 수(먹을 때의 모습)
   const took = {};
   for (const h of b.history) for (const t of h.took || '') took[t] = (took[t] || 0) + 1;
+  // 하네스용(CHM-56): 광대 진단 — 붙은 칸이라서만 먹은 수 · 흉내로 먹은 수 · 광대로 떨군 사슬 · 광대 모습을 거친 사슬 · 모든 사슬(수 · 먹은 수)
+  const jd = { a: 0, m: 0, dropN: 0, dropCaps: 0, viaN: 0, viaCaps: 0, allN: 0, allCaps: 0 };
+  for (const h of b.history) {
+    jd.allN++; jd.allCaps += h.captures;
+    if (h.piece === 'M') { jd.dropN++; jd.dropCaps += h.captures; }
+    if (h.jm) { jd.viaN++; jd.viaCaps += h.captures; for (const ch of h.jm) jd[ch]++; }
+  }
   const row = {
     ante: run.ante, blind: run.blind, kind: info.kind, faction: info.faction, master: info.master, target: b.target ?? info.target,
     score: b.score, won, reason: b.result.reason, moves: b.movesUsed, best,
@@ -355,6 +362,7 @@ function endBattle(run, events) {
     reboards: b.reboards || 0,
     worn,
     took,
+    jd,
   };
   run.log.push(row);
   if (!won) {
