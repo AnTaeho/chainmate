@@ -3,7 +3,7 @@
 // 확인: 예외 0 · 모든 화면 방문 · 프레임당 그리기 시간 · 한 수 연출 시간(×1) · 저장 → 이어 하기.
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle } from './bot.mjs';
-import { lineCommands, previewDrop } from '../src/sim/solver.js';
+import { lineCommands, previewDrop, bestMove } from '../src/sim/solver.js';
 import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
@@ -168,7 +168,9 @@ const objTips = { step: 0, gate: 0, highway: 0, wall: 0, gem: 0, trap: 0 };
 // 밤샘 2: 시계(대국을 지고 다음 대국으로) · 다시 놓기(첫 수 전 단추)
 // 세력(factions.js): 판마다 섞인 차례 · 대국에서 만난 세력 · 관 선택의 세력 띠와 다음 관 문장 · 처음 안내
 const facSeen = { met: new Set(), orders: new Set(), runs: 0, band: 0, next: 0, bad: [] };
-const n2 = { forced: false, clockBefore: null, clockLost: 0, clockShop: 0, clockNext: 0, clockBad: [], reboard: 0, reboardBot: 0, reboardBad: 0, tried: false, waitNext: false };
+const n2 = { forced: false, clockBefore: null, clockLost: 0, clockShop: 0, clockNext: 0, clockBad: [], reboard: 0, reboardBot: 0, reboardBad: 0, tried: false, waitNext: false, worse: null };
+// 복기(CHM-59): 진 대국마다 갈림길 카드(복기 중 → 카드 · 길 없음 · 찾지 못함), 「다시 두기」 화면(▶ 끝까지 → 이김, ◀ 한 번, 키 좌우), 「넘어가기」
+const rvSeen = { unk: [], lost: 0, cards: 0, kinds: { path: 0, none: 0, unknown: 0 }, replays: 0, won: 0, back: 0, keys: 0, moveon: 0, frames: [], bad: [] };
 // 손은 하나만 든다: 둘을 차례로 눌러도 든 것은 나중 것 하나, 든 것을 다시 누르면 놓인다
 const pickSeen = { swap: 0, swapBad: 0, off: 0, offBad: 0 };
 // 낱말 상자: 카드를 가리키면 옆에 낱말 상자가 1개 이상, 카드 · 말풍선을 가리지 않고 화면 안에.
@@ -341,6 +343,8 @@ const HINT_SUBJECT = {
   clock: (id, run) => id === 'clock' && run.log.some((x) => x.clockLost),
   crack: (id, run) => { const p = run.deck.find((x) => `deck:${x.id}` === id); return !!(p && isCracked(p)); },
   // 탁월수(CHM-43): 가리킨 손 카드가 희생으로 새로 뽑은 기물(「!?」 딱지)
+  // 복기(CHM-59): 길 있음 갈림길 카드의 「다시 두기」
+  replay: (id) => id === 'btn:replay' && scrName() === 'battle' && !!app.screen.rv && app.screen.rv.phase === 'card' && app.screen.rv.res.kind === 'path',
   brilliant: (id, run) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')], off = run.battle && run.battle.offering; return !!(p && off && (off.drawn || []).includes(p.id)); },
 };
 function hintSubject() {
@@ -415,9 +419,13 @@ function battleStep() {
     return;
   }
   // 시계: 2관 첫 대국을 한 번 일부러 진다(수 하나 · 먼 목표) → 시계 한 칸을 잃고 보상 없이 상점(CHM-20)을 거쳐 다음 대국으로 가야 한다
+  // 복기(CHM-59): 목표는 이 손의 최선 사슬 점수, 일부러 그보다 낮은 떨구기를 둔다 → 진 뒤 갈림길 카드가 그 수를 짚어야 한다
   if (!n2.forced && app.run.ante === 2 && b.movesUsed === 0 && !s.busy && app.run.clock > 1) {
     n2.forced = true; n2.clockBefore = { clock: app.run.clock, ante: app.run.ante, blind: app.run.blind, money: app.run.money };
-    b.movesLeft = 1; b.target = 1e12; s.sync();
+    const collect = [], best = bestMove(b, { collect, preferMate: false });
+    const worse = best && !best.mate && collect.find((c) => c.score < best.score && !c.mate);
+    b.movesLeft = 1; b.target = worse ? b.score + best.score : 1e12; s.sync();
+    n2.worse = worse ? { handIndex: worse.handIndex, sq: worse.sq, line: worse.line } : null;
   }
   // 판 조정의 다시 놓기를 끄면(tuning.js) 단추가 없어야 한다
   if (!reboardOn() && region('btn:reboard')) n2.reboardBad++;
@@ -431,7 +439,8 @@ function battleStep() {
     n2.reboard++;
     return;
   }
-  const d = decideBattle(b);
+  const d = n2.worse && b.movesUsed === 0 ? { play: n2.worse } : decideBattle(b);
+  n2.worse = null;
   if (!d) throw new Error('no decision');
   if (d.reboard) {
     if (!region('btn:reboard')) { n2.reboardBad++; throw new Error('bot wants to reboard but no button'); }
@@ -515,6 +524,48 @@ function battleStep() {
   }
   measureSeq(s);
 }
+
+// 진 대국: 복기 중 한 줄 → 갈림길 카드(길 있음이면 판 위 「?」 · 「!」). 처음 길 있음 카드는 「다시 두기」, 그 밖은 「넘어가기」
+function reviewStep() {
+  const s = app.screen;
+  rvSeen.lost++;
+  let n = 0;
+  while (app.screen === s && s.rv && s.rv.phase === 'think' && n < 1200) { pump(1); n++; }
+  rvSeen.frames.push(n);
+  if (app.screen !== s || !s.rv) { rvSeen.kinds.unknown++; const rr = s.reviewRes; rvSeen.unk.push(`${s.bRef ? s.bRef.ante : '?'}관 ${rr && rr.wall ? '시간' : `마디 ${rr ? rr.nodes : '?'}`}`); return; } // 찾지 못함: 카드 없이 지금 흐름
+  const r = s.rv.res;
+  rvSeen.cards++; rvSeen.kinds[r.kind]++;
+  pump(2);
+  if (r.kind === 'path') {
+    if (!region('btn:replay') || !region('btn:moveon')) rvSeen.bad.push('길 있음 카드에 단추 둘이 없다');
+    if (s.b.movesUsed !== r.move - 1) rvSeen.bad.push(`카드 판이 갈림길 상태가 아니다 ${s.b.movesUsed}/${r.move}`);
+    if (app.run.log.at(-1).replay !== 'path') rvSeen.bad.push('대국 줄에 복기 결과가 없다');
+    if (!rvSeen.replays) { notesOnce('review-card', 2); rvSeen.replays++; click('btn:replay'); pump(2); if (screen() !== 'review') rvSeen.bad.push(`다시 두기 → ${screen()}`); return; }
+  } else if (region('btn:replay')) rvSeen.bad.push('길 없음 카드에 다시 두기');
+  click('btn:moveon'); rvSeen.moveon++; pump(2);
+  if (screen() === 'battle' && app.screen.rv) rvSeen.bad.push('넘어가기가 카드를 닫지 않았다');
+}
+// 다시 두기: ▶로 끝까지(마지막 수 뒤 이긴 대국) → ◀ 한 번(한 수 앞 상태로) → 키 →로 다시 끝까지 → 「넘어가기」
+function reviewWalk() {
+  let s = app.screen, guard = 0;
+  const n = s.n;
+  const toEnd = () => { while (guard++ < 40) { s = app.screen; idle2(s); if (s.i >= n) break; click('btn:forward'); pump(1); } s = app.screen; idle2(s); };
+  toEnd();
+  if (s.i !== n || s.live().status !== 'won') rvSeen.bad.push(`다시 두기 끝 ${s.i}/${n} ${s.live().status}`);
+  else rvSeen.won++;
+  notesOnce('review', 2);
+  if (!rvSeen.back) {
+    click('btn:back'); pump(2); rvSeen.back++;
+    s = app.screen;
+    if (s.name !== 'review' || s.i !== n - 1 || s.live().status === 'won') rvSeen.bad.push(`◀ 뒤 ${s.i}/${n}`);
+    dom.key('ArrowRight'); pump(1); idle2(app.screen); rvSeen.keys++;
+    s = app.screen;
+    if (s.i !== n || s.live().status !== 'won') rvSeen.bad.push(`→ 뒤 ${s.i}/${n} ${s.live().status}`);
+  }
+  click('btn:moveon'); rvSeen.moveon++; pump(2);
+  if (screen() === 'review') rvSeen.bad.push('다시 두기 넘어가기가 화면을 넘기지 않았다');
+}
+function idle2(s, max = 3000) { let k = 0; while (app.screen === s && (s.busy || s.playing) && k < max) { pump(1); k++; } if (k >= max) throw new Error('review animation never ends'); }
 
 function shopStep() {
   const run = app.run;
@@ -649,6 +700,8 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
     }
     if (name === 'select') { notesOnce('select', 4); if (n2.waitNext || !(app.run.blind < 2 && rnd() < 0.15)) click('select:play'); else click('select:skip'); pump(2); if (n2.waitNext && screen() === 'battle') { n2.clockNext++; n2.waitNext = false; n2.clockBefore = null; } continue; }
     if (name === 'chest') { click('next'); pump(2); notesOnce('chest', 4); click('next'); pump(1); continue; }
+    if (name === 'battle' && app.screen.rv) { reviewStep(); continue; }
+    if (name === 'review') { reviewWalk(); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
     // 각성 막간(금이 간 혼이 금빛 적을 먹고 이긴 뒤 저절로 열린다 — 판 흐름에 따라 이 길에서도 나온다)
     if (name === 'reward' || name === 'chest' || name === 'legend' || name === 'awaken') { if (name === 'awaken') pump(60); click('next'); pump(1); if (screen() === name) click('next'); continue; }
@@ -922,6 +975,8 @@ if (app.run.phase === 'won') {
     const name = screen();
     if (name === 'draft') { pump(40); click('draft:0'); pump(60); continue; }
     if (name === 'select') { click('select:play'); pump(2); continue; }
+    if (name === 'battle' && app.screen.rv) { reviewStep(); continue; }
+    if (name === 'review') { reviewWalk(); continue; }
     if (name === 'battle') { idle(); if (app.screen.name === 'battle' && app.run.battle) battleStep(); else pump(1); continue; }
     if (name === 'reward' || name === 'chest' || name === 'legend' || name === 'awaken') { if (name === 'awaken') pump(60); click('next'); pump(1); if (screen() === name) click('next'); continue; }
     if (name === 'shop') { shopStep(); continue; }
@@ -1595,7 +1650,7 @@ function checkShops(name, out, { firstNoMaxim = false } = {}) {
 }
 
 seen();
-const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves'];
+const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review'];
 const missing = need.filter((n) => !visited.has(n));
 const ms = app.stats.drawMs.slice().sort((a, b) => a - b);
 const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;
@@ -1620,6 +1675,7 @@ console.log(`대국 띠 「새로」: 대국 ${newsSeen.battles} · 그림 ${new
 console.log(`손 고르기: 둘을 차례로 ${pickSeen.swap}(둘 이상 남음 ${pickSeen.swapBad}) · 다시 눌러 놓기 ${pickSeen.off}(안 놓임 ${pickSeen.offBad})`);
 console.log(`판 위 사물 말풍선: 발판 ${objTips.step} · 문 ${objTips.gate} · 고속도로 ${objTips.highway} · 벽 ${objTips.wall} · 보석 ${objTips.gem} · 함정 ${objTips.trap}`);
 console.log(`시계 · 다시 놓기: 시계를 잃고 상점 ${n2.clockLost} → ${n2.clockShop} → 다음 대국 ${n2.clockNext}(어긋남 ${n2.clockBad.length}${n2.clockBad.length ? ': ' + n2.clockBad.join(' | ') : ''}) · 다시 놓기${reboardOn() ? '' : '(끔)'} ${n2.reboard}(봇 ${n2.reboardBot}, 어긋남 ${n2.reboardBad})`);
+{ const fr = rvSeen.frames.slice().sort((a, b) => a - b); console.log(`복기: 진 대국 ${rvSeen.lost} · 카드 ${rvSeen.cards}(길 ${rvSeen.kinds.path} · 길 없음 ${rvSeen.kinds.none} · 찾지 못함 ${rvSeen.kinds.unknown}) · 복기 중 프레임 p50 ${fr[fr.length >> 1] ?? '-'} · 최대 ${fr[fr.length - 1] ?? '-'} · 다시 두기 ${rvSeen.replays}(끝까지 이김 ${rvSeen.won} · ◀ ${rvSeen.back} · 키 ${rvSeen.keys}) · 넘어가기 ${rvSeen.moveon}${rvSeen.unk.length ? ` · 찾지 못한 대국 ${rvSeen.unk.join(', ')}` : ''} · 기록 본 수 ${app.records.reviews || 0} · 다시 두기 ${app.records.reviewReplays || 0}${rvSeen.bad.length ? ' · 어긋남 ' + rvSeen.bad.join(' | ') : ''}`); }
 console.log(`이어 하기: ${reloaded ? '확인' : '못 함'} · 설정: ${settingsSeen ? '확인' : '못 함'} · 격언 끌기: ${draggedMaxim ? '확인' : '못 함'}`);
 console.log(`판 위 표시: 칸 · 화살표 ${marksSeen.board} · 왼쪽 누르기로 지움 ${marksSeen.clear ? '확인' : '못 함'} · 상점 오른쪽 누르기 ${marksSeen.shop}(아무 일 없음)`);
 console.log(`사슬 중 목표를 넘긴 채 먹기: ${passSeen.n}번 · 입력이 막힘 ${passSeen.blocked}`);
@@ -1635,6 +1691,7 @@ if (!pickSeen.swap || !pickSeen.off || pickSeen.swapBad || pickSeen.offBad) { co
 if (!passSeen.n || passSeen.blocked) { console.log('사슬 중 목표를 넘긴 장면을 못 봤거나, 그때 입력이 막혔다'); fail = true; }
 if (!shopBack.trips || shopBack.changed || shopBack.stray || shopBack.overlap) { console.log('관 선택에서 상점으로 오가지 못했거나, 오가며 상점이 바뀌었거나, 상점이 없는데 단추가 있거나, 단추가 판의 길과 겹친다'); fail = true; }
 if (!n2.clockLost || !n2.clockShop || !n2.clockNext || n2.clockBad.length || (reboardOn() && !n2.reboard) || n2.reboardBad || (!reboardOn() && n2.reboard)) { console.log('시계를 잃고 상점을 거쳐 다음 대국으로 가지 못했거나, 다시 놓기가 어긋났다'); fail = true; }
+if (!rvSeen.kinds.path || !rvSeen.replays || !rvSeen.won || !rvSeen.back || rvSeen.bad.length) { console.log('진 대국 → 갈림길 카드 → 다시 두기 → 넘어가기를 다 걷지 못했다'); fail = true; }
 if (marksSeen.board !== 3 || !marksSeen.clear || !marksSeen.shop) { console.log('판 위 표시(오른쪽 누르기)를 다 확인하지 못했다'); fail = true; }
 if (LANG !== 'ko') {
   const { untranslated } = await import('../src/ui/lang.js');
