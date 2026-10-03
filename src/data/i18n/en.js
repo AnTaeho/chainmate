@@ -103,6 +103,10 @@ export const EN = {
   '벽과 보석은 가리키면 무엇을 하는지 보인다': 'Point at walls and gems to see what they do',
   '특수 기물은 체스에 없는 행마를 쓴다. 누르면 먹을 칸이 보인다': 'Special pieces move in ways chess does not. Tap one to see what it can take',
   '점선 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다': 'A dotted shadow marks a recruit. An enemy arrives there when this move ends',
+  // 복기(CHM-59)
+  '이길 길도 이 대국의 실제 뽑기와 증원 그대로 둔 길이다': 'The winning line uses this match’s real draws and recruits',
+  '이 판은 길이 없었다': 'No winning line on this board', '복기 중…': 'Reviewing…', '다시 두기': 'Replay', '넘어가기': 'Move on',
+  '판을 다시 놓았다면 이겼다': 'A new board would have won', '네 수': 'Your move', '이길 길': 'Winning line', '앞 수': 'Previous move', '다음 수': 'Next move', '복기': 'Review',
   '격언을 누르면 팔 수 있고, 끌면 순서가 바뀐다': 'Tap a maxim to sell it. Drag to reorder',
   // ── 화면
   // 혼(깊이 C)
@@ -496,6 +500,16 @@ const KIND = { '연습 대국': 'Practice', '정식 대국': 'Rated', 마스터�
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
   [/^(\d+)개$/, (m) => `${m[1]}`],
+  // 복기(CHM-59) 갈림길 카드 · 다시 두기: 「 · 」로 쪼개기 전에
+  [/^(\d+)수째가 갈림길이었다$/, (m) => `Move ${m[1]} was the turning point`],
+  [/^(.+?)[을를] ([a-h][1-8])에 떨궜다면 이겼다$/, (m, tr) => `${tr(m[1])} on ${m[2]} would have won`],
+  [/^(.+?)[을를] 바쳤다면 이겼다$/, (m, tr) => `Sacrificing the ${tr(m[1]).toLowerCase()} would have won`],
+  [/^([a-h][1-8])의 (.+?)[을를] 먹었다면 이겼다$/, (m, tr) => `Taking the ${tr(m[2]).toLowerCase()} on ${m[1]} would have won`],
+  [/^([a-h][1-8])의 적을 먹었다면 이겼다$/, (m) => `Taking ${m[1]} would have won`],
+  [/^([a-h][1-8])에 다시 떨궜다면 이겼다$/, (m) => `Dropping again on ${m[1]} would have won`],
+  [/^네 수 (.+) · 이길 길 (.+) \/ 목표 (.+)$/, (m) => `You ${m[1]} · Winning line ${m[2] === '메이트' ? 'Mate' : m[2]} / Target ${m[3]}`],
+  [/^복기 · (\d+)\/(\d+)수$/, (m) => `Review · ${m[1]}/${m[2]}`],
+  [/^네 수 (.+) · 이길 길 (.+)$/, (m) => `You ${m[1]} · Winning line ${m[2] === '메이트' ? 'Mate' : m[2]}`],
   // 혼 각성(CHM-17): 효과 글에 「 · 」가 끼어 쪼개기 전에 본다
   [/^금이 갔다 · 깨어나면: (.+)$/, (m, tr) => `Cracked · awakened: ${tr(m[1])}`],
   [/^각성 · (.+)$/, (m, tr) => `Awakened · ${tr(m[1])}`],
