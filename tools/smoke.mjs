@@ -1317,7 +1317,8 @@ const brillSeen = { sac: 0, deal: 0, tag: 0, hint: 0, row: 0, gone: 0, fx: 0, fl
 }
 
 // 새 특수 기물(CHM-55): 까마귀는 먹은 칸(e5) 너머(f6)에 앉아 그려지고, 화약병은 둘레 적을 터뜨리고 사슬이 끝난다. 한 수 연출(×1)을 잰다
-const fairySeen = { land: 0, path: 0, gone: 0, blast: 0, board: 0, sec: [], bad: [] };
+// CHM-57: 까마귀는 잇따라 넘고(짧은 포물선 둘), 꺾쇠는 두 번 꺾은 길 · 물수제비는 튕긴 길로 움직이며 사슬 길도 꺾여 남는다
+const fairySeen = { land: 0, path: 0, gone: 0, blast: 0, board: 0, hops: 0, bend: 0, bounce: 0, trail: 0, sec: [], bad: [] };
 {
   const bad = (m) => fairySeen.bad.push(m);
   app.overlay = null; app.nextSeed = 15; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
@@ -1330,9 +1331,12 @@ const fairySeen = { land: 0, path: 0, gone: 0, blast: 0, board: 0, sec: [], bad:
     const b = app.run.battle, s = app.screen;
     const at = (n) => n.charCodeAt(0) - 97 + 8 * (Number(n[1]) - 1);
     // 까마귀: d4에 떨궈 e5 나이트를 넘어 f6에 앉는다(나이트가 되어 g4 폰까지)
-    b.board = boardFrom({ h8: 'K', e5: 'N', g4: 'P' }); b.incoming = []; b.incomingNext = [];
-    b.hand = ['V', 'D', 'P', 'P'].map((t, i) => ({ t, id: 960 + i, eng: null }));
-    b.target = 1e9; b.movesLeft = Math.max(3, b.movesLeft);
+    // (CHM-57) e7 비숍을 더 놓아 나이트가 된 뒤에도 넘어 d8에 앉는다 — 넘기 둘
+    b.board = boardFrom({ h8: 'K', e5: 'N', e7: 'B' }); b.incoming = []; b.incomingNext = [];
+    b.hand = ['V', 'D', 'T', 'E'].map((t, i) => ({ t, id: 960 + i, eng: null }));
+    b.target = 1e9; b.movesLeft = Math.max(4, b.movesLeft);
+    let lastMover = null;
+    const watch = () => { const m = s.view.mover; if (m && m !== lastMover) { lastMover = m; if (m.route && m.route.kind === 'hop') fairySeen.hops++; } };
     s.sync(); pump(2);
     click('hand:0'); pump(1);
     s.seq.total = 0; s.seq.trace = [];
@@ -1344,12 +1348,14 @@ const fairySeen = { land: 0, path: 0, gone: 0, blast: 0, board: 0, sec: [], bad:
       const v = s.view;
       if (v.board[at('f6')] && v.board[at('f6')].mine && !v.board[at('e5')] && !v.mover) landed = true;
       if (v.chain && v.chain.path.includes(at('f6'))) fairySeen.path = 1;
+      watch();
     }
     if (landed) fairySeen.land++; else bad('까마귀가 앉는 칸(f6)에 그려지지 않았다');
     if (!fairySeen.path) bad('사슬 길에 앉는 칸이 없다');
-    for (let n = 0; n < 4 && b.status === 'chain' && b.chain && !b.chain.done; n++) { const l = chainCaptures(b); if (!l.length) break; click(`sq:${l[0]}`); for (let k = 0; k < 600 && s.busy; k++) pump(1); }
+    for (let n = 0; n < 4 && b.status === 'chain' && b.chain && !b.chain.done; n++) { const l = chainCaptures(b); if (!l.length) break; click(`sq:${l.includes(at('e7')) ? at('e7') : l[0]}`); for (let k = 0; k < 600 && s.busy; k++) { pump(1); watch(); } }
     idle();
     measureSeq(s); fairySeen.sec.push(s.seq.total);
+    if (fairySeen.hops < 2) bad(`까마귀가 잇따라 넘지 않았다(넘기 ${fairySeen.hops})`);
     const cap = (b.history.at(-1) || {});
     if (cap.piece === 'V' && b.board[at('e5')] == null) fairySeen.gone++; else bad(`까마귀 사슬 기록이 어긋났다(${JSON.stringify(cap)})`);
     // 화약병: d5에 떨궈 c6 나이트를 먹으면 b7 · c7 · d7이 함께 터지고 사슬이 끝난다
@@ -1368,6 +1374,31 @@ const fairySeen = { land: 0, path: 0, gone: 0, blast: 0, board: 0, sec: [], bad:
       if (h.piece === 'D' && h.reason === 'blast') fairySeen.blast++; else bad(`화약병 사슬이 터짐으로 끝나지 않았다(${JSON.stringify(h)})`);
       if (['b7', 'c7', 'd7', 'c6'].every((n) => !b.board[at(n)]) && b.board[at('h8')]) fairySeen.board++; else bad('터진 칸이 비지 않았다');
     } else bad(`까마귀 뒤 대국이 둘 차례가 아니다(${b.status})`);
+    // 꺾쇠(CHM-57): b2에 떨궈 e5 나이트를 먹는다 — 곧장 꺾는 칸 b5 · e2를 적이 막아 두 번 꺾는 길(c2 · c5)로 간다
+    // 물수제비: c1에 떨궈 a3에서 튕겨 d6 룩을 먹는다
+    for (const [t, drop, target, map, key] of [['T', 'b2', 'e5', { h8: 'K', e5: 'N', b5: 'P', e2: 'P' }, 'bend'], ['E', 'c1', 'd6', { h8: 'K', d6: 'R' }, 'bounce']]) {
+      if (b.status !== 'play') { bad(`${t} 앞에서 대국이 둘 차례가 아니다(${b.status})`); break; }
+      b.board = boardFrom(map); b.incoming = []; b.incomingNext = [];
+      s.sync(); pump(2);
+      const i = b.hand.findIndex((p) => p.t === t);
+      if (i < 0) { bad(`손에 ${t}가 없다`); break; }
+      click(`hand:${i}`); pump(1);
+      s.seq.total = 0; s.seq.trace = [];
+      click(`sq:${at(drop)}`); idle();
+      click(`sq:${at(target)}`);
+      let corners = 0, trail = false;
+      for (let n = 0; n < 600 && app.screen === s && s.busy; n++) {
+        pump(1);
+        const v = s.view, m = v.mover;
+        if (m && m.route && m.route.kind === 'bend') corners = Math.max(corners, m.route.pts.length - 2);
+        if (v.chain && (v.chain.bends || []).some((x) => x && x.length)) trail = true;
+      }
+      for (let n = 0; n < 4 && b.status === 'chain' && b.chain && !b.chain.done; n++) { const l = chainCaptures(b); if (!l.length) break; click(`sq:${l[0]}`); for (let k = 0; k < 600 && s.busy; k++) pump(1); }
+      idle();
+      measureSeq(s); fairySeen.sec.push(s.seq.total);
+      if (corners >= (t === 'T' ? 2 : 1)) fairySeen[key]++; else bad(`${t}가 꺾인 길로 움직이지 않았다(꺾음 ${corners})`);
+      if (trail) fairySeen.trail++; else bad(`${t}의 사슬 길이 꺾여 남지 않았다`);
+    }
   }
   for (let k = 0; k < 20 && screen() !== 'shop' && screen() !== 'select'; k++) { pump(30); if (region('next')) click('next'); }
   app.toTitle(); pump(1);
@@ -1634,8 +1665,8 @@ console.log(`혼 각성: 금 ${awakeSeen.crack} · 금 글 ${awakeSeen.toast} ·
 if (awakeSeen.bad.length || !awakeSeen.crack || !awakeSeen.screen || !awakeSeen.back || !awakeSeen.chest) { console.log('혼에 금이 가고 깨어나는 걸음이 어긋났다'); fail = true; }
 console.log(`탁월수: 희생 ${brillSeen.sac} · 새 카드 ${brillSeen.deal} · !? ${brillSeen.tag} · 바친 줄 ${brillSeen.row} · 처음 안내 ${brillSeen.hint} · 둔 뒤 !? 사라짐 ${brillSeen.gone} · !! ${brillSeen.fx} · 가장자리 뒤집기 ${brillSeen.flip} · ×N ${brillSeen.mult} · 기록 ${brillSeen.record} · 명경기 조각 ${brillSeen.frag} · 연출 ${brillSeen.sec.toFixed(2)}s${brillSeen.bad.length ? ` · 어긋남: ${brillSeen.bad.join(' | ')}` : ''}`);
 if (brillSeen.bad.length || !brillSeen.fx || !brillSeen.record || !brillSeen.frag) { console.log('희생 → 탁월수 걸음이 어긋났다'); fail = true; }
-console.log(`특수 기물: 까마귀 앉는 칸 ${fairySeen.land} · 길 ${fairySeen.path} · 기록 ${fairySeen.gone} · 화약병 터짐 ${fairySeen.blast} · 빈 칸 ${fairySeen.board} · 연출 ${fairySeen.sec.map((x) => x.toFixed(2) + 's').join(' / ')}${fairySeen.bad.length ? ` · 어긋남: ${fairySeen.bad.join(' | ')}` : ''}`);
-if (fairySeen.bad.length || !fairySeen.land || !fairySeen.blast) { console.log('새 특수 기물 걸음이 어긋났다'); fail = true; }
+console.log(`특수 기물: 까마귀 앉는 칸 ${fairySeen.land} · 길 ${fairySeen.path} · 넘기 ${fairySeen.hops} · 기록 ${fairySeen.gone} · 화약병 터짐 ${fairySeen.blast} · 빈 칸 ${fairySeen.board} · 꺾쇠 꺾음 ${fairySeen.bend} · 물수제비 튕김 ${fairySeen.bounce} · 꺾인 길 ${fairySeen.trail} · 연출 ${fairySeen.sec.map((x) => x.toFixed(2) + 's').join(' / ')}${fairySeen.bad.length ? ` · 어긋남: ${fairySeen.bad.join(' | ')}` : ''}`);
+if (fairySeen.bad.length || !fairySeen.land || !fairySeen.blast || !fairySeen.bend || !fairySeen.bounce) { console.log('새 특수 기물 걸음이 어긋났다'); fail = true; }
 console.log(`각인 · 혼 바꾸기: 같은 것 흐림 ${swapSeen.same} · 상점 그만 ${swapSeen.shopBack} · Esc ${swapSeen.shopEsc} · 바꾸기 ${swapSeen.shopSwap} · 혼 ${swapSeen.soulSwap} · 꾸러미 그만 ${swapSeen.packBack} · Esc ${swapSeen.packEsc} · 바꾸기 ${swapSeen.packSwap}${swapSeen.bad.length ? ` · 어긋남: ${swapSeen.bad.join(' | ')}` : ''}`);
 if (swapSeen.bad.length || !swapSeen.same || !swapSeen.shopBack || !swapSeen.shopEsc || !swapSeen.packEsc || !swapSeen.shopSwap || !swapSeen.soulSwap || !swapSeen.packBack || !swapSeen.packSwap) { console.log('각인 · 혼을 덮어쓰기 전에 확인하지 않았거나, 「그만」 · 「바꾸기」가 어긋났다'); fail = true; }
 console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 ${chartSeen.scene} · 기보를 쓴 순간 크게 ${chartSeen.grow} · 수준만 ${chartSeen.tick}(어긋남 ${chartSeen.growBad})`);
