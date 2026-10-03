@@ -14,3 +14,23 @@
 18:07 done d0-look16 1994s
 18:07 start d0-x2
 18:49 done d0-x2 (manual), queue stopped
+21:23 start freeze-d0-s1
+21:37 done freeze-d0-s1
+21:37 start freeze-d0-s2
+21:49 done freeze-d0-s2
+21:49 start freeze-d8-s1
+21:58 done freeze-d8-s1
+21:58 start read-d0-s3
+22:10 done read-d0-s3
+22:10 start read-d8-s3
+22:16 done read-d8-s3
+22:18 start skip-d0-s1
+22:26 done skip-d0-s1
+22:26 start skip-d0-s2
+22:27 stopped skip queue (altPlay 버그 — 대국이 끝나면 run.battle이 비어 75판 오류), 다시 돈다
+22:27 start skip-d0-s1
+22:38 done skip-d0-s1
+22:38 start skip-d0-s2
+22:48 done skip-d0-s2
+22:48 start skip-d8-s1
+22:55 done skip-d8-s1
