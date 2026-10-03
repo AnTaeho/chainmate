@@ -20,6 +20,7 @@ import { rollDisplay, rollPacks } from '../src/sim/shop.js';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
 import { evolveTo } from '../src/data/tactics.js';
+import { noteStep, review, REVIEW } from '../src/sim/replay.js';
 
 export const SMART = {
   K: 6,            // 짜임 하나를 재는 대국판 수(깊이 층 뒤 8 → 6: 판 하나가 2분 안에 끝나게)
@@ -472,6 +473,10 @@ function huntRank(run) {
 }
 
 // 판 하나를 끝까지. 돌려주는 값: 요약(하네스용)
+// 복기 진단(CHM-59, run.mjs --replay): 진 대국마다 복기(src/sim/replay.js)를 돌려 대국 줄에 kind를 적고(사람 판 기록과 같은 열쇠 replay),
+// 갈림길 · 마디 · ms는 rows에. 끄면(기본) 아무것도 하지 않는다 — 판의 결과는 켜도 끄도 같다(복기는 복사본만 둔다).
+// keep: 진 대국의 기록(steps · 마지막 상태)도 saved에 모은다(복기 예산을 따로 재 보려고).
+export const REPLAY = { on: false, rows: [], keep: false, saved: [] };
 export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null, shopAlt = null } = {}) {
   const r = createRng((run.seed * 2654435761) >>> 0);
   const bought = new Set();
@@ -483,6 +488,8 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     for (const m of run.maxims) if (!before.includes(m.uid)) { bought.add(m.id); if (m.edition) editions.push(m.edition); }
   };
   let guard = 0;
+  let rb = null, rsteps = [];
+  REPLAY.rows = [];
   while (guard++ < 5000) {
     if (run.phase === 'lost') break;
     if (stopAt && stopAt(run)) break;
@@ -495,7 +502,23 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     }
     if (run.phase === 'battle') {
       const opts = policy === 'hunt' ? { rank: huntRank(run) } : policy === 'nosac' ? { sacrifice: false } : {};
-      if (!stepBattle(run.battle, (c) => act(run, c), opts)) throw new Error('bot has no move but battle is live');
+      if (!REPLAY.on) {
+        if (!stepBattle(run.battle, (c) => act(run, c), opts)) throw new Error('bot has no move but battle is live');
+        continue;
+      }
+      const b = run.battle;
+      if (rb !== b) { rb = b; rsteps = []; }
+      const logLen = run.log.length;
+      if (!stepBattle(b, (c) => { noteStep(rsteps, b, c); return act(run, c); }, opts)) throw new Error('bot has no move but battle is live');
+      const row = run.log.length > logLen ? run.log[run.log.length - 1] : null;
+      if (row && !row.won) {
+        const t0 = performance.now();
+        const r = review(rsteps, b);
+        const ms = performance.now() - t0;
+        row.replay = r.kind;
+        if (REPLAY.keep) REPLAY.saved.push({ steps: rsteps, end: b, ended: run.phase === 'lost' });
+        REPLAY.rows.push({ ante: row.ante, blind: row.blind, kind: row.kind, replay: r.kind, at: r.at ?? null, move: r.move ?? null, steps: rsteps.length, moves: b.movesUsed, nodes: r.nodes, ms: Math.round(ms), best: r.scores ? r.scores.best : null, score: b.score, target: b.target, first: r.best ? r.best[0].kind : null, ended: run.phase === 'lost' });
+      }
       continue;
     }
     if (legendAt == null && run.legends.length) legendAt = run.ante;

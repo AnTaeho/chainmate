@@ -13,11 +13,12 @@
 //   다시 놓기(밤샘 2 D2): 첫 수 전, 첫 손 최선 사슬 점수 × 수가 목표 × REBOARD.ratio에 못 미치면 판을 새로 깐다
 //   (첫 손 최선 사슬 점수가 대국 점수의 대리 지표 — docs/reports/luck.md ④).
 import { bestPerPiece, lineCommands } from '../src/sim/solver.js';
-import { canReboard, apply as applyBattle } from '../src/sim/battle.js';
+import { canReboard } from '../src/sim/battle.js';
 import { createRng, fork, next, shuffle } from '../src/sim/rng.js';
 import { valueOf } from '../src/data/pieces.js';
 import { bestMove } from '../src/sim/solver.js';
 import { addOffering, weightOf as weightOfPiece } from '../src/data/sacrifice.js';
+import { cloneBattle, applyDecision, pieceKey } from '../src/sim/replay.js';
 
 // ratio 1 → 2(밤샘 2 3부): 1이면 대국당 0.08번만 다시 놓아 판을 끝낸 죽음의 판 운 몫이 52.6%, 2면 0.18번 · 31.3%(luck 30판)
 export const REBOARD = { ratio: 2 }; // 켜고 끄기는 src/sim/tuning.js BOARD_TUNING.reboard(끄면 canReboard가 늘 거짓)
@@ -70,7 +71,7 @@ export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null, 
 //   weakChain: 지금 최선 사슬이 이만큼 먹기 이하일 때만 잰다(옛 「손이 나쁠 때」 문턱 — 짜임 재기가 모든 판에서 주머니를 재면 하네스가 몇 배 느려진다).
 //   keys: 주머니에서 재는 서로 다른 기물 수(많이 든 것부터). 나머지는 잰 것들의 평균으로 친다.
 export const SAC = { keep: 0.5, margin: 0.1, nodes: 2000, weakChain: 2, keys: 4 };
-export const pieceKey = (p) => p.t + JSON.stringify(p.eng ?? null) + (p.soul || '') + (p.awake ? '!' : '');
+export { pieceKey }; // 복기(src/sim/replay.js)와 함께 쓴다
 
 // 주머니의 서로 다른 기물마다 { n(주머니에 든 수), score, mate } — 그 기물을 희생으로 뽑아 지금 판에 혼자 둔 최선.
 // 탁월수 배수는 바친 무게에 달려서, 무게 1(폰)을 바친 셈으로 재 두고 후보마다 비율로 바꾼다(배수 ×(1 + 무게)는 곱이다).
@@ -144,8 +145,8 @@ export function sacrificeChoice(b, per, best, opts = {}) {
 // 대국 상태에는 아무것도 적지 않는다(WeakMap). playRun이 판마다 비운다.
 export const SACLOG = { rows: [], pending: new WeakMap(), reset() { this.rows = []; this.pending = new WeakMap(); } };
 
-// ── 내다보기(BOT.look > 0). 대국 상태는 JSON 왕복 안전하니 복사본에서 두어 본다.
-const cloneB = (b) => JSON.parse(JSON.stringify(b));
+// ── 내다보기(BOT.look > 0). 대국 상태는 JSON 왕복 안전하니 복사본에서 두어 본다(복사 · 결정 두기는 복기 src/sim/replay.js와 함께 쓴다).
+const cloneB = cloneBattle;
 const seedOf = (r) => Math.floor(next(r) * 2 ** 31);
 function candidates(b, base, opts) {
   const nomate = !!opts.nomate;
@@ -162,11 +163,6 @@ function candidates(b, base, opts) {
   const uniq = new Map();
   for (const d of out) if (!uniq.has(key(d))) uniq.set(key(d), d);
   return [...uniq.values()];
-}
-function applyDecision(t, d) {
-  if (d.reboard) applyBattle(t, { type: 'reboard' });
-  else if (d.discard) applyBattle(t, { type: 'discard', handIndices: d.discard });
-  else { applyBattle(t, { type: 'drop', handIndex: d.play.handIndex, sq: d.play.sq }); for (const c of lineCommands(d.play.line)) applyBattle(t, c); }
 }
 // 모르는 것만 새로 섞는다: 주머니 차례 · 증원 · 다시 놓을 판(대국 시드에서 나온다) · 확률 · 유리
 function determinize(t, s) {
