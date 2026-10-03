@@ -573,3 +573,25 @@ test('마스터전 제목: 마스터 여덟 이름이 머리 칸 제목 줄에 �
   }
   M.lang.setLang('ko');
 });
+
+// 다음 수(CHM-60): 손 카드 오른쪽 끝의 좁은 칸 — 카드 1~5장과 겹치지 않고, 넷째 카드의 「!?」 딱지와도 겹치지 않고, 화면 안
+test('다음 수 칸: 손 카드 · 「!?」 딱지와 겹치지 않고 오른쪽 칸 안에 든다', async () => {
+  const { handTagRect } = await import('../src/ui/annot.js');
+  const B = M.battle;
+  const lay = B.BattleScreen.prototype.rightLayout.call({});
+  const col = B.nextColumn(lay);
+  const over = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  assert.equal(col.x + col.w, B.RX + B.RW);
+  assert.ok(col.y >= lay.handY && col.y + col.h <= BOTTOM, `칸 ${col.y}~${col.y + col.h}`);
+  for (const r of col.slots) assert.ok(r.w >= 10 && r.h >= 11 + 2, '반 크기 기물(8×11)이 테 안에 든다');
+  for (let n = 1; n <= 5; n++) {
+    for (let i = 0; i < n; i++) {
+      const hr = B.BattleScreen.prototype.handRect.call({}, i, n, lay);
+      assert.ok(hr.w >= 17, `${n}장 카드 폭 ${hr.w}(기물 16이 든다)`);
+      assert.ok(!over(hr, col), `${n}장 ${i}째 카드가 다음 수 칸과 겹친다`);
+      for (const lift of [0, 4]) assert.ok(!over(handTagRect(hr.x, hr.y - lift, hr.w, 0), col), `${n}장 ${i}째 「!?」`);
+    }
+  }
+  // 넷이면 카드는 22(전에는 25)
+  assert.equal(B.BattleScreen.prototype.handRect.call({}, 0, 4, lay).w, 22);
+});
