@@ -127,6 +127,13 @@ function draw(b) {
   while (b.hand.length < b.rules.hand && b.bag.length) b.hand.push(b.bag.shift());
 }
 
+// 다음 수(CHM-60, docs/design-notes/agency.md A): 주머니 차례는 대국을 시작할 때 시드로 섞여 정해져 있고, 손은 늘 맨 앞부터 뽑는다.
+// 그래서 다음에 손에 들어올 기물은 주머니 맨 앞 그대로다 — 새 상태 없이 b.bag 차례를 보여 줄 뿐이다.
+// 차례가 바뀌는 곳: 수 · 희생(앞에서 뽑아 간다) · 손을 새로 쥠(주머니를 다시 섞는다). 다시 놓기는 판만 새로 깔아 차례가 그대로다.
+// 화면 · 봇 모두 앞의 NEXT_DRAWS개만 안다(셋째부터는 가린다).
+export const NEXT_DRAWS = 2;
+export const nextDraws = (b, n = NEXT_DRAWS) => b.bag.slice(0, n);
+
 const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null, ...soulOf(p) });
 // 기물의 혼 · 금(사슬 수 links) · 각성(awake)을 옮긴다(판 주머니 → 대국)
 export const soulOf = (p) => (p.soul ? { soul: p.soul, ...(p.links ? { links: p.links } : {}), ...(p.awake ? { awake: true } : {}) } : {});
