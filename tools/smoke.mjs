@@ -7,7 +7,7 @@ import { lineCommands, previewDrop, bestMove } from '../src/sim/solver.js';
 import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
-import { isHidden, canReboard, dropSquaresFor, nextDraws } from '../src/sim/battle.js';
+import { isHidden, canReboard, dropSquaresFor, nextDraws, visibleIncoming } from '../src/sim/battle.js';
 import { boardFrom } from '../src/sim/board.js';
 import { chainCaptures } from '../src/sim/chain.js';
 import { reboardOn } from '../src/sim/tuning.js';
@@ -347,6 +347,8 @@ const HINT_SUBJECT = {
   replay: (id) => id === 'btn:replay' && scrName() === 'battle' && !!app.screen.rv && app.screen.rv.phase === 'card' && app.screen.rv.res.kind === 'path',
   // 다음 수(CHM-60): 손 오른쪽 끝 칸, 주머니 맨 앞이 하나라도 있을 때
   next: (id, run) => id === 'next' && scrName() === 'battle' && !!run.battle && nextDraws(run.battle).length > 0,
+  // 판 보기(CHM-61): 지금 대국 카드(작은 판이 있는 카드)
+  preview: (id, run) => scrName() === 'select' && id === `select:board:${run.blind}`,
   brilliant: (id, run) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')], off = run.battle && run.battle.offering; return !!(p && off && (off.drawn || []).includes(p.id)); },
 };
 function hintSubject() {
@@ -404,6 +406,39 @@ function measureSeq(s) {
 // ── 다음 수(CHM-60): 결정마다 「보이던 둘」(화면 view.next = 규칙 nextDraws)이 실제로 그 차례로 손에 들어왔나.
 // 손을 새로 쥔 결정은 주머니를 다시 섞으니 들어온 것 대신 새 차례가 화면에 곧바로 보이는지만 잰다.
 const nextSeen = { moves: 0, drawn: 0, regrip: 0, view: 0, bad: [] };
+// ── 판 보기(CHM-61): 관 선택마다 지금 대국 카드에 그려진 작은 판(화면 peekOf)과, 두기를 눌러 열린 대국의 시작 판이 같은가.
+// 남은 대국 카드의 판도 적어 두었다가 그 대국 차례의 관 선택(건너뛴 뒤 · 상점 뒤)에서 같은 판인지 잰다(판 짓기 규칙이 바뀐 것 ·
+// 금빛의 부름으로 금빛 적 확률이 올라 금빛만 더해진 것은 따로 센다 — 둘 다 보이는 판이 바뀌고 그 판으로 둔다).
+const peekSeen = { selects: 0, played: 0, same: 0, ahead: 0, aheadSame: 0, regen: 0, gold: 0, bad: [], shown: new Map() };
+const peekLook = (b) => JSON.stringify({ board: b.board, incoming: visibleIncoming(b), hidden: b.board.map((_, sq) => isHidden(b, sq)) });
+// 금빛 적만 더해졌나(나머지는 같고, 앞의 금빛은 그대로)
+const noGold = (x) => JSON.stringify({ ...x, board: x.board.map((c) => c && { ...c, gold: undefined }) });
+const goldOnly = (a, b) => noGold(a) === noGold(b) && a.board.every((c, q) => !(c && c.gold) || (b.board[q] && b.board[q].gold));
+function peekSelect() {
+  const run = app.run, scr = app.screen;
+  if (!scr.peekOf) return null;
+  peekSeen.selects++;
+  for (let i = run.blind; i < 3; i++) {
+    if (!region(`select:board:${i}`)) { peekSeen.bad.push(`${run.ante}:${i} 작은 판이 없다`); continue; }
+    const look = peekLook(scr.peekOf(run, i)), key = `${run.seed}:${run.ante}:${i}:${run.retry || 0}`, gen = run.boards[i] && run.boards[i].gen;
+    const was = peekSeen.shown.get(key);
+    if (was && i === run.blind) {
+      peekSeen.ahead++;
+      if (was.look === look) peekSeen.aheadSame++;
+      else if (was.gen !== gen) peekSeen.regen++;
+      else if (goldOnly(JSON.parse(was.look), JSON.parse(look))) peekSeen.gold++;
+      else peekSeen.bad.push(`${key} 앞서 보인 판과 다르다`);
+    }
+    if (!was) peekSeen.shown.set(key, { look, gen });
+  }
+  return peekLook(scr.peekOf(run, run.blind));
+}
+function peekPlayed(shown) {
+  if (shown == null || !app.run.battle) return;
+  peekSeen.played++;
+  if (peekLook(app.run.battle) === shown) peekSeen.same++;
+  else peekSeen.bad.push(`${app.run.ante}:${app.run.blind} 보인 판과 시작 판이 다르다`);
+}
 const nextIds = (xs) => (xs || []).map((p) => p.id).join(',');
 function nextBad(msg) { if (nextSeen.bad.length < 8) nextSeen.bad.push(msg); }
 function nextView(b) {
@@ -734,7 +769,7 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
       else n2.clockShop++;
       n2.waitNext = true;
     }
-    if (name === 'select') { notesOnce('select', 4); if (n2.waitNext || !(app.run.blind < 2 && rnd() < 0.15)) click('select:play'); else click('select:skip'); pump(2); if (n2.waitNext && screen() === 'battle') { n2.clockNext++; n2.waitNext = false; n2.clockBefore = null; } continue; }
+    if (name === 'select') { notesOnce('select', 4); const shown = peekSelect(); if (n2.waitNext || !(app.run.blind < 2 && rnd() < 0.15)) { click('select:play'); peekPlayed(shown); } else click('select:skip'); pump(2); if (n2.waitNext && screen() === 'battle') { n2.clockNext++; n2.waitNext = false; n2.clockBefore = null; } continue; }
     if (name === 'chest') { click('next'); pump(2); notesOnce('chest', 4); click('next'); pump(1); continue; }
     if (name === 'battle' && app.screen.rv) { reviewStep(); continue; }
     if (name === 'review') { reviewWalk(); continue; }
@@ -1750,6 +1785,8 @@ if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았�
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
 console.log(`다음 수: 결정 ${nextSeen.moves}번 · 들어온 기물 ${nextSeen.drawn} · 손을 새로 쥠 ${nextSeen.regrip} · 화면 = 규칙 잰 수 ${nextSeen.view} · 어긋남 ${nextSeen.bad.length}${nextSeen.bad.length ? `: ${nextSeen.bad.join(' | ')}` : ''}`);
 if (nextSeen.bad.length || nextSeen.moves < 10 || nextSeen.drawn < 10) { console.log('보이던 다음 둘이 실제로 그 차례로 들어오지 않았거나, 잰 결정이 너무 적다'); fail = true; }
+console.log(`판 보기: 관 선택 ${peekSeen.selects} · 두기 ${peekSeen.played}(미리 본 판 = 시작 판 ${peekSeen.same}) · 앞서 본 판을 그 차례에 다시 ${peekSeen.ahead}(같음 ${peekSeen.aheadSame} · 판 짓기 규칙이 바뀌어 다시 지음 ${peekSeen.regen} · 금빛의 부름으로 금빛 적만 더해짐 ${peekSeen.gold}) · 어긋남 ${peekSeen.bad.length}${peekSeen.bad.length ? `: ${peekSeen.bad.slice(0, 8).join(' | ')}` : ''}`);
+if (peekSeen.bad.length || peekSeen.played < 5 || peekSeen.same !== peekSeen.played || peekSeen.ahead < 3) { console.log('관 선택에 보인 판과 두기로 연 판이 다르거나, 잰 관 선택이 너무 적다'); fail = true; }
 console.log(`처음 안내가 말하는 것: ${subj.n}곳 · 화면에 없음 ${subj.bad.length}${subj.bad.length ? `: ${subj.bad.join(' | ')}` : ''}`);
 if (subj.bad.length) { console.log('처음 안내가 화면에 없는 것을 가리켰거나 같은 안내가 두 번 떴다'); fail = true; }
 console.log(`대본 대국 경로: 끝까지 둔 뒤 상점 ${scriptSeen.shopMaxim ? '격언 있음 → 격언 안내' : '격언 없음 → 격언 안내 없음'}`);
