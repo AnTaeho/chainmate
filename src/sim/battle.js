@@ -149,7 +149,41 @@ export const overflowTier = (score, target) => (target ? OVERFLOW_TIERS.reduce((
 
 // golden: null이면 goldenChance(기본 GOLDEN.chance)로 굴린다(시드의 'gold' 하위 스트림), true/false로 강제.
 // filter: 판 후보 수(0 · 1이면 거르지 않는다, BOARD_FILTER)
-export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [], golden = null, goldenChance = GOLDEN.chance, filter = 0 } = {}) {
+// layout: 미리 지어 둔 판(battleLayout, 판 보기 CHM-61). 주면 판 짓기(거르기 · 금빛 적)를 건너뛰고 그 판을 깐다 —
+//   나머지(손 · 판 위 정석 · 증원 예고)는 똑같이 흐른다. 같은 입력이면 layout을 주든 안 주든 같은 대국이다.
+export function createBattle(opts = {}) {
+  const { b, root } = newBattle(opts);
+  if (opts.layout) useLayout(b, opts.layout);
+  else layBoard(b, b.rng.board, fork(root, 'filter'));
+  layGold(b, root, opts);
+  runHook(b, 'onSetup', {}, []);
+  telegraph(b);
+  markFairy(b);
+  refreshHints(b);
+  return b;
+}
+
+// 판 보기(CHM-61, docs/design-notes/agency.md E): 대국을 시작하기 전에 판만 지어 둔다. 판(금빛 적 앞, 판 위 정석 앞) ·
+// 다음 id · 판 난수의 상태. 판(런)이 관 선택에서 이것을 보여 주고, 두기를 누르면 같은 것으로 대국을 연다.
+// 금빛 적은 대국을 열 때 굴린다(시드의 'gold' 스트림 — 같은 판 위 같은 칸이고, 금빛의 부름으로 확률이 오르면 없던 금빛만 생긴다).
+export function battleLayout(opts = {}) {
+  const { b, root } = newBattle(opts);
+  layBoard(b, b.rng.board, fork(root, 'filter'));
+  return { board: b.board.map((c) => (c ? { ...c } : null)), nextId: b.nextId, rng: b.rng.board.s };
+}
+// 대국을 시작할 때의 규칙(시작 훅 뒤) — 판 짓기가 읽는 규칙이 바뀌었나 재려고
+export const battleRules = (opts = {}) => newBattle(opts).b.rules;
+function useLayout(b, lay) {
+  b.board = lay.board.map((c) => (c ? { ...c } : null));
+  b.nextId = lay.nextId;
+  b.rng.board.s = lay.rng;
+}
+function layGold(b, root, { golden = null, goldenChance = GOLDEN.chance } = {}) {
+  const gr = fork(root, 'gold');
+  if (golden ?? next(gr) < goldenChance) placeGold(b, gr);
+}
+
+function newBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [], filter = 0 } = {}) {
   const root = createRng(seed);
   const b = {
     v: 1,
@@ -186,14 +220,7 @@ export function createBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFA
   b.discardsLeft = b.rules.discards;
   shuffle(b.rng.bag, b.bag);
   draw(b);
-  layBoard(b, b.rng.board, fork(root, 'filter'));
-  const gr = fork(root, 'gold');
-  if (golden ?? next(gr) < goldenChance) placeGold(b, gr);
-  runHook(b, 'onSetup', {}, []);
-  telegraph(b);
-  markFairy(b);
-  refreshHints(b);
-  return b;
+  return { b, root };
 }
 
 // 판 하나를 깐다. 시작 손으로 떨굴 수가 없으면 다시 짓는다(시드 안에서 결정적으로).

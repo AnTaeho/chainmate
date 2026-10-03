@@ -15,7 +15,7 @@ import { createRng, fork, int, next, shuffle } from './rng.js';
 import { boardFilter } from './tuning.js';
 import { parseSq } from './board.js';
 import { SCRIPT } from '../data/tutorial.js';
-import { createBattle, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
+import { createBattle, battleLayout, battleRules, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
 import { isCracked } from '../data/souls.js';
 import { getModifier } from './scoring.js';
 import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul } from './shop.js';
@@ -129,11 +129,12 @@ export function factionOrder(seed) {
 export function migrateRun(run) {
   if (!run) return run;
   run = renameOldPieces(run);
-  if (run.factions) return run;
+  if (run.factions) { syncBoards(run); return run; }
   run.factions = Array.isArray(run.masters) && run.masters.length === ANTES && run.masters.every((id) => FACTION_OF_BOSS[id])
     ? run.masters.map((id) => FACTION_OF_BOSS[id])
     : factionOrder(run.seed ?? 1);
   delete run.masters;
+  syncBoards(run);
   return run;
 }
 
@@ -207,6 +208,7 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
   if (!draft) run.noDraft = true;
   if (script && opening === DEFAULT_OPENING && !dan) { run.script = SCRIPT.id; run.draftLate = run.ante; }
   openDraft(run);
+  syncBoards(run);
   return run;
 }
 
@@ -267,20 +269,72 @@ export function battleMods(build, master = null, faction = null) {
 // 대국 시드: 8관 명인을 시계를 써서 다시 둘 때는 몇째 다시 두기인지를 붙인다
 export const battleSeed = (run, ante = run.ante, blind = run.blind) =>
   fork(root(run), `battle:${ante}:${blind}${run.retry ? `:${run.retry}` : ''}`).s;
-function startBattle(run) {
-  const info = blindInfo(run);
+// 대국 하나를 여는 재료(판(런)의 지금 상태에서). 판 보기 · 두기 · 대본 건너뛰기가 같은 것을 쓴다
+export function battleOpts(run, blind = run.blind) {
+  const info = blindInfo(run, run.ante, blind);
   // 대본 대국: 1관 연습 하나만. 판 조정(거르기 · 다시 놓기)은 끄고 정해 둔 판을 깐다(세력 버릇 · 기보는 평소대로 켜진다)
-  const scripted = !!run.script && run.ante === 1 && run.blind === 0 && info.kind === 'practice';
-  run.battle = createBattle({
-    seed: battleSeed(run), ante: run.ante, kind: info.kind, target: info.target,
-    bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...soulOf(p) })),
-    rules: scripted ? { ...run.rules, reboards: 0 } : run.rules, mods: battleMods(run, info.master, info.faction),
-    goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
-    golden: scripted ? false : null,
-    filter: run.scratch || scripted ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
-  });
+  const scripted = !!run.script && run.ante === 1 && blind === 0 && info.kind === 'practice';
+  return {
+    scripted,
+    opts: {
+      seed: battleSeed(run, run.ante, blind), ante: run.ante, kind: info.kind, target: info.target,
+      bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...soulOf(p) })),
+      rules: scripted ? { ...run.rules, reboards: 0 } : run.rules, mods: battleMods(run, info.master, info.faction),
+      goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
+      golden: scripted ? false : null,
+      filter: run.scratch || scripted ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
+    },
+  };
+}
+function startBattle(run) {
+  const { scripted, opts } = battleOpts(run);
+  run.battle = createBattle({ ...opts, layout: scripted ? null : layoutFor(run, run.blind) });
   if (scripted) layScript(run.battle, SCRIPT);
   run.phase = 'battle';
+}
+
+// ── 판 보기(CHM-61, docs/design-notes/agency.md E 「구현 뒤」)
+// 관 선택에 서면 이 관의 남은 대국판을 미리 지어 run.boards에 둔다(저장 왕복). 두기는 지어 둔 판으로 대국을 연다 — 보인 판 = 두는 판.
+// 지은 뒤 주머니 · 기보가 바뀌어도(상점 · 두루마리 · 건너뛰기 패) 판은 그대로다. 판 짓기가 읽는 규칙(GEN_RULES — 시작 훅 뒤, 격언
+// 「메이트 사냥꾼」 · 정석 「속기」 …)이 바뀌거나 대국 시드가 바뀌면(8관 마스터 다시 두기) 그 대국판만 다시 짓는다.
+// 손은 지어 두지 않는다: 대국을 열 때 지금 주머니를 섞어 쥔다(나쁜 판 거르기의 「첫 손」은 판을 지을 때의 주머니로 잰다).
+export const GEN_RULES = ['enemies', 'kings', 'guards', 'guardsBonus', 'pawnSides', 'mix', 'unique', 'walls', 'wallRow', 'things', 'traits', 'traitFrom', 'traitMult', 'hand', 'easyStart', 'noHeavyDrop', 'fog', 'openKings', 'highways'];
+function genKey(opts) {
+  const r = battleRules(opts);
+  return JSON.stringify(GEN_RULES.map((k) => r[k] ?? null));
+}
+function freshLayout(run, blind) {
+  const { opts } = battleOpts(run, blind);
+  return { ante: run.ante, blind, seed: opts.seed, gen: genKey(opts), ...battleLayout(opts) };
+}
+// 지어 둔 판이 지금도 맞나(관 · 시드 · 판 짓기 규칙)
+function layoutOk(run, blind, lay) {
+  if (!lay || lay.ante !== run.ante || lay.blind !== blind) return false;
+  const { opts } = battleOpts(run, blind);
+  return lay.seed === opts.seed && lay.gen === genKey(opts);
+}
+// 그 대국판: 지어 둔 것이 맞으면 그것, 아니면 지금 지은 것(저장하지 않는다 — 같은 상태면 syncBoards가 지을 것과 같다)
+export function layoutFor(run, blind = run.blind) {
+  const lay = run.boards && run.boards[blind];
+  return layoutOk(run, blind, lay) ? lay : freshLayout(run, blind);
+}
+// 관 선택에 설 때마다(applyRun 끝 · createRun · migrateRun): 이 관의 지금 대국부터 마스터전까지 판을 지어 둔다
+export function syncBoards(run) {
+  if (run.phase !== 'select' || !run.factions) return;
+  const out = [];
+  for (let i = 0; i < KINDS.length; i++) {
+    const lay = run.boards && run.boards[i];
+    if (i < run.blind) { out.push(null); continue; }
+    if (run.script && run.ante === 1 && i === 0) { out.push(null); continue; } // 대본 대국은 정해 둔 판
+    out.push(layoutOk(run, i, lay) ? lay : freshLayout(run, i));
+  }
+  run.boards = out;
+}
+// 관 선택에 보일 대국: 두기를 누르면 열릴 대국과 같은 것(손 · 주머니는 화면이 쓰지 않는다)
+export function previewBattle(run, blind = run.blind) {
+  const { scripted, opts } = battleOpts(run, blind);
+  if (scripted) return null;
+  return createBattle({ ...opts, layout: layoutFor(run, blind) });
 }
 
 // 대본 판을 깐다: 적 · 손 · 주머니(판의 주머니에서 종류로 골라 같은 id) · 수마다 증원 · 목표
@@ -884,6 +938,7 @@ export function applyRun(run, cmd) {
     }
     default: throw new Error(`unknown command ${cmd.type}`);
   }
+  syncBoards(run);
   return events;
 }
 
