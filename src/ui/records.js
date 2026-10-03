@@ -30,6 +30,8 @@ export function emptyRecords() {
     lessonsDone: false,        // 첫 수업을 끝까지 두었나(건너뛰어도)
     lessonsSeen: {},           // { [수업 id]: true } 끝낸 수업(목록의 표)
     coachSeen: {},             // { [안내 id]: true } 본 처음 안내
+    reviews: 0,                // 복기 갈림길 카드를 본 수(길 있음 · 길 없음, CHM-59)
+    reviewReplays: 0,          // 갈림길 카드에서 「다시 두기」를 누른 수
   };
 }
 

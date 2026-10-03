@@ -18,6 +18,7 @@ import { DraftScreen } from './draft.js';
 import { LessonsScreen } from './lessons.js';
 import { ScriptScreen } from './script.js';
 import { MovesScreen } from './moves.js';
+import { ReviewScreen } from './review.js';
 
 // 대국: 판의 대국이 대본 대국이면(첫 판 1관 연습, CHM-22) 대본 화면으로 — 화면 이름은 같은 battle
 class BattleEntry {
@@ -44,4 +45,5 @@ export const SCREENS = {
   draft: DraftScreen,
   lessons: LessonsScreen,
   moves: MovesScreen,
+  review: ReviewScreen,
 };

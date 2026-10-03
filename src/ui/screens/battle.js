@@ -42,6 +42,12 @@ import { SOUL_BY_ID } from '../../data/souls.js';
 import { ANNOT, drawAnnot, annotSize, handTagRect, boardTagRect, offeredRow, drawMore } from '../annot.js';
 import { drawStars, starsW, starCount, STAR_N } from '../stars.js';
 import { capRoute, routeAt, bendDur } from '../fxroute.js';
+import { noteStep, reviewGen, cloneBattle } from '../../sim/replay.js';
+import { reviewOn, forkTitle, forkLine, forkScores, forkScoreLines, forkMarks, NO_PATH, THINKING } from '../review.js';
+
+// 복기(CHM-59): 진 순간 프레임마다 이만큼(ms)씩 나눠 잰다. 답은 마디 예산(replay.js REVIEW.nodes)이 정하고, 이 기기에서
+// REVIEW_WALL초를 넘기면(느린 기기) 카드 없이 지금 흐름대로 넘어간다(그 대국의 기록은 unknown)
+export const REVIEW_SLICE_MS = 12, REVIEW_WALL = 3;
 
 export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
@@ -220,6 +226,8 @@ export class BattleScreen {
     this.stamp = null;
     this.lastEnd = null;
     this.notes = 'side'; // 설명 자리: 왼쪽 칸(placement.js). 판 위의 기물 · 손을 가리지 않는다
+    this.trail = [];     // 복기: 내 결정마다 그 앞의 대국 상태(replay.js noteStep). 판 상태에는 적지 않는다
+    this.rv = null;      // 복기 중 · 갈림길 카드 { phase: 'think' | 'card', … }
     this.sync();
     const info = events.find((e) => e.type === 'battleStart');
     const b = this.bRef;
@@ -263,7 +271,8 @@ export class BattleScreen {
   onLeave() { this.fx.list = this.fx.list.filter((e) => !e.word); }
   get run() { return this.src.run; }
   live() { return this.src.live(); }
-  get b() { return this.live() || this.bRef; }
+  // 갈림길 카드가 떠 있으면 그 상태(갈린 수 앞)를 그린다
+  get b() { return (this.rv && this.rv.state) || this.live() || this.bRef; }
   snd(name, arg) { this.app.sfx(name, arg); }
   shake(px, dur) { this.app.shake(px, dur); }
   hitstop(sec) { this.app.hitstop(sec); }
@@ -274,6 +283,12 @@ export class BattleScreen {
   toastSpot() {
     let top = BY + 126;
     if (this.banner) { const bb = this.bannerBox(); top = bb.by + bb.bh + 2; }
+    // 갈림길 카드(복기)가 떠 있으면 그 위로
+    if (this.rv) {
+      const rb = this.reviewBox();
+      if (rb.y > BY + 4) return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: rb.y - 2, top: Math.min(top, rb.y - 22) };
+      return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: BY + S * 8 - 4, top: rb.y + rb.h + 2 };
+    }
     return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: BY + S * 8 - 4, top };
   }
   // 대국 시작 띠의 자리(drawOver · toastSpot). 명인 띠: 이름(두 배, 초상 왼쪽 146에 안 들어가면 한 배) → 묶음 틈 → 규칙 글(줄마다 LINE) — 띠 높이는 글에 맞춘다(초상 64 이상)
@@ -325,7 +340,7 @@ export class BattleScreen {
 
   // 지금 누를 수 있는 칸(판이 바뀔 때만 다시 잰다)
   clickable() {
-    if (this.busy) return { kind: null, list: [] };
+    if (this.busy || this.rv) return { kind: null, list: [] };
     const b = this.live();
     if (!b) return { kind: null, list: [] };
     if (!this.targets) {
@@ -378,7 +393,7 @@ export class BattleScreen {
 
   toggle(i) {
     const b = this.live();
-    if (this.busy || !b || b.status !== 'play' || i >= b.hand.length) return;
+    if (this.busy || this.rv || !b || b.status !== 'play' || i >= b.hand.length) return;
     // 손은 하나만 든다: 다른 기물을 누르면 바꿔 들고, 든 것을 다시 누르면 놓는다
     this.sel = this.sel.includes(i) ? [] : [i];
     this.targets = null;
@@ -429,6 +444,7 @@ export class BattleScreen {
     if (cmd.type === 'drop') this.slow = this.src.kind === 'lesson' || (!!run && !run.log.some((x) => !x.skipped) && bRef.history.length < 3);
     if (cmd.type === 'drop') { const hp = bRef.hand[cmd.handIndex]; this.dropEng = hp && hp.eng ? hp.eng.id : null; this.dropSoul = hp && hp.soul ? hp.soul : null; this.dropAwake = !!(hp && hp.awake); }
     if (cmd.type === 'drop' && run && !this.rehearsal) this.rec = { board: clone(bRef.board), drop: { sq: cmd.sq, piece: bRef.hand[cmd.handIndex].t }, caps: [], ante: run.ante };
+    if (this.src.kind === 'run' && !this.rehearsal) noteStep(this.trail, bRef, cmd);
     const events = this.src.cmd(cmd);
     if (run && !this.rehearsal) this.record(events, run);
     const post = clone(bRef.board);
@@ -748,7 +764,118 @@ export class BattleScreen {
     if (chest) list.push(['chest', { chest }]);
     list.push(...awakenFlow(ev));
     for (const e of ev) if (e.type === 'legend') list.push(['legend', { legend: e.legend }]);
+    // 진 대국: 막간 앞에 복기(갈림길 카드). 「넘어가기」 한 번이면 지금과 같은 흐름
+    if (this.bRef && this.bRef.status === 'lost' && reviewOn(app, this.src, this.bRef)) { this.rv = { phase: 'think', list, gen: reviewGen(this.trail, this.bRef), t: 0, end: this.bRef }; this.banner = null; return; }
     app.flow(list);
+  }
+
+  // ── 복기(CHM-59)
+  thinkReview(dt) {
+    const rv = this.rv;
+    rv.t += dt;
+    const t0 = performance.now();
+    let r;
+    do r = rv.gen.next(); while (!r.done && performance.now() - t0 < REVIEW_SLICE_MS);
+    if (!r.done && rv.t < REVIEW_WALL) return;
+    this.reviewDone(r.done ? r.value : { kind: 'unknown', nodes: 0, wall: true });
+  }
+  reviewDone(res) {
+    const app = this.app, run = app.run, rv = this.rv;
+    rv.gen = null;
+    this.reviewRes = res; // 마지막 복기 결과(smoke · 스크린샷 도구가 본다)
+    // 사람 판 기록: 대국 줄에 복기 결과(하네스 --replay와 같은 열쇠). 판이 이 대국으로 끝났으면 남긴 줄을 갈아 끼운다
+    const row = run.log[run.log.length - 1];
+    if (row && !row.won) {
+      row.replay = res.kind;
+      app.save();
+      if ((run.phase === 'lost' || run.phase === 'won') && run.track && run.track.kept) app.keepRun(run, run.phase === 'won' ? 'won' : run.endless ? 'endless' : 'lost');
+    }
+    if (res.kind === 'unknown') { this.endReview(false); return; }
+    rv.res = res;
+    rv.phase = 'card';
+    this.fx.list = this.fx.list.filter((e) => !e.word); // 「수가 다했다」 · 「시계 −1」 글자는 카드와 함께 두지 않는다
+    if (res.kind === 'path') {
+      // 갈린 수 앞의 판을 보인다(안개는 걷고)
+      rv.state = cloneBattle(this.trail[res.at].state);
+      rv.state.revealed = Array.from({ length: 64 }, (_, i) => i);
+      this.lastEnd = null;
+      this.sync();
+    }
+    app.records.reviews = (app.records.reviews || 0) + 1;
+    app.saveRecords();
+    this.snd(res.kind === 'path' ? 'pick' : 'lose');
+  }
+  // 넘어가기: 막간 · 국면 화면으로(카드를 봤으면 잃은 시계 칸을 상점에서 한 번 더 깜빡인다)
+  endReview(shown = true) {
+    const rv = this.rv, app = this.app;
+    this.rv = null;
+    const lost = shown && this.runEvents.find((e) => e.type === 'clockLost');
+    if (lost) app.clockFx = { idx: lost.clock, t: 0 };
+    app.flow(rv.list);
+  }
+  retryReview() {
+    const rv = this.rv, app = this.app;
+    if (!rv || !rv.res || rv.res.kind !== 'path') return;
+    app.records.reviewReplays = (app.records.reviewReplays || 0) + 1;
+    app.saveRecords();
+    const lost = this.runEvents.find((e) => e.type === 'clockLost');
+    app.go('review', { res: rv.res, trail: this.trail, list: rv.list, clock: lost ? lost.clock : null });
+  }
+  // 갈림길 카드 자리(판 아래쪽, 판 폭 안 — hug): 복기 중이면 한 줄, 카드면 제목 → 묶음 안 틈 → 문장 · 점수 → 묶음 틈 → 단추 줄
+  reviewBox() {
+    const rv = this.rv, CW = S * 8 - 8, P = PAD_BOX, tw = CW - P * 2;
+    const x = BX + Math.floor((S * 8 - CW) / 2), bottom = BY + S * 8 - 4;
+    const f = flow(P), rows = [];
+    let by = null;
+    if (rv.phase === 'think') rows.push([THINKING, f.line(), PAL.dim, false]);
+    else if (rv.res.kind === 'path') {
+      for (const l of wrap(forkTitle(rv.res), tw, true)) rows.push([l, f.line(), PAL.gold, true]);
+      f.gap(GAP_IN);
+      for (const l of wrap(forkLine(rv.res, rv.state.board), tw)) rows.push([l, f.line(), PAL.ink, false]);
+      const sc = wrap(forkScores(rv.res), tw);
+      for (const l of sc.length > 1 ? forkScoreLines(rv.res) : sc) rows.push([l, f.line(), PAL.dim, false]);
+    } else for (const l of wrap(NO_PATH, tw, true)) rows.push([l, f.line(), PAL.ink, true]);
+    if (rv.phase === 'card') by = f.gap(GAP_GROUP).space(BTN_S);
+    const h = f.y + P;
+    // 「?」 · 「!」 칸이 카드 밑에 들면 카드를 판 위쪽으로
+    let y = bottom - h;
+    if (rv.phase === 'card' && rv.res.kind === 'path') {
+      const m = forkMarks(rv.res);
+      const under = [m.mine, m.best].some((sq) => sq != null && sqXY(sq).y + S > y - 6);
+      if (under) y = BY + 4;
+    }
+    return { x, y, w: CW, h, rows, by, tw };
+  }
+  // 갈림길 카드. 판 위에는 「?」 내 수 · 「!」 이길 수
+  drawReview(ctx, ui) {
+    const rv = this.rv, app = this.app, P = PAD_BOX;
+    const path = rv.phase === 'card' && rv.res.kind === 'path';
+    if (path) this.drawForkMarks(ctx, rv.res);
+    const { x, y, w, h, rows, by, tw } = this.reviewBox();
+    openBox('panel', x, y, w, h, P, { name: rv.phase === 'think' ? '복기 중' : '갈림길' });
+    box(ctx, x, y, w, h, PAL.feltDk, path ? PAL.gold : PAL.frameDk);
+    for (const [l, ty, col, bold] of rows) text(ctx, l, x + w / 2, y + ty, col, { align: 'center', bold });
+    if (by != null) {
+      const bw = Math.floor((tw - 8) / 2);
+      if (path) {
+        button(ctx, ui, 'btn:replay', x + P, y + by, bw, BTN_S, '다시 두기', { onClick: () => this.retryReview(), tone: 'gold' });
+        button(ctx, ui, 'btn:moveon', x + w - P - bw, y + by, bw, BTN_S, '넘어가기', { onClick: () => this.endReview() });
+        hint(app, 'replay', 'btn:replay');
+      } else button(ctx, ui, 'btn:moveon', x + Math.floor((w - bw) / 2), y + by, bw, BTN_S, '넘어가기', { onClick: () => this.endReview() });
+    }
+    closeBox();
+  }
+  drawForkMarks(ctx, res) {
+    const m = forkMarks(res);
+    const tag = (sq, mark, tone, edge) => {
+      const { x, y } = sqXY(sq);
+      frame(ctx, x, y, S, S, edge, 2);
+      const r = boardTagRect(sq, { bx: BX, by: BY, S, mark, scale: 2 });
+      drawAnnot(ctx, mark, r.x, r.y, tone, 2);
+    };
+    if (m.best != null && m.ghost) sprite(ctx, m.ghost, 'w', sqXY(m.best).x + 6, sqXY(m.best).y + 2, { alpha: 0.6 });
+    if (m.mine != null) tag(m.mine, '?', ANNOT.red, ANNOT.red.fill);
+    if (m.best != null) tag(m.best, '!', ANNOT.teal, ANNOT.teal.fill);
   }
 
   // ── 효과
@@ -1048,6 +1175,7 @@ export class BattleScreen {
   pointerDown(x, y) { this.idleT = 0; if (x != null && sqAt(x, y) >= 0) this.marks.clear(); }
   update(dt) {
     this.idleT = (this.idleT || 0) + dt;
+    if (this.rv && this.rv.phase === 'think' && !this.busy) this.thinkReview(dt);
     // 판 전체의 처음 세 사슬과 첫 수업은 연출 속도 설정과 상관없이 ×1(눈이 규칙을 따라잡을 때까지)
     const sp = (this.slow ? 1 : this.app.speed()) * (this.fast ? 5 : 1);
     this.seq.update(dt * sp);
@@ -1068,6 +1196,7 @@ export class BattleScreen {
     this.drawLeft(ctx, ui);
     this.drawRight(ctx, ui);
     this.drawOver(ctx);
+    if (this.rv) this.drawReview(ctx, ui);
     if (this.src.kind === 'run') this.coachHints();
   }
   // 처음 안내: 판 위에서 처음 만나는 것(증원 · 금빛 적 · 특성 · 벽과 보석 · 이형 기물)
@@ -1648,7 +1777,12 @@ export class BattleScreen {
       if (g) fine(drawVM); else drawVM();
       if (v.brill) fine(() => this.brillTag(ctx, LX + 64 - dx, VY, 48));
     }
-    // 사슬 칸: 지나온 모습은 작게(왼쪽 아래), 지금 모습은 크게(2배, 오른쪽). 남는 높이를 가진다(모자라면 지금 모습도 1배)
+    this.drawChainPanel(ctx, ui, lay);
+    this.drawFootRows(ctx, ui);
+  }
+  // 사슬 칸: 지나온 모습은 작게(왼쪽 아래), 지금 모습은 크게(2배, 오른쪽). 남는 높이를 가진다(모자라면 지금 모습도 1배)
+  drawChainPanel(ctx, ui, lay) {
+    const v = this.view, run = this.run, P = PAD_BOX, c = v.chain;
     const cy = lay.chain.y, ch = lay.chain.h;
     openBox('panel', LX, cy, LW, ch, P, { name: '사슬 칸' });
     panel(ctx, LX, cy, LW, ch);
@@ -1670,7 +1804,10 @@ export class BattleScreen {
       ctx.globalAlpha = 1;
     }
     closeBox();
-    // 아래 칸: 수 · 희생(구슬) → 상금 → 주머니
+  }
+  // 아래 칸: 수 · 희생(구슬) → 상금 → 주머니
+  drawFootRows(ctx, ui) {
+    const app = this.app, v = this.view, run = this.run, P = PAD_BOX;
     const pipX = Math.max(52, Math.max(measure('수'), measure('희생')) + PAD_BOX + 6);
     const pipN = Math.max(v.moves, v.discards, 1);
     const pipStep = Math.min(14, Math.floor((LW - PAD_BOX - pipX) / pipN));
@@ -1784,7 +1921,7 @@ export class BattleScreen {
     }
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
-    button(ctx, ui, 'btn:discard', RX + RW - db.w, ry, db.w, BTN_S, '희생', { enabled: !!canDiscard, onClick: () => this.discard(), icon: db.icon ? discardIcon : null, tone: canDiscard ? 'red' : 'plain', grow: { u: upRoom } });
+    this.actionButton(ctx, ui, RX + RW - db.w, ry, db, !!canDiscard, upRoom);
     const drawn = v.drawn || [], hiding = v.hiding || [], deal = this.dealIn;
     v.hand.forEach((p, i) => {
       const hr = this.handRect(i, v.hand.length, lay);
@@ -1808,6 +1945,11 @@ export class BattleScreen {
         if (drawn.includes(p.id)) { const r = handTagRect(x, y - lift, w, level); drawAnnot(c, '!?', r.x, r.y, ANNOT.red); }
       }, { hover: hov && usable, press: pressed });
     });
+  }
+
+  // 손 이름표 줄 오른쪽 단추(희생). 다시 두기(screens/review.js)는 「넘어가기」
+  actionButton(ctx, ui, x, y, db, canDiscard, upRoom) {
+    button(ctx, ui, 'btn:discard', x, y, db.w, BTN_S, '희생', { enabled: canDiscard, onClick: () => this.discard(), icon: db.icon ? discardIcon : null, tone: canDiscard ? 'red' : 'plain', grow: { u: upRoom } });
   }
 
   drawOver(ctx) {
@@ -1883,6 +2025,13 @@ export class BattleScreen {
   key(k) {
     const b = this.live();
     this.idleT = 0;
+    // 갈림길 카드: Enter 다시 두기 · Esc · 스페이스 넘어가기
+    if (this.rv) {
+      if (this.rv.phase !== 'card') return;
+      if (k === 'Enter' && this.rv.res.kind === 'path') this.retryReview();
+      else if (k === 'Escape' || k === ' ' || (k === 'Enter' && this.rv.res.kind !== 'path')) this.endReview();
+      return;
+    }
     if (k === 'Escape') {
       if (this.sel.length) { this.sel = []; this.targets = null; return; }
       this.app.openOverlay('pause');

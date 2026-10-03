@@ -1,4 +1,4 @@
-// 설정(덮개): 소리 크기 · 음악 · 연출 속도 ×1/×2/×4 · 화면 흔들림 · 큰 글자 · 언어 · 처음 안내 · 움직임 줄이기,
+// 설정(덮개): 소리 크기 · 음악 · 연출 속도 ×1/×2/×4 · 화면 흔들림 · 복기 · 큰 글자 · 언어 · 처음 안내 · 움직임 줄이기,
 // 맨 아래 수업 · 킹과 다시 두기(다음 새 판의 첫 대국을 킹과 둔다, CHM-22) · 기록 내보내기(사람 판 기록 JSON, CHM-50) · 돌아가기.
 // 기록 내보내기는 줄 하나를 더하면 상자가 화면(270)을 넘어 맨 아래 단추 줄에 둔다.
 import { PAL } from '../../render/palette.js';
@@ -38,6 +38,10 @@ export class SettingsScreen {
     [1, 2, 4].forEach((v, i) => button(ctx, ui, `set:speed${v}`, x + 120 + i * 34, yy, 30, 18, `×${v}`, { onClick: () => set('speed', v), tone: s.speed === v ? 'gold' : 'plain', grow: GS }));
     yy = row(3, '화면 흔들림');
     button(ctx, ui, 'set:shake', x + 120, yy, 64, 18, s.shake ? '켬' : '끔', { onClick: () => set('shake', !s.shake), tone: s.shake ? 'gold' : 'plain', grow: G });
+    // 복기(CHM-59): 진 대국의 갈림길 카드. 줄을 더하면 상자가 화면(270)을 넘어 화면 흔들림 줄 오른쪽에 둔다
+    const on = s.replay !== false, rbw = 30;
+    text(ctx, '복기', x + w - PAD_BOX - rbw - 6, textY(yy, RH), PAL.ink, { align: 'right' });
+    button(ctx, ui, 'set:replay', x + w - PAD_BOX - rbw, yy, rbw, 18, on ? '켬' : '끔', { onClick: () => set('replay', !on), tone: on ? 'gold' : 'plain', grow: G });
     yy = row(5, '언어');
     button(ctx, ui, 'set:lang', x + 120, yy, 64, 18, s.lang === 'en' ? 'English' : '한국어', { onClick: () => { set('lang', s.lang === 'en' ? 'ko' : 'en'); setLang(s.lang); }, grow: G });
     yy = row(4, '큰 글자');
