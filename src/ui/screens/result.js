@@ -1,4 +1,4 @@
-// 판 결과: 이김/짐, 도달 관, 최고 한 수(작은 판에 다시 둔다), 목표에 모자란 점수(아슬아슬), 모은 조각,
+// 판 결과: 이김/짐, 도달 관, 최고 한 수(작은 판에 다시 둔다 — 대국 화면과 같은 길), 목표에 모자란 점수(아슬아슬), 모은 조각,
 // 새 도감 칸 · 해금 알림 · 다음 해금까지. 「다시」 / 「타이틀」.
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, sprite, num, short, fitNum, line, measure, fine } from '../../render/gfx.js';
@@ -12,6 +12,7 @@ import { rating } from './setup.js';
 import { lerp } from '../anim.js';
 import { PAD_BOX, LINE, GAP_GROUP, GAP_IN, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
+import { replayState, routeAt } from '../fxroute.js';
 
 const Q = 16, MX = 330, ROW_R = 300; // 다시 보기 판: 칸 16px. 윗변 MY는 결과 상자 자리에 따라(draw가 정한다). ROW_R: 기록 줄 수치의 오른끝
 let MY = 50;
@@ -37,6 +38,8 @@ export class ResultScreen {
   update(dt) { this.t += dt; }
 
   xy(sq) { return { x: MX + (sq & 7) * Q, y: MY + (7 - (sq >> 3)) * Q }; }
+  // 다시 보기(CHM-57): 대국 화면과 같은 길 — 꺾쇠 · 물수제비는 꺾은 칸을 거치고, 넘기는 넘은 칸 너머로 작은 포물선,
+  // 궁수 모습은 제자리에서 화살을 쏘고, 화약병 · 폭약으로 터진 적도 판에서 지운다(fxroute.js replayState)
   drawReplay(ctx) {
     const r = this.replay;
     box(ctx, MX - 4, MY - 4, Q * 8 + 8, Q * 8 + 8, PAL.frame, PAL.frameDk);
@@ -47,31 +50,41 @@ export class ResultScreen {
     const t = this.t % cycle - 0.8;          // < 0: 떨구기 전
     const done = t < 0 ? -1 : Math.min(n, Math.floor(t / STEP));
     const p = t < 0 ? 0 : Math.min(1, (t - done * STEP) / 0.25);
-    // 적: 먹힌 것은 지운다
-    const gone = new Set(r.caps.slice(0, Math.max(0, done)).map((c) => c.to));
-    const cur = done >= 0 && done < n ? r.caps[done] : null;
-    if (cur && p >= 1) gone.add(cur.to);
+    const st = replayState(r, done, p);
     r.board.forEach((c, sq) => {
-      if (!c || c.mine || gone.has(sq)) return;
+      if (!c || c.mine || st.gone.has(sq)) return;
       const { x, y } = this.xy(sq);
       sprite(ctx, c.t, 'b', x, y - 6, { alpha: 0.9 });
     });
     if (t < 0) return;
-    // 지나온 길
-    let pos = r.drop.sq, form = r.drop.piece;
-    const path = [pos];
-    for (let i = 0; i < Math.min(done, n); i++) { pos = r.caps[i].at ?? r.caps[i].to; form = r.caps[i].after; path.push(pos); }
-    for (let i = 0; i + 1 < path.length; i++) { const a = this.xy(path[i]), b = this.xy(path[i + 1]); line(ctx, a.x + 8, a.y + 8, b.x + 8, b.y + 8, PAL.gold); }
-    let x = this.xy(pos).x, y = this.xy(pos).y;
-    if (cur) {
-      const a = this.xy(cur.from), b = this.xy(cur.at ?? cur.to); // 까마귀는 넘은 칸 너머에 앉는다
-      x = lerp(a.x, b.x, p); y = lerp(a.y, b.y, p);
-      form = p >= 1 ? cur.after : cur.form;
+    const mid = (sq) => { const a = this.xy(sq); return { x: a.x + 8, y: a.y + 8 }; };
+    const poly = (pts, col) => { for (let i = 0; i + 1 < pts.length; i++) { const a = mid(pts[i]), b = mid(pts[i + 1]); line(ctx, a.x, a.y, b.x, b.y, col); } };
+    // 지나온 길(꺾인 길은 꺾은 칸을 거쳐) · 제자리 쏘기는 점선 대신 짧은 화살 줄
+    for (const pts of st.trail) poly(pts, PAL.gold);
+    for (const [a0, b0] of st.shots) { const a = mid(a0), b = mid(b0); line(ctx, a.x, a.y, b.x, b.y, PAL.goldDk); frame(ctx, this.xy(b0).x, this.xy(b0).y, Q, Q, PAL.goldDk); }
+    let { x, y } = this.xy(st.pos);
+    let moving = false;
+    const cur = st.cur, rt = st.route;
+    if (cur && p < 1) {
+      if (rt.kind === 'shot') {
+        // 화살: 제자리에서 먹을 칸까지 날아간다
+        const a = mid(cur.from), b = mid(cur.to);
+        fine(() => { const hx = lerp(a.x, b.x, p), hy = lerp(a.y, b.y, p); line(ctx, a.x, a.y, hx, hy, PAL.goldHi); rect(ctx, hx - 1, hy - 1, 2, 2, PAL.white); });
+      } else if (rt.kind === 'bend') {
+        const at = routeAt(rt.pts, p), a = this.xy(rt.pts[at.i]), b = this.xy(rt.pts[at.i + 1]);
+        x = lerp(a.x, b.x, at.k); y = lerp(a.y, b.y, at.k); moving = true;
+        // 지나온 몫: 꺾은 칸까지 + 지금 자리까지
+        poly(rt.pts.slice(0, at.i + 1), PAL.goldDk);
+        { const c = mid(rt.pts[at.i]); fine(() => line(ctx, c.x, c.y, x + 8, y + 8, PAL.goldDk)); }
+      } else {
+        const a = this.xy(rt.pts[0]), b = this.xy(rt.pts[1]);
+        x = lerp(a.x, b.x, p); y = lerp(a.y, b.y, p) - (rt.kind === 'hop' ? Math.sin(p * Math.PI) * 6 : 0); moving = true;
+      }
     }
     // 다시 보기의 움직이는 기물은 소수점 자리로
-    if (cur) fine(() => sprite(ctx, form, 'w', x, y - 6)); else sprite(ctx, form, 'w', x, y - 6);
+    if (moving) fine(() => sprite(ctx, st.form, 'w', x, y - 6)); else sprite(ctx, st.form, 'w', x, y - 6);
     if (done >= n) {
-      const e = this.xy(pos);
+      const e = this.xy(st.pos);
       frame(ctx, e.x, e.y, Q, Q, r.reason === 'cut' ? PAL.red : PAL.gold);
     }
   }

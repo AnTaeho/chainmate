@@ -41,6 +41,7 @@ import { awakenFlow } from './awaken.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
 import { ANNOT, drawAnnot, annotSize, handTagRect, boardTagRect, offeredRow, drawMore } from '../annot.js';
 import { drawStars, starsW, starCount, STAR_N } from '../stars.js';
+import { capRoute, routeAt, bendDur } from '../fxroute.js';
 
 export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
 export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
@@ -142,6 +143,7 @@ function gateArch(ctx, x, y, size, glow) {
   rect(ctx, x + 2, y + size - 2, size - 4, 1, GATE.hi);
   rect(ctx, x + inset, y + size - 3, size - inset * 2, 1, GATE.rim);
 }
+const WATER = '#4fa6c6'; // 물수제비가 튕긴 칸의 물방울 · 고리(나뭇결 위에서도 보이게 하늘빛보다 진하게)
 const FALL = 0.2, FALL_PX = 14; // 증원이 위에서 떨어지는 시간(×1) · 높이
 
 // 칸 안의 둥근 고리(다음에 먹을 적)
@@ -175,6 +177,19 @@ export function moverXY(form, from, to, p) {
   const k = q < 2 / 3 ? q * 1.5 : (q - 2 / 3) * 3;
   const pt = q < 2 / 3 ? { x: lerp(a.x, mid.x, k), y: lerp(a.y, mid.y, k) } : { x: lerp(mid.x, c.x, k), y: lerp(mid.y, c.y, k) };
   return { x: pt.x, y: pt.y - Math.sin(p * Math.PI) * 9, arc: Math.sin(p * Math.PI) * 9 };
+}
+// 움직이는 내 기물의 자리(CHM-57): 꺾는 길은 꺾은 칸을 거쳐(꺾는 칸에서 잠깐 선다), 넘기는 짧은 포물선, 그 밖은 행마(path)대로
+export function routeXY(m) {
+  const r = m.route;
+  if (r && r.kind === 'bend') {
+    const at = routeAt(r.pts, m.p), a = sqXY(r.pts[at.i]), c = sqXY(r.pts[at.i + 1]);
+    return { x: lerp(a.x, c.x, at.k), y: lerp(a.y, c.y, at.k) };
+  }
+  if (r && r.kind === 'hop') {
+    const a = sqXY(m.from), c = sqXY(m.to), q = ease.inOut(m.p), h = Math.sin(m.p * Math.PI) * 10;
+    return { x: lerp(a.x, c.x, q), y: lerp(a.y, c.y, q) - h, arc: h };
+  }
+  return moverXY(m.path || m.form, m.from, m.to, m.p);
 }
 const bagTip = (b) => {
   const counts = {};
@@ -294,6 +309,7 @@ export class BattleScreen {
         sq: c.sq, form: c.form, value: c.value, mult: c.mult,
         steps: [...c.captures.map((x) => x.form), c.form],
         path: [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.at ?? x.to)],
+        bends: [null, ...c.captures.filter((x) => !x.stay).map((x) => capRoute(x).pts.slice(1, -1))],
         shots: c.captures.filter((x) => x.stay).map((x) => [x.from, x.to]),
         forced: c.forced ? c.forced.slice() : null, awaiting: c.awaiting ? chainRedrops(b) : null,
         cut: false, eng: c.engraving ? c.engraving.id : null, soul: c.soul ? c.soul.id.replace('soul:', '') : null, awake: !!(c.soul && c.soul.data && c.soul.data.awake), absorbed: c.absorbed ? c.absorbed.slice() : null,
@@ -427,7 +443,10 @@ export class BattleScreen {
     const r = this.rec;
     if (!r) return;
     for (const e of events) {
-      if (e.type === 'capture') r.caps.push({ from: e.from, to: e.to, at: e.at ?? e.to, piece: e.piece, form: e.form, after: e.form });
+      // 다시 보기가 같은 길을 그리게 꺾은 칸(via) · 넘기(hop) · 제자리 쏘기(stay) · 광대가 흉내 낸 행마(move)도 남긴다
+      if (e.type === 'capture') r.caps.push({ from: e.from, to: e.to, at: e.at ?? e.to, piece: e.piece, form: e.form, after: e.form, ...(e.via != null && e.via >= 0 ? { via: e.via } : {}), ...(e.hop ? { hop: true } : {}), ...(e.stay ? { stay: true } : {}), ...(e.move ? { move: e.move } : {}) });
+      // 화약병 · 폭약으로 함께 터진 적은 그 먹기에 붙여 둔다(다시 보기 판에서 지운다)
+      else if (e.type === 'pierce' && r.caps.length) { const c = r.caps[r.caps.length - 1]; (c.gone || (c.gone = [])).push(e.sq); }
       else if ((e.type === 'transform' || e.type === 'promote') && r.caps.length) r.caps[r.caps.length - 1].after = e.type === 'promote' ? 'Q' : e.to;
       else if (e.type === 'refill' || e.type === 'redrop') r.broken = true;
       else if (e.type === 'end') {
@@ -464,7 +483,7 @@ export class BattleScreen {
         case 'drop': add(0.14, {
           begin: () => {
             v.board[e.sq] = { t: e.piece, mine: true };
-            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], forced: null, awaiting: null, cut: false, eng: this.dropEng || null, soul: this.dropSoul || null, awake: this.dropAwake || false };
+            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], bends: [], forced: null, awaiting: null, cut: false, eng: this.dropEng || null, soul: this.dropSoul || null, awake: this.dropAwake || false };
             v.dropIn = { sq: e.sq, p: 0 };
             this.snd('drop');
           },
@@ -481,31 +500,50 @@ export class BattleScreen {
           tick: (p) => { v.dropIn.p = p; },
           done: () => { v.dropIn = null; },
         }); break;
-        // 까마귀 모습은 먹은 칸(e.to) 너머에 앉는다(e.at): 움직임은 앉는 칸까지, 깨지는 그림은 먹은 칸에
-        case 'capture': add(moveDur(v.chain ? v.chain.form : 'N', e.from, e.at ?? e.to, e.stay), {
-          begin: () => {
-            const c = v.chain;
-            if (e.stay) { v.arrow = { from: e.from, to: e.to, p: 0 }; c.forced = null; return; }
-            v.board[e.from] = null;
-            v.mover = { from: e.from, to: e.at ?? e.to, form: c.form, p: 0 };
-            c.forced = null;
-          },
-          tick: (p) => { if (v.arrow) v.arrow.p = p; else v.mover.p = LEAPERS.has(v.mover.form) ? p : ease.out(p); },
-          done: () => {
-            const c = v.chain;
-            const victim = v.board[e.to];
-            // 궁수 모습: 제자리에서 쏜다(판 위 기물은 그대로, 먹힌 칸만 빈다)
-            if (e.stay) { v.board[e.to] = null; v.arrow = null; (c.shots || (c.shots = [])).push([e.from, e.to]); c.steps.push(c.form); }
-            else { const at = e.at ?? e.to; v.board[e.to] = null; v.board[at] = { t: c.form, mine: true }; v.mover = null; c.sq = at; c.path.push(at); c.steps.push(c.form); }
-            c.value += e.value; c.mult += 1;
-            this.shatter(e.to, victim ? victim.t : e.piece, victim && victim.gold ? 'g' : 'b');
-            this.flash(e.to, PAL.white);
-            this.pop(`+${e.value}`, 'value');
-            c.capPop = `+${e.value}`;
-            this.snd('capture', c.path.length - 1);
-            this.shake(1, 0.08);
-          },
-        }); break;
+        // 까마귀 모습은 먹은 칸(e.to) 너머에 앉는다(e.at): 짧은 포물선으로 넘고, 넘은 적은 가운데쯤 깨진다(CHM-57).
+        // 꺾쇠 · 물수제비는 꺾은 칸(via)을 거치는 꺾인 길로 미끄러지고 꺾는 칸에서 짧게 멈춘다(fxroute.js)
+        case 'capture': {
+          const route = capRoute(e);
+          const form0 = v.chain ? v.chain.form : 'N';
+          const dur = route.kind === 'bend' ? bendDur(route.pts) : route.kind === 'hop' ? 0.18 : moveDur(e.move || form0, e.from, e.at ?? e.to, e.stay);
+          add(dur, {
+            begin: () => {
+              const c = v.chain;
+              if (e.stay) { v.arrow = { from: e.from, to: e.to, p: 0 }; c.forced = null; return; }
+              v.board[e.from] = null;
+              v.mover = { from: e.from, to: e.at ?? e.to, form: c.form, path: e.move || c.form, route, p: 0, seen: 0, broke: false };
+              c.forced = null;
+            },
+            tick: (p) => {
+              if (v.arrow) { v.arrow.p = p; return; }
+              const m = v.mover;
+              if (route.kind === 'bend') {
+                m.p = p;
+                const at = routeAt(route.pts, p);
+                // 꺾는 칸에 닿는 순간 한 번: 꺾쇠는 흰 빛 한 점, 물수제비는 물방울
+                const reached = at.corner > 0 ? at.corner : at.i;
+                while (m.seen < reached && m.seen < route.pts.length - 2) { m.seen++; this.cornerFx(route.pts[m.seen], (e.move || m.form) === 'E'); }
+              } else if (route.kind === 'hop') {
+                m.p = p;
+                if (p >= 0.5 && !m.broke) { m.broke = true; const vic = v.board[e.to]; v.board[e.to] = null; this.shatter(e.to, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b'); this.flash(e.to, PAL.white); this.snd('capture', v.chain ? v.chain.path.length - 1 : 0); }
+              } else m.p = LEAPERS.has(m.path) ? p : ease.out(p);
+            },
+            done: () => {
+              const c = v.chain;
+              const broke = !!(v.mover && v.mover.broke);
+              const victim = v.board[e.to];
+              // 궁수 모습: 제자리에서 쏜다(판 위 기물은 그대로, 먹힌 칸만 빈다)
+              if (e.stay) { v.board[e.to] = null; v.arrow = null; (c.shots || (c.shots = [])).push([e.from, e.to]); c.steps.push(c.form); }
+              else { const at = e.at ?? e.to; v.board[e.to] = null; v.board[at] = { t: c.form, mine: true }; v.mover = null; c.sq = at; c.path.push(at); (c.bends || (c.bends = []))[c.path.length - 1] = route.pts.slice(1, -1); c.steps.push(c.form); }
+              c.value += e.value; c.mult += 1;
+              if (!broke) { this.shatter(e.to, victim ? victim.t : e.piece, victim && victim.gold ? 'g' : 'b'); this.flash(e.to, PAL.white); }
+              this.pop(`+${e.value}`, 'value');
+              c.capPop = `+${e.value}`;
+              if (!broke) this.snd('capture', c.path.length - 1);
+              this.shake(1, 0.08);
+            },
+          });
+        } break;
         case 'golden': add(0.12, { begin: () => { this.burst(e.sq, PAL.gold, 20); this.dust(e.sq, 26); this.snd('golden'); this.shake(1, 0.1); } }); break;
         case 'scoreGroup': add(0.05 + 0.03 * Math.min(3, e.list.length), {
           begin: () => {
@@ -545,7 +583,11 @@ export class BattleScreen {
         case 'cutIgnored': add(0.2, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('넘겼다', PAL.silver); } }); break;
         // 가족(깊이 B): 도약 뒤 노림 무시 · 직선 꿰뚫기 · 변신 한 번 더
         case 'threatIgnored': add(0.15, { begin: () => { this.sparkle(e.sq, PAL.silver, 10); this.word('지키는 적을 피했다', PAL.silver); } }); break;
-        case 'pierce': add(0.12, { begin: () => {
+        // 화약병 터짐(CHM-57): 둘레 여덟 칸이 번쩍이고 조각이 튄다. 세기는 터진 수에 따라(글 · 흔들림 · 멈칫은 여기서 한 번)
+        case 'explode': add(0.14 + 0.02 * Math.min(6, e.squares.length), { begin: () => this.blastFx(e.sq, e.squares) }); break;
+        // 화약병에 터진 적은 깨지기만(글 · 소리는 터짐 걸음이 한 번 냈다)
+        case 'pierce': if (e.src === 'powder') { add(0.05, { begin: () => { const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b'); this.flash(e.sq, PAL.goldHi); } }); break; }
+          add(0.12, { begin: () => {
           const vic = v.board[e.sq]; v.board[e.sq] = null; this.shatter(e.sq, vic ? vic.t : e.piece, vic && vic.gold ? 'g' : 'b');
           const bomb = e.src === 'bomb' || e.src === 'powder', col = bomb ? PAL.red : e.src && e.src.includes('martyr') ? PAL.red : FAMILY_BY_ID.line.col;
           this.flash(e.sq, col); this.word(bomb ? '폭발' : e.src && e.src.includes('martyr') ? '순교' : '꿰뚫었다', col); this.snd(bomb ? 'cut' : 'capture', 2); if (bomb) this.shake(2, 0.12);
@@ -570,7 +612,7 @@ export class BattleScreen {
         case 'brilliant': { const sq = mateSq; add(0, { begin: () => this.brilliantFx(sq, e) }); break; }
         case 'refill': add(0.35, {
           begin: () => { this.word('적이 다시 찬다', PAL.gold, 1.1, 1); this.snd('refill'); },
-          done: () => { v.board = clone(post); if (v.chain) { v.chain.path = [e.sq]; } },
+          done: () => { v.board = clone(post); if (v.chain) { v.chain.path = [e.sq]; v.chain.bends = []; } },
         }); break;
         case 'redropReady': add(0.15, {
           begin: () => { if (v.chain) { v.board[v.chain.sq] = null; v.chain.awaiting = e.squares.slice(); } this.word('다시 떨군다', PAL.gold, 1); },
@@ -755,6 +797,68 @@ export class BattleScreen {
   flash(sq, col) {
     const { x, y } = sqXY(sq);
     this.fx.add({ life: 0.15, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = 0.6 * (1 - e.t / e.life); rect(ctx, x, y, S, S, col); ctx.globalAlpha = 1; } });
+  }
+  // 꺾는 칸(CHM-57): 꺾쇠는 흰 빛 한 점(십자), 물수제비는 물방울 몇 개가 튀고 칸 테두리에 물빛 고리. 움직임 줄이기면 칸 빛만
+  cornerFx(sq, water) {
+    const { x, y } = this.center(sq);
+    const col = water ? WATER : PAL.white;
+    this.fx.add({ life: 0.22, layer: 1, draw: (ctx, e) => {
+      const k = e.t / e.life;
+      ctx.globalAlpha = 1 - k;
+      if (water) { const r = 5 + Math.floor(k * 9); frame(ctx, x - r, y - r, r * 2, r * 2, col); }
+      else { const r = 2 + Math.floor((1 - k) * 3); rect(ctx, x - r, y, r * 2 + 1, 1, col); rect(ctx, x, y - r, 1, r * 2 + 1, col); }
+      ctx.globalAlpha = 1;
+    } });
+    if (water && !this.app.reducedMotion) {
+      const parts = [];
+      for (let i = 0; i < 7; i++) parts.push({ x, y: y - 6, vx: (i - 3) * 22, vy: -80 - (i % 2) * 30, s: i % 3 ? 1 : 2 });
+      this.fx.add({
+        life: 0.35, layer: 1, parts,
+        update: (dt, f) => { for (const p of f.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * dt; } },
+        draw: (ctx, f) => { ctx.globalAlpha = Math.max(0, 1 - f.t / f.life); for (const p of f.parts) { rect(ctx, p.x, p.y, p.s, p.s + 1, col); if (p.s > 1) rect(ctx, p.x, p.y, 1, 1, PAL.white); } ctx.globalAlpha = 1; },
+      });
+    }
+    this.snd('tick');
+  }
+  // 화약병 터짐(CHM-57): 먹은 칸 둘레 여덟 칸이 번쩍이고(터진 칸은 진하게) 네모 충격파가 퍼지며 불티가 튄다.
+  // 세기 n = 터진 수: 불티 · 충격파 · 흔들림 · 글 크기가 커진다. 움직임 줄이기면 칸 빛과 글만
+  blastFx(sq, hit) {
+    const n = hit.length, set = new Set(hit), calm = this.app.reducedMotion;
+    const f0 = sq & 7, r0 = sq >> 3, cells = [];
+    for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
+      const f = f0 + df, r = r0 + dr;
+      if (f < 0 || f > 7 || r < 0 || r > 7) continue;
+      const s = r * 8 + f; cells.push({ ...sqXY(s), hot: s === sq || set.has(s) });
+    }
+    this.fx.add({ life: 0.28 + 0.03 * Math.min(6, n), layer: 1, draw: (ctx, e) => {
+      const k = e.t / e.life;
+      for (const c of cells) {
+        ctx.globalAlpha = (c.hot ? 0.75 : 0.35) * (1 - k);
+        rect(ctx, c.x, c.y, S, S, c.hot ? (k < 0.3 ? PAL.goldHi : PAL.red) : PAL.red);
+      }
+      ctx.globalAlpha = 1;
+    } });
+    const { x, y } = this.center(sq);
+    if (!calm) {
+      const reach = 18 + 4 * Math.min(6, n);
+      this.fx.add({ life: 0.3, layer: 1, draw: (ctx, e) => {
+        const k = e.t / e.life, r = Math.floor(6 + k * reach);
+        ctx.globalAlpha = 1 - k; frame(ctx, x - r, y - r, r * 2, r * 2, PAL.goldHi); ctx.globalAlpha = 1;
+      } });
+      const parts = [], m = 10 + 3 * Math.min(8, n);
+      let seed = sq * 131 + n;
+      const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+      for (let i = 0; i < m; i++) { const a = (i / m) * Math.PI * 2 + rnd() * 0.4, sp = 60 + rnd() * (40 + 10 * n); parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 20, col: rnd() < 0.5 ? PAL.goldHi : PAL.red, s: rnd() < 0.3 ? 2 : 1 }); }
+      this.fx.add({
+        life: 0.5, layer: 1, parts,
+        update: (dt, f) => { for (const p of f.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.93; p.vy = p.vy * 0.93 + 120 * dt; } },
+        draw: (ctx, f) => { ctx.globalAlpha = Math.max(0, 1 - f.t / f.life); for (const p of f.parts) rect(ctx, p.x, p.y, p.s, p.s, p.col); ctx.globalAlpha = 1; },
+      });
+    }
+    this.word('폭발', PAL.red, 1, n >= 6 ? 3 : 2);
+    this.snd('boom', 0);
+    this.shake(Math.min(3, 1 + Math.floor(n / 3)), 0.12 + 0.02 * Math.min(6, n));
+    if (n >= 3) this.hitstop(0.06);
   }
   // 희생: 바친 손 카드가 조각(카드 바탕 · 기물 빛깔)으로 흩어진다. 카드 자리는 걸음이 끝날 때까지 비워 둔다(v.hiding)
   offerFx(indices) {
@@ -1146,10 +1250,12 @@ export class BattleScreen {
     }
     // 사슬 길
     if (v.chain) {
-      const path = v.chain.path;
+      // 꺾쇠 · 물수제비의 길은 꺾은 칸(bends)을 거쳐 꺾여 그린다 — 꺾은 칸에는 작은 금빛 점
+      const path = v.chain.path, bends = v.chain.bends || [];
       for (let i = 0; i + 1 < path.length; i++) {
-        const a = this.center(path[i]), c = this.center(path[i + 1]);
-        line(ctx, a.x, a.y, c.x, c.y, PAL.gold);
+        const pts = [path[i], ...(bends[i + 1] || []), path[i + 1]];
+        for (let j = 0; j + 1 < pts.length; j++) { const a = this.center(pts[j]), c = this.center(pts[j + 1]); line(ctx, a.x, a.y, c.x, c.y, PAL.gold); }
+        for (const k of bends[i + 1] || []) { const c = this.center(k); rect(ctx, c.x - 1, c.y - 1, 3, 3, PAL.goldHi); }
       }
       for (let i = 1; i < path.length; i++) {
         const { x, y } = sqXY(path[i]);
@@ -1216,7 +1322,16 @@ export class BattleScreen {
     }
     // 움직이는 내 기물
     if (v.mover) {
-      const m = moverXY(v.mover.form, v.mover.from, v.mover.to, v.mover.p);
+      const m = routeXY(v.mover);
+      // 꺾는 길: 지나온 몫을 흐린 금빛 선으로 끌고 간다
+      if (v.mover.route && v.mover.route.kind === 'bend') {
+        const pts = v.mover.route.pts, at = routeAt(pts, v.mover.p);
+        let a = this.center(pts[0]);
+        ctx.globalAlpha = 0.7;
+        for (let i = 0; i < at.i; i++) { const b = this.center(pts[i + 1]); line(ctx, a.x, a.y, b.x, b.y, PAL.goldHi); a = b; }
+        line(ctx, a.x, a.y, Math.round(m.x) + 14, Math.round(m.y) + 14, PAL.goldHi);
+        ctx.globalAlpha = 1;
+      }
       // 그림자는 뛰는 호 밑 바닥 자리에(뛰면 작아지고 옅어진다)
       this.putPiece(ctx, v.mover.form, 'w', m.x + 6, m.y + 3, this.look(v.mover.form, time), Math.max(0, m.arc || 0));
     }
