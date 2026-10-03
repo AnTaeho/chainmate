@@ -94,8 +94,8 @@ export function bestMove(b, opts = {}) {
       startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece), pieceId: piece.id });
       const r = dfs(t, stats, preferMate, rank);
       if (!r) continue;
-      // opts.collect: 떨구기마다 그 자리의 최선(재미 하네스가 「의미 있는 선택지」를 센다)
-      if (opts.collect) opts.collect.push({ handIndex, t: piece.t, sq, score: r.score, first: r.line[0] ?? null });
+      // opts.collect: 떨구기마다 그 자리의 최선(재미 하네스가 「의미 있는 선택지」를 센다 · 복기 replay.js가 빔 후보로 쓴다)
+      if (opts.collect) opts.collect.push({ handIndex, t: piece.t, sq, score: r.score, mate: r.mate, first: r.line[0] ?? null, line: r.line });
       if (better(r, best, preferMate, rank)) best = { ...r, handIndex, sq };
     }
   }
