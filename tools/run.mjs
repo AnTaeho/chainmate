@@ -13,7 +13,7 @@ import { createRun, B, targetFor, REWARD, CHEST } from '../src/sim/run.js';
 import { applyNight2 } from './night2.mjs';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
-import { playRun, SMART, DRAFT, applyStrength, REPLAY } from './shopbot.mjs';
+import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK } from './shopbot.mjs';
 import { REVIEW } from '../src/sim/replay.js';
 import { BOT } from './bot.mjs';
 import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
@@ -50,6 +50,10 @@ function parseArgs(argv) {
     else if (k === '--replay') a.replay = true;                         // 진 대국마다 복기(src/sim/replay.js)를 돌려 path · none · unknown 몫과 ms를 잰다(CHM-59)
     else if (k === '--replay-nodes') a.replayNodes = Number(argv[++i]);  // 복기 마디 예산(기본 REVIEW.nodes)
     else if (k === '--replay-beam') a.replayBeam = Number(argv[++i]);    // 복기 빔 폭(기본 REVIEW.beam)
+    else if (k === '--peek-log') a.peekLog = true;                     // 판 보기(CHM-61): 연습 · 정식 대국마다 봇의 판 읽기(read)를 남겨 승패와 견준다
+    else if (k === '--peek-skip') a.peekSkip = Number(argv[++i]);      // 판 읽기가 이 값보다 낮으면 건너뛴다
+    else if (k === '--peek-alt') a.peekAlt = true;                     // 건너뛴 판을 복사본에서 두어 이겼을지(대체 승률)
+    else if (k === '--peek-nodes') a.peekNodes = Number(argv[++i]);    // 판 읽기 풀이기 마디(기물 하나마다)
     else if (k === '--dump') a.dump = argv[++i];                       // 판별 결과 전부(ms 빼고, seed 순)를 JSON으로 — 손질 전후 결정성 비교(CHM-44)
     else if (k === '--json') a.json = argv[++i];                       // 수치를 JSON으로도(밤샘 2 보고서 · 아티팩트용)                          // 정석 드래프트 없이(깊이 E 이전)
     else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
@@ -75,13 +79,18 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
     souls: [...new Set(run.log.flatMap((b) => b.souls || []))], cracked: run.cracked || [], awakened: run.awakened || [],
     ...(BOT.stats ? { botStats: { ...BOT.stats } } : {}),
     ...(REPLAY.on ? { replays: REPLAY.rows.slice() } : {}),
+    ...(PEEK.log || PEEK.skipBelow != null ? { peek: PEEK.rows.slice() } : {}),
     ms: performance.now() - t0,
   };
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki, strong, look, botstats, replay, replayNodes, replayBeam } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki, strong, look, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes } = workerData;
   if (replay) REPLAY.on = true;
+  if (peekLog) PEEK.log = true;
+  if (peekSkip != null) PEEK.skipBelow = peekSkip;
+  if (peekAlt) PEEK.alt = true;
+  if (peekNodes) PEEK.nodes = peekNodes;
   if (replayNodes) REVIEW.nodes = replayNodes;
   if (replayBeam) REVIEW.beam = replayBeam;
   if (joseki) DRAFT.pick = joseki;
@@ -109,7 +118,7 @@ if (!isMainThread) {
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + i * 7919) >>> 0);
   const t0 = performance.now();
   // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
-  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam };
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes };
   const results = [], timeouts = [];
   let next = 0, done = 0;
   await new Promise((finish) => {
@@ -349,6 +358,7 @@ function report(R, args, wall) {
     for (const r of winners) console.log(`  이긴 판 예 seed ${r.seed}: 격언 [${r.final.map((id) => MAXIM_BY_ID[id].name).join(', ')}]${r.legends.length ? ' 전설 [' + r.legends.map((id) => LEGEND_BY_ID[id].name).join(', ') + ']' : ''} 주머니 [${r.deck}]`);
   }
   // ── JSON(--json): 관별 통과율 · 종류별 · 점수/목표 분포 · 시계 · 새것별 산 판 승률
+  if (args.peekLog || args.peekSkip != null) peekReport(R, args, { pc, f, table });
   if (args.replay) { if (args.replayNodes) REVIEW.nodes = args.replayNodes; if (args.replayBeam) REVIEW.beam = args.replayBeam; replayReport(R, { pc, f, table, pctile }); }
   if (args.json) {
     const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : null);
@@ -458,4 +468,35 @@ function replayReport(R, { pc, f, table, pctile }) {
   table(['관', '진 대국', 'path', 'none', 'unknown', 'ms p50', 'ms p90'], byAnte);
   const byKind = ['practice', 'official', 'master'].map((kd) => { const xs = rows.filter((x) => x.kind === kd); const k = (kind) => xs.filter((x) => x.replay === kind).length; return [kd, String(xs.length), pc(k('path') / Math.max(1, xs.length)), pc(k('none') / Math.max(1, xs.length)), pc(k('unknown') / Math.max(1, xs.length))]; });
   table(['종류', '진 대국', 'path', 'none', 'unknown'], byKind);
+}
+
+// 판 보기(CHM-61): 봇이 관 선택에서 판을 읽은 값(read = 주머니 기물 하나로 둔 첫 수 최선의 평균 / 목표)과 그 대국의 승패 ·
+// 건너뛴 대국의 몫 · 건너뛴 판을 복사본에서 두었다면 이겼을 몫(대체 승률).
+function peekReport(R, args, { pc, f, table }) {
+  const rows = [];
+  for (const r of R) for (const p of r.peek || []) {
+    const lg = r.log.find((x) => x.ante === p.ante && x.blind === p.blind);
+    rows.push({ ...p, won: lg && !lg.skipped ? !!lg.won : null, ended: !lg });
+  }
+  const played = rows.filter((x) => !x.skip && x.won != null), skipped = rows.filter((x) => x.skip);
+  const all = R.flatMap((r) => r.log);
+  const pr = all.filter((x) => x.kind !== 'master');
+  console.log(`\n판 보기: 봇이 읽은 연습 · 정식 대국 ${rows.length}개(마디 ${args.peekNodes || PEEK.nodes}${args.peekSkip != null ? ` · read < ${args.peekSkip}면 건너뜀` : ' · 건너뛰지 않음'})`);
+  console.log(`건너뛴 대국: 연습 · 정식 ${pr.filter((x) => x.skipped).length} / ${pr.length}(${pc(pr.filter((x) => x.skipped).length / Math.max(1, pr.length))}) · 대국 전체 ${all.filter((x) => x.skipped).length} / ${all.length}(${pc(all.filter((x) => x.skipped).length / Math.max(1, all.length))})`);
+  const alt = skipped.filter((x) => x.altWon != null);
+  if (alt.length) console.log(`건너뛴 판의 대체 승률: ${alt.filter((x) => x.altWon).length} / ${alt.length}(${pc(alt.filter((x) => x.altWon).length / alt.length)}) · 둔 연습 · 정식 대국 승률 ${pc(played.filter((x) => x.won).length / Math.max(1, played.length))}`);
+  // read 구간마다 둔 대국의 승률(문턱 고르기)
+  const cuts = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1, 1.5, 2, Infinity];
+  const out = [];
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    const xs = played.filter((x) => x.read >= cuts[i] && x.read < cuts[i + 1]);
+    const sk = skipped.filter((x) => x.read >= cuts[i] && x.read < cuts[i + 1]);
+    const al = sk.filter((x) => x.altWon != null);
+    out.push([`${cuts[i]}~${cuts[i + 1] === Infinity ? '' : cuts[i + 1]}`, String(xs.length), pc(xs.filter((x) => x.won).length / Math.max(1, xs.length)), String(sk.length), al.length ? pc(al.filter((x) => x.altWon).length / al.length) : '-']);
+  }
+  table(['read', '둔 대국', '승률', '건너뜀', '대체 승률'], out);
+  for (const kind of [0, 1]) {
+    const xs = played.filter((x) => x.blind === kind);
+    console.log(`  ${kind ? '정식' : '연습'}: 둔 ${xs.length} · 승률 ${pc(xs.filter((x) => x.won).length / Math.max(1, xs.length))} · read p50 ${f(xs.map((x) => x.read).sort((a, b) => a - b)[xs.length >> 1] ?? NaN, 2)}`);
+  }
 }

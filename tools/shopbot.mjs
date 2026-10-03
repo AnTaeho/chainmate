@@ -9,7 +9,7 @@
 import { createRng, fork, int, next } from '../src/sim/rng.js';
 import { createBattle, soulOf, arrive, apply as applyBattle } from '../src/sim/battle.js';
 import { isCracked } from '../src/data/souls.js';
-import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult } from '../src/sim/run.js';
+import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult, previewBattle } from '../src/sim/run.js';
 import { EDITION_BY_ID } from '../src/data/editions.js';
 import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
@@ -472,6 +472,43 @@ function huntRank(run) {
   };
 }
 
+// ── 판 보기(CHM-61): 관 선택에서 연습 · 정식 대국판을 보고 건너뛸지 고른다. 사람이 보는 것만 쓴다 — 판(previewBattle) · 주머니 · 목표.
+// 손은 모른다: 주머니의 기물(같은 종류 · 각인 · 혼은 하나로)마다 「그 기물 하나로 둔 첫 수 최선 점수」(풀이기, 마디 PEEK.nodes)를 재어
+// 주머니 몫으로 평균하고 목표로 나눈 값이 read(판이 내 주머니에 맞는 정도). read < PEEK.skipBelow면 건너뛴다(null이면 늘 둔다).
+// log: 대국마다 read를 남겨 승패와 견준다(문턱 고르기). alt: 건너뛴 판을 복사본에서 두어 이겼을지 남긴다(건너뛴 판의 대체 승률).
+export const PEEK = { skipBelow: null, nodes: 1500, log: false, alt: false, rows: [] };
+export function boardRead(run) {
+  const b = previewBattle(run);
+  if (!b || !b.target) return null;
+  const seen = new Map();
+  for (const p of [...b.hand, ...b.bag]) {
+    const k = p.t + JSON.stringify(p.eng) + (p.soul || '') + (p.awake ? '!' : '');
+    const e = seen.get(k);
+    if (e) { e.n++; continue; }
+    const m = bestMove({ ...b, hand: [p] }, { preferMate: false, maxNodes: PEEK.nodes });
+    seen.set(k, { n: 1, score: m ? m.score : 0 });
+  }
+  let sum = 0, n = 0, max = 0;
+  for (const e of seen.values()) { sum += e.score * e.n; n += e.n; max = Math.max(max, e.score); }
+  return { read: n ? sum / n / b.target : 0, max: max / b.target };
+}
+// 건너뛴 대국을 복사본에서 끝까지 두어 본다(판의 흐름 · 기록은 건드리지 않는다)
+function altPlay(run, opts) {
+  const copy = clone(run), sac = SACLOG.rows.length;
+  applyRun(copy, { type: 'play' });
+  for (let i = 0; i < 200 && copy.phase === 'battle'; i++) if (!stepBattle(copy.battle, (c) => applyRun(copy, c), opts)) break;
+  SACLOG.rows.length = sac;
+  return copy.battle.status === 'won';
+}
+function selectStep(run, policy, r) {
+  if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) { act(run, { type: 'skip' }); return; }
+  const peek = policy !== 'random' && run.blind < 2 && (PEEK.log || PEEK.skipBelow != null);
+  const rd = peek ? boardRead(run) : null;
+  const skip = !!rd && PEEK.skipBelow != null && rd.read < PEEK.skipBelow;
+  if (rd) PEEK.rows.push({ ante: run.ante, blind: run.blind, read: Math.round(rd.read * 1000) / 1000, max: Math.round(rd.max * 1000) / 1000, skip, ...(skip && PEEK.alt ? { altWon: altPlay(run, policy === 'nosac' ? { sacrifice: false } : {}) } : {}) });
+  act(run, { type: skip ? 'skip' : 'play' });
+}
+
 // 판 하나를 끝까지. 돌려주는 값: 요약(하네스용)
 // 복기 진단(CHM-59, run.mjs --replay): 진 대국마다 복기(src/sim/replay.js)를 돌려 대국 줄에 kind를 적고(사람 판 기록과 같은 열쇠 replay),
 // 갈림길 · 마디 · ms는 rows에. 끄면(기본) 아무것도 하지 않는다 — 판의 결과는 켜도 끄도 같다(복기는 복사본만 둔다).
@@ -484,6 +521,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
   let legendAt = null;
   SEEN.reset();
   SACLOG.reset();
+  PEEK.rows = [];
   const trackBuys = (before) => {
     for (const m of run.maxims) if (!before.includes(m.uid)) { bought.add(m.id); if (m.edition) editions.push(m.edition); }
   };
@@ -495,11 +533,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (stopAt && stopAt(run)) break;
     if (run.phase === 'won') { if (endlessUntil > run.ante) act(run, { type: 'endless' }); else break; }
     if (run.phase === 'draft') { act(run, { type: 'joseki', index: pickJoseki(run, policy, r) }); continue; }
-    if (run.phase === 'select') {
-      if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) act(run, { type: 'skip' });
-      else act(run, { type: 'play' });
-      continue;
-    }
+    if (run.phase === 'select') { selectStep(run, policy, r); continue; }
     if (run.phase === 'battle') {
       const opts = policy === 'hunt' ? { rank: huntRank(run) } : policy === 'nosac' ? { sacrifice: false } : {};
       if (!REPLAY.on) {
