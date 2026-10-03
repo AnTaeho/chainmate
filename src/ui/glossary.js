@@ -127,9 +127,11 @@ export function richText(ctx, s, x, y, col, { termCol = PAL.goldDk, ui = null, u
 // ── 낱말 상자(Slay the Spire의 키워드 상자처럼): 카드 · 말풍선 옆에 낱말마다 제목 + 한 문장, 위에서 아래로 쌓는다.
 // 글(한국어 글 · 옮긴 글)과 { id } 꼴의 이름을 받아 처음 나온 차례대로 낱말 id를 모은다.
 // 글에서 찾은 기본 낱말은 뺀다. { id } 꼴은 그 낱말 자체를 가리킨 것이라(값 · 배수 칸) 기본 낱말이어도 남긴다.
+// { skip: id }는 그 낱말을 빼라는 표시다(카드가 자기 종류 낱말을 효과 글에 품고 있을 때 — parts.js itemKeys).
 export function termsIn(list) {
   const out = [];
-  const push = (id) => { if (id && TERM_BY_ID[id] && !out.includes(id)) out.push(id); };
+  const skip = new Set(list.filter((s) => s && typeof s === 'object' && s.skip).map((s) => s.skip));
+  const push = (id) => { if (id && TERM_BY_ID[id] && !out.includes(id) && !skip.has(id)) out.push(id); };
   for (const s of list) {
     if (!s) continue;
     if (typeof s === 'object') { push(s.id); continue; }

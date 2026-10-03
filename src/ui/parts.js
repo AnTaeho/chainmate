@@ -544,8 +544,11 @@ export function itemKeys(it) {
   if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) out.push({ id: 'fairy' });
   out.push(itemEffect(it));
   if (it.edition) out.push({ id: 'edition' });
+  // 효과 글에 자기 종류 낱말(「격언 칸 +1」의 격언 등)이 있어도 그 상자는 띄우지 않는다
+  if (OWN_TERM[it.kind]) out.push({ skip: OWN_TERM[it.kind] });
   return out;
 }
+const OWN_TERM = { maxim: 'maxim', chart: 'chart', engraving: 'engraving', fragment: 'fragment', soul: 'soul', evolve: 'evolve', tactic: 'tactic' };
 // 카드에 이미 적힌 것 말고 덧붙일 것만(이야기 · 진화 갈래 · 행마 그림). 시너지는 카드의 칩이 말한다. 없으면 null
 export function itemExtraTip(it) {
   const lines = [];
