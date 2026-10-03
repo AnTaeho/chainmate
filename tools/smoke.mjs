@@ -7,7 +7,7 @@ import { lineCommands, previewDrop, bestMove } from '../src/sim/solver.js';
 import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
-import { isHidden, canReboard, dropSquaresFor } from '../src/sim/battle.js';
+import { isHidden, canReboard, dropSquaresFor, nextDraws } from '../src/sim/battle.js';
 import { boardFrom } from '../src/sim/board.js';
 import { chainCaptures } from '../src/sim/chain.js';
 import { reboardOn } from '../src/sim/tuning.js';
@@ -345,6 +345,8 @@ const HINT_SUBJECT = {
   // 탁월수(CHM-43): 가리킨 손 카드가 희생으로 새로 뽑은 기물(「!?」 딱지)
   // 복기(CHM-59): 길 있음 갈림길 카드의 「다시 두기」
   replay: (id) => id === 'btn:replay' && scrName() === 'battle' && !!app.screen.rv && app.screen.rv.phase === 'card' && app.screen.rv.res.kind === 'path',
+  // 다음 수(CHM-60): 손 오른쪽 끝 칸, 주머니 맨 앞이 하나라도 있을 때
+  next: (id, run) => id === 'next' && scrName() === 'battle' && !!run.battle && nextDraws(run.battle).length > 0,
   brilliant: (id, run) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')], off = run.battle && run.battle.offering; return !!(p && off && (off.drawn || []).includes(p.id)); },
 };
 function hintSubject() {
@@ -399,6 +401,34 @@ function measureSeq(s) {
   s.seq.trace = [];
 }
 
+// ── 다음 수(CHM-60): 결정마다 「보이던 둘」(화면 view.next = 규칙 nextDraws)이 실제로 그 차례로 손에 들어왔나.
+// 손을 새로 쥔 결정은 주머니를 다시 섞으니 들어온 것 대신 새 차례가 화면에 곧바로 보이는지만 잰다.
+const nextSeen = { moves: 0, drawn: 0, regrip: 0, view: 0, bad: [] };
+const nextIds = (xs) => (xs || []).map((p) => p.id).join(',');
+function nextBad(msg) { if (nextSeen.bad.length < 8) nextSeen.bad.push(msg); }
+function nextView(b) {
+  const v = app.screen.view;
+  nextSeen.view++;
+  if (nextIds(v.next) !== nextIds(nextDraws(b))) nextBad(`화면 ${nextIds(v.next)} · 규칙 ${nextIds(nextDraws(b))}`);
+  if (!region('next')) nextBad('다음 수 칸이 없다');
+}
+function nextBefore(b) {
+  if (app.screen.name !== 'battle' || b.status !== 'play' || app.screen.busy) return null;
+  nextView(b);
+  return { b, shown: nextDraws(b).map((p) => p.id), hand: b.hand.map((p) => p.id), regrip: !!b.regrip };
+}
+function nextAfter(pre) {
+  if (!pre) return;
+  const b = pre.b;
+  if (app.run.battle !== b || b.status !== 'play' || app.screen.name !== 'battle') return;
+  nextSeen.moves++;
+  if (!!b.regrip !== pre.regrip) { nextSeen.regrip++; nextView(b); return; }
+  const got = b.hand.filter((p) => !pre.hand.includes(p.id)).map((p) => p.id);
+  nextSeen.drawn += got.length;
+  if (got.length <= pre.shown.length && got.join(',') !== pre.shown.slice(0, got.length).join(',')) nextBad(`보이던 ${pre.shown} · 들어온 ${got}`);
+  nextView(b);
+}
+
 // ── 화면별 할 일
 let rngS = SEED * 7919;
 const rnd = () => { rngS = (rngS * 1103515245 + 12345) & 0x7fffffff; return rngS / 0x7fffffff; };
@@ -442,10 +472,14 @@ function battleStep() {
   const d = n2.worse && b.movesUsed === 0 ? { play: n2.worse } : decideBattle(b);
   n2.worse = null;
   if (!d) throw new Error('no decision');
+  const pre = nextBefore(b);
   if (d.reboard) {
     if (!region('btn:reboard')) { n2.reboardBad++; throw new Error('bot wants to reboard but no button'); }
     click('btn:reboard'); idle();
     n2.reboard++; n2.reboardBot++;
+    // 다시 놓기는 판만 새로 깐다: 보이는 둘이 그대로
+    if (pre && app.run.battle === b && nextDraws(b).map((p) => p.id).join(',') !== pre.shown.join(',')) nextBad(`다시 놓기 뒤 ${nextIds(nextDraws(b))} · 앞 ${pre.shown}`);
+    nextAfter(pre);
     return;
   }
   if (d.discard) {
@@ -453,6 +487,7 @@ function battleStep() {
     s.seq.total = 0;
     click('btn:discard');
     idle();
+    nextAfter(pre);
     return;
   }
   s.seq.total = 0;
@@ -523,6 +558,7 @@ function battleStep() {
     k++;
   }
   measureSeq(s);
+  nextAfter(pre);
 }
 
 // 진 대국: 복기 중 한 줄 → 갈림길 카드(길 있음이면 판 위 「?」 · 「!」). 처음 길 있음 카드는 「다시 두기」, 그 밖은 「넘어가기」
@@ -1712,6 +1748,8 @@ console.log(`길 중 멈춤: Esc ${pauseSeen.esc} · ≡ ${pauseSeen.button} · 
 if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseSeen.title || !pauseSeen.resume || !pauseSeen.skip || !pauseSeen.lessonTitle) { console.log('길 중에 멈춤이 열리지 않았거나, 닫은 뒤 · 타이틀로 · 건너뛰기가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
+console.log(`다음 수: 결정 ${nextSeen.moves}번 · 들어온 기물 ${nextSeen.drawn} · 손을 새로 쥠 ${nextSeen.regrip} · 화면 = 규칙 잰 수 ${nextSeen.view} · 어긋남 ${nextSeen.bad.length}${nextSeen.bad.length ? `: ${nextSeen.bad.join(' | ')}` : ''}`);
+if (nextSeen.bad.length || nextSeen.moves < 10 || nextSeen.drawn < 10) { console.log('보이던 다음 둘이 실제로 그 차례로 들어오지 않았거나, 잰 결정이 너무 적다'); fail = true; }
 console.log(`처음 안내가 말하는 것: ${subj.n}곳 · 화면에 없음 ${subj.bad.length}${subj.bad.length ? `: ${subj.bad.join(' | ')}` : ''}`);
 if (subj.bad.length) { console.log('처음 안내가 화면에 없는 것을 가리켰거나 같은 안내가 두 번 떴다'); fail = true; }
 console.log(`대본 대국 경로: 끝까지 둔 뒤 상점 ${scriptSeen.shopMaxim ? '격언 있음 → 격언 안내' : '격언 없음 → 격언 안내 없음'}`);
