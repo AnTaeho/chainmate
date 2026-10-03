@@ -7,7 +7,7 @@ import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, artOf } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, hiFor, SW, SH, TONE, tierOf } from '../../render/sprites.js';
 import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
-import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard } from '../../sim/battle.js';
+import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
@@ -54,6 +54,15 @@ export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S
 // 게임 좌표 → 판 칸(판 밖이면 -1)
 export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
+// 다음 수(CHM-60, docs/design-notes/agency.md A): 손 카드 오른쪽 끝의 좁은 칸에 주머니 맨 앞 둘을 반 크기 기물로(위가 먼저, 흐리게).
+// 새 카드는 손 오른쪽 끝에 붙으니 들어오는 쪽에 둔다. 손 카드는 그만큼 좁아진다(넷이면 25 → 22).
+// 칸 둘은 손 높이(36)의 아래쪽에 — 넷째 카드의 「!?」 딱지(오른쪽 위 밖으로 2 · 위로 4)와 떨어지게.
+export const NEXT_COL = { w: 10, gap: 2, slotH: 15, slotGap: 2 };
+export function nextColumn(lay) {
+  const { w, slotH, slotGap } = NEXT_COL, h = slotH * 2 + slotGap;
+  const x = RX + RW - w, y = lay.handY + lay.HAND_H - h;
+  return { x, y, w, h, slots: [0, 1].map((k) => ({ x, y: y + k * (slotH + slotGap), w, h: slotH })) };
+}
 // 손 이름표 줄 오른쪽 희생 단추: 아이콘 + 이름이 62 안에 들어가면 그대로. 안 들어가면(영어 「Sacrifice」 굵게 57) 아이콘을 빼고
 // 이름에 맞춘 폭(테 1 + 틈 2 양쪽 — 단추 글 안 여백 검사). 손 이름표 줄(handRowLayout)은 이 폭을 뺀 자리를 쓴다(CHM-40)
 export function discardButton() {
@@ -312,6 +321,7 @@ export class BattleScreen {
     v.movesLeft = b.movesLeft; v.moves = b.rules.moves;
     v.discardsLeft = b.discardsLeft; v.discards = b.rules.discards;
     v.bag = b.bag.length; v.deckSize = b.deckSize;
+    v.next = clone(nextDraws(b)); // 다음 수(CHM-60): 손과 같은 순간에 바뀐다
     // 희생(CHM-43): 새로 뽑은 기물(손 카드의 !?) · 바친 기물(왼쪽 칸 희생 구슬 옆 줄). 규칙 상태를 그대로 읽는다 — 수를 두면 endMove가 b.offering을 비운다
     // 사슬 중(수를 둔 뒤)에는 기회가 이미 그 수에 걸렸으니 손의 「!?」는 없다
     v.drawn = b.status === 'play' && b.offering && b.offering.drawn ? b.offering.drawn.slice() : [];
@@ -686,14 +696,14 @@ export class BattleScreen {
         }); break;
         case 'regrip': add(0.45, {
           begin: () => { this.word('손을 새로 쥔다', PAL.gold, 1.2, 1); this.snd('discard'); },
-          done: () => { const b = this.bRef; v.hand = clone(b.hand); v.bag = b.bag.length; },
+          done: () => { const b = this.bRef; v.hand = clone(b.hand); v.bag = b.bag.length; v.next = clone(nextDraws(b)); },
         }); break;
         // 희생: 바친 카드가 흩어지고(걸음 처음) 새 카드가 아래에서 올라온다(걸음 끝, 0.18초 — 손 그리기가 app.time으로)
         case 'discard': add(0.22, {
           begin: () => { this.snd('discard'); this.offerFx((cmd && cmd.handIndices) || []); },
           done: () => {
             const b = this.bRef, had = new Set(v.hand.map((p) => p.id));
-            v.hand = clone(b.hand); v.discardsLeft = b.discardsLeft; v.bag = b.bag.length; v.hiding = null;
+            v.hand = clone(b.hand); v.discardsLeft = b.discardsLeft; v.bag = b.bag.length; v.next = clone(nextDraws(b)); v.hiding = null;
             v.drawn = e.offering && e.offering.drawn ? e.offering.drawn.slice() : [];
             v.offered = (b.offered || []).map((p) => p.t);
             this.dealIn = { ids: v.hand.filter((p) => !had.has(p.id)).map((p) => p.id), t: this.app.time };
@@ -1218,6 +1228,8 @@ export class BattleScreen {
     if (sq >= 0) hint(app, 'things', `sq:${sq}`);
     const f = v.hand.findIndex((p) => PIECES[p.t] && PIECES[p.t].fairy);
     if (f >= 0) hint(app, 'fairy', `hand:${f}`);
+    // 다음 수(CHM-60): 주머니 맨 앞이 보일 때
+    if ((v.next || []).length) hint(app, 'next', 'next');
     const reg = (p) => app.ui.regions.find((r) => r.id.startsWith(p));
     if (reg('fam:')) hint(app, 'family', reg('fam:').id);
     if (reg('joseki:')) hint(app, 'joseki', reg('joseki:').id);
@@ -1877,11 +1889,12 @@ export class BattleScreen {
     const step = 15 + (label || itemsW(2) <= space ? 2 : 1);
     return { label, tactics: tactics.map((i, k) => ({ i, x: x0 + k * step })), rb: rb ? x0 + tactics.length * step : null };
   }
-  // 손 카드 i의 자리(n장일 때). 희생 연출(흩어지는 카드)도 같은 셈을 쓴다
+  // 손 카드 i의 자리(n장일 때). 희생 연출(흩어지는 카드)도 같은 셈을 쓴다. 오른쪽 끝은 다음 수 칸(NEXT_COL)
   handRect(i, n, lay = this.rightLayout(this.run)) {
     n = Math.max(1, n);
-    const w = Math.min(26, Math.floor((RW - (n - 1) * 3) / n));
-    const gap = n > 1 ? Math.floor((RW - w * n) / (n - 1)) : 0;
+    const room = RW - NEXT_COL.w - NEXT_COL.gap;
+    const w = Math.min(26, Math.floor((room - (n - 1) * 3) / n));
+    const gap = n > 1 ? Math.floor((room - w * n) / (n - 1)) : 0;
     return { x: RX + i * (w + Math.min(gap, 4)), y: lay.handY, w, h: lay.HAND_H };
   }
   drawRight(ctx, ui) {
@@ -1945,6 +1958,24 @@ export class BattleScreen {
         if (drawn.includes(p.id)) { const r = handTagRect(x, y - lift, w, level); drawAnnot(c, '!?', r.x, r.y, ANNOT.red); }
       }, { hover: hov && usable, press: pressed });
     });
+    this.drawNext(ctx, ui, lay);
+  }
+
+  // 다음 수(CHM-60): 주머니 맨 앞 둘, 위가 먼저. 흐린 반 크기 기물(숫자 없음), 주머니가 비면 점선 빈칸
+  drawNext(ctx, ui, lay) {
+    const col = nextColumn(lay), next = this.view.next || [];
+    ui.region('next', col.x, col.y, col.w, col.h, { tip: () => this.nextTip() });
+    col.slots.forEach((r, k) => {
+      const p = next[k];
+      if (!p) { dots(ctx, r.x, r.y, r.w, r.h, PAL.frameDk); return; }
+      box(ctx, r.x, r.y, r.w, r.h, '#132019', PAL.frameDk);
+      // 반 크기(sprite는 16×22 칸의 아래 가운데에 줄여 그린다): 8×11을 칸 가운데로
+      sprite(ctx, p.t, 'w', r.x + 1 - 4, r.y + 2 - 11, { sx: 0.5, sy: 0.5, alpha: k === 0 ? 0.85 : 0.6, eng: p.eng ? p.eng.id : null });
+    });
+  }
+  nextTip() {
+    const next = this.view.next || [];
+    return tipLines('다음에 들어올 기물', [next.length ? next.map((p) => PIECE_NAME[p.t]).join(' · ') : '주머니가 비었다']);
   }
 
   // 손 이름표 줄 오른쪽 단추(희생). 다시 두기(screens/review.js)는 「넘어가기」
