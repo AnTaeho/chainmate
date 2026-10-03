@@ -9,27 +9,34 @@
 //    판 죽음(진 대국)은 K개(--k), 나머지 대국은 --sample 몫만큼 SK개(--sk).
 // 3. 대국판마다 시작 성질을 잰다: 떨굴 수 있는 칸 · 첫 손 최선 사슬(풀이기) · 적 구성 · 서로 지키는 적 · 증원 자리 · 손.
 // 4. random · none 정책은 판만 돌려 판 승률 · 관별 통과율을 낸다(--policies 판씩, 0이면 뺀다).
+// 5. --split(운의 출처, docs/reports/agency-measure.md): 판을 끝낸 진 대국마다 같은 직전 상태에서 하나만 바꿔 K번 다시 둔다.
+//      (a) 대국판만: 대체 시드로 판 · 증원을 깔고 손 · 주머니 차례는 원래 대국 그대로
+//      (b) 주머니 차례만: 원래 판 · 증원, 손 · 주머니를 대체 스트림으로 다시 섞음
+//      (ab) 둘 다: 위 2의 대체 판(옛 luck.md와 같은 수)
+//      (c) 둘 다 그대로, 봇만 세게(--strong N · --look M, bot.mjs BOT · shopbot applyStrength): 같은 상태에서 한 번(결정적)
+//      (cb) --ck개: 세게 둔 봇으로 (b)의 대체 주머니를 다시 둠 — 같은 대체에서 보통 봇(b)과 짝 비교
+// 6. --shopk N(운의 출처 (d)): smart 판마다 상점 난수만 바꾼 판을 N번 처음부터 다시 둔다(shopbot playRun shopAlt).
 // 표를 찍고 --json 경로에 수치를 남긴다(시간 값은 넣지 않는다: 같은 시드면 같은 파일).
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { createRng, fork, next } from '../src/sim/rng.js';
+import { createRng, fork, next, shuffle } from '../src/sim/rng.js';
 import { createRun, blindInfo, battleMods, awaitingGold, battleSeed, ANTES, KINDS } from '../src/sim/run.js';
 import { boardFilter } from '../src/sim/tuning.js';
-import { createBattle, apply, dropSquaresFor, GOLDEN } from '../src/sim/battle.js';
+import { createBattle, apply, dropSquaresFor, GOLDEN, hasLegalDrop, checkStuck, refreshHints } from '../src/sim/battle.js';
 import { attackers } from '../src/sim/board.js';
 import { boardOpts } from '../src/sim/chain.js';
 import { bestMove } from '../src/sim/solver.js';
 import { PIECES, valueOf } from '../src/data/pieces.js';
 import { playRun, SMART } from './shopbot.mjs';
-import { stepBattle } from './bot.mjs';
+import { stepBattle, BOT, SAC } from './bot.mjs';
 import { applyNight2 } from './night2.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 
 function parseArgs(argv) {
-  const a = { runs: 40, seed: 1, k: 20, sk: 10, sample: 1, workers: 10, policies: null, json: null, limit: 300, shopK: SMART.K };
+  const a = { runs: 40, seed: 1, k: 20, sk: 10, sample: 1, workers: 10, policies: null, json: null, limit: 300, shopK: SMART.K, split: false, strong: 4, look: 0, ck: 0, shopk: 0 };
   for (let i = 0; i < argv.length; i++) {
     const x = argv[i];
     if (x === '--runs') a.runs = Number(argv[++i]);
@@ -42,6 +49,11 @@ function parseArgs(argv) {
     else if (x === '--json') a.json = argv[++i];
     else if (x === '--limit') a.limit = Number(argv[++i]);      // 판 하나(대체 대국 빼고) 시간 상한(초)
     else if (x === '--tune') a.tune = JSON.parse(argv[++i]);    // 밤샘 2 장치 켜고 끄기(run.mjs와 같은 꼴)
+    else if (x === '--split') a.split = true;                   // 운의 출처: 판만 · 주머니만 · 봇만 세게
+    else if (x === '--strong') a.strong = Number(argv[++i]);    // (c)의 세기: 예산 ×N(기본 4)
+    else if (x === '--look') a.look = Number(argv[++i]);        // (c)의 내다보기 굴림 수(기본 0)
+    else if (x === '--ck') a.ck = Number(argv[++i]);            // (cb) 세게 둔 봇으로 다시 둘 대체 주머니 수(기본 0)
+    else if (x === '--shopk') a.shopk = Number(argv[++i]);      // (d) 판마다 상점 난수만 바꾼 판 수(기본 0)
   }
   if (a.policies == null) a.policies = a.runs;
   return a;
@@ -128,11 +140,59 @@ function measure(task) {
   const ob = rebuild(snap, origSeed(snap), false);
   const oScore = features(ob).bestScore;
   const below = alts.filter((a) => a.f.bestScore < oScore).length + 0.5 * alts.filter((a) => a.f.bestScore === oScore).length;
-  return { id: task.id, alts, origWon: orig.status === 'won', origScore: orig.score, origPct: below / Math.max(1, alts.length), origReboards: orig.reboards || 0 };
+  const out = { id: task.id, alts, origWon: orig.status === 'won', origScore: orig.score, origPct: below / Math.max(1, alts.length), origReboards: orig.reboards || 0 };
+  if (task.split) out.split = splitMeasure(snap, n, task.split);
+  return out;
+}
+
+// ── 운의 출처(--split): 하나만 바꾼 다시 두기
+// 손 · 주머니 차례와 주머니 난수를 갈아 끼운다(판은 그대로). 판을 깔 때 본 손과 다르면 첫 손으로 떨굴 곳이 없을 수 있다 — 그때는
+// 규칙대로(checkStuck: 희생이 남았으면 봇이 바치고, 없으면 손을 새로 쥔다) 두고 그 수를 센다.
+function setHand(b, hand, bag, bagRng) {
+  b.hand = clone(hand); b.bag = clone(bag); b.rng.bag = { ...bagRng };
+  refreshHints(b);
+  const noDrop = !hasLegalDrop(b);
+  checkStuck(b, []);
+  return noDrop;
+}
+function withStrength({ strong, look }, fn) {
+  const saved = { nodes: BOT.nodes, look: BOT.look, sn: SAC.nodes, sk: SAC.keys };
+  if (strong !== 1) { BOT.nodes = Math.round(10000 * strong); SAC.nodes = Math.round(SAC.nodes * strong); SAC.keys = Math.round(SAC.keys * strong); }
+  BOT.look = look || 0;
+  try { return fn(); } finally { BOT.nodes = saved.nodes; BOT.look = saved.look; SAC.nodes = saved.sn; SAC.keys = saved.sk; }
+}
+function bagVariant(snap, k) {
+  const b = rebuild(snap, origSeed(snap), true);
+  const all = [...b.hand, ...b.bag];
+  const r = fork(createRng(origSeed(snap)), `altbag:${k}`);
+  shuffle(r, all);
+  const noDrop = setHand(b, all.slice(0, b.hand.length), all.slice(b.hand.length), r);
+  return { b, noDrop };
+}
+function splitMeasure(snap, n, opt) {
+  const o = rebuild(snap, origSeed(snap), true);
+  const board = [], bag = [];
+  let noDropA = 0, noDropB = 0;
+  for (let k = 0; k < n; k++) {
+    // (a) 대국판만: 대체 시드의 판 · 증원 · 금빛 · 확률, 손 · 주머니 차례 · 주머니 난수는 원래 대국
+    const ba = rebuild(snap, altSeed(snap, k), true);
+    if (setHand(ba, o.hand, o.bag, o.rng.bag)) noDropA++;
+    board.push(playOut(ba).status === 'won' ? 1 : 0);
+    // (b) 주머니 차례만
+    const v = bagVariant(snap, k);
+    if (v.noDrop) noDropB++;
+    bag.push(playOut(v.b).status === 'won' ? 1 : 0);
+  }
+  // (c) 같은 상태 · 세게 둔 봇
+  const strong = withStrength(opt, () => playOut(rebuild(snap, origSeed(snap), true)));
+  // (cb) 세게 둔 봇으로 (b)의 대체 주머니
+  const strongBag = [];
+  for (let k = 0; k < (opt.ck || 0); k++) strongBag.push(withStrength(opt, () => playOut(bagVariant(snap, k).b)).status === 'won' ? 1 : 0);
+  return { board, bag, strongWon: strong.status === 'won' ? 1 : 0, strongScore: strong.score, strongBag, noDropA, noDropB };
 }
 
 // ── 판 하나(스냅숏 포함)
-function oneRun(seed, policy, withSnaps) {
+function oneRun(seed, policy, withSnaps, shopAlt = null) {
   const run = createRun({ seed });
   const snaps = [];
   let lastKey = null, mismatch = 0;
@@ -147,9 +207,9 @@ function oneRun(seed, policy, withSnaps) {
     snaps.push(snap);
     return false;
   };
-  playRun(run, policy, { stopAt: watch });
+  playRun(run, policy, { stopAt: watch, shopAlt });
   return {
-    seed, policy, won: run.phase === 'won', ante: run.ante, blind: run.blind,
+    seed, policy, shopAlt, won: run.phase === 'won', ante: run.ante, blind: run.blind,
     log: run.log.map((x) => ({ ante: x.ante, blind: x.blind, kind: x.kind, master: x.master, target: x.target, score: x.score, won: x.won, reason: x.reason, skipped: !!x.skipped, clockLost: !!x.clockLost, reboards: x.reboards || 0 })),
     snaps, mismatch,
   };
@@ -350,16 +410,65 @@ function analyse(args, smart, states, others) {
 
   // 5. 정책
   const policies = { smart: { runs: n, timeouts: smart.timeouts.length, runWin: r3(winRate(R)), ci: wilson(R.filter((r) => r.won).length, n).map(r3), survival: survival(R) } };
-  for (const [k, v] of Object.entries(others)) policies[k] = { runs: v.runs.length, timeouts: v.timeouts.length, runWin: r3(winRate(v.runs)), ci: wilson(v.runs.filter((r) => r.won).length, v.runs.length).map(r3), survival: survival(v.runs) };
+  for (const [k, v] of Object.entries(others)) if (k !== '__shop') policies[k] = { runs: v.runs.length, timeouts: v.timeouts.length, runWin: r3(winRate(v.runs)), ci: wilson(v.runs.filter((r) => r.won).length, v.runs.length).map(r3), survival: survival(v.runs) };
 
   return {
-    tool: 'tools/luck.mjs', args: { runs: args.runs, seed: args.seed, k: args.k, sk: args.sk, sample: args.sample, policies: args.policies, shopK: args.shopK, limit: args.limit },
+    tool: 'tools/luck.mjs', args: { runs: args.runs, seed: args.seed, k: args.k, sk: args.sk, sample: args.sample, policies: args.policies, shopK: args.shopK, limit: args.limit, split: args.split, strong: args.strong, look: args.look, ck: args.ck, shopk: args.shopk },
     rebuildMismatch: R.reduce((a, r) => a + r.mismatch, 0),
     replayMismatch: states.filter((s) => s.origWon !== s.actualWon || s.origScore !== s.actualScore).length, snapshots: R.reduce((a, r) => a + r.snaps.length, 0), timeouts: smart.timeouts,
     runs: R.map((r) => ({ seed: r.seed, won: r.won, ante: r.ante, blind: r.blind, battles: r.log.length })),
     death, lostAll, origPct, perBattle, decomp, luckShareAll: r3((() => { const vw = mean(allGroups.map(variance)); return vw / variance(allGroups.flat()); })()),
     features: { rows: rows.length, badCut: r3(lo), goodCut: r3(hi), rank: featRank }, corr, filterSim, policies,
+    split: analyseSplit(states, args), shop: analyseShop(R, others.__shop, args),
   };
+}
+
+// ── 운의 출처 분석: 판을 끝낸 진 대국마다 pA(판만) · pB(주머니만) · pAB(둘 다) · c(같은 상태 세게) · pCB(세게 · 주머니만)
+function analyseSplit(states, args) {
+  const ds = states.filter((s) => s.death && s.split);
+  if (!ds.length) return null;
+  const m = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  const rows = ds.map((s) => {
+    const pAB = s.alts.filter((a) => a.won).length / s.alts.length;
+    const pA = m(s.split.board), pB = m(s.split.bag);
+    const pCB = s.split.strongBag.length ? m(s.split.strongBag) : null;
+    const pBpair = s.split.strongBag.length ? m(s.split.bag.slice(0, s.split.strongBag.length)) : null;
+    return { seed: s.seed, ante: s.ante, kind: s.kind, pA, pB, pAB, c: s.split.strongWon, pCB, pBpair, noDropA: s.split.noDropA, noDropB: s.split.noDropB, n: s.split.board.length };
+  });
+  const n = rows.length;
+  const meanCi = (xs) => { const mu = mean(xs), e = 1.96 * sd(xs) / Math.sqrt(xs.length); return { mean: r3(mu), ci: [r3(Math.max(0, mu - e)), r3(Math.min(1, mu + e))] }; };
+  const share = (pred) => { const k = rows.filter(pred).length; return { n: k, share: r3(k / n), ci: wilson(k, n).map(r3) }; };
+  const src = (key, name) => ({ key, name, ...meanCi(rows.map((r) => r[key])), hi60: share((r) => r[key] >= 0.6), lo40: share((r) => r[key] < 0.4), any: share((r) => r[key] > 0) });
+  const sources = [src('pA', '(a) 대국판만'), src('pB', '(b) 주머니 차례만'), src('pAB', '(ab) 둘 다')];
+  const strong = share((r) => r.c === 1);
+  const withCb = rows.filter((r) => r.pCB != null);
+  const cb = withCb.length ? { n: withCb.length, strongMean: r3(mean(withCb.map((r) => r.pCB))), baseMean: r3(mean(withCb.map((r) => r.pBpair))) } : null;
+  // 겹치지 않는 갈래(먼저 맞는 쪽): 세게 두면 이김 → 실수 / 판만 ≥60% → 판 운 / 주머니만 ≥60% → 뽑기 운 / 둘 다 ≥60% → 둘이 겹친 운 / 나머지 → 덱의 힘
+  const cls = (r) => (r.c === 1 ? 'mistake' : r.pA >= 0.6 && r.pB >= 0.6 ? 'both' : r.pA >= 0.6 ? 'board' : r.pB >= 0.6 ? 'bag' : r.pAB >= 0.6 ? 'joint' : r.pA < 0.4 && r.pB < 0.4 && r.pAB < 0.4 ? 'deck' : 'mixed');
+  const CLS = [['mistake', '실수(같은 상태에서 세게 두면 이김)'], ['board', '판 운(판만 바꿔 ≥60%)'], ['bag', '뽑기 운(주머니만 바꿔 ≥60%)'], ['both', '판 · 뽑기 어느 쪽만 바꿔도 ≥60%'], ['joint', '둘 다 바꿔야 ≥60%'], ['mixed', '가운데(40~60% 언저리)'], ['deck', '덱의 힘 부족(셋 다 <40%)']];
+  const classes = CLS.map(([id, name]) => ({ id, name, ...share((r) => cls(r) === id) }));
+  // 기대 몫: 진 대국마다 그 하나만 바꿨을 때 살아날 확률의 평균(판 · 뽑기 · 둘 다), 실수는 0/1
+  const byAnte = Array.from({ length: ANTES }, (_, i) => { const x = rows.filter((r) => r.ante === i + 1); return { ante: i + 1, n: x.length, pA: r3(mean(x.map((r) => r.pA))), pB: r3(mean(x.map((r) => r.pB))), pAB: r3(mean(x.map((r) => r.pAB))), c: r3(mean(x.map((r) => r.c))) }; });
+  return { n, k: rows[0].n, strong: { mult: args.strong, look: args.look, ...strong }, sources, cb, classes, byAnte,
+    noDrop: { a: rows.reduce((x, r) => x + r.noDropA, 0), b: rows.reduce((x, r) => x + r.noDropB, 0), of: rows.reduce((x, r) => x + r.n, 0) },
+    list: rows.map((r) => ({ ...r, pA: r3(r.pA), pB: r3(r.pB), pAB: r3(r.pAB), pCB: r3(r.pCB), pBpair: r3(r.pBpair), cls: cls(r) })) };
+}
+// 상점 운(d): 판마다 상점 난수만 바꾼 판 N번
+function analyseShop(smartRuns, shopRuns, args) {
+  if (!shopRuns || !shopRuns.length) return null;
+  const by = new Map();
+  for (const r of shopRuns) { if (!by.has(r.seed)) by.set(r.seed, []); by.get(r.seed).push(r.won ? 1 : 0); }
+  const orig = new Map(smartRuns.map((r) => [r.seed, r.won]));
+  const per = [...by.entries()].filter(([seed]) => orig.has(seed)).map(([seed, w]) => ({ seed, orig: orig.get(seed) ? 1 : 0, n: w.length, p: mean(w) }));
+  const all = per.flatMap((x) => by.get(x.seed));
+  const pbar = mean(all);
+  // 같은 판 안(상점만 다름) 승패 분산(표본 보정) / 전체 승패 분산
+  const within = mean(per.map((x) => (x.n > 1 ? x.p * (1 - x.p) * x.n / (x.n - 1) : 0)));
+  const lost = per.filter((x) => !x.orig), won = per.filter((x) => x.orig);
+  return { runs: per.length, k: args.shopk, timeouts: shopRuns.timeouts || 0, origWin: r3(mean(per.map((x) => x.orig))), altWin: r3(pbar), altCi: wilson(all.filter(Boolean).length, all.length).map(r3),
+    luckShare: r3(within / (pbar * (1 - pbar))),
+    lostRescue: r3(mean(lost.map((x) => x.p))), lostHi60: r3(lost.filter((x) => x.p >= 0.6).length / Math.max(1, lost.length)), lostZero: r3(lost.filter((x) => x.p === 0).length / Math.max(1, lost.length)), lostN: lost.length,
+    wonKeep: r3(mean(won.map((x) => x.p))), wonN: won.length, sdPerRun: r3(sd(per.map((x) => x.p))), list: per.map((x) => ({ ...x, p: r3(x.p) })) };
 }
 
 function report(D, args, wall) {
@@ -409,6 +518,23 @@ function report(D, args, wall) {
   table(['정책', '판', '판 승률', '구간', ...Array.from({ length: ANTES }, (_, i) => `${i + 1}관`)],
     Object.entries(D.policies).map(([k, v]) => [k, String(v.runs), pc(v.runWin), ci(v.ci), ...v.survival.map((s) => pc(s.passGivenReached))]));
   table(['정책', ...Array.from({ length: ANTES }, (_, i) => `${i + 1}관 도달`)], Object.entries(D.policies).map(([k, v]) => [k, ...v.survival.map((s) => pc(s.reached))]));
+
+  const S = D.split;
+  if (S) {
+    console.log(`\n⑥ 운의 출처 — 판을 끝낸 진 대국 ${S.n}개, 하나만 바꿔 K ${S.k}번씩. 판을 깔 때와 다른 손이라 첫 손으로 떨굴 곳이 없던 대체: (a) ${S.noDrop.a} · (b) ${S.noDrop.b} / ${S.noDrop.of}`);
+    table(['바꾼 것', '대체 승률 평균', '95% 구간', '≥60%', '<40%', '한 번이라도 이김'], S.sources.map((x) => [x.name, pc(x.mean), ci(x.ci), `${x.hi60.n} ${pc(x.hi60.share)}`, `${x.lo40.n} ${pc(x.lo40.share)}`, `${x.any.n} ${pc(x.any.share)}`]));
+    console.log(`  (c) 같은 상태 · 같은 판 · 같은 차례에서 봇만 세게(예산 ×${S.strong.mult}${S.strong.look ? ` · 내다보기 ${S.strong.look}` : ''}): 이긴 진 대국 ${S.strong.n}개 ${pc(S.strong.share)} ${ci(S.strong.ci)}`);
+    if (S.cb) console.log(`  (cb) 주머니만 바꾼 대체 ${S.cb.n}개 상태에서: 보통 봇 ${pc(S.cb.baseMean)} → 세게 둔 봇 ${pc(S.cb.strongMean)}`);
+    table(['갈래(먼저 맞는 쪽)', '진 대국', '몫', '95% 구간'], S.classes.map((x) => [x.name, String(x.n), pc(x.share), ci(x.ci)]));
+    table(['관', '진 대국', '(a) 판만', '(b) 주머니만', '(ab) 둘 다', '(c) 세게'], S.byAnte.filter((x) => x.n).map((x) => [String(x.ante), String(x.n), pc(x.pA), pc(x.pB), pc(x.pAB), pc(x.c)]));
+  }
+  const H = D.shop;
+  if (H) {
+    console.log(`\n⑦ 상점 운(d) — smart ${H.runs}판 × 상점 난수만 바꾼 판 ${H.k}번${H.timeouts ? `(시간 초과 ${H.timeouts}판 뺌)` : ''}`);
+    console.log(`  원래 판 승률 ${pc(H.origWin)} · 상점만 바꾼 판 승률 ${pc(H.altWin)} ${ci(H.altCi)} · 판마다 승률 sd ${f2(H.sdPerRun)}`);
+    console.log(`  판 승패 분산 중 상점 운 몫(같은 판 안 분산 / 전체) ${pc(H.luckShare)}`);
+    console.log(`  원래 진 판 ${H.lostN}개: 상점만 바꾸면 이긴 몫 평균 ${pc(H.lostRescue)} · ≥60% ${pc(H.lostHi60)} · 한 번도 못 이김 ${pc(H.lostZero)} | 원래 이긴 판 ${H.wonN}개: 상점만 바꿔도 이긴 몫 ${pc(H.wonKeep)}`);
+  }
 }
 
 // ── 실행(통계 함수가 모두 선언된 뒤)
@@ -417,7 +543,7 @@ if (!isMainThread) {
   applyNight2(workerData.tune);
   if (mode === 'run') {
     SMART.K = workerData.shopK;
-    parentPort.postMessage(oneRun(workerData.seed, workerData.policy, workerData.snaps));
+    parentPort.postMessage(oneRun(workerData.seed, workerData.policy, workerData.snaps, workerData.shopAlt ?? null));
   } else {
     parentPort.on('message', (task) => { if (task === 'end') process.exit(0); parentPort.postMessage(measure(task)); });
   }
@@ -428,25 +554,27 @@ if (!isMainThread) {
   const say = (s) => process.stderr.write(s);
 
   // 판: 판 하나에 일꾼 하나(run.mjs처럼), 시간 상한을 넘으면 따로 센다
-  async function runPool(policy, seeds, snaps) {
+  // alts > 0이면 판마다 상점 난수만 바꾼 판 alts번(shopAlt 0…alts−1)
+  async function runPool(policy, seeds, snaps, alts = 0) {
     const out = [], timeouts = [];
+    const jobs = alts > 0 ? seeds.flatMap((seed) => Array.from({ length: alts }, (_, k) => ({ seed, shopAlt: k }))) : seeds.map((seed) => ({ seed, shopAlt: null }));
     let nextI = 0, done = 0;
     await new Promise((finish) => {
       const launch = () => {
-        if (nextI >= seeds.length) { if (done === seeds.length) finish(); return; }
-        const seed = seeds[nextI++];
-        const wk = new Worker(SELF, { workerData: { mode: 'run', seed, policy, snaps, shopK: args.shopK, tune: args.tune } });
+        if (nextI >= jobs.length) { if (done === jobs.length) finish(); return; }
+        const { seed, shopAlt } = jobs[nextI++];
+        const wk = new Worker(SELF, { workerData: { mode: 'run', seed, policy, snaps, shopAlt, shopK: args.shopK, tune: args.tune } });
         const timer = setTimeout(() => { timeouts.push(seed); wk.terminate(); }, args.limit * 1000);
         let settled = false;
-        const end = () => { if (settled) return; settled = true; clearTimeout(timer); done++; say(`\r${policy} 판 ${done}/${seeds.length} · 시간 초과 ${timeouts.length}   `); launch(); };
+        const end = () => { if (settled) return; settled = true; clearTimeout(timer); done++; say(`\r${policy}${alts ? ' 상점만 바꾼' : ''} 판 ${done}/${jobs.length} · 시간 초과 ${timeouts.length}   `); launch(); };
         wk.on('message', (m) => out.push(m));
         wk.on('error', (e) => { console.error(`seed ${seed} 오류`, e); end(); });
         wk.on('exit', end);
       };
-      for (let i = 0; i < Math.min(args.workers, seeds.length); i++) launch();
+      for (let i = 0; i < Math.min(args.workers, jobs.length); i++) launch();
     });
     say('\n');
-    out.sort((x, y) => seeds.indexOf(x.seed) - seeds.indexOf(y.seed));
+    out.sort((x, y) => seeds.indexOf(x.seed) - seeds.indexOf(y.seed) || (x.shopAlt ?? 0) - (y.shopAlt ?? 0));
     return { runs: out, timeouts };
   }
 
@@ -486,13 +614,17 @@ if (!isMainThread) {
       // 시계(밤샘 2 D1): 진 대국이 판을 끝내지 않을 수 있다. lost = 진 대국 전부, death = 판을 끝낸 대국
       const lost = !!row && !row.won;
       if (!lost && !sampled(r.seed, snap.ante, snap.blind, args.sample)) return;
-      tasks.push({ snap, n: lost ? args.k : args.sk, meta: { seed: r.seed, ante: snap.ante, blind: snap.blind, kind: KINDS[snap.blind], master: row && row.master, death, lost, actualWon: row ? row.won : null, actualScore: row ? row.score : null, target: row && row.target } });
+      tasks.push({ snap, n: lost ? args.k : args.sk, split: args.split && death ? { strong: args.strong, look: args.look, ck: args.ck } : null, meta: { seed: r.seed, ante: snap.ante, blind: snap.blind, kind: KINDS[snap.blind], master: row && row.master, death, lost, actualWon: row ? row.won : null, actualScore: row ? row.score : null, target: row && row.target } });
     });
   }
-  const alts = await measurePool(tasks.map((t) => ({ snap: t.snap, n: t.n })));
-  const states = tasks.map((t, i) => ({ ...t.meta, alts: alts[i].alts, origWon: alts[i].origWon, origScore: alts[i].origScore, origPct: alts[i].origPct }));
+  const alts = await measurePool(tasks.map((t) => ({ snap: t.snap, n: t.n, split: t.split })));
+  const states = tasks.map((t, i) => ({ ...t.meta, alts: alts[i].alts, origWon: alts[i].origWon, origScore: alts[i].origScore, origPct: alts[i].origPct, split: alts[i].split || null }));
   const others = {};
   for (const p of ['random', 'none']) if (args.policies > 0) others[p] = await runPool(p, runSeeds(args.seed, args.policies), false);
+  if (args.shopk > 0) {
+    const sh = await runPool('smart', seeds, false, args.shopk);
+    others.__shop = Object.assign(sh.runs, { timeouts: sh.timeouts.length });
+  }
   const wall = performance.now() - t0;
   const data = analyse(args, smart, states, others);
   report(data, args, wall);

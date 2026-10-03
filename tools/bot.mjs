@@ -13,18 +13,27 @@
 //   다시 놓기(밤샘 2 D2): 첫 수 전, 첫 손 최선 사슬 점수 × 수가 목표 × REBOARD.ratio에 못 미치면 판을 새로 깐다
 //   (첫 손 최선 사슬 점수가 대국 점수의 대리 지표 — docs/reports/luck.md ④).
 import { bestPerPiece, lineCommands } from '../src/sim/solver.js';
-import { canReboard } from '../src/sim/battle.js';
+import { canReboard, apply as applyBattle } from '../src/sim/battle.js';
+import { createRng, fork, next, shuffle } from '../src/sim/rng.js';
 import { valueOf } from '../src/data/pieces.js';
 import { bestMove } from '../src/sim/solver.js';
 import { addOffering, weightOf as weightOfPiece } from '../src/data/sacrifice.js';
 
 // ratio 1 → 2(밤샘 2 3부): 1이면 대국당 0.08번만 다시 놓아 판을 끝낸 죽음의 판 운 몫이 52.6%, 2면 0.18번 · 31.3%(luck 30판)
 export const REBOARD = { ratio: 2 }; // 켜고 끄기는 src/sim/tuning.js BOARD_TUNING.reboard(끄면 canReboard가 늘 거짓)
+// 하네스 세기 손잡이(실력 천장 측정, docs/reports/agency-measure.md). 기본값이면 옛 봇과 비트 단위로 같다.
+//   nodes: 대국 결정의 풀이기 마디 예산(null = 풀이기 기본 10000)
+//   look: 내다보기 굴림 수(0 = 끔). 켜면 결정마다 후보(손 기물마다 최선 수 · 손 칸마다 희생 · 다시 놓기)를
+//         모르는 것(주머니 차례 · 앞으로 올 증원 · 다시 놓을 판 · 확률)을 새로 섞은 look개의 복사본에서 이 봇(내다보기 없이)으로
+//         끝까지 두어 보고, 이긴 몫(같으면 평균 점수)이 가장 큰 후보를 고른다. 굴림 시드는 후보끼리 같다(공통 난수).
+//   stats: 결정마다 풀이기가 예산에 닿았나 센다(예산 손잡이가 실제로 움직이는지 보려고)
+export const BOT = { nodes: null, look: 0, stats: null };
 const betterMove = (x, y, nomate, rank) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : rank ? rank(x) > rank(y) : x.score > y.score);
 
 // rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
 export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null, sacrifice = true } = {}) {
-  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true, rank });
+  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true, rank, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}) });
+  if (BOT.stats) { BOT.stats.decisions++; const lim = BOT.nodes ?? 10000; if (per.some((m) => m && m.nodes > lim)) BOT.stats.capped++; }
   let best = null;
   for (const m of per) if (m && betterMove(m, best, nomate, rank)) best = m;
   const canDiscard = b.discardsLeft > 0 && b.bag.length > 0;
@@ -135,9 +144,71 @@ export function sacrificeChoice(b, per, best, opts = {}) {
 // 대국 상태에는 아무것도 적지 않는다(WeakMap). playRun이 판마다 비운다.
 export const SACLOG = { rows: [], pending: new WeakMap(), reset() { this.rows = []; this.pending = new WeakMap(); } };
 
+// ── 내다보기(BOT.look > 0). 대국 상태는 JSON 왕복 안전하니 복사본에서 두어 본다.
+const cloneB = (b) => JSON.parse(JSON.stringify(b));
+const seedOf = (r) => Math.floor(next(r) * 2 ** 31);
+function candidates(b, base, opts) {
+  const nomate = !!opts.nomate;
+  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true, rank: opts.rank || null, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}) });
+  const out = [base];
+  const seen = new Set();
+  per.forEach((m) => { if (!m) return; const k = pieceKey(b.hand[m.handIndex]); if (seen.has(k)) return; seen.add(k); out.push({ play: m }); });
+  if (b.discardsLeft > 0 && b.bag.length > 0) {
+    const ds = new Set();
+    b.hand.forEach((p, i) => { const k = pieceKey(p); if (ds.has(k)) return; ds.add(k); out.push({ discard: [i] }); });
+  }
+  if (b.target != null && canReboard(b)) out.push({ reboard: true });
+  const key = (d) => (d.reboard ? 'R' : d.discard ? 'D' + pieceKey(b.hand[d.discard[0]]) : 'P' + d.play.handIndex + ':' + d.play.sq + ':' + JSON.stringify(d.play.line));
+  const uniq = new Map();
+  for (const d of out) if (!uniq.has(key(d))) uniq.set(key(d), d);
+  return [...uniq.values()];
+}
+function applyDecision(t, d) {
+  if (d.reboard) applyBattle(t, { type: 'reboard' });
+  else if (d.discard) applyBattle(t, { type: 'discard', handIndices: d.discard });
+  else { applyBattle(t, { type: 'drop', handIndex: d.play.handIndex, sq: d.play.sq }); for (const c of lineCommands(d.play.line)) applyBattle(t, c); }
+}
+// 모르는 것만 새로 섞는다: 주머니 차례 · 증원 · 다시 놓을 판(대국 시드에서 나온다) · 확률 · 유리
+function determinize(t, s) {
+  const r = createRng(s);
+  shuffle(r, t.bag);
+  t.rng = { ...t.rng, bag: fork(r, 'bag'), reinf: fork(r, 'reinf'), luck: fork(r, 'luck'), glass: fork(r, 'glass') };
+  t.seed = seedOf(r);
+}
+function lookDecide(b, opts) {
+  const base = decideBattle(b, opts);
+  if (!base || b.target == null) return base;
+  if (base.play && ((base.play.mate && !opts.nomate) || b.score + base.play.score >= b.target)) return base;
+  const cands = candidates(b, base, opts);
+  if (cands.length < 2) return base;
+  const r = fork(createRng((b.seed ^ (b.movesUsed * 7919) ^ ((b.discardsUsed || 0) * 104729) ^ ((b.reboards || 0) * 31)) >>> 0), 'look');
+  const seeds = Array.from({ length: BOT.look }, () => seedOf(r));
+  let best = null;
+  {
+    cands.forEach((d, ci) => {
+      let wins = 0, score = 0;
+      for (const s of seeds) {
+        const t = cloneB(b);
+        determinize(t, s);
+        try { applyDecision(t, d); } catch { wins = -1; break; }
+        let guard = 0;
+        // 굴림은 하네스 희생 기록(SACLOG)에 남기지 않는다
+        while (t.status === 'play' && guard++ < 200) { const d2 = decideBattle(t, opts); if (!d2) break; applyDecision(t, d2); }
+        if (t.status === 'won') wins++;
+        score += Math.min(t.score, 2 * b.target);
+      }
+      if (wins < 0) return;
+      const v = { d, wins, score, ci };
+      // 이긴 몫 → 평균 점수 → 원래 봇의 결정(ci 0) 순
+      if (!best || v.wins > best.wins || (v.wins === best.wins && v.score > best.score)) best = v;
+    });
+  }
+  return best ? best.d : base;
+}
+
 // 결정 하나를 명령으로 적용. 끝났거나 둘 게 없으면 false.
 export function stepBattle(b, apply, opts) {
-  const d = decideBattle(b, opts);
+  const d = BOT.look > 0 && b.status === 'play' ? lookDecide(b, opts || {}) : decideBattle(b, opts);
   if (!d) return false;
   if (d.reboard) { apply({ type: 'reboard' }); return true; }
   if (d.discard) {

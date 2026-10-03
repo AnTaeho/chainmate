@@ -13,7 +13,8 @@ import { createRun, B, targetFor, REWARD, CHEST } from '../src/sim/run.js';
 import { applyNight2 } from './night2.mjs';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
-import { playRun, SMART, DRAFT } from './shopbot.mjs';
+import { playRun, SMART, DRAFT, applyStrength } from './shopbot.mjs';
+import { BOT } from './bot.mjs';
 import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
 import { SOULS, SOUL_BY_ID, SOUL_RARITY, RARITY_NAME } from '../src/data/souls.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
@@ -42,6 +43,9 @@ function parseArgs(argv) {
     else if (k === '--nodraft') a.nodraft = true;
     else if (k === '--limit') a.limit = Number(argv[++i]);             // 판 하나 시간 상한(초)
     else if (k === '--quiet') a.quiet = true;
+    else if (k === '--strong') a.strong = Number(argv[++i]);           // 봇 세기: 예산 ×N(짜임 재기 K · 마디 · 대국 마디 · 희생 마디, shopbot applyStrength)
+    else if (k === '--look') a.look = Number(argv[++i]);               // 대국 내다보기 굴림 수(bot.mjs BOT.look, 0 = 끔)
+    else if (k === '--botstats') a.botstats = true;                    // 대국 결정 중 풀이기가 마디 예산에 닿은 몫을 센다
     else if (k === '--dump') a.dump = argv[++i];                       // 판별 결과 전부(ms 빼고, seed 순)를 JSON으로 — 손질 전후 결정성 비교(CHM-44)
     else if (k === '--json') a.json = argv[++i];                       // 수치를 JSON으로도(밤샘 2 보고서 · 아티팩트용)                          // 정석 드래프트 없이(깊이 E 이전)
     else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
@@ -53,6 +57,7 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
   const t0 = performance.now();
   const run = createRun({ seed, opening, dan, draft: !nodraft });
   for (const id of give || []) run.maxims.push({ uid: run.nextUid++, id, data: {}, edition: null, paid: 0 });
+  if (BOT.stats) { BOT.stats.decisions = 0; BOT.stats.capped = 0; }
   const { bought, editions, legendAt, seen, sac } = playRun(run, policy);
   return {
     seed, won: run.phase === 'won', ante: run.ante, blind: run.blind,
@@ -64,12 +69,13 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
     best: Math.max(0, ...run.log.filter((x) => !x.skipped).map((x) => x.best || 0)),
     // 혼 등급 · 각성(CHM-17): 판 동안 주머니에 있던 혼 · 금이 간 때 · 깨어난 때와 길
     souls: [...new Set(run.log.flatMap((b) => b.souls || []))], cracked: run.cracked || [], awakened: run.awakened || [],
+    ...(BOT.stats ? { botStats: { ...BOT.stats } } : {}),
     ms: performance.now() - t0,
   };
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki, strong, look, botstats } = workerData;
   if (joseki) DRAFT.pick = joseki;
   if (tune && tune.overflow) REWARD.overflow = tune.overflow;
   if (tune && tune.chest) CHEST.counts = tune.chest;
@@ -81,6 +87,8 @@ if (!isMainThread) {
   // 밤샘 2 D4: 장치를 하나씩 켜 보며 잰다 {"clock":1,"reboard":false,"filter":0,"reboardRatio":1}
   applyNight2(tune);
   SMART.K = k;
+  applyStrength(strong || 1, look || 0);
+  if (botstats) BOT.stats = { decisions: 0, capped: 0 };
   if (policy === 'nofam') SMART.famAware = false;
   if (policy === 'nosac') SMART.sacEval = false; // 희생 끈 봇은 짜임 재기에서도 바치지 않는다(CHM-51)
   if (b) b.forEach((x, i) => { B[i] = x; });
@@ -93,7 +101,7 @@ if (!isMainThread) {
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + i * 7919) >>> 0);
   const t0 = performance.now();
   // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
-  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki };
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, botstats: args.botstats };
   const results = [], timeouts = [];
   let next = 0, done = 0;
   await new Promise((finish) => {
@@ -136,8 +144,9 @@ function report(R, args, wall) {
 
   const wins = R.filter((r) => r.won).length;
   console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
+  if (args.botstats) { const d = R.reduce((a, r) => a + (r.botStats ? r.botStats.decisions : 0), 0), c = R.reduce((a, r) => a + (r.botStats ? r.botStats.capped : 0), 0); console.log(`대국 결정 ${d}번 중 풀이기가 마디 예산에 닿은 결정 ${c}번(${pc(c / Math.max(1, d))})`); }
   if (args.timeouts && args.timeouts.length) console.log(`시간 초과 ${args.timeouts.length}판(${args.limit}초, 표에서 뺐다): seed ${args.timeouts.join(' ')}`);
-  console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
+  console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.strong && args.strong !== 1 ? `, 세기 ×${args.strong}` : ''}${args.look ? `, 내다보기 ${args.look}` : ''}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
 
   // 관별
   const rows = [];
@@ -346,7 +355,7 @@ function report(R, args, wall) {
     }
     const tally = (keyOf) => { const t = {}; for (const r of R) for (const id of new Set(keyOf(r))) { t[id] = t[id] || { n: 0, w: 0 }; t[id].n++; if (r.won) t[id].w++; } return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, { runs: v.n, win: r3(v.w / v.n) }])); };
     const out = {
-      tool: 'tools/run.mjs', policy: args.policy, seed: args.seed, dan: args.dan || 0, runs: n, timeouts: (args.timeouts || []).length, tune: args.tune || null, B: args.B || null,
+      tool: 'tools/run.mjs', policy: args.policy, seed: args.seed, dan: args.dan || 0, strong: args.strong || 1, look: args.look || 0, runs: n, timeouts: (args.timeouts || []).length, tune: args.tune || null, B: args.B || null,
       runWin: r3(wins / n), antes, ratioEdges: EDGES.slice(0, -1).map((x, i) => [x, EDGES[i + 1] === Infinity ? null : EDGES[i + 1]]),
       clock: { lostPerRun: r3(R.reduce((a, r) => a + r.log.filter((x) => x.clockLost).length, 0) / n), wonWithLoss: r3(R.filter((r) => r.won && r.log.some((x) => x.clockLost)).length / Math.max(1, wins)), reboardPerBattle: r3(battles.reduce((a, b) => a + (b.reboards || 0), 0) / battles.length) },
       items: {

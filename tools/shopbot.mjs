@@ -15,7 +15,8 @@ import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { FINAL_FACTION } from '../src/data/factions.js';
-import { stepBattle, SACLOG, SAC, sacrificeChoice, pieceKey } from './bot.mjs';
+import { stepBattle, SACLOG, SAC, sacrificeChoice, pieceKey, BOT } from './bot.mjs';
+import { rollDisplay, rollPacks } from '../src/sim/shop.js';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
 import { evolveTo } from '../src/data/tactics.js';
@@ -44,6 +45,30 @@ export const SMART = {
   sacEval: true,
   sacNodes: 300,
 };
+// 하네스 세기 손잡이(실력 천장, docs/reports/agency-measure.md): 예산 ×n — 짜임 재기 판 K · 마디 · 희생 마디,
+// 대국 결정의 풀이기 마디 · 희생 판단 마디 · 재는 주머니 기물 수. look: 대국 내다보기 굴림 수(bot.mjs BOT.look).
+// run.mjs가 --k로 SMART.K를 정한 뒤에 부른다. n 1 · look 0이면 아무것도 바꾸지 않는다.
+export function applyStrength(n = 1, look = 0) {
+  if (n !== 1) {
+    SMART.K = Math.round(SMART.K * n);
+    SMART.evalNodes = Math.round(SMART.evalNodes * n);
+    SMART.sacNodes = Math.round(SMART.sacNodes * n);
+    SAC.nodes = Math.round(SAC.nodes * n);
+    SAC.keys = Math.round(SAC.keys * n);
+    BOT.nodes = Math.round(10000 * n);
+  }
+  BOT.look = look || 0;
+}
+// 상점 운만 바꾸기(운의 출처 (d)): 상점이 열릴 때마다 진열 · 꾸러미 · 다시 진열 · 꾸러미 속을 굴리는 상점 난수만
+// (판 시드, alt) 쪽 스트림으로 바꿔 진열을 다시 굴린다. 대국판 · 주머니 · 세력 · 상자 같은 나머지 무작위는 그대로.
+function reshop(run, alt) {
+  const label = `shop:${run.ante}:${run.blind}${run.retry ? `:${run.retry}` : ''}`;
+  run.shop.rng = fork(fork(createRng(run.seed), `altshop:${alt}`), label);
+  const golden = run.shop.packs.filter((p) => p.kind === 'golden');
+  rollDisplay(run);
+  rollPacks(run);
+  run.shop.packs.push(...golden);
+}
 const battlesLeft = (run) => Math.max(0, (8 - run.ante) * 3 + (2 - run.blind));
 export const moneyGain = (run, id) => (SMART.moneyMaxims[id] || 0) * battlesLeft(run) * SMART.minGainPerCoin * 0.5 + (SMART.luckMaxims[id] || 0);
 
@@ -447,7 +472,7 @@ function huntRank(run) {
 }
 
 // 판 하나를 끝까지. 돌려주는 값: 요약(하네스용)
-export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null } = {}) {
+export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null, shopAlt = null } = {}) {
   const r = createRng((run.seed * 2654435761) >>> 0);
   const bought = new Set();
   const editions = [];
@@ -475,6 +500,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     }
     if (legendAt == null && run.legends.length) legendAt = run.ante;
     if (run.phase === 'shop') {
+      if (shopAlt != null) reshop(run, shopAlt);
       noteDisplay(run);
       const before = run.maxims.map((m) => m.uid);
       if (policy === 'smart' || policy === 'hunt' || policy === 'nofam' || policy === 'nosac') smartShop(run, policy === 'hunt');
