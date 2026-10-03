@@ -74,7 +74,7 @@ export const TERMS = [
   T('p_T', 'item', '꺾쇠', 'Bracket', /꺾쇠/, /\bbrackets?\b/i, '룩처럼 가다가 빈칸에서 직각으로 두 번까지 꺾을 수 있다', 'Slides like a rook and may turn up to twice at right angles on empty squares'),
   T('p_E', 'item', '물수제비', 'Skipper', /물수제비/, /\bskippers?\b/i, '비숍처럼 가다가 판 끝에 닿으면 튕긴다. 두 번까지', 'Slides like a bishop and bounces off the board edge, up to twice'),
   T('p_V', 'item', '까마귀', 'Crow', /까마귀/, /\bcrows?\b/i, '대각선으로 붙은 적을 넘어 먹고 그 너머 빈칸에 앉는다. 모습이 바뀌어도 넘기를 이어 간다', 'Jumps a diagonal neighbor to take it and lands beyond. Keeps jumping even after its form changes'),
-  T('p_M', 'item', '광대', 'Jester', /광대/, /\bjesters?\b/i, '붙은 여덟 칸의 적은 그냥 먹고, 먼 적은 그 적의 행마로 먹는다', "Takes any adjacent enemy outright, and farther ones with that enemy's own move"),
+  T('p_M', 'item', '광대', 'Jester', /광대/, /\bjesters?\b/i, '적을 그 적의 행마로 먹는다(룩은 룩처럼, 나이트는 나이트처럼)', "Takes each enemy with that enemy's own move (a rook like a rook, a knight like a knight)"),
   T('p_D', 'item', '화약병', 'Powder', /화약병/, /\bpowder\b/i, '둘레 한 칸을 먹으면 그 둘레의 적도 터진다. 사슬은 거기서 끝난다', 'Takes one square away and blows up the enemies around it. The chain ends there'),
   T('edition', 'item', '판본', 'Edition', /판본/, /\beditions?\b/i, '격언에 드물게 붙는 빛깔. 효과가 하나 더 붙는다', 'A rare finish on a maxim. It adds one more effect'),
   T('fragment', 'item', '명경기 조각', 'Fragment', /명경기 조각/, /\bfragments?\b/i, '전설 격언의 조각. 셋을 모으면 전설', 'Part of a legendary maxim. Three make the legend'),
