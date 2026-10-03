@@ -104,6 +104,7 @@ export const EN = {
   '특수 기물은 체스에 없는 행마를 쓴다. 누르면 먹을 칸이 보인다': 'Special pieces move in ways chess does not. Tap one to see what it can take',
   '점선 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다': 'A dotted shadow marks a recruit. An enemy arrives there when this move ends',
   '흐린 둘은 다음에 손에 들어올 기물. 위가 먼저 온다': 'The two faded pieces reach your hand next. The top one comes first',
+  '카드의 작은 판이 그 대국에서 둘 판이다': 'The small board on each card is the board you will play',
   '다음에 들어올 기물': 'Up next', '주머니가 비었다': 'The bag is empty',
   // 복기(CHM-59)
   '이길 길도 이 대국의 실제 뽑기와 증원 그대로 둔 길이다': 'The winning line uses this match’s real draws and recruits',

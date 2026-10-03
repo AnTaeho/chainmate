@@ -1,5 +1,6 @@
 // 관 선택: 연습 · 정식 · 명인 세 장. 목표 · 보상 · 명인 규칙 · 건너뛰면 받는 패. 「두기」 / 「건너뛰기」.
 // 떠나온 상점이 있으면 위 띠 왼쪽에 「상점」(돌아가 더 살 수 있다 — 진열 · 꾸러미는 떠날 때 그대로).
+// 판 보기(CHM-61, layout.md 17절): 지금 · 남은 대국 카드마다 작은 판(두기를 누르면 열릴 그 판), 카드를 가리키면 왼쪽 칸에 크게.
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
@@ -20,6 +21,8 @@ import { FACTION_BY_ID, bossOf } from '../../data/factions.js';
 import { drawCrest, CREST_SIZE } from '../../render/crests.js';
 import { factionFor } from '../../sim/run.js';
 import { lightHue } from './common.js';
+import { previewBattle } from '../../sim/run.js';
+import { miniBoard, bigBoard, peekSize, PEEK } from '../peek.js';
 
 
 // 마지막 관(대가)의 왕관 9×7
@@ -74,10 +77,14 @@ const BAR = { y: 2, h: BTN_S }; // 본 칸 위 띠의 작은 단추(상점 화�
 const SEL = { gap: 4, get w() { return Math.floor((MAIN.w - this.gap * 2) / 3); } };
 const selX = (i) => MAIN.x + i * (SEL.w + SEL.gap);
 export function blindLayout(run, i, w = SEL.w) {
+  const blind = i;
   const info = blindInfo(run, run.ante, i);
   const master = info.kind === 'master';
   const P = PAD_CARD, IW = w - P * 2, f = flow(P);
   const out = { info, master, IW };
+  // 판 보기(CHM-61): 지금 대국부터 남은 대국 카드에 작은 판. 지난 대국은 없다
+  const peek = blind >= run.blind;
+  const BW = peekSize();
   out.kind = f.line(true);
   f.gap(GAP_GROUP);
   // 이름표 · 수치 한 줄(넘치면 수치를 다음 줄 오른쪽에 — 그 줄에도 안 들어가는 큰 수는 짧은 꼴 3.1T)
@@ -95,13 +102,20 @@ export function blindLayout(run, i, w = SEL.w) {
     out.m = m;
     // 초상 옆 이름: 굵게 두 줄까지, 넘치거나 낱말 하나가 굵게 안 들어가면 보통 굵기.
     // 보통 굵기로도 낱말이 초상 옆에 안 들어가면(영어 「Grandmaster」 · 「Castellan」) 초상 아래 온 폭에 쓴다(낱말 가운데서 끊지 않게)
+    // 작은 판이 있으면(지금 · 남은 마스터전) 초상 옆 이름 대신 판 — 아래 peek
     const full = `마스터 ${m.name}`, nameW = IW - PORTRAIT - 6, words = L(full).split(' '); // 낱말은 옮긴 글에서 센다
     const fits = (w, bold) => words.every((x) => measure(x, bold) <= w);
     out.nameX = PORTRAIT + 6;
     let names = wrap(full, nameW, true);
     out.nameBold = names.length <= 2 && fits(nameW, true);
     if (!out.nameBold) names = wrap(full, nameW, false);
-    if (!fits(nameW, false)) {
+    if (peek) {
+      // 초상(왼쪽) · 작은 판(오른쪽) 한 줄. 마스터 이름은 카드를 가리키면 왼쪽 칸 큰 판의 제목에(카드 높이가 본 칸에 들게)
+      const rh = Math.max(PORTRAIT, BW), top = f.space(rh);
+      out.portrait = top + ((rh - PORTRAIT) >> 1);
+      out.peek = { x: IW - BW, y: top + ((rh - BW) >> 1) };
+      out.names = [];
+    } else if (!fits(nameW, false)) {
       out.nameX = 0;
       out.nameBold = fits(IW, true) && wrap(full, IW, true).length <= 2;
       names = wrap(full, IW, out.nameBold);
@@ -115,6 +129,14 @@ export function blindLayout(run, i, w = SEL.w) {
     }
     f.gap(GAP_IN);
     out.lines = wrap(m.text, IW).map((l) => [l, f.line()]);
+  } else if (peek) {
+    // 「건너뛰면」 · 받는 것은 왼쪽, 작은 판은 오른쪽 끝
+    const top = f.y, tw = IW - BW - 6;
+    out.skipLabel = f.line();
+    f.gap(GAP_IN);
+    out.lines = wrap(tagText(info.tag), tw, true).map((l) => [l, f.line()]);
+    out.peek = { x: IW - BW, y: top };
+    f.y = Math.max(f.y, top + BW);
   } else {
     out.skipLabel = f.line();
     f.gap(GAP_IN);
@@ -145,7 +167,16 @@ export function selectPlan(run, lays = [0, 1, 2].map((i) => blindLayout(run, i))
 }
 
 export class SelectScreen {
-  constructor(app) { this.app = app; this.notes = 'side'; }
+  constructor(app) { this.app = app; this.notes = 'side'; this.peeks = new Map(); }
+  // 판 보기: 두기를 누르면 열릴 대국(previewBattle). 판(런)이 바뀐 만큼만 다시 잰다
+  peekOf(run, i) {
+    const key = JSON.stringify([run.ante, run.blind, run.retry, run.boards && run.boards[i], run.maxims, run.josekis, run.charts, run.fragments, run.deck.length]);
+    const hit = this.peeks.get(i);
+    if (hit && hit.key === key) return hit.b;
+    const b = previewBattle(run, i);
+    this.peeks.set(i, { key, b });
+    return b;
+  }
   // 판 틀: 왼쪽 칸(관 선택 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(대국 카드 셋 — 가장 긴 카드에 맞춘 높이 · 판의 길 ·
   // 떠나온 상점이 있으면 판의 길 띠 왼쪽에 「상점」)
   draw(ctx, ui) {
@@ -192,9 +223,18 @@ export class SelectScreen {
         text(ctx, r.val, x + w - P, y + r.vy, k ? PAL.gold : ink, { align: 'right', bold: true });
       });
       rect(ctx, x + P, y + lay.rule, w - P * 2, 1, PAL.frameDk);
+      // 판 보기: 카드를 가리키면 왼쪽 칸에 그 판을 크게(마스터전 카드는 규칙 글의 낱말 상자도). 단추는 뒤에 그려 먼저 눌린다
+      const pv = lay.peek ? this.peekOf(run, i) : null;
+      if (pv) {
+        const BS = peekSize(PEEK.big);
+        const tip = { title: master ? `마스터 ${lay.m.name}` : KIND_NAME[info.kind], titleCol: master ? PAL.redDk : null, body: [], block: { h: BS, draw: (c, bx, by, bw) => bigBoard(c, pv, bx + ((bw - BS) >> 1), by) } };
+        ui.region(`select:board:${i}`, x, y, w, h, master ? { tip, keys: [lay.m.text] } : { tip });
+        miniBoard(ctx, pv, x + P + lay.peek.x, y + lay.peek.y, { dim: !cur });
+        if (cur) hint(this.app, 'preview', `select:board:${i}`);
+      }
       if (master) {
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)
-        ui.region(`select:card:${i}`, x, y, w, h, { keys: [lay.m.text] });
+        if (!pv) ui.region(`select:card:${i}`, x, y, w, h, { keys: [lay.m.text] });
         box(ctx, x + P, y + lay.portrait, PORTRAIT, PORTRAIT, PAL.felt, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + P + 2, y + lay.portrait + 2, 1, cur ? 1 : 0.6);
         for (const [l, ly] of lay.names) text(ctx, l, x + P + lay.nameX, y + ly, PAL.red, { bold: lay.nameBold });

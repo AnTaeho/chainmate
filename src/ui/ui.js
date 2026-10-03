@@ -207,6 +207,8 @@ function tipLayoutRows(tip, w, rows, diagOn, cut) {
   out.titles = tip.title ? wrap(String(tip.title), w - PAD_BOX * 2, true).map((l) => [l, f.line(true)]) : [];
   if (cut) rows = [...rows, [TIP_CUT, PAL.cardDim]];
   f.gap(GAP_GROUP);
+  // 그림 칸(tip.block { h, draw }, 판 보기의 큰 판 — CHM-61): 제목 아래 온 폭. 자를 때도 남는다(그것이 말풍선의 본 내용)
+  if (tip.block) { out.block = f.space(tip.block.h); if (rows.length) f.gap(GAP_IN); }
   const bodyTop = f.y;
   if (diagOn && !side) { out.diag = f.space(DIAG_SIZE + 1) + 1; f.gap(GAP_IN); }
   else if (diagOn) out.diag = bodyTop + 1;
@@ -233,6 +235,7 @@ export function tooltip(ctx, x, y, tip, w, maxH = Infinity) {
   rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
   for (const [l, ly] of lay.titles) text(ctx, l, x + P, y + ly, tip.titleCol || PAL.cardInk, { bold: true });
   if (lay.diagOn) moveDiagram(ctx, tip.diagram.t, x + P, y + lay.diag, { dir: tip.diagram.dir || 1 });
+  if (tip.block) tip.block.draw(ctx, x + P, y + lay.block, w - P * 2);
   for (const { l, y: ly } of lay.rows) {
     if (isChips(l)) { familyChips(ctx, l.chips, x + P + dx, y + ly, lay.tw); continue; }
     if (l.step) { if (l.mark) stepMark(ctx, l.step, x + P + dx, y + ly); text(ctx, l.s, x + P + dx + STEP_IN, y + ly, STEP_INK[l.step], { bold: l.step === 'next' }); continue; }
