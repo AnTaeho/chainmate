@@ -1,0 +1,20 @@
+# 복기 예산 고르기(CHM-59): 판 30개(seed 1, smart)에서 모은 진 대국 60개를 손잡이마다 다시 복기. 마디 수는 결정적, ms는 함께 돈 프로세스 수에 따라 달라(1~4) 마디 수로 견준다
+# 열쇠: beam = 결정마다 펼칠 떨구기(배열이면 남은 수 0..4마다), sac = 펼칠 희생 수, sacMax = 길 하나의 희생 상한, decided<=N = 마디 N 안에 path/none이 난 대국 수
+{"nodes":1000000} 60 { path: 39, none: 13, unknown: 8 } p50 898 p90 15944 max 34091 <2s 38
+{"nodes":1000000} 60 { path: 39, none: 17, unknown: 4 } p50 593 p90 9238 max 28078 <2s 40 nodes p50 36555 p90 685625 decided<=25k 26 <=50k 32 <=100k 37 <=200k 43 ms/node 0.0159 
+{"nodes":1000000,"sac":2} 60 { path: 39, none: 19, unknown: 2 } p50 423 p90 3865 max 23267 <2s 51 nodes p50 23695 p90 266344 decided<=25k 31 <=50k 37 <=100k 47 <=200k 52 ms/node 0.0146 
+{"nodes":1000000,"sac":2,"beam":[1,1,2,3,3]} 60 { path: 35, none: 25, unknown: 0 } p50 285 p90 2062 max 12583 <2s 54 nodes p50 18962 p90 134694 decided<=25k 36 <=50k 46 <=100k 52 <=200k 55 ms/node 0.0144 
+{"nodes":1000000,"sac":2,"solver":3000} 60 { path: 39, none: 19, unknown: 2 } p50 464 p90 3674 max 23037 <2s 50 nodes p50 23695 p90 266344 decided<=25k 31 <=50k 37 <=100k 47 <=200k 52 ms/node 0.0150 
+{"nodes":1000000,"sac":1} 60 { path: 38, none: 22, unknown: 0 } p50 400 p90 2369 max 12028 <2s 53 nodes p50 14011 p90 98732 decided<=25k 38 <=50k 46 <=100k 55 <=200k 57 ms/node 0.0234 
+{"nodes":1000000,"sac":2,"beam":[1,1,3,3,4]} 60 { path: 38, none: 22, unknown: 0 } p50 655 p90 4907 max 41554 <2s 45 nodes p50 20015 p90 179910 decided<=25k 31 <=50k 42 <=100k 50 <=200k 55 ms/node 0.0308 
+
+[exited with code 0]
+{"nodes":400000,"sac":1,"beam":[1,1,4,4,4]} 60 { path: 38, none: 20, unknown: 2 } p50 498 p90 2719 max 20514 <2s 51 nodes p50 14011 p90 98732 decided<=25k 38 <=50k 46 <=100k 55 <=200k 57 ms/node 0.0315 
+{"nodes":400000,"sac":2,"beam":[1,1,4,3,2]} 60 { path: 34, none: 24, unknown: 2 } p50 479 p90 4537 max 21070 <2s 47 nodes p50 17860 p90 119784 decided<=25k 36 <=50k 45 <=100k 51 <=200k 56 ms/node 0.0342 
+{"nodes":400000,"sac":2,"beam":[1,1,4,3,3]} 60 { path: 36, none: 22, unknown: 2 } p50 624 p90 7038 max 22485 <2s 44 nodes p50 23434 p90 171455 decided<=25k 32 <=50k 42 <=100k 49 <=200k 55 ms/node 0.0325 
+{"nodes":400000,"sac":2,"beam":[1,1,4,4,3]} 60 { path: 36, none: 21, unknown: 3 } p50 940 p90 8270 max 22981 <2s 42 nodes p50 24456 p90 198771 decided<=25k 31 <=50k 41 <=100k 48 <=200k 55 ms/node 0.0325 
+
+[exited with code 0]
+{"nodes":400000,"sac":1,"sacMax":1} 60 { path: 36, none: 24, unknown: 0 } p50 961 p90 3983 max 28202 <2s 41 nodes p50 11301 p90 50727 decided<=25k 40 <=50k 54 <=100k 58 <=200k 59 ms/node 0.0768 
+{"nodes":400000,"sac":1,"sacMax":2} 60 { path: 37, none: 22, unknown: 1 } p50 1121 p90 6034 max 43699 <2s 34 nodes p50 13917 p90 92898 decided<=25k 38 <=50k 46 <=100k 56 <=200k 57 ms/node 0.0733 
+# 첫 줄(dead 기억 전, 빔 4 · 희생 4)은 다 본 상태 기억(같은 상태를 다시 보지 않음) 전 값. 고른 값: 빔 4 · 희생 1 · sacMax 없음 · 마디 100000
