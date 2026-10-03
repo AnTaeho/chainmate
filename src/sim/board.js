@@ -189,8 +189,6 @@ export function reach(board, t, sq, dir = 1, ignore = -1) {
 // 광대(CHM-55): 적을 그 적의 행마로만 먹는다 — 판의 적 종류마다 그 행마로 sq에서 닿는 그 종류의 적 칸
 function jesterReach(board, sq, dir, ignore) {
   const out = [];
-  // 붙은 여덟 칸의 적은 그냥 먹는다(벽 빼고)
-  for (const x of KING[sq]) { const y = board[x]; if (y && !y.mine && y.t !== 'X' && x !== ignore) out.push(x); }
   let seen = '';
   for (let s = 0; s < 64; s++) {
     const c = board[s];
@@ -308,8 +306,6 @@ function fairyHits(board, sq, opts, ignore, out) {
   // 꺾쇠 · 물수제비: sq에서 거꾸로 걸어 처음 만나는 기물이 그 적(꺾고 튕기는 길은 뒤집어도 같은 길이다)
   if (k == null || k.includes('T')) { if (walkHits(hookWalk, board, sq, ignore, 'T', out)) return true; }
   if (k == null || k.includes('E')) { if (walkHits(bounceWalk, board, sq, ignore, 'E', out)) return true; }
-  // 광대: 붙은 여덟 칸은 늘 지킨다
-  if (k == null || k.includes('M')) for (const s of KING[sq]) if (enemyAt(board, ignore, s, 'M') && hitAdd(out, s)) return true;
   // 광대: sq에 선 내 기물의 모습(opts.form)으로 광대가 sq에 닿으면. 빈칸을 잴 때는 그 모습이 서 있는 것으로 본다
   const form = k != null && !k.includes('M') ? null : opts.form || (board[sq] && board[sq].mine ? board[sq].t : null);
   if (form) {
@@ -327,7 +323,7 @@ function fairyHits(board, sq, opts, ignore, out) {
 
 // 빈칸 sq에 t 종류의 적(특성 없음 · 얼지 않음)을 새로 세우면 attackers(board, to, opts)에 sq가 드는가 — 그런 빈칸 전부를 한 번에.
 // 칸마다 세워 보고 노림 전체를 재던 것(판 짓기의 킹 수비 칸 찾기)과 같은 답을, to에서 뻗는 선을 한 번씩만 걸어 낸다(CHM-44).
-// 돌려주는 값: 64칸 표(1 = 그 칸에 세우면 노린다). 차지된 칸은 늘 0. 광대는 지킬 모습을 몰라 붙은 칸만.
+// 돌려주는 값: 64칸 표(1 = 그 칸에 세우면 노린다). 차지된 칸은 늘 0. 광대는 지킬 모습을 몰라 늘 비어 있다(킹 수비수로 서지 않는다).
 export function guardSquares(board, t, to, opts = {}) {
   const m = new Uint8Array(64);
   const leap = (list) => { for (const s of list) if (!board[s]) m[s] = 1; };
@@ -341,7 +337,7 @@ export function guardSquares(board, t, to, opts = {}) {
   if (opts.fairy === false) return m;
   if (t === 'L') leap(CAMEL[to]);
   if (t === 'S') leap(RING2[to]);
-  if (t === 'D' || t === 'M') leap(KING[to]);
+  if (t === 'D') leap(KING[to]);
   if (t === 'W') for (const ray of RAY_O[to]) leap(ray);
   // 포: 선의 첫 기물(받침) 너머, 다음 기물 앞의 빈칸
   if (t === 'O') for (const ray of RAY_O[to]) {

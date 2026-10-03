@@ -129,10 +129,10 @@ test('까마귀가 적일 때: 대각선으로 붙은 칸 중 반대쪽이 빈 �
 });
 
 // ── 광대
-test('광대: 적을 그 적의 행마로 먹고, 붙은 여덟 칸의 적은 그냥 먹는다', () => {
-  const b = boardFrom({ e5: 'P', c2: 'P', f5: 'N', d6: 'N', b4: 'R', b5: 'B', b6: 'B', c3: 'Q' });
+test('광대: 적을 그 적의 행마로만 먹는다 — 붙은 적도 그 행마로 닿아야 한다', () => {
+  const b = boardFrom({ e5: 'P', c2: 'P', f5: 'N', d6: 'N', b4: 'R', b5: 'B', b6: 'B', c3: 'Q', e3: 'N', e4: 'B' });
   // c2 폰은 폰 행마로 닿지 않고, d6 나이트는 L자가 아니라, b5 비숍은 대각이 아니라 못 먹는다. b6 비숍은 대각선 위
-  // 붙은 c3 퀸은 그냥 먹는다
+  // 붙은 c3 퀸은 퀸 행마로 닿아 먹고, 붙은 e3 나이트 · e4 비숍은 그 행마로 닿지 않아 못 먹는다
   assert.deepEqual(names(captures(b, 'M', S('d4'))), ['b4', 'b6', 'c3', 'e5', 'f5']);
   // 적 까마귀는 까마귀처럼(넘어 앉는다) · 적 궁수는 궁수처럼(제자리)
   const t = table({ e5: 'V', a8: 'K', b7: 'P' });
@@ -157,9 +157,9 @@ test('광대가 적일 때: 그 칸에 선 내 기물의 지금 모습의 행마
   assert.ok(isAttacked(b4, S('d4'), { form: 'R' }));
   assert.ok(!isAttacked(b4, S('d4'), { form: 'N' }));
   assert.ok(!dropSquares(b4, 'R').includes(S('d4')));
-  // 붙은 여덟 칸은 모습과 상관없이 지킨다(그래서 킹 수비수로도 선다)
-  assert.deepEqual(names(attackers(mine(boardFrom({ e5: 'M' }), 'd4', 'N'), S('d4'))), ['e5']);
-  assert.equal(guardSquares(boardFrom({ d4: 'K' }), 'M', S('d4')).reduce((a, x) => a + x, 0), 8);
+  // 붙은 칸도 모습의 행마로만 지킨다(그래서 킹 수비수로 서지 않는다)
+  assert.deepEqual(attackers(mine(boardFrom({ e5: 'M' }), 'd4', 'N'), S('d4')), []);
+  assert.equal(guardSquares(boardFrom({ d4: 'K' }), 'M', S('d4')).reduce((a, x) => a + x, 0), 0);
 });
 
 // ── 화약병
@@ -212,9 +212,8 @@ function brute(board, sq, ignore) {
   for (let s = 0; s < 64; s++) {
     const c = board[s];
     if (!c || c.mine || s === ignore || c.t === 'X' || c.t === 'J') continue;
-    const adj = Math.max(Math.abs((s & 7) - (sq & 7)), Math.abs((s >> 3) - (sq >> 3))) === 1;
     const mv = c.t === 'M' ? (F ? mimicOf(F) : null) : c.t;
-    if ((c.t === 'M' && adj) || (mv && reach(board, mv, s, -1, ignore).includes(sq))) out.push(s);
+    if (mv && reach(board, mv, s, -1, ignore).includes(sq)) out.push(s);
   }
   return out.sort((a, b) => a - b);
 }

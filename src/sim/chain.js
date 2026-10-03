@@ -8,7 +8,7 @@
 // 이벤트: drop · capture(from · to = 먹은 칸 · at = 내 기물이 선 칸 · via = 꺾거나 튕긴 칸) · explode(화약병) · golden · grade · transform · promote · forced · cut · cutIgnored · mate · brilliant · refill ·
 //         redropReady · redrop · end · score
 // 사슬이 끝나면 t.chain.done = true, 내 기물은 판에서 내려간다.
-import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy, kingTakeable, at, landingOf, pathVia, mimicOf, reach } from './board.js';
+import { attackers, captures, dropSquares, isAttacked, rankOf, isEnemy, kingTakeable, at, landingOf, pathVia, mimicOf } from './board.js';
 import { PIECES, FAIRIES } from '../data/pieces.js';
 import { runHook, finalScore } from './scoring.js';
 import { createRng, fork } from './rng.js';
@@ -133,8 +133,7 @@ export function chainCapture(t, sq, legal = false) {
 
   // 내 기물이 서는 칸(board.js landingOf): 궁수 모습은 움직이지 않고 쏜다(먹힌 칸만 비고 제자리, 응수도 제자리 기준) ·
   // 까마귀 모습은 넘은 적 너머 빈칸에 앉는다 · 광대는 먹힌 적의 행마를 흉내 내니 그 행마의 자리에 선다
-  // 광대: 그 적의 행마로 닿으면 그 행마로, 아니면 붙은 칸이라 킹처럼 한 칸
-  let move = formBefore === 'M' ? (reach(board, mimicOf(target.t), from, 1).includes(sq) ? mimicOf(target.t) : 'K') : formBefore;
+  let move = formBefore === 'M' ? mimicOf(target.t) : formBefore;
   // 넘기를 잇는 중이면 대각선으로 붙은 적은 넘어 먹는다(너머가 빈칸일 때) — 넘지 않는 먹기를 하면 넘기가 끝난다
   if (c.hop && formBefore !== 'S' && landingOf(board, 'V', from, sq) !== sq) move = 'V';
   const via = pathVia(board, move, from, sq);
