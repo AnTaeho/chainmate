@@ -1,0 +1,16 @@
+13:42 start d0-x1
+13:53 done d0-x1 650s
+13:53 start d0-x4
+15:43 done d0-x4 6608s
+15:43 start d0-look8
+16:08 done d0-look8 (requeued)
+16:08 start d4-x1
+16:16 done d4-x1 (requeued)
+16:16 start luck
+17:15 done luck
+17:15 start d4-look8
+17:34 done d4-look8 1158s
+17:34 start d0-look16
+18:07 done d0-look16 1994s
+18:07 start d0-x2
+18:49 done d0-x2 (manual), queue stopped
