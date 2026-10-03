@@ -275,6 +275,12 @@ function report(R, args, wall) {
   const anyF = R.filter((r) => r.fairies.length);
   console.log(`이형(판 끝 주머니): 하나라도 가진 판 ${pc(anyF.length / n)} 승률 ${pc(anyF.filter((r) => r.won).length / anyF.length)} · 없는 판 승률 ${pc(R.filter((r) => !r.fairies.length && r.won).length / (n - anyF.length))} · 판 최고 한 수 p50 이형 ${pctile(anyF.map((r) => r.best), 0.5)} / 없음 ${pctile(R.filter((r) => !r.fairies.length).map((r) => r.best), 0.5)}`);
   table(['이형', '가진 판', '그 판 승률', '전체 대비 %p', '그 모습으로 먹은 수', '입은 수'], fr);
+  { // 광대 진단(CHM-56): 먹기 갈래 · 사슬 길이
+    const J = { a: 0, m: 0, dropN: 0, dropCaps: 0, viaN: 0, viaCaps: 0, allN: 0, allCaps: 0 };
+    for (const r of R) for (const bt of r.log) for (const k in J) J[k] += (bt.jd || {})[k] || 0;
+    const avg = (c, n) => (n ? (c / n).toFixed(2) : '-');
+    console.log(`광대 진단: 광대 모습의 먹기 ${J.a + J.m} — 붙은 칸이라서만 ${J.a} (${pc(J.a / (J.a + J.m))}) · 그 적의 행마로 ${J.m} · 광대로 떨군 사슬 ${J.dropN}(평균 먹은 수 ${avg(J.dropCaps, J.dropN)}) · 광대 모습을 거친 사슬 ${J.viaN}(평균 ${avg(J.viaCaps, J.viaN)}) · 모든 사슬 ${J.allN}(평균 ${avg(J.allCaps, J.allN)})`);
+  }
   if (!args.nodraft) {
     // 외통 = 정석을 고른 뒤(1 · 3 · 5관부터)의 대국 중 외통으로 이긴 몫
     const afterJ = (r, id) => { const k = r.josekis.indexOf(id); return r.log.filter((b) => !b.skipped && b.ante >= DRAFT_ANTES[k]); };

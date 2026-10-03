@@ -442,6 +442,8 @@ export function chainSummary(c, move = 0) {
     captures: c.captures.length, transforms: c.transforms, promotions: c.promotions, forced: c.forcedReplies,
     caps: c.captures.map((x) => x.piece).join(''), took: c.captures.map((x) => x.form).join(''), cuts: c.cuts, mates: c.mates, golden: c.golden,
     refills: c.refills, redrops: c.redrops, move,
+    // 하네스용(CHM-56): 광대 모습의 먹기마다 a = 붙은 칸이라서만 · m = 그 적의 행마로
+    ...(c.captures.some((x) => x.form === 'M') ? { jm: c.captures.filter((x) => x.form === 'M').map((x) => (x.move === 'K' && mimicOf(x.piece) !== 'K' ? 'a' : 'm')).join('') } : {}),
     ...(c.soul ? { soul: c.soul.id.replace(/^soul:/, '') } : {}),
   };
 }
