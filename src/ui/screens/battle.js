@@ -43,7 +43,7 @@ import { ANNOT, drawAnnot, annotSize, handTagRect, boardTagRect, offeredRow, dra
 import { drawStars, starsW, starCount, STAR_N } from '../stars.js';
 import { capRoute, routeAt, bendDur } from '../fxroute.js';
 import { noteStep, reviewGen, cloneBattle } from '../../sim/replay.js';
-import { reviewOn, forkTitle, forkLine, forkScores, forkScoreLines, forkMarks, NO_PATH, THINKING } from '../review.js';
+import { reviewOn, forkTitle, forkLine, forkScores, forkScoreLines, forkScoreRows, forkMarks, NO_PATH, THINKING } from '../review.js';
 
 // 복기(CHM-59): 진 순간 프레임마다 이만큼(ms)씩 나눠 잰다. 답은 마디 예산(replay.js REVIEW.nodes)이 정하고, 이 기기에서
 // REVIEW_WALL초를 넘기면(느린 기기) 카드 없이 지금 흐름대로 넘어간다(그 대국의 기록은 unknown)
@@ -843,7 +843,8 @@ export class BattleScreen {
       f.gap(GAP_IN);
       for (const l of wrap(forkLine(rv.res, rv.state.board), tw)) rows.push([l, f.line(), PAL.ink, false]);
       const sc = wrap(forkScores(rv.res), tw);
-      for (const l of sc.length > 1 ? forkScoreLines(rv.res) : sc) rows.push([l, f.line(), PAL.dim, false]);
+      const two = forkScoreLines(rv.res);
+      for (const l of sc.length <= 1 ? sc : two.every((x) => wrap(x, tw).length === 1) ? two : forkScoreRows(rv.res)) rows.push([l, f.line(), PAL.dim, false]);
     } else for (const l of wrap(NO_PATH, tw, true)) rows.push([l, f.line(), PAL.ink, true]);
     if (rv.phase === 'card') by = f.gap(GAP_GROUP).space(BTN_S);
     const h = f.y + P;

@@ -24,6 +24,8 @@ export function forkLine(r, board) {
 export const forkScores = (r) => `네 수 ${num(r.scores.mine)} · 이길 길 ${r.mate ? '메이트' : num(r.scores.best)} / 목표 ${num(r.scores.target)}`;
 // 한 줄에 안 들어가면 두 줄로(목표를 줄 가운데서 끊지 않게)
 export const forkScoreLines = (r) => [`네 수 ${num(r.scores.mine)} · 이길 길 ${r.mate ? '메이트' : num(r.scores.best)}`, `목표 ${num(r.scores.target)}`];
+// 두 줄 첫 줄도 안 들어가면(영어 · 큰 수) 세 줄로 — 「네 수」 · 「이길 길」 · 「목표」를 줄 가운데서 끊지 않게
+export const forkScoreRows = (r) => [`네 수 ${num(r.scores.mine)}`, `이길 길 ${r.mate ? '메이트' : num(r.scores.best)}`, `목표 ${num(r.scores.target)}`];
 export const NO_PATH = '이 판은 길이 없었다';
 export const THINKING = '복기 중…';
 
