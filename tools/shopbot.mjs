@@ -498,7 +498,8 @@ function altPlay(run, opts) {
   applyRun(copy, { type: 'play' });
   for (let i = 0; i < 200 && copy.phase === 'battle'; i++) if (!stepBattle(copy.battle, (c) => applyRun(copy, c), opts)) break;
   SACLOG.rows.length = sac;
-  return copy.battle.status === 'won';
+  const row = copy.log.at(-1); // 대국이 끝나면 판(런)이 대국을 치우고 한 줄을 남긴다
+  return !!(row && row.ante === run.ante && row.blind === run.blind && !row.skipped && row.won);
 }
 function selectStep(run, policy, r) {
   if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) { act(run, { type: 'skip' }); return; }
