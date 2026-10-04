@@ -11,7 +11,7 @@ import { generateBoard, randomEmpty, rollType, rollFrom, reinforceCount } from '
 import { pieceSoul, CRACK } from '../data/souls.js';
 import { PIECES } from '../data/pieces.js';
 import { thaw } from '../data/tactics.js';
-import { reboardOn } from './tuning.js';
+import { reboardOn, playToEnd } from './tuning.js';
 
 export { enemyCount, kingGuards, reinforceCount, enemyWeights, kingDefended } from './setup.js';
 
@@ -465,10 +465,12 @@ function endMove(b, events) {
   thaw(b);
   if (c.reason === 'mate') { refreshHints(b); return finishBattle(b, 'won', 'mate', events); }
   if (c.flags.gomoku) return finishBattle(b, 'won', 'gomoku', events);
-  if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
-  if (b.movesLeft <= 0) return finishBattle(b, 'lost', 'moves', events);
+  // 끝까지 둔다(시제품 CHM-66 C, tuning.js PACE — 기본 꺼짐): 목표를 넘겨도 수를 다 쓸 때까지. 다 쓴 뒤 목표 이상이면 이긴다
+  const toEnd = playToEnd();
+  if (!toEnd && b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
+  if (b.movesLeft <= 0) return toEnd && b.target != null && b.score >= b.target ? finishBattle(b, 'won', 'score', events) : finishBattle(b, 'lost', 'moves', events);
   arrive(b, events);
-  if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events); // 함정이 붙잡은 증원으로 넘길 때
+  if (!toEnd && b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events); // 함정이 붙잡은 증원으로 넘길 때
   draw(b);
   checkStuck(b, events);
 }
@@ -487,6 +489,8 @@ export function checkStuck(b, events) {
     events.push({ type: 'regrip', hand: b.hand.map((p) => p.t) });
     if (hasLegalDrop(b)) return;
   }
+  // 끝까지 둔다(시제품 C): 목표를 이미 넘긴 채 막히면 이긴다
+  if (playToEnd() && b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
   finishBattle(b, 'lost', 'stuck', events);
 }
 
