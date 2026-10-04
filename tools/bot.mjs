@@ -19,6 +19,17 @@ import { valueOf } from '../src/data/pieces.js';
 import { bestMove } from '../src/sim/solver.js';
 import { addOffering, weightOf as weightOfPiece } from '../src/data/sacrifice.js';
 import { cloneBattle, applyDecision, pieceKey } from '../src/sim/replay.js';
+import { PACE, playToEnd } from '../src/sim/tuning.js';
+
+// 봇이 이번 대국에서 노리는 점수. 보통은 목표. 시제품 C(끝까지 둔다, CHM-66 — 기본 꺼짐)에서 목표를 넘긴 뒤에는
+// 덤이 붙는 다음 넘침 층(PACE.overflow의 ×2 · ×5 · ×10)을 노린다 — 넘긴 뒤에도 희생 판단 · 폰 아끼기가 덤을 보고 돈다
+export function goalOf(b) {
+  if (b.target == null) return null;
+  if (!playToEnd() || b.score < b.target) return b.target;
+  const tiers = Object.keys(PACE.overflow).map(Number).filter((x) => PACE.overflow[x] > 0).sort((x, y) => x - y);
+  for (const x of tiers) if (b.score < x * b.target) return x * b.target;
+  return Infinity;
+}
 
 // ratio 1 → 2(밤샘 2 3부): 1이면 대국당 0.08번만 다시 놓아 판을 끝낸 죽음의 판 운 몫이 52.6%, 2면 0.18번 · 31.3%(luck 30판)
 export const REBOARD = { ratio: 2 }; // 켜고 끄기는 src/sim/tuning.js BOARD_TUNING.reboard(끄면 canReboard가 늘 거짓)
@@ -49,7 +60,7 @@ export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null, 
     b.hand.forEach((p, i) => { if (valueOf(p.t) < valueOf(b.hand[low].t)) low = i; });
     return { discard: [low], why: 'stuck', before: 0 };
   }
-  const need = b.target != null ? b.target - b.score : Infinity;
+  const need = b.target != null ? goalOf(b) - b.score : Infinity;
   if (best.score >= need) return { play: best };
   if (sacrifice && canDiscard && roomy) {
     const pick = sacrificeChoice(b, per.map((m) => (m ? m.score : null)), best, { need, preferMate: nomate ? 'avoid' : true });
@@ -191,7 +202,7 @@ function determinize(t, s) {
 function lookDecide(b, opts) {
   const base = decideBattle(b, opts);
   if (!base || b.target == null) return base;
-  if (base.play && ((base.play.mate && !opts.nomate) || b.score + base.play.score >= b.target)) return base;
+  if (base.play && ((base.play.mate && !opts.nomate) || b.score + base.play.score >= goalOf(b))) return base;
   const cands = candidates(b, base, opts);
   if (cands.length < 2) return base;
   const r = fork(createRng((b.seed ^ (b.movesUsed * 7919) ^ ((b.discardsUsed || 0) * 104729) ^ ((b.reboards || 0) * 31)) >>> 0), 'look');

@@ -17,6 +17,7 @@ import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK, TAG_BONUS, HOLD, BE
 import { beatLog, runBeats, BEAT_TABLE, TIER, NEAR_NAMES } from './beats.mjs';
 import { REVIEW } from '../src/sim/replay.js';
 import { BOT } from './bot.mjs';
+import { PACE } from '../src/sim/tuning.js';
 import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
 import { SOULS, SOUL_BY_ID, SOUL_RARITY, RARITY_NAME } from '../src/data/souls.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
@@ -59,6 +60,7 @@ function parseArgs(argv) {
     else if (k === '--dump') a.dump = argv[++i];                       // 판별 결과 전부(ms 빼고, seed 순)를 JSON으로 — 손질 전후 결정성 비교(CHM-44)
     else if (k === '--json') a.json = argv[++i];                       // 수치를 JSON으로도(밤샘 2 보고서 · 아티팩트용)                          // 정석 드래프트 없이(깊이 E 이전)
     else if (k === '--beats') a.beats = true;                           // 박자(CHM-66): 판마다 쾌감 사건을 시간순으로 모아 「박자」 절을 더한다(tools/beats.mjs)
+    else if (k === '--pace') a.pace = JSON.parse(argv[++i]);            // 대국 호흡 시제품(CHM-66): src/sim/tuning.js PACE 덮어쓰기 {"mode":"B","momentum":0.5,"curve":1.6}
     else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
   }
   return a;
@@ -90,7 +92,8 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats, pace } = workerData;
+  if (pace) Object.assign(PACE, pace);
   if (beats) BEATS.on = true;
   if (replay) REPLAY.on = true;
   if (peekLog) PEEK.log = true;
@@ -125,7 +128,7 @@ if (!isMainThread) {
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + i * 7919) >>> 0);
   const t0 = performance.now();
   // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
-  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats };
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, pace: args.pace };
   const results = [], timeouts = [];
   let next = 0, done = 0;
   await new Promise((finish) => {
@@ -167,7 +170,7 @@ function report(R, args, wall) {
   const pctile = (arr, p) => { if (!arr.length) return NaN; const s = [...arr].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.round(p * (s.length - 1)))]; };
 
   const wins = R.filter((r) => r.won).length;
-  console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
+  console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}${args.pace ? ' 호흡 ' + JSON.stringify(args.pace) : ''}`);
   if (args.botstats) { const d = R.reduce((a, r) => a + (r.botStats ? r.botStats.decisions : 0), 0), c = R.reduce((a, r) => a + (r.botStats ? r.botStats.capped : 0), 0); console.log(`대국 결정 ${d}번 중 풀이기가 마디 예산에 닿은 결정 ${c}번(${pc(c / Math.max(1, d))})`); }
   if (args.timeouts && args.timeouts.length) console.log(`시간 초과 ${args.timeouts.length}판(${args.limit}초, 표에서 뺐다): seed ${args.timeouts.join(' ')}`);
   console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.strong && args.strong !== 1 ? `, 세기 ×${args.strong}` : ''}${args.look ? `, 내다보기 ${args.look}` : ''}${args.next != null ? `, 다음 수 ${args.next}` : ''}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
@@ -387,7 +390,7 @@ function report(R, args, wall) {
     }
     const tally = (keyOf) => { const t = {}; for (const r of R) for (const id of new Set(keyOf(r))) { t[id] = t[id] || { n: 0, w: 0 }; t[id].n++; if (r.won) t[id].w++; } return Object.fromEntries(Object.entries(t).map(([k, v]) => [k, { runs: v.n, win: r3(v.w / v.n) }])); };
     const out = {
-      tool: 'tools/run.mjs', policy: args.policy, seed: args.seed, dan: args.dan || 0, strong: args.strong || 1, look: args.look || 0, next: args.next ?? null, runs: n, timeouts: (args.timeouts || []).length, tune: args.tune || null, B: args.B || null,
+      tool: 'tools/run.mjs', policy: args.policy, seed: args.seed, dan: args.dan || 0, strong: args.strong || 1, look: args.look || 0, next: args.next ?? null, runs: n, timeouts: (args.timeouts || []).length, tune: args.tune || null, B: args.B || null, ...(args.pace ? { pace: args.pace } : {}),
       runWin: r3(wins / n), antes, ratioEdges: EDGES.slice(0, -1).map((x, i) => [x, EDGES[i + 1] === Infinity ? null : EDGES[i + 1]]),
       clock: { lostPerRun: r3(R.reduce((a, r) => a + r.log.filter((x) => x.clockLost).length, 0) / n), wonWithLoss: r3(R.filter((r) => r.won && r.log.some((x) => x.clockLost)).length / Math.max(1, wins)), reboardPerBattle: r3(battles.reduce((a, b) => a + (b.reboards || 0), 0) / battles.length) },
       items: {
@@ -622,5 +625,40 @@ function beatsReport(R, { pc, f, f2, table, pctile }) {
   }
   console.log('시너지 문턱(가족 수 최댓값, 판 상태로 셈): 넘은 판 · 그 판 승률 · 못 넘은 판 승률 · 처음 넘은 관');
   table(['문턱', '넘은 판', '승률', '못 넘은 판 승률', '처음 넘은 관'], famRows);
+  out.pace = paceReport(R, X, { pc, f, f2, table });
   return out;
+}
+
+// 대국 호흡(CHM-66 D′, tools/beats.mjs paceOf): 점수로 이긴 대국이 목표를 처음 넘긴 수(사슬마다 쌓인 점수로) · 체크메이트 승리는 따로 ·
+// 대국당 둔 수 · 번 상금 · 판당 둔 수 합 · 넘긴 뒤의 사슬(넘겨도 대국이 이어지는 시제품 C) · 판 보기로 건너뛴 몫
+function paceReport(R, X, { pc, f, f2, table }) {
+  const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : null);
+  const P = X.map((x) => x.b.pace);
+  const won = P.flatMap((p) => p.won), mate = P.flatMap((p) => p.mate), all = P.flatMap((p) => p.all), after = P.flatMap((p) => p.after);
+  const share = (xs, fn) => (xs.length ? xs.filter(fn).length / xs.length : NaN);
+  const mean = (xs) => (xs.length ? xs.reduce((a, v) => a + v, 0) / xs.length : NaN);
+  const row = (name, ws, ms) => [name, String(ws.length), pc(share(ws, (v) => v.first)), pc(share(ws, (v) => v.last2)), ...[0, 1, 2].map((i) => pc(share(ws, (v) => v.third === i))), String(ms.length), String(ms.filter((v) => v.cross == null).length)];
+  const KN = ['연습', '정식', '마스터'];
+  const rows = [row('전체', won, mate), ...[0, 1, 2].map((k) => row(KN[k], won.filter((v) => v.blind === k), mate.filter((v) => v.blind === k)))];
+  for (let a = 1; a <= 8; a++) rows.push(row(`${a}관`, won.filter((v) => v.ante === a), mate.filter((v) => v.ante === a)));
+  console.log('\n호흡(CHM-66): 점수로 이긴 대국이 목표를 처음 넘긴 수(사슬마다 쌓인 점수) — 첫 수 · 마지막 두 수 · 둘 수 있던 수의 앞 1/3 · 가운데 · 끝 1/3. 체크메이트 승리는 따로(그중 목표 밑)');
+  table(['', '점수로 이김', '첫 수', '마지막 두 수', '앞', '가운데', '끝', '메이트 승리', '목표 밑 메이트'], rows);
+  const wonB = all.filter((v) => v.won), lostB = all.filter((v) => !v.won);
+  const perRunMoves = X.map((x) => x.b.pace.all.reduce((a, v) => a + v.moves, 0));
+  const peek = R.flatMap((r) => r.peek || []);
+  const skipped = peek.filter((v) => v.skip).length;
+  const o = {
+    scoreWins: won.length, first: r3(share(won, (v) => v.first)), last2: r3(share(won, (v) => v.last2)), thirds: [0, 1, 2].map((i) => r3(share(won, (v) => v.third === i))),
+    mateWins: mate.length, mateUnder: mate.filter((v) => v.cross == null).length,
+    byKind: [0, 1, 2].map((k) => { const ws = won.filter((v) => v.blind === k); return { n: ws.length, first: r3(share(ws, (v) => v.first)), last2: r3(share(ws, (v) => v.last2)) }; }),
+    byAnte: [1, 2, 3, 4, 5, 6, 7, 8].map((a) => { const ws = won.filter((v) => v.ante === a); return { n: ws.length, first: r3(share(ws, (v) => v.first)), last2: r3(share(ws, (v) => v.last2)) }; }),
+    movesPerBattle: r3(mean(all.map((v) => v.moves))), movesWon: r3(mean(wonB.map((v) => v.moves))), movesLost: r3(mean(lostB.map((v) => v.moves))),
+    rewardPerBattle: r3(mean(all.map((v) => v.reward))), rewardPerWin: r3(mean(wonB.map((v) => v.reward))),
+    movesPerRun: r3(mean(perRunMoves)),
+    after: after.length ? { battles: after.length, pre: r3(mean(after.map((v) => v.pre))), post: r3(mean(after.map((v) => v.post))), ratioP50: (() => { const rs = after.filter((v) => v.pre > 0).map((v) => v.post / v.pre).sort((a, b) => a - b); return rs.length ? r3(rs[Math.floor((rs.length - 1) / 2)]) : null; })(), sacs: r3(mean(after.map((v) => v.sacs))), sacBattles: r3(share(after, (v) => v.sacs > 0)) } : null,
+    peek: { seen: peek.length, skipped, skip: r3(skipped / Math.max(1, peek.length)) },
+  };
+  console.log(`  대국당 둔 수 ${f2(o.movesPerBattle)} (이긴 대국 ${f2(o.movesWon)} · 진 대국 ${f2(o.movesLost)}) · 대국당 번 상금 ${f2(o.rewardPerBattle)} (이긴 대국 ${f2(o.rewardPerWin)}) · 판당 둔 수 합 ${f(o.movesPerRun, 1)} · 판 보기 연습 · 정식 ${peek.length}번 중 건너뜀 ${pc(o.peek.skip)}`);
+  if (o.after) console.log(`  넘긴 뒤에도 둔 대국 ${o.after.battles}: 사슬 점수 평균 넘기기까지 ${f(o.after.pre)} → 넘긴 뒤 ${f(o.after.post)}(대국마다 넘긴 뒤 ÷ 넘기기까지 p50 ${f2(o.after.ratioP50)}) · 넘긴 뒤 희생 대국당 ${f2(o.after.sacs)}(희생한 대국 ${pc(o.after.sacBattles)})`);
+  return o;
 }
