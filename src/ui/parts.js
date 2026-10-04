@@ -577,13 +577,13 @@ export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
 }
 
 // wide: 폭이 88보다 좁아도 넓은 카드로(꾸러미 카드 넷 — 효과 글을 카드에 그대로 적는다)
-export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false } = {}) {
+export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false, hold = false } = {}) {
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
     x += Math.floor((w - nw) / 2); w = nw;
   }
-  if (scaleX === 1 && (w >= 88 || wide)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under });
+  if (scaleX === 1 && (w >= 88 || wide)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under, hold });
   // 좁은 카드는 뒤집히는 순간에만 그린다(연출 — 글 넘침은 재지 않는다)
   openBox('card', x, y, w, h, 0, { loose: true, name: '뒤집히는 카드' });
   narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run });
@@ -693,17 +693,22 @@ function itemNameOf(it) { return it.kind === 'chart' ? `${PIECE_NAME[it.form]} �
 const artW = (it) => (it.kind === 'evolve' ? 44 : 22);
 // 카드의 칩 줄 수(못 놓은 시너지는 「+N」 — 전부는 가리키면 말풍선에)
 export const CARD_CHIP_ROWS = 1;
-export function itemCardLayout(it, w, { run = null, price = true } = {}) {
+// 찜 책갈피(상점 진열, CHM-58 F): 위 테에서 늘어져 값 왼쪽에 선다. 폭 w · 높이 h, 값과 사이 gap.
+// hold 카드는 머릿말 첫 줄 폭에서 책갈피 자리(w + gap)를 뺀다 — 긴 머릿말 · 영어 종류명이 책갈피와 겹치지 않게
+export const HOLD_MARK = { w: 9, h: 14, gap: 3 };
+export function itemCardLayout(it, w, { run = null, price = true, hold = false } = {}) {
   const P = PAD_CARD, IW = w - P * 2;
   const f = flow(P);
   const out = { IW };
   // 종류(머릿말)는 값 왼쪽까지(길면 줄바꿈 — 영어 「Classic Fragment」), 값은 첫 줄 오른쪽
   // 머릿말 자리는 종류 딱지 뒤부터(딱지 바탕 끝과 글 사이 2 — 문양은 바탕 안쪽 한 칸이라 눈에는 3), 값과는 2 띄운다.
   // 영어 판본 이름(「Obsidian」 54)과 두 자리 값이 한 줄에 들어야 진열 카드가 160을 넘지 않는다(test/layout.test.js)
-  const priceW = (price && it.price != null ? measure(`$${it.price}`, true) + 2 : 0) + TAB + TAB_GAP;
+  const priceW = (price && it.price != null ? measure(`$${it.price}`, true) + 2 : 0) + TAB + TAB_GAP + (hold ? HOLD_MARK.w + HOLD_MARK.gap : 0);
   // 판본 격언은 머릿말이 판본 이름(금빛, 「무지개 격언」 — 값 옆에 안 들어가면 「무지개」), 판본 효과는 효과 글 끝 줄(금빛)
   let kind = ITEM_KIND[it.kind];
-  if (it.edition) { const ed = EDITION_BY_ID[it.edition].name; kind = measure(`${ed} ${kind}`) <= IW - priceW ? `${ed} ${kind}` : ed; }
+  // 진열 카드(hold)는 책갈피 자리만큼 첫 줄이 좁아 영어 「Obsidian」(54) · 「Rainbow」(52)가 값 옆(두 자리 값이면 42)에 안 들어간다 —
+  // 그때는 종류 이름(금빛)만 적고 판본 이름은 말풍선 첫 줄로(screens/shop.js editionLine). 머릿말이 둘째 줄로 접히면 카드가 160을 넘었다
+  if (it.edition) { const ed = EDITION_BY_ID[it.edition].name; kind = measure(`${ed} ${kind}`) <= IW - priceW ? `${ed} ${kind}` : measure(ed) <= IW - priceW || !hold ? ed : kind; }
   out.kindCol = it.edition ? PAL.goldDk : PAL.cardDim;
   // 종류 딱지(kinds.js — 14 = 머릿말 줄 높이)는 첫 줄 왼쪽, 머릿말 글은 그 오른쪽
   out.tabY = f.y;
@@ -756,7 +761,7 @@ export function wrapHead(s, w1, w2) {
 // 넓은 카드 높이(폭 w). 한 줄의 카드는 가장 긴 카드에 맞춘다(itemRowH)
 export const itemCardH = (it, w, opts = {}) => itemCardLayout(it, w, opts).h;
 export const itemRowH = (items, w, opts = {}) => Math.max(0, ...items.filter(Boolean).map((it) => itemCardH(it, w, opts)));
-function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under }) {
+function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under, hold = false }) {
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   const edge = it.kind === 'engraving' ? ENG_EDGE[it.id] : it.kind === 'soul' ? SOUL_BY_ID[it.id].col : null;
   openBox('card', x, y, w, h, PAD_CARD, { name: `카드 ${it.kind}` });
@@ -766,7 +771,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (rar) rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[rar]);
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
   if (hover) frame(ctx, x, y, w, h, PAL.gold);
-  const lay = itemCardLayout(it, w, { run, price });
+  const lay = itemCardLayout(it, w, { run, price, hold });
   const P = PAD_CARD;
   kindTab(ctx, it.kind, x + P, y + lay.tabY);
   for (const [l, ly] of lay.kinds) if (l) text(ctx, l, x + lay.kindX, y + ly, lay.kindCol);

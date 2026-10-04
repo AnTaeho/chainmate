@@ -6,6 +6,14 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 // 효과 글: 「Condition: effect」, 수치는 +20 Value · ×2 Mult · +$2 · +1 Move. Value · Mult · Target은 늘 대문자, 다른 낱말과 기물 이름은 문장 안에서 소문자.
 export const EN = {
+  // 찜(CHM-58 F)
+  '찜': 'Hold', '찜했다': 'Held',
+  '다음 상점까지 맡아 둔다': 'Keep it for the next shop',
+  '다음 상점 진열에 그대로 남는다': 'It stays on sale at the next shop',
+  '지난 상점에서 찜한 카드. 다시 찜하면 다음 상점에도 남는다': 'Held from the last shop. Hold it again to keep it one more shop',
+  '찜했다 · 다음 상점까지 남는다': 'Held · stays for the next shop',
+  '지난 상점에서 찜한 카드': 'Held from the last shop',
+  '책갈피를 누르면 그 카드를 다음 상점까지 맡아 둔다': 'Tap the bookmark to hold that card for the next shop',
 
   '사슬이 끝날 때 점수가 목표에 닿으면 이긴다. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어난다': 'Reach the Target when a chain ends to win. Go past it and the bar stretches to ×2, ×5, ×10',
   '고른 레퍼토리는 가리키면 무엇을 하는지 보인다': 'Point at your repertoire to see what it does',

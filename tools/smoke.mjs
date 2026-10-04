@@ -337,6 +337,8 @@ const HINT_SUBJECT = {
   incoming: (id, run) => { const sq = num(id, 'sq:'); return !!(run.battle && (run.battle.incoming || []).some((r) => r.sq === sq) && !cellAt(sq)); },
   fairy: (id) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')]; return !!(p && PIECES[p.t] && PIECES[p.t].fairy); },
   maximSell: (id, run) => canSell(run.maxims[num(id, 'maxim:')]),
+  // 찜(CHM-58 F): 상점 진열의 안 산 카드의 책갈피
+  hold: (id, run) => scrName() === 'shop' && !!run.shop.display[num(id, 'shop:hold:')] && !run.shop.display[num(id, 'shop:hold:')].sold,
   joseki: (id, run) => id.startsWith('joseki:') && run.josekis.length > 0,
   tactic: (id, run) => id.startsWith('tactic:') && run.consumables.some((c) => c.kind === 'tactic'),
   bigText: (id) => scrName() === 'title' && id === 'title:settings',
@@ -638,8 +640,54 @@ function reviewWalk() {
 }
 function idle2(s, max = 3000) { let k = 0; while (app.screen === s && (s.busy || s.playing) && k < max) { pump(1); k++; } if (k >= max) throw new Error('review animation never ends'); }
 
+// 찜(CHM-58 F): 떠나기 전에 책갈피를 눌러 찜(처음엔 풀기 · 옮기기 · 손가락 한 번 누름도) → 다음 상점 같은 칸에 넘어왔나
+const holdSeen = { on: 0, off: 0, moved: 0, touch: 0, carried: 0, dropped: 0, bought: 0, bad: [], want: null };
+const holdKey = (it) => JSON.stringify({ ...it, price: undefined, sold: undefined, kept: undefined, base: undefined });
+function holdArrive(run) {
+  const w = holdSeen.want;
+  holdSeen.want = null;
+  if (!w || w.seed !== run.seed) return;
+  const it = run.shop.display[w.slot];
+  if (it && it.kept && holdKey(it) === w.key) { holdSeen.carried++; return; }
+  // 그사이 같은 격언 · 첫 조각을 얻었으면 찜은 버린다(run.js holdStillGood)
+  const gone = (w.kind === 'maxim' && run.maxims.some((m) => m.id === w.id)) || (w.kind === 'fragment' && run.fragments[w.legend] && run.fragments[w.legend].first);
+  if (gone) { holdSeen.dropped++; return; }
+  if (holdSeen.bad.length < 6) holdSeen.bad.push(`${run.ante}관: ${w.slot}칸 찜이 넘어오지 않았다`);
+}
+function holdBeforeLeave(run) {
+  const shop = run.shop;
+  const open = shop.display.map((it, i) => (!it.sold ? i : -1)).filter((i) => i >= 0);
+  if (!open.length) return;
+  const j = open[Math.floor(rnd() * open.length)];
+  if (!region(`shop:hold:${j}`)) { holdSeen.bad.push(`${j}칸 책갈피 구역이 없다`); return; }
+  const tap = (k) => { click(`shop:hold:${k}`); pump(1); };
+  if (!holdSeen.off && open.length > 1) {
+    tap(j); if (!run.hold || run.hold.slot !== j) holdSeen.bad.push('책갈피를 눌러도 찜이 안 됐다');
+    tap(j); if (run.hold) holdSeen.bad.push('다시 눌러도 찜이 안 풀렸다'); else holdSeen.off++;
+    const k = open.find((x) => x !== j); tap(k); tap(j); if (!run.hold || run.hold.slot !== j) holdSeen.bad.push('찜이 옮겨 가지 않았다'); else holdSeen.moved++;
+  } else if (!holdSeen.touch) {
+    // 손가락: 책갈피는 한 번 누르면 곧바로 찜(진열 카드처럼 두 번 누르지 않는다), 넓힌 구역 가장자리를 눌러도
+    app.touch = true;
+    try {
+      pump(1);
+      const r = region(`shop:hold:${j}`), money = run.money;
+      if (!app.ui.finger || r.w < app.ui.finger || r.h < app.ui.finger) holdSeen.bad.push(`손가락 책갈피 구역이 작다 ${r.w}×${r.h} < ${app.ui.finger}`);
+      const gx = r.x + 1, gy = r.y + r.h - 2;
+      dom.mouse('mousemove', gx, gy); dom.mouse('mousedown', gx, gy); dom.mouse('mouseup', gx, gy); pump(1);
+      if (!run.hold || run.hold.slot !== j || run.money !== money) holdSeen.bad.push('손가락 한 번에 찜이 안 됐다'); else holdSeen.touch++;
+    } finally { app.touch = false; }
+  } else if (!run.hold || run.hold.slot !== j) tap(j);
+  if (run.hold) {
+    const it = shop.display[run.hold.slot];
+    holdSeen.on++;
+    holdSeen.want = { seed: run.seed, slot: run.hold.slot, key: holdKey(it), kind: it.kind, id: it.id, legend: it.legend };
+    notesOnce('shop-hold', 2);
+  }
+}
+
 function shopStep() {
   const run = app.run;
+  holdArrive(run);
   notesOnce('shop', 6);
   // 격언 끌어 순서 바꾸기(한 번)
   if (!draggedMaxim && run.maxims.length >= 2) {
@@ -652,7 +700,7 @@ function shopStep() {
     if (i >= 0) keyBoxesAt(`shop:buy:${i}`, 'shop');
     if (keySeen.chip < 20) chipBoxes();
     if (i >= 0 && !keySeen.touch && app.screen.name === 'shop') { touchBuy(i); continue; }
-    if (i >= 0 && rnd() < 0.8) { click(`shop:buy:${i}`); continue; }
+    if (i >= 0 && rnd() < 0.8) { const kept = shop.display[i].kept; click(`shop:buy:${i}`); if (kept && shop.display[i].sold) holdSeen.bought++; continue; }
     const p = shop.packs.findIndex((pk) => !pk.sold && run.money >= pk.price);
     if (p >= 0 && rnd() < 0.6) { click(`shop:pack:${p}`); return; }
     if (run.consumables.length) {
@@ -679,10 +727,15 @@ function shopStep() {
       continue;
     }
     if (run.maxims.length >= 4 && rnd() < 0.3) { click('maxim:0'); if (region('shop:sell')) click('shop:sell'); continue; }
-    if (run.money >= 5 + shop.rerolls && rnd() < 0.2) { click('shop:reroll'); continue; }
+    if (run.money >= 5 + shop.rerolls && rnd() < 0.2) {
+      const fixed = shop.display.map((it, k) => (!it.sold && (it.kept || (run.hold && run.hold.slot === k)) ? [k, holdKey(it)] : null)).filter(Boolean);
+      click('shop:reroll');
+      for (const [k, key] of fixed) if (holdKey(shop.display[k]) !== key && holdSeen.bad.length < 6) holdSeen.bad.push(`다시 진열이 찜한 ${k}칸을 바꿨다`);
+      continue;
+    }
     break;
   }
-  if (app.screen.name === 'shop') click('shop:leave');
+  if (app.screen.name === 'shop') { holdBeforeLeave(run); click('shop:leave'); }
 }
 
 function packStep() {
@@ -1803,6 +1856,8 @@ console.log(`각인 · 혼 바꾸기: 같은 것 흐림 ${swapSeen.same} · 상�
 if (swapSeen.bad.length || !swapSeen.same || !swapSeen.shopBack || !swapSeen.shopEsc || !swapSeen.packEsc || !swapSeen.shopSwap || !swapSeen.soulSwap || !swapSeen.packBack || !swapSeen.packSwap) { console.log('각인 · 혼을 덮어쓰기 전에 확인하지 않았거나, 「그만」 · 「바꾸기」가 어긋났다'); fail = true; }
 console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 ${chartSeen.scene} · 기보를 쓴 순간 크게 ${chartSeen.grow} · 수준만 ${chartSeen.tick}(어긋남 ${chartSeen.growBad})`);
 if (!chartSeen.scene || !chartSeen.grow || !chartSeen.tick || chartSeen.growBad) { console.log('기보 몫 연출이 뜨지 않았거나 기보를 쓴 순간이 자라지 않았다'); fail = true; }
+console.log(`찜: 찜 ${holdSeen.on} · 풀기 ${holdSeen.off} · 옮기기 ${holdSeen.moved} · 손가락 한 번 ${holdSeen.touch} · 다음 상점 같은 칸 ${holdSeen.carried} · 얻어서 버림 ${holdSeen.dropped} · 넘어온 카드 삼 ${holdSeen.bought}${holdSeen.bad.length ? ` · 어긋남: ${holdSeen.bad.join(' | ')}` : ''}`);
+if (holdSeen.bad.length || !holdSeen.on || !holdSeen.off || !holdSeen.moved || !holdSeen.touch || !holdSeen.carried) { console.log('찜이 어긋났다(책갈피 · 풀기 · 손가락 · 다음 상점 같은 칸)'); fail = true; }
 console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);
 if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none || keySeen.many || keySeen.basic || keySeen.own || !keySeen.chip || keySeen.chipBox) { console.log('낱말 상자를 보지 못했거나, 카드를 가리거나, 둘을 넘거나, 기본 낱말을 띄웠다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }

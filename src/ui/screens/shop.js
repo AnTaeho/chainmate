@@ -9,8 +9,9 @@ import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } 
 import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
-import { button } from '../ui.js';
-import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk, isSwap, rarityLine, awakenArt } from '../parts.js';
+import { button, growHit } from '../ui.js';
+import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk, isSwap, rarityLine, awakenArt, HOLD_MARK, itemName, itemCardLayout } from '../parts.js';
+import { EDITION_BY_ID } from '../../data/editions.js';
 import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
@@ -177,6 +178,53 @@ export const packRowNames = (packs, w) => packEnv(w) || packs.every((pk) => meas
 const SCROLL_ON_PIECE = ['engraving', 'soul', 'evolve', 'awaken'];
 export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' || c.kind === 'awaken' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
+// ── 찜(CHM-58 F, docs/design-notes/layout.md 19절): 진열 카드 위 테에서 늘어진 책갈피(값 왼쪽). 누르면 찜, 다시 누르면 풀린다.
+// 리본(위 테 금빛 띠) = 이 상점에서 찜했거나 지난 상점에서 넘어온 카드, 채운 책갈피 = 다음 상점까지 맡아 둔 카드(run.hold).
+// 넘어온 카드(kept)는 리본에 빈 책갈피로 선다 — 다시 누르면 채워져 그다음 상점에도 남는다
+const isHeld = (run, i) => !!run.hold && run.hold.slot === i;
+const HOLD_ROWS = [
+  'EEEEEEEEE',
+  'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFFFFFFFE', 'EFFFFFFFE',
+  'EFFFEFFFE',
+  'EFFE.EFFE',
+  'EFE...EFE',
+  'EE.....EE',
+];
+export function bookmark(ctx, bx, by, filled, hover = false) {
+  const col = { E: filled ? PAL.goldDk : hover ? PAL.gold : PAL.cardDim, F: filled ? PAL.gold : PAL.card, H: filled ? PAL.goldHi : PAL.card };
+  HOLD_ROWS.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') rect(ctx, bx + i, by + j, 1, 1, col[row[i]]); });
+}
+// 책갈피 자리(카드 안): 값 글 왼쪽에 gap 띄우고, 위 테에서 한 칸 아래부터 늘어진다
+export function holdMarkAt(it, x, y, w) {
+  const pw = it.price != null ? measure(`$${it.price}`, true) : 0;
+  return { x: x + w - PAD_CARD - pw - HOLD_MARK.gap - HOLD_MARK.w, y: y + 1 };
+}
+// 누르는 자리: 책갈피 둘레 3, 손가락이면 44pt까지 넓힌다(위로는 띠 단추 밑 2까지, 오른쪽은 값 글 앞까지 — 카드 밖 · 띠는 덮지 않는다)
+function holdHit(ui, m) {
+  const x = m.x - 3, y = m.y - 3, w = HOLD_MARK.w + 6, h = HOLD_MARK.h + 5;
+  return ui.finger ? growHit(x, y, w, h, ui.finger, { l: 14, r: HOLD_MARK.gap - 1, u: 0, d: 12 }) : { x, y, w, h };
+}
+// 찜한 카드 · 넘어온 카드를 가리키면 말풍선 첫 줄에 그 사실(금빛 한 줄)
+export function holdLine(run, it, i) {
+  if (it.sold) return null;
+  if (isHeld(run, i)) return '찜했다 · 다음 상점까지 남는다';
+  if (it.kept) return '지난 상점에서 찜한 카드';
+  return null;
+}
+// 판본 이름이 머릿말에 못 들어간 진열 카드(영어 긴 판본 이름 — parts.js itemCardLayout): 말풍선에 「판본 · 효과」(격언 칸 말풍선과 같은 꼴)
+export function editionLine(run, it) {
+  if (!it.edition) return null;
+  const e = EDITION_BY_ID[it.edition];
+  const head = itemCardLayout(it, CARD_W, { run, hold: true }).kinds.map(([l]) => l).join(' ');
+  return head.includes(L(e.name)) ? null : `${L(e.name)} · ${L(e.text)}`;
+}
+function withHoldLine(tip, run, it, i) {
+  const lines = [holdLine(run, it, i), editionLine(run, it)].filter(Boolean).map((l) => [l, PAL.goldDk]);
+  if (!lines.length) return tip;
+  if (!tip) return tipLines(itemName(it), [], 150, lines);
+  return { ...tip, extra: [...lines, ...(tip.extra || [])] };
+}
+
 export class ShopScreen {
   constructor(app) {
     this.app = app;
@@ -244,7 +292,7 @@ export class ShopScreen {
   // 가운데 칸 자리: 진열 줄 높이(두 카드 중 긴 것) · 꾸러미 줄 높이 · 주머니 윗변
   centerLayout() {
     const run = this.run, shop = run.shop;
-    const cardH = itemRowH(shop.display, CARD_W, { run });
+    const cardH = itemRowH(shop.display, CARD_W, { run, hold: true });
     const packY = TOP + cardH + GAP_GROUP;
     // 꾸러미 칸은 가운데 칸 폭을 나눠 쓴다(둘이면 108, 금빛 꾸러미가 붙어 셋이면 72)
     const n = Math.max(1, shop.packs.length), packW = n <= 2 ? CARD_W : Math.floor((CENTER.w - (n - 1) * PACK_GAP) / n);
@@ -289,13 +337,23 @@ export class ShopScreen {
       shop.display.forEach((it, i) => {
         const x = CX + i * (CARD_W + 8), y = TOP, id = `shop:buy:${i}`;
         const ok = canBuy(run, it);
-        ui.region(id, x, y, CARD_W, lay.cardH, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => itemExtraTip(it), keys: () => itemKeys(it), preview: true });
+        ui.region(id, x, y, CARD_W, lay.cardH, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => withHoldLine(itemExtraTip(it), run, it, i), keys: () => itemKeys(it), preview: true });
+        // 찜 책갈피: 카드 구역 뒤에 적어 카드보다 먼저 눌린다(살 돈이 모자란 카드도 찜할 수 있다)
+        const held = isHeld(run, i), mark = holdMarkAt(it, x, y, CARD_W), hid = `shop:hold:${i}`;
+        if (!it.sold) {
+          const g = holdHit(ui, mark);
+          ui.region(hid, g.x, g.y, g.w, g.h, { onClick: () => this.act({ type: 'hold', slot: i }, 'pick'), tip: () => tipLines(held ? '찜했다' : '찜', held ? '다음 상점 진열에 그대로 남는다' : it.kept ? '지난 상점에서 찜한 카드. 다시 찜하면 다음 상점에도 남는다' : '다음 상점까지 맡아 둔다', 130) });
+        }
         // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
-        const hov = ui.isHover(id) && ok;
+        const hov = (ui.isHover(id) && ok) || ui.isHover(hid);
         sway(ctx, ui.time, `${id}:${it.kind}:${it.id || it.form || it.t || ''}`, x, y, CARD_W, lay.cardH, (c) => {
-          itemCard(c, it, x, y, CARD_W, lay.cardH, { hover: hov, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok } });
+          itemCard(c, it, x, y, CARD_W, lay.cardH, { hover: hov && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok }, hold: true });
           if (!it.sold && !ok) { c.globalAlpha = 0.35; rect(c, x, y, CARD_W, lay.cardH, PAL.shadow); c.globalAlpha = 1; }
-        }, { hover: hov, press: hov && ui.press && ui.press.id === id });
+          if (it.sold) return;
+          // 리본: 찜했거나 넘어온 카드는 위 테에 금빛 띠
+          if (held || it.kept) { rect(c, x + 1, y - 1, CARD_W - 2, 3, PAL.gold); rect(c, x + 1, y - 1, CARD_W - 2, 1, PAL.goldHi); }
+          bookmark(c, mark.x, mark.y, held, ui.isHover(hid));
+        }, { hover: hov, press: hov && ui.press && (ui.press.id === id || ui.press.id === hid) });
       });
       // 꾸러미: 진열 아래 칸 둘(금빛 꾸러미가 붙으면 셋)
       shop.packs.forEach((pk, i) => {
@@ -351,6 +409,9 @@ export class ShopScreen {
       // 격언 안내는 진열에 아직 안 산 격언이 있을 때 그 카드를
       const mx = shop.display.findIndex((it) => it.kind === 'maxim' && !it.sold);
       if (mx >= 0) coachHint(app, 'shop', `shop:buy:${mx}`);
+      // 찜 안내(CHM-58 F)는 진열에 안 산 카드가 있는 첫 상점에서 그 카드의 책갈피를(격언 안내 다음)
+      const hx = shop.display.findIndex((it) => !it.sold);
+      if (hx >= 0) coachHint(app, 'hold', `shop:hold:${hx}`);
       // 두루마리 안내는 기물을 골라 쓰는 두루마리(각인 · 혼 · 진화 · 깨우기)에
       const sc = run.consumables.findIndex((c) => SCROLL_ON_PIECE.includes(c.kind));
       if (sc >= 0) coachHint(app, 'scroll', `cons:${sc}`);
