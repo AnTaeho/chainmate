@@ -96,9 +96,13 @@ HOLDS.reset();
 function noteKept(run) {
   for (const it of run.shop.display) if (it.kept) { HOLDS.carried++; HOLDS.kinds[it.kind] = (HOLDS.kinds[it.kind] || 0) + 1; }
 }
+// 박자(CHM-66, run.mjs --beats): log = tools/beats.mjs beatLog(run)이면 명령마다 사건을 넘긴다(읽기만 — 판 결과는 같다)
+export const BEATS = { on: false, log: null };
 function act(run, cmd) {
   if (cmd.type === 'buy' && run.shop.display[cmd.slot] && run.shop.display[cmd.slot].kept) HOLDS.bought++;
+  const b = BEATS.log ? run.battle : null, mu = b ? b.movesUsed : 0, logLen = run.log.length;
   const ev = applyRun(run, cmd);
+  if (BEATS.log) BEATS.log.record(run, ev, b, mu, logLen);
   if (cmd.type === 'reroll') noteDisplay(run);
   if (cmd.type === 'buyPack') notePack(run);
   return ev;
