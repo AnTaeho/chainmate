@@ -316,6 +316,10 @@ function openGolden(run, ctx, hunt) {
   const slot = run.shop.packs.findIndex((p) => p.kind === 'golden' && !p.sold);
   if (slot < 0) return;
   act(run, { type: 'buyPack', slot });
+  pickGolden(run, ctx, hunt);
+}
+// 열린 금빛 꾸러미에서 고른다(상점 · 건너뛰기 패 공용)
+function pickGolden(run, ctx, hunt) {
   const build = buildOf(run);
   const base = Math.max(1, ctx.score(build));
   const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
@@ -332,6 +336,34 @@ function openGolden(run, ctx, hunt) {
     if (pick.sell != null) act(run, { type: 'sell', index: pick.sell });
     act(run, { type: 'pick', index: pick.index });
   } else act(run, { type: 'skipPack' });
+}
+
+// 열린 꾸러미(기물 · 기보 · 각인)에서 가장 좋은 것(오르지 않으면 넘김, hunt는 첫 조각) — 상점 · 건너뛰기 패 공용
+function pickPack(run, ctx, build, base, hunt) {
+  let pick = null;
+  run.pack.options.forEach((o, index) => {
+    const v = variantFor(run, build, o, ctx);
+    if (!v) return;
+    const s = ctx.score(v.build) * (1 + famBonus(build, v.build));
+    if (!pick || s > pick.s) pick = { s, cmd: { type: 'pick', index, target: v.target } };
+  });
+  const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
+  if (frag >= 0 && (hunt || !pick || pick.s <= base)) act(run, { type: 'pick', index: frag });
+  else if (pick && pick.s > base * 1.0) act(run, pick.cmd);
+  else act(run, { type: 'skipPack' });
+}
+// 건너뛰기 패로 상점 밖에서 열린 꾸러미(CHM-58 ②): 짜임 재기는 다음 대국(건너뛴 대국의 다음)으로
+function tagPack(run, policy, r) {
+  if (policy === 'random') {
+    const opts = legalRunCommands(run).filter((x) => x.type === 'pick');
+    act(run, opts.length ? opts[int(r, opts.length)] : { type: 'skipPack' });
+    return;
+  }
+  if (policy === 'none') { act(run, { type: 'skipPack' }); return; }
+  const ctx = makeCtx({ ...run, phase: 'shop' });
+  if (run.pack.kind === 'golden') { pickGolden(run, ctx, policy === 'hunt'); return; }
+  const build = buildOf(run);
+  pickPack(run, ctx, build, Math.max(1, ctx.score(build)), policy === 'hunt');
 }
 
 function smartShop(run, hunt = false) {
@@ -409,21 +441,12 @@ function smartShop(run, hunt = false) {
     const pk = run.shop.packs.findIndex((p) => !p.sold && run.money - p.price >= (hunt ? Math.min(reserve, 4) : reserve));
     if (pk >= 0) {
       act(run, { type: 'buyPack', slot: pk });
-      let pick = null;
-      run.pack.options.forEach((o, index) => {
-        const v = variantFor(run, build, o, ctx);
-        if (!v) return;
-        const s = ctx.score(v.build) * (1 + famBonus(build, v.build));
-        if (!pick || s > pick.s) pick = { s, cmd: { type: 'pick', index, target: v.target } };
-      });
-      const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
-      if (frag >= 0 && (hunt || !pick || pick.s <= base)) act(run, { type: 'pick', index: frag });
-      else if (pick && pick.s > base * 1.0) act(run, pick.cmd);
-      else act(run, { type: 'skipPack' });
+      pickPack(run, ctx, build, base, hunt);
       continue;
     }
-    // 다시 진열: 돈이 넉넉할 때만(hunt는 조각을 찾으려 조금 더 자주)
-    if (run.money - rerollCost(run) >= reserve + (hunt ? 2 : 8)) { act(run, { type: 'reroll' }); continue; }
+    // 다시 진열: 돈이 넉넉할 때만(hunt는 조각을 찾으려 조금 더 자주). 건너뛰기 패의 값 없는 다시 진열은 늘 쓴다
+    const rc = rerollCost(run);
+    if (rc === 0 || run.money - rc >= reserve + (hunt ? 2 : 8)) { act(run, { type: 'reroll' }); continue; }
     break;
   }
   if (run.phase === 'shop') { useConsumables(run, ctx); act(run, { type: 'leave' }); }
@@ -477,6 +500,10 @@ function huntRank(run) {
 // 주머니 몫으로 평균하고 목표로 나눈 값이 read(판이 내 주머니에 맞는 정도). read < PEEK.skipBelow면 건너뛴다(null이면 늘 둔다).
 // log: 대국마다 read를 남겨 승패와 견준다(문턱 고르기). alt: 건너뛴 판을 복사본에서 두어 이겼을지 남긴다(건너뛴 판의 대체 승률).
 export const PEEK = { skipBelow: null, nodes: 1500, log: false, alt: false, rows: [] };
+// 건너뛰기 패의 덤(CHM-58 ②): 문턱 = skipBelow + 덤 — 좋은 패면 조금 덜 나쁜 판도 건너뛴다(skipBelow가 있을 때만).
+// read 0.2~0.3 구간의 둔 대국 승률이 65%라 덤은 그 구간 안에서만 움직이게 0.1까지. 상금이 되는 패(상금 · 두 배)와
+// 곧바로 여는 꾸러미가 가운데, 금빛 꾸러미(판본 격언)가 가장 크고, 다음 상점의 덤(꾸러미 칸 · 다시 진열)은 작다
+export const TAG_BONUS = { money: 0.06, double: 0.06, pack: 0.06, golden: 0.1, chart: 0.04, fragment: 0.04, slot: 0.02, reroll: 0.02 };
 export function boardRead(run) {
   const b = previewBattle(run);
   if (!b || !b.target) return null;
@@ -505,8 +532,9 @@ function selectStep(run, policy, r) {
   if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) { act(run, { type: 'skip' }); return; }
   const peek = policy !== 'random' && run.blind < 2 && (PEEK.log || PEEK.skipBelow != null);
   const rd = peek ? boardRead(run) : null;
-  const skip = !!rd && PEEK.skipBelow != null && rd.read < PEEK.skipBelow;
-  if (rd) PEEK.rows.push({ ante: run.ante, blind: run.blind, read: Math.round(rd.read * 1000) / 1000, max: Math.round(rd.max * 1000) / 1000, skip, ...(skip && PEEK.alt ? { altWon: altPlay(run, policy === 'nosac' ? { sacrifice: false } : {}) } : {}) });
+  const tag = rd ? blindInfo(run).tag : null;
+  const skip = !!rd && PEEK.skipBelow != null && rd.read < PEEK.skipBelow + (TAG_BONUS[tag.kind] || 0);
+  if (rd) PEEK.rows.push({ ante: run.ante, blind: run.blind, read: Math.round(rd.read * 1000) / 1000, max: Math.round(rd.max * 1000) / 1000, skip, tag: tag.kind, ...(skip && PEEK.alt ? { altWon: altPlay(run, policy === 'nosac' ? { sacrifice: false } : {}) } : {}) });
   act(run, { type: skip ? 'skip' : 'play' });
 }
 
@@ -567,7 +595,13 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
       trackBuys(before);
       continue;
     }
-    if (run.phase === 'pack') { act(run, { type: 'skipPack' }); continue; }
+    if (run.phase === 'pack') {
+      // 상점 밖에서 열린 꾸러미는 건너뛰기 패뿐이다(상점 꾸러미는 상점 봇이 그 자리에서 고른다)
+      const before = run.maxims.map((m) => m.uid);
+      if (run.pack.from === 'tag') tagPack(run, policy, r); else act(run, { type: 'skipPack' });
+      trackBuys(before);
+      continue;
+    }
   }
   if (legendAt == null && run.legends.length) legendAt = run.ante;
   return { bought: [...bought], editions, legendAt, seen: JSON.parse(JSON.stringify({ ...SEEN, reset: undefined })), sac: SACLOG.rows.slice() };

@@ -9,11 +9,11 @@ import { Worker, isMainThread, parentPort, workerData } from 'node:worker_thread
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRun, B, targetFor, REWARD, CHEST } from '../src/sim/run.js';
+import { createRun, B, targetFor, REWARD, CHEST, TAGS } from '../src/sim/run.js';
 import { applyNight2 } from './night2.mjs';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
-import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK } from './shopbot.mjs';
+import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK, TAG_BONUS } from './shopbot.mjs';
 import { REVIEW } from '../src/sim/replay.js';
 import { BOT } from './bot.mjs';
 import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
@@ -483,7 +483,7 @@ function peekReport(R, args, { pc, f, table }) {
   const played = rows.filter((x) => !x.skip && x.won != null), skipped = rows.filter((x) => x.skip);
   const all = R.flatMap((r) => r.log);
   const pr = all.filter((x) => x.kind !== 'master');
-  console.log(`\n판 보기: 봇이 읽은 연습 · 정식 대국 ${rows.length}개(마디 ${args.peekNodes || PEEK.nodes}${args.peekSkip != null ? ` · read < ${args.peekSkip}면 건너뜀` : ' · 건너뛰지 않음'})`);
+  console.log(`\n판 보기: 봇이 읽은 연습 · 정식 대국 ${rows.length}개(마디 ${args.peekNodes || PEEK.nodes}${args.peekSkip != null ? ` · read < ${args.peekSkip} + 패 덤이면 건너뜀(덤 ${Object.entries(TAG_BONUS).map(([k, v]) => `${k} ${v}`).join(' · ')})` : ' · 건너뛰지 않음'})`);
   console.log(`건너뛴 대국: 연습 · 정식 ${pr.filter((x) => x.skipped).length} / ${pr.length}(${pc(pr.filter((x) => x.skipped).length / Math.max(1, pr.length))}) · 대국 전체 ${all.filter((x) => x.skipped).length} / ${all.length}(${pc(all.filter((x) => x.skipped).length / Math.max(1, all.length))})`);
   const alt = skipped.filter((x) => x.altWon != null);
   if (alt.length) console.log(`건너뛴 판의 대체 승률: ${alt.filter((x) => x.altWon).length} / ${alt.length}(${pc(alt.filter((x) => x.altWon).length / alt.length)}) · 둔 연습 · 정식 대국 승률 ${pc(played.filter((x) => x.won).length / Math.max(1, played.length))}`);
@@ -497,6 +497,15 @@ function peekReport(R, args, { pc, f, table }) {
     out.push([`${cuts[i]}~${cuts[i + 1] === Infinity ? '' : cuts[i + 1]}`, String(xs.length), pc(xs.filter((x) => x.won).length / Math.max(1, xs.length)), String(sk.length), al.length ? pc(al.filter((x) => x.altWon).length / al.length) : '-']);
   }
   table(['read', '둔 대국', '승률', '건너뜀', '대체 승률'], out);
+  // 건너뛰기 패(CHM-58 ②): 패마다 봇이 읽은 대국 · 건너뛴 수(몫) · 그 패로 건너뛴 판의 판 승률 · 건너뛴 판의 대체 승률
+  const tagRows = [];
+  for (const t of TAGS) {
+    const seen = rows.filter((x) => x.tag === t.kind), sk = skipped.filter((x) => x.tag === t.kind), al = sk.filter((x) => x.altWon != null);
+    const runs = R.filter((r) => r.log.some((x) => x.skipped && x.tag && x.tag.kind === t.kind));
+    const n = all.filter((x) => x.skipped && x.tag && x.tag.kind === t.kind).length;
+    tagRows.push([t.kind, String(seen.length), `${sk.length} ${pc(sk.length / Math.max(1, seen.length))}`, String(n), String(runs.length), pc(runs.filter((r) => r.won).length / Math.max(1, runs.length)), al.length ? pc(al.filter((x) => x.altWon).length / al.length) : '-']);
+  }
+  table(['패', '읽은 대국', '건너뜀', '건너뛴 대국 전부', '그 패를 받은 판', '그 판 승률', '대체 승률'], tagRows);
   for (const kind of [0, 1]) {
     const xs = played.filter((x) => x.blind === kind);
     console.log(`  ${kind ? '정식' : '연습'}: 둔 ${xs.length} · 승률 ${pc(xs.filter((x) => x.won).length / Math.max(1, xs.length))} · read p50 ${f(xs.map((x) => x.read).sort((a, b) => a - b)[xs.length >> 1] ?? NaN, 2)}`);
