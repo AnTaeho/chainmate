@@ -122,11 +122,28 @@ export function rollItem(run, rng, exclude) {
   return { kind: 'piece', t, price: SHOP.piecePrice[t] };
 }
 
+// 찜(CHM-58 F)으로 붙박인 칸: 이 상점에서 찜한 칸(run.hold.slot)과 지난 상점에서 넘어온 칸(kept, 아직 안 산 것).
+// 다시 진열해도 그대로 두고 새로 굴리지 않는다(난수도 그 칸 몫은 쓰지 않는다 — 붙박인 칸이 없으면 예전과 똑같이 굴린다)
+export const fixedSlot = (run, i) => {
+  const it = run.shop && run.shop.display[i];
+  if (!it || it.sold) return false;
+  return !!it.kept || (!!run.hold && run.hold.slot === i);
+};
+
 export function rollDisplay(run) {
   const rng = run.shop.rng;
   const exclude = run.maxims.map((m) => m.id);
+  const prev = run.shop.display || [];
+  const fixed = [];
+  for (let i = 0; i < SHOP.displaySlots; i++) {
+    if (!fixedSlot(run, i)) continue;
+    fixed[i] = prev[i];
+    if (prev[i].kind === 'maxim') exclude.push(prev[i].id);
+    if (prev[i].kind === 'fragment') exclude.push(prev[i].legend);
+  }
   const out = [];
   for (let i = 0; i < SHOP.displaySlots; i++) {
+    if (fixed[i]) { out.push(fixed[i]); continue; }
     const it = rollItem(run, rng, exclude);
     if (it.kind === 'maxim') exclude.push(it.id);
     if (it.kind === 'fragment') exclude.push(it.legend);

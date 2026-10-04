@@ -6,7 +6,7 @@
 //   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
 //   select  다음 대국 앞.   play | skip(연습 · 정식만) | use | moveMaxim | shop(떠나온 상점으로 돌아가기)
 //   battle  대국 중.        drop | capture | discard | unscript(대본 대국을 건너뛰어 평범한 대국으로)
-//   shop    대국을 이긴 뒤(진 뒤에도 시계가 남으면 — 보상 없이). buy | buyPack | reroll | sell | use | promote | remove | moveMaxim | leave
+//   shop    대국을 이긴 뒤(진 뒤에도 시계가 남으면 — 보상 없이). buy | buyPack | reroll | hold | sell | use | promote | remove | moveMaxim | leave
 //   pack    꾸러미를 연 뒤. pick | skipPack
 //   won     8관 명인을 이김. endless
 //   lost    끝.
@@ -18,7 +18,7 @@ import { SCRIPT } from '../data/tutorial.js';
 import { createBattle, battleLayout, battleRules, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
 import { isCracked } from '../data/souls.js';
 import { getModifier } from './scoring.js';
-import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul } from './shop.js';
+import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul, priceBonus } from './shop.js';
 import { gradeOf, markFairy } from './chain.js';
 import { MAXIM_BY_ID } from '../data/maxims.js';
 import { CHART_TABLE, CHART_FORMS } from '../data/charts.js';
@@ -241,6 +241,7 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
     nextUid: 1,
     battle: null,
     shop: null,
+    hold: null,               // 찜(CHM-58 F): { slot, item(값 덤을 뺀 base) } — 다음 상점을 열 때 같은 칸에 놓고 지운다. 옛 저장엔 없다
     pack: null,
     last: null,               // 마지막 대국 결과와 보상 내역(화면용)
     log: [],                  // 대국마다 한 줄(하네스 · 결과 화면용)
@@ -656,9 +657,26 @@ function openShop(run) {
     if (pk.packs) run.shop.packSlots = SHOP.packSlots + pk.packs;
     delete run.perks;
   }
+  // 찜(CHM-58 F): 지난 상점에서 찜한 카드를 같은 칸에 그대로 놓는다(값은 지금의 값 덤으로). 찜은 여기서 끝난다 —
+  // 이 상점에서 사지 않으면 진열에 남을 뿐이고, 이 상점에서 다시 찜할 수 있다(횟수 제한 없음 — 붙박인 칸만큼 새 카드가 준다)
+  const held = run.hold;
+  run.hold = null;
+  if (held && holdStillGood(run, held.item)) {
+    run.shop.display[held.slot] = { ...held.item, price: held.item.base + priceBonus(run), sold: false, kept: true };
+    delete run.shop.display[held.slot].base;
+  }
   rollDisplay(run);
   rollPacks(run);
   run.phase = 'shop';
+}
+
+// 찜한 카드가 다음 상점까지 그대로 살 만한가: 그사이 같은 격언을 얻었거나(금빛 꾸러미 · 상자 · 건너뛰기 패) 그 명경기의 첫 조각을
+// 얻었거나, 깨울 혼이 없어졌으면 찜을 버린다(그 칸은 새로 굴린다)
+function holdStillGood(run, it) {
+  if (it.kind === 'maxim') return !run.maxims.some((m) => m.id === it.id);
+  if (it.kind === 'fragment') return !(run.fragments[it.legend] && run.fragments[it.legend].first);
+  if (it.kind === 'awaken') return run.deck.some(isCracked);
+  return true;
 }
 
 // 꾸러미를 닫는다: 상점에서 연 것은 상점으로, 건너뛰기 패로 연 것은 다음 대국 앞으로
@@ -857,6 +875,7 @@ export function applyRun(run, cmd) {
       if (!canBuy(run, it)) throw new Error('cannot buy');
       pay(run, it.price);
       it.sold = true;
+      if (run.hold && run.hold.slot === cmd.slot) run.hold = null; // 찜한 카드를 이 상점에서 사면 찜은 풀린다
       if (it.kind === 'maxim') addMaxim(run, it.id, it.price, events, it.edition || null);
       else if (it.kind === 'piece') addPiece(run, it.t, events, it.soul || null);
       else if (it.kind === 'fragment') grantFragment(run, it.legend, 'first', events);
@@ -904,6 +923,26 @@ export function applyRun(run, cmd) {
       run.shop.rerolls++;
       rollDisplay(run);
       events.push({ type: 'reroll' });
+      break;
+    }
+    // 찜(CHM-58 F): 진열 카드 한 장을 다음 상점까지 맡겨 둔다. 같은 칸을 다시 누르면 풀리고, 다른 칸을 누르면 찜이 옮겨 간다.
+    // 값은 없다(다음 상점에서 살 때 그때의 값). 찜한 칸은 다시 진열에서 빠진다(shop.js fixedSlot).
+    // 봇은 떠날 때 따로 판단해 부른다(tools/shopbot.mjs holdChoice) — random 봇이 마구 누르지 않게 legalRunCommands에는 넣지 않는다.
+    case 'hold': {
+      need('shop');
+      const it = run.shop.display[cmd.slot];
+      if (!it || it.sold) throw new Error('nothing to hold');
+      if (run.hold && run.hold.slot === cmd.slot) {
+        run.hold = null;
+        events.push({ type: 'hold', slot: cmd.slot, on: false });
+      } else {
+        const item = clone(it);
+        delete item.sold; delete item.kept;
+        item.base = it.price - priceBonus(run);
+        delete item.price;
+        run.hold = { slot: cmd.slot, item };
+        events.push({ type: 'hold', slot: cmd.slot, on: true });
+      }
       break;
     }
     case 'sell': {
