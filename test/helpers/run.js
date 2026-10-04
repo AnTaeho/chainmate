@@ -22,3 +22,12 @@ export function skipBlind(run) {
   if (run.phase === 'pack') ev.push(...applyRun(run, { type: 'skipPack' }));
   return ev;
 }
+
+// 다음 상점까지: 지금 대국을 두고 목표를 0으로(이김) 또는 닿을 수 없게(짐 — 시계가 남으면 상점은 열린다) 해서 끝낸다
+export function playToShop(run, { lose = false } = {}) {
+  applyRun(run, { type: 'play' });
+  run.battle.target = lose ? 1e12 : 0;
+  finishBattle(run);
+  assert.equal(run.phase, 'shop');
+  return run;
+}

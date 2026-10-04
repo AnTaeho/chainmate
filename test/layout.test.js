@@ -250,9 +250,10 @@ test('상점: 모든 진열 카드(판본 · 명국 조각 포함) → 꾸러미
   for (const lang of LANGS) {
     M.lang.setLang(lang);
     const pack = Math.max(...['piece', 'chart', 'engraving', 'golden'].map((kind) => Math.max(packCellH({ kind }, CARD.w), packCellH({ kind }, 72))));
-    for (const it of items) {
-      const h = M.parts.itemCardH(it, CARD.w, { run });
-      assert.ok(TOP + h + GAP_GROUP + pack + GAP_GROUP + 28 <= BOTTOM, `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend} ${it.edition || ''} ${h}`);
+    // 진열 카드는 찜 책갈피 자리를 머릿말에서 뺀다(hold, CHM-58 F) — 머릿말이 한 줄 더 접혀도 한도 안
+    for (const it of items) for (const hold of [false, true]) {
+      const h = M.parts.itemCardH(it, CARD.w, { run, hold });
+      assert.ok(TOP + h + GAP_GROUP + pack + GAP_GROUP + 28 <= BOTTOM, `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend} ${it.edition || ''}${hold ? ' 찜' : ''} ${h}`);
     }
   }
 });
@@ -268,21 +269,22 @@ test('진열 카드 글: 머릿말은 낱말 단위로만 줄을 바꾸고 · �
   let n = 0;
   for (const lang of LANGS) {
     M.lang.setLang(lang);
-    for (const it of items) {
-      const lay = M.parts.itemCardLayout(it, CARD.w, { run });
-      const tag = `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend || ''} ${it.edition || ''}`;
+    // hold: 진열 카드(찜 책갈피가 값 왼쪽에 선다 — 첫 줄 폭에서 책갈피 자리를 뺀다, CHM-58 F)
+    for (const it of items) for (const hold of [false, true]) {
+      const lay = M.parts.itemCardLayout(it, CARD.w, { run, hold });
+      const tag = `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend || ''} ${it.edition || ''}${hold ? ' 찜' : ''}`;
       const head = lay.kinds.map(([l]) => l);
       // 낱말이 줄 사이에서 끊기지 않았다: 줄마다 원래 머릿말의 낱말들로만 이뤄진다
       const whole = [M.parts.ITEM_KIND[it.kind], it.edition ? EDITION_BY_ID[it.edition].name : ''].flatMap((s) => M.lang.L(s).split(' '));
       for (const word of head.filter(Boolean).join(' ').split(' ')) assert.ok(whole.includes(word), `${tag}: 머릿말이 낱말 가운데서 끊겼다 ${JSON.stringify(head)}`);
       // 첫 줄은 값 옆, 다음 줄은 딱지 뒤 끝까지
-      const priceW = M.text.textWidth(`$${it.price}`, true) + 2 + TAB + TAB_GAP;
+      const priceW = M.text.textWidth(`$${it.price}`, true) + 2 + TAB + TAB_GAP + (hold ? M.parts.HOLD_MARK.w + M.parts.HOLD_MARK.gap : 0);
       head.forEach((l, k) => assert.ok(M.text.textWidth(l) <= (k ? lay.IW - TAB - TAB_GAP : lay.IW - priceW), `${tag}: 머릿말 ${k + 1}째 줄 「${l}」 ${M.text.textWidth(l)}`));
       for (const [l] of lay.lines) assert.ok(M.text.textWidth(l) <= lay.IW, `${tag}: 「${l}」 ${M.text.textWidth(l)} > ${lay.IW}`);
       n++;
     }
   }
-  assert.ok(n > 200, `잰 물건 ${n}`);
+  assert.ok(n > 400, `잰 물건 ${n}`);
   M.lang.setLang('ko');
 });
 

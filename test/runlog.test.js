@@ -30,8 +30,8 @@ before(() => {
 
 test('요약은 하네스 dump의 판별 열쇠를 모두 같은 값으로 낸다(봇이 센 것을 넘기면)', () => {
   const run = createRun({ seed: dump.seed, dan: 0, draft: true });
-  const { bought, editions, legendAt, seen } = playRun(run, 'none');
-  const row = runRow(run, { ...newTrack(), bought, editions, legendAt, seen }, { end: 'lost' });
+  const { bought, editions, legendAt, seen, holds } = playRun(run, 'none');
+  const row = runRow(run, { ...newTrack(), bought, editions, legendAt, seen, holds }, { end: 'lost' });
   for (const k of dumpKeys()) assert.deepStrictEqual(row[k], dump[k], k);
   // 사람 판에만 있는 열쇠는 dump 열쇠와 겹치지 않는다
   for (const k of HUMAN_ONLY) assert.ok(!(k in dump), k);
@@ -75,6 +75,25 @@ test('산 것: 격언은 bought · editions, 모든 산 것은 buys(꾸러미에
   assert.deepEqual(track.bought, ['chivalry']);
   assert.deepEqual(track.editions, ['foil']);
   assert.deepEqual(track.buys.map((x) => [x.k, x.id, x.$]), [['maxim', 'chivalry', 5], ['piece', 'R', 4]]);
+});
+
+// 찜(CHM-58 F): 다음 상점에 넘어온 카드는 상점에 들어설 때 한 번(다시 진열 · 상점으로 돌아가기는 세지 않는다), 그 카드를 사면 bought
+test('찜: 넘어온 카드 · 산 수 · 종류별을 하네스(shopbot HOLDS)와 같은 셈으로', () => {
+  const run = createRun({ seed: 11, draft: false });
+  const track = newTrack();
+  const act = (cmd) => { const b = trackBefore(run); const ev = applyRun(run, cmd); trackCommand(track, run, cmd, ev, b); return ev; };
+  const toShop = () => { act({ type: 'play' }); run.battle.target = 0; while (run.phase === 'battle') stepBattle(run.battle, act, {}); assert.equal(run.phase, 'shop'); };
+  toShop();
+  act({ type: 'hold', slot: 1 });
+  const kind = run.shop.display[1].kind;
+  act({ type: 'leave' });
+  toShop();
+  assert.equal(run.shop.display[1].kept, true);
+  run.money = 99;
+  act({ type: 'reroll' });
+  act({ type: 'leave' }); act({ type: 'shop' }); // 돌아가기도 세지 않는다
+  act({ type: 'buy', slot: 1 });
+  assert.deepEqual(runRow(run, track).holds, { carried: 1, bought: 1, kinds: { [kind]: 1 } });
 });
 
 test('기록은 200판까지, 오래된 것부터 버리고 같은 id는 갈아 끼운다', () => {
