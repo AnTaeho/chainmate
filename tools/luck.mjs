@@ -1,5 +1,6 @@
 // 판 운 하네스: 판(런)의 대국 하나하나가 「덱의 힘」과 「대국판 운」 중 어느 쪽으로 갈리는지 잰다(CHM-18). 규칙은 건드리지 않는다.
 //   node tools/luck.mjs --runs 40 --seed 1 --k 20 --sk 10 --workers 10 [--sample 1] [--policies 50] [--json out.json] [--limit 300]
+//     [--peek-skip 0.2](판 보기 건너뛰기를 켠 봇, run.mjs와 같음)
 //
 // 1. smart 판 하네스를 run.mjs와 같은 시드(seed*1000003 + i*7919)로 돌린다. 대국이 시작될 때마다 그 직전 판 상태
 //    (주머니 · 격언 · 기보 · 각인 · 혼 · 정석 · 목표 · 관 · 종류 · 명인)를 그대로 떠 둔다(playRun의 stopAt을 보기만 하는 데 쓴다).
@@ -22,21 +23,21 @@ import { fileURLToPath } from 'node:url';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createRng, fork, next, shuffle } from '../src/sim/rng.js';
-import { createRun, blindInfo, battleMods, awaitingGold, battleSeed, ANTES, KINDS } from '../src/sim/run.js';
+import { createRun, blindInfo, battleMods, awaitingGold, battleSeed, layoutFor, ANTES, KINDS } from '../src/sim/run.js';
 import { boardFilter } from '../src/sim/tuning.js';
 import { createBattle, apply, dropSquaresFor, GOLDEN, hasLegalDrop, checkStuck, refreshHints } from '../src/sim/battle.js';
 import { attackers } from '../src/sim/board.js';
 import { boardOpts } from '../src/sim/chain.js';
 import { bestMove } from '../src/sim/solver.js';
 import { PIECES, valueOf } from '../src/data/pieces.js';
-import { playRun, SMART } from './shopbot.mjs';
+import { playRun, SMART, PEEK } from './shopbot.mjs';
 import { stepBattle, BOT, SAC } from './bot.mjs';
 import { applyNight2 } from './night2.mjs';
 
 const SELF = fileURLToPath(import.meta.url);
 
 function parseArgs(argv) {
-  const a = { runs: 40, seed: 1, k: 20, sk: 10, sample: 1, workers: 10, policies: null, json: null, limit: 300, shopK: SMART.K, split: false, strong: 4, look: 0, ck: 0, shopk: 0 };
+  const a = { runs: 40, seed: 1, k: 20, sk: 10, sample: 1, workers: 10, policies: null, json: null, limit: 300, shopK: SMART.K, split: false, strong: 4, look: 0, ck: 0, shopk: 0, peekSkip: null };
   for (let i = 0; i < argv.length; i++) {
     const x = argv[i];
     if (x === '--runs') a.runs = Number(argv[++i]);
@@ -54,6 +55,7 @@ function parseArgs(argv) {
     else if (x === '--look') a.look = Number(argv[++i]);        // (c)의 내다보기 굴림 수(기본 0)
     else if (x === '--ck') a.ck = Number(argv[++i]);            // (cb) 세게 둔 봇으로 다시 둘 대체 주머니 수(기본 0)
     else if (x === '--shopk') a.shopk = Number(argv[++i]);      // (d) 판마다 상점 난수만 바꾼 판 수(기본 0)
+    else if (x === '--peek-skip') a.peekSkip = Number(argv[++i]); // 판 보기 건너뛰기(run.mjs --peek-skip과 같음): 판 읽기가 이 값 + 패 덤보다 낮으면 건너뛴다
   }
   if (a.policies == null) a.policies = a.runs;
   return a;
@@ -63,11 +65,14 @@ const runSeeds = (seed, n) => Array.from({ length: n }, (_, i) => (seed * 100000
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // ── 떠 둔 판 상태에서 대국을 다시 만든다(run.js startBattle과 같은 재료, 시드만 바꿀 수 있게)
+// 판 보기(CHM-61) 뒤로 대국은 관 선택에서 지어 둔 판(run.boards — 그때의 주머니로 거른 판)으로 열린다. 원래 시드면 떠 둔 상태의
+// 지어 둔 판(layoutFor)을 깔고, 대체 시드면 지금 상태로 새로 짓는다(대체 판의 거르기는 대국 직전 주머니로 잰다).
 const origSeed = (snap) => battleSeed(snap);
 const altSeed = (snap, k) => fork(createRng(origSeed(snap)), `alt:${k}`).s;
 function rebuild(snap, seed, withTarget = true) {
   const info = blindInfo(snap);
   return createBattle({
+    layout: seed === origSeed(snap) && snap.factions ? layoutFor(snap, snap.blind) : null,
     seed, ante: snap.ante, kind: info.kind, target: withTarget ? info.target : null,
     bag: snap.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...(p.soul ? { soul: p.soul } : {}) })),
     rules: snap.rules, mods: battleMods(snap, info.master, info.faction),
@@ -413,7 +418,7 @@ function analyse(args, smart, states, others) {
   for (const [k, v] of Object.entries(others)) if (k !== '__shop') policies[k] = { runs: v.runs.length, timeouts: v.timeouts.length, runWin: r3(winRate(v.runs)), ci: wilson(v.runs.filter((r) => r.won).length, v.runs.length).map(r3), survival: survival(v.runs) };
 
   return {
-    tool: 'tools/luck.mjs', args: { runs: args.runs, seed: args.seed, k: args.k, sk: args.sk, sample: args.sample, policies: args.policies, shopK: args.shopK, limit: args.limit, split: args.split, strong: args.strong, look: args.look, ck: args.ck, shopk: args.shopk },
+    tool: 'tools/luck.mjs', args: { runs: args.runs, seed: args.seed, k: args.k, sk: args.sk, sample: args.sample, policies: args.policies, shopK: args.shopK, limit: args.limit, split: args.split, strong: args.strong, look: args.look, ck: args.ck, shopk: args.shopk, peekSkip: args.peekSkip },
     rebuildMismatch: R.reduce((a, r) => a + r.mismatch, 0),
     replayMismatch: states.filter((s) => s.origWon !== s.actualWon || s.origScore !== s.actualScore).length, snapshots: R.reduce((a, r) => a + r.snaps.length, 0), timeouts: smart.timeouts,
     runs: R.map((r) => ({ seed: r.seed, won: r.won, ante: r.ante, blind: r.blind, battles: r.log.length })),
@@ -482,7 +487,7 @@ function report(D, args, wall) {
     for (const r of rows) console.log(line(r));
   };
   const ci = (c) => `[${pc(c[0])}, ${pc(c[1])}]`;
-  console.log(`판 운 하네스: smart ${D.runs.length}판, seed ${args.seed}, 죽음 K ${args.k}, 이긴 대국 SK ${args.sk} × 몫 ${args.sample}, 상점 K ${args.shopK} — 전체 ${(wall / 1000).toFixed(0)}s(일꾼 ${args.workers})`);
+  console.log(`판 운 하네스: smart ${D.runs.length}판, seed ${args.seed}, 죽음 K ${args.k}, 이긴 대국 SK ${args.sk} × 몫 ${args.sample}, 상점 K ${args.shopK}${args.peekSkip != null ? ` · 판 보기 건너뛰기 ${args.peekSkip}` : ''} — 전체 ${(wall / 1000).toFixed(0)}s(일꾼 ${args.workers})`);
   console.log(`떠 둔 상태 ${D.snapshots}개, 다시 만든 대국이 원래와 다른 것 ${D.rebuildMismatch}개, 원래 시드를 따로 다시 둔 결과(승패 · 점수)가 판 안과 다른 것 ${D.replayMismatch}개${D.timeouts.length ? `, 시간 초과 ${D.timeouts.length}판(뺐다): ${D.timeouts.join(' ')}` : ''}`);
 
   console.log(`\n① 판 죽음의 운 비율 — 진 대국 ${D.death.n}개, 같은 상태에서 판만 바꾼 대체 판 승률 평균 ${pc(D.death.meanAltWin)} ${ci(D.death.meanCi)}, 가운데 ${pc(D.death.median)}`);
@@ -543,6 +548,7 @@ if (!isMainThread) {
   applyNight2(workerData.tune);
   if (mode === 'run') {
     SMART.K = workerData.shopK;
+    if (workerData.peekSkip != null) PEEK.skipBelow = workerData.peekSkip;
     parentPort.postMessage(oneRun(workerData.seed, workerData.policy, workerData.snaps, workerData.shopAlt ?? null));
   } else {
     parentPort.on('message', (task) => { if (task === 'end') process.exit(0); parentPort.postMessage(measure(task)); });
@@ -563,7 +569,7 @@ if (!isMainThread) {
       const launch = () => {
         if (nextI >= jobs.length) { if (done === jobs.length) finish(); return; }
         const { seed, shopAlt } = jobs[nextI++];
-        const wk = new Worker(SELF, { workerData: { mode: 'run', seed, policy, snaps, shopAlt, shopK: args.shopK, tune: args.tune } });
+        const wk = new Worker(SELF, { workerData: { mode: 'run', seed, policy, snaps, shopAlt, shopK: args.shopK, tune: args.tune, peekSkip: args.peekSkip } });
         const timer = setTimeout(() => { timeouts.push(seed); wk.terminate(); }, args.limit * 1000);
         let settled = false;
         const end = () => { if (settled) return; settled = true; clearTimeout(timer); done++; say(`\r${policy}${alts ? ' 상점만 바꾼' : ''} 판 ${done}/${jobs.length} · 시간 초과 ${timeouts.length}   `); launch(); };
