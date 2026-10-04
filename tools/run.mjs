@@ -629,7 +629,7 @@ function beatsReport(R, { pc, f, f2, table, pctile }) {
   return out;
 }
 
-// 대국 호흡(CHM-66 D′, tools/beats.mjs paceOf): 점수로 이긴 대국이 목표를 처음 넘긴 수(사슬마다 쌓인 점수로) · 체크메이트 승리는 따로 ·
+// 대국 호흡(CHM-66 D′, tools/beats.mjs paceOf): 목표를 넘겨 이긴 대국이 목표를 처음 넘긴 수(사슬마다 쌓인 점수로) · 체크메이트 승리는 따로 ·
 // 대국당 둔 수 · 번 상금 · 판당 둔 수 합 · 넘긴 뒤의 사슬(넘겨도 대국이 이어지는 시제품 C) · 판 보기로 건너뛴 몫
 function paceReport(R, X, { pc, f, f2, table }) {
   const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : null);
@@ -641,8 +641,8 @@ function paceReport(R, X, { pc, f, f2, table }) {
   const KN = ['연습', '정식', '마스터'];
   const rows = [row('전체', won, mate), ...[0, 1, 2].map((k) => row(KN[k], won.filter((v) => v.blind === k), mate.filter((v) => v.blind === k)))];
   for (let a = 1; a <= 8; a++) rows.push(row(`${a}관`, won.filter((v) => v.ante === a), mate.filter((v) => v.ante === a)));
-  console.log('\n호흡(CHM-66): 점수로 이긴 대국이 목표를 처음 넘긴 수(사슬마다 쌓인 점수) — 첫 수 · 마지막 두 수 · 둘 수 있던 수의 앞 1/3 · 가운데 · 끝 1/3. 체크메이트 승리는 따로(그중 목표 밑)');
-  table(['', '점수로 이김', '첫 수', '마지막 두 수', '앞', '가운데', '끝', '메이트 승리', '목표 밑 메이트'], rows);
+  console.log('\n호흡(CHM-66): 목표를 넘겨 이긴 대국이 목표를 처음 넘긴 수(사슬마다 쌓인 점수, 끝난 까닭 상관없이) — 첫 수 · 마지막 두 수 · 둘 수 있던 수의 앞 1/3 · 가운데 · 끝 1/3. 체크메이트 승리는 따로(그중 목표 밑)');
+  table(['', '넘겨 이김', '첫 수', '마지막 두 수', '앞', '가운데', '끝', '메이트 승리', '목표 밑 메이트'], rows);
   const wonB = all.filter((v) => v.won), lostB = all.filter((v) => !v.won);
   const perRunMoves = X.map((x) => x.b.pace.all.reduce((a, v) => a + v.moves, 0));
   const peek = R.flatMap((r) => r.peek || []);
