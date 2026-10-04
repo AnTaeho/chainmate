@@ -1,6 +1,7 @@
 // 깊이 A: 이형 기물의 행마 · 노림 · 궁수 제자리 · 포 받침 · 유령 · 기보 · 판 생성 · 상점 · 결정성(새 다섯은 fairies55.test.js)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { skipBlind } from './helpers/run.js';
 import { table } from './helpers/chain.js';
 import { boardFrom, parseSq as S, sqName, captures, attackers, reach, dropSquares } from '../src/sim/board.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
@@ -142,8 +143,8 @@ test('명인의 상자에서 이형 기물이 주머니로 들어온다', () => 
   let got = false;
   for (let seed = 1; seed <= 400 && !got; seed++) {
     const run = createRun({ draft: false, seed });
-    applyRun(run, { type: 'skip' });
-    applyRun(run, { type: 'skip' });
+    skipBlind(run);
+    skipBlind(run);
     applyRun(run, { type: 'play' });
     run.battle.target = 1;
     let ev = [];

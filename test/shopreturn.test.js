@@ -1,6 +1,7 @@
 // 관 선택 ↔ 상점 오가기(docs/tasks/shop-chain.md A): 떠나온 상점으로 돌아가도 새로 얻는 것이 없다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { skipBlind } from './helpers/run.js';
 import { createRun, applyRun, legalRunCommands, canReopenShop } from '../src/sim/run.js';
 import { stepBattle } from '../tools/bot.mjs';
 
@@ -75,7 +76,7 @@ test('두기 뒤 · 건너뛴 뒤 · 판의 첫 대국 앞에는 돌아갈 상�
   assert.equal(run.shop, null);
   assert.throws(() => applyRun(run, { type: 'shop' }));
   // 건너뛰기: 연습 대국을 건너뛰면 다음 관 선택에도 상점이 없다
-  applyRun(skip, { type: 'skip' });
+  skipBlind(skip);
   assert.equal(skip.phase, 'select');
   assert.equal(skip.shop, null);
   assert.equal(canReopenShop(skip), false);

@@ -1,6 +1,7 @@
 // 판 보기(CHM-61, docs/design-notes/agency.md E): 관 선택에서 보인 판 = 두기를 눌러 여는 판.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { skipBlind } from './helpers/run.js';
 import { createRun, applyRun, migrateRun, syncBoards, previewBattle, battleOpts, layoutFor, blindInfo, ANTES } from '../src/sim/run.js';
 import { createBattle, battleLayout, isHidden, visibleIncoming, hasLegalDrop } from '../src/sim/battle.js';
 import { dailySeed } from '../src/ui/records.js';
@@ -97,7 +98,7 @@ test('판 보기: 건너뛴 뒤 다음 대국은 건너뛰기 전에 보인 그 
   for (let seed = 1; seed <= 12; seed++) {
     const run = at(createRun({ seed, draft: false }), 2 + (seed % 5), 0);
     const want = [1, 2].map((i) => look(previewBattle(run, i)));
-    applyRun(run, { type: 'skip' });
+    skipBlind(run);
     assert.equal(run.blind, 1);
     assert.deepEqual(look(previewBattle(run)), want[0], `seed ${seed}`);
     assert.deepEqual(look(previewBattle(run, 2)), want[1], `seed ${seed}`);
@@ -130,7 +131,7 @@ test('판 보기: 판(런) 흐름 그대로 — 관 선택에 설 때마다 남�
   const run = createRun({ seed: 17, draft: false });
   assert.equal(run.phase, 'select');
   assert.deepEqual(run.boards.map((x) => !!x), [true, true, true]);
-  applyRun(run, { type: 'skip' });
+  skipBlind(run);
   assert.deepEqual(run.boards.map((x) => !!x), [false, true, true]);
   // 지어 둔 것을 쓰는지: 판 칸 하나를 몰래 바꾸면 그 판으로 연다
   run.boards[1].board[60] = { t: 'X', id: 9999, born: -1 };

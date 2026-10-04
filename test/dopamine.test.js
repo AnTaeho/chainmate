@@ -15,7 +15,7 @@ import { LEGENDS, LEGEND_BY_ID, OPERA_REFILLS } from '../src/data/legends.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { enemyCount } from '../src/sim/setup.js';
 import { stepBattle } from '../tools/bot.mjs';
-import { finishBattle, shopRun } from './helpers/run.js';
+import { finishBattle, shopRun, skipBlind } from './helpers/run.js';
 
 const table = (map, mods = [], extra = {}) => ({ board: boardFrom(map), rules: {}, mods: JSON.parse(JSON.stringify(mods)), chain: null, seed: 1, ante: 1, movesUsed: 0, nextId: 500, ...extra });
 const types = (ev) => ev.map((e) => e.type);
@@ -182,8 +182,8 @@ function toMasterWin(seed) {
   // 1관 명인 대국 직전까지 건너뛰고(연습 · 정식), 명인 대국을 목표 0으로 이긴다(첫 수가 끝나면 이긴다 —
   // 명인 「앙갚음」은 끊긴 사슬 점수가 0이라 목표 1로는 질 수 있다)
   const run = createRun({ draft: false, seed });
-  applyRun(run, { type: 'skip' });
-  applyRun(run, { type: 'skip' });
+  skipBlind(run);
+  skipBlind(run);
   applyRun(run, { type: 'play' });
   run.battle.target = 0;
   let events = [];
@@ -233,8 +233,8 @@ test('명인의 상자: 물건 넷(상금 · 기보 · 각인 · 이형 기물)�
   for (let seed = 1; seed <= 400 && kinds.size < 4; seed++) {
     const run = createRun({ draft: false, seed });
     run.maxims.push({ uid: 50, id: 'edge', data: {}, edition: null, paid: 4 });
-    applyRun(run, { type: 'skip' });
-    applyRun(run, { type: 'skip' });
+    skipBlind(run);
+    skipBlind(run);
     applyRun(run, { type: 'play' });
     run.battle.target = 1;
     const before = { charts: { ...run.charts }, deck: JSON.parse(JSON.stringify(run.deck)) };

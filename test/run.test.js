@@ -5,7 +5,7 @@ import { SHOP, rerollCost } from '../src/sim/shop.js';
 import { MASTERS, FINAL_MASTER } from '../src/data/masters.js';
 import { FACTION_BY_ID } from '../src/data/factions.js';
 import { stepBattle } from '../tools/bot.mjs';
-import { finishBattle, shopRun } from './helpers/run.js';
+import { finishBattle, shopRun, skipBlind } from './helpers/run.js';
 
 // 간단한 봇: 대국은 풀이기, 상점에선 살 수 있는 첫 물건 하나를 사고 꾸러미는 첫 선택, 나간다. 명령을 모두 적어 둔다.
 function botCommands(run, maxCmds = 100000) {
@@ -215,16 +215,13 @@ test('기물 조작: 승급(P→N/B→R→Q) · 빼기, 상점마다 한 번씩,
   assert.ok(!legalRunCommands(run).some((c) => c.type === 'remove'));
 });
 
-test('건너뛰기: 연습 · 정식은 패를 받고 다음 대국으로, 명인은 못 건넌다', () => {
+// 패마다 받는 것은 test/skiptags.test.js
+test('건너뛰기: 연습 · 정식은 다음 대국으로, 명인은 못 건넌다', () => {
   const run = createRun({ draft: false, seed: 5 });
-  const tag = blindInfo(run).tag;
-  const money = run.money;
-  applyRun(run, { type: 'skip' });
-  if (tag.kind === 'money') assert.equal(run.money, money + tag.amount);
-  else assert.equal(run.charts[tag.form], 1);
+  skipBlind(run);
   assert.equal(run.blind, 1);
   assert.equal(run.phase, 'select');
-  applyRun(run, { type: 'skip' });
+  skipBlind(run);
   assert.equal(run.blind, 2);
   assert.ok(!legalRunCommands(run).some((c) => c.type === 'skip'));
   assert.throws(() => applyRun(run, { type: 'skip' }), /master/);

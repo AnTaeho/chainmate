@@ -15,3 +15,10 @@ export function shopRun(seed = 1) {
   assert.equal(run.phase, 'shop');
   return run;
 }
+
+// 건너뛰기(CHM-58 ②): 꾸러미 · 금빛 꾸러미 패는 건너뛴 뒤 꾸러미가 열린다 — 넘겨 닫고 다음 대국 앞에 선다
+export function skipBlind(run) {
+  const ev = applyRun(run, { type: 'skip' });
+  if (run.phase === 'pack') ev.push(...applyRun(run, { type: 'skipPack' }));
+  return ev;
+}
