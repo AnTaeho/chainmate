@@ -178,7 +178,7 @@ test('관 선택: 세력 띠 · 카드 셋(1~7관 명인 · 8관 대가)이 본 
       const h = plan.H;
       assert.ok(M.frame.TOP + h <= 270 - M.frame.GAP_GROUP, `${lang} ${f.id} ${ante}관 ${h}`);
       // 연습 · 정식 카드는 세력 띠 아래, 제 내용이 들어가고 아랫변이 명인 카드와 같다
-      for (const i of [0, 1]) assert.ok(plan.cards[i].h >= M.select.blindLayout(run, i).h && plan.cards[i].y + plan.cards[i].h === plan.cards[2].y + plan.cards[2].h, `${lang} ${f.id} 카드 ${i}`);
+      for (const i of [0, 1]) assert.ok(plan.cards[i].h >= M.select.selectLays(run)[i].h && plan.cards[i].y + plan.cards[i].h === plan.cards[2].y + plan.cards[2].h, `${lang} ${f.id} 카드 ${i}`);
     }
   }
 });
@@ -308,6 +308,44 @@ test('꾸러미 좁은 칸: 줄의 이름이 다 굵게 들어갈 때만 이름,
     const lay = S.packCellLayout({ kind: 'engraving' }, w, { names: false });
     assert.ok(lay.small && lay.h === S.packCellH({ kind: 'engraving' }, w), `${lang} 작은 봉투 칸 ${lay.h}`);
     for (const s of [M.lang.L('공짜'), '$12']) assert.ok(M.text.textWidth(s, true) <= lay.tw, `${lang} 「${s}」 ${M.text.textWidth(s, true)} > ${lay.tw}`);
+  }
+  M.lang.setLang('ko');
+});
+
+// CHM-58 ②: 건너뛰기 패 글은 관 선택 카드 판 아래 온 폭에 두 줄까지(세 줄이면 영어 카드가 본 칸을 넘는다 — 관 선택 시험)
+test('건너뛰기 패 글: 모든 패가 카드 폭에 두 줄 안, 낱말 가운데서 끊기지 않는다(한국어 · 영어)', async () => {
+  const { CHART_FORMS } = await import('../src/data/charts.js');
+  const run = M.run.createRun({ seed: 1, draft: false });
+  const IW = M.select.blindLayout(run, 0).IW;
+  const tags = [{ kind: 'money', amount: 12 }, ...CHART_FORMS.map((form) => ({ kind: 'chart', form })), ...['piece', 'chart', 'engraving'].map((pack) => ({ kind: 'pack', pack })), ...['slot', 'reroll', 'double', 'golden', 'fragment'].map((kind) => ({ kind }))];
+  assert.equal(M.select.tagText({ kind: 'money', amount: 5 }), '$5 받기'); // 옛 기록의 패도 읽힌다
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const t of tags) {
+      const s = M.select.tagText(t), lines = M.text.wrap(s, IW, true);
+      assert.ok(s && lines.length <= 2, `${lang} ${t.kind} ${JSON.stringify(lines)}`);
+      for (const l of lines) assert.ok(M.text.textWidth(l, true) <= IW, `${lang} ${t.kind} 「${l}」`);
+    }
+  }
+  M.lang.setLang('ko');
+});
+
+// CHM-58 ②: 건너뛰기 패 「꾸러미 칸 +1」에 금빛 꾸러미가 붙으면 꾸러미 칸이 넷(폭 53) — 이름이든 작은 봉투 + 값이든 칸 안에
+test('꾸러미 칸 넷: 이름 또는 작은 봉투 + 값이 칸 안(한국어 · 영어)', async () => {
+  const S = await import('../src/ui/screens/shop.js');
+  const { CENTER } = M.frame;
+  const w = Math.floor((CENTER.w - 3 * 4) / 4);
+  assert.equal(w, 53);
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    const packs = ['piece', 'chart', 'engraving', 'golden'].map((kind) => ({ kind, price: kind === 'golden' ? 0 : 5 }));
+    const names = S.packRowNames(packs, w);
+    const lay = S.packCellLayout(packs[0], w, { names });
+    for (const pk of packs) {
+      const strs = names ? [S.packShortName(pk)] : [];
+      strs.push(pk.price ? `$${pk.price}` : M.lang.L('공짜'), '$12');
+      for (const t of strs) assert.ok(M.text.textWidth(t, true) <= lay.tw, `${lang} ${pk.kind} 「${t}」 ${M.text.textWidth(t, true)} > ${lay.tw}`);
+    }
   }
   M.lang.setLang('ko');
 });
