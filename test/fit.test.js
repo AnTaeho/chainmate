@@ -89,8 +89,7 @@ test('돌리는 기준: 손가락 + 세로 + 도트가 1 CSS 화소 미만일 �
   assert.equal(chooseFit({ vw: 393, vh: 659, dpr: 3, coarse: false }).rot, false);
   // 손가락이어도 가로면 그대로
   assert.equal(chooseFit({ vw: 659, vh: 393, dpr: 3, coarse: true }).rot, false);
-  // 아이패드 세로(도트 1.5 CSS 화소)는 그대로
-  assert.equal(chooseFit({ vw: 810, vh: 1080, dpr: 2, coarse: true }).rot, false);
+  // 아이패드 세로(도트 1.5 CSS 화소)는 그대로 — 810×1080은 「화면 맞춤: 아이패드 세로」가 잰다
   assert.equal(chooseFit({ vw: 768, vh: 1024, dpr: 2, coarse: true }).rot, false);
 });
 

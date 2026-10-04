@@ -4,7 +4,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom, tick } from './helpers/dom.js';
 import { createRun, applyRun, blindInfo } from '../src/sim/run.js';
-import { apply, dropSquaresFor, createBattle } from '../src/sim/battle.js';
+import { apply, dropSquaresFor } from '../src/sim/battle.js';
 import { chainCaptures } from '../src/sim/chain.js';
 import { SCRIPT } from '../src/data/tutorial.js';
 import { TUTORIAL_STEPS as STEPS, stepSq, firstStepOf } from '../src/ui/tutorial.js';
@@ -208,5 +208,4 @@ test('대본 대국의 판 조정: 켜 둔 거르기와 상관없이 정해 둔 
       assert.equal(run.battle.board.filter(Boolean).length, want);
     }
   } finally { Object.assign(BOARD_TUNING, keep); }
-  assert.ok(createBattle);
 });
