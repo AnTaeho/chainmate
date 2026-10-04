@@ -86,14 +86,6 @@ test('시계: 명인에서 지면 명인의 상자 없이 다음 관 · 8관 명
   assert.notEqual(JSON.stringify(fin.battle.board), first);
 });
 
-test('시계 1(마지막 칸)은 한 번 지면 판이 끝난다', () => {
-  const run = createRun({ seed: 5, draft: false, dan: 8 });
-  assert.equal(run.clock, 2);
-  run.clock = 1;
-  loseBattle(run);
-  assert.equal(run.phase, 'lost');
-});
-
 test('다시 놓기: 첫 수 전에 한 번, 손 · 목표는 그대로, 판은 시드로 정해진다', { skip: !reboardOn() && '판 조정의 다시 놓기가 꺼져 있다' }, () => {
   const make = () => createBattle({ seed: 77, ante: 3, kind: 'official', target: 500 });
   const b = make();

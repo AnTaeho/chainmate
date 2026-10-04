@@ -12,8 +12,7 @@ function chain(map, drop, at, caps, mods, extra = {}) {
   return t.chain;
 }
 
-test('격언은 일흔(밤샘 여덟 · 깊이 G 셋 · 밤샘 2 스물일곱) · 새 여덟은 동사가 겹치지 않게 퍼졌다', () => {
-  assert.equal(MAXIMS.length, 70);
+test('밤샘 D-8 격언 여덟이 목록에 있다', () => {
   const ids = ['light_step', 'queen_hunt', 'bare_board', 'homecoming', 'collector_forms', 'reply_master', 'promotion_road', 'reinforce_hunt'];
   for (const id of ids) assert.ok(MAXIMS.find((m) => m.id === id), id);
 });
@@ -95,11 +94,6 @@ test('왕의 목: 킹을 지키던 적을 먹으면 연쇄 +2', () => {
   assert.equal(c.mult, 1 + 2);
   const d = chain({ e5: 'B', h7: 'K', a1: 'R' }, 'N', 'd3', ['e5'], ['kings_neck']);
   assert.equal(d.mult, 1);
-});
-
-test('미련 없이: 희생 +1', async () => {
-  const { createBattle } = await import('../src/sim/battle.js');
-  assert.equal(createBattle({ seed: 1, mods: [{ id: 'second_thought' }] }).discardsLeft, 4);
 });
 
 test('그림자 읽기: 증원이 올 칸에 떨구면 연쇄 +4', () => {

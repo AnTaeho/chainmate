@@ -27,7 +27,6 @@ test('보이는 둘은 주머니 맨 앞 둘이고, 셋째부터는 가린다', 
   const b = createBattle({ seed: 3, ante: 2 });
   assert.equal(NEXT_DRAWS, 2);
   assert.deepEqual(ids(nextDraws(b)), ids(b.bag.slice(0, 2)));
-  assert.equal(nextDraws(b).length, 2);
 });
 
 test('수 하나를 두면 보이던 둘이 그 차례로 손에 들어온다', () => {

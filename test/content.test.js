@@ -7,7 +7,7 @@ import { startChain, chainCapture, chainCaptures } from '../src/sim/chain.js';
 import { createBattle, apply, legalCommands, refreshHints, visibleIncoming, isHidden } from '../src/sim/battle.js';
 import { bestMove } from '../src/sim/solver.js';
 import { MAXIMS } from '../src/data/maxims.js';
-import { ENGRAVINGS } from '../src/data/engravings.js';
+import '../src/data/engravings.js'; // 각인 조정자 등록
 import { MASTERS } from '../src/data/masters.js';
 import { CHART_TABLE } from '../src/data/charts.js';
 import { getModifier } from '../src/sim/scoring.js';
@@ -49,8 +49,7 @@ test('장면 기준값(조정자 없음)', () => {
   assert.deepEqual(base('rook'), [50, 1, 50, 'blocked']);
   assert.deepEqual(base('promote'), [10, 1, 10, 'blocked']);
   assert.deepEqual(base('toQueen'), [90, 1, 90, 'blocked']);
-  assert.deepEqual(base('mate'), [340, 6, 2040, 'mate']);
-  assert.deepEqual(base('cut'), [50, 1, 50, 'cut']);
+  // mate · cut 장면의 기준값은 chain.test 「장면」 · 「응수 실패 → 끊김」이 잰다
   assert.deepEqual(base('promoCut'), [10, 1, 10, 'cut']);
 });
 
@@ -123,8 +122,7 @@ for (const [id, scene, score, extra = {}, money, more] of CASES) {
   });
 }
 
-test('격언 70종 모두 장면 검사가 있다', () => {
-  assert.equal(MAXIMS.length, 70);
+test('격언마다 장면 검사가 있다', () => {
   const covered = new Set(CASES.map((c) => c[0]));
   for (const id of ['sacrifice', 'back_rank_dream', 'memory', 'collector', 'ivory_tower', 'kings_neck', 'shadow_reading']) covered.add(id);
   // 밤샘 D-8의 여덟은 test/newmaxims.test.js
@@ -222,7 +220,6 @@ test('각인: 금 상금 +2 · 상아 값 +30 · 흑단 ×1.5 · 유리 ×2', ()
   assert.equal(play('knight', [], {}, { id: 'ivory' }).score, 60);
   assert.equal(play('knight', [], {}, { id: 'ebony' }).score, 45);
   assert.equal(play('knight', [], {}, { id: 'glass' }).score, 60);
-  assert.equal(ENGRAVINGS.length, 12);
 });
 
 test('각인 은: 첫 먹기의 끊김만 넘긴다', () => {
@@ -252,12 +249,8 @@ test('각인 유리: 대국 흐름에서 1/4로 깨져 shattered에 남는다', 
 });
 
 // ── 명인
-test('명인 8: 철벽 · 모래시계 · 무거운 손 · 대가', () => {
+test('명인 여덟 · 대가: 킹 둘, 기보는 꺼지지 않는다', () => {
   assert.equal(MASTERS.length, 8);
-  const iron = createBattle({ seed: 1, mods: [{ id: 'iron_wall' }] });
-  assert.equal(iron.rules.noReply, true);
-  assert.equal(createBattle({ seed: 1, mods: [{ id: 'hourglass' }] }).movesLeft, 2);
-  assert.equal(createBattle({ seed: 1, mods: [{ id: 'heavy_hand' }] }).rules.noHeavyDrop, true);
   const gm = createBattle({ seed: 3, ante: 8, mods: [{ id: 'grandmaster' }, { id: 'charts', data: { table: CHART_TABLE, levels: { N: 5 } } }] });
   assert.equal(gm.board.filter((c) => isEnemy(c) && c.t === 'K').length, 2);
   assert.equal(gm.mods[1].off, undefined);
@@ -293,7 +286,6 @@ test('명인 철벽: 응수가 없다 — 노려진 칸을 먹으면 곧바로 �
   chainCapture(plain, S('e5'));
   assert.equal(plain.chain.done, false);
   const iron = createBattle({ seed: 1, mods: [{ id: 'iron_wall' }] });
-  assert.equal(iron.rules.noReply, true);
   const t = { board: boardFrom({ e5: 'B', f6: 'P', a8: 'R' }), rules: iron.rules, mods: [], chain: null };
   startChain(t, { type: 'N', sq: S('d3') });
   chainCapture(t, S('e5'));

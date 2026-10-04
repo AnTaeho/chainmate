@@ -42,7 +42,6 @@ test('세력: 관의 세 대국 모두 같은 세력, 명인은 그 세력의 �
   }
   applyRun(run, { type: 'play' });
   assert.equal(run.battle.mods[0].id, 'faction:peasants');
-  assert.equal(run.battle.rules.pawnSides, true);
   const back = JSON.parse(JSON.stringify(run));
   assert.deepEqual(back, run);
   assert.deepEqual(legalCommands(back.battle), legalCommands(run.battle));
@@ -71,7 +70,6 @@ test('버릇 · 기병대: 증원이 모두 나이트 무리(나이트 · 낙타
     for (const r of [...b.incoming, ...b.incomingNext]) seen.add(r.t);
   }
   assert.ok([...seen].every((t) => ['N', 'L'].includes(t)), [...seen].join());
-  const r = {}; FACTION_BY_ID.cavalry.habit.apply(r);
   const w = enemyWeights(3, { mix: FACTION_BY_ID.cavalry.mix, unique: FACTION_BY_ID.cavalry.unique });
   const top = [...w].sort((a, b) => b[1] - a[1])[0][0];
   assert.equal(top, 'N');

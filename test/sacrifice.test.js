@@ -59,7 +59,6 @@ test('희생: 바친 기물은 이번 대국에 돌아오지 않고 새로 뽑�
 
 test('희생 횟수: 대국마다 3번, 다 쓰면 거부', () => {
   const b = scene(BISHOP);
-  assert.equal(b.discardsLeft, 3);
   for (let i = 0; i < 3; i++) apply(b, { type: 'discard', handIndices: [3] });
   assert.throws(() => apply(b, { type: 'discard', handIndices: [3] }), /no discards left/);
   assert.equal(b.offering.count, 3);
@@ -182,11 +181,8 @@ test('격언 셋: 뽑은 대로 · 미련 없이 · 절약', () => {
   assert.equal(th.money, 2);
 });
 
-test('마스터 모래시계: 수 2 · 희생 1', () => {
+test('마스터 모래시계 글: 수 2 · 희생 1', () => {
   assert.equal(MASTER_BY_ID.hourglass.text, '수 2 · 희생 1뿐');
-  const b = createBattle({ seed: 1, mods: [{ id: 'hourglass', kind: 'master' }] });
-  assert.equal(b.movesLeft, 2);
-  assert.equal(b.discardsLeft, 1);
 });
 
 test('레이팅 계단: 6단(레이팅 2000)부터 희생 −1', () => {

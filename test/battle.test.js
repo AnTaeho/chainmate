@@ -106,15 +106,8 @@ test('목표 넘기면 즉시 이김, 수를 다 쓰면 짐', () => {
   assert.ok(lostByMoves > 0);
 });
 
-test('희생: 하나를 골라 바치고 다시 뽑는다, 떨굴 수 없고 희생도 없으면 짐', () => {
+test('희생: 주머니가 비면 바칠 수 없고, 떨굴 수 없는데 희생도 없으면 짐', () => {
   const b = createBattle({ seed: 4 });
-  const before = b.hand.map((p) => p.id);
-  apply(b, { type: 'discard', handIndices: [2] });
-  assert.equal(b.discardsLeft, 2);
-  assert.equal(b.discarded, 1);
-  assert.equal(b.hand.length, 4);
-  assert.deepEqual(b.offered.map((p) => p.id), [before[2]]); // 바친 기물은 이번 대국에 돌아오지 않는다
-  assert.deepEqual(b.used, []);
   const saved = b.bag;
   b.bag = [];
   assert.throws(() => apply(b, { type: 'discard', handIndices: [0] }), /bag is empty/);
@@ -210,7 +203,6 @@ test('미리 보기: 먹기 전에 바뀐 모습 · 값 · 연쇄 · 다음 적 
     const drop = legalCommands(b).find((c) => c.type === 'drop');
     if (!drop) continue;
     const pd = previewDrop(b, drop.handIndex, drop.sq);
-    const before = JSON.stringify(b);
     apply(b, drop);
     if (b.status !== 'chain') continue;
     assert.deepEqual(pd.next.slice().sort(), chainCaptures(b).slice().sort());
@@ -234,6 +226,5 @@ test('미리 보기: 먹기 전에 바뀐 모습 · 값 · 연쇄 · 다음 적 
       assert.equal(pv.mult, b.chain.mult - m0);
       assert.deepEqual(pv.next.slice().sort(), chainCaptures(b).slice().sort());
     }
-    assert.ok(before);
   }
 });

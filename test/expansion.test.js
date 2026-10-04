@@ -166,7 +166,7 @@ test('반격의 서: 지키는 적을 두 번 먹은 사슬 ×2', () => {
   assert.equal(c.score, (30 + 10 + 10) * 3 * 2);
 });
 
-// 대국 흐름으로만 도는 격언: 절약 · 도박사 · 행운의 동전
+// 대국 흐름으로만 도는 격언: 도박사 · 행운의 동전(절약은 sacrifice.test 「격언 셋」)
 function winOnce(seed, mods, target = 1) {
   const b = createBattle({ seed, ante: 2, kind: 'practice', target, mods });
   const ev = [];
@@ -175,11 +175,6 @@ function winOnce(seed, mods, target = 1) {
   while (b.status === 'chain') ev.push(...apply(b, legalCommands(b)[0]));
   return { b, ev };
 }
-test('절약: 대국을 이기면 남은 희생마다 상금 +1', () => {
-  const { b } = winOnce(3, [{ id: 'thrift' }]);
-  assert.equal(b.status, 'won');
-  assert.equal(b.money >= b.discardsLeft && b.discardsLeft === 3, true);
-});
 test('도박사: 사슬 넷에 하나 ×3(풀이기는 모른다) · 행운의 동전: 먹기 여섯에 하나 상금', () => {
   let hit = 0, n = 0, coins = 0, caps = 0;
   for (let s = 1; s <= 400; s++) {

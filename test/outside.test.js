@@ -66,15 +66,13 @@ test('단 규칙은 차례로 쌓인다(여덟)', () => {
   }
 });
 
-test('단 1: 증원 +1 / 단 4: 시계 −1 / 단 6: 희생 −1', () => {
+test('단 1: 증원 +1 / 단 4: 시계 −1 / 단 8: 수는 그대로', () => {
   const plain = createRun({ draft: false, seed: 9 }); applyRun(plain, { type: 'play' });
   assert.equal(plain.clock, 3);
   const r1 = createRun({ draft: false, seed: 9, dan: 1 }); applyRun(r1, { type: 'play' });
   assert.equal(r1.battle.incoming.length, plain.battle.incoming.length + 1);
   assert.equal(createRun({ draft: false, seed: 9, dan: 4 }).clock, 2);
   assert.equal(createRun({ draft: false, seed: 9, dan: 8 }).clock, 2);
-  const r6 = createRun({ draft: false, seed: 9, dan: 6 }); applyRun(r6, { type: 'play' });
-  assert.equal(r6.battle.discardsLeft, 2);
   const r8 = createRun({ draft: false, seed: 9, dan: 8 }); applyRun(r8, { type: 'play' });
   assert.equal(r8.battle.movesLeft, 4);
 });

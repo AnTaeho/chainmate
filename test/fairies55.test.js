@@ -12,7 +12,6 @@ import { legalCommands } from '../src/sim/battle.js';
 import { renameOldPieces } from '../src/sim/oldsave.js';
 import { generateBoard } from '../src/sim/setup.js';
 import { EVOLVE } from '../src/data/tactics.js';
-import { JOSEKI_BY_ID } from '../src/data/josekis.js';
 import { loadRecords } from '../src/ui/records.js';
 import { loadRuns } from '../src/ui/runlog.js';
 import { makeStore, KEYS } from '../src/ui/save.js';
@@ -318,12 +317,4 @@ test('옛 기록 · 사람 판 기록도 읽을 때 바꾼다', () => {
   assert.deepEqual(rows[0].fairies, ['E', 'V']);
   assert.deepEqual(rows[0].log[0].worn, { T: 1 });
   assert.equal(renameOldPieces(null), null);
-});
-
-test('정석: 풀밭은 까마귀 · 기사 서약 광대 · 성벽 쌓기 꺾쇠 · 주교관 물수제비', () => {
-  for (const [id, to] of [['meadow', 'V'], ['knight_oath', 'M'], ['rampart', 'T'], ['mitre', 'E']]) {
-    const run = createRun({ seed: 1, draft: false });
-    JOSEKI_BY_ID[id].pick(run, []);
-    assert.ok(run.deck.some((p) => p.t === to), id);
-  }
 });

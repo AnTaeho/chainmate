@@ -50,8 +50,6 @@ test('폰은 rank 7(8번째 줄)에 떨굴 수 없다', () => {
   const drops = dropSquares(b, 'P');
   assert.ok(drops.length > 0);
   assert.ok(drops.every((s) => rankOf(s) !== 7));
-  // 규칙 경로 자체: 8번째 줄 칸은 폰에게 절대 나오지 않는다(위로 먹을 칸이 없어도, 있어도)
-  for (let f = 0; f < 8; f++) assert.ok(!drops.includes(56 + f));
 });
 
 test('킹은 아무도 지키지 않을 때만 먹을 수 있다', () => {

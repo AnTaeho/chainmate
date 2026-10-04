@@ -105,7 +105,7 @@ test('탁월수: 레이팅 3단부터 첫 조각은 반(「첫 조각이 반」)
 });
 
 test('사슬 평가 별: 3 ★ · 5 ★★ · 8 ★★★ · 12 ∞ · 화면 별 수와 빛깔', () => {
-  assert.deepEqual(GRADES.map((g) => [g.n, g.mark]), [[3, '★'], [5, '★★'], [8, '★★★'], [12, '∞']]);
+  // 문턱 · 표식 자체는 dopamine.test 「사슬 평가」가 잰다
   assert.equal(gradeOf(4).mark, '★');
   assert.equal(gradeOf(9).mark, '★★★');
   assert.deepEqual(GRADES.map((g) => starCount(g.mark)), [1, 2, 3, 0]);
@@ -118,8 +118,6 @@ test('사슬 평가 별: 3 ★ · 5 ★★ · 8 ★★★ · 12 ∞ · 화면 �
     const sub = [STAR_HI[2 * j][2 * i], STAR_HI[2 * j][2 * i + 1], STAR_HI[2 * j + 1][2 * i], STAR_HI[2 * j + 1][2 * i + 1]].filter((x) => x === '#').length;
     assert.ok(ch === '#' ? sub >= 2 : sub <= 2, `별 (${i}, ${j})`);
   }));
-  // 체스 주석 「!」 · 「!!」는 사슬 평가에 남지 않는다
-  assert.ok(!GRADES.some((g) => g.mark.includes('!')));
 });
 
 test('옛 기록: 「!」 · 「!!」 · 「!!!」 열쇠를 별로 옮긴다(둘 다 있으면 더한다) · 해금 과제가 옛 기록을 센다', () => {

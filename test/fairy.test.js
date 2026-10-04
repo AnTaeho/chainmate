@@ -102,8 +102,6 @@ test('적 이형은 4관부터 섞인다', () => {
   const seen = new Set();
   for (let i = 0; i < 3000; i++) seen.add(rollType(r, 8));
   for (const f of FAIRIES) assert.ok(seen.has(f), f);
-  const b = createBattle({ seed: 5, ante: 8 });
-  assert.ok(b.board.some((c) => c && FAIRIES.includes(c.t)) || true);
 });
 
 test('상점 기물 칸과 기물 꾸러미에 이형이 나온다(관이 오를수록 자주)', () => {

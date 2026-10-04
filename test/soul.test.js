@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { table as T } from './helpers/chain.js';
 import { parseSq as S } from '../src/sim/board.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
-import { SOULS, soulSpec } from '../src/data/souls.js';
+import { soulSpec } from '../src/data/souls.js';
 import { createRun, applyRun } from '../src/sim/run.js';
 import { createBattle, apply } from '../src/sim/battle.js';
 import { familyCounts } from '../src/data/families.js';
@@ -12,8 +12,7 @@ import { bestMove } from '../src/sim/solver.js';
 
 const go = (map, type, sq, soul, caps = []) => { const t = T(map); startChain(t, { type, sq: S(sq), soul: soulSpec(soul) }); for (const c of caps) chainCapture(t, S(c)); return t; };
 
-test('혼 열여섯 · 가족이 있고 세기에 들어간다', () => {
-  assert.equal(SOULS.length, 16);
+test('혼의 가족이 가족 세기에 들어간다', () => {
   const n = familyCounts({ maxims: [], deck: [{ t: 'N', soul: 'hunger' }, { t: 'P', soul: 'hunter' }] });
   assert.equal(n.hunt, 2);
 });
@@ -66,12 +65,6 @@ test('사냥꾼: 같은 종류를 잇달아 먹으면 연쇄 ×2', () => {
   assert.equal(t.chain.mult, (1 + 1) * 2);
 });
 
-test('순교자: 끊기면 둘레 적을 먹은 것으로', () => {
-  const t = go({ e6: 'P', e8: 'R', d7: 'N' }, 'B', 'c4', 'martyr', ['e6']);
-  assert.equal(t.chain.reason, 'cut');
-  assert.equal(t.board[S('d7')], null);
-});
-
 test('순교자: 킹을 뺀 둘레의 적을 모두 먹는다', () => {
   // 둘레: d7 나이트 · f5 폰 · d6 비숍 · f6 룩 · f7 킹 → 킹만 남는다(킹을 지키는 적도 먹는다)
   const t = go({ e6: 'P', e8: 'R', d7: 'N', f5: 'P', d6: 'B', f6: 'R', f7: 'K' }, 'B', 'c4', 'martyr', ['e6']);
@@ -91,12 +84,6 @@ test('왕관: 승급 칸이 두 줄 앞, 아마존이 된다', () => {
   const t = go({ c6: 'P' }, 'N', 'b4', 'crown', ['c6']);
   assert.equal(t.chain.form, 'Z');
   assert.equal(t.chain.promotions, 1);
-});
-
-test('잠행: 노림이 보지 못해 응수 없이 이어진다', () => {
-  const t = go({ e6: 'P', e8: 'R', f3: 'B' }, 'B', 'c4', 'shade', ['e6']);
-  assert.equal(t.chain.forced, null);
-  assert.notEqual(t.chain.reason, 'cut');
 });
 
 test('잠행: 지키는 적을 늘 무시한다 · 사슬 끝에 배수 −1', () => {

@@ -450,9 +450,7 @@ test('셋째 조각: 첫 조각이 없으면 금빛 꾸러미에 첫 조각이 �
 const LEG = (id) => [{ id, uid: 99, data: {} }];
 
 test('전설 불멸의 대국: 끊김을 넘기며 연쇄 ×2, 되잡힌 칸에서 계속', () => {
-  // N d3 → R e5(g6 나이트가 노림, 룩으로 못 먹음 = 끊김) → 넘겨 ×2 → 룩으로 b5 폰
-  const base = play({ e5: 'R', g6: 'N', b5: 'P' }, ['N', 'd3'], ['e5']).end;
-  assert.deepEqual([base.reason, base.score], ['cut', 50]);
+  // N d3 → R e5(g6 나이트가 노림, 룩으로 못 먹음 = 끊김 — 전설 없이는 50점에서 끊기는 판, chain.test 「응수 실패 → 끊김」) → 넘겨 ×2 → 룩으로 b5 폰
   const { ev, end } = play({ e5: 'R', g6: 'N', b5: 'P' }, ['N', 'd3'], ['e5', 'b5'], LEG('immortal'));
   assert.ok(types(ev).includes('cutIgnored'));
   // 값 50 + 10 = 60, 연쇄 (1 × 2) + 1 = 3 → 180
