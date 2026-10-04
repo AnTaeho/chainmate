@@ -28,7 +28,9 @@ export const REBOARD = { ratio: 2 }; // 켜고 끄기는 src/sim/tuning.js BOARD
 //         모르는 것(주머니 차례 · 앞으로 올 증원 · 다시 놓을 판 · 확률)을 새로 섞은 look개의 복사본에서 이 봇(내다보기 없이)으로
 //         끝까지 두어 보고, 이긴 몫(같으면 평균 점수)이 가장 큰 후보를 고른다. 굴림 시드는 후보끼리 같다(공통 난수).
 //   stats: 결정마다 풀이기가 예산에 닿았나 센다(예산 손잡이가 실제로 움직이는지 보려고)
-export const BOT = { nodes: null, look: 0, stats: null };
+export const BOT = { nodes: null, look: 0, stats: null, next: null };
+// 봇이 아는 「다음 수」 개수(측정용, run.mjs --next): null이면 규칙 그대로 NEXT_DRAWS, 0이면 주머니 전체를 모르는 것으로 친다
+const knownNext = () => BOT.next ?? NEXT_DRAWS;
 const betterMove = (x, y, nomate, rank) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : rank ? rank(x) > rank(y) : x.score > y.score);
 
 // rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
@@ -91,7 +93,7 @@ function drawProbe(b, p, opts) {
 function bagDraws(b, opts) {
   const k = Math.max(0, Math.min(b.bag.length, b.rules.hand - (b.hand.length - 1)));
   if (k === 0) return [{ n: 1, score: 0, mate: false, probe: 1 }];
-  if (k <= NEXT_DRAWS) {
+  if (k <= knownNext()) {
     let best = null;
     for (const p of nextDraws(b, k)) {
       const d = drawProbe(b, p, opts);
@@ -100,7 +102,7 @@ function bagDraws(b, opts) {
     return [{ n: 1, ...best }];
   }
   const groups = new Map();
-  for (const p of b.bag.slice(NEXT_DRAWS)) { const key = pieceKey(p); if (groups.has(key)) groups.get(key).n++; else groups.set(key, { p, n: 1 }); }
+  for (const p of b.bag.slice(knownNext())) { const key = pieceKey(p); if (groups.has(key)) groups.get(key).n++; else groups.set(key, { p, n: 1 }); }
   // 많이 든 것부터(같으면 주머니 차례) keys개만 — 무게 n은 그대로라 잰 것들끼리의 평균이 된다
   const top = [...groups.values()].sort((x, y) => y.n - x.n).slice(0, opts.keys ?? SAC.keys);
   return top.map(({ p, n }) => ({ n, ...drawProbe(b, p, opts) }));
@@ -179,9 +181,10 @@ function candidates(b, base, opts) {
 // 모르는 것만 새로 섞는다: 주머니 차례(보이는 맨 앞 둘은 그대로 — CHM-60 「다음 수」) · 증원 · 다시 놓을 판(대국 시드에서 나온다) · 확률 · 유리
 function determinize(t, s) {
   const r = createRng(s);
-  const rest = t.bag.slice(NEXT_DRAWS);
+  const kn = knownNext();
+  const rest = t.bag.slice(kn);
   shuffle(r, rest);
-  t.bag = [...nextDraws(t), ...rest];
+  t.bag = [...nextDraws(t, kn), ...rest];
   t.rng = { ...t.rng, bag: fork(r, 'bag'), reinf: fork(r, 'reinf'), luck: fork(r, 'luck'), glass: fork(r, 'glass') };
   t.seed = seedOf(r);
 }
