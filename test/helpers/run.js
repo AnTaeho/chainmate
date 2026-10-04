@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { createRun, applyRun } from '../../src/sim/run.js';
 import { stepBattle } from '../../tools/bot.mjs';
 
-export function finishBattle(run) {
-  while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
+// apply: 명령을 넣는 길(기본 applyRun — 사건을 따로 받아 보려면 감싼 것을 준다)
+export function finishBattle(run, apply = (c) => applyRun(run, c)) {
+  while (run.phase === 'battle') stepBattle(run.battle, apply, {});
   return run;
 }
 
