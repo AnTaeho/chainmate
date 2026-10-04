@@ -1,0 +1,106 @@
+# D 여세 근거: 판 하네스 dump(run.mjs --dump, final-d0-s1 · final-d0-s2 · final-d4-s1과 같은 명령에 --dump를 더함)에서 둔 대국의 점수/목표. dump(판마다 1MB 남짓)는 저장소에 두지 않았다 — 같은 명령으로 비트 단위로 다시 나온다(final-d0-s1 41.0% · s2 30.0%가 hold-d0-s1 · s2와 같다). 셈 스크립트는 맨 아래.
+
+## 단 0 seed 1 + seed 2
+판 200개 · 둔 대국 3745개(이김 3282 · 짐 463)
+이긴 대국 점수/목표: p10 1.05 · p25 1.33 · p50 2.17 · p75 4.26 · p90 9.04
+  넘침 층(이긴 대국 중): <1.25 20.9% · 1.25~2 25.4% · 2~5 32.8% · 5~10 12.3% · ≥10 8.7%
+진 대국 점수/목표: p10 0.08 · p25 0.19 · p50 0.43 · p75 0.72 · p90 0.90
+log(점수/목표) 관 · 종류 평균을 뺀 분산 1.434: 판 안 1.053(73.4%) · 판 사이 26.6%
+판 안 sd(log): p25 0.66 · p50 0.81 · p75 1.01 → 같은 판 안 대국 사이 점수/목표의 전형 폭 ×2.24
+한 판 안에 ≥×5 이긴 대국과 <×1.25 대국(짐 포함)이 함께 있는 판 163 / 200(81.5%)
+진 대국 463개(판 첫 대국 빼고)의 바로 앞 대국 점수/목표(앞도 졌으면 0): p25 0.00 · p50 1.08 · p75 1.75
+설계 D를 점수에만 얹었을 때 넘었을 진 대국 57 / 463(12.3%) · 여세 0(앞이 짐) 136개
+  그중 판을 끝낸 패배(마지막 대국): 7 / 129(5.4%)
+앞 대국을 이긴 대국 3211개 중 여세가 상한(다음 목표 절반)에 닿는 몫 26.1%
+
+## 단 0 seed 1
+판 100개 · 둔 대국 1888개(이김 1674 · 짐 214)
+이긴 대국 점수/목표: p10 1.06 · p25 1.39 · p50 2.33 · p75 4.74 · p90 10.80
+  넘침 층(이긴 대국 중): <1.25 19.2% · 1.25~2 23.5% · 2~5 33.3% · 5~10 12.8% · ≥10 11.1%
+진 대국 점수/목표: p10 0.10 · p25 0.23 · p50 0.43 · p75 0.75 · p90 0.92
+log(점수/목표) 관 · 종류 평균을 뺀 분산 1.714: 판 안 1.216(70.9%) · 판 사이 29.1%
+판 안 sd(log): p25 0.70 · p50 0.84 · p75 1.06 → 같은 판 안 대국 사이 점수/목표의 전형 폭 ×2.32
+한 판 안에 ≥×5 이긴 대국과 <×1.25 대국(짐 포함)이 함께 있는 판 81 / 100(81.0%)
+진 대국 214개(판 첫 대국 빼고)의 바로 앞 대국 점수/목표(앞도 졌으면 0): p25 0.00 · p50 1.05 · p75 1.59
+설계 D를 점수에만 얹었을 때 넘었을 진 대국 24 / 214(11.2%) · 여세 0(앞이 짐) 69개
+  그중 판을 끝낸 패배(마지막 대국): 2 / 59(3.4%)
+앞 대국을 이긴 대국 1633개 중 여세가 상한(다음 목표 절반)에 닿는 몫 29.4%
+
+## 단 0 seed 2
+판 100개 · 둔 대국 1857개(이김 1608 · 짐 249)
+이긴 대국 점수/목표: p10 1.05 · p25 1.30 · p50 2.00 · p75 3.87 · p90 7.65
+  넘침 층(이긴 대국 중): <1.25 22.6% · 1.25~2 27.2% · 2~5 32.2% · 5~10 11.8% · ≥10 6.2%
+진 대국 점수/목표: p10 0.06 · p25 0.16 · p50 0.41 · p75 0.70 · p90 0.90
+log(점수/목표) 관 · 종류 평균을 뺀 분산 1.071: 판 안 0.854(79.8%) · 판 사이 20.2%
+판 안 sd(log): p25 0.63 · p50 0.79 · p75 0.97 → 같은 판 안 대국 사이 점수/목표의 전형 폭 ×2.19
+한 판 안에 ≥×5 이긴 대국과 <×1.25 대국(짐 포함)이 함께 있는 판 82 / 100(82.0%)
+진 대국 249개(판 첫 대국 빼고)의 바로 앞 대국 점수/목표(앞도 졌으면 0): p25 0.00 · p50 1.11 · p75 1.85
+설계 D를 점수에만 얹었을 때 넘었을 진 대국 33 / 249(13.3%) · 여세 0(앞이 짐) 67개
+  그중 판을 끝낸 패배(마지막 대국): 5 / 70(7.1%)
+앞 대국을 이긴 대국 1578개 중 여세가 상한(다음 목표 절반)에 닿는 몫 22.8%
+
+## 단 4 seed 1
+판 100개 · 둔 대국 1673개(이김 1496 · 짐 177)
+이긴 대국 점수/목표: p10 1.05 · p25 1.25 · p50 2.03 · p75 3.85 · p90 8.25
+  넘침 층(이긴 대국 중): <1.25 24.7% · 1.25~2 24.1% · 2~5 32.6% · 5~10 12.2% · ≥10 6.5%
+진 대국 점수/목표: p10 0.11 · p25 0.25 · p50 0.47 · p75 0.80 · p90 0.93
+log(점수/목표) 관 · 종류 평균을 뺀 분산 0.839: 판 안 0.618(73.6%) · 판 사이 26.4%
+판 안 sd(log): p25 0.59 · p50 0.74 · p75 0.83 → 같은 판 안 대국 사이 점수/목표의 전형 폭 ×2.09
+한 판 안에 ≥×5 이긴 대국과 <×1.25 대국(짐 포함)이 함께 있는 판 76 / 100(76.0%)
+진 대국 177개(판 첫 대국 빼고)의 바로 앞 대국 점수/목표(앞도 졌으면 0): p25 0.33 · p50 1.17 · p75 1.92
+설계 D를 점수에만 얹었을 때 넘었을 진 대국 25 / 177(14.1%) · 여세 0(앞이 짐) 37개
+  그중 판을 끝낸 패배(마지막 대국): 8 / 84(9.5%)
+앞 대국을 이긴 대국 1480개 중 여세가 상한(다음 목표 절반)에 닿는 몫 23.0%
+
+## 셈 스크립트(dstats.mjs)
+```js
+// D 여세 근거: 판 하네스 dump에서 판 안 대국 점수/목표(넘침 비율) 분포와 판 사이 · 판 안 들쭉날쭉
+import { readFileSync } from 'node:fs';
+const files = process.argv.slice(2);
+const runs = files.flatMap((f) => JSON.parse(readFileSync(f, 'utf8')).runs);
+const q = (a, p) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.round(p * (s.length - 1)))]; };
+const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+const vr = (a) => { const m = mean(a); return a.reduce((s, x) => s + (x - m) ** 2, 0) / (a.length - 1); };
+const pc = (x) => (100 * x).toFixed(1) + '%';
+const played = runs.map((r) => r.log.filter((x) => !x.skipped && x.target > 0));
+const all = played.flat();
+const won = all.filter((x) => x.won), lost = all.filter((x) => !x.won);
+const ratio = (x) => x.score / x.target;
+console.log(`판 ${runs.length}개 · 둔 대국 ${all.length}개(이김 ${won.length} · 짐 ${lost.length})`);
+const rw = won.map(ratio);
+console.log(`이긴 대국 점수/목표: p10 ${q(rw, .1).toFixed(2)} · p25 ${q(rw, .25).toFixed(2)} · p50 ${q(rw, .5).toFixed(2)} · p75 ${q(rw, .75).toFixed(2)} · p90 ${q(rw, .9).toFixed(2)}`);
+console.log(`  넘침 층(이긴 대국 중): <1.25 ${pc(rw.filter((r) => r < 1.25).length / rw.length)} · 1.25~2 ${pc(rw.filter((r) => r >= 1.25 && r < 2).length / rw.length)} · 2~5 ${pc(rw.filter((r) => r >= 2 && r < 5).length / rw.length)} · 5~10 ${pc(rw.filter((r) => r >= 5 && r < 10).length / rw.length)} · ≥10 ${pc(rw.filter((r) => r >= 10).length / rw.length)}`);
+const rl = lost.map(ratio);
+console.log(`진 대국 점수/목표: p10 ${q(rl, .1).toFixed(2)} · p25 ${q(rl, .25).toFixed(2)} · p50 ${q(rl, .5).toFixed(2)} · p75 ${q(rl, .75).toFixed(2)} · p90 ${q(rl, .9).toFixed(2)}`);
+// 판 안 · 판 사이: log(점수/목표)를 관 · 종류 평균을 뺀 뒤, 판 평균(사이)과 판 안 흩어짐(안)으로 나눔
+const key = (x) => `${x.ante}:${x.kind}`;
+const byKey = {};
+for (const x of all) (byKey[key(x)] ||= []).push(Math.log(Math.max(1e-3, ratio(x))));
+const km = Object.fromEntries(Object.entries(byKey).map(([k, v]) => [k, mean(v)]));
+const resid = played.map((rs) => rs.map((x) => Math.log(Math.max(1e-3, ratio(x))) - km[key(x)])).filter((a) => a.length >= 3);
+const flat = resid.flat(), tot = vr(flat);
+const within = mean(resid.map(vr));
+console.log(`log(점수/목표) 관 · 종류 평균을 뺀 분산 ${tot.toFixed(3)}: 판 안 ${within.toFixed(3)}(${pc(within / tot)}) · 판 사이 ${pc(1 - within / tot)}`);
+const sds = resid.map((a) => Math.sqrt(vr(a)));
+console.log(`판 안 sd(log): p25 ${q(sds, .25).toFixed(2)} · p50 ${q(sds, .5).toFixed(2)} · p75 ${q(sds, .75).toFixed(2)} → 같은 판 안 대국 사이 점수/목표의 전형 폭 ×${Math.exp(q(sds, .5)).toFixed(2)}`);
+// 판 안에서 크게 넘친 대국(≥5)과 겨우 넘거나 진 대국(<1.25)이 함께 있는 판
+const mixed = played.filter((rs) => rs.some((x) => x.won && ratio(x) >= 5) && rs.some((x) => ratio(x) < 1.25)).length;
+console.log(`한 판 안에 ≥×5 이긴 대국과 <×1.25 대국(짐 포함)이 함께 있는 판 ${mixed} / ${runs.length}(${pc(mixed / runs.length)})`);
+// 진 대국 바로 앞 대국(같은 판)
+const prevs = [], carry = [];
+for (const rs of played) rs.forEach((x, i) => {
+  if (x.won || i === 0) return;
+  const p = rs[i - 1];
+  prevs.push(p.won ? ratio(p) : 0);
+  // 설계 D(25%, 다음 목표 절반 상한, 지면 사라짐)를 그대로 얹으면 넘었을까 — 다른 것은 그대로 둔 셈
+  const c = p.won ? Math.min(0.25 * (p.score - p.target), 0.5 * x.target) : 0;
+  carry.push({ c, reach: x.score + c >= x.target, ended: rs === rs && i === rs.length - 1 });
+});
+console.log(`진 대국 ${prevs.length}개(판 첫 대국 빼고)의 바로 앞 대국 점수/목표(앞도 졌으면 0): p25 ${q(prevs, .25).toFixed(2)} · p50 ${q(prevs, .5).toFixed(2)} · p75 ${q(prevs, .75).toFixed(2)}`);
+const r1 = carry.filter((x) => x.reach).length;
+console.log(`설계 D를 점수에만 얹었을 때 넘었을 진 대국 ${r1} / ${carry.length}(${pc(r1 / carry.length)}) · 여세 0(앞이 짐) ${carry.filter((x) => x.c === 0).length}개`);
+const ends = []; for (const rs of played) { const i = rs.length - 1, x = rs[i]; if (!x.won && i > 0) { const p = rs[i - 1]; const c = p.won ? Math.min(0.25 * (p.score - p.target), 0.5 * x.target) : 0; ends.push(x.score + c >= x.target); } }
+console.log(`  그중 판을 끝낸 패배(마지막 대국): ${ends.filter(Boolean).length} / ${ends.length}(${pc(ends.filter(Boolean).length / Math.max(1, ends.length))})`);
+const capHit = []; for (const rs of played) rs.forEach((x, i) => { if (i && rs[i - 1].won) capHit.push(0.25 * (rs[i - 1].score - rs[i - 1].target) >= 0.5 * x.target); });
+console.log(`앞 대국을 이긴 대국 ${capHit.length}개 중 여세가 상한(다음 목표 절반)에 닿는 몫 ${pc(capHit.filter(Boolean).length / capHit.length)}`);
+```
