@@ -5,12 +5,15 @@ import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, fitNum, frame, measure } from '../../render/gfx.js';
-import { blindInfo, REWARD, ANTES, canReopenShop } from '../../sim/run.js';
+import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
 import { CHARTS } from '../../data/charts.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
-import { KIND_NAME, josa } from '../words.js';
+import { KIND_NAME, PACK_NAME, josa } from '../words.js';
+import { drawIcon, drawIconLight } from '../../render/icons.js';
+import { kindTab } from '../kinds.js';
+import { envelope } from '../parts.js';
 import { L } from '../lang.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, GAP_IN, GAP_GROUP, flow, BTN_S } from '../frame.js';
@@ -67,16 +70,47 @@ export function antePath(ctx, ui, run, cx, y, time) {
   ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${FACTION_BY_ID[factionFor(run, ANTES)].name}`, josa(`마스터 ${fm.name}`, '을/를') + ' 꺾으면 판을 이긴다') });
 }
 
-export const tagText = (tag) => (tag.kind === 'money' ? `상금 +${tag.amount}` : tag.kind === 'chart' ? `${CHARTS[tag.form].name} 한 장` : '');
+// 건너뛰기 패(CHM-58 ②, 시안 2 「아이콘 + 글」 — docs/shots/skip-tags/): 받는 것 글(한국어 열쇠 — 그릴 때 옮긴다)과 그림.
+// 그림 icon: ['icon', 격언 아이콘] · ['light', 먹을 옅은 금으로 칠한 격언 아이콘] · ['tab', 종류 딱지] · ['env', 꾸러미 봉투] · ['slot', 봉투 + 「+」]
+const TAG_VIEW = {
+  money: { text: (t) => `$${t.amount} 받기`, icon: () => ['icon', 'thrift'] },
+  chart: { text: (t) => `${CHARTS[t.form].name} 한 장`, icon: () => ['tab', 'chart'] },
+  pack: { text: (t) => `${PACK_NAME[t.pack]} 하나 열기`, icon: (t) => ['env', t.pack] },
+  slot: { text: () => `다음 상점 꾸러미 칸 +${TAG_RULES.packs}`, icon: () => ['slot', 'piece'] },
+  reroll: { text: () => `다음 상점에서 다시 진열 ${TAG_RULES.rerolls}번`, icon: () => ['light', 'second_thought'] },
+  double: { text: () => `가진 상금 두 배(최대 $${TAG_RULES.doubleMax})`, icon: () => ['icon', 'vault'] },
+  golden: { text: () => '판본 격언 셋 중 하나 고르기', icon: () => ['env', 'golden'] },
+  fragment: { text: () => '명경기 조각 하나', icon: () => ['tab', 'fragment'] },
+};
+// 옛 패(CHM-58 전 저장의 기록: 상금 +5)도 같은 글로 읽힌다
+export const tagText = (tag) => (tag && TAG_VIEW[tag.kind] ? TAG_VIEW[tag.kind].text(tag) : '');
+// 패 그림 12×12를 (x, y)에 sc배로(관 선택 카드는 2배)
+export function tagIcon(ctx, tag, x, y, sc = 1) {
+  const v = tag && TAG_VIEW[tag.kind];
+  if (!v) return;
+  const [k, id] = v.icon(tag);
+  ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.scale(sc, sc);
+  if (k === 'icon') drawIcon(ctx, id, 0, 0);
+  else if (k === 'light') drawIconLight(ctx, id, 0, 0);
+  else if (k === 'tab') kindTab(ctx, id, -1, -1);
+  else {
+    envelope(ctx, 0, 1, 12, 10, id);
+    // 꾸러미 칸 +1: 봉투 오른쪽 위에 금빛 「+」
+    if (k === 'slot') { rect(ctx, 8, 0, 4, 4, PAL.feltDk); rect(ctx, 9, 1, 3, 1, PAL.goldHi); rect(ctx, 10, 0, 1, 3, PAL.goldHi); }
+  }
+  ctx.restore();
+}
 
 // 대국 카드 쌓기(재기와 그리기가 같이 쓴다 — PAD_CARD): 종류(제목) → 묶음 틈 → 목표 · 이기면 → 묶음 틈(가운데 가로줄) →
 // 명인(초상 옆 이름 → 묶음 안 틈 → 규칙 글) 또는 「건너뛰면」 → 받는 것 → 묶음 틈 → 단추 줄(지난 대국은 「이김」 · 「건너뜀」)
 const PORTRAIT = 36;
+const TAG_ICON = 24; // 건너뛰기 패 그림(12 × 2배)
 const BAR = { y: 2, h: BTN_S }; // 본 칸 위 띠의 작은 단추(상점 화면 띠와 같다)
 // 대국 카드 셋은 본 칸을 꽉 채운다(사이 4 — 명인 규칙 글이 한 줄이라도 덜 접히게)
 const SEL = { gap: 4, get w() { return Math.floor((MAIN.w - this.gap * 2) / 3); } };
 const selX = (i) => MAIN.x + i * (SEL.w + SEL.gap);
-export function blindLayout(run, i, w = SEL.w) {
+// tight: 카드 줄이 본 칸을 넘을 때(영어 7 · 8관 큰 목표가 두 줄 + 패 글 두 줄 + 두 줄 세력 띠) 목표 · 이기면 수치를 짧은 꼴(470K)로 한 줄에 — selectLays
+export function blindLayout(run, i, w = SEL.w, { tight = false } = {}) {
   const blind = i;
   const info = blindInfo(run, run.ante, i);
   const master = info.kind === 'master';
@@ -89,7 +123,7 @@ export function blindLayout(run, i, w = SEL.w) {
   f.gap(GAP_GROUP);
   // 이름표 · 수치 한 줄(넘치면 수치를 다음 줄 오른쪽에 — 그 줄에도 안 들어가는 큰 수는 짧은 꼴 3.1T)
   const row = (label, val, bold = true) => {
-    if (typeof val === 'number') val = fitNum(val, IW, bold);
+    if (typeof val === 'number') val = fitNum(val, tight ? IW - measure(label) - 6 : IW, bold);
     const two = measure(label) + 6 + measure(val, bold) > IW;
     const ly = f.line();
     return { label, val, ly, vy: two ? f.line() : ly };
@@ -130,13 +164,15 @@ export function blindLayout(run, i, w = SEL.w) {
     f.gap(GAP_IN);
     out.lines = wrap(m.text, IW).map((l) => [l, f.line()]);
   } else if (peek) {
-    // 「건너뛰면」 · 받는 것은 왼쪽, 작은 판은 오른쪽 끝
-    const top = f.y, tw = IW - BW - 6;
+    // 시안 2(CHM-58 ②): 작은 판 왼쪽에 「건너뛰면」 → 그 아래 패 그림(2배, 24), 받는 것 글은 판 아래 온 폭(두 줄까지)
+    const top = f.y;
     out.skipLabel = f.line();
     f.gap(GAP_IN);
-    out.lines = wrap(tagText(info.tag), tw, true).map((l) => [l, f.line()]);
+    out.icon2 = { x: 0, y: f.space(TAG_ICON) };
     out.peek = { x: IW - BW, y: top };
     f.y = Math.max(f.y, top + BW);
+    f.gap(GAP_IN);
+    out.lines = wrap(tagText(info.tag), IW, true).map((l) => [l, f.line()]);
   } else {
     out.skipLabel = f.line();
     f.gap(GAP_IN);
@@ -156,8 +192,14 @@ export function bandLayout(fa, w) {
   const lines = wrap(fa.habit.text, w - tx - P).map((l) => [l, f.line()]);
   return { w, tx, name, lines, h: Math.max(P * 2 + CREST2, f.y + P) };
 }
+// 카드 셋의 쌓기: 본 칸(아래 여백 GAP_GROUP)을 넘으면 수치를 짧은 꼴로 다시 쌓는다
+export function selectLays(run) {
+  const lays = [0, 1, 2].map((i) => blindLayout(run, i));
+  if (TOP + selectPlan(run, lays).H <= 270 - GAP_GROUP) return lays;
+  return [0, 1, 2].map((i) => blindLayout(run, i, SEL.w, { tight: true }));
+}
 // 관 선택의 자리: 연습 · 정식 카드는 세력 띠 아래, 명인 카드는 본 칸 위부터 온 높이. 아랫변은 셋이 같다
-export function selectPlan(run, lays = [0, 1, 2].map((i) => blindLayout(run, i))) {
+export function selectPlan(run, lays = selectLays(run)) {
   const fa = FACTION_BY_ID[blindInfo(run).faction];
   const band = bandLayout(fa, SEL.w * 2 + SEL.gap);
   const low = Math.max(lays[0].h, lays[1].h);
@@ -188,7 +230,7 @@ export class SelectScreen {
     if (run.log.some((x) => x.clockLost)) hint(app, 'clock', 'clock');
     // 판의 길은 본 칸 위 띠(카드 줄이 내용에 맞춰 길어지므로 아래를 비운다)
     antePath(ctx, ui, run, MAIN.x + MAIN.w / 2, 5, app.time);
-    const lays = [0, 1, 2].map((i) => blindLayout(run, i));
+    const lays = selectLays(run);
     const plan = selectPlan(run, lays);
     // 세력 띠: 연습 · 정식 카드 위(문장 2배 · 이름 · 버릇), 명인 카드는 오른쪽에 온 높이
     // 시안(docs/shots/factions/draft1~4)에서 4를 골랐다 — 보고서 docs/reports/factions.md 「화면」
@@ -228,7 +270,7 @@ export class SelectScreen {
       if (pv) {
         const BS = peekSize(PEEK.big);
         const tip = { title: master ? `마스터 ${lay.m.name}` : KIND_NAME[info.kind], titleCol: master ? PAL.redDk : null, body: [], block: { h: BS, draw: (c, bx, by, bw) => bigBoard(c, pv, bx + ((bw - BS) >> 1), by) } };
-        ui.region(`select:board:${i}`, x, y, w, h, master ? { tip, keys: [lay.m.text] } : { tip });
+        ui.region(`select:board:${i}`, x, y, w, h, { tip, keys: [master ? lay.m.text : tagText(info.tag)] });
         miniBoard(ctx, pv, x + P + lay.peek.x, y + lay.peek.y, { dim: !cur });
         if (cur) hint(this.app, 'preview', `select:board:${i}`);
       }
@@ -241,7 +283,9 @@ export class SelectScreen {
         for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, ink, { termCol: PAL.gold });
       } else {
         text(ctx, '건너뛰면', x + P, y + lay.skipLabel, PAL.dim);
-        for (const [l, ly] of lay.lines) text(ctx, l, x + P, y + ly, cur ? PAL.gold : PAL.dim, { bold: true });
+        if (lay.icon2) tagIcon(ctx, info.tag, x + P + lay.icon2.x, y + lay.icon2.y, 2);
+        // 받는 것 글 안 낱말(꾸러미 · 판본 · 명경기 조각)은 밝게 — 가리키면 낱말 상자(위 select:board keys)
+        for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, cur ? PAL.gold : PAL.dim, { bold: true, termCol: cur ? PAL.goldHi : PAL.dim });
       }
       // 단추 줄은 카드 아래 안 여백 위(세 카드가 같은 높이라 같은 줄)
       const by = y + h - P - BTN_H;
@@ -276,7 +320,8 @@ export class SelectScreen {
   skip() {
     const ev = this.app.cmd({ type: 'skip' });
     const s = ev.find((e) => e.type === 'skip');
-    if (s) this.app.toast(`건너뜀 · ${tagText(s.tag)}`, PAL.gold);
+    // 꾸러미 패는 알림 없이 곧바로 꾸러미 화면(이름은 왼쪽 칸 머리에) — 알림이 위 띠 격언 이름표를 덮었다
+    if (s && this.app.run.phase !== 'pack') this.app.toast(`건너뜀 · ${tagText(s.tag)}${s.tag.kind === 'double' ? ` · +$${s.money || 0}` : ''}`, PAL.gold);
     this.app.sfx('coin');
     this.app.goPhase();
   }

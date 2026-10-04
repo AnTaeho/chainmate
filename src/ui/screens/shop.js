@@ -156,13 +156,17 @@ const packEnv = (w) => w >= 100;
 // 좁은 칸 한 줄(셋)의 이름이 하나라도 굵게 안 들어가면(영어 「Engraving」 63 > 58, CHM-42) 그 줄 셋을 다 작은 봉투(ENV_S) + 값으로 —
 // 봉랍 자리 딱지가 종류를, 금빛 봉투가 금빛 꾸러미를 말한다. 두루마리 좁은 칸(CHM-41 scrollRowNames)과 같은 규칙: 한 줄 안에서 섞지 않는다
 const ENV_S = { w: 24, h: 20 };
+// 꾸러미 칸이 넷(건너뛰기 패 「꾸러미 칸 +1」에 금빛 꾸러미가 붙은 상점, CHM-58 — 폭 53)이면 봉투를 더 작게(ENV_XS) 해서 값 자리를 남긴다
+const ENV_XS = { w: 14, h: 12 };
 export function packCellLayout(pk, w, { names = true } = {}) {
   const P = PAD_CARD, env = packEnv(w), small = !env && !names;
-  const tx = env ? P + ENV.w + 4 : small ? P + ENV_S.w + 4 : P, tw = w - tx - P;
+  // 아주 좁은 칸(넷)의 작은 봉투 칸은 봉투를 위에, 값을 그 아래 가운데에(stack) — 옆에 두면 「Free」가 안 들어간다
+  const stack = small && w < 60, es = stack ? ENV_XS : ENV_S;
+  const tx = env ? P + ENV.w + 4 : small && !stack ? P + es.w + 4 : P, tw = w - tx - P;
   const f = flow(P);
   const name = f.line(), price = f.line();
   const h = Math.max(f.y, env ? P + ENV.h : 0) + P;
-  return { tx, tw, price, name, small, env: env ? Math.floor((h - ENV.h) / 2) : small ? Math.floor((h - ENV_S.h) / 2) : null, h };
+  return { tx, tw, price, name, small, stack, es, env: env ? Math.floor((h - ENV.h) / 2) : stack ? P - 2 : small ? Math.floor((h - es.h) / 2) : null, h };
 }
 export const packCellH = (pk, w) => packCellLayout(pk, w).h;
 // 좁은 칸 이름(꾸러미 이름의 앞 낱말 — 「각인 꾸러미」 → 「각인」)과 그 자리 폭
@@ -365,7 +369,7 @@ export class ShopScreen {
     box(ctx, x, y, w, h, PAL.feltDk, hover ? PAL.gold : PAL.frameDk);
     const P = PAD_CARD;
     // 연 꾸러미는 작은 봉투 칸이어도 봉투 없이 칸 가운데 「열었다」(봉투 오른쪽 34에 영어 「Opened」가 안 들어간다)
-    if (lay.env != null && !(pk.sold && lay.small)) envelope(ctx, x + P, y + lay.env, lay.small ? ENV_S.w : ENV.w, lay.small ? ENV_S.h : ENV.h, pk.kind, { hover });
+    if (lay.env != null && !(pk.sold && lay.small)) envelope(ctx, lay.stack ? x + ((w - lay.es.w) >> 1) : x + P, y + lay.env, lay.small ? lay.es.w : ENV.w, lay.small ? lay.es.h : ENV.h, pk.kind, { hover });
     if (pk.sold) {
       ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
       // 봉투가 있으면 글 칸(봉투 오른쪽) 가운데 — 영어 「Opened」가 봉투에 걸치지 않게
@@ -375,7 +379,8 @@ export class ShopScreen {
     }
     // 작은 봉투 칸: 이름 없이 봉투 오른쪽에 값 한 줄(칸 높이 가운데)
     if (lay.small) {
-      text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, inkY(y, h), PAL.gold, { bold: true });
+      if (lay.stack) text(ctx, pk.price ? `$${pk.price}` : '공짜', x + Math.floor(w / 2), y + lay.price, PAL.gold, { bold: true, align: 'center' });
+      else text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, inkY(y, h), PAL.gold, { bold: true });
       closeBox();
       return;
     }

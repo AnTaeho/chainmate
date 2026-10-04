@@ -115,5 +115,24 @@ export function drawIcon(ctx, id, x, y, alpha = 1) {
   if (alpha !== 1) ctx.globalAlpha = 1;
   return true;
 }
+// 밝게 칠한 판: 먹(#)을 옅은 금(y)으로 — 어두운 카드 바탕 위의 먹빛 아이콘(관 선택의 건너뛰기 패, CHM-58)
+const LIGHT_HI = { ...HI_COL, '#': [COL.y, 1] };
+export function drawIconLight(ctx, id, x, y) {
+  let c;
+  if (hiFor(ctx) && ICON_HI[id]) c = baked(`icon:${id}:light`, ICON_HI[id], LIGHT_HI);
+  else {
+    const key = `${id}:light`;
+    c = CACHE.get(key);
+    if (c === undefined) {
+      const rows = I[id];
+      c = rows ? makeCanvas(12, 12) : null;
+      if (c) { const x2 = context(c); rows.forEach((r, yy) => { for (let k = 0; k < 12; k++) { const ch = r[k] === '#' ? 'y' : r[k]; if (ch && ch !== '.' && COL[ch]) { x2.fillStyle = COL[ch]; x2.fillRect(k, yy, 1, 1); } } }); }
+      CACHE.set(key, c);
+    }
+  }
+  if (!c) return false;
+  ctx.drawImage(c, place(x), place(y), 12, 12);
+  return true;
+}
 export const ICON_IDS = Object.keys(I);
 export const ICON_ROWS = I;
