@@ -99,3 +99,23 @@ test('C 끝까지: 봇은 넘긴 뒤 덤이 붙는 다음 넘침 층을 노린�
   Object.assign(PACE, { mode: null });
   assert.equal(goalOf(b), 100);
 }));
+
+test('호흡 셈(tools/beats.mjs paceOf): 넘겨 이긴 대국은 넘긴 수로, 목표 밑 체크메이트는 따로', async () => {
+  const { paceOf } = await import('../tools/beats.mjs');
+  // [bi, 관, 대국, 이김, 까닭, 점수, 목표, 쓴 수, 둘 수 있던 수, 넘긴 수, 상금, 수마다 점수]
+  const p = paceOf({
+    ev: [[3, 1, 3, 'sac']],
+    battles: [
+      [1, 1, 0, 1, 'score', 200, 100, 1, 4, 1, 8, [200]],
+      [2, 1, 1, 1, 'score', 150, 100, 4, 4, 4, 5, [20, 30, 40, 60]],
+      [3, 1, 2, 1, 'mate', 900, 100, 3, 4, 1, 9, [500, 300, 100]], // 넘긴 뒤 체크메이트(C)
+      [4, 2, 0, 1, 'mate', 50, 100, 2, 4, null, 7, [10, 40]],      // 목표 밑 체크메이트
+      [5, 2, 1, 0, 'moves', 60, 100, 4, 4, null, 0, [10, 20, 10, 20]],
+    ],
+  });
+  assert.deepEqual(p.won.map((v) => [v.cross, v.first, v.last2, v.third]), [[1, true, false, 0], [4, false, true, 2], [1, true, false, 0]]);
+  assert.deepEqual(p.mate.map((v) => v.cross), [1, null]);
+  assert.deepEqual(p.all.map((v) => [v.moves, v.reward]), [[1, 8], [4, 5], [3, 9], [2, 7], [4, 0]]);
+  // 넘긴 뒤에도 둔 대국: 셋째 대국 하나(넘기기까지 500, 넘긴 뒤 평균 200, 넘긴 뒤 희생 하나)
+  assert.deepEqual(p.after, [{ pre: 500, post: 200, sacs: 1, n: 2 }]);
+});
