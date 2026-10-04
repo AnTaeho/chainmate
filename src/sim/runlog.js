@@ -9,10 +9,12 @@ export const RUNLOG_MAX = 200;   // 기기에 남기는 판 수(오래된 것부
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const emptySeen = () => ({ maxims: 0, slots: 0, editions: {}, fragDisplay: 0, packs: 0, fragPack: 0, golden: 0 });
+// 찜(CHM-58 F): 다음 상점에 넘어온 카드 수(상점에 들어설 때) · 그 카드를 산 수 · 종류별 — shopbot HOLDS와 같은 셈
+const emptyHolds = () => ({ carried: 0, bought: 0, kinds: {} });
 
 // 판을 시작할 때 하나. app = { version, commit, platform }. startedAt: 시작 시각(ms, 옛 저장에서 이어 붙인 판은 null)
 export function newTrack({ startedAt = null, app = null } = {}) {
-  return { v: 1, startedAt, sec: 0, bought: [], editions: [], legendAt: null, seen: emptySeen(), buys: [], script: [], app };
+  return { v: 1, startedAt, sec: 0, bought: [], editions: [], legendAt: null, seen: emptySeen(), holds: emptyHolds(), buys: [], script: [], app };
 }
 
 // 명령 바로 앞의 판 모습(trackCommand가 견줄 것)
@@ -44,7 +46,12 @@ const itemId = (it) => it.id ?? it.form ?? it.t ?? it.legend ?? null;
 export function trackCommand(track, run, cmd, events, before) {
   // 대본 대국(킹과 두는 첫 대국)의 줄은 기록에서 뺀다 — 그 대국이 끝나며 늘어난 log 자리를 적어 둔다
   if (before.scripted && run.log.length > before.logLen) for (let i = before.logLen; i < run.log.length; i++) track.script.push(i);
-  if (run.phase === 'shop' && run.shop && cmd.type !== 'shop' && before.phase !== 'shop' && before.phase !== 'pack') noteDisplay(track.seen, run);
+  if (run.phase === 'shop' && run.shop && cmd.type !== 'shop' && before.phase !== 'shop' && before.phase !== 'pack') {
+    noteDisplay(track.seen, run);
+    const h = track.holds || (track.holds = emptyHolds());
+    for (const it of run.shop.display) if (it.kept) { h.carried++; h.kinds[it.kind] = (h.kinds[it.kind] || 0) + 1; }
+  }
+  for (const e of events) if (e.type === 'buy' && e.item.kept) (track.holds || (track.holds = emptyHolds())).bought++;
   if (cmd.type === 'reroll') noteDisplay(track.seen, run);
   if (cmd.type === 'buyPack' && run.pack) notePack(track.seen, run);
   // 산 격언(하네스 bought: 상점에서 새로 든 격언 id, 겹치면 한 번 · editions: 판본마다)
@@ -76,7 +83,7 @@ export function runRow(run, track, { end = null, endedAt = null, id = null } = {
     // ── 하네스 dump와 같은 열쇠(tools/run.mjs one())
     seed: run.seed, won, ante: run.ante, blind: run.blind,
     log, bought: [...tr.bought], final: run.maxims.filter((m) => !m.legendary).map((m) => m.id), money: run.money,
-    fragments: clone(run.fragments), legends: [...run.legends], legendAt: tr.legendAt, editions: [...tr.editions], seen: clone(tr.seen),
+    fragments: clone(run.fragments), legends: [...run.legends], legendAt: tr.legendAt, editions: [...tr.editions], seen: clone(tr.seen), holds: clone(tr.holds || emptyHolds()),
     deck: run.deck.map((p) => p.t + (p.eng ? ':' + p.eng.id : '')).sort().join(' '),
     charts: Object.values(run.charts).reduce((a, x) => a + x, 0), deckSize: run.deck.length,
     fam: familyCounts(run), josekis: [...(run.josekis || [])], fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],

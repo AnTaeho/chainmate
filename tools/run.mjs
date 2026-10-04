@@ -13,7 +13,7 @@ import { createRun, B, targetFor, REWARD, CHEST, TAGS } from '../src/sim/run.js'
 import { applyNight2 } from './night2.mjs';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
-import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK, TAG_BONUS } from './shopbot.mjs';
+import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK, TAG_BONUS, HOLD } from './shopbot.mjs';
 import { REVIEW } from '../src/sim/replay.js';
 import { BOT } from './bot.mjs';
 import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
@@ -67,11 +67,11 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
   const run = createRun({ seed, opening, dan, draft: !nodraft });
   for (const id of give || []) run.maxims.push({ uid: run.nextUid++, id, data: {}, edition: null, paid: 0 });
   if (BOT.stats) { BOT.stats.decisions = 0; BOT.stats.capped = 0; }
-  const { bought, editions, legendAt, seen, sac } = playRun(run, policy);
+  const { bought, editions, legendAt, seen, holds, sac } = playRun(run, policy);
   return {
     seed, won: run.phase === 'won', ante: run.ante, blind: run.blind,
     log: run.log, bought, final: run.maxims.filter((m) => !m.legendary).map((m) => m.id), money: run.money,
-    fragments: run.fragments, legends: run.legends, legendAt, editions, seen, sac,
+    fragments: run.fragments, legends: run.legends, legendAt, editions, seen, holds, sac,
     deck: run.deck.map((p) => p.t + (p.eng ? ':' + p.eng.id : '')).sort().join(' '),
     charts: Object.values(run.charts).reduce((a, x) => a + x, 0), deckSize: run.deck.length,
     fam: familyCounts(run), josekis: run.josekis || [], fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],
@@ -280,6 +280,11 @@ function report(R, args, wall) {
   const edTotal = Object.values(edSeen).reduce((a, x) => a + x, 0);
   const edBought = {}; for (const r of R) for (const e of r.editions) edBought[e] = (edBought[e] || 0) + 1;
   console.log(`판본: 진열 격언 ${maximsSeen}개 중 ${pc(edTotal / maximsSeen)} (칸당 ${pc(edTotal / slots)}) — ${EDITIONS.map((e) => `${e.name} ${edSeen[e.id] || 0}/산 ${edBought[e.id] || 0}`).join(' · ')}. 판본 격언을 가진 판 ${pc(R.filter((r) => r.editions.length).length / n)}`);
+  // 찜(CHM-58 F): 찜한 카드가 다음 상점에 넘어온 판 · 넘어온 카드를 그 상점에서 산 몫 · 종류별
+  const hs = R.map((r) => r.holds || { carried: 0, bought: 0, kinds: {} });
+  const hCarried = hs.reduce((a, h) => a + h.carried, 0), hBought = hs.reduce((a, h) => a + h.bought, 0);
+  const hKinds = {}; for (const h of hs) for (const [k, v] of Object.entries(h.kinds)) hKinds[k] = (hKinds[k] || 0) + v;
+  console.log(`찜(봇 ${Object.entries(HOLD).map(([k, v]) => `${k} ${v}`).join(' · ')}): 찜한 판 ${hs.filter((h) => h.carried).length} / ${n}(${pc(hs.filter((h) => h.carried).length / n)}) · 넘어온 카드 ${hCarried}(판당 ${(hCarried / n).toFixed(2)}) · 그 상점에서 삼 ${hBought} / ${hCarried}(${pc(hBought / Math.max(1, hCarried))}) · 종류별 ${Object.entries(hKinds).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(' · ') || '-'}`);
   const chains = battles.reduce((a, b) => a + b.moves, 0);
   const gr = {}; for (const b of battles) for (const [k, v] of Object.entries(b.grades || {})) gr[k] = (gr[k] || 0) + v;
   console.log(`사슬 평가(사슬 ${chains}): ${['★', '★★', '★★★', '∞'].map((k) => `「${k}」 ${gr[k] || 0} (${pc((gr[k] || 0) / chains)})`).join(' · ')}`);

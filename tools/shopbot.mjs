@@ -90,7 +90,14 @@ function notePack(run) {
   else SEEN.packs++;
   if (run.pack.options.some((o) => o.kind === 'fragment')) SEEN.fragPack++;
 }
+// 찜(CHM-58 F) 세기: 다음 상점에 넘어온 카드(상점에 들어설 때 한 번) · 그 카드를 산 것 · 종류별(playRun마다 새로, src/sim/runlog.js와 같은 셈)
+export const HOLDS = { reset() { Object.assign(this, { carried: 0, bought: 0, kinds: {} }); } };
+HOLDS.reset();
+function noteKept(run) {
+  for (const it of run.shop.display) if (it.kept) { HOLDS.carried++; HOLDS.kinds[it.kind] = (HOLDS.kinds[it.kind] || 0) + 1; }
+}
 function act(run, cmd) {
+  if (cmd.type === 'buy' && run.shop.display[cmd.slot] && run.shop.display[cmd.slot].kept) HOLDS.bought++;
   const ev = applyRun(run, cmd);
   if (cmd.type === 'reroll') noteDisplay(run);
   if (cmd.type === 'buyPack') notePack(run);
@@ -366,6 +373,29 @@ function tagPack(run, policy, r) {
   pickPack(run, ctx, build, Math.max(1, ctx.score(build)), policy === 'hunt');
 }
 
+// 찜(CHM-58 F): 떠날 때 지금 못 사는(돈이 모자라거나 다른 것을 사느라 남은) 진열 카드 중 짜임 재기 득이 가장 큰 것을 찜한다.
+// 다음 상점까지 미루는 몫은 discount로 깎고(그사이 판이 바뀐다), 그 값이 floor(다음 상점에서 살 만한 득) 이상이고
+// slot(그 칸을 새로 굴렸을 때의 기대 득) 보다 크며, 다음 상점에서 지금 봇의 사기 잣대(득/값 ≥ minGainPerCoin)를 넘을 때만.
+// 다음 상점에서는 넘어온 카드도 다른 카드와 똑같이 사거나 말거나 판단한다(따로 다루지 않는다)
+export const HOLD = { discount: 0.8, floor: 0.08, slot: 0.06 };
+function holdChoice(run, ctx) {
+  const build = buildOf(run);
+  const base = Math.max(1, ctx.score(build));
+  let best = null;
+  run.shop.display.forEach((it, slot) => {
+    if (it.sold || it.kind === 'tactic' || it.kind === 'gamble' || it.kind === 'fragment') return;
+    const v = variantFor(run, build, it, ctx);
+    if (!v) return;
+    const econ = it.kind === 'maxim' ? moneyGain(run, it.id) : 0;
+    const worth = (ctx.score(v.build) * (1 + econ + famBonus(build, v.build)) / base - 1) * HOLD.discount;
+    if (worth < Math.max(HOLD.floor, HOLD.slot) || worth / Math.max(1, it.price) < SMART.minGainPerCoin) return;
+    if (!best || worth > best.worth) best = { slot, worth };
+  });
+  const cur = run.hold ? run.hold.slot : null;
+  if (best && best.slot !== cur) act(run, { type: 'hold', slot: best.slot });
+  else if (!best && cur != null) act(run, { type: 'hold', slot: cur }); // 찜할 만한 게 없으면 풀기
+}
+
 function smartShop(run, hunt = false) {
   const ctx = makeCtx(run);
   openGolden(run, ctx, hunt);
@@ -449,7 +479,7 @@ function smartShop(run, hunt = false) {
     if (rc === 0 || run.money - rc >= reserve + (hunt ? 2 : 8)) { act(run, { type: 'reroll' }); continue; }
     break;
   }
-  if (run.phase === 'shop') { useConsumables(run, ctx); act(run, { type: 'leave' }); }
+  if (run.phase === 'shop') { useConsumables(run, ctx); holdChoice(run, ctx); act(run, { type: 'leave' }); }
 }
 
 function randomShop(run, r) {
@@ -549,6 +579,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
   const editions = [];
   let legendAt = null;
   SEEN.reset();
+  HOLDS.reset();
   SACLOG.reset();
   PEEK.rows = [];
   const trackBuys = (before) => {
@@ -588,6 +619,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'shop') {
       if (shopAlt != null) reshop(run, shopAlt);
       noteDisplay(run);
+      noteKept(run);
       const before = run.maxims.map((m) => m.uid);
       if (policy === 'smart' || policy === 'hunt' || policy === 'nofam' || policy === 'nosac') smartShop(run, policy === 'hunt');
       else if (policy === 'random') randomShop(run, r);
@@ -604,7 +636,7 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     }
   }
   if (legendAt == null && run.legends.length) legendAt = run.ante;
-  return { bought: [...bought], editions, legendAt, seen: JSON.parse(JSON.stringify({ ...SEEN, reset: undefined })), sac: SACLOG.rows.slice() };
+  return { bought: [...bought], editions, legendAt, seen: JSON.parse(JSON.stringify({ ...SEEN, reset: undefined })), holds: JSON.parse(JSON.stringify({ ...HOLDS, reset: undefined })), sac: SACLOG.rows.slice() };
 }
 
 export { blindInfo, canBuy };
