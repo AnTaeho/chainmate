@@ -2,6 +2,7 @@
 // 처음 켜면 수업을 거치지 않고 타이틀 → 「새 판」이 곧바로 대본 대국, 설정 「킹과 다시 두기」가 다음 새 판을 대본으로 켠다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom, tick } from './helpers/dom.js';
 import { createRun, applyRun, blindInfo } from '../src/sim/run.js';
 import { apply, dropSquaresFor, createBattle } from '../src/sim/battle.js';
 import { chainCaptures } from '../src/sim/chain.js';
@@ -139,15 +140,10 @@ test('대본은 기본 오프닝 · 단 0 판의 1관 연습 하나뿐', () => {
 // ── 앱: 첫 실행 · 킹과 다시 두기
 let dom, boot;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  dom = await installDom();
   ({ boot } = await import('../src/main.js'));
 });
 after(() => { delete globalThis.document; delete globalThis.window; });
-const tick = (app, n = 2) => { for (let i = 0; i < n; i++) app.frame((app.last || 0) + 16); };
 
 test('첫 실행은 수업을 거치지 않는다: 타이틀 → 새 판 → 곧바로 대본 대국', async () => {
   for (const k of [...dom.store.keys()]) dom.store.delete(k);

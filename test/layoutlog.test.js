@@ -2,14 +2,11 @@
 // 안 자르면 기록하지 않는다. 기록기가 꺼져 있으면(게임) 아무것도 쌓이지 않는다
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 
 let dom, LL, parts, text, ctx;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  dom = await installDom();
   LL = await import('../src/render/layoutlog.js');
   parts = await import('../src/ui/parts.js');
   text = await import('../src/render/text.js');

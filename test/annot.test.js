@@ -2,14 +2,11 @@
 // 바친 기물 줄(자리가 모자라면 「+N」) · 영어 희생 단추 폭. docs/design-notes/layout.md 「!? · !! 주석」
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 
 let M;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  const dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  await installDom();
   M = {
     annot: await import('../src/ui/annot.js'),
     parts: await import('../src/ui/parts.js'),

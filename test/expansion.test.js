@@ -16,8 +16,7 @@ import { FAMILIES, MAXIM_FAMILIES, familyCounts } from '../src/data/families.js'
 import { LEGENDS } from '../src/data/legends.js';
 import { TACTICS } from '../src/data/tactics.js';
 import { PIECES } from '../src/data/pieces.js';
-
-export const NEW_MAXIMS = ['cavalry_charge', 'long_diagonal', 'encircle', 'loner', 'full_board', 'youngest', 'eldest', 'second_wind', 'all_in', 'combo', 'disguise', 'checkerboard', 'last_square', 'nobility', 'farmer', 'blacksmith', 'soul_collector', 'specialty', 'thrift', 'asceticism', 'gambler', 'lucky_coin', 'reversal', 'pilgrimage', 'kings_step', 'ambusher', 'counter_book'];
+import { NEW_MAXIMS } from './helpers/maxims.js';
 
 const spec = (m) => (typeof m === 'string' ? { id: m } : m);
 function chain(map, drop, at, caps, mods = [], extra = {}, opts = {}) {

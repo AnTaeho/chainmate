@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { boardFrom, parseSq as S, sqName } from '../src/sim/board.js';
+import { table } from './helpers/chain.js';
+import { parseSq as S, sqName } from '../src/sim/board.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
 
-const table = (map) => ({ board: boardFrom(map), rules: {}, mods: [], chain: null });
 const names = (list) => list.map(sqName).sort();
 const types = (events) => events.map((e) => e.type);
 

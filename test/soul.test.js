@@ -1,7 +1,8 @@
 // 깊이 C: 혼 여덟
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { boardFrom, parseSq as S } from '../src/sim/board.js';
+import { table as T } from './helpers/chain.js';
+import { parseSq as S } from '../src/sim/board.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
 import { SOULS, soulSpec } from '../src/data/souls.js';
 import { createRun, applyRun } from '../src/sim/run.js';
@@ -9,7 +10,6 @@ import { createBattle, apply } from '../src/sim/battle.js';
 import { familyCounts } from '../src/data/families.js';
 import { bestMove } from '../src/sim/solver.js';
 
-const T = (map) => ({ board: boardFrom(map), rules: {}, mods: [], chain: null });
 const go = (map, type, sq, soul, caps = []) => { const t = T(map); startChain(t, { type, sq: S(sq), soul: soulSpec(soul) }); for (const c of caps) chainCapture(t, S(c)); return t; };
 
 test('혼 열여섯 · 가족이 있고 세기에 들어간다', () => {

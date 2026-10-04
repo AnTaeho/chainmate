@@ -1,6 +1,7 @@
 // 깊이 A: 이형 기물의 행마 · 노림 · 궁수 제자리 · 포 받침 · 유령 · 기보 · 판 생성 · 상점 · 결정성(새 다섯은 fairies55.test.js)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { table } from './helpers/chain.js';
 import { boardFrom, parseSq as S, sqName, captures, attackers, reach, dropSquares } from '../src/sim/board.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
 import { PIECES, FAIRIES } from '../src/data/pieces.js';
@@ -14,7 +15,6 @@ import { bestMove } from '../src/sim/solver.js';
 import { CHART_TABLE } from '../src/data/charts.js';
 
 const names = (list) => list.map(sqName).sort();
-const table = (map) => ({ board: boardFrom(map), rules: {}, mods: [], chain: null });
 
 test('아마존 = 퀸 + 나이트', () => {
   const b = boardFrom({ f6: 'P', e6: 'P', d6: 'P', f7: 'P', d8: 'P' });

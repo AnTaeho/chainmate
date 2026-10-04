@@ -2,6 +2,7 @@
 // 까마귀 앉는 칸 · 광대 적 행마 · 화약병 터짐 · 적일 때 지키는 칸 · 노림 판정과 행마의 일치(무작위 판) · 옛 저장 바꿔 읽기
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { table } from './helpers/chain.js';
 import { boardFrom, parseSq as S, sqName, captures, attackers, isAttacked, reach, guardSquares, dropSquares, mimicOf, capWay } from '../src/sim/board.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
 import { PIECES, FAIRIES, OLD_PIECE } from '../src/data/pieces.js';
@@ -17,7 +18,6 @@ import { loadRuns } from '../src/ui/runlog.js';
 import { makeStore, KEYS } from '../src/ui/save.js';
 
 const names = (list) => list.map(sqName).sort();
-const table = (map) => ({ board: boardFrom(map), rules: {}, mods: [], chain: null });
 const mine = (b, sq, t) => { b[S(sq)] = { t, mine: true }; return b; };
 
 test('목록: 뺀 넷은 없고 새 다섯이 있다', () => {

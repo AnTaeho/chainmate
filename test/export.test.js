@@ -3,6 +3,7 @@
 // 가짜 DOM(tools/fakedom.mjs)에 navigator · File · URL · Blob · body를 붙여 main.js boot()를 그대로 부른다.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { tick } from './helpers/dom.js';
 import { keepRow } from '../src/ui/runlog.js';
 
 let makeFakeDom, boot;
@@ -39,7 +40,6 @@ function makeDom({ width = 1280, height = 720, dpr = 1, touch = false, app = fal
   w.localStorage.setItem('chainmate.settings.v1', JSON.stringify({ coach: false }));
   return { dom, calls };
 }
-const tick = (app, n = 2) => { for (let i = 0; i < n; i++) app.frame((app.last || 0) + 16); };
 async function open(opts) {
   const { dom, calls } = makeDom(opts);
   const app = await boot({ window: dom.window, document: dom.document });

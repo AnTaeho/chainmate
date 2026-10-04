@@ -1,6 +1,7 @@
 // 사람 판 기록(CHM-50): 요약이 판 하네스 dump와 같은 열쇠 · 같은 값을 내는가, 200개 자르기, 수업 · 대본 · scratch 빼기, 그만둔 판, 저장 왕복.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom, tick } from './helpers/dom.js';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -114,15 +115,10 @@ test('저장 왕복: 남긴 판을 그대로 읽고, 내보낸 JSON에도 그대
 // ── 앱: 판이 끝나면 한 줄, 그만둔 판 · 대본 대국 · 수업 판
 let dom, boot;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  dom = await installDom();
   ({ boot } = await import('../src/main.js'));
 });
 after(() => { delete globalThis.document; delete globalThis.window; });
-const tick = (app, n = 2) => { for (let i = 0; i < n; i++) app.frame((app.last || 0) + 16); };
 const fresh = async () => { for (const k of [...dom.store.keys()]) dom.store.delete(k); const app = await boot({ window: dom.window, document: dom.document }); tick(app); return app; };
 const rows = (app) => loadRuns(app.store);
 // 대국 하나를 봇으로 끝까지(앱 명령으로)

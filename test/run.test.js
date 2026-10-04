@@ -5,6 +5,7 @@ import { SHOP, rerollCost } from '../src/sim/shop.js';
 import { MASTERS, FINAL_MASTER } from '../src/data/masters.js';
 import { FACTION_BY_ID } from '../src/data/factions.js';
 import { stepBattle } from '../tools/bot.mjs';
+import { finishBattle, shopRun } from './helpers/run.js';
 
 // 간단한 봇: 대국은 풀이기, 상점에선 살 수 있는 첫 물건 하나를 사고 꾸러미는 첫 선택, 나간다. 명령을 모두 적어 둔다.
 function botCommands(run, maxCmds = 100000) {
@@ -57,7 +58,7 @@ test('대국을 이기면 보상(기본 + 남은 수 + 적립 + 외통 + 대국 
     run.money = 12; // 적립 2
     applyRun(run, { type: 'play' });
     assert.equal(run.phase, 'battle');
-    while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
+    finishBattle(run);
     if (run.phase !== 'shop') continue;
     const r = run.last.reward;
     const movesLeft = 4 - run.last.moves;
@@ -72,14 +73,6 @@ test('대국을 이기면 보상(기본 + 남은 수 + 적립 + 외통 + 대국 
   }
   assert.ok(checked > 0);
 });
-
-function shopRun(seed = 1) {
-  const run = createRun({ draft: false, seed });
-  applyRun(run, { type: 'play' });
-  while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
-  assert.equal(run.phase, 'shop');
-  return run;
-}
 
 test('상점: 사기 · 다시 진열(5, +1) · 팔기(절반) · 칸 제한', () => {
   const run = shopRun(1);
@@ -289,7 +282,7 @@ test('8관 명인을 이기면 판을 이기고, 끝없는 대국으로 이어 �
   applyRun(run, { type: 'play' });
   assert.equal(run.battle.rules.kings, 2);
   run.battle.target = 1;
-  while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
+  finishBattle(run);
   assert.equal(run.phase, 'won');
   assert.deepEqual(legalRunCommands(run), [{ type: 'endless' }]);
   applyRun(run, { type: 'endless' });
@@ -306,7 +299,7 @@ test('유리 기물이 깨지면 판의 주머니에서도 빠진다', () => {
     const run = createRun({ draft: false, seed });
     for (const p of run.deck) p.eng = { id: 'glass' };
     applyRun(run, { type: 'play' });
-    while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
+    finishBattle(run);
     const gone = run.log.length && run.deck.length < 8;
     if (gone) { assert.ok(run.deck.every((p) => p.eng.id === 'glass')); return; }
   }

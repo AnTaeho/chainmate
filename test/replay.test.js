@@ -2,6 +2,7 @@
 // 화면 글(src/ui/review.js): 갈림길 카드 문장 · 표시 칸 · 영어.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 import '../src/sim/run.js'; // 조정자 등록
 import { createBattle, apply } from '../src/sim/battle.js';
 import { bestMove } from '../src/sim/solver.js';
@@ -174,11 +175,7 @@ test('진 대국 몇십 개: 찾은 길을 갈림길 상태에서 실제 규칙�
 // ── 화면 글
 let M;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  const dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  await installDom();
   M = { review: await import('../src/ui/review.js'), lang: await import('../src/ui/lang.js') };
 });
 after(async () => { const { setCanvasFactory } = await import('../src/render/surface.js'); setCanvasFactory(null); M.lang.setLang('ko'); });

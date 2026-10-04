@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { table } from './helpers/chain.js';
 import { boardFrom, parseSq as S } from '../src/sim/board.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
 import { defineModifier } from '../src/sim/scoring.js';
 import { createBattle, apply, legalCommands } from '../src/sim/battle.js';
 import { bestMove } from '../src/sim/solver.js';
 
-const table = (map, mods = []) => ({ board: boardFrom(map), rules: {}, mods, chain: null });
 const LOG = [];
 for (const kind of ['master', 'chart', 'engraving', 'maxim']) {
   for (const n of [1, 2]) {

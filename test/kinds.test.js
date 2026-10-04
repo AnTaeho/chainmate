@@ -2,14 +2,11 @@
 // 딱지 표(src/ui/kinds.js KIND)에 문양 · 빛깔을 가진다. 새 종류를 상점에 더하고 표를 잊으면 여기서 잡힌다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 
 let K, P, S, RARITY;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  const dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  await installDom();
   K = await import('../src/ui/kinds.js');
   P = await import('../src/ui/parts.js');
   S = await import('../src/sim/shop.js');

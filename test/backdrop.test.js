@@ -1,14 +1,11 @@
 // 여백 판(src/render/backdrop.js, layout.md 「화면 맞춤」): 판 밖 흐름은 게임과 같은 칸의 같은 얼룩, 바뀐 것이 없으면 다시 칠하지 않는다
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 
 let dom, M;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  dom = await installDom();
   M = { light: await import('../src/render/light.js'), pad: await import('../src/render/backdrop.js'), fit: await import('../src/ui/fit.js'), look: await import('../src/render/look.js') };
 });
 after(() => { delete globalThis.document; delete globalThis.window; });

@@ -2,6 +2,7 @@
 // 결과 다시 보기의 판 상태(터진 적 지움 · 궁수 제자리 · 꺾인 길), 대국 화면이 다시 보기용으로 남기는 기록
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 import { boardFrom, parseSq as S, sqName, captures, pathVia, TURNS, BOUNCES, emptyBoard } from '../src/sim/board.js';
 import { createRng, int, next } from '../src/sim/rng.js';
 import { capRoute, routeSquares, routeAt, routeLen, bendDur, replayState, isShot } from '../src/ui/fxroute.js';
@@ -150,11 +151,7 @@ test('다시 보기: 꺾인 길 · 넘기는 길 위로(넘은 적은 가운데�
 // 대국 화면이 남기는 다시 보기 기록(BattleScreen.record)
 let battle;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  const dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  await installDom();
   battle = await import('../src/ui/screens/battle.js');
 });
 after(async () => { const { setCanvasFactory } = await import('../src/render/surface.js'); setCanvasFactory(null); });

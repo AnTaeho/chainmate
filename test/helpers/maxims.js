@@ -1,0 +1,2 @@
+// 밤샘 2에 더한 격언 스물일곱(test/expansion.test.js가 규칙을 재고, test/content.test.js가 「격언마다 장면 검사」에 센다)
+export const NEW_MAXIMS = ['cavalry_charge', 'long_diagonal', 'encircle', 'loner', 'full_board', 'youngest', 'eldest', 'second_wind', 'all_in', 'combo', 'disguise', 'checkerboard', 'last_square', 'nobility', 'farmer', 'blacksmith', 'soul_collector', 'specialty', 'thrift', 'asceticism', 'gambler', 'lucky_coin', 'reversal', 'pilgrimage', 'kings_step', 'ambusher', 'counter_book'];

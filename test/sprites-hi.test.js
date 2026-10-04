@@ -2,14 +2,11 @@
 // 화면 배율 N = 1(또는 1배 오프스크린 캔버스)이면 16×22 마스크 그대로 — 32×44를 반으로 줄인 섞인 도트가 나오면 안 된다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 
 let dom, S, gfx, look, HI;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  dom = await installDom();
   S = await import('../src/render/sprites.js');
   gfx = await import('../src/render/gfx.js');
   look = await import('../src/render/look.js');

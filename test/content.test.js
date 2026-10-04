@@ -1,7 +1,7 @@
 // 격언 32 · 각인 6 · 명인 8 · 기보: 손으로 짠 장면에서 정확한 점수 변화를 확인한다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NEW_MAXIMS } from './expansion.test.js';
+import { NEW_MAXIMS } from './helpers/maxims.js';
 import { boardFrom, parseSq as S, isEnemy } from '../src/sim/board.js';
 import { startChain, chainCapture, chainCaptures } from '../src/sim/chain.js';
 import { createBattle, apply, legalCommands, refreshHints, visibleIncoming, isHidden } from '../src/sim/battle.js';

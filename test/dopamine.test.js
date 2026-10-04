@@ -15,6 +15,7 @@ import { LEGENDS, LEGEND_BY_ID, OPERA_REFILLS } from '../src/data/legends.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
 import { enemyCount } from '../src/sim/setup.js';
 import { stepBattle } from '../tools/bot.mjs';
+import { finishBattle, shopRun } from './helpers/run.js';
 
 const table = (map, mods = [], extra = {}) => ({ board: boardFrom(map), rules: {}, mods: JSON.parse(JSON.stringify(mods)), chain: null, seed: 1, ante: 1, movesUsed: 0, nextId: 500, ...extra });
 const types = (ev) => ev.map((e) => e.type);
@@ -98,7 +99,7 @@ test('넘친 목표 상금: ×5 +1 · ×10 +2, 보상 내역에 overflow', () =>
   for (let seed = 1; seed <= 12; seed++) {
     const run = createRun({ draft: false, seed });
     applyRun(run, { type: 'play' });
-    while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
+    finishBattle(run);
     if (run.phase !== 'shop') continue;
     const r = run.last.reward;
     const tier = overflowTier(run.last.score, run.last.target);
@@ -138,10 +139,7 @@ test('판본: 값에 판본 값이 붙고(팔면 절반), 흑요는 격언 칸 +
   assert.deepEqual(EDITIONS.map((e) => [e.id, e.name]), [['foil', '은박'], ['pearl', '자개'], ['rainbow', '무지개'], ['obsidian', '흑요']]);
   assert.equal(maximPrice('edge', null), MAXIM_BY_ID.edge.price);
   assert.equal(maximPrice('edge', 'rainbow'), MAXIM_BY_ID.edge.price + EDITION_BY_ID.rainbow.price);
-  const run = createRun({ draft: false, seed: 1 });
-  applyRun(run, { type: 'play' });
-  while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
-  assert.equal(run.phase, 'shop');
+  const run = shopRun(1);
   run.money = 100;
   for (let i = 0; i < 5; i++) run.maxims.push({ uid: 90 + i, id: ['edge', 'center', 'payback', 'first_move', 'welcome'][i], data: {}, edition: null, paid: 4 });
   assert.equal(maximCapacity(run), 5);
@@ -284,16 +282,8 @@ test('재현 판정: 명국마다 조건', () => {
   assert.ok(!chk('eight_pawns', { promotions: 1 }));
 });
 
-function shopAt(seed = 1) {
-  const run = createRun({ draft: false, seed });
-  applyRun(run, { type: 'play' });
-  while (run.phase === 'battle') stepBattle(run.battle, (c) => applyRun(run, c), {});
-  assert.equal(run.phase, 'shop');
-  return run;
-}
-
 test('첫 조각: 진열에서 사거나 꾸러미에서 고른다', () => {
-  const run = shopAt(1);
+  const run = shopRun(1);
   run.money = 50;
   run.shop.display[0] = { kind: 'fragment', legend: 'opera', price: SHOP.fragmentPrice, sold: false };
   const ev = applyRun(run, { type: 'buy', slot: 0 });

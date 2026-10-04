@@ -1,14 +1,11 @@
 // 첫 화면(CHM-49, docs/design-notes/layout.md 「첫 화면」): 하늘의 사슬 시간표 · 먹는 차례와 모습 바뀜 · 움직임 줄이기 정지 · 메뉴 구역
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 
 let dom, S, T, N, LOOK;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  dom = await installDom();
   S = await import('../src/ui/skychain.js');
   T = await import('../src/ui/screens/title.js');
   N = await import('../src/render/night.js');

@@ -2,14 +2,11 @@
 // 소수점 자리는 fine 안에서만 1/N 칸에 서고, 밖에서는 늘 정수 칸이다. 누르는 구역과 레이아웃 기록은 원래 네모 그대로.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { installDom } from './helpers/dom.js';
 
 let dom, M;
 before(async () => {
-  const { makeFakeDom } = await import('../tools/fakedom.mjs');
-  const { setCanvasFactory } = await import('../src/render/surface.js');
-  dom = makeFakeDom();
-  globalThis.document = dom.document; globalThis.window = dom.window;
-  setCanvasFactory(() => dom.document.createElement('canvas'));
+  dom = await installDom();
   M = {
     look: await import('../src/render/look.js'),
     gfx: await import('../src/render/gfx.js'),
