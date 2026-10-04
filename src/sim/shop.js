@@ -138,7 +138,7 @@ export function rollDisplay(run) {
 export function rollPacks(run) {
   const rng = run.shop.rng;
   run.shop.packs = [];
-  for (let i = 0; i < SHOP.packSlots; i++) {
+  for (let i = 0; i < (run.shop.packSlots ?? SHOP.packSlots); i++) {
     const kind = SHOP.packKinds[int(rng, SHOP.packKinds.length)];
     run.shop.packs.push({ kind, price: SHOP.packPrice + priceBonus(run), sold: false });
   }
@@ -147,8 +147,8 @@ export function rollPacks(run) {
 // 꾸러미를 열면 3개 중 1개. 기보 · 각인은 서로 다른 셋.
 // 기물 · 기보 · 각인 꾸러미는 fragmentChance.pack으로 셋째 자리에 그 꾸러미에서 나오는 명국의 첫 조각이 들어선다.
 // 금빛 꾸러미: 판본 붙은 격언 셋(+ 가끔 첫 조각).
-export function rollPackOptions(run, kind) {
-  const rng = run.shop.rng;
+// rng · goldenFragment: 상점 밖에서 여는 꾸러미(건너뛰기 패)는 따로 준다
+export function rollPackOptions(run, kind, rng = run.shop.rng, { goldenFragment = !!(run.shop && run.shop.goldenFragment) } = {}) {
   const out = [];
   if (kind === 'golden') {
     const exclude = run.maxims.map((m) => m.id);
@@ -158,7 +158,7 @@ export function rollPackOptions(run, kind) {
       exclude.push(it.id);
       out.push({ kind: 'maxim', id: it.id, edition: it.edition });
     }
-    if (run.shop.goldenFragment) {
+    if (goldenFragment) {
       const f = fragmentOffer(run, rng, null);
       if (f) out.push(f);
     }
@@ -178,5 +178,6 @@ export function rollPackOptions(run, kind) {
   return out;
 }
 
-export const rerollCost = (run) => SHOP.rerollBase + run.shop.rerolls + priceBonus(run);
+// 건너뛰기 패의 값 없는 다시 진열(shop.free)이 남았으면 0. 값은 값을 치른 횟수로만 오른다
+export const rerollCost = (run) => (run.shop.free > 0 ? 0 : SHOP.rerollBase + run.shop.rerolls - (run.shop.freeUsed || 0) + priceBonus(run));
 export const chartName = (f) => CHARTS[f].name;

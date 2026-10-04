@@ -75,11 +75,50 @@ export const RUN_DEFAULTS = { money: 4, maximSlots: 5, consumableSlots: 2 };
 // 마지막 칸을 잃으면(시간을 다 쓰면) 판이 끝난다 — 시계 1은 옛 규칙(한 번 지면 끝)과 같다.
 // 8관 명인(대가)에서 지고 칸이 남으면 그 대국을 새 판으로 다시 둔다.
 export const CLOCK = { start: 3 };
-// 건너뛰기 패(대국마다 정해진 하나). step 2b에서 늘린다.
+// 건너뛰기 패(대국마다 정해진 하나 — 판 시드로 정해져 관 선택에 미리 보인다). CHM-58 ②: 여덟 가지로 늘렸다(docs/design-notes/agency.md 「② 건너뛰기 패」).
+// weight: 뽑힐 무게. 받는 것은 TAG_APPLY 한 표에서 — 규칙 코드에 패 id 분기를 두지 않는다.
 export const TAGS = [
-  { kind: 'money', amount: 5 },
-  { kind: 'chart' },          // 정해진 모습의 기보 한 장을 곧바로 쓴다
+  { kind: 'money', weight: 3 },    // 상금 TAG_RULES.moneyBase + 관
+  { kind: 'chart', weight: 3 },    // 정해진 모습의 기보 한 장을 곧바로 쓴다
+  { kind: 'pack', weight: 3 },     // 기물 · 기보 · 각인 꾸러미 하나를 곧바로 연다(종류는 뽑을 때)
+  { kind: 'slot', weight: 2 },     // 다음 상점 꾸러미 칸 +1(진열 세 장은 높이 한도를 넘어 꾸러미 칸으로)
+  { kind: 'reroll', weight: 2 },   // 다음 상점에서 다시 진열 TAG_RULES.rerolls번을 값 없이
+  { kind: 'double', weight: 2 },   // 가진 상금만큼 더(최대 TAG_RULES.doubleMax)
+  { kind: 'golden', weight: 1 },   // 금빛 꾸러미(판본 격언 셋 중 하나)를 곧바로 연다
+  { kind: 'fragment', weight: 0.3 }, // 명경기 첫 조각 하나(고를 명경기가 없으면 상금 패로)
 ];
+export const TAG_RULES = { moneyBase: 4, doubleMax: 10, rerolls: 2, packs: 1 };
+// 패를 뽑을 때 정하는 것(보이는 글이 받는 것과 같게)
+const TAG_ROLL = {
+  money: (run, ante) => ({ amount: TAG_RULES.moneyBase + ante }),
+  chart: (run, ante, r) => ({ form: CHART_FORMS[int(r, CHART_FORMS.length)] }),
+  pack: (run, ante, r) => ({ pack: SHOP.packKinds[int(r, SHOP.packKinds.length)] }),
+};
+// 꾸러미를 곧바로 연다(상점 없이 — 고르거나 넘기면 다음 대국 앞으로, run.pack.from = 'tag')
+function openTagPack(run, kind, events) {
+  const r = fork(root(run), `tagpack:${run.ante}:${run.blind}`);
+  run.pack = { kind, options: rollPackOptions(run, kind, r, { goldenFragment: false }), from: 'tag' };
+  run.phase = 'pack';
+  events.push({ type: 'packOpen', kind, options: clone(run.pack.options), from: 'tag' });
+}
+const addPerk = (run, k, n) => { run.perks = run.perks || {}; run.perks[k] = (run.perks[k] || 0) + n; };
+// 패를 받는다. 돌려주는 값: 받은 상금(이벤트 · 알림용, 없으면 0)
+const TAG_APPLY = {
+  money: (run, tag) => { run.money += tag.amount; return tag.amount; },
+  chart: (run, tag, events) => { useChart(run, tag.form, events); return 0; },
+  pack: (run, tag, events) => { openTagPack(run, tag.pack, events); return 0; },
+  slot: (run) => { addPerk(run, 'packs', TAG_RULES.packs); return 0; },
+  reroll: (run) => { addPerk(run, 'rerolls', TAG_RULES.rerolls); return 0; },
+  double: (run) => { const n = Math.max(0, Math.min(run.money, TAG_RULES.doubleMax)); run.money += n; return n; },
+  golden: (run, tag, events) => { openTagPack(run, 'golden', events); return 0; },
+  fragment: (run, tag, events) => {
+    const pool = LEGENDS.filter((l) => !(run.fragments[l.id] && run.fragments[l.id].first));
+    if (!pool.length) return 0;
+    const r = fork(root(run), `tagfrag:${run.ante}:${run.blind}`);
+    grantFragment(run, pool[int(r, pool.length)].id, 'first', events, 'tag');
+    return 0;
+  },
+};
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const root = (run) => createRng(run.seed);
@@ -140,9 +179,10 @@ export function migrateRun(run) {
 
 function tagFor(run, ante, blind) {
   const r = fork(root(run), `tag:${ante}:${blind}`);
-  const tag = { ...TAGS[int(r, TAGS.length)] };
-  if (tag.kind === 'chart') tag.form = CHART_FORMS[int(r, CHART_FORMS.length)];
-  return tag;
+  let kind = weighted(r, TAGS.map((t) => [t.kind, t.weight]));
+  // 명경기 조각: 첫 조각을 못 받은 명경기가 없으면 상금 패로
+  if (kind === 'fragment' && LEGENDS.every((l) => run.fragments && run.fragments[l.id] && run.fragments[l.id].first)) kind = 'money';
+  return { kind, ...(TAG_ROLL[kind] ? TAG_ROLL[kind](run, ante, r) : {}) };
 }
 
 // 지금(또는 다음) 대국의 정보: 종류 · 목표 · 세력 · 명인(세력의 우두머리) · 건너뛰기 패
@@ -609,8 +649,22 @@ function openShop(run) {
     rng: fork(root(run), `shop:${run.ante}:${run.blind}${run.retry ? `:${run.retry}` : ''}`),
     display: [], packs: [], rerolls: 0, promoted: false, removed: false,
   };
+  // 건너뛰기 패의 「다음 상점」 덤(run.perks)은 여기서 한 번 쓰고 지운다
+  const pk = run.perks;
+  if (pk) {
+    if (pk.rerolls) run.shop.free = pk.rerolls;
+    if (pk.packs) run.shop.packSlots = SHOP.packSlots + pk.packs;
+    delete run.perks;
+  }
   rollDisplay(run);
   rollPacks(run);
+  run.phase = 'shop';
+}
+
+// 꾸러미를 닫는다: 상점에서 연 것은 상점으로, 건너뛰기 패로 연 것은 다음 대국 앞으로
+function closePack(run) {
+  if (run.pack && run.pack.from === 'tag') { advance(run); return; }
+  run.pack = null;
   run.phase = 'shop';
 }
 
@@ -748,12 +802,12 @@ export function applyRun(run, cmd) {
       const info = blindInfo(run);
       if (info.kind === 'master') throw new Error('cannot skip master');
       const tag = info.tag;
-      if (tag.kind === 'money') run.money += tag.amount;
-      else if (tag.kind === 'chart') useChart(run, tag.form, events);
-      events.push({ type: 'skip', tag });
-      run.log.push({ ante: run.ante, blind: run.blind, kind: info.kind, skipped: true, tag });
       run.shop = null;
-      advance(run);
+      const ev = [];
+      const money = TAG_APPLY[tag.kind](run, tag, ev);
+      events.push({ type: 'skip', tag, ...(money ? { money } : {}) }, ...ev);
+      run.log.push({ ante: run.ante, blind: run.blind, kind: info.kind, skipped: true, tag });
+      if (run.phase !== 'pack') advance(run);
       break;
     }
     // 묘수(깊이 F): 대국 중 떨구기 전에
@@ -834,19 +888,19 @@ export function applyRun(run, cmd) {
         if (!hasMaximRoom(run, o.edition)) throw new Error('no maxim slot');
         addMaxim(run, o.id, maximPrice(o.id, o.edition), events, o.edition);
       } else engrave(run, cmd.target, o.id, events);
-      run.pack = null;
-      run.phase = 'shop';
+      closePack(run);
       break;
     }
     case 'skipPack': {
       need('pack');
-      run.pack = null;
-      run.phase = 'shop';
+      closePack(run);
       break;
     }
     case 'reroll': {
       need('shop');
-      pay(run, rerollCost(run));
+      // 건너뛰기 패 「다시 진열」: 값 없이 쓰는 몫부터(값 계산의 횟수에서는 뺀다 — shop.js rerollCost)
+      if (run.shop.free > 0) { run.shop.free--; run.shop.freeUsed = (run.shop.freeUsed || 0) + 1; }
+      else pay(run, rerollCost(run));
       run.shop.rerolls++;
       rollDisplay(run);
       events.push({ type: 'reroll' });
