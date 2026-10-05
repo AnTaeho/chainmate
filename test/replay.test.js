@@ -3,7 +3,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom } from './helpers/dom.js';
-import '../src/sim/run.js'; // 조정자 등록
+import { B } from '../src/sim/run.js'; // 조정자 등록 · 목표 곡선
 import { createBattle, apply } from '../src/sim/battle.js';
 import { bestMove } from '../src/sim/solver.js';
 import { noteStep, review, reviewGen, findWin, cloneBattle, decisionCommands, REVIEW } from '../src/sim/replay.js';
@@ -151,7 +151,7 @@ test('진 대국 몇십 개: 찾은 길을 갈림길 상태에서 실제 규칙�
   let lost = 0;
   for (let i = 0; lost < 30 && i < 200; i++) {
     const ante = 1 + (i % 3);
-    const b = createBattle({ seed: 500 + i, ante, target: [150, 616, 4400][ante - 1] });
+    const b = createBattle({ seed: 500 + i, ante, target: B[ante - 1] });
     const steps = [];
     while (b.status === 'play') { const d = weak(b); if (!d) break; play(b, steps, decisionCommands(d)); }
     if (b.status !== 'lost') continue;

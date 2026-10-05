@@ -38,9 +38,10 @@ test('판 시작: 주머니 8, 상금 4, 세력은 1관 농민군 · 8관 왕궁
   assert.notDeepEqual(createRun({ draft: false, seed: 4 }).factions, run.factions);
 });
 
-test('목표: B × 종류 배율, 9관부터 늘어난다', () => {
+test('목표: B × 종류 배율(유효 숫자 둘로 반올림), 9관부터 늘어난다', () => {
+  const two = (x) => { const mag = 10 ** Math.max(0, Math.floor(Math.log10(x)) - 1); return Math.round(x / mag) * mag; };
   assert.equal(targetFor(1, 'practice'), B[0]);
-  assert.equal(targetFor(3, 'master'), B[2] * 2);
+  assert.equal(targetFor(3, 'master'), two(B[2] * 2));
   assert.ok(targetFor(9, 'practice') > B[7]);
   const run = createRun({ draft: false, seed: 1 });
   const info = blindInfo(run);
