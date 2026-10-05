@@ -118,7 +118,56 @@ const seen = () => { for (const v of app.visited) visited.add(v); };
 const hintsShown = new Set();
 const previewSeen = { scroll: 0, pack: 0 };
 const goldSeen = { swap: 0, sell: 0, bad: [] };
-function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); hintSubject(); } if (app) hintCover(); } }
+function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); hintSubject(); } if (app) { hintCover(); igniteWatch(); } } }
+
+// ── 점화 막간(CHM-67): 판에서 처음 사슬 8 · 넘침 ×10 뒤에 열리고(판 · 대국 화면만, 대본 · scratch 판은 없음) 닫히는가, 판당 한 번인가,
+// 떠 있는 동안 화면의 다른 구역이 눌리지 않는가. 첫 막간은 손 카드(없으면 판 칸)를 실제로 눌러 닫고(눌러도 고르기 · 규칙이 그대로),
+// 둘째는 Enter로, 나머지는 저절로(앉은 뒤 2초) 닫힌다. 다른 구역의 가운데를 누르면 모두 막간 구역이 받아야 한다
+const igSeen = { opened: 0, closed: 0, tap: 0, key: 0, auto: 0, regions: 0, leak: [], twice: 0, data: 0, maxT: 0, bad: [], perRun: new WeakMap(), busy: false };
+function igniteWatch() {
+  const s = app.screen;
+  if (igSeen.busy || !s) return;
+  const open = !!s.combo;
+  if (open && igSeen.cur !== s.combo) {
+    igSeen.busy = true;
+    try {
+      igSeen.cur = s.combo; igSeen.opened++;
+      const run = app.run, n = (igSeen.perRun.get(run) || 0) + 1;
+      igSeen.perRun.set(run, n);
+      if (n > 1) igSeen.twice++;
+      if (s.name !== 'battle' || !run || run.scratch || (run.battle && run.battle.script)) igSeen.bad.push(`막간이 열리면 안 되는 곳(${s.name}${run && run.scratch ? ' scratch' : ''})`);
+      if (run && run.ignite && JSON.stringify(s.combo.data) === JSON.stringify({ type: 'ignite', ...run.ignite })) igSeen.data++;
+      else igSeen.bad.push('막간의 사슬이 판의 점화 기록과 다르다');
+      // 막간 구역이 맨 위에서 화면을 덮는가: 다른 구역 가운데를 누르면 막간 구역이 받는다
+      const rs = app.ui.regions, top = rs[rs.length - 1];
+      if (!top || top.id !== 'ignite') igSeen.bad.push(`막간 구역이 맨 위가 아니다(${top ? top.id : '없음'})`);
+      for (const r of rs) {
+        if (r.id === 'ignite' || r.passive) continue;
+        igSeen.regions++;
+        const h = app.ui.hitIn(rs, r.x + Math.floor(r.w / 2), r.y + Math.floor(r.h / 2));
+        if (!h || h.id !== 'ignite') igSeen.leak.push(r.id);
+      }
+      const k = igSeen.opened;
+      if (k === 1) {
+        // 실제로 눌러 본다: 손 카드(없으면 판 칸) — 막간만 닫히고 고른 손 · 규칙 상태는 그대로
+        const b = run.battle, target = rs.find((r) => r.id.startsWith('hand:')) || rs.find((r) => r.id.startsWith('sq:'));
+        const before = b ? JSON.stringify({ h: b.history.length, s: b.status, hand: b.hand.map((p) => p.id) }) : '';
+        const gx = target.x + Math.floor(target.w / 2), gy = target.y + Math.floor(target.h / 2);
+        dom.mouse('mousemove', gx, gy); dom.mouse('mousedown', gx, gy); dom.mouse('mouseup', gx, gy);
+        t += 1000 / 60; dom.frame(t);
+        const after = b ? JSON.stringify({ h: b.history.length, s: b.status, hand: b.hand.map((p) => p.id) }) : '';
+        if (s.combo) igSeen.bad.push('눌러도 막간이 닫히지 않았다');
+        else if (before !== after || (s.sel && s.sel.length)) igSeen.bad.push(`막간을 누른 것이 ${target.id}로 샜다`);
+        else igSeen.tap++;
+      } else if (k === 2) {
+        dom.key('Enter'); t += 1000 / 60; dom.frame(t);
+        if (s.combo) igSeen.bad.push('Enter로 막간이 닫히지 않았다'); else igSeen.key++;
+      }
+    } finally { igSeen.busy = false; }
+  }
+  if (s.combo) igSeen.maxT = Math.max(igSeen.maxT, s.combo.t);
+  if (!s.combo && igSeen.cur) { igSeen.closed++; if (igSeen.opened > 2 && igSeen.cur.t >= 2.9) igSeen.auto++; igSeen.cur = null; }
+}
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
 function click(id) {
   const r = region(id);
@@ -1397,12 +1446,15 @@ const awakeSeen = { crack: 0, toast: 0, hint: 0, skip: 0, preview: 0, screen: 0,
     b.target = 1; s.sync();
     const d = decideBattle(b);
     s.seq.total = 0; s.seq.trace = [];
-    const toastsBefore = app.toasts.length;
+    // 뜬 알림을 모은다: 목표 1이라 이 사슬이 점화(넘침 ×10, CHM-67)해 막간이 3초 떠 있는 동안 알림(2.4초)은 스러진다
+    const toasts = [], toast0 = app.toast;
+    app.toast = (msg, ...rest) => { toasts.push(msg); return toast0(msg, ...rest); };
     click(`hand:${d.play.handIndex}`); click(`sq:${d.play.sq}`); idle();
     for (const c of lineCommands(d.play.line)) { if (!app.run.battle || app.screen.name !== 'battle' || app.run.battle.status !== 'chain') break; click(`sq:${c.sq}`); idle(); }
+    app.toast = toast0;
     measureSeq(s);
     if ((r.cracked || []).length) awakeSeen.crack++; else bad('금이 가지 않았다');
-    if (app.toasts.slice(toastsBefore).some((x) => /금이 갔다|cracked/.test(L(x.msg)))) awakeSeen.toast++; else bad('금 글이 뜨지 않았다');
+    if (toasts.some((m) => /금이 갔다|cracked/.test(L(m)))) awakeSeen.toast++; else bad('금 글이 뜨지 않았다');
   }
   for (let k = 0; k < 20 && screen() !== 'shop'; k++) { pump(30); if (['reward', 'chest', 'legend', 'awaken'].includes(screen())) { click('next'); pump(1); if (region('next')) click('next'); } }
   if (screen() !== 'shop') bad(`상점으로 오지 않았다(${screen()})`);
@@ -1836,6 +1888,8 @@ console.log(`길 중 멈춤: Esc ${pauseSeen.esc} · ≡ ${pauseSeen.button} · 
 if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseSeen.title || !pauseSeen.resume || !pauseSeen.skip || !pauseSeen.lessonTitle) { console.log('길 중에 멈춤이 열리지 않았거나, 닫은 뒤 · 타이틀로 · 건너뛰기가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
+console.log(`점화 막간: 열림 ${igSeen.opened} · 닫힘 ${igSeen.closed}(누름 ${igSeen.tap} · Enter ${igSeen.key} · 저절로 ${igSeen.auto}) · 판의 기록과 같음 ${igSeen.data} · 한 판에 두 번 ${igSeen.twice} · 떠 있는 동안 잰 구역 ${igSeen.regions}(샌 것 ${igSeen.leak.length}${igSeen.leak.length ? ': ' + [...new Set(igSeen.leak)].slice(0, 8).join(' ') : ''}) · 가장 오래 ${igSeen.maxT.toFixed(2)}s${igSeen.bad.length ? ` · 어긋남: ${igSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
+if (igSeen.opened < 3 || igSeen.closed !== igSeen.opened || !igSeen.tap || !igSeen.key || !igSeen.auto || igSeen.twice || igSeen.leak.length || igSeen.data !== igSeen.opened || igSeen.bad.length) { console.log('점화 막간이 열리고 닫히지 않았거나, 한 판에 두 번 열렸거나, 떠 있는 동안 다른 것이 눌렸다'); fail = true; }
 console.log(`다음 수: 결정 ${nextSeen.moves}번 · 들어온 기물 ${nextSeen.drawn} · 손을 새로 쥠 ${nextSeen.regrip} · 화면 = 규칙 잰 수 ${nextSeen.view} · 어긋남 ${nextSeen.bad.length}${nextSeen.bad.length ? `: ${nextSeen.bad.join(' | ')}` : ''}`);
 if (nextSeen.bad.length || nextSeen.moves < 10 || nextSeen.drawn < 10) { console.log('보이던 다음 둘이 실제로 그 차례로 들어오지 않았거나, 잰 결정이 너무 적다'); fail = true; }
 console.log(`판 보기: 관 선택 ${peekSeen.selects} · 두기 ${peekSeen.played}(미리 본 판 = 시작 판 ${peekSeen.same}) · 앞서 본 판을 그 차례에 다시 ${peekSeen.ahead}(같음 ${peekSeen.aheadSame} · 판 짓기 규칙이 바뀌어 다시 지음 ${peekSeen.regen} · 금빛의 부름으로 금빛 적만 더해짐 ${peekSeen.gold}) · 어긋남 ${peekSeen.bad.length}${peekSeen.bad.length ? `: ${peekSeen.bad.slice(0, 8).join(' | ')}` : ''}`);
