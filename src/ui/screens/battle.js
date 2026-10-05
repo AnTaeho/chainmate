@@ -784,6 +784,9 @@ export class BattleScreen {
     const list = [];
     const reward = ev.find((e) => e.type === 'reward');
     if (reward) list.push(['reward', { reward, events: ev }]);
+    // 진 대국의 위로 상금(CHM-65): 판이 이어질 때만 같은 보상 막간에 한 줄로
+    const consolation = ev.find((e) => e.type === 'consolation');
+    if (consolation && app.run.phase !== 'lost') list.push(['reward', { consolation, events: ev }]);
     const chest = ev.find((e) => e.type === 'chest');
     if (chest) list.push(['chest', { chest }]);
     list.push(...awakenFlow(ev));

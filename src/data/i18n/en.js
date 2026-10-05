@@ -166,7 +166,7 @@ export const EN = {
   '다음 상점 꾸러미 칸 +1': '+1 bundle slot next visit', '다음 상점에서 다시 진열 2번': '2 rerolls at next shop',
   '가진 상금 두 배(최대 $10)': 'Double cash (max $10)', '판본 격언 셋 중 하나 고르기': 'Pick 1 of 3 edition maxims', '명경기 조각 하나': 'One classic fragment',
   '점수': 'Score', '이 판의': "This run's", '콤비네이션': 'Combination', '이 판의 콤비네이션': "This run's Combination", '먹은 수': 'Captures', '수': 'Moves', '상금': 'Purse', '주머니': 'Bag', '손': 'Hand', '격언': 'Maxim',
-  '대국 승리': 'Match Won', '체크메이트 승리': 'Won by Mate', '대국 기본': 'Base', '적립': 'Interest', '체크메이트': 'Checkmate', '메이트': 'Mate', '대국 중 번 상금': 'Earned in match', '합': 'Total',
+  '대국 승리': 'Match Won', '대국 패배': 'Match Lost', '위로': 'Consolation', '체크메이트 승리': 'Won by Mate', '대국 기본': 'Base', '적립': 'Interest', '체크메이트': 'Checkmate', '메이트': 'Mate', '대국 중 번 상금': 'Earned in match', '합': 'Total',
   '금빛 꾸러미가 상점에 나왔다': 'A golden bundle is in the shop',
   '프로모션': 'Promotion', '넘겼다': 'Survived', '적이 다시 찬다': 'Enemies refill', '다시 떨군다': 'Drop again', '목표 달성': 'Target reached',
   '떨굴 곳이 없다': 'Nowhere to drop', '수가 다했다': 'Out of moves', '수를 다 썼다': 'Out of moves',
