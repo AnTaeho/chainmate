@@ -36,18 +36,19 @@ export const EDITION_FORM = { rainbow: 'x', foil: 'm', pearl: 'v', obsidian: 'o'
 export const SPEND_OF = { maxim: 'maxim', chart: 'chart', engraving: 'engraving', piece: 'piece', soul: 'soul', tactic: 'tactic', evolve: 'evolve', awaken: 'awaken', fragment: 'fragment', gamble: 'gamble' };
 export const SPEND_KEYS = ['maxim', 'chart', 'engraving', 'piece', 'pack', 'reroll', 'promote', 'remove', 'soul', 'tactic', 'evolve', 'awaken', 'fragment', 'gamble'];
 export const SPEND_NAME = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', pack: '꾸러미', reroll: '다시 진열', promote: '승급', remove: '버리기', soul: '혼', tactic: '전술', evolve: '진화', awaken: '깨우기', fragment: '조각', gamble: '도박' };
-export const EARN_KEYS = ['reward', 'interest', 'chest', 'tag', 'sell'];
-export const EARN_NAME = { reward: '대국 보상', interest: '이자', chest: '상자', tag: '건너뛰기 패', sell: '팔기' };
+export const EARN_KEYS = ['reward', 'consolation', 'interest', 'chest', 'tag', 'sell'];
+export const EARN_NAME = { reward: '대국 보상', consolation: '위로', interest: '이자', chest: '상자', tag: '건너뛰기 패', sell: '팔기' };
 
 // 명령 하나의 상금 흐름(순수). cmd · 그 명령의 사건 · 상금 변화(뒤 − 앞) → { earn, spend, other }.
 // 버는 것은 사건에서: reward(이자는 따로, 나머지 — 기본 · 남은 수 · 메이트 · 넘침 · 대국에서 번 상금 — 는 대국 보상) ·
-// money(src chest) · skip(money) · sell. 쓰는 것: buy는 사건의 물건 값, buyPack · reroll · promote · remove는 상금 변화.
+// consolation(진 대국의 위로 상금, CHM-65) · money(src chest) · skip(money) · sell. 쓰는 것: buy는 사건의 물건 값, buyPack · reroll · promote · remove는 상금 변화.
 // other = 상금 변화 − (번 것 − 쓴 것): 놓친 흐름이 없으면 늘 0이다(하네스가 0이 아닌 명령 수를 센다).
 export function ledger(cmd, events, delta) {
   const earn = {}, spend = {};
   const add = (o, k, v) => { if (v) o[k] = (o[k] || 0) + v; };
   for (const e of events) {
     if (e.type === 'reward') { add(earn, 'interest', e.interest || 0); add(earn, 'reward', (e.total || 0) - (e.interest || 0)); }
+    else if (e.type === 'consolation') add(earn, 'consolation', e.money || 0);
     else if (e.type === 'money' && e.src === 'chest') add(earn, 'chest', e.money || 0);
     else if (e.type === 'skip' && e.money) add(earn, 'tag', e.money);
     else if (e.type === 'sell') add(earn, 'sell', e.money || 0);
