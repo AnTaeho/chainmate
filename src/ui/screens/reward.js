@@ -1,5 +1,4 @@
 // 대국 승리: 보상이 한 줄씩(기본 · 남은 수 · 적립 · 외통 · 넘친 목표 · 대국 중 번 상금) 쌓인다.
-// 진 대국(CHM-65): 같은 막간에 「위로」 한 줄 — 동전 연출도 같다.
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, num, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
@@ -7,17 +6,12 @@ import { PAD_BOX, LINE, GAP_GROUP, flow, BTN_S, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 export class RewardScreen {
-  constructor(app, { reward, consolation, events = [] }) {
+  constructor(app, { reward, events = [] }) {
     this.app = app;
     this.t = 0;
+    const r = reward;
     const last = app.run.last || {};
     this.last = last;
-    this.lost = !!consolation;
-    this.gold = false;
-    this.shown = 0;
-    this.step = 0.32;
-    if (consolation) { this.lines = [['위로', consolation.money]]; this.total = consolation.money; return; }
-    const r = reward;
     this.lines = [['대국 기본', r.base]];
     if (r.moves) this.lines.push([`남은 수 ${r.moves}`, r.moves]);
     if (r.interest) this.lines.push(['적립', r.interest]);
@@ -26,6 +20,8 @@ export class RewardScreen {
     if (r.earned) this.lines.push(['대국 중 번 상금', r.earned]);
     this.total = r.total;
     this.gold = events.some((e) => e.type === 'goldenPack');
+    this.shown = 0;
+    this.step = 0.32;
   }
   update(dt) {
     this.t += dt * this.app.speed();
@@ -62,8 +58,8 @@ export class RewardScreen {
     const scoreLine = `점수 ${num(last.score || 0)} / 목표 ${num(last.target || 0)}`;
     const w = Math.max(240, measure(scoreLine) + PAD_BOX * 2 + 8), h = lay.h, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2), P = PAD_BOX;
     openBox('panel', x, y, w, h, P, { name: '보상' });
-    box(ctx, x, y, w, h, PAL.feltDk, this.lost ? PAL.frameHi : PAL.gold);
-    text(ctx, this.lost ? '대국 패배' : last.reason === 'mate' ? '체크메이트 승리' : '대국 승리', W / 2, y + lay.title, this.lost ? PAL.dim : PAL.gold, { align: 'center', bold: true, scale: 2 });
+    box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
+    text(ctx, last.reason === 'mate' ? '체크메이트 승리' : '대국 승리', W / 2, y + lay.title, PAL.gold, { align: 'center', bold: true, scale: 2 });
     // 넘친 목표는 제목 옆 도장으로
     if (last.overflow >= 2) {
       const col = last.overflow >= 5 ? PAL.red : PAL.gold, s = `목표 ×${last.overflow}`;
