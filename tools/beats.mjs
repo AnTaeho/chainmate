@@ -88,7 +88,7 @@ const famMax = (run) => Math.max(0, ...Object.values(familyCounts(run)));
 // 돌려주는 rows(판 요약의 beats 열쇠):
 //   ev: [bi, 관, m, key]  battles: [bi, 관, 대국(0~2), 이김 1/0, 끝난 까닭, 점수, 목표, 쓴 수, 둘 수 있던 수, 목표를 처음 넘긴 수 | null,
 //                                  번 상금(보상 합, 진 대국 0), 수마다 사슬 점수[]]
-//   목표를 처음 넘긴 수는 사슬마다 쌓인 점수(b.score)로 센다 — 넘겨도 대국이 이어지는 시제품 C(CHM-66)에서도 같은 셈이다
+//   목표를 처음 넘긴 수는 사슬마다 쌓인 점수(b.score)로 센다
 //   seen: { edition | golden | frag: [bi …] } — 드문 층이 「보인」 대국(진열 · 꾸러미에 판본 격언 · 첫 조각 카드, 판에 금빛 적)
 export function beatLog(run) {
   const out = { ev: [], battles: [], seen: { edition: [], golden: [], frag: [] } };
@@ -185,34 +185,10 @@ export function runBeats(beats) {
     near: lost.map((x) => ({ ante: x[1], tier: nearTier(x[5] / x[6]) })),
     late: crossed.map((x) => ({ ante: x[1], last2: x[9] >= x[8] - 1, third: crossThird(x[9], x[8]) })),
     mateUnder: won.filter((x) => x[9] == null).length, // 목표 밑에서 체크메이트로 이긴 대국
-    pace: paceOf(beats),
     rare: {
       edition: { seen: gaps(beats.seen.edition), got: gaps(beats.ev.filter((e) => e[3] === 'edition').map((e) => e[0])) },
       golden: { seen: gaps(beats.seen.golden), got: gaps(beats.ev.filter((e) => e[3] === 'golden').map((e) => e[0])) },
       frag: { seen: gaps(beats.seen.frag), got: gaps(beats.ev.filter((e) => e[3] === 'frag1').map((e) => e[0])) },
     },
   };
-}
-
-// ── 대국 호흡(CHM-66 D′): 대국마다 목표를 처음 넘긴 수의 자리 · 둔 수 · 번 상금. 순수.
-// 목표를 넘겨 이긴 대국(넘긴 수 · 끝난 까닭 상관없이)과 체크메이트로 이긴 대국(그중 목표 밑)을 따로 센다. 넘긴 수 = 사슬마다 쌓인 점수로 처음 목표 이상이 된 수.
-//   won: [{ ante, blind, cross, max, first, last2, third }]  mate: [{ ante, blind, cross }]  (cross는 넘긴 수, 넘기지 못하고 메이트면 null)
-//   all: [{ ante, blind, won, moves, reward }]  after: 넘긴 뒤의 사슬 점수 / 넘기기까지의 사슬 점수(평균) · 넘긴 뒤 희생 수 — 넘긴 뒤에도 대국이 이어질 때만 뜻이 있다
-export function paceOf(beats) {
-  const out = { won: [], mate: [], all: [], after: [] };
-  const sacAt = new Map();
-  for (const [bi, , m, k] of beats.ev) if (k === 'sac' && m > 0) { const a = sacAt.get(bi) || []; a.push(m); sacAt.set(bi, a); }
-  for (const x of beats.battles) {
-    const [bi, ante, blind, w, reason, , , moves, max, cross, reward, scores] = x;
-    out.all.push({ ante, blind, won: !!w, moves, reward: reward ?? 0 });
-    if (w && reason === 'mate') out.mate.push({ ante, blind, cross: cross ?? null });
-    // 목표를 넘겨 이긴 대국은 끝난 까닭과 상관없이 넘긴 수로 센다(C에서는 넘긴 뒤 체크메이트로 끝나는 대국이 많다). 목표 밑 체크메이트만 따로
-    if (w && cross != null) out.won.push({ ante, blind, cross, max, first: cross === 1, last2: cross >= max - 1, third: crossThird(cross, max) });
-    if (cross != null && scores && scores.length > cross) {
-      const pre = scores.slice(0, cross), post = scores.slice(cross);
-      // 희생은 그 뒤에 둘 수의 번호(m)로 적힌다: m > cross면 넘긴 뒤의 희생
-      out.after.push({ pre: pre.reduce((a, v) => a + v, 0) / pre.length, post: post.reduce((a, v) => a + v, 0) / post.length, sacs: (sacAt.get(bi) || []).filter((m) => m > cross).length, n: post.length });
-    }
-  }
-  return out;
 }
