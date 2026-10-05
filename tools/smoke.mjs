@@ -4,7 +4,7 @@
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle } from './bot.mjs';
 import { lineCommands, previewDrop, bestMove } from '../src/sim/solver.js';
-import { canBuy, canSell, factionFor, targetFor, consolationFor } from '../src/sim/run.js';
+import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
 import { isHidden, canReboard, dropSquaresFor, nextDraws, visibleIncoming } from '../src/sim/battle.js';
@@ -861,13 +861,13 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
       shopBack.trips++;
       continue;
     }
-    // 시계를 잃은 뒤: 판이 이어져 상점이 열리고(보상 없음 · 상금은 위로 상금만큼, CHM-65) 시계가 한 칸 줄었나 · 상점을 떠나 다음 대국을 두면 센다
+    // 시계를 잃은 뒤: 판이 이어져 상점이 열리고(보상 없음 · 상금 그대로) 시계가 한 칸 줄었나 · 상점을 떠나 다음 대국을 두면 센다
     // 외통은 목표와 상관없이 이긴다(세력마다 판이 달라 일부러 진 대국이 외통으로 끝날 수 있다): 다음 대국에서 다시 진다
     if ((name === 'shop' || name === 'select') && n2.clockBefore && !n2.waitNext && app.run.log.at(-1) && app.run.log.at(-1).reason === 'mate') { n2.forced = false; n2.clockBefore = null; }
     if ((name === 'shop' || name === 'select') && n2.clockBefore && !n2.waitNext) {
       const c = n2.clockBefore, last = app.run.log.at(-1);
       n2.clockLost++;
-      if (name !== 'shop' || !last || !last.clockLost || app.run.clock !== c.clock - 1 || app.run.phase !== 'shop' || app.run.money !== c.money + (last ? consolationFor(last.kind) : 0) || (app.run.last && app.run.last.reward)) n2.clockBad.push(`${c.ante}:${c.blind} ${name} ${app.run.clock}/${c.clock} 상금 ${app.run.money}/${c.money}`);
+      if (name !== 'shop' || !last || !last.clockLost || app.run.clock !== c.clock - 1 || app.run.phase !== 'shop' || app.run.money !== c.money || (app.run.last && app.run.last.reward)) n2.clockBad.push(`${c.ante}:${c.blind} ${name} ${app.run.clock}/${c.clock} 상금 ${app.run.money}/${c.money}`);
       else n2.clockShop++;
       n2.waitNext = true;
     }
