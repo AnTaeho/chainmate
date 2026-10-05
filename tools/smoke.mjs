@@ -460,11 +460,18 @@ const nextSeen = { moves: 0, drawn: 0, regrip: 0, view: 0, bad: [] };
 // ── 판 보기(CHM-61): 관 선택마다 지금 대국 카드에 그려진 작은 판(화면 peekOf)과, 두기를 눌러 열린 대국의 시작 판이 같은가.
 // 남은 대국 카드의 판도 적어 두었다가 그 대국 차례의 관 선택(건너뛴 뒤 · 상점 뒤)에서 같은 판인지 잰다(판 짓기 규칙이 바뀐 것 ·
 // 금빛의 부름으로 금빛 적 확률이 올라 금빛만 더해진 것은 따로 센다 — 둘 다 보이는 판이 바뀌고 그 판으로 둔다).
-const peekSeen = { selects: 0, played: 0, same: 0, ahead: 0, aheadSame: 0, regen: 0, gold: 0, bad: [], shown: new Map() };
+// 그 사이 「그림자 읽기」 같은 것을 얻어 증원 예고가 더 멀리 보이게 된 것(판 · 안개는 같고 앞서 보인 예고가 지금 예고의 앞부분)도 따로 센다.
+const peekSeen = { selects: 0, played: 0, same: 0, ahead: 0, aheadSame: 0, regen: 0, gold: 0, sight: 0, bad: [], shown: new Map() };
 const peekLook = (b) => JSON.stringify({ board: b.board, incoming: visibleIncoming(b), hidden: b.board.map((_, sq) => isHidden(b, sq)) });
 // 금빛 적만 더해졌나(나머지는 같고, 앞의 금빛은 그대로)
 const noGold = (x) => JSON.stringify({ ...x, board: x.board.map((c) => c && { ...c, gold: undefined }) });
 const goldOnly = (a, b) => noGold(a) === noGold(b) && a.board.every((c, q) => !(c && c.gold) || (b.board[q] && b.board[q].gold));
+// 보이는 예고 수만 달라졌나(판 · 안개 같음, 짧은 쪽 예고가 긴 쪽의 앞부분)
+const sightOnly = (a, b) => {
+  if (JSON.stringify(a.board) !== JSON.stringify(b.board) || JSON.stringify(a.hidden) !== JSON.stringify(b.hidden)) return false;
+  const [s, l] = a.incoming.length <= b.incoming.length ? [a.incoming, b.incoming] : [b.incoming, a.incoming];
+  return s.length < l.length && JSON.stringify(s) === JSON.stringify(l.slice(0, s.length));
+};
 function peekSelect() {
   const run = app.run, scr = app.screen;
   if (!scr.peekOf) return null;
@@ -478,6 +485,7 @@ function peekSelect() {
       if (was.look === look) peekSeen.aheadSame++;
       else if (was.gen !== gen) peekSeen.regen++;
       else if (goldOnly(JSON.parse(was.look), JSON.parse(look))) peekSeen.gold++;
+      else if (sightOnly(JSON.parse(was.look), JSON.parse(look))) peekSeen.sight++;
       else peekSeen.bad.push(`${key} 앞서 보인 판과 다르다`);
     }
     if (!was) peekSeen.shown.set(key, { look, gen });
@@ -1892,7 +1900,7 @@ console.log(`점화 막간: 열림 ${igSeen.opened} · 닫힘 ${igSeen.closed}(�
 if (igSeen.opened < 3 || igSeen.closed !== igSeen.opened || !igSeen.tap || !igSeen.key || !igSeen.auto || igSeen.twice || igSeen.leak.length || igSeen.data !== igSeen.opened || igSeen.bad.length) { console.log('점화 막간이 열리고 닫히지 않았거나, 한 판에 두 번 열렸거나, 떠 있는 동안 다른 것이 눌렸다'); fail = true; }
 console.log(`다음 수: 결정 ${nextSeen.moves}번 · 들어온 기물 ${nextSeen.drawn} · 손을 새로 쥠 ${nextSeen.regrip} · 화면 = 규칙 잰 수 ${nextSeen.view} · 어긋남 ${nextSeen.bad.length}${nextSeen.bad.length ? `: ${nextSeen.bad.join(' | ')}` : ''}`);
 if (nextSeen.bad.length || nextSeen.moves < 10 || nextSeen.drawn < 10) { console.log('보이던 다음 둘이 실제로 그 차례로 들어오지 않았거나, 잰 결정이 너무 적다'); fail = true; }
-console.log(`판 보기: 관 선택 ${peekSeen.selects} · 두기 ${peekSeen.played}(미리 본 판 = 시작 판 ${peekSeen.same}) · 앞서 본 판을 그 차례에 다시 ${peekSeen.ahead}(같음 ${peekSeen.aheadSame} · 판 짓기 규칙이 바뀌어 다시 지음 ${peekSeen.regen} · 금빛의 부름으로 금빛 적만 더해짐 ${peekSeen.gold}) · 어긋남 ${peekSeen.bad.length}${peekSeen.bad.length ? `: ${peekSeen.bad.slice(0, 8).join(' | ')}` : ''}`);
+console.log(`판 보기: 관 선택 ${peekSeen.selects} · 두기 ${peekSeen.played}(미리 본 판 = 시작 판 ${peekSeen.same}) · 앞서 본 판을 그 차례에 다시 ${peekSeen.ahead}(같음 ${peekSeen.aheadSame} · 판 짓기 규칙이 바뀌어 다시 지음 ${peekSeen.regen} · 금빛의 부름으로 금빛 적만 더해짐 ${peekSeen.gold} · 예고가 더 멀리 보임 ${peekSeen.sight}) · 어긋남 ${peekSeen.bad.length}${peekSeen.bad.length ? `: ${peekSeen.bad.slice(0, 8).join(' | ')}` : ''}`);
 if (peekSeen.bad.length || peekSeen.played < 5 || peekSeen.same !== peekSeen.played || peekSeen.ahead < 3) { console.log('관 선택에 보인 판과 두기로 연 판이 다르거나, 잰 관 선택이 너무 적다'); fail = true; }
 console.log(`처음 안내가 말하는 것: ${subj.n}곳 · 화면에 없음 ${subj.bad.length}${subj.bad.length ? `: ${subj.bad.join(' | ')}` : ''}`);
 if (subj.bad.length) { console.log('처음 안내가 화면에 없는 것을 가리켰거나 같은 안내가 두 번 떴다'); fail = true; }
