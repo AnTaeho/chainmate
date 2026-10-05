@@ -112,9 +112,20 @@ test('기록기: 실제 대국 하나의 줄이 판(런) log와 맞고 사건 ke
   assert.deepEqual([bi, ante, blind, won, reason, score, target, used], [1, row.ante, row.blind, row.won ? 1 : 0, row.reason, row.score, row.target, row.moves]);
   assert.ok(max >= used);
   for (const e of ev) { assert.ok(BEAT_TABLE[e[3]], e[3]); assert.equal(e[0], 1); assert.ok(e[2] >= 1 && e[2] <= max); }
-  // 사건으로 센 별이 대국 줄의 별(사슬마다 마지막 별)과 같은 사슬들에서 나왔다: 사슬 8이면 3 · 5 · 8이 모두 찍힌다
+  // 사건으로 센 별은 대국 줄의 별(사슬마다 마지막 별)과 같다: 사슬 하나에 가장 높은 별 하나만(CHM-68)
   const g = row.grades || {};
-  const reach = (n) => ['★', '★★', '★★★', '∞'].slice([3, 5, 8, 12].indexOf(n)).reduce((a, k) => a + (g[k] || 0), 0);
-  assert.equal(ev.filter((e) => e[3] === 'grade3').length, reach(3));
-  assert.equal(ev.filter((e) => e[3] === 'grade5').length, reach(5));
+  ['★', '★★', '★★★', '∞'].forEach((mark, i) => assert.equal(ev.filter((e) => e[3] === ['grade3', 'grade5', 'grade8', 'grade12'][i]).length, g[mark] || 0, mark));
+});
+
+test('기록기: 사슬 별은 사슬마다 가장 높은 것 하나, 사슬 끝에서 넣는다', () => {
+  const run = { ante: 2, log: [], phase: 'battle', maxims: [], deck: [] };
+  const log = beatLog(run);
+  const b = { movesUsed: 0, movesLeft: 3, history: [] };
+  log.record(run, [{ type: 'battleStart' }], null, 0, 0);
+  for (const n of [3, 5, 8, 12]) log.record(run, [{ type: 'capture' }, { type: 'grade', n }], b, 0, 0);
+  assert.deepEqual(log.rows.ev, [], '사슬이 끝나기 전에는 넣지 않는다');
+  log.record(run, [{ type: 'end' }], b, 0, 0);
+  log.record(run, [{ type: 'grade', n: 3 }, { type: 'grade', n: 5 }, { type: 'end' }], b, 1, 0);
+  assert.deepEqual(log.rows.ev.map((e) => e[3]), ['grade12', 'grade5']);
+  assert.deepEqual(log.rows.ev.map((e) => e[2]), [1, 2]);
 });

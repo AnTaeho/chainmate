@@ -50,7 +50,8 @@ const OV_KEY = { 2: 'ov2', 5: 'ov5', 10: 'ov10' };
 const FRAG_KEY = { first: 'frag1', feat: 'fragFeat', gold: 'fragGold' };
 const rareSoul = (id) => !!(id && SOUL_BY_ID[id] && SOUL_BY_ID[id].rarity === 'rare');
 
-// 사건 하나 → 등급 표의 key(없으면 null). 순수.
+// 사건 하나 → 등급 표의 key(없으면 null). 순수. 사슬 별(grade)은 sim이 3 · 5 · 8 · 12마다 내지만, 기록기는 사슬마다 가장 높은
+// 별 하나만 센다(CHM-68 — 사슬 12 하나가 S + M + L + L 넷으로 세어지던 것을 고쳤다).
 export function beatKey(e) {
   switch (e.type) {
     case 'grade': return GRADE_KEY[e.n] || null;
@@ -94,6 +95,8 @@ export function beatLog(run) {
   const out = { ev: [], battles: [], seen: { edition: [], golden: [], frag: [] } };
   let bi = 0, fam = famMax(run), cross = null, reward = 0;
   const shown = new WeakSet();
+  let star = null; // 지금 사슬에서 찍힌 가장 높은 별 { n, row }
+  const flush = () => { if (star) out.ev.push(star.row); star = null; };
   const at = () => Math.max(1, bi);
   const look = (list) => {
     for (const it of list || []) {
@@ -109,14 +112,19 @@ export function beatLog(run) {
       const inBattle = !!b;
       const m = inBattle ? mu + 1 : 0;
       for (const e of events) {
-        if (e.type === 'battleStart') { bi++; cross = null; reward = 0; continue; }
+        if (e.type === 'battleStart') { flush(); bi++; cross = null; reward = 0; continue; }
         if (e.type === 'reward') reward = e.total || 0;
+        if (e.type === 'end') flush();
         const k = beatKey(e);
-        if (k) out.ev.push([at(), run.ante, inBattle ? m : 0, k]);
+        if (!k) continue;
+        // 사슬 별(CHM-68): 한 사슬에 가장 높은 별 하나만 — 사슬 끝(end)에서 그 별이 찍힌 자리로 넣는다
+        if (e.type === 'grade') { if (!star || e.n > star.n) star = { n: e.n, row: [at(), run.ante, inBattle ? m : 0, k] }; continue; }
+        out.ev.push([at(), run.ante, inBattle ? m : 0, k]);
       }
       if (inBattle && b.target && cross == null && b.score >= b.target) cross = b.movesUsed;
       // 대국이 끝났다: 판(런)이 log에 한 줄을 남긴다
       const row = inBattle && run.log.length > logLen ? run.log.at(-1) : null;
+      if (row) flush();
       if (row && !row.skipped) {
         out.battles.push([bi, row.ante, row.blind, row.won ? 1 : 0, row.reason, row.score, row.target, b.movesUsed, b.movesUsed + b.movesLeft, cross, reward, (b.history || []).map((h) => h.score)]);
         if (row.goldenSeen) out.seen.golden.push(bi);
