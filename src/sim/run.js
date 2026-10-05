@@ -12,7 +12,7 @@
 //   lost    끝.
 import { renameOldPieces } from './oldsave.js';
 import { createRng, fork, int, next, shuffle } from './rng.js';
-import { boardFilter, PACE, playToEnd } from './tuning.js';
+import { boardFilter } from './tuning.js';
 import { parseSq } from './board.js';
 import { SCRIPT } from '../data/tutorial.js';
 import { createBattle, battleLayout, battleRules, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
@@ -144,14 +144,8 @@ export function danRules(dan) {
 }
 
 export function targetFor(ante, kind, mult = 1) {
-  let base = ante <= ANTES ? B[ante - 1] : B[ANTES - 1] * ENDLESS_GROWTH ** (ante - ANTES);
-  let km = KIND_MULT[kind];
-  // 대국 호흡 시제품(CHM-66, tuning.js PACE — 기본 꺼짐): 2관부터 곡선 배율 · A의 연습 · 정식 배율
-  if (PACE.mode) {
-    if (ante >= 2 && PACE.curve !== 1) base *= PACE.curve;
-    if (PACE.mode === 'A' && PACE.kindMult[kind] != null) km = PACE.kindMult[kind];
-  }
-  const raw = base * km * mult;
+  const base = ante <= ANTES ? B[ante - 1] : B[ANTES - 1] * ENDLESS_GROWTH ** (ante - ANTES);
+  const raw = base * KIND_MULT[kind] * mult;
   // 보기 좋게: 유효 숫자 둘
   const mag = 10 ** Math.max(0, Math.floor(Math.log10(raw)) - 1);
   return Math.round(raw / mag) * mag;
@@ -217,8 +211,6 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
   const conf = { ...RUN_DEFAULTS, ...op.run };
   const rules = clone(op.rules);
   const stake = dan > 0 ? danRules(dan) : null;
-  // 대국 호흡 시제품 A(CHM-66, 기본 꺼짐): 대국당 수
-  if (PACE.mode === 'A' && PACE.moves !== DEFAULT_RULES.moves) rules.moves = (rules.moves ?? DEFAULT_RULES.moves) + PACE.moves - DEFAULT_RULES.moves;
   if (stake) {
     if (stake.discards) rules.discards = (rules.discards ?? DEFAULT_RULES.discards) + stake.discards;
     if (stake.moves) rules.moves = (rules.moves ?? DEFAULT_RULES.moves) + stake.moves;
@@ -494,11 +486,10 @@ function endBattle(run, events) {
   const mate = b.result.reason === 'mate';
   const reward = {
     base: REWARD.base[info.kind],
-    // 시제품 C(끝까지 둔다, CHM-66 — 기본 꺼짐): 남은 수 상금 없음 · 넘친 목표 덤은 PACE.overflow
-    moves: playToEnd() ? 0 : REWARD.perMove * b.movesLeft,
+    moves: REWARD.perMove * b.movesLeft,
     interest: interest(run.money),
     mate: mate ? REWARD.mate : 0,
-    overflow: (playToEnd() ? PACE.overflow : REWARD.overflow)[b.overflow] || 0,
+    overflow: REWARD.overflow[b.overflow] || 0,
     earned: b.money,
   };
   reward.total = reward.base + reward.moves + reward.interest + reward.mate + reward.overflow + reward.earned;

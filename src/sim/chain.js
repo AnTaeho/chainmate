@@ -15,7 +15,6 @@ import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
 import { UP, ABSORB } from '../data/souls.js';
 import { brilliantMult } from '../data/sacrifice.js';
-import { momentumMult } from './tuning.js';
 
 const NO_OPTS = {};
 // 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
@@ -429,9 +428,6 @@ function finish(t, reason, events) {
     events.push({ type: 'score', src: 'brilliant', xmult: x });
     c.brilliant = { weight: c.offerWeight, x, pieces: (c.offerPieces || []).slice() };
   }
-  // 기세(시제품 CHM-66 B, tuning.js PACE — 기본 꺼짐): 앞서 끝낸 사슬마다 이 사슬의 마지막 배수에 ×(1 + momentum × 그 수)
-  const mo = momentumMult(t);
-  if (mo !== 1) { c.mult *= mo; events.push({ type: 'score', src: 'momentum', xmult: mo }); }
   c.score = finalScore(c);
   if (c.brilliant) events.push({ type: 'brilliant', ...c.brilliant, score: c.score });
   if (t.board[c.sq] && t.board[c.sq].mine) t.board[c.sq] = null;
