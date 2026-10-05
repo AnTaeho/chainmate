@@ -5,7 +5,7 @@ import { W, H, text, box, rect, frame, sprite, line } from '../../render/gfx.js'
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
-import { maximCellH, maximCard } from '../parts.js';
+import { maximCellH, maximCard, maximTip } from '../parts.js';
 import { REPLAYS, sqOf } from '../replays.js';
 import { LIST_GAP } from '../frame.js';
 
@@ -14,6 +14,24 @@ const Q = 20, MX = 24, MY = 58; // 작은 판: 칸 20px
 const MK = 19 / 22;
 const mini = (ctx, t, side, x, y) => sprite(ctx, t, side, x + 2, y - 2, { sx: MK, sy: MK });
 const STEP = 0.6, T_FREEZE = 0.5;
+
+// 오른쪽 격언 칸 자리: 제목(2배, 아래 끝 ≈ 44) 밑 y 50부터 「계속」(y 244) 위 238까지.
+// 가진 격언은 칸이 다 들어가면 한 줄(이름 한 줄 칸), 안 들어가면 2 · 3 · 4줄로 나란히(아이콘만 — maximColumn과 같다).
+// 새 전설 칸은 늘 맨 아래 폭 112 한 줄(이름이 보인다). 아이콘(24)이 들어가는 칸 폭은 4줄(26)까지라
+// 가진 격언 20개(4줄 × 5칸)까지 화면 안이다 — 격언 칸 5 + 흑요 10 + 다른 전설 4 = 19가 규칙상 넉넉한 최대.
+export const LEGEND_RX = 356, LEGEND_RW = 112, LEGEND_TOP = 50, LEGEND_BOT = H - 32;
+export function legendSlots(nOthers) {
+  const h = maximCellH(), step = h + LIST_GAP;
+  const fitRows = Math.max(0, Math.floor((LEGEND_BOT - LEGEND_TOP - h) / step));
+  let cols = 1;
+  while (cols < 4 && Math.ceil(nOthers / cols) > fitRows) cols++;
+  const cw = cols === 1 ? LEGEND_RW : Math.floor((LEGEND_RW - (cols - 1) * LIST_GAP) / cols);
+  const rows = Math.ceil(nOthers / cols);
+  const rects = [];
+  for (let i = 0; i < nOthers; i++) rects.push({ x: LEGEND_RX + (i % cols) * (cw + LIST_GAP), y: LEGEND_TOP + Math.floor(i / cols) * step, w: cw, h });
+  const slot = { x: LEGEND_RX, y: LEGEND_TOP + rows * step, w: LEGEND_RW, h };
+  return { cols, cw, rows, h, rects, slot, narrow: cols > 1 };
+}
 
 export class LegendScreen {
   constructor(app, { legend }) {
@@ -102,13 +120,16 @@ export class LegendScreen {
     }
     // 오른쪽: 격언 칸. 금박 격언이 위에서 떨어져 여섯째 칸에 박힌다
     const run = this.app.run;
-    const RX = 356, RW = 112;
+    const RX = LEGEND_RX, RW = LEGEND_RW;
     const maxims = run ? run.maxims.filter((m) => m.id !== this.id) : [];
-    // 격언 칸(이름 한 줄 — maximCellH), 사이 LIST_GAP. 칸이 많으면 위로 올려 화면 안에
-    const h = maximCellH(), step = h + LIST_GAP, n = maxims.length + 1;
-    const top = Math.min(50, H - 30 - n * step);
-    maxims.forEach((m, i) => maximCard(ctx, m, RX, top + i * step, RW, h, { t: ui.time }));
-    const slotY = top + maxims.length * step;
+    // 격언 칸(이름 한 줄 — maximCellH), 사이 LIST_GAP. 칸이 많으면 여러 줄로 나란히(이름은 가리키면 말풍선에)
+    const lay = legendSlots(maxims.length), h = lay.h;
+    maxims.forEach((m, i) => {
+      const r = lay.rects[i];
+      ui.region(`legend:maxim:${i}`, r.x, r.y, r.w, r.h, { tip: () => maximTip(m) });
+      maximCard(ctx, m, r.x, r.y, r.w, r.h, { t: ui.time, narrow: lay.narrow });
+    });
+    const slotY = lay.slot.y;
     const k = Math.max(0, Math.min(1, (t - this.tDrop) / 0.5));
     const y = Math.round(-40 + (slotY + 40) * (k * k));
     if (k < 1) frame(ctx, RX, slotY, RW, h, PAL.goldDk);
