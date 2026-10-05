@@ -18,7 +18,7 @@ import { SCRIPT } from '../data/tutorial.js';
 import { createBattle, battleLayout, battleRules, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
 import { isCracked } from '../data/souls.js';
 import { getModifier } from './scoring.js';
-import { SHOP, PROMOTE, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul, priceBonus } from './shop.js';
+import { SHOP, PROMOTE, pityOf, pityChance, pityMiss, pityHit, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul, priceBonus } from './shop.js';
 import { gradeOf, markFairy } from './chain.js';
 import { MAXIM_BY_ID } from '../data/maxims.js';
 import { CHART_TABLE, CHART_FORMS } from '../data/charts.js';
@@ -238,6 +238,7 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
     factions: factionOrder(seed), // 관마다 세력 id(1관 농민군 · 8관 왕궁 근위)
     fragments: {},            // { [명국 id]: { first, feat, gold } } — 불멸의 기보 조각
     legends: [],              // 완성한 명국 id(전설 격언은 maxims에 legendary: true로, 격언 칸 수와 따로)
+    pity: { golden: 0, edition: 0, fragment: 0 }, // 연줄(CHM-68, shop.js SHOP.pity): 금빛 적 없이 지난 대국 · 판본 · 첫 조각 없이 연 상점
     nextUid: 1,
     battle: null,
     shop: null,
@@ -321,7 +322,7 @@ export function battleOpts(run, blind = run.blind) {
       seed: battleSeed(run, run.ante, blind), ante: run.ante, kind: info.kind, target: info.target,
       bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...soulOf(p) })),
       rules: scripted ? { ...run.rules, reboards: 0 } : run.rules, mods: battleMods(run, info.master, info.faction),
-      goldenChance: awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance,
+      goldenChance: pityChance(awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance, 'golden', pityOf(run, 'golden')), // 연줄(CHM-68)
       golden: scripted ? false : null,
       filter: run.scratch || scripted ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
     },
@@ -331,6 +332,11 @@ function startBattle(run) {
   const { scripted, opts } = battleOpts(run);
   run.battle = createBattle({ ...opts, layout: scripted ? null : layoutFor(run, run.blind) });
   if (scripted) layScript(run.battle, SCRIPT);
+  // 연줄(CHM-68): 금빛 적이 선 대국이면 처음으로, 없으면 하나 더(대본 대국 · 수업 판은 세지 않는다)
+  if (!scripted && !run.scratch) {
+    if (run.battle.board.some((c) => c && c.gold)) pityHit(run, 'golden');
+    else pityMiss(run, 'golden');
+  }
   run.phase = 'battle';
 }
 
@@ -698,6 +704,8 @@ function openShop(run) {
     run.shop.display[held.slot] = { ...held.item, price: held.item.base + priceBonus(run), sold: false, kept: true };
     delete run.shop.display[held.slot].base;
   }
+  // 연줄(CHM-68): 상점을 열 때마다 판본 · 첫 조각 연줄에 하나씩(이 상점에서 나오면 shop.js가 0으로 되돌린다)
+  if (!run.scratch) { pityMiss(run, 'edition'); pityMiss(run, 'fragment'); }
   rollDisplay(run);
   rollPacks(run);
   run.phase = 'shop';

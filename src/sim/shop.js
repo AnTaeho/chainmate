@@ -47,7 +47,29 @@ export const SHOP = {
   goldenRarity: [['common', 40], ['uncommon', 45], ['rare', 15]],
   // 금빛 꾸러미에 첫 조각이 끼어 나올 확률(첫 조각을 가진 명국이 없어 금빛 조각을 못 받은 판에서만)
   goldenFragmentChance: 0.5,
+  // 연줄(CHM-68, 빗나감 보정): 드문 층이 오래 안 나오면 다음 확률이 조금씩 오르고, 나오면 처음으로 돌아간다(상태 run.pity).
+  // golden: 금빛 적 없이 지난 대국마다 · edition: 판본 없이 지난 상점마다(진열 격언의 판본 확률) · fragment: 첫 조각 없이 지난
+  // 상점마다(진열 칸 · 꾸러미 둘 다). 확률 = min(max, 기본 + step × 지난 수), 기본이 max보다 크면 기본 그대로(금빛의 부름 10%).
+  // step 0이면 굴림이 연줄 앞과 같다(같은 난수 · 같은 문턱). 처음 값은 평균 간격 절반쯤: 금빛 적 25 → 13대국,
+  // 판본 ≈ 21 → 12상점(상점당 진열 격언 ≈ 1.2번), 첫 조각 진열 17 → 9상점 · 꾸러미 25 → 13번(평균 간격 셈은 docs/reports/beats.md 「C · E 뒤」)
+  pity: { golden: { step: 0.004, max: 0.2 }, edition: { step: 0.004, max: 0.15 }, fragment: { step: 0.004, max: 0.12 } },
 };
+
+// 연줄 상태: run.pity = { golden, edition, fragment } — 옛 저장 · 수업 판에 없으면 0으로 돈다
+export const pityOf = (run, k) => (run && run.pity && run.pity[k]) || 0;
+// 지난 수 n의 확률. 상점 연줄은 상점을 열 때 1을 더하므로(pityMiss) 그 상점 안에서는 n − 1이 「판본 · 조각 없이 지난 상점 수」다
+export function pityChance(base, k, n) {
+  const p = SHOP.pity && SHOP.pity[k];
+  if (!p || !p.step || n <= 0) return base;
+  return Math.max(base, Math.min(p.max, base + p.step * n));
+}
+export function pityMiss(run, k) {
+  if (!run) return;
+  if (!run.pity) run.pity = { golden: 0, edition: 0, fragment: 0 };
+  run.pity[k] = (run.pity[k] || 0) + 1;
+}
+export function pityHit(run, k) { if (run && run.pity) run.pity[k] = 0; }
+const shopPity = (run, k) => Math.max(0, pityOf(run, k) - 1);
 
 export const PROMOTE = { P: ['N', 'B'], N: ['R'], B: ['R'], R: ['Q'] };
 
@@ -70,13 +92,15 @@ export const rollEdition = (rng) => weighted(rng, EDITIONS.map((e) => [e.id, e.w
 export const maximPrice = (id, edition) => MAXIMS.find((m) => m.id === id).price + (edition ? EDITION_BY_ID[edition].price : 0);
 
 // 가진 격언 · 이미 진열된 격언은 다시 나오지 않는다. edition: true면 판본을 반드시 붙인다.
-function rollMaxim(rng, exclude, { rarityWeights = SHOP.rarityWeights, edition = false } = {}) {
+// run: 진열 격언이면 판본 연줄을 읽고 쓴다(금빛 꾸러미처럼 판본을 반드시 붙이는 곳은 넘기지 않는다)
+function rollMaxim(rng, exclude, { rarityWeights = SHOP.rarityWeights, edition = false, run = null } = {}) {
   const rarity = weighted(rng, rarityWeights);
   let pool = MAXIMS.filter((m) => m.rarity === rarity && !exclude.includes(m.id));
   if (!pool.length) pool = MAXIMS.filter((m) => m.rarity !== 'legendary' && !exclude.includes(m.id));
   if (!pool.length) return null;
   const m = pool[int(rng, pool.length)];
-  const ed = edition || next(rng) < SHOP.editionChance ? rollEdition(rng) : null;
+  const ed = edition || next(rng) < (run ? pityChance(SHOP.editionChance, 'edition', shopPity(run, 'edition')) : SHOP.editionChance) ? rollEdition(rng) : null;
+  if (ed && !edition) pityHit(run, 'edition');
   return { kind: 'maxim', id: m.id, edition: ed, price: maximPrice(m.id, ed) };
 }
 
@@ -101,14 +125,14 @@ export function rollPiece(run, rng) {
 }
 
 export function rollItem(run, rng, exclude) {
-  if (next(rng) < SHOP.fragmentChance.display * fragmentMult(run)) {
+  if (next(rng) < pityChance(SHOP.fragmentChance.display, 'fragment', shopPity(run, 'fragment')) * fragmentMult(run)) {
     const f = fragmentOffer(run, rng, 'display');
-    if (f && !exclude.includes(f.legend)) return { ...f, price: SHOP.fragmentPrice };
+    if (f && !exclude.includes(f.legend)) { pityHit(run, 'fragment'); return { ...f, price: SHOP.fragmentPrice }; }
   }
   const kind = weighted(rng, run.deck && run.deck.some(isCracked) ? [...SHOP.kindWeights, ['awaken', SHOP.awaken.weight]] : SHOP.kindWeights);
   if (kind === 'awaken') return { kind: 'awaken', price: SHOP.awaken.price };
   if (kind === 'maxim') {
-    const it = rollMaxim(rng, exclude);
+    const it = rollMaxim(rng, exclude, { run });
     if (it) return it;
   }
   if (kind === 'chart') return { kind: 'chart', form: CHART_FORMS[int(rng, CHART_FORMS.length)], price: CHART_PRICE };
@@ -188,9 +212,9 @@ export function rollPackOptions(run, kind, rng = run.shop.rng, { goldenFragment 
       out.push({ kind: 'chart', form: pool[int(rng, pool.length)] });
     } else out.push({ kind: 'engraving', id: rollEngravingId(rng, out.map((o) => o.id)) });
   }
-  if (next(rng) < SHOP.fragmentChance.pack * fragmentMult(run)) {
+  if (next(rng) < pityChance(SHOP.fragmentChance.pack, 'fragment', shopPity(run, 'fragment')) * fragmentMult(run)) {
     const f = fragmentOffer(run, rng, kind);
-    if (f) out[out.length - 1] = f;
+    if (f) { out[out.length - 1] = f; pityHit(run, 'fragment'); }
   }
   return out;
 }
