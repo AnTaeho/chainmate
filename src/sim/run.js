@@ -568,6 +568,37 @@ export function brilliantFragment(run, events) {
   return pick;
 }
 
+// 점화(CHM-67, docs/design-notes/ignite.md): 판에서 처음 사슬 8 이상(★★★) 또는 넘침 ×10이 나온 사슬을 run.ignite에 남긴다.
+// 판당 한 번. 대본 대국 · scratch 판은 판 기록을 남기지 않으니 점화도 없다(수업 · 복기 · 되짚기는 대국 규칙만 돌려 여기 오지 않는다).
+// 판정은 끝난 사슬을 읽기만 한다 — 규칙 · 난수는 그대로. c = 그 사슬(endMove가 비우기 전에 쥔 것), out = 이번 명령의 대국 사건.
+// 기록: ante · blind · log(이 대국이 run.log에 들 자리) · by('chain' 사슬 8 | 'overflow' 넘침 ×10 | 'both') · drop(떨군 칸) ·
+//   path(먹기마다 from · to · at · form, 제자리 쏘기면 stay, 꺾쇠 · 물수제비는 via, 광대는 move — 화면 capRoute가 읽는 꼴) ·
+//   steps(거쳐 간 모습, 떨군 모습부터 마지막 모습까지) · captures · value · mult · score. 옛 저장엔 없다(= 아직 점화 없음)
+export const IGNITE = { chain: 8, overflow: 10 };
+function checkIgnite(run, c, out, events) {
+  if (run.ignite || run.scratch || run.battle.script || !c) return;
+  const h = run.battle.history[run.battle.history.length - 1];
+  const chain = h.captures >= IGNITE.chain, over = out.some((e) => e.type === 'overflow' && e.tier === IGNITE.overflow);
+  if (!chain && !over) return;
+  const path = c.captures.map((x) => ({
+    from: x.from, to: x.to, at: x.at, form: x.form,
+    ...(x.stay ? { stay: true } : {}), ...(x.via != null && x.via >= 0 ? { via: x.via } : {}), ...(x.move ? { move: x.move } : {}),
+  }));
+  run.ignite = {
+    ante: run.ante, blind: run.blind, log: run.log.length, by: chain && over ? 'both' : chain ? 'chain' : 'overflow',
+    drop: c.dropSq, path, steps: [...c.captures.map((x) => x.form), c.form],
+    captures: h.captures, value: h.value, mult: h.mult, score: h.score,
+  };
+  events.push({ type: 'ignite', ...clone(run.ignite) });
+}
+// 하네스 dump · 사람 판 기록(runRow)의 점화 열쇠: { at: 몇째로 둔 대국(건너뛴 대국 · skip에 든 log 자리 빼고, 1부터), by } 또는 null
+export function igniteKey(run, skip = null) {
+  const ig = run.ignite;
+  if (!ig) return null;
+  const at = run.log.slice(0, ig.log).filter((x, i) => !x.skipped && !(skip && skip.has(i))).length + 1;
+  return { at, by: ig.by };
+}
+
 // 금빛 적을 먹고 이긴 대국 뒤: 재현까지 해낸 명국 하나의 셋째(금빛) 조각 — 조각은 첫 → 재현 → 금빛 차례로만 모인다
 // (HOOKS 「가진 조각 중 하나의 다음 조각」). 첫 조각이 하나도 없으면 금빛 꾸러미에 첫 조각이 끼어 나올 기회.
 // 돌려주는 값 { fragment: 꾸러미에 첫 조각이 드나 }
@@ -849,6 +880,7 @@ export function applyRun(run, cmd) {
     case 'drop': case 'capture': case 'redrop': case 'discard': case 'reboard': {
       need('battle');
       const seen = run.battle.history.length;
+      const live = run.battle.chain; // endMove가 b.chain을 비우니 끝난 사슬의 길(captures)은 앞에서 쥔다(점화)
       const out = applyBattle(run.battle, cmd);
       const feats = [];
       for (const h of run.battle.history.slice(seen)) checkFeats(run, h, feats);
@@ -866,6 +898,7 @@ export function applyRun(run, cmd) {
         if (e.type === 'brilliant') brilliantFragment(run, events);
       });
       if (at < 0) events.push(...feats);
+      if (run.battle.history.length > seen) checkIgnite(run, live, out, events);
       if (run.battle.status === 'won' || run.battle.status === 'lost') endBattle(run, events);
       break;
     }

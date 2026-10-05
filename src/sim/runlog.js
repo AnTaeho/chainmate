@@ -4,6 +4,7 @@
 // 열쇠 표: docs/design-notes/human-runs.md. 순수 함수(DOM 없음), 상태는 JSON 왕복 안전.
 import { PIECES } from '../data/pieces.js';
 import { familyCounts } from '../data/families.js';
+import { igniteKey } from './run.js';
 
 export const RUNLOG_MAX = 200;   // 기기에 남기는 판 수(오래된 것부터 버린다)
 
@@ -89,6 +90,7 @@ export function runRow(run, track, { end = null, endedAt = null, id = null } = {
     fam: familyCounts(run), josekis: [...(run.josekis || [])], fairies: [...new Set(run.deck.filter((p) => PIECES[p.t].fairy).map((p) => p.t))],
     best: Math.max(0, ...played.map((x) => x.best || 0)),
     souls: [...new Set(log.flatMap((b) => b.souls || []))], cracked: clone(run.cracked || []), awakened: clone(run.awakened || []),
+    ignite: igniteKey(run, skip), // 점화(CHM-67): 몇째로 둔 대국 · 계기
     // ── 사람 판에만
     human: 1,
     id: id ?? `${tr.startedAt ?? 0}:${run.seed}`,

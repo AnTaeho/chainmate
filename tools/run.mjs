@@ -9,7 +9,7 @@ import { Worker, isMainThread, parentPort, workerData } from 'node:worker_thread
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRun, B, targetFor, REWARD, CHEST, TAGS } from '../src/sim/run.js';
+import { createRun, B, targetFor, REWARD, CHEST, TAGS, igniteKey } from '../src/sim/run.js';
 import { applyNight2 } from './night2.mjs';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
@@ -81,6 +81,7 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
     best: Math.max(0, ...run.log.filter((x) => !x.skipped).map((x) => x.best || 0)),
     // 혼 등급 · 각성(CHM-17): 판 동안 주머니에 있던 혼 · 금이 간 때 · 깨어난 때와 길
     souls: [...new Set(run.log.flatMap((b) => b.souls || []))], cracked: run.cracked || [], awakened: run.awakened || [],
+    ignite: igniteKey(run), // 점화(CHM-67): 몇째로 둔 대국 · 계기(사슬 8 · 넘침 ×10)
     ...(BOT.stats ? { botStats: { ...BOT.stats } } : {}),
     ...(REPLAY.on ? { replays: REPLAY.rows.slice() } : {}),
     ...(PEEK.log || PEEK.skipBelow != null ? { peek: PEEK.rows.slice() } : {}),
@@ -223,6 +224,9 @@ function report(R, args, wall) {
   const brPieces = {}; for (const x of brAll) for (const t of x.pieces) brPieces[t] = (brPieces[t] || 0) + 1;
   const brPer = R.map((r) => r.log.reduce((a, x) => a + (x.brilliants || []).length, 0));
   console.log(`탁월수: 나온 판 ${pc(brR.length / n)} (판당 ${f2(brPer.reduce((a, x) => a + x, 0) / n)}번 · 2번+ 판 ${pc(brPer.filter((x) => x >= 2).length / n)}), 대국당 ${(brAll.length / battles.length).toFixed(3)}, 바친 기물 ${Object.entries(brPieces).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${v}`).join(' · ') || '-'}, 무게 합 p50 ${pctile(brAll.map((x) => x.weight), 0.5)} · 최대 ${Math.max(0, ...brAll.map((x) => x.weight))}, 탁월수 판 승률 ${pc(brR.filter((r) => r.won).length / Math.max(1, brR.length))} (없는 판 ${pc(R.filter((r) => r.won && !brR.includes(r)).length / Math.max(1, n - brR.length))})`);
+  // 점화(CHM-67): 판에서 처음 사슬 8 이상 또는 넘침 ×10 — 점화한 판 · 점화 대국 p50 · 계기 몫 · 점화한 판 / 못 한 판 승률
+  const igR = R.filter((r) => r.ignite), igBy = (k) => igR.filter((r) => r.ignite.by === k).length / Math.max(1, igR.length);
+  console.log(`점화: 점화한 판 ${pc(igR.length / n)} · 점화 대국 p50 ${f(pctile(igR.map((r) => r.ignite.at), 0.5))} · 계기 사슬 8 ${pc(igBy('chain'))} · 넘침 ×10 ${pc(igBy('overflow'))} · 둘 다 ${pc(igBy('both'))} · 판 승률 점화 ${pc(igR.filter((r) => r.won).length / Math.max(1, igR.length))} / 못 함 ${pc(R.filter((r) => !r.ignite && r.won).length / Math.max(1, n - igR.length))}`);
   // 탁월수 → 명경기 조각(CHM-47)
   const bfAll = battles.flatMap((x) => x.brilliantFrags || []);
   const bfR = R.filter((r) => r.log.some((x) => (x.brilliantFrags || []).length));
