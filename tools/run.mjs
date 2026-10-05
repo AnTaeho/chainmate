@@ -13,7 +13,9 @@ import { createRun, B, targetFor, REWARD, CHEST, TAGS, igniteKey } from '../src/
 import { applyNight2 } from './night2.mjs';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
-import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK, TAG_BONUS, HOLD, BEATS } from './shopbot.mjs';
+import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK, TAG_BONUS, HOLD, BEATS, BUILD } from './shopbot.mjs';
+import { buildLog } from './build.mjs';
+import { buildReport } from './build-report.mjs';
 import { beatLog, runBeats, BEAT_TABLE, TIER, NEAR_NAMES } from './beats.mjs';
 import { REVIEW } from '../src/sim/replay.js';
 import { BOT } from './bot.mjs';
@@ -58,6 +60,7 @@ function parseArgs(argv) {
     else if (k === '--peek-nodes') a.peekNodes = Number(argv[++i]);    // 판 읽기 풀이기 마디(기물 하나마다)
     else if (k === '--dump') a.dump = argv[++i];                       // 판별 결과 전부(ms 빼고, seed 순)를 JSON으로 — 손질 전후 결정성 비교(CHM-44)
     else if (k === '--json') a.json = argv[++i];                       // 수치를 JSON으로도(밤샘 2 보고서 · 아티팩트용)                          // 정석 드래프트 없이(깊이 E 이전)
+    else if (k === '--build') a.build = true;                           // 빌드 단면(CHM-65): 관이 끝날 때마다 짜임 · 상금 흐름 · 힘 비율을 남겨 「빌드」 절을 더한다(tools/build.mjs)
     else if (k === '--beats') a.beats = true;                           // 박자(CHM-66): 판마다 쾌감 사건을 시간순으로 모아 「박자」 절을 더한다(tools/beats.mjs)
     else if (k === '--joseki') a.joseki = argv[++i];                       // 이 정석이 보이면 고른다              // 실험: 판 시작에 격언을 쥐여 준다(값 재기)            // 실험: {"overflow":{…},"chest":[[1,77],…],"golden":0.04}
   }
@@ -69,6 +72,7 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
   const run = createRun({ seed, opening, dan, draft: !nodraft });
   for (const id of give || []) run.maxims.push({ uid: run.nextUid++, id, data: {}, edition: null, paid: 0 });
   if (BEATS.on) BEATS.log = beatLog(run);
+  if (BUILD.on) BUILD.log = buildLog(run);
   if (BOT.stats) { BOT.stats.decisions = 0; BOT.stats.capped = 0; }
   const { bought, editions, legendAt, seen, holds, sac } = playRun(run, policy);
   return {
@@ -86,13 +90,15 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
     ...(REPLAY.on ? { replays: REPLAY.rows.slice() } : {}),
     ...(PEEK.log || PEEK.skipBelow != null ? { peek: PEEK.rows.slice() } : {}),
     ...(BEATS.on ? { beats: BEATS.log.rows } : {}),
+    ...(BUILD.on ? { build: BUILD.log.rows } : {}),
     ms: performance.now() - t0,
   };
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats, build } = workerData;
   if (beats) BEATS.on = true;
+  if (build) BUILD.on = true;
   if (replay) REPLAY.on = true;
   if (peekLog) PEEK.log = true;
   if (peekSkip != null) PEEK.skipBelow = peekSkip;
@@ -126,7 +132,7 @@ if (!isMainThread) {
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + i * 7919) >>> 0);
   const t0 = performance.now();
   // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
-  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats };
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, build: args.build };
   const results = [], timeouts = [];
   let next = 0, done = 0;
   await new Promise((finish) => {
@@ -376,6 +382,7 @@ function report(R, args, wall) {
   // ── JSON(--json): 관별 통과율 · 종류별 · 점수/목표 분포 · 시계 · 새것별 산 판 승률
   if (args.peekLog || args.peekSkip != null) peekReport(R, args, { pc, f, table });
   const beatsOut = args.beats ? beatsReport(R, { pc, f, f2, table, pctile }) : null;
+  const buildOut = args.build ? buildReport(R, { pc, f, f2, table, pctile }) : null;
   if (args.replay) { if (args.replayNodes) REVIEW.nodes = args.replayNodes; if (args.replayBeam) REVIEW.beam = args.replayBeam; replayReport(R, { pc, f, table, pctile }); }
   if (args.json) {
     const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : null);
@@ -404,6 +411,7 @@ function report(R, args, wall) {
       battles: battles.map((b) => [b.ante, b.blind, b.faction || null, b.won ? 1 : 0, b.reason]),
       masters: Object.fromEntries(Object.keys(MASTER_BY_ID).map((id) => { const bs = battles.filter((b) => b.master === id); return [id, { n: bs.length, win: r3(bs.filter((b) => b.won).length / bs.length) }]; })),
       ...(beatsOut ? { beats: beatsOut } : {}),
+      ...(buildOut ? { build: buildOut } : {}),
     };
     mkdirSync(dirname(args.json), { recursive: true });
     writeFileSync(args.json, JSON.stringify(out, null, 1) + '\n');

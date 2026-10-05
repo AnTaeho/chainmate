@@ -98,11 +98,15 @@ function noteKept(run) {
 }
 // 박자(CHM-66, run.mjs --beats): log = tools/beats.mjs beatLog(run)이면 명령마다 사건을 넘긴다(읽기만 — 판 결과는 같다)
 export const BEATS = { on: false, log: null };
+// 빌드 단면(CHM-65, run.mjs --build): log = tools/build.mjs buildLog(run)이면 명령마다 상금 흐름 · 상점 · 관 끝을 넘긴다(읽기만)
+export const BUILD = { on: false, log: null };
 function act(run, cmd) {
   if (cmd.type === 'buy' && run.shop.display[cmd.slot] && run.shop.display[cmd.slot].kept) HOLDS.bought++;
   const b = BEATS.log ? run.battle : null, mu = b ? b.movesUsed : 0, logLen = run.log.length;
+  const money0 = run.money, ante0 = run.ante;
   const ev = applyRun(run, cmd);
   if (BEATS.log) BEATS.log.record(run, ev, b, mu, logLen);
+  if (BUILD.log) BUILD.log.record(run, cmd, ev, money0, ante0);
   if (cmd.type === 'reroll') noteDisplay(run);
   if (cmd.type === 'buyPack') notePack(run);
   return ev;
