@@ -2,7 +2,7 @@
 // 판당 한 번 · 대본 대국 · 수업 · scratch 판에서는 없다 · JSON 왕복(사슬 가운데 · 옛 저장).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRun, applyRun, migrateRun, igniteKey } from '../src/sim/run.js';
+import { createRun, applyRun, migrateRun, igniteKey, syncBoards, IGNITE } from '../src/sim/run.js';
 import { apply as applyBattle, createBattle } from '../src/sim/battle.js';
 import { stepBattle } from '../tools/bot.mjs';
 import { plantChain8 } from './helpers/run.js';
@@ -16,6 +16,13 @@ function chainRun(opts = {}) {
   const run = createRun({ seed: 1, draft: false, ...opts });
   applyRun(run, { type: 'play' });
   return { run, cmds: plantChain8(run.battle) };
+}
+// ante관 첫 대국을 연다(판 보기를 그 관으로 다시 짓는다)
+function openAt(ante) {
+  const run = createRun({ seed: 1, draft: false });
+  run.ante = ante; run.boards = null; syncBoards(run);
+  applyRun(run, { type: 'play' });
+  return run;
 }
 // 지금 대국의 목표를 1로 두고 봇이 한 수(사슬 하나)를 둔다 — 그 사슬이 목표 ×10을 넘긴다
 function overflowMove(run) {
@@ -53,24 +60,34 @@ test('사슬 8: 그 사슬의 길 · 모습 · 값 · 배수 · 점수를 남기
   assert.deepEqual(igniteKey(run), { at: 1, by: 'chain' });
 });
 
-test('넘침 ×10: 그 대국에서 목표 ×10을 넘긴 사슬을 남긴다', () => {
-  const run = createRun({ seed: 1, draft: false });
-  applyRun(run, { type: 'play' });
+test('넘침 ×10: 3관부터 그 대국에서 목표 ×10을 넘긴 사슬을 남긴다', () => {
+  assert.equal(IGNITE.overflowFrom, 3);
+  const run = openAt(3);
   const ev = overflowMove(run);
   const ig = run.ignite;
   assert.ok(ev.some((e) => e.type === 'overflow' && e.tier === 10), '이 수가 ×10을 넘겼다');
   assert.ok(ig && ig.by === 'overflow', `계기 ${ig && ig.by}`);
   assert.ok(ig.captures < 8);
   const row = run.log.at(-1);
-  assert.deepEqual([ig.ante, ig.blind, ig.log], [row.ante, row.blind, run.log.length - 1]);
+  assert.deepEqual([ig.ante, ig.blind, ig.log], [3, row.blind, run.log.length - 1]);
   assert.equal(ig.score, row.score, '대국의 유일한 사슬');
   assert.equal(ignites(ev).length, 1);
   assert.equal(ig.path.length, ig.captures);
 });
 
+test('넘침 ×10: 1 · 2관에서는 점화가 아니다(사슬 8은 관과 상관없이 점화)', () => {
+  for (const ante of [1, 2]) {
+    const run = openAt(ante);
+    const ev = overflowMove(run);
+    assert.ok(ev.some((e) => e.type === 'overflow' && e.tier === 10), `${ante}관: 이 수가 ×10을 넘겼다`);
+    assert.ok(run.log.at(-1).best > 0 && !run.log.at(-1).grades['★★★'] && !run.log.at(-1).grades['∞'], `${ante}관: 사슬 8이 아니다`);
+    assert.equal(ignites(ev).length, 0, `${ante}관`);
+    assert.equal(run.ignite, undefined, `${ante}관`);
+  }
+});
+
 test('판당 한 번: 다음 대국의 사슬 8은 남긴 점화를 바꾸지 않는다', () => {
-  const run = createRun({ seed: 1, draft: false });
-  applyRun(run, { type: 'play' });
+  const run = openAt(3);
   overflowMove(run);
   const first = clone(run.ignite);
   assert.equal(run.phase, 'shop');

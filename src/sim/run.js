@@ -568,17 +568,19 @@ export function brilliantFragment(run, events) {
   return pick;
 }
 
-// 점화(CHM-67, docs/design-notes/ignite.md): 판에서 처음 사슬 8 이상(★★★) 또는 넘침 ×10이 나온 사슬을 run.ignite에 남긴다.
+// 점화(CHM-67, docs/design-notes/ignite.md): 판에서 처음 사슬 8 이상(★★★) 또는 넘침 ×10(3관부터)이 나온 사슬을 run.ignite에 남긴다.
 // 판당 한 번. 대본 대국 · scratch 판은 판 기록을 남기지 않으니 점화도 없다(수업 · 복기 · 되짚기는 대국 규칙만 돌려 여기 오지 않는다).
 // 판정은 끝난 사슬을 읽기만 한다 — 규칙 · 난수는 그대로. c = 그 사슬(endMove가 비우기 전에 쥔 것), out = 이번 명령의 대국 사건.
 // 기록: ante · blind · log(이 대국이 run.log에 들 자리) · by('chain' 사슬 8 | 'overflow' 넘침 ×10 | 'both') · drop(떨군 칸) ·
 //   path(먹기마다 from · to · at · form, 제자리 쏘기면 stay, 꺾쇠 · 물수제비는 via, 광대는 move — 화면 capRoute가 읽는 꼴) ·
 //   steps(거쳐 간 모습, 떨군 모습부터 마지막 모습까지) · captures · value · mult · score. 옛 저장엔 없다(= 아직 점화 없음)
-export const IGNITE = { chain: 8, overflow: 10 };
+// overflowFrom: 넘침 ×10은 이 관부터만 센다 — 1~2관의 작은 목표(150 · 620)는 사슬 하나로 ×10을 넘겨, 점화가 판의 분기점보다
+// 첫 대국에 몰렸다(smart 20판 점화 19번 중 9번이 1관 ×10). 사슬 8 계기는 관과 상관없이 센다
+export const IGNITE = { chain: 8, overflow: 10, overflowFrom: 3 };
 function checkIgnite(run, c, out, events) {
   if (run.ignite || run.scratch || run.battle.script || !c) return;
   const h = run.battle.history[run.battle.history.length - 1];
-  const chain = h.captures >= IGNITE.chain, over = out.some((e) => e.type === 'overflow' && e.tier === IGNITE.overflow);
+  const chain = h.captures >= IGNITE.chain, over = run.ante >= IGNITE.overflowFrom && out.some((e) => e.type === 'overflow' && e.tier === IGNITE.overflow);
   if (!chain && !over) return;
   const path = c.captures.map((x) => ({
     from: x.from, to: x.to, at: x.at, form: x.form,
