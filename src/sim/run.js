@@ -62,12 +62,7 @@ export const REWARD = {
   interestMax: 5,
   mate: 3,             // 외통으로 이기면
   overflow: { 5: 1, 10: 2 }, // 목표를 ×5 · ×10 넘기면 덤. ×2부터 주면(이긴 대국의 절반) 판 봇 승률이 10%p 넘게 올라 작게 묶었다
-  // CHM-65: 진 대국의 위로 상금 = 그 대국 기본 상금 × 이 몫(내림, 최소 1). 남은 수 · 이자 · 넘침 덤 · 상자는 없다.
-  // 진 판의 상금이 3관부터 이긴 판의 83 → 47%로 미끄러져 덱을 보강할 돈까지 말랐다 — docs/reports/build.md 「손잡이 뒤」
-  lossShare: 0.5,
 };
-// 진 대국의 위로 상금(연습 3 → 1 · 정식 4 → 2 · 마스터 2 → 1)
-export const consolationFor = (kind) => Math.max(1, Math.floor(REWARD.base[kind] * REWARD.lossShare));
 // 명인의 상자(명인 대국을 이기면): 몇 개가 나오나(무게, HOOKS 1 흔함 · 3 드묾 · 5 ~3%)와 한 칸에 무엇이 드나.
 export const CHEST = {
   counts: [[1, 77], [3, 20], [5, 3]],
@@ -474,11 +469,7 @@ function endBattle(run, events) {
   };
   run.log.push(row);
   if (!won) {
-    // 위로 상금(CHM-65): 판이 이 대국으로 끝나도 준다(규칙 하나로) — 화면은 판이 이어질 때만 보인다
-    const consolation = consolationFor(info.kind);
-    run.money += consolation;
-    run.last = { ...row, reward: null, consolation };
-    events.push({ type: 'consolation', money: consolation, kind: info.kind });
+    run.last = { ...row, reward: null };
     // 시계 한 칸을 잃는다. 남은 칸이 있으면 다음 대국으로(8관 명인은 같은 대국을 새 판으로), 다 쓰면 판이 끝난다
     if (run.clock != null && run.clock > 0) {
       run.clock--;
@@ -486,7 +477,7 @@ function endBattle(run, events) {
       run.last.clockLost = true;
       events.push({ type: 'clockLost', clock: run.clock, ante: run.ante, blind: run.blind });
     }
-    // CHM-20: 진 대국 뒤에도 상점은 연다(위로 상금 말고 보상 · 명인의 상자는 없다) — 지면 덱을 보강할 기회까지 사라져 연쇄로 무너졌다.
+    // CHM-20: 진 대국 뒤에도 상점은 연다(보상 · 명인의 상자는 없다) — 지면 덱을 보강할 기회까지 사라져 연쇄로 무너졌다.
     // 8관 명인은 떠나면 같은 대국 앞으로 돌아온다(stay).
     if (run.clock > 0) {
       run.battle = null;

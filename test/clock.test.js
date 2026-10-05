@@ -1,7 +1,7 @@
 // 밤샘 2: 시계(D1) · 다시 놓기(D2) · 나쁜 판 거르기(D3)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRun, applyRun, legalRunCommands, ANTES, CLOCK, blindInfo, battleMods, battleSeed, awaitingGold, consolationFor } from '../src/sim/run.js';
+import { createRun, applyRun, legalRunCommands, ANTES, CLOCK, blindInfo, battleMods, battleSeed, awaitingGold } from '../src/sim/run.js';
 import { createBattle, apply, legalCommands, canReboard, boardScore, GOLDEN } from '../src/sim/battle.js';
 import { BOARD_TUNING, boardFilter, reboardOn } from '../src/sim/tuning.js';
 import { useTactic } from '../src/data/tactics.js';
@@ -23,7 +23,7 @@ function loseBattle(run) {
   return ev;
 }
 
-test('시계: 지면 한 칸을 잃고 보상 없이(위로 상금만) 상점을 거쳐 다음 대국으로, 마지막 칸을 잃으면 판이 끝난다', () => {
+test('시계: 지면 한 칸을 잃고 보상 없이 상점을 거쳐 다음 대국으로, 마지막 칸을 잃으면 판이 끝난다', () => {
   const run = createRun({ seed: 5, draft: false });
   assert.equal(run.clock, CLOCK.start);
   const money = run.money;
@@ -31,7 +31,7 @@ test('시계: 지면 한 칸을 잃고 보상 없이(위로 상금만) 상점을
   assert.ok(ev.some((e) => e.type === 'clockLost' && e.clock === CLOCK.start - 1));
   assert.ok(!ev.some((e) => e.type === 'reward' || e.type === 'chest'));
   assert.equal(run.phase, 'shop');
-  assert.equal(run.money, money + consolationFor('practice')); // CHM-65 위로 상금
+  assert.equal(run.money, money);
   assert.equal(run.last.reward, null);
   assert.ok(run.shop.display.length > 0);
   assert.equal(run.log.at(-1).clockLost, true);
