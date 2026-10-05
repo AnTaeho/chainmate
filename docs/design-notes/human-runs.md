@@ -36,6 +36,7 @@
 | `fairies` | 판 끝 주머니의 특수 기물 |
 | `best` | 판 최고 한 수 |
 | `souls` · `cracked` · `awakened` | 대국 때 주머니에 있던 혼 · 금 간 때 · 깨어난 때 |
+| `ignite` | 점화(CHM-67, `ignite.md`): `{ at: 몇째로 둔 대국(건너뛴 대국 · 대본 대국 빼고, 1부터), by: 'chain' · 'overflow' · 'both' }`, 없으면 `null`. 두 쪽 다 `run.js igniteKey` |
 
 ### 사람 판에만 있는 열쇠
 | 열쇠 | 뜻 |
