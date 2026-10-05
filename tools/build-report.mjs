@@ -222,8 +222,8 @@ export function buildReport(R, { pc, f, f2, table }) {
 
 // CLI: dump 여러 개를 합쳐 같은 표를 찍고 JSON을 표준 출력 끝에(--json 경로를 주면 파일로)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const files = process.argv.slice(2).filter((x) => !x.startsWith('--'));
   const jsonAt = process.argv.indexOf('--json');
+  const files = process.argv.slice(2).filter((x, i, a) => !x.startsWith('--') && a[i - 1] !== '--json');
   const R = files.flatMap((fn) => JSON.parse(readFileSync(fn, 'utf8')).runs);
   const pc = (x) => (Number.isFinite(x) ? (100 * x).toFixed(1) + '%' : '-');
   const f = (x, d = 0) => (Number.isFinite(x) ? x.toFixed(d) : '-');
