@@ -1,0 +1,4483 @@
+{
+ "runs": 200,
+ "won": 89,
+ "ignited": 169,
+ "ledgerOther": 0,
+ "curve": [
+  150,
+  690,
+  4140,
+  15600,
+  66000,
+  250000,
+  490000,
+  1450000
+ ],
+ "reserve": [
+  0,
+  15,
+  15,
+  15,
+  15,
+  15,
+  0,
+  0
+ ],
+ "power": [
+  {
+   "ante": 1,
+   "next": 2,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "p25": 2.362,
+     "p50": 3.466,
+     "p75": 5.321,
+     "below1": 0.01
+    },
+    "이긴 판": {
+     "n": 89,
+     "p25": 2.473,
+     "p50": 3.652,
+     "p75": 5.418,
+     "below1": 0
+    },
+    "진 판": {
+     "n": 111,
+     "p25": 2.346,
+     "p50": 3.274,
+     "p75": 5.321,
+     "below1": 0.018
+    },
+    "점화": {
+     "n": 169,
+     "p25": 2.411,
+     "p50": 3.491,
+     "p75": 5.283,
+     "below1": 0.006
+    },
+    "점화 못 함": {
+     "n": 31,
+     "p25": 1.982,
+     "p50": 3.274,
+     "p75": 5.361,
+     "below1": 0.032
+    }
+   },
+   "pass": {
+    "n": 200,
+    "p25": 2.362,
+    "p50": 3.466,
+    "p75": 5.321,
+    "below1": 0.01
+   },
+   "died": {
+    "n": 0,
+    "p25": null,
+    "p50": null,
+    "p75": null,
+    "below1": null
+   }
+  },
+  {
+   "ante": 2,
+   "next": 3,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "p25": 0.996,
+     "p50": 1.577,
+     "p75": 2.744,
+     "below1": 0.255
+    },
+    "이긴 판": {
+     "n": 89,
+     "p25": 1.352,
+     "p50": 1.95,
+     "p75": 3.313,
+     "below1": 0.146
+    },
+    "진 판": {
+     "n": 111,
+     "p25": 0.853,
+     "p50": 1.377,
+     "p75": 2.121,
+     "below1": 0.342
+    },
+    "점화": {
+     "n": 169,
+     "p25": 1.137,
+     "p50": 1.824,
+     "p75": 2.899,
+     "below1": 0.213
+    },
+    "점화 못 함": {
+     "n": 31,
+     "p25": 0.826,
+     "p50": 1.005,
+     "p75": 1.896,
+     "below1": 0.484
+    }
+   },
+   "pass": {
+    "n": 200,
+    "p25": 0.996,
+    "p50": 1.577,
+    "p75": 2.744,
+    "below1": 0.255
+   },
+   "died": {
+    "n": 0,
+    "p25": null,
+    "p50": null,
+    "p75": null,
+    "below1": null
+   }
+  },
+  {
+   "ante": 3,
+   "next": 4,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "p25": 1.067,
+     "p50": 2.019,
+     "p75": 4.24,
+     "below1": 0.245
+    },
+    "이긴 판": {
+     "n": 89,
+     "p25": 1.721,
+     "p50": 3.131,
+     "p75": 7.759,
+     "below1": 0.09
+    },
+    "진 판": {
+     "n": 111,
+     "p25": 0.788,
+     "p50": 1.414,
+     "p75": 2.301,
+     "below1": 0.369
+    },
+    "점화": {
+     "n": 169,
+     "p25": 1.343,
+     "p50": 2.203,
+     "p75": 4.936,
+     "below1": 0.178
+    },
+    "점화 못 함": {
+     "n": 31,
+     "p25": 0.514,
+     "p50": 0.789,
+     "p75": 1.467,
+     "below1": 0.613
+    }
+   },
+   "pass": {
+    "n": 195,
+    "p25": 1.158,
+    "p50": 2.044,
+    "p75": 4.581,
+    "below1": 0.231
+   },
+   "died": {
+    "n": 5,
+    "p25": 0.514,
+    "p50": 0.598,
+    "p75": 0.742,
+    "below1": 0.8
+   }
+  },
+  {
+   "ante": 4,
+   "next": 5,
+   "groups": {
+    "전체": {
+     "n": 195,
+     "p25": 0.617,
+     "p50": 1.348,
+     "p75": 2.947,
+     "below1": 0.415
+    },
+    "이긴 판": {
+     "n": 89,
+     "p25": 1.045,
+     "p50": 1.995,
+     "p75": 5.76,
+     "below1": 0.236
+    },
+    "진 판": {
+     "n": 106,
+     "p25": 0.357,
+     "p50": 0.945,
+     "p75": 1.747,
+     "below1": 0.566
+    },
+    "점화": {
+     "n": 169,
+     "p25": 0.835,
+     "p50": 1.509,
+     "p75": 3.15,
+     "below1": 0.361
+    },
+    "점화 못 함": {
+     "n": 26,
+     "p25": 0.257,
+     "p50": 0.403,
+     "p75": 0.941,
+     "below1": 0.769
+    }
+   },
+   "pass": {
+    "n": 181,
+    "p25": 0.668,
+    "p50": 1.509,
+    "p75": 3.028,
+    "below1": 0.376
+   },
+   "died": {
+    "n": 14,
+    "p25": 0.224,
+    "p50": 0.348,
+    "p75": 0.907,
+    "below1": 0.929
+   }
+  },
+  {
+   "ante": 5,
+   "next": 6,
+   "groups": {
+    "전체": {
+     "n": 181,
+     "p25": 0.442,
+     "p50": 0.889,
+     "p75": 2.331,
+     "below1": 0.525
+    },
+    "이긴 판": {
+     "n": 89,
+     "p25": 0.855,
+     "p50": 1.964,
+     "p75": 4.186,
+     "below1": 0.292
+    },
+    "진 판": {
+     "n": 92,
+     "p25": 0.336,
+     "p50": 0.5,
+     "p75": 0.988,
+     "below1": 0.75
+    },
+    "점화": {
+     "n": 163,
+     "p25": 0.533,
+     "p50": 1.048,
+     "p75": 2.695,
+     "below1": 0.485
+    },
+    "점화 못 함": {
+     "n": 18,
+     "p25": 0.235,
+     "p50": 0.413,
+     "p75": 0.539,
+     "below1": 0.889
+    }
+   },
+   "pass": {
+    "n": 152,
+    "p25": 0.558,
+    "p50": 1.152,
+    "p75": 2.764,
+    "below1": 0.467
+   },
+   "died": {
+    "n": 29,
+    "p25": 0.268,
+    "p50": 0.441,
+    "p75": 0.633,
+    "below1": 0.828
+   }
+  },
+  {
+   "ante": 6,
+   "next": 7,
+   "groups": {
+    "전체": {
+     "n": 152,
+     "p25": 0.54,
+     "p50": 1.257,
+     "p75": 3.548,
+     "below1": 0.421
+    },
+    "이긴 판": {
+     "n": 89,
+     "p25": 1.018,
+     "p50": 2.264,
+     "p75": 6.87,
+     "below1": 0.247
+    },
+    "진 판": {
+     "n": 63,
+     "p25": 0.303,
+     "p50": 0.553,
+     "p75": 1.314,
+     "below1": 0.667
+    },
+    "점화": {
+     "n": 144,
+     "p25": 0.567,
+     "p50": 1.282,
+     "p75": 3.613,
+     "below1": 0.403
+    },
+    "점화 못 함": {
+     "n": 8,
+     "p25": 0.31,
+     "p50": 0.473,
+     "p75": 0.514,
+     "below1": 0.75
+    }
+   },
+   "pass": {
+    "n": 123,
+    "p25": 0.721,
+    "p50": 1.471,
+    "p75": 4.334,
+    "below1": 0.35
+   },
+   "died": {
+    "n": 29,
+    "p25": 0.29,
+    "p50": 0.514,
+    "p75": 1.03,
+    "below1": 0.724
+   }
+  },
+  {
+   "ante": 7,
+   "next": 8,
+   "groups": {
+    "전체": {
+     "n": 123,
+     "p25": 0.799,
+     "p50": 2.546,
+     "p75": 10.409,
+     "below1": 0.293
+    },
+    "이긴 판": {
+     "n": 89,
+     "p25": 1.672,
+     "p50": 5.79,
+     "p75": 18.206,
+     "below1": 0.146
+    },
+    "진 판": {
+     "n": 34,
+     "p25": 0.267,
+     "p50": 0.5,
+     "p75": 1.369,
+     "below1": 0.676
+    },
+    "점화": {
+     "n": 121,
+     "p25": 0.799,
+     "p50": 2.88,
+     "p75": 10.409,
+     "below1": 0.289
+    },
+    "점화 못 함": {
+     "n": 2,
+     "p25": 0.184,
+     "p50": 1.649,
+     "p75": 1.649,
+     "below1": 0.5
+    }
+   },
+   "pass": {
+    "n": 89,
+    "p25": 1.672,
+    "p50": 5.79,
+    "p75": 18.206,
+    "below1": 0.146
+   },
+   "died": {
+    "n": 34,
+    "p25": 0.267,
+    "p50": 0.5,
+    "p75": 1.369,
+    "below1": 0.676
+   }
+  }
+ ],
+ "death": [
+  {
+   "died": 4,
+   "n": 5,
+   "cells": {
+    "1": {
+     "n": 5,
+     "p50": 1.971
+    },
+    "2": {
+     "n": 5,
+     "p50": 0.678
+    },
+    "3": {
+     "n": 5,
+     "p50": 0.598
+    }
+   }
+  },
+  {
+   "died": 5,
+   "n": 14,
+   "cells": {
+    "1": {
+     "n": 14,
+     "p50": 3.466
+    },
+    "2": {
+     "n": 14,
+     "p50": 0.996
+    },
+    "3": {
+     "n": 14,
+     "p50": 0.789
+    },
+    "4": {
+     "n": 14,
+     "p50": 0.348
+    }
+   }
+  },
+  {
+   "died": 6,
+   "n": 29,
+   "cells": {
+    "1": {
+     "n": 29,
+     "p50": 3.036
+    },
+    "2": {
+     "n": 29,
+     "p50": 1.331
+    },
+    "3": {
+     "n": 29,
+     "p50": 1.244
+    },
+    "4": {
+     "n": 29,
+     "p50": 0.75
+    },
+    "5": {
+     "n": 29,
+     "p50": 0.441
+    }
+   }
+  },
+  {
+   "died": 7,
+   "n": 29,
+   "cells": {
+    "1": {
+     "n": 29,
+     "p50": 4.928
+    },
+    "2": {
+     "n": 29,
+     "p50": 1.451
+    },
+    "3": {
+     "n": 29,
+     "p50": 1.909
+    },
+    "4": {
+     "n": 29,
+     "p50": 1.227
+    },
+    "5": {
+     "n": 29,
+     "p50": 0.572
+    },
+    "6": {
+     "n": 29,
+     "p50": 0.514
+    }
+   }
+  },
+  {
+   "died": 8,
+   "n": 34,
+   "cells": {
+    "1": {
+     "n": 34,
+     "p50": 3.036
+    },
+    "2": {
+     "n": 34,
+     "p50": 1.571
+    },
+    "3": {
+     "n": 34,
+     "p50": 1.746
+    },
+    "4": {
+     "n": 34,
+     "p50": 1.307
+    },
+    "5": {
+     "n": 34,
+     "p50": 0.581
+    },
+    "6": {
+     "n": 34,
+     "p50": 0.721
+    },
+    "7": {
+     "n": 34,
+     "p50": 0.5
+    }
+   }
+  },
+  {
+   "died": "won",
+   "n": 89,
+   "cells": {
+    "1": {
+     "n": 89,
+     "p50": 3.652
+    },
+    "2": {
+     "n": 89,
+     "p50": 1.95
+    },
+    "3": {
+     "n": 89,
+     "p50": 3.131
+    },
+    "4": {
+     "n": 89,
+     "p50": 1.995
+    },
+    "5": {
+     "n": 89,
+     "p50": 1.964
+    },
+    "6": {
+     "n": 89,
+     "p50": 2.264
+    },
+    "7": {
+     "n": 89,
+     "p50": 5.79
+    }
+   }
+  }
+ ],
+ "below": {
+  "이긴 판": {
+   "n": 89,
+   "at": {
+    "2": 13,
+    "3": 7,
+    "4": 14,
+    "5": 12,
+    "6": 3,
+    "7": 4,
+    "없음": 36
+   }
+  },
+  "진 판": {
+   "n": 111,
+   "at": {
+    "1": 2,
+    "2": 37,
+    "3": 17,
+    "4": 22,
+    "5": 21,
+    "6": 3,
+    "없음": 9
+   }
+  }
+ },
+ "money": [
+  {
+   "ante": 1,
+   "reserve": 0,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "earn": {
+      "reward": 18.73,
+      "consolation": 0,
+      "interest": 0.005,
+      "chest": 1.68,
+      "tag": 0.03,
+      "sell": 0
+     },
+     "spend": {
+      "maxim": 7.905,
+      "chart": 2.595,
+      "engraving": 1.155,
+      "piece": 0.615,
+      "pack": 4.52,
+      "reroll": 0,
+      "promote": 1.965,
+      "remove": 1.965,
+      "soul": 0.755,
+      "tactic": 0,
+      "evolve": 0.8,
+      "awaken": 0,
+      "fragment": 0.92,
+      "gamble": 0
+     },
+     "earnSum": 20.445,
+     "spendSum": 23.195,
+     "held": 1.25,
+     "heldP50": 1,
+     "shops": 595,
+     "left": 1.262,
+     "leftP50": 1,
+     "leftOverReserve": 0.002,
+     "leftAtCap": 0
+    },
+    "이긴 판": {
+     "n": 89,
+     "earn": {
+      "reward": 19.135,
+      "consolation": 0,
+      "interest": 0,
+      "chest": 1.573,
+      "tag": 0,
+      "sell": 0
+     },
+     "spend": {
+      "maxim": 8.315,
+      "chart": 2.798,
+      "engraving": 0.978,
+      "piece": 0.461,
+      "pack": 4.449,
+      "reroll": 0,
+      "promote": 1.921,
+      "remove": 1.82,
+      "soul": 0.663,
+      "tactic": 0,
+      "evolve": 0.674,
+      "awaken": 0,
+      "fragment": 1.303,
+      "gamble": 0
+     },
+     "earnSum": 20.708,
+     "spendSum": 23.382,
+     "held": 1.326,
+     "heldP50": 1,
+     "shops": 265,
+     "left": 1.37,
+     "leftP50": 1,
+     "leftOverReserve": 0,
+     "leftAtCap": 0
+    },
+    "진 판": {
+     "n": 111,
+     "earn": {
+      "reward": 18.405,
+      "consolation": 0,
+      "interest": 0.009,
+      "chest": 1.766,
+      "tag": 0.054,
+      "sell": 0
+     },
+     "spend": {
+      "maxim": 7.577,
+      "chart": 2.432,
+      "engraving": 1.297,
+      "piece": 0.739,
+      "pack": 4.577,
+      "reroll": 0,
+      "promote": 2,
+      "remove": 2.081,
+      "soul": 0.829,
+      "tactic": 0,
+      "evolve": 0.901,
+      "awaken": 0,
+      "fragment": 0.613,
+      "gamble": 0
+     },
+     "earnSum": 20.234,
+     "spendSum": 23.045,
+     "held": 1.189,
+     "heldP50": 1,
+     "shops": 330,
+     "left": 1.176,
+     "leftP50": 1,
+     "leftOverReserve": 0.003,
+     "leftAtCap": 0
+    }
+   }
+  },
+  {
+   "ante": 2,
+   "reserve": 15,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "earn": {
+      "reward": 20.38,
+      "consolation": 0.04,
+      "interest": 2.655,
+      "chest": 1.61,
+      "tag": 0,
+      "sell": 0.035
+     },
+     "spend": {
+      "maxim": 5.28,
+      "chart": 1.17,
+      "engraving": 0.285,
+      "piece": 0.34,
+      "pack": 1.34,
+      "reroll": 0,
+      "promote": 0.615,
+      "remove": 0.81,
+      "soul": 0.695,
+      "tactic": 0,
+      "evolve": 0.54,
+      "awaken": 0,
+      "fragment": 0.22,
+      "gamble": 0
+     },
+     "earnSum": 24.72,
+     "spendSum": 11.295,
+     "held": 14.675,
+     "heldP50": 16,
+     "shops": 598,
+     "left": 10.742,
+     "leftP50": 11,
+     "leftOverReserve": 0.003,
+     "leftAtCap": 0
+    },
+    "이긴 판": {
+     "n": 89,
+     "earn": {
+      "reward": 21.955,
+      "consolation": 0.022,
+      "interest": 2.697,
+      "chest": 1.551,
+      "tag": 0,
+      "sell": 0.045
+     },
+     "spend": {
+      "maxim": 6.303,
+      "chart": 1.348,
+      "engraving": 0.337,
+      "piece": 0.461,
+      "pack": 1.528,
+      "reroll": 0,
+      "promote": 0.506,
+      "remove": 0.91,
+      "soul": 0.888,
+      "tactic": 0,
+      "evolve": 0.539,
+      "awaken": 0,
+      "fragment": 0.135,
+      "gamble": 0
+     },
+     "earnSum": 26.27,
+     "spendSum": 12.955,
+     "held": 14.64,
+     "heldP50": 16,
+     "shops": 266,
+     "left": 10.707,
+     "leftP50": 11,
+     "leftOverReserve": 0.004,
+     "leftAtCap": 0
+    },
+    "진 판": {
+     "n": 111,
+     "earn": {
+      "reward": 19.117,
+      "consolation": 0.054,
+      "interest": 2.622,
+      "chest": 1.658,
+      "tag": 0,
+      "sell": 0.027
+     },
+     "spend": {
+      "maxim": 4.459,
+      "chart": 1.027,
+      "engraving": 0.243,
+      "piece": 0.243,
+      "pack": 1.189,
+      "reroll": 0,
+      "promote": 0.703,
+      "remove": 0.73,
+      "soul": 0.541,
+      "tactic": 0,
+      "evolve": 0.541,
+      "awaken": 0,
+      "fragment": 0.288,
+      "gamble": 0
+     },
+     "earnSum": 23.477,
+     "spendSum": 9.964,
+     "held": 14.703,
+     "heldP50": 16,
+     "shops": 332,
+     "left": 10.771,
+     "leftP50": 11,
+     "leftOverReserve": 0.003,
+     "leftAtCap": 0
+    }
+   }
+  },
+  {
+   "ante": 3,
+   "reserve": 15,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "earn": {
+      "reward": 19.5,
+      "consolation": 0.165,
+      "interest": 7.855,
+      "chest": 1.58,
+      "tag": 0.46,
+      "sell": 0.945
+     },
+     "spend": {
+      "maxim": 7.605,
+      "chart": 2.175,
+      "engraving": 0.78,
+      "piece": 0.76,
+      "pack": 10.7,
+      "reroll": 0.025,
+      "promote": 1.92,
+      "remove": 1.935,
+      "soul": 0.925,
+      "tactic": 0,
+      "evolve": 0.78,
+      "awaken": 0,
+      "fragment": 0.74,
+      "gamble": 0
+     },
+     "earnSum": 30.505,
+     "spendSum": 28.345,
+     "held": 16.835,
+     "heldP50": 17,
+     "shops": 576,
+     "left": 16.542,
+     "leftP50": 16,
+     "leftOverReserve": 0.066,
+     "leftAtCap": 0.014
+    },
+    "이긴 판": {
+     "n": 89,
+     "earn": {
+      "reward": 22.112,
+      "consolation": 0.045,
+      "interest": 8.393,
+      "chest": 1.73,
+      "tag": 0.236,
+      "sell": 1.135
+     },
+     "spend": {
+      "maxim": 8.236,
+      "chart": 2.124,
+      "engraving": 0.944,
+      "piece": 0.843,
+      "pack": 11.865,
+      "reroll": 0.056,
+      "promote": 2.022,
+      "remove": 1.989,
+      "soul": 1.045,
+      "tactic": 0,
+      "evolve": 0.764,
+      "awaken": 0,
+      "fragment": 1.079,
+      "gamble": 0
+     },
+     "earnSum": 33.652,
+     "spendSum": 30.966,
+     "held": 17.326,
+     "heldP50": 17,
+     "shops": 264,
+     "left": 16.761,
+     "leftP50": 17,
+     "leftOverReserve": 0.08,
+     "leftAtCap": 0.015
+    },
+    "진 판": {
+     "n": 111,
+     "earn": {
+      "reward": 17.405,
+      "consolation": 0.261,
+      "interest": 7.423,
+      "chest": 1.459,
+      "tag": 0.64,
+      "sell": 0.793
+     },
+     "spend": {
+      "maxim": 7.099,
+      "chart": 2.216,
+      "engraving": 0.649,
+      "piece": 0.694,
+      "pack": 9.766,
+      "reroll": 0,
+      "promote": 1.838,
+      "remove": 1.892,
+      "soul": 0.829,
+      "tactic": 0,
+      "evolve": 0.793,
+      "awaken": 0,
+      "fragment": 0.468,
+      "gamble": 0
+     },
+     "earnSum": 27.982,
+     "spendSum": 26.243,
+     "held": 16.441,
+     "heldP50": 16,
+     "shops": 312,
+     "left": 16.356,
+     "leftP50": 16,
+     "leftOverReserve": 0.054,
+     "leftAtCap": 0.013
+    }
+   }
+  },
+  {
+   "ante": 4,
+   "reserve": 15,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "earn": {
+      "reward": 18.04,
+      "consolation": 0.265,
+      "interest": 7.76,
+      "chest": 1.2,
+      "tag": 0.81,
+      "sell": 1.915
+     },
+     "spend": {
+      "maxim": 6.14,
+      "chart": 1.965,
+      "engraving": 0.51,
+      "piece": 1.015,
+      "pack": 13.46,
+      "reroll": 0.38,
+      "promote": 1.875,
+      "remove": 1.92,
+      "soul": 0.84,
+      "tactic": 0,
+      "evolve": 0.5,
+      "awaken": 0.04,
+      "fragment": 1.02,
+      "gamble": 0
+     },
+     "earnSum": 29.99,
+     "spendSum": 29.665,
+     "held": 17.16,
+     "heldP50": 17,
+     "shops": 533,
+     "left": 17.415,
+     "leftP50": 17,
+     "leftOverReserve": 0.184,
+     "leftAtCap": 0.032
+    },
+    "이긴 판": {
+     "n": 89,
+     "earn": {
+      "reward": 22.18,
+      "consolation": 0.034,
+      "interest": 9.202,
+      "chest": 1.506,
+      "tag": 0.27,
+      "sell": 2.191
+     },
+     "spend": {
+      "maxim": 6.584,
+      "chart": 2.292,
+      "engraving": 0.674,
+      "piece": 1.247,
+      "pack": 16.629,
+      "reroll": 0.517,
+      "promote": 2.056,
+      "remove": 2.326,
+      "soul": 0.888,
+      "tactic": 0,
+      "evolve": 0.539,
+      "awaken": 0.09,
+      "fragment": 0.854,
+      "gamble": 0
+     },
+     "earnSum": 35.382,
+     "spendSum": 34.697,
+     "held": 18.011,
+     "heldP50": 17,
+     "shops": 257,
+     "left": 17.918,
+     "leftP50": 17,
+     "leftOverReserve": 0.245,
+     "leftAtCap": 0.043
+    },
+    "진 판": {
+     "n": 111,
+     "earn": {
+      "reward": 14.721,
+      "consolation": 0.45,
+      "interest": 6.604,
+      "chest": 0.955,
+      "tag": 1.243,
+      "sell": 1.694
+     },
+     "spend": {
+      "maxim": 5.784,
+      "chart": 1.703,
+      "engraving": 0.378,
+      "piece": 0.829,
+      "pack": 10.919,
+      "reroll": 0.27,
+      "promote": 1.73,
+      "remove": 1.595,
+      "soul": 0.802,
+      "tactic": 0,
+      "evolve": 0.468,
+      "awaken": 0,
+      "fragment": 1.153,
+      "gamble": 0
+     },
+     "earnSum": 25.667,
+     "spendSum": 25.631,
+     "held": 16.477,
+     "heldP50": 16,
+     "shops": 276,
+     "left": 16.946,
+     "leftP50": 17,
+     "leftOverReserve": 0.127,
+     "leftAtCap": 0.022
+    }
+   }
+  },
+  {
+   "ante": 5,
+   "reserve": 15,
+   "groups": {
+    "전체": {
+     "n": 195,
+     "earn": {
+      "reward": 16.123,
+      "consolation": 0.446,
+      "interest": 6.764,
+      "chest": 1.077,
+      "tag": 1.431,
+      "sell": 1.867
+     },
+     "spend": {
+      "maxim": 4.621,
+      "chart": 1.862,
+      "engraving": 0.508,
+      "piece": 0.651,
+      "pack": 12.841,
+      "reroll": 0.779,
+      "promote": 1.538,
+      "remove": 1.692,
+      "soul": 0.897,
+      "tactic": 0,
+      "evolve": 0.636,
+      "awaken": 0,
+      "fragment": 0.8,
+      "gamble": 0
+     },
+     "earnSum": 27.708,
+     "spendSum": 26.826,
+     "held": 18.077,
+     "heldP50": 17,
+     "shops": 467,
+     "left": 18.094,
+     "leftP50": 17,
+     "leftOverReserve": 0.251,
+     "leftAtCap": 0.073
+    },
+    "이긴 판": {
+     "n": 89,
+     "earn": {
+      "reward": 21.809,
+      "consolation": 0.112,
+      "interest": 9.112,
+      "chest": 1.393,
+      "tag": 0.213,
+      "sell": 2.596
+     },
+     "spend": {
+      "maxim": 5.64,
+      "chart": 2.36,
+      "engraving": 0.607,
+      "piece": 0.966,
+      "pack": 17.169,
+      "reroll": 1.135,
+      "promote": 1.921,
+      "remove": 1.787,
+      "soul": 1.124,
+      "tactic": 0,
+      "evolve": 0.719,
+      "awaken": 0,
+      "fragment": 1.169,
+      "gamble": 0
+     },
+     "earnSum": 35.236,
+     "spendSum": 34.596,
+     "held": 18.652,
+     "heldP50": 18,
+     "shops": 250,
+     "left": 18.724,
+     "leftP50": 18,
+     "leftOverReserve": 0.324,
+     "leftAtCap": 0.096
+    },
+    "진 판": {
+     "n": 106,
+     "earn": {
+      "reward": 11.349,
+      "consolation": 0.726,
+      "interest": 4.792,
+      "chest": 0.811,
+      "tag": 2.453,
+      "sell": 1.255
+     },
+     "spend": {
+      "maxim": 3.764,
+      "chart": 1.443,
+      "engraving": 0.425,
+      "piece": 0.387,
+      "pack": 9.208,
+      "reroll": 0.481,
+      "promote": 1.217,
+      "remove": 1.613,
+      "soul": 0.708,
+      "tactic": 0,
+      "evolve": 0.566,
+      "awaken": 0,
+      "fragment": 0.491,
+      "gamble": 0
+     },
+     "earnSum": 21.387,
+     "spendSum": 20.302,
+     "held": 17.594,
+     "heldP50": 17,
+     "shops": 217,
+     "left": 17.369,
+     "leftP50": 17,
+     "leftOverReserve": 0.166,
+     "leftAtCap": 0.046
+    }
+   }
+  },
+  {
+   "ante": 6,
+   "reserve": 15,
+   "groups": {
+    "전체": {
+     "n": 181,
+     "earn": {
+      "reward": 12.05,
+      "consolation": 0.762,
+      "interest": 5.133,
+      "chest": 0.807,
+      "tag": 2.707,
+      "sell": 1.591
+     },
+     "spend": {
+      "maxim": 3.685,
+      "chart": 1.425,
+      "engraving": 0.448,
+      "piece": 0.834,
+      "pack": 11.204,
+      "reroll": 1.033,
+      "promote": 1.028,
+      "remove": 1.558,
+      "soul": 0.552,
+      "tactic": 0,
+      "evolve": 0.442,
+      "awaken": 0,
+      "fragment": 0.354,
+      "gamble": 0
+     },
+     "earnSum": 23.05,
+     "spendSum": 22.564,
+     "held": 18.326,
+     "heldP50": 17,
+     "shops": 361,
+     "left": 18.366,
+     "leftP50": 17,
+     "leftOverReserve": 0.288,
+     "leftAtCap": 0.086
+    },
+    "이긴 판": {
+     "n": 89,
+     "earn": {
+      "reward": 18.022,
+      "consolation": 0.337,
+      "interest": 7.944,
+      "chest": 1.213,
+      "tag": 1.798,
+      "sell": 2.169
+     },
+     "spend": {
+      "maxim": 5.011,
+      "chart": 1.854,
+      "engraving": 0.573,
+      "piece": 1.067,
+      "pack": 16.045,
+      "reroll": 1.764,
+      "promote": 1.348,
+      "remove": 1.82,
+      "soul": 0.775,
+      "tactic": 0,
+      "evolve": 0.674,
+      "awaken": 0,
+      "fragment": 0.494,
+      "gamble": 0
+     },
+     "earnSum": 31.483,
+     "spendSum": 31.427,
+     "held": 18.708,
+     "heldP50": 18,
+     "shops": 228,
+     "left": 19,
+     "leftP50": 18,
+     "leftOverReserve": 0.364,
+     "leftAtCap": 0.114
+    },
+    "진 판": {
+     "n": 92,
+     "earn": {
+      "reward": 6.272,
+      "consolation": 1.174,
+      "interest": 2.413,
+      "chest": 0.413,
+      "tag": 3.587,
+      "sell": 1.033
+     },
+     "spend": {
+      "maxim": 2.402,
+      "chart": 1.011,
+      "engraving": 0.326,
+      "piece": 0.609,
+      "pack": 6.522,
+      "reroll": 0.326,
+      "promote": 0.717,
+      "remove": 1.304,
+      "soul": 0.337,
+      "tactic": 0,
+      "evolve": 0.217,
+      "awaken": 0,
+      "fragment": 0.217,
+      "gamble": 0
+     },
+     "earnSum": 14.891,
+     "spendSum": 13.989,
+     "held": 17.957,
+     "heldP50": 17,
+     "shops": 133,
+     "left": 17.278,
+     "leftP50": 17,
+     "leftOverReserve": 0.158,
+     "leftAtCap": 0.038
+    }
+   }
+  },
+  {
+   "ante": 7,
+   "reserve": 0,
+   "groups": {
+    "전체": {
+     "n": 152,
+     "earn": {
+      "reward": 13.454,
+      "consolation": 0.553,
+      "interest": 3.783,
+      "chest": 1.079,
+      "tag": 2.217,
+      "sell": 1.822
+     },
+     "spend": {
+      "maxim": 3.678,
+      "chart": 1.52,
+      "engraving": 0.572,
+      "piece": 0.664,
+      "pack": 14.395,
+      "reroll": 6.882,
+      "promote": 1.539,
+      "remove": 1.579,
+      "soul": 1.171,
+      "tactic": 0,
+      "evolve": 0.526,
+      "awaken": 0.105,
+      "fragment": 0.553,
+      "gamble": 0
+     },
+     "earnSum": 22.908,
+     "spendSum": 33.184,
+     "held": 7.678,
+     "heldP50": 7,
+     "shops": 302,
+     "left": 6.94,
+     "leftP50": 8,
+     "leftOverReserve": 0.659,
+     "leftAtCap": 0
+    },
+    "이긴 판": {
+     "n": 89,
+     "earn": {
+      "reward": 17.876,
+      "consolation": 0.382,
+      "interest": 4.674,
+      "chest": 1.371,
+      "tag": 1.382,
+      "sell": 2.348
+     },
+     "spend": {
+      "maxim": 4.764,
+      "chart": 1.888,
+      "engraving": 0.742,
+      "piece": 0.82,
+      "pack": 17.933,
+      "reroll": 8.753,
+      "promote": 1.82,
+      "remove": 2.124,
+      "soul": 1.607,
+      "tactic": 0,
+      "evolve": 0.629,
+      "awaken": 0,
+      "fragment": 0.629,
+      "gamble": 0
+     },
+     "earnSum": 28.034,
+     "spendSum": 41.708,
+     "held": 5.034,
+     "heldP50": 3,
+     "shops": 223,
+     "left": 6.717,
+     "leftP50": 7,
+     "leftOverReserve": 0.628,
+     "leftAtCap": 0
+    },
+    "진 판": {
+     "n": 63,
+     "earn": {
+      "reward": 7.206,
+      "consolation": 0.794,
+      "interest": 2.524,
+      "chest": 0.667,
+      "tag": 3.397,
+      "sell": 1.079
+     },
+     "spend": {
+      "maxim": 2.143,
+      "chart": 1,
+      "engraving": 0.333,
+      "piece": 0.444,
+      "pack": 9.397,
+      "reroll": 4.238,
+      "promote": 1.143,
+      "remove": 0.81,
+      "soul": 0.556,
+      "tactic": 0,
+      "evolve": 0.381,
+      "awaken": 0.254,
+      "fragment": 0.444,
+      "gamble": 0
+     },
+     "earnSum": 15.667,
+     "spendSum": 21.143,
+     "held": 11.413,
+     "heldP50": 9,
+     "shops": 79,
+     "left": 7.57,
+     "leftP50": 8,
+     "leftOverReserve": 0.747,
+     "leftAtCap": 0
+    }
+   }
+  },
+  {
+   "ante": 8,
+   "reserve": 0,
+   "groups": {
+    "전체": {
+     "n": 123,
+     "earn": {
+      "reward": 18.943,
+      "consolation": 0.447,
+      "interest": 1.276,
+      "chest": 1.138,
+      "tag": 1.26,
+      "sell": 1.171
+     },
+     "spend": {
+      "maxim": 2.195,
+      "chart": 0.951,
+      "engraving": 0.293,
+      "piece": 0.61,
+      "pack": 9.073,
+      "reroll": 0.821,
+      "promote": 0.951,
+      "remove": 1.512,
+      "soul": 0.325,
+      "tactic": 0,
+      "evolve": 0.293,
+      "awaken": 0.065,
+      "fragment": 0.195,
+      "gamble": 0
+     },
+     "earnSum": 24.236,
+     "spendSum": 17.285,
+     "held": 12.488,
+     "heldP50": 11,
+     "shops": 198,
+     "left": 3.96,
+     "leftP50": 3,
+     "leftOverReserve": 0.323,
+     "leftAtCap": 0
+    },
+    "이긴 판": {
+     "n": 89,
+     "earn": {
+      "reward": 23.067,
+      "consolation": 0.101,
+      "interest": 1.494,
+      "chest": 1.573,
+      "tag": 0.719,
+      "sell": 1.202
+     },
+     "spend": {
+      "maxim": 2.303,
+      "chart": 1.045,
+      "engraving": 0.404,
+      "piece": 0.697,
+      "pack": 10.427,
+      "reroll": 0.854,
+      "promote": 0.944,
+      "remove": 1.652,
+      "soul": 0.292,
+      "tactic": 0,
+      "evolve": 0.315,
+      "awaken": 0.09,
+      "fragment": 0.09,
+      "gamble": 0
+     },
+     "earnSum": 28.157,
+     "spendSum": 19.112,
+     "held": 14.079,
+     "heldP50": 12,
+     "shops": 154,
+     "left": 3.877,
+     "leftP50": 3,
+     "leftOverReserve": 0.318,
+     "leftAtCap": 0
+    },
+    "진 판": {
+     "n": 34,
+     "earn": {
+      "reward": 8.147,
+      "consolation": 1.353,
+      "interest": 0.706,
+      "chest": 0,
+      "tag": 2.676,
+      "sell": 1.088
+     },
+     "spend": {
+      "maxim": 1.912,
+      "chart": 0.706,
+      "engraving": 0,
+      "piece": 0.382,
+      "pack": 5.529,
+      "reroll": 0.735,
+      "promote": 0.971,
+      "remove": 1.147,
+      "soul": 0.412,
+      "tactic": 0,
+      "evolve": 0.235,
+      "awaken": 0,
+      "fragment": 0.471,
+      "gamble": 0
+     },
+     "earnSum": 13.971,
+     "spendSum": 12.5,
+     "held": 8.324,
+     "heldP50": 9,
+     "shops": 44,
+     "left": 4.25,
+     "leftP50": 2,
+     "leftOverReserve": 0.341,
+     "leftAtCap": 0
+    }
+   }
+  }
+ ],
+ "display": [
+  {
+   "ante": 1,
+   "groups": {
+    "전체": {
+     "shops": 595,
+     "perShop": 2,
+     "boughtShare": 0.652,
+     "kinds": {
+      "maxim": {
+       "seen": 532,
+       "bought": 378,
+       "affUnbought": 141
+      },
+      "piece": {
+       "seen": 120,
+       "bought": 32,
+       "affUnbought": 83
+      },
+      "fragment": {
+       "seen": 46,
+       "bought": 46,
+       "affUnbought": 0
+      },
+      "evolve": {
+       "seen": 50,
+       "bought": 40,
+       "affUnbought": 10
+      },
+      "engraving": {
+       "seen": 123,
+       "bought": 77,
+       "affUnbought": 46
+      },
+      "chart": {
+       "seen": 191,
+       "bought": 173,
+       "affUnbought": 18
+      },
+      "gamble": {
+       "seen": 34,
+       "bought": 0,
+       "affUnbought": 34
+      },
+      "soul": {
+       "seen": 48,
+       "bought": 30,
+       "affUnbought": 15
+      },
+      "tactic": {
+       "seen": 46,
+       "bought": 0,
+       "affUnbought": 46
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 29,
+       "bought": 13,
+       "affUnbought": 13,
+       "cant": 3
+      },
+      "edition": {
+       "seen": 23,
+       "bought": 11,
+       "affUnbought": 6,
+       "cant": 6
+      },
+      "x": {
+       "seen": 155,
+       "bought": 89,
+       "affUnbought": 61,
+       "cant": 5
+      }
+     },
+     "lastGood": {
+      "keep": 1,
+      "breakR": 0,
+      "cant": 81
+     },
+     "packs": {
+      "seen": 1197,
+      "bought": 233
+     }
+    },
+    "이긴 판": {
+     "shops": 265,
+     "perShop": 2,
+     "boughtShare": 0.668,
+     "kinds": {
+      "maxim": {
+       "seen": 243,
+       "bought": 174,
+       "affUnbought": 66
+      },
+      "fragment": {
+       "seen": 29,
+       "bought": 29,
+       "affUnbought": 0
+      },
+      "piece": {
+       "seen": 47,
+       "bought": 12,
+       "affUnbought": 35
+      },
+      "evolve": {
+       "seen": 18,
+       "bought": 15,
+       "affUnbought": 3
+      },
+      "chart": {
+       "seen": 90,
+       "bought": 83,
+       "affUnbought": 7
+      },
+      "engraving": {
+       "seen": 46,
+       "bought": 29,
+       "affUnbought": 17
+      },
+      "soul": {
+       "seen": 21,
+       "bought": 12,
+       "affUnbought": 7
+      },
+      "gamble": {
+       "seen": 18,
+       "bought": 0,
+       "affUnbought": 18
+      },
+      "tactic": {
+       "seen": 18,
+       "bought": 0,
+       "affUnbought": 18
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 15,
+       "bought": 7,
+       "affUnbought": 8,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 11,
+       "bought": 7,
+       "affUnbought": 2,
+       "cant": 2
+      },
+      "x": {
+       "seen": 79,
+       "bought": 43,
+       "affUnbought": 35,
+       "cant": 1
+      }
+     },
+     "lastGood": {
+      "keep": 0,
+      "breakR": 0,
+      "cant": 41
+     },
+     "packs": {
+      "seen": 531,
+      "bought": 100
+     }
+    },
+    "진 판": {
+     "shops": 330,
+     "perShop": 2,
+     "boughtShare": 0.639,
+     "kinds": {
+      "maxim": {
+       "seen": 289,
+       "bought": 204,
+       "affUnbought": 75
+      },
+      "piece": {
+       "seen": 73,
+       "bought": 20,
+       "affUnbought": 48
+      },
+      "fragment": {
+       "seen": 17,
+       "bought": 17,
+       "affUnbought": 0
+      },
+      "evolve": {
+       "seen": 32,
+       "bought": 25,
+       "affUnbought": 7
+      },
+      "engraving": {
+       "seen": 77,
+       "bought": 48,
+       "affUnbought": 29
+      },
+      "chart": {
+       "seen": 101,
+       "bought": 90,
+       "affUnbought": 11
+      },
+      "gamble": {
+       "seen": 16,
+       "bought": 0,
+       "affUnbought": 16
+      },
+      "soul": {
+       "seen": 27,
+       "bought": 18,
+       "affUnbought": 8
+      },
+      "tactic": {
+       "seen": 28,
+       "bought": 0,
+       "affUnbought": 28
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 14,
+       "bought": 6,
+       "affUnbought": 5,
+       "cant": 3
+      },
+      "edition": {
+       "seen": 12,
+       "bought": 4,
+       "affUnbought": 4,
+       "cant": 4
+      },
+      "x": {
+       "seen": 76,
+       "bought": 46,
+       "affUnbought": 26,
+       "cant": 4
+      }
+     },
+     "lastGood": {
+      "keep": 1,
+      "breakR": 0,
+      "cant": 40
+     },
+     "packs": {
+      "seen": 666,
+      "bought": 133
+     }
+    }
+   }
+  },
+  {
+   "ante": 2,
+   "groups": {
+    "전체": {
+     "shops": 598,
+     "perShop": 2,
+     "boughtShare": 0.34,
+     "kinds": {
+      "evolve": {
+       "seen": 64,
+       "bought": 27,
+       "affUnbought": 37
+      },
+      "fragment": {
+       "seen": 43,
+       "bought": 11,
+       "affUnbought": 32
+      },
+      "chart": {
+       "seen": 223,
+       "bought": 78,
+       "affUnbought": 145
+      },
+      "maxim": {
+       "seen": 527,
+       "bought": 233,
+       "affUnbought": 287
+      },
+      "piece": {
+       "seen": 107,
+       "bought": 13,
+       "affUnbought": 91
+      },
+      "engraving": {
+       "seen": 99,
+       "bought": 19,
+       "affUnbought": 80
+      },
+      "tactic": {
+       "seen": 45,
+       "bought": 0,
+       "affUnbought": 45
+      },
+      "gamble": {
+       "seen": 29,
+       "bought": 0,
+       "affUnbought": 29
+      },
+      "soul": {
+       "seen": 59,
+       "bought": 26,
+       "affUnbought": 30
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 26,
+       "bought": 12,
+       "affUnbought": 11,
+       "cant": 3
+      },
+      "edition": {
+       "seen": 34,
+       "bought": 18,
+       "affUnbought": 11,
+       "cant": 5
+      },
+      "x": {
+       "seen": 135,
+       "bought": 65,
+       "affUnbought": 66,
+       "cant": 4
+      }
+     },
+     "lastGood": {
+      "keep": 0,
+      "breakR": 65,
+      "cant": 17
+     },
+     "packs": {
+      "seen": 1208,
+      "bought": 79
+     }
+    },
+    "이긴 판": {
+     "shops": 266,
+     "perShop": 2,
+     "boughtShare": 0.397,
+     "kinds": {
+      "engraving": {
+       "seen": 33,
+       "bought": 10,
+       "affUnbought": 23
+      },
+      "evolve": {
+       "seen": 30,
+       "bought": 12,
+       "affUnbought": 18
+      },
+      "maxim": {
+       "seen": 245,
+       "bought": 123,
+       "affUnbought": 120
+      },
+      "tactic": {
+       "seen": 19,
+       "bought": 0,
+       "affUnbought": 19
+      },
+      "chart": {
+       "seen": 105,
+       "bought": 40,
+       "affUnbought": 65
+      },
+      "piece": {
+       "seen": 36,
+       "bought": 8,
+       "affUnbought": 28
+      },
+      "soul": {
+       "seen": 28,
+       "bought": 15,
+       "affUnbought": 11
+      },
+      "gamble": {
+       "seen": 18,
+       "bought": 0,
+       "affUnbought": 18
+      },
+      "fragment": {
+       "seen": 18,
+       "bought": 3,
+       "affUnbought": 15
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 14,
+       "bought": 8,
+       "affUnbought": 6,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 16,
+       "bought": 10,
+       "affUnbought": 4,
+       "cant": 2
+      },
+      "x": {
+       "seen": 59,
+       "bought": 32,
+       "affUnbought": 27,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 0,
+      "breakR": 23,
+      "cant": 8
+     },
+     "packs": {
+      "seen": 538,
+      "bought": 40
+     }
+    },
+    "진 판": {
+     "shops": 332,
+     "perShop": 2,
+     "boughtShare": 0.295,
+     "kinds": {
+      "evolve": {
+       "seen": 34,
+       "bought": 15,
+       "affUnbought": 19
+      },
+      "fragment": {
+       "seen": 25,
+       "bought": 8,
+       "affUnbought": 17
+      },
+      "chart": {
+       "seen": 118,
+       "bought": 38,
+       "affUnbought": 80
+      },
+      "maxim": {
+       "seen": 282,
+       "bought": 110,
+       "affUnbought": 167
+      },
+      "piece": {
+       "seen": 71,
+       "bought": 5,
+       "affUnbought": 63
+      },
+      "engraving": {
+       "seen": 66,
+       "bought": 9,
+       "affUnbought": 57
+      },
+      "tactic": {
+       "seen": 26,
+       "bought": 0,
+       "affUnbought": 26
+      },
+      "gamble": {
+       "seen": 11,
+       "bought": 0,
+       "affUnbought": 11
+      },
+      "soul": {
+       "seen": 31,
+       "bought": 11,
+       "affUnbought": 19
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 12,
+       "bought": 4,
+       "affUnbought": 5,
+       "cant": 3
+      },
+      "edition": {
+       "seen": 18,
+       "bought": 8,
+       "affUnbought": 7,
+       "cant": 3
+      },
+      "x": {
+       "seen": 76,
+       "bought": 33,
+       "affUnbought": 39,
+       "cant": 4
+      }
+     },
+     "lastGood": {
+      "keep": 0,
+      "breakR": 42,
+      "cant": 9
+     },
+     "packs": {
+      "seen": 670,
+      "bought": 39
+     }
+    }
+   }
+  },
+  {
+   "ante": 3,
+   "groups": {
+    "전체": {
+     "shops": 576,
+     "perShop": 2.007,
+     "boughtShare": 0.594,
+     "kinds": {
+      "chart": {
+       "seen": 189,
+       "bought": 145,
+       "affUnbought": 44
+      },
+      "maxim": {
+       "seen": 517,
+       "bought": 339,
+       "affUnbought": 177
+      },
+      "piece": {
+       "seen": 116,
+       "bought": 38,
+       "affUnbought": 77
+      },
+      "engraving": {
+       "seen": 112,
+       "bought": 52,
+       "affUnbought": 60
+      },
+      "gamble": {
+       "seen": 44,
+       "bought": 0,
+       "affUnbought": 44
+      },
+      "fragment": {
+       "seen": 41,
+       "bought": 37,
+       "affUnbought": 4
+      },
+      "soul": {
+       "seen": 51,
+       "bought": 37,
+       "affUnbought": 14
+      },
+      "tactic": {
+       "seen": 42,
+       "bought": 0,
+       "affUnbought": 42
+      },
+      "evolve": {
+       "seen": 44,
+       "bought": 39,
+       "affUnbought": 5
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 19,
+       "bought": 11,
+       "affUnbought": 7,
+       "cant": 1
+      },
+      "edition": {
+       "seen": 39,
+       "bought": 24,
+       "affUnbought": 14,
+       "cant": 1
+      },
+      "x": {
+       "seen": 139,
+       "bought": 104,
+       "affUnbought": 34,
+       "cant": 1
+      }
+     },
+     "lastGood": {
+      "keep": 4,
+      "breakR": 42,
+      "cant": 1
+     },
+     "packs": {
+      "seen": 1174,
+      "bought": 553
+     }
+    },
+    "이긴 판": {
+     "shops": 264,
+     "perShop": 2.008,
+     "boughtShare": 0.621,
+     "kinds": {
+      "maxim": {
+       "seen": 234,
+       "bought": 161,
+       "affUnbought": 73
+      },
+      "engraving": {
+       "seen": 48,
+       "bought": 28,
+       "affUnbought": 20
+      },
+      "piece": {
+       "seen": 64,
+       "bought": 19,
+       "affUnbought": 45
+      },
+      "gamble": {
+       "seen": 22,
+       "bought": 0,
+       "affUnbought": 22
+      },
+      "chart": {
+       "seen": 76,
+       "bought": 63,
+       "affUnbought": 13
+      },
+      "fragment": {
+       "seen": 24,
+       "bought": 24,
+       "affUnbought": 0
+      },
+      "soul": {
+       "seen": 22,
+       "bought": 17,
+       "affUnbought": 5
+      },
+      "tactic": {
+       "seen": 23,
+       "bought": 0,
+       "affUnbought": 23
+      },
+      "evolve": {
+       "seen": 17,
+       "bought": 17,
+       "affUnbought": 0
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 9,
+       "bought": 7,
+       "affUnbought": 2,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 15,
+       "bought": 10,
+       "affUnbought": 5,
+       "cant": 0
+      },
+      "x": {
+       "seen": 66,
+       "bought": 50,
+       "affUnbought": 16,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 1,
+      "breakR": 18,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 539,
+      "bought": 275
+     }
+    },
+    "진 판": {
+     "shops": 312,
+     "perShop": 2.006,
+     "boughtShare": 0.572,
+     "kinds": {
+      "chart": {
+       "seen": 113,
+       "bought": 82,
+       "affUnbought": 31
+      },
+      "maxim": {
+       "seen": 283,
+       "bought": 178,
+       "affUnbought": 104
+      },
+      "piece": {
+       "seen": 52,
+       "bought": 19,
+       "affUnbought": 32
+      },
+      "soul": {
+       "seen": 29,
+       "bought": 20,
+       "affUnbought": 9
+      },
+      "tactic": {
+       "seen": 19,
+       "bought": 0,
+       "affUnbought": 19
+      },
+      "engraving": {
+       "seen": 64,
+       "bought": 24,
+       "affUnbought": 40
+      },
+      "gamble": {
+       "seen": 22,
+       "bought": 0,
+       "affUnbought": 22
+      },
+      "evolve": {
+       "seen": 27,
+       "bought": 22,
+       "affUnbought": 5
+      },
+      "fragment": {
+       "seen": 17,
+       "bought": 13,
+       "affUnbought": 4
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 10,
+       "bought": 4,
+       "affUnbought": 5,
+       "cant": 1
+      },
+      "edition": {
+       "seen": 24,
+       "bought": 14,
+       "affUnbought": 9,
+       "cant": 1
+      },
+      "x": {
+       "seen": 73,
+       "bought": 54,
+       "affUnbought": 18,
+       "cant": 1
+      }
+     },
+     "lastGood": {
+      "keep": 3,
+      "breakR": 24,
+      "cant": 1
+     },
+     "packs": {
+      "seen": 635,
+      "bought": 278
+     }
+    }
+   }
+  },
+  {
+   "ante": 4,
+   "groups": {
+    "전체": {
+     "shops": 533,
+     "perShop": 2.086,
+     "boughtShare": 0.523,
+     "kinds": {
+      "soul": {
+       "seen": 50,
+       "bought": 35,
+       "affUnbought": 15
+      },
+      "chart": {
+       "seen": 182,
+       "bought": 131,
+       "affUnbought": 51
+      },
+      "piece": {
+       "seen": 111,
+       "bought": 34,
+       "affUnbought": 77
+      },
+      "maxim": {
+       "seen": 488,
+       "bought": 271,
+       "affUnbought": 217
+      },
+      "tactic": {
+       "seen": 46,
+       "bought": 0,
+       "affUnbought": 46
+      },
+      "fragment": {
+       "seen": 52,
+       "bought": 51,
+       "affUnbought": 1
+      },
+      "evolve": {
+       "seen": 40,
+       "bought": 25,
+       "affUnbought": 15
+      },
+      "engraving": {
+       "seen": 97,
+       "bought": 34,
+       "affUnbought": 63
+      },
+      "gamble": {
+       "seen": 45,
+       "bought": 0,
+       "affUnbought": 45
+      },
+      "awaken": {
+       "seen": 1,
+       "bought": 1,
+       "affUnbought": 0
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 26,
+       "bought": 14,
+       "affUnbought": 12,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 31,
+       "bought": 19,
+       "affUnbought": 12,
+       "cant": 0
+      },
+      "x": {
+       "seen": 113,
+       "bought": 69,
+       "affUnbought": 44,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 8,
+      "breakR": 47,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 1094,
+      "bought": 699
+     }
+    },
+    "이긴 판": {
+     "shops": 257,
+     "perShop": 2.086,
+     "boughtShare": 0.521,
+     "kinds": {
+      "maxim": {
+       "seen": 237,
+       "bought": 125,
+       "affUnbought": 112
+      },
+      "tactic": {
+       "seen": 22,
+       "bought": 0,
+       "affUnbought": 22
+      },
+      "soul": {
+       "seen": 22,
+       "bought": 17,
+       "affUnbought": 5
+      },
+      "piece": {
+       "seen": 55,
+       "bought": 17,
+       "affUnbought": 38
+      },
+      "fragment": {
+       "seen": 19,
+       "bought": 19,
+       "affUnbought": 0
+      },
+      "evolve": {
+       "seen": 19,
+       "bought": 12,
+       "affUnbought": 7
+      },
+      "chart": {
+       "seen": 94,
+       "bought": 68,
+       "affUnbought": 26
+      },
+      "engraving": {
+       "seen": 46,
+       "bought": 20,
+       "affUnbought": 26
+      },
+      "gamble": {
+       "seen": 21,
+       "bought": 0,
+       "affUnbought": 21
+      },
+      "awaken": {
+       "seen": 1,
+       "bought": 1,
+       "affUnbought": 0
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 14,
+       "bought": 10,
+       "affUnbought": 4,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 19,
+       "bought": 13,
+       "affUnbought": 6,
+       "cant": 0
+      },
+      "x": {
+       "seen": 51,
+       "bought": 32,
+       "affUnbought": 19,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 2,
+      "breakR": 22,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 530,
+      "bought": 386
+     }
+    },
+    "진 판": {
+     "shops": 276,
+     "perShop": 2.087,
+     "boughtShare": 0.526,
+     "kinds": {
+      "soul": {
+       "seen": 28,
+       "bought": 18,
+       "affUnbought": 10
+      },
+      "chart": {
+       "seen": 88,
+       "bought": 63,
+       "affUnbought": 25
+      },
+      "piece": {
+       "seen": 56,
+       "bought": 17,
+       "affUnbought": 39
+      },
+      "maxim": {
+       "seen": 251,
+       "bought": 146,
+       "affUnbought": 105
+      },
+      "tactic": {
+       "seen": 24,
+       "bought": 0,
+       "affUnbought": 24
+      },
+      "evolve": {
+       "seen": 21,
+       "bought": 13,
+       "affUnbought": 8
+      },
+      "fragment": {
+       "seen": 33,
+       "bought": 32,
+       "affUnbought": 1
+      },
+      "engraving": {
+       "seen": 51,
+       "bought": 14,
+       "affUnbought": 37
+      },
+      "gamble": {
+       "seen": 24,
+       "bought": 0,
+       "affUnbought": 24
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 12,
+       "bought": 4,
+       "affUnbought": 8,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 12,
+       "bought": 6,
+       "affUnbought": 6,
+       "cant": 0
+      },
+      "x": {
+       "seen": 62,
+       "bought": 37,
+       "affUnbought": 25,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 6,
+      "breakR": 25,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 564,
+      "bought": 313
+     }
+    }
+   }
+  },
+  {
+   "ante": 5,
+   "groups": {
+    "전체": {
+     "shops": 467,
+     "perShop": 2.218,
+     "boughtShare": 0.459,
+     "kinds": {
+      "maxim": {
+       "seen": 444,
+       "bought": 189,
+       "affUnbought": 255
+      },
+      "piece": {
+       "seen": 82,
+       "bought": 27,
+       "affUnbought": 55
+      },
+      "gamble": {
+       "seen": 25,
+       "bought": 0,
+       "affUnbought": 25
+      },
+      "soul": {
+       "seen": 58,
+       "bought": 36,
+       "affUnbought": 22
+      },
+      "chart": {
+       "seen": 182,
+       "bought": 121,
+       "affUnbought": 61
+      },
+      "engraving": {
+       "seen": 119,
+       "bought": 33,
+       "affUnbought": 86
+      },
+      "fragment": {
+       "seen": 46,
+       "bought": 39,
+       "affUnbought": 7
+      },
+      "evolve": {
+       "seen": 45,
+       "bought": 31,
+       "affUnbought": 14
+      },
+      "tactic": {
+       "seen": 34,
+       "bought": 0,
+       "affUnbought": 34
+      },
+      "awaken": {
+       "seen": 1,
+       "bought": 0,
+       "affUnbought": 1
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 27,
+       "bought": 16,
+       "affUnbought": 11,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 32,
+       "bought": 17,
+       "affUnbought": 15,
+       "cant": 0
+      },
+      "x": {
+       "seen": 117,
+       "bought": 67,
+       "affUnbought": 50,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 18,
+      "breakR": 40,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 964,
+      "bought": 645
+     }
+    },
+    "이긴 판": {
+     "shops": 250,
+     "perShop": 2.192,
+     "boughtShare": 0.498,
+     "kinds": {
+      "soul": {
+       "seen": 30,
+       "bought": 21,
+       "affUnbought": 9
+      },
+      "chart": {
+       "seen": 94,
+       "bought": 70,
+       "affUnbought": 24
+      },
+      "maxim": {
+       "seen": 236,
+       "bought": 104,
+       "affUnbought": 132
+      },
+      "engraving": {
+       "seen": 59,
+       "bought": 18,
+       "affUnbought": 41
+      },
+      "piece": {
+       "seen": 51,
+       "bought": 18,
+       "affUnbought": 33
+      },
+      "gamble": {
+       "seen": 10,
+       "bought": 0,
+       "affUnbought": 10
+      },
+      "fragment": {
+       "seen": 27,
+       "bought": 26,
+       "affUnbought": 1
+      },
+      "evolve": {
+       "seen": 21,
+       "bought": 16,
+       "affUnbought": 5
+      },
+      "tactic": {
+       "seen": 20,
+       "bought": 0,
+       "affUnbought": 20
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 19,
+       "bought": 12,
+       "affUnbought": 7,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 17,
+       "bought": 8,
+       "affUnbought": 9,
+       "cant": 0
+      },
+      "x": {
+       "seen": 66,
+       "bought": 39,
+       "affUnbought": 27,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 12,
+      "breakR": 21,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 518,
+      "bought": 396
+     }
+    },
+    "진 판": {
+     "shops": 217,
+     "perShop": 2.249,
+     "boughtShare": 0.416,
+     "kinds": {
+      "maxim": {
+       "seen": 208,
+       "bought": 85,
+       "affUnbought": 123
+      },
+      "piece": {
+       "seen": 31,
+       "bought": 9,
+       "affUnbought": 22
+      },
+      "gamble": {
+       "seen": 15,
+       "bought": 0,
+       "affUnbought": 15
+      },
+      "soul": {
+       "seen": 28,
+       "bought": 15,
+       "affUnbought": 13
+      },
+      "chart": {
+       "seen": 88,
+       "bought": 51,
+       "affUnbought": 37
+      },
+      "engraving": {
+       "seen": 60,
+       "bought": 15,
+       "affUnbought": 45
+      },
+      "evolve": {
+       "seen": 24,
+       "bought": 15,
+       "affUnbought": 9
+      },
+      "tactic": {
+       "seen": 14,
+       "bought": 0,
+       "affUnbought": 14
+      },
+      "fragment": {
+       "seen": 19,
+       "bought": 13,
+       "affUnbought": 6
+      },
+      "awaken": {
+       "seen": 1,
+       "bought": 0,
+       "affUnbought": 1
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 8,
+       "bought": 4,
+       "affUnbought": 4,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 15,
+       "bought": 9,
+       "affUnbought": 6,
+       "cant": 0
+      },
+      "x": {
+       "seen": 51,
+       "bought": 28,
+       "affUnbought": 23,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 6,
+      "breakR": 19,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 446,
+      "bought": 249
+     }
+    }
+   }
+  },
+  {
+   "ante": 6,
+   "groups": {
+    "전체": {
+     "shops": 361,
+     "perShop": 2.366,
+     "boughtShare": 0.399,
+     "kinds": {
+      "engraving": {
+       "seen": 86,
+       "bought": 27,
+       "affUnbought": 59
+      },
+      "chart": {
+       "seen": 164,
+       "bought": 86,
+       "affUnbought": 78
+      },
+      "maxim": {
+       "seen": 353,
+       "bought": 138,
+       "affUnbought": 215
+      },
+      "soul": {
+       "seen": 44,
+       "bought": 20,
+       "affUnbought": 24
+      },
+      "piece": {
+       "seen": 104,
+       "bought": 34,
+       "affUnbought": 70
+      },
+      "tactic": {
+       "seen": 29,
+       "bought": 0,
+       "affUnbought": 29
+      },
+      "fragment": {
+       "seen": 20,
+       "bought": 16,
+       "affUnbought": 4
+      },
+      "evolve": {
+       "seen": 34,
+       "bought": 20,
+       "affUnbought": 14
+      },
+      "gamble": {
+       "seen": 19,
+       "bought": 0,
+       "affUnbought": 19
+      },
+      "awaken": {
+       "seen": 1,
+       "bought": 0,
+       "affUnbought": 1
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 13,
+       "bought": 11,
+       "affUnbought": 2,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 26,
+       "bought": 11,
+       "affUnbought": 15,
+       "cant": 0
+      },
+      "x": {
+       "seen": 106,
+       "bought": 63,
+       "affUnbought": 43,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 18,
+      "breakR": 29,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 743,
+      "bought": 518
+     }
+    },
+    "이긴 판": {
+     "shops": 228,
+     "perShop": 2.325,
+     "boughtShare": 0.423,
+     "kinds": {
+      "engraving": {
+       "seen": 55,
+       "bought": 17,
+       "affUnbought": 38
+      },
+      "piece": {
+       "seen": 61,
+       "bought": 22,
+       "affUnbought": 39
+      },
+      "maxim": {
+       "seen": 217,
+       "bought": 90,
+       "affUnbought": 127
+      },
+      "tactic": {
+       "seen": 20,
+       "bought": 0,
+       "affUnbought": 20
+      },
+      "chart": {
+       "seen": 98,
+       "bought": 55,
+       "affUnbought": 43
+      },
+      "soul": {
+       "seen": 27,
+       "bought": 14,
+       "affUnbought": 13
+      },
+      "fragment": {
+       "seen": 12,
+       "bought": 11,
+       "affUnbought": 1
+      },
+      "evolve": {
+       "seen": 24,
+       "bought": 15,
+       "affUnbought": 9
+      },
+      "gamble": {
+       "seen": 16,
+       "bought": 0,
+       "affUnbought": 16
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 12,
+       "bought": 11,
+       "affUnbought": 1,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 17,
+       "bought": 7,
+       "affUnbought": 10,
+       "cant": 0
+      },
+      "x": {
+       "seen": 68,
+       "bought": 44,
+       "affUnbought": 24,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 12,
+      "breakR": 15,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 468,
+      "bought": 365
+     }
+    },
+    "진 판": {
+     "shops": 133,
+     "perShop": 2.436,
+     "boughtShare": 0.361,
+     "kinds": {
+      "engraving": {
+       "seen": 31,
+       "bought": 10,
+       "affUnbought": 21
+      },
+      "chart": {
+       "seen": 66,
+       "bought": 31,
+       "affUnbought": 35
+      },
+      "maxim": {
+       "seen": 136,
+       "bought": 48,
+       "affUnbought": 88
+      },
+      "soul": {
+       "seen": 17,
+       "bought": 6,
+       "affUnbought": 11
+      },
+      "piece": {
+       "seen": 43,
+       "bought": 12,
+       "affUnbought": 31
+      },
+      "fragment": {
+       "seen": 8,
+       "bought": 5,
+       "affUnbought": 3
+      },
+      "evolve": {
+       "seen": 10,
+       "bought": 5,
+       "affUnbought": 5
+      },
+      "gamble": {
+       "seen": 3,
+       "bought": 0,
+       "affUnbought": 3
+      },
+      "awaken": {
+       "seen": 1,
+       "bought": 0,
+       "affUnbought": 1
+      },
+      "tactic": {
+       "seen": 9,
+       "bought": 0,
+       "affUnbought": 9
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 1,
+       "bought": 0,
+       "affUnbought": 1,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 9,
+       "bought": 4,
+       "affUnbought": 5,
+       "cant": 0
+      },
+      "x": {
+       "seen": 38,
+       "bought": 19,
+       "affUnbought": 19,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 6,
+      "breakR": 14,
+      "cant": 0
+     },
+     "packs": {
+      "seen": 275,
+      "bought": 153
+     }
+    }
+   }
+  },
+  {
+   "ante": 7,
+   "groups": {
+    "전체": {
+     "shops": 302,
+     "perShop": 3.384,
+     "boughtShare": 0.316,
+     "kinds": {
+      "maxim": {
+       "seen": 449,
+       "bought": 113,
+       "affUnbought": 328
+      },
+      "chart": {
+       "seen": 151,
+       "bought": 77,
+       "affUnbought": 72
+      },
+      "engraving": {
+       "seen": 113,
+       "bought": 29,
+       "affUnbought": 84
+      },
+      "fragment": {
+       "seen": 22,
+       "bought": 21,
+       "affUnbought": 0
+      },
+      "piece": {
+       "seen": 122,
+       "bought": 25,
+       "affUnbought": 92
+      },
+      "soul": {
+       "seen": 59,
+       "bought": 36,
+       "affUnbought": 23
+      },
+      "evolve": {
+       "seen": 33,
+       "bought": 20,
+       "affUnbought": 12
+      },
+      "tactic": {
+       "seen": 44,
+       "bought": 0,
+       "affUnbought": 44
+      },
+      "gamble": {
+       "seen": 27,
+       "bought": 0,
+       "affUnbought": 27
+      },
+      "awaken": {
+       "seen": 2,
+       "bought": 2,
+       "affUnbought": 0
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 16,
+       "bought": 7,
+       "affUnbought": 7,
+       "cant": 2
+      },
+      "edition": {
+       "seen": 32,
+       "bought": 11,
+       "affUnbought": 21,
+       "cant": 0
+      },
+      "x": {
+       "seen": 107,
+       "bought": 50,
+       "affUnbought": 52,
+       "cant": 5
+      }
+     },
+     "lastGood": {
+      "keep": 27,
+      "breakR": 0,
+      "cant": 13
+     },
+     "packs": {
+      "seen": 631,
+      "bought": 566
+     }
+    },
+    "이긴 판": {
+     "shops": 223,
+     "perShop": 3.372,
+     "boughtShare": 0.316,
+     "kinds": {
+      "maxim": {
+       "seen": 325,
+       "bought": 85,
+       "affUnbought": 232
+      },
+      "soul": {
+       "seen": 47,
+       "bought": 29,
+       "affUnbought": 18
+      },
+      "evolve": {
+       "seen": 23,
+       "bought": 14,
+       "affUnbought": 8
+      },
+      "chart": {
+       "seen": 113,
+       "bought": 56,
+       "affUnbought": 55
+      },
+      "tactic": {
+       "seen": 36,
+       "bought": 0,
+       "affUnbought": 36
+      },
+      "engraving": {
+       "seen": 81,
+       "bought": 22,
+       "affUnbought": 59
+      },
+      "piece": {
+       "seen": 95,
+       "bought": 18,
+       "affUnbought": 73
+      },
+      "fragment": {
+       "seen": 15,
+       "bought": 14,
+       "affUnbought": 0
+      },
+      "gamble": {
+       "seen": 17,
+       "bought": 0,
+       "affUnbought": 17
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 15,
+       "bought": 6,
+       "affUnbought": 7,
+       "cant": 2
+      },
+      "edition": {
+       "seen": 23,
+       "bought": 8,
+       "affUnbought": 15,
+       "cant": 0
+      },
+      "x": {
+       "seen": 84,
+       "bought": 41,
+       "affUnbought": 38,
+       "cant": 5
+      }
+     },
+     "lastGood": {
+      "keep": 17,
+      "breakR": 0,
+      "cant": 12
+     },
+     "packs": {
+      "seen": 465,
+      "bought": 414
+     }
+    },
+    "진 판": {
+     "shops": 79,
+     "perShop": 3.418,
+     "boughtShare": 0.315,
+     "kinds": {
+      "maxim": {
+       "seen": 124,
+       "bought": 28,
+       "affUnbought": 96
+      },
+      "chart": {
+       "seen": 38,
+       "bought": 21,
+       "affUnbought": 17
+      },
+      "engraving": {
+       "seen": 32,
+       "bought": 7,
+       "affUnbought": 25
+      },
+      "fragment": {
+       "seen": 7,
+       "bought": 7,
+       "affUnbought": 0
+      },
+      "piece": {
+       "seen": 27,
+       "bought": 7,
+       "affUnbought": 19
+      },
+      "evolve": {
+       "seen": 10,
+       "bought": 6,
+       "affUnbought": 4
+      },
+      "tactic": {
+       "seen": 8,
+       "bought": 0,
+       "affUnbought": 8
+      },
+      "soul": {
+       "seen": 12,
+       "bought": 7,
+       "affUnbought": 5
+      },
+      "gamble": {
+       "seen": 10,
+       "bought": 0,
+       "affUnbought": 10
+      },
+      "awaken": {
+       "seen": 2,
+       "bought": 2,
+       "affUnbought": 0
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 1,
+       "bought": 1,
+       "affUnbought": 0,
+       "cant": 0
+      },
+      "edition": {
+       "seen": 9,
+       "bought": 3,
+       "affUnbought": 6,
+       "cant": 0
+      },
+      "x": {
+       "seen": 23,
+       "bought": 9,
+       "affUnbought": 14,
+       "cant": 0
+      }
+     },
+     "lastGood": {
+      "keep": 10,
+      "breakR": 0,
+      "cant": 1
+     },
+     "packs": {
+      "seen": 166,
+      "bought": 152
+     }
+    }
+   }
+  },
+  {
+   "ante": 8,
+   "groups": {
+    "전체": {
+     "shops": 198,
+     "perShop": 2.202,
+     "boughtShare": 0.339,
+     "kinds": {
+      "chart": {
+       "seen": 83,
+       "bought": 39,
+       "affUnbought": 40
+      },
+      "maxim": {
+       "seen": 178,
+       "bought": 54,
+       "affUnbought": 115
+      },
+      "soul": {
+       "seen": 21,
+       "bought": 9,
+       "affUnbought": 11
+      },
+      "engraving": {
+       "seen": 48,
+       "bought": 12,
+       "affUnbought": 33
+      },
+      "piece": {
+       "seen": 49,
+       "bought": 18,
+       "affUnbought": 29
+      },
+      "tactic": {
+       "seen": 20,
+       "bought": 0,
+       "affUnbought": 20
+      },
+      "evolve": {
+       "seen": 20,
+       "bought": 9,
+       "affUnbought": 9
+      },
+      "gamble": {
+       "seen": 10,
+       "bought": 0,
+       "affUnbought": 10
+      },
+      "fragment": {
+       "seen": 6,
+       "bought": 6,
+       "affUnbought": 0
+      },
+      "awaken": {
+       "seen": 1,
+       "bought": 1,
+       "affUnbought": 0
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 8,
+       "bought": 4,
+       "affUnbought": 2,
+       "cant": 2
+      },
+      "edition": {
+       "seen": 12,
+       "bought": 6,
+       "affUnbought": 4,
+       "cant": 2
+      },
+      "x": {
+       "seen": 48,
+       "bought": 23,
+       "affUnbought": 20,
+       "cant": 5
+      }
+     },
+     "lastGood": {
+      "keep": 7,
+      "breakR": 0,
+      "cant": 21
+     },
+     "packs": {
+      "seen": 411,
+      "bought": 288
+     }
+    },
+    "이긴 판": {
+     "shops": 154,
+     "perShop": 2.195,
+     "boughtShare": 0.34,
+     "kinds": {
+      "piece": {
+       "seen": 35,
+       "bought": 15,
+       "affUnbought": 18
+      },
+      "maxim": {
+       "seen": 139,
+       "bought": 41,
+       "affUnbought": 93
+      },
+      "chart": {
+       "seen": 65,
+       "bought": 31,
+       "affUnbought": 32
+      },
+      "soul": {
+       "seen": 18,
+       "bought": 6,
+       "affUnbought": 11
+      },
+      "engraving": {
+       "seen": 38,
+       "bought": 12,
+       "affUnbought": 24
+      },
+      "tactic": {
+       "seen": 16,
+       "bought": 0,
+       "affUnbought": 16
+      },
+      "evolve": {
+       "seen": 15,
+       "bought": 7,
+       "affUnbought": 7
+      },
+      "gamble": {
+       "seen": 9,
+       "bought": 0,
+       "affUnbought": 9
+      },
+      "fragment": {
+       "seen": 2,
+       "bought": 2,
+       "affUnbought": 0
+      },
+      "awaken": {
+       "seen": 1,
+       "bought": 1,
+       "affUnbought": 0
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 7,
+       "bought": 4,
+       "affUnbought": 2,
+       "cant": 1
+      },
+      "edition": {
+       "seen": 10,
+       "bought": 5,
+       "affUnbought": 3,
+       "cant": 2
+      },
+      "x": {
+       "seen": 36,
+       "bought": 17,
+       "affUnbought": 16,
+       "cant": 3
+      }
+     },
+     "lastGood": {
+      "keep": 6,
+      "breakR": 0,
+      "cant": 15
+     },
+     "packs": {
+      "seen": 322,
+      "bought": 241
+     }
+    },
+    "진 판": {
+     "shops": 44,
+     "perShop": 2.227,
+     "boughtShare": 0.337,
+     "kinds": {
+      "chart": {
+       "seen": 18,
+       "bought": 8,
+       "affUnbought": 8
+      },
+      "maxim": {
+       "seen": 39,
+       "bought": 13,
+       "affUnbought": 22
+      },
+      "soul": {
+       "seen": 3,
+       "bought": 3,
+       "affUnbought": 0
+      },
+      "engraving": {
+       "seen": 10,
+       "bought": 0,
+       "affUnbought": 9
+      },
+      "piece": {
+       "seen": 14,
+       "bought": 3,
+       "affUnbought": 11
+      },
+      "gamble": {
+       "seen": 1,
+       "bought": 0,
+       "affUnbought": 1
+      },
+      "evolve": {
+       "seen": 5,
+       "bought": 2,
+       "affUnbought": 2
+      },
+      "tactic": {
+       "seen": 4,
+       "bought": 0,
+       "affUnbought": 4
+      },
+      "fragment": {
+       "seen": 4,
+       "bought": 4,
+       "affUnbought": 0
+      }
+     },
+     "good": {
+      "rare": {
+       "seen": 1,
+       "bought": 0,
+       "affUnbought": 0,
+       "cant": 1
+      },
+      "edition": {
+       "seen": 2,
+       "bought": 1,
+       "affUnbought": 1,
+       "cant": 0
+      },
+      "x": {
+       "seen": 12,
+       "bought": 6,
+       "affUnbought": 4,
+       "cant": 2
+      }
+     },
+     "lastGood": {
+      "keep": 1,
+      "breakR": 0,
+      "cant": 6
+     },
+     "packs": {
+      "seen": 89,
+      "bought": 47
+     }
+    }
+   }
+  }
+ ],
+ "features": [
+  {
+   "ante": 1,
+   "n": 200,
+   "win": 0.445,
+   "feats": {
+    "x2": {
+     "name": "×배수 격언 둘 이상",
+     "n": 17,
+     "win": 0.588,
+     "nWithout": 183,
+     "winWithout": 0.432
+    },
+    "x0": {
+     "name": "×배수 격언 없음",
+     "n": 124,
+     "win": 0.452,
+     "nWithout": 76,
+     "winWithout": 0.434
+    },
+    "ed": {
+     "name": "판본 격언 하나 이상",
+     "n": 17,
+     "win": 0.471,
+     "nWithout": 183,
+     "winWithout": 0.443
+    },
+    "fam4": {
+     "name": "시너지 4 이상",
+     "n": 10,
+     "win": 0.5,
+     "nWithout": 190,
+     "winWithout": 0.442
+    },
+    "fam6": {
+     "name": "시너지 6 이상",
+     "n": 0,
+     "win": null,
+     "nWithout": 200,
+     "winWithout": 0.445
+    },
+    "fairy2": {
+     "name": "특수 기물 둘 이상",
+     "n": 73,
+     "win": 0.507,
+     "nWithout": 127,
+     "winWithout": 0.409
+    },
+    "soul": {
+     "name": "혼 하나 이상",
+     "n": 32,
+     "win": 0.375,
+     "nWithout": 168,
+     "winWithout": 0.458
+    },
+    "eng2": {
+     "name": "각인 둘 이상",
+     "n": 41,
+     "win": 0.39,
+     "nWithout": 159,
+     "winWithout": 0.459
+    },
+    "chartHi": {
+     "name": "기보 레벨 합 ≥ 그 관 가운데값(1)",
+     "n": 165,
+     "win": 0.479,
+     "nWithout": 35,
+     "winWithout": 0.286
+    }
+   },
+   "avg": {
+    "won": {
+     "maxims": 1.966,
+     "x": 0.483,
+     "m": 0.663,
+     "v": 0.528,
+     "o": 0.292,
+     "ed": 0.09,
+     "rare": 0.079,
+     "charts": 1.764,
+     "chartTop": 1.079,
+     "engraved": 0.809,
+     "souls": 0.135,
+     "awake": 0,
+     "fam": 2.18,
+     "deck": 7.562,
+     "fairies": 1.247,
+     "money": 1.326
+    },
+    "lost": {
+     "maxims": 1.892,
+     "x": 0.45,
+     "m": 0.586,
+     "v": 0.712,
+     "o": 0.144,
+     "ed": 0.09,
+     "rare": 0.054,
+     "charts": 1.649,
+     "chartTop": 1.063,
+     "engraved": 0.856,
+     "souls": 0.18,
+     "awake": 0,
+     "fam": 2.153,
+     "deck": 7.685,
+     "fairies": 1.225,
+     "money": 1.189
+    }
+   }
+  },
+  {
+   "ante": 2,
+   "n": 200,
+   "win": 0.445,
+   "feats": {
+    "x2": {
+     "name": "×배수 격언 둘 이상",
+     "n": 36,
+     "win": 0.389,
+     "nWithout": 164,
+     "winWithout": 0.457
+    },
+    "x0": {
+     "name": "×배수 격언 없음",
+     "n": 83,
+     "win": 0.386,
+     "nWithout": 117,
+     "winWithout": 0.487
+    },
+    "ed": {
+     "name": "판본 격언 하나 이상",
+     "n": 48,
+     "win": 0.521,
+     "nWithout": 152,
+     "winWithout": 0.421
+    },
+    "fam4": {
+     "name": "시너지 4 이상",
+     "n": 27,
+     "win": 0.63,
+     "nWithout": 173,
+     "winWithout": 0.416
+    },
+    "fam6": {
+     "name": "시너지 6 이상",
+     "n": 1,
+     "win": 0,
+     "nWithout": 199,
+     "winWithout": 0.447
+    },
+    "fairy2": {
+     "name": "특수 기물 둘 이상",
+     "n": 90,
+     "win": 0.456,
+     "nWithout": 110,
+     "winWithout": 0.436
+    },
+    "soul": {
+     "name": "혼 하나 이상",
+     "n": 59,
+     "win": 0.441,
+     "nWithout": 141,
+     "winWithout": 0.447
+    },
+    "eng2": {
+     "name": "각인 둘 이상",
+     "n": 67,
+     "win": 0.433,
+     "nWithout": 133,
+     "winWithout": 0.451
+    },
+    "chartHi": {
+     "name": "기보 레벨 합 ≥ 그 관 가운데값(3)",
+     "n": 100,
+     "win": 0.5,
+     "nWithout": 100,
+     "winWithout": 0.39
+    }
+   },
+   "avg": {
+    "won": {
+     "maxims": 3.393,
+     "x": 0.876,
+     "m": 1.101,
+     "v": 0.876,
+     "o": 0.539,
+     "ed": 0.281,
+     "rare": 0.18,
+     "charts": 2.809,
+     "chartTop": 1.438,
+     "engraved": 1.157,
+     "souls": 0.326,
+     "awake": 0,
+     "fam": 2.674,
+     "deck": 7.449,
+     "fairies": 1.506,
+     "money": 14.64
+    },
+    "lost": {
+     "maxims": 2.919,
+     "x": 0.757,
+     "m": 0.928,
+     "v": 0.91,
+     "o": 0.324,
+     "ed": 0.216,
+     "rare": 0.09,
+     "charts": 2.45,
+     "chartTop": 1.432,
+     "engraved": 1.108,
+     "souls": 0.306,
+     "awake": 0,
+     "fam": 2.495,
+     "deck": 7.559,
+     "fairies": 1.441,
+     "money": 14.703
+    }
+   }
+  },
+  {
+   "ante": 3,
+   "n": 200,
+   "win": 0.445,
+   "feats": {
+    "x2": {
+     "name": "×배수 격언 둘 이상",
+     "n": 76,
+     "win": 0.5,
+     "nWithout": 124,
+     "winWithout": 0.411
+    },
+    "x0": {
+     "name": "×배수 격언 없음",
+     "n": 44,
+     "win": 0.364,
+     "nWithout": 156,
+     "winWithout": 0.468
+    },
+    "ed": {
+     "name": "판본 격언 하나 이상",
+     "n": 80,
+     "win": 0.525,
+     "nWithout": 120,
+     "winWithout": 0.392
+    },
+    "fam4": {
+     "name": "시너지 4 이상",
+     "n": 90,
+     "win": 0.522,
+     "nWithout": 110,
+     "winWithout": 0.382
+    },
+    "fam6": {
+     "name": "시너지 6 이상",
+     "n": 8,
+     "win": 0.625,
+     "nWithout": 192,
+     "winWithout": 0.438
+    },
+    "fairy2": {
+     "name": "특수 기물 둘 이상",
+     "n": 127,
+     "win": 0.488,
+     "nWithout": 73,
+     "winWithout": 0.37
+    },
+    "soul": {
+     "name": "혼 하나 이상",
+     "n": 76,
+     "win": 0.447,
+     "nWithout": 124,
+     "winWithout": 0.444
+    },
+    "eng2": {
+     "name": "각인 둘 이상",
+     "n": 126,
+     "win": 0.492,
+     "nWithout": 74,
+     "winWithout": 0.365
+    },
+    "chartHi": {
+     "name": "기보 레벨 합 ≥ 그 관 가운데값(5)",
+     "n": 102,
+     "win": 0.49,
+     "nWithout": 98,
+     "winWithout": 0.398
+    }
+   },
+   "avg": {
+    "won": {
+     "maxims": 4.64,
+     "x": 1.427,
+     "m": 1.438,
+     "v": 1.011,
+     "o": 0.764,
+     "ed": 0.506,
+     "rare": 0.292,
+     "charts": 4.989,
+     "chartTop": 2.202,
+     "engraved": 2.09,
+     "souls": 0.472,
+     "awake": 0,
+     "fam": 3.528,
+     "deck": 7.079,
+     "fairies": 2.281,
+     "money": 17.326
+    },
+    "lost": {
+     "maxims": 4.09,
+     "x": 1.189,
+     "m": 1.297,
+     "v": 1.144,
+     "o": 0.459,
+     "ed": 0.387,
+     "rare": 0.144,
+     "charts": 4.432,
+     "chartTop": 2.216,
+     "engraved": 1.73,
+     "souls": 0.459,
+     "awake": 0,
+     "fam": 3.234,
+     "deck": 7.27,
+     "fairies": 2.009,
+     "money": 16.441
+    }
+   }
+  },
+  {
+   "ante": 4,
+   "n": 200,
+   "win": 0.445,
+   "feats": {
+    "x2": {
+     "name": "×배수 격언 둘 이상",
+     "n": 95,
+     "win": 0.526,
+     "nWithout": 105,
+     "winWithout": 0.371
+    },
+    "x0": {
+     "name": "×배수 격언 없음",
+     "n": 29,
+     "win": 0.414,
+     "nWithout": 171,
+     "winWithout": 0.45
+    },
+    "ed": {
+     "name": "판본 격언 하나 이상",
+     "n": 108,
+     "win": 0.528,
+     "nWithout": 92,
+     "winWithout": 0.348
+    },
+    "fam4": {
+     "name": "시너지 4 이상",
+     "n": 112,
+     "win": 0.482,
+     "nWithout": 88,
+     "winWithout": 0.398
+    },
+    "fam6": {
+     "name": "시너지 6 이상",
+     "n": 11,
+     "win": 0.636,
+     "nWithout": 189,
+     "winWithout": 0.434
+    },
+    "fairy2": {
+     "name": "특수 기물 둘 이상",
+     "n": 152,
+     "win": 0.454,
+     "nWithout": 48,
+     "winWithout": 0.417
+    },
+    "soul": {
+     "name": "혼 하나 이상",
+     "n": 91,
+     "win": 0.451,
+     "nWithout": 109,
+     "winWithout": 0.44
+    },
+    "eng2": {
+     "name": "각인 둘 이상",
+     "n": 158,
+     "win": 0.506,
+     "nWithout": 42,
+     "winWithout": 0.214
+    },
+    "chartHi": {
+     "name": "기보 레벨 합 ≥ 그 관 가운데값(7)",
+     "n": 108,
+     "win": 0.556,
+     "nWithout": 92,
+     "winWithout": 0.315
+    }
+   },
+   "avg": {
+    "won": {
+     "maxims": 4.978,
+     "x": 1.708,
+     "m": 1.517,
+     "v": 0.955,
+     "o": 0.798,
+     "ed": 0.809,
+     "rare": 0.416,
+     "charts": 7.551,
+     "chartTop": 3.146,
+     "engraved": 2.989,
+     "souls": 0.674,
+     "awake": 0.034,
+     "fam": 3.73,
+     "deck": 6.91,
+     "fairies": 2.652,
+     "money": 18.011
+    },
+    "lost": {
+     "maxims": 4.577,
+     "x": 1.396,
+     "m": 1.351,
+     "v": 1.108,
+     "o": 0.721,
+     "ed": 0.523,
+     "rare": 0.198,
+     "charts": 6.234,
+     "chartTop": 2.91,
+     "engraved": 2.315,
+     "souls": 0.577,
+     "awake": 0,
+     "fam": 3.441,
+     "deck": 7.351,
+     "fairies": 2.45,
+     "money": 16.477
+    }
+   }
+  },
+  {
+   "ante": 5,
+   "n": 195,
+   "win": 0.456,
+   "feats": {
+    "x2": {
+     "name": "×배수 격언 둘 이상",
+     "n": 118,
+     "win": 0.551,
+     "nWithout": 77,
+     "winWithout": 0.312
+    },
+    "x0": {
+     "name": "×배수 격언 없음",
+     "n": 15,
+     "win": 0.267,
+     "nWithout": 180,
+     "winWithout": 0.472
+    },
+    "ed": {
+     "name": "판본 격언 하나 이상",
+     "n": 123,
+     "win": 0.496,
+     "nWithout": 72,
+     "winWithout": 0.389
+    },
+    "fam4": {
+     "name": "시너지 4 이상",
+     "n": 134,
+     "win": 0.44,
+     "nWithout": 61,
+     "winWithout": 0.492
+    },
+    "fam6": {
+     "name": "시너지 6 이상",
+     "n": 14,
+     "win": 0.571,
+     "nWithout": 181,
+     "winWithout": 0.448
+    },
+    "fairy2": {
+     "name": "특수 기물 둘 이상",
+     "n": 165,
+     "win": 0.461,
+     "nWithout": 30,
+     "winWithout": 0.433
+    },
+    "soul": {
+     "name": "혼 하나 이상",
+     "n": 104,
+     "win": 0.462,
+     "nWithout": 91,
+     "winWithout": 0.451
+    },
+    "eng2": {
+     "name": "각인 둘 이상",
+     "n": 165,
+     "win": 0.497,
+     "nWithout": 30,
+     "winWithout": 0.233
+    },
+    "chartHi": {
+     "name": "기보 레벨 합 ≥ 그 관 가운데값(9)",
+     "n": 113,
+     "win": 0.593,
+     "nWithout": 82,
+     "winWithout": 0.268
+    }
+   },
+   "avg": {
+    "won": {
+     "maxims": 5.034,
+     "x": 2.09,
+     "m": 1.236,
+     "v": 0.82,
+     "o": 0.888,
+     "ed": 0.966,
+     "rare": 0.573,
+     "charts": 10.157,
+     "chartTop": 4.022,
+     "engraved": 3.404,
+     "souls": 0.764,
+     "awake": 0.056,
+     "fam": 3.854,
+     "deck": 6.674,
+     "fairies": 2.944,
+     "money": 18.652
+    },
+    "lost": {
+     "maxims": 4.877,
+     "x": 1.613,
+     "m": 1.368,
+     "v": 1.16,
+     "o": 0.736,
+     "ed": 0.67,
+     "rare": 0.283,
+     "charts": 7.943,
+     "chartTop": 3.415,
+     "engraved": 2.745,
+     "souls": 0.679,
+     "awake": 0,
+     "fam": 3.915,
+     "deck": 7.377,
+     "fairies": 2.906,
+     "money": 17.594
+    }
+   }
+  },
+  {
+   "ante": 6,
+   "n": 181,
+   "win": 0.492,
+   "feats": {
+    "x2": {
+     "name": "×배수 격언 둘 이상",
+     "n": 132,
+     "win": 0.545,
+     "nWithout": 49,
+     "winWithout": 0.347
+    },
+    "x0": {
+     "name": "×배수 격언 없음",
+     "n": 10,
+     "win": 0.2,
+     "nWithout": 171,
+     "winWithout": 0.509
+    },
+    "ed": {
+     "name": "판본 격언 하나 이상",
+     "n": 120,
+     "win": 0.542,
+     "nWithout": 61,
+     "winWithout": 0.393
+    },
+    "fam4": {
+     "name": "시너지 4 이상",
+     "n": 125,
+     "win": 0.496,
+     "nWithout": 56,
+     "winWithout": 0.482
+    },
+    "fam6": {
+     "name": "시너지 6 이상",
+     "n": 19,
+     "win": 0.632,
+     "nWithout": 162,
+     "winWithout": 0.475
+    },
+    "fairy2": {
+     "name": "특수 기물 둘 이상",
+     "n": 163,
+     "win": 0.503,
+     "nWithout": 18,
+     "winWithout": 0.389
+    },
+    "soul": {
+     "name": "혼 하나 이상",
+     "n": 99,
+     "win": 0.505,
+     "nWithout": 82,
+     "winWithout": 0.476
+    },
+    "eng2": {
+     "name": "각인 둘 이상",
+     "n": 159,
+     "win": 0.522,
+     "nWithout": 22,
+     "winWithout": 0.273
+    },
+    "chartHi": {
+     "name": "기보 레벨 합 ≥ 그 관 가운데값(10)",
+     "n": 121,
+     "win": 0.603,
+     "nWithout": 60,
+     "winWithout": 0.267
+    }
+   },
+   "avg": {
+    "won": {
+     "maxims": 5.067,
+     "x": 2.461,
+     "m": 1.157,
+     "v": 0.652,
+     "o": 0.798,
+     "ed": 1.09,
+     "rare": 0.697,
+     "charts": 12.416,
+     "chartTop": 5.034,
+     "engraved": 3.82,
+     "souls": 0.82,
+     "awake": 0.09,
+     "fam": 4.045,
+     "deck": 7.056,
+     "fairies": 3.281,
+     "money": 18.708
+    },
+    "lost": {
+     "maxims": 5,
+     "x": 1.859,
+     "m": 1.315,
+     "v": 1.065,
+     "o": 0.761,
+     "ed": 0.793,
+     "rare": 0.315,
+     "charts": 9.565,
+     "chartTop": 4.054,
+     "engraved": 3,
+     "souls": 0.685,
+     "awake": 0.011,
+     "fam": 3.902,
+     "deck": 7.511,
+     "fairies": 3.25,
+     "money": 17.957
+    }
+   }
+  },
+  {
+   "ante": 7,
+   "n": 152,
+   "win": 0.586,
+   "feats": {
+    "x2": {
+     "name": "×배수 격언 둘 이상",
+     "n": 122,
+     "win": 0.648,
+     "nWithout": 30,
+     "winWithout": 0.333
+    },
+    "x0": {
+     "name": "×배수 격언 없음",
+     "n": 5,
+     "win": 0,
+     "nWithout": 147,
+     "winWithout": 0.605
+    },
+    "ed": {
+     "name": "판본 격언 하나 이상",
+     "n": 111,
+     "win": 0.622,
+     "nWithout": 41,
+     "winWithout": 0.488
+    },
+    "fam4": {
+     "name": "시너지 4 이상",
+     "n": 115,
+     "win": 0.6,
+     "nWithout": 37,
+     "winWithout": 0.541
+    },
+    "fam6": {
+     "name": "시너지 6 이상",
+     "n": 19,
+     "win": 0.632,
+     "nWithout": 133,
+     "winWithout": 0.579
+    },
+    "fairy2": {
+     "name": "특수 기물 둘 이상",
+     "n": 140,
+     "win": 0.586,
+     "nWithout": 12,
+     "winWithout": 0.583
+    },
+    "soul": {
+     "name": "혼 하나 이상",
+     "n": 88,
+     "win": 0.602,
+     "nWithout": 64,
+     "winWithout": 0.563
+    },
+    "eng2": {
+     "name": "각인 둘 이상",
+     "n": 143,
+     "win": 0.601,
+     "nWithout": 9,
+     "winWithout": 0.333
+    },
+    "chartHi": {
+     "name": "기보 레벨 합 ≥ 그 관 가운데값(13)",
+     "n": 90,
+     "win": 0.744,
+     "nWithout": 62,
+     "winWithout": 0.355
+    }
+   },
+   "avg": {
+    "won": {
+     "maxims": 5.124,
+     "x": 2.831,
+     "m": 0.921,
+     "v": 0.64,
+     "o": 0.73,
+     "ed": 1.202,
+     "rare": 0.798,
+     "charts": 14.865,
+     "chartTop": 6.056,
+     "engraved": 4.303,
+     "souls": 0.944,
+     "awake": 0.146,
+     "fam": 4.157,
+     "deck": 7.427,
+     "fairies": 3.753,
+     "money": 5.034
+    },
+    "lost": {
+     "maxims": 5.111,
+     "x": 1.984,
+     "m": 1.286,
+     "v": 0.968,
+     "o": 0.873,
+     "ed": 1,
+     "rare": 0.317,
+     "charts": 11.762,
+     "chartTop": 4.921,
+     "engraved": 3.413,
+     "souls": 0.762,
+     "awake": 0.079,
+     "fam": 4,
+     "deck": 7.825,
+     "fairies": 3.508,
+     "money": 11.413
+    }
+   }
+  }
+ ],
+ "growth": [
+  {
+   "from": 2,
+   "to": 3,
+   "curve": 6,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "perRunP50": 2.846,
+     "perRunP25": 1.686,
+     "perRunP75": 4.282,
+     "medians": 2.702
+    },
+    "이긴 판": {
+     "n": 89,
+     "perRunP50": 3.145,
+     "perRunP25": 2.139,
+     "perRunP75": 4.959,
+     "medians": 3.173
+    },
+    "진 판": {
+     "n": 111,
+     "perRunP50": 2.311,
+     "perRunP25": 1.475,
+     "perRunP75": 3.887,
+     "medians": 2.5
+    }
+   }
+  },
+  {
+   "from": 3,
+   "to": 4,
+   "curve": 3.768,
+   "groups": {
+    "전체": {
+     "n": 200,
+     "perRunP50": 4.483,
+     "perRunP25": 2.375,
+     "perRunP75": 9.755,
+     "medians": 4.998
+    },
+    "이긴 판": {
+     "n": 89,
+     "perRunP50": 7.27,
+     "perRunP25": 3.001,
+     "perRunP75": 12.465,
+     "medians": 6.266
+    },
+    "진 판": {
+     "n": 111,
+     "perRunP50": 3.673,
+     "perRunP25": 2.124,
+     "perRunP75": 6.915,
+     "medians": 4.006
+    }
+   }
+  },
+  {
+   "from": 4,
+   "to": 5,
+   "curve": 4.231,
+   "groups": {
+    "전체": {
+     "n": 195,
+     "perRunP50": 2.503,
+     "perRunP25": 1.437,
+     "perRunP75": 4.298,
+     "medians": 2.719
+    },
+    "이긴 판": {
+     "n": 89,
+     "perRunP50": 2.595,
+     "perRunP25": 1.586,
+     "perRunP75": 4.613,
+     "medians": 2.629
+    },
+    "진 판": {
+     "n": 106,
+     "perRunP50": 2.348,
+     "perRunP25": 1.311,
+     "perRunP75": 3.791,
+     "medians": 2.672
+    }
+   }
+  },
+  {
+   "from": 5,
+   "to": 6,
+   "curve": 3.788,
+   "groups": {
+    "전체": {
+     "n": 181,
+     "perRunP50": 2.316,
+     "perRunP25": 1.229,
+     "perRunP75": 4.07,
+     "medians": 2.141
+    },
+    "이긴 판": {
+     "n": 89,
+     "perRunP50": 3.06,
+     "perRunP25": 1.456,
+     "perRunP75": 5.133,
+     "medians": 3.208
+    },
+    "진 판": {
+     "n": 92,
+     "perRunP50": 2.104,
+     "perRunP25": 1.157,
+     "perRunP75": 3.006,
+     "medians": 1.849
+    }
+   }
+  },
+  {
+   "from": 6,
+   "to": 7,
+   "curve": 1.96,
+   "groups": {
+    "전체": {
+     "n": 152,
+     "perRunP50": 2.168,
+     "perRunP25": 1.333,
+     "perRunP75": 3.752,
+     "medians": 2.147
+    },
+    "이긴 판": {
+     "n": 89,
+     "perRunP50": 2.399,
+     "perRunP25": 1.511,
+     "perRunP75": 4.578,
+     "medians": 2.519
+    },
+    "진 판": {
+     "n": 63,
+     "perRunP50": 1.874,
+     "perRunP25": 1.223,
+     "perRunP75": 3.193,
+     "medians": 1.896
+    }
+   }
+  },
+  {
+   "from": 7,
+   "to": 8,
+   "curve": 2.959,
+   "groups": {
+    "전체": {
+     "n": 123,
+     "perRunP50": 4.228,
+     "perRunP25": 1.729,
+     "perRunP75": 13.879,
+     "medians": 4.923
+    },
+    "이긴 판": {
+     "n": 89,
+     "perRunP50": 5.488,
+     "perRunP25": 2.186,
+     "perRunP75": 17.745,
+     "medians": 7.074
+    },
+    "진 판": {
+     "n": 34,
+     "perRunP50": 1.799,
+     "perRunP25": 1.075,
+     "perRunP75": 3.903,
+     "medians": 1.918
+    }
+   }
+  }
+ ]
+}
