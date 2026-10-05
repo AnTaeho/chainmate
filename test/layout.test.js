@@ -632,3 +632,47 @@ test('다음 수 칸: 손 카드 · 「!?」 딱지와 겹치지 않고 오른�
   // 넷이면 카드는 22(전에는 25)
   assert.equal(B.BattleScreen.prototype.handRect.call({}, 0, 4, lay).w, 22);
 });
+
+// CHM-68 뒤: 연줄로 명경기 조각이 흔해져 전설 화면에 격언을 많이 들고 들어온다. 가진 격언 칸이 넘치면 여러 줄로 나란히(아이콘만),
+// 새 전설 칸은 맨 아래 한 줄 — 모두 제목(2배, y 22 ~ 44) 밑 · 「계속」(y 244) 위 · 화면 안에. 「최대」는 격언 칸이 끝까지 찬 판:
+// 기본 칸 5 + 흑요 판본 10(칸을 스스로 가져온다) + 다른 전설 넷 = 19. 칸 폭이 아이콘(24)을 담는 4줄까지면 20개가 든다.
+test('전설 화면 격언 칸: 칸이 끝까지 찬 판(흑요 포함)도 제목 밑 · 「계속」 위 · 화면 안, 칸끼리 겹치지 않는다', async () => {
+  const L = await import('../src/ui/screens/legend.js');
+  const { MAXIMS } = await import('../src/data/maxims.js');
+  const { LEGENDS } = await import('../src/data/legends.js');
+  const TITLE_BOTTOM = 22 + 22, BUTTON_TOP = 270 - 26;
+  const check = (n, tag) => {
+    const lay = L.legendSlots(n);
+    const all = [...lay.rects, lay.slot];
+    for (const r of all) {
+      assert.ok(r.x >= 0 && r.x + r.w <= 480 && r.y >= 0 && r.y + r.h <= 270, `${tag}: 화면 밖 ${JSON.stringify(r)}`);
+      assert.ok(r.y > TITLE_BOTTOM, `${tag}: 제목과 겹침 y ${r.y}`);
+      assert.ok(r.y + r.h < BUTTON_TOP, `${tag}: 「계속」과 겹침 ${r.y + r.h}`);
+      assert.ok(r.x >= L.LEGEND_RX && r.x + r.w <= L.LEGEND_RX + L.LEGEND_RW, `${tag}: 오른쪽 칸 밖`);
+    }
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+      const a = all[i], b = all[j];
+      assert.ok(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y, `${tag}: 칸 ${i} · ${j} 겹침`);
+    }
+    if (lay.narrow) assert.ok(lay.cw >= 24, `${tag}: 아이콘(24)이 칸 폭 ${lay.cw}에 안 든다`);
+    else assert.equal(lay.cw, L.LEGEND_RW);
+    return lay;
+  };
+  // 다섯까지는 예전과 같은 한 줄(이름이 보인다), 그 위는 여러 줄
+  for (let n = 0; n <= 20; n++) {
+    const lay = check(n, `가진 격언 ${n}`);
+    if (n <= 5) assert.equal(lay.cols, 1, `가진 격언 ${n}`);
+  }
+  // 실제 판 상태로: 격언 칸 5를 끝까지 · 흑요 10 · 다른 전설 넷
+  const run = M.run.createRun({ seed: 1, draft: false });
+  const plain = MAXIMS.filter((m) => m.rarity !== 'legendary');
+  run.maxims = plain.slice(0, 15).map((m, i) => ({ uid: 100 + i, id: m.id, data: {}, edition: i < 10 ? 'obsidian' : null, paid: 5 }));
+  assert.equal(M.run.maximCount(run), M.run.maximCapacity(run));
+  const legend = LEGENDS[0].id;
+  for (const l of LEGENDS) run.maxims.push({ uid: 200 + run.maxims.length, id: l.id, data: {}, edition: null, paid: 0, legendary: true });
+  const others = run.maxims.filter((m) => m.id !== legend).length;
+  assert.equal(others, 19);
+  check(others, '칸이 끝까지 찬 판');
+  // smoke가 만난 판(격언 다섯 + 전설 셋)
+  assert.equal(check(8, 'smoke 판').cols, 2);
+});
