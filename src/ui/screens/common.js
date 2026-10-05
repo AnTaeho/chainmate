@@ -10,6 +10,7 @@ import { familyCounts } from '../../data/families.js';
 import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, flow, rowSpan } from '../frame.js';
 import { openBox, closeBox, logClip } from '../../render/layoutlog.js';
 import { L as L_ } from '../lang.js';
+import { emberMark } from '../ignite.js';
 
 // 세력 빛깔을 짙은 판넬 위 글자로 읽히게 조금 밝힌다
 export function lightHue(hex, k = 0.25) {
@@ -143,6 +144,8 @@ export function runSide(ctx, ui, app, title) {
   panel(ctx, L, st.head.y, LW, head.h);
   ui.sideItem(L, st.head.y, LW, head.h, { rows: [rowSpan(st.head.y + head.kicker), ...head.titles.map((t) => rowSpan(st.head.y + t, LINE_TITLE))] });
   text(ctx, hallText(run), L + P, st.head.y + head.kicker, PAL.dim);
+  // 점화(CHM-67): 관 줄 옆에 불씨 — 가리키면 이 판의 콤비네이션
+  if (run.ignite && !run.scratch) emberMark(ctx, ui, run.ignite, L + P + measure(hallText(run)) + 4, st.head.y + head.kicker);
   drawName(ctx, title, tn, L + P, head.titles.map((t) => st.head.y + t), LW - P * 2, PAL.gold);
   closeBox();
   // 짜임 칸: 시너지(이름표 → 세로 칩) → 묶음 틈 → 정석(이름표 → 이름 줄). 칸은 머리 칸과 아래 칸 사이

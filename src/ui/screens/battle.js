@@ -43,6 +43,7 @@ import { ANNOT, drawAnnot, annotSize, handTagRect, boardTagRect, offeredRow, dra
 import { drawStars, starsW, starCount, STAR_N } from '../stars.js';
 import { capRoute, routeAt, bendDur } from '../fxroute.js';
 import { noteStep, reviewGen, cloneBattle } from '../../sim/replay.js';
+import { openCombo, drawCombo, comboLand, comboClose, emberMark } from '../ignite.js';
 import { reviewOn, forkTitle, forkLine, forkScores, forkScoreLines, forkScoreRows, forkMarks, NO_PATH, THINKING } from '../review.js';
 
 // 복기(CHM-59): 진 순간 프레임마다 이만큼(ms)씩 나눠 잰다. 답은 마디 예산(replay.js REVIEW.nodes)이 정하고, 이 기기에서
@@ -309,7 +310,7 @@ export class BattleScreen {
     const bh = (bn.master ? mh : 44) + row, by = BY + 106 - bh / 2;
     return { row, TW, mBig, subs, bh, by };
   }
-  get busy() { return this.seq.busy; }
+  get busy() { return this.seq.busy || !!this.combo; } // 점화 막간(this.combo)이 떠 있는 동안도 누를 수 없다
 
   // 규칙 상태에서 보이는 판을 다시 읽는다(연출이 끝날 때마다)
   sync() {
@@ -585,9 +586,11 @@ export class BattleScreen {
               if (x.xmult) { c.mult *= x.xmult; xm *= x.xmult; }
             }
             if (dv) this.pop(`+${short(dv)}`, 'value');
-            if (dm) this.pop(`+${short(dm)}`, 'mult');
-            if (xm !== 1) this.pop(`×${Number(xm.toFixed(2))}`, 'mult', dm ? 10 : 0);
-            if (cv || cm) this.chartShare(c.sq, cv, cm, { after: dv ? `+${short(dv)}` : c.capPop, multBusy: !!dm || xm !== 1 });
+            const mrow = [];
+            if (dm) mrow.push([`+${short(dm)}`, {}]);
+            if (xm !== 1) mrow.push([`×${Number(xm.toFixed(2))}`, {}]);
+            if (cv || cm) this.chartShare(c.sq, cv, cm, { after: dv ? `+${short(dv)}` : c.capPop, row: mrow });
+            else this.popRow(mrow);
             this.snd('tick', c.mult);
           },
         }); break;
@@ -711,6 +714,8 @@ export class BattleScreen {
         }); break;
         case 'win': if (this.src.kind === 'lesson') break; add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); } }); break;
         case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
+        // 점화(CHM-67): 걸음 없이 적어 두고, 한 수 연출이 끝난 뒤(afterSeq) 막간을 연다
+        case 'ignite': this.ignPending = e; break;
         case 'fragment': add(0.05, { begin: () => { this.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); this.snd('fragment'); { const to = shardTo(); this.app.flyShard(BX + 112, BY + 112, to.x, to.y); } } }); this.runEvents.push(e); break;
         default: this.runEvents.push(e);
       }
@@ -763,6 +768,15 @@ export class BattleScreen {
   afterSeq() {
     this.fast = false;
     const app = this.app;
+    // 점화 막간(CHM-67): 한 수 연출 밖. 닫히면(closeCombo) 여기로 다시 와 대국을 잇거나 보상 흐름으로 간다
+    if (this.ignPending) {
+      this.combo = openCombo(this.ignPending, app.reducedMotion);
+      this.ignPending = null;
+      this.fx.list = this.fx.list.filter((e) => !e.word && !e.formName); // 「대국 승리」 같은 큰 글자 · 「폰!」 모습 이름 · 사슬 평가 도장은 다시 긋는 길과 함께 두지 않는다
+      this.stamp = null;
+      if (this.combo.calm) this.snd('ignite');
+      return;
+    }
     if (this.src.after) { this.sync(); this.src.after(this); return; }
     if (app.run.phase === 'battle') { this.sync(); return; }
     // 대국이 끝났다: 막간(보상 · 상자 · 전설) 뒤 국면 화면으로
@@ -1065,22 +1079,37 @@ export class BattleScreen {
     });
   }
   // col: 빛깔(기본은 값 · 배수 빛깔) · delay: 늦게 뜨기(초) · dx · align: 가운데 대신 왼쪽 맞춤으로 옆에 붙일 때
-  pop(s, where, dy = 0, { col = null, delay = 0, dx = 0, align = 'center' } = {}) {
-    const lay = this.leftLayout(), vy = lay.val.y - 2;
-    const pos = where === 'value' ? { x: LX + 24 + dx, y: vy - dy } : where === 'mult' ? { x: LX + 88 + dx, y: vy - dy } : { x: LX + LW - 20, y: shardTo().y - 6 };
+  // 값 · 배수 몫은 칸 위 틈에 머물며 스러진다: 머리 칸과 값 칸 사이 틈(GAP_GROUP 8)은 글자 잉크(11)보다 좁아, 떠오르면 머리 칸 아랫변 ·
+  // 점수 줄에 겹쳤다(CHM-67). 잉크 윗변을 머리 칸 아랫변 바로 밑에 두면 아래쪽(그림자까지)은 값 칸 윗테 · 안 여백에 걸치고 칸 안 수(VT)에는 닿지 않는다.
+  // 상금은 아래 칸 상금 줄 위로 떠오른다(예전 그대로)
+  pop(s, where, { col = null, delay = 0, dx = 0, align = 'center' } = {}) {
+    const lay = this.leftLayout(), vy = lay.val.y - GAP_GROUP;
+    const pos = where === 'value' ? { x: LX + 24 + dx, y: vy } : where === 'mult' ? { x: LX + 88 + dx, y: vy } : { x: LX + LW - 20, y: shardTo().y - 6 };
+    const rise = where === 'money' ? 10 : 0;
     const c = col || (where === 'value' ? PAL.val : PAL.gold);
-    this.fx.add({ life: 0.6 + delay, layer: 1, draw: (ctx, e) => { const t = e.t - delay; if (t < 0) return; const k = t / 0.6; text(ctx, s, pos.x, pos.y - 6 - k * 10, c, { align, bold: true, alpha: 1 - k * k, shadow: PAL.shadow }); } });
+    // 머무는 몫은 같은 자리에 겹치지 않게: 앞선 순간에 뜬 같은 칸의 몫은 새 몫이 뜰 때 지운다(같은 순간에 나란히 뜬 몫은 둔다)
+    const now = this.app.time;
+    if (!rise) for (const f of this.fx.list) if (f.popAt === where && f.born < now) f.t = f.life;
+    this.fx.add({ life: 0.6 + delay, layer: 1, popAt: where, born: now, draw: (ctx, e) => { const t = e.t - delay; if (t < 0) return; const k = t / 0.6; text(ctx, s, pos.x, pos.y - (rise ? 6 + k * rise : 0), c, { align, bold: true, alpha: Math.min(1, k * 10) * (1 - k * k), shadow: PAL.shadow }); } });
   }
-  // 기보 몫: 값 칸 위의 기본 몫(after) 바로 오른쪽에 청록 「+N」, 배수 칸 위에 청록 「+N」(배수 몫이 이미 떴으면 한 칸 위) —
+  // 배수 칸 위 몫 여럿(+N · ×N · 기보 +N)은 위로 쌓지 않고 한 줄에 나란히(배수 칸 가운데 기준, 왼쪽 칸 안). items = [[글, { col, delay }]]
+  popRow(items) {
+    if (!items.length) return;
+    const ws = items.map(([s]) => measure(s, true)), total = ws.reduce((a, w) => a + w, 0) + 3 * (items.length - 1);
+    let x = Math.min(LX + LW - 1 - total, Math.round(LX + 88 - total / 2));
+    items.forEach(([s, o], i) => { this.pop(s, 'mult', { ...o, dx: x - (LX + 88), align: 'left' }); x += ws[i] + 3; });
+  }
+  // 기보 몫: 값 칸 위의 기본 몫(after) 바로 오른쪽에 청록 「+N」, 배수 칸 위에 청록 「+N」(배수 몫이 같이 뜨면 그 옆에 나란히) —
   // 기보 봉랍 빛깔, 조금 늦게. 먹은 칸에 청록 반짝. 한 수 연출 길이는 늘리지 않는다(fx만)
-  chartShare(sq, value, mult, { after = null, multBusy = false } = {}) {
+  // row: 같은 순간 배수 칸 위에 뜨는 다른 몫(+N · ×N) — 기보 몫은 그 줄 끝에 나란히
+  chartShare(sq, value, mult, { after = null, row = [] } = {}) {
     const hi = SEAL.chart[1];
     if (value) {
       const s = `+${short(value)}`;
       const half = after ? Math.ceil(measure(after, true) / 2) + 2 : -Math.floor(measure(s, true) / 2);
-      this.pop(s, 'value', 0, { col: hi, delay: 0.08, dx: half, align: 'left' });
+      this.pop(s, 'value', { col: hi, delay: 0.08, dx: half, align: 'left' });
     }
-    if (mult) this.pop(`+${short(mult)}`, 'mult', multBusy ? 11 : 0, { col: hi, delay: 0.08 });
+    this.popRow(mult ? [...row, [`+${short(mult)}`, { col: hi, delay: 0.08 }]] : row);
     if (sq != null) this.sparkle(sq, hi, 8);
     const st = this.app.stats;
     if (st) st.chartPops = (st.chartPops || 0) + 1;
@@ -1100,7 +1129,7 @@ export class BattleScreen {
     const c = this.center(sq);
     const s = `${PIECE_NAME[t]}!`;
     this.fx.add({
-      life: 0.9, layer: 1,
+      life: 0.9, layer: 1, formName: true,
       draw: (ctx, e) => {
         const k = e.t / e.life;
         const w = measure(s, true) * 2 + 10, h = 27;
@@ -1183,7 +1212,9 @@ export class BattleScreen {
   get marks() { return this._marks || (this._marks = new Marks()); }
   rightDown(x, y) { this.marks.down(sqAt(x, y)); }
   rightUp(x, y) { this.marks.up(sqAt(x, y)); }
-  pointerDown(x, y) { this.idleT = 0; if (x != null && sqAt(x, y) >= 0) this.marks.clear(); }
+  pointerDown(x, y) { if (this.combo) return; this.idleT = 0; if (x != null && sqAt(x, y) >= 0) this.marks.clear(); }
+  // 점화 막간 닫기(탭 · 키 · 저절로)
+  closeCombo() { if (!this.combo) return; this.combo = null; this.afterSeq(); }
   update(dt) {
     this.idleT = (this.idleT || 0) + dt;
     if (this.rv && this.rv.phase === 'think' && !this.busy) this.thinkReview(dt);
@@ -1199,6 +1230,12 @@ export class BattleScreen {
     this.updateFlames(dt);
     if (this.banner) { this.banner.t += dt; if (this.banner.t > this.banner.life) this.banner = null; }
     if (this.stamp) { this.stamp.t += dt * this.app.speed(); if (this.stamp.t > this.stamp.life) this.stamp = null; }
+    if (this.combo) {
+      const g = this.combo, was = g.t, land = comboLand(g.calm);
+      g.t += dt;
+      if (!g.calm && was < land && g.t >= land) { this.shake(2, 0.15); this.snd('ignite'); }
+      if (g.t >= comboClose(g.calm)) this.closeCombo();
+    }
   }
 
   // ── 그리기
@@ -1208,6 +1245,11 @@ export class BattleScreen {
     this.drawRight(ctx, ui);
     this.drawOver(ctx);
     if (this.rv) this.drawReview(ctx, ui);
+    // 점화 막간: 화면을 덮는 구역 하나가 모든 누르기를 받아 막간을 닫는다(밑의 단추 · 칸은 눌리지 않는다)
+    if (this.combo) {
+      drawCombo(ctx, this.combo, { BX, BY, S, sqXY });
+      ui.region('ignite', 0, 0, W, H, { onClick: () => this.closeCombo() });
+    }
     if (this.src.kind === 'run') this.coachHints();
   }
   // 처음 안내: 판 위에서 처음 만나는 것(증원 · 금빛 적 · 특성 · 벽과 보석 · 이형 기물)
@@ -1732,7 +1774,9 @@ export class BattleScreen {
       if (a > 0.01) glowText(ctx, LX + LW - P - sw, sy, sw, 12, PAL.gold, a, 7);
     }
     text(ctx, '점수', LX + P, sy, PAL.dim);
-    text(ctx, fitRow('점수', score), LX + LW - P, sy, hot ? PAL.gold : PAL.ink, { align: 'right', bold: true });
+    // 점화(CHM-67): 점수 이름표 옆에 불씨 — 가리키면 이 판의 콤비네이션. 규칙이 사슬 끝에 남기니 막간이 열리기 전(ignPending)에는 감춘다
+    const ign = run && run.ignite && !this.ignPending ? emberMark(ctx, ui, run.ignite, LX + P + measure('점수') + 4, sy) : 0;
+    text(ctx, typeof score === 'number' ? fitNum(score, LW - P * 2 - measure('점수') - 4 - ign) : score, LX + LW - P, sy, hot ? PAL.gold : PAL.ink, { align: 'right', bold: true });
     closeBox();
     this.drawFlames(ctx);
     // 값 × 배수
@@ -1802,15 +1846,23 @@ export class BattleScreen {
     ui.sideItem(LX, cy, LW, ch);
     const steps = c ? c.steps : this.lastEnd ? this.lastEnd.steps : [];
     const a = c ? 1 : 0.45;
-    const past = steps.slice(Math.max(0, steps.length - 4), -1);
     const eng = c ? c.eng : this.lastEnd ? this.lastEnd.eng : null;
     const tierAt = (tp) => (run ? tierOf(run.charts[tp]) : 0);
     const big = ch >= 44 + 4;
-    past.forEach((tp, i) => sprite(ctx, tp, 'w', LX + 5 + i * 19, cy + ch - 24, { alpha: a, eng, tier: tierAt(tp) }));
-    if (steps.length > 4) text(ctx, `+${steps.length - 4}`, LX + P, cy + textY(P), PAL.dim);
+    const cw = big ? 32 : 16, chh = big ? 44 : 22, cx0 = LX + LW - 6 - cw;
+    // 지나온 모습: 지금 모습 칸 앞까지 들어가는 만큼(최근 것부터, 셋까지). 못 보인 앞의 모습은 줄 왼쪽에 「+N」(작은 그림과 같은 줄 — 그림 위에 겹치지 않게)
+    const prev = steps.slice(0, -1), sy = cy + ch - 24;
+    let k = Math.min(3, prev.length), lw = 0;
+    // 글은 판넬 안 여백(P) 안쪽에서 시작한다. 「+N」이 있으면 그림은 그 뒤 3에서
+    const fits = (n) => { const more = prev.length - n; lw = more > 0 ? P + measure(`+${more}`) + 3 : 5; return LX + lw + (n ? (n - 1) * 19 + 16 : 0) <= cx0 - 2; };
+    while (k > 0 && !fits(k)) k--;
+    fits(k);
+    const past = prev.slice(prev.length - k);
+    if (prev.length > k) text(ctx, `+${prev.length - k}`, LX + P, sy + 5, PAL.dim);
+    past.forEach((tp, i) => sprite(ctx, tp, 'w', LX + lw + i * 19, sy, { alpha: a, eng, tier: tierAt(tp) }));
     const cur = steps[steps.length - 1];
     if (cur) {
-      const cw = big ? 32 : 16, chh = big ? 44 : 22, cx0 = LX + LW - 6 - cw, cy0 = cy + Math.floor((ch - chh) / 2);
+      const cy0 = cy + Math.floor((ch - chh) / 2);
       if (c && c.cut) { ctx.globalAlpha = 0.35; rect(ctx, cx0 - 2, cy + 2, cw + 4, ch - 4, PAL.red); ctx.globalAlpha = 1; }
       ctx.globalAlpha = a;
       ctx.drawImage(spriteCanvas(artOf(cur), 'w', eng, tierAt(cur), hiFor(ctx, cw / SW)), cx0, cy0, cw, chh);
@@ -2055,6 +2107,7 @@ export class BattleScreen {
   }
 
   key(k) {
+    if (this.combo) { this.closeCombo(); return; } // 점화 막간: 아무 키나 닫는다(다른 데로 새지 않는다)
     const b = this.live();
     this.idleT = 0;
     // 갈림길 카드: Enter 다시 두기 · Esc · 스페이스 넘어가기

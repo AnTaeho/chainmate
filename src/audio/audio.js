@@ -148,6 +148,8 @@ export function createAudio(win = globalThis, opts = {}) {
     fragment: () => arp([84, 88, 91], 0.07, { dur: 0.4, type: 'sine', vol: 0.12 }),
     // 혼의 금(CHM-17): 사기 그릇에 금이 가는 짧은 두 번의 딱 소리 · 각성: 금이 터지며 솟는 쓸기 + 종 화음
     crack: () => { noise({ dur: 0.04, vol: 0.22, freq: 7000, q: 5 }); noise({ t: 0.07, dur: 0.05, vol: 0.18, freq: 5200, q: 5 }); tone(NOTE(79), { t: 0.07, dur: 0.12, type: 'triangle', vol: 0.05, slide: NOTE(74) }); },
+    // 점화(CHM-67): 콤비네이션 카드가 앉는 순간 — 낮은 숨 · 따뜻한 장조 화음(도 · 미 · 솔)을 종으로 겹치고 위 도를 늦게 얹는다. 짧게(1초 안)
+    ignite: () => { noise({ dur: 0.18, vol: 0.1, freq: 600, q: 1.2, sweep: 2400 }); [60, 64, 67].forEach((n) => tone(NOTE(n), { dur: 0.7, type: 'triangle', vol: 0.1 })); [72, 76, 79].forEach((n, i) => bell(NOTE(n), { t: 0.02 * i, dur: 0.8, vol: 0.1 })); bell(NOTE(84), { t: 0.12, dur: 0.9, vol: 0.09 }); },
     awaken: () => { noise({ dur: 0.35, vol: 0.16, freq: 800, q: 1.5, sweep: 7000 }); bell(NOTE(84), { t: 0.3, dur: 0.9, vol: 0.16 }); bell(NOTE(88), { t: 0.36, dur: 0.9, vol: 0.12 }); bell(NOTE(91), { t: 0.42, dur: 1.1, vol: 0.12 }); },
     // 탁월수 !!(CHM-43): 메이트 화음 위에 얹히는 맑은 두 종(5도 위로 뛴다) + 위로 쓸어 올리는 반짝임. 메이트 소리와 겹쳐 울린다
     brilliant: () => {
