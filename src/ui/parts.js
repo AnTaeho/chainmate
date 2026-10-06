@@ -3,8 +3,7 @@ import { richText } from './glossary.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, textMid, frame, dots, sprite, measure, line, digits, place } from '../render/gfx.js';
 import { button } from './ui.js';
-import { ENG_EDGE, tierOf, baked, hiFor } from '../render/sprites.js';
-import { EMBLEM_HI, TACTIC_HI, SHARD_HI } from '../render/art-hi.js';
+import { ENG_EDGE, tierOf, hiFor } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID, RARITY_NAME, isCracked, CRACK } from '../data/souls.js';
@@ -23,6 +22,9 @@ import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 import { kindTab, TAB, TAB_GAP, PACK_KIND } from './kinds.js';
+import { itemArt, artW, engravingEmblem, soulEmblem, awakenArt, shardIcon, tacticIcon } from './art.js';
+// 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
+export { EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, SHARD_ROWS, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
 
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
 // 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
@@ -326,85 +328,12 @@ export function cornerTicks(ctx, x, y, w, h, col, n = 2) {
   rect(ctx, x, y + h - 1, n, 1, col); rect(ctx, x, y + h - n, 1, n, col);
   rect(ctx, x + w - n, y + h - 1, n, 1, col); rect(ctx, x + w - 1, y + h - n, 1, n, col);
 }
-// 각인 그림: 기물 없이 재료 하나(금화 · 은판 · 상아 조각 · 흑단 나뭇조각 · 유리 조각 · 깃털). 16×16 도트, 22×26 어두운 칸 안에.
-// 각인은 주머니의 어느 기물에나 새기므로 기물을 그리지 않는다(나이트를 그리면 나이트에만 붙는 것처럼 보였다).
-export const EMBLEM = {
-  gold: { c: { o: '#6b4410', m: '#c8902c', h: '#efbd55', w: '#fff1b8' }, g: ['.....oooooo.....', '...oommmmmmoo...', '..ommhhhhhhmmo..', '.omhhwwhhhhhhmo.', '.omhwwhhhhhhhmo.', 'omhhhhmmmmhhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhhmmmmhhhhmo', '.omhhhhhhhhhhmo.', '.omhhhhhhhhhhmo.', '..ommhhhhhhmmo..', '...oommmmmmoo...', '.....oooooo.....'] },
-  silver: { c: { o: '#4a5560', m: '#9aa6b0', h: '#d8dee6', w: '#ffffff' }, g: ['................', '................', '..oooooooooooo..', '.ohhhhhhhhhhhmo.', '.ohwwhhhhhhhhmo.', '.ohwhhhhhhhhhmo.', '.ohhhhhwhhhhhmo.', '.ohhhhwhhhhhhmo.', '.ohhhwhhhhhhhmo.', '.ohhhhhhhhhwhmo.', '.ohhhhhhhhwhhmo.', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '................', '................', '................'] },
-  ivory: { c: { o: '#8a6a4a', m: '#d8c4a4', h: '#f7efdb', w: '#ffffff' }, g: ['..........oo....', '.........ohho...', '........ohwho...', '.......ohwhho...', '......ohwhhmo...', '.....ohhhhmo....', '....ohhhhmo.....', '...ohhhhmo......', '..ohhhhmo.......', '..ohhhmo........', '.ohhhmo.........', '.ohhmmo.........', '.ohmmo..........', '..oooo..........', '................', '................'] },
-  ebony: { c: { o: '#1e1612', m: '#3e2f28', h: '#6b5a52', w: '#c8902c' }, g: ['................', '................', '...ooooooooo....', '..ohhmhhhhhmoo..', '..ohmhhhmhhhhmo.', '.ohhmhhhmhhhhmo.', '.ohmhhhhmhhhhhmo', '.ommmhhhhmmhhhmo', '.ohhhmmhhhhmmmmo', '.ohhhhhmhhhhhhmo', '..ohhhhmhhhwhmo.', '..ommmmmmmmmmo..', '...oooooooooo...', '................', '................', '................'] },
-  glass: { c: { o: '#3f7f8a', m: '#6fb8c4', h: '#bfe0e6', w: '#ffffff' }, g: ['.......o........', '......owo.......', '......owho......', '.....owhho......', '.....owhhho.....', '....owhhhho.....', '....owhhhhmo....', '...owhhhhhmo....', '...owhhhhhhmo...', '..owhhhhhhhmo...', '..owhhhhhhhhmo..', '.owhhhhhhhhhmo..', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '................', '................'] },
-  feather: { c: { o: '#3a6a60', m: '#6fd1bf', h: '#e8e0f0', w: '#ffffff' }, g: ['...........ooo..', '.........oohhmo.', '........ohhhhmo.', '.......ohhhhmo..', '......ohhwhmo...', '.....ohhwhmo....', '....ohhwhmo.....', '....ohwhmo......', '...ohwhmo.......', '...owhmo........', '..owmo..........', '..omo...........', '.oo.............', 'o...............', '................', '................'] },
-  // 밤샘 2: 청동 종 · 철 덩이 · 벌레 든 호박 · 비취 고리 · 산호 가지 · 결 있는 대리석
-  bronze: { c: { o: '#5a3414', m: '#a0602a', h: '#d08a48', w: '#f0c090' }, g: ['.......oo.......', '......ommo......', '.....ohhhmo.....', '....ohwhhhmo....', '....ohwhhhmo....', '...ohwhhhhhmo...', '...ohhhhhhhmo...', '...ohhhhhhhmo...', '..ohhhhhhhhhmo..', '..ohhhhhhhhhmo..', '.ohhhhhhhhhhhmo.', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '.......oo.......', '......omo.......', '.......o........'] },
-  iron: { c: { o: '#2a2e33', m: '#555c63', h: '#8a9299', w: '#c8d0d6' }, g: ['................', '................', '................', '....oooooooo....', '...ohhwhhhhmo...', '..ohhwhhhhhhmo..', '.ohhhhhhhhhhhmo.', 'ommmmmmmmmmmmmmo', 'ommmmmmmmmmmmmmo', '.oooooooooooooo.', '................', '................', '................', '................', '................', '................'] },
-  amber: { c: { o: '#6a3a08', m: '#c87a14', h: '#f0a830', w: '#ffe0a0' }, g: ['.......oo.......', '......ohho......', '.....ohwhho.....', '.....owhhho.....', '....owhhhhmo....', '...ohwhhhhhmo...', '...owhhoohhmo...', '..ohhhoooohhmo..', '..ohhhhoohhhmo..', '..ohhhhhhhhhmo..', '..ohhhhhhhhhmo..', '...ohhhhhhhmo...', '....ommmmmmo....', '.....oooooo.....', '................', '................'] },
-  jade: { c: { o: '#1e5a3a', m: '#3f9a60', h: '#7fd09a', w: '#d0ffe0' }, g: ['.....oooooo.....', '...oohhhhhhoo...', '..ohhwwhhhhhmo..', '.ohwwhhhhhhhhmo.', '.ohwhhooooohhmo.', 'ohhhho....ohhhmo', 'ohhho......ohhmo', 'ohhho......ohhmo', 'ohhho......ohhmo', 'ohhhho....ohhhmo', '.ohhhhooooohhmo.', '.ohhhhhhhhhhhmo.', '..ommhhhhhhmmo..', '...oommmmmmoo...', '.....oooooo.....', '................'] },
-  coral: { c: { o: '#7a2a2a', m: '#d05a50', h: '#f08878', w: '#ffd0c8' }, g: ['..o.....o....o..', '.oho...oho..oho.', '.oho...oho..oho.', '.ohho..oho.ohho.', '..oho..ohooho...', '..ohhooohhhmo...', '...ohhhhhhmo....', '....ohhhhmo.....', '.....ohhmo......', '.....ohhmo......', '.....ohhmo......', '....ohhhhmo.....', '...ommmmmmmo....', '...ooooooooo....', '................', '................'] },
-  marble: { c: { o: '#3a3a4a', m: '#7a70a8', h: '#e8e4f8', w: '#ffffff' }, g: ['................', '................', '.oooooooooooooo.', '.ohhhhhhhmhhhho.', '.ohwhhhhmhhhhho.', '.ohhhhhmhhhhhho.', '.ohhhhmhhhhhhmo.', '.ohhhhhmmhhhhmo.', '.ohhhhhhhmhhhmo.', '.ohhmhhhhhmhhmo.', '.ohhhmmhhhhhhmo.', '.ommmmmmmmmmmmo.', '.oooooooooooooo.', '................', '................', '................'] },
-};
-export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
-  if (sq) { rect(ctx, x, y, 22, 26, '#1b2b27'); rect(ctx, x + 1, y + 1, 20, 1, '#2a3a33'); }
-  const e = EMBLEM[id];
-  if (!e) return;
-  // 화면 배율 2 이상: 32×32 반 도트 그림(art-hi.js, CHM-39 2단계)을 같은 16×16 자리에
-  if (EMBLEM_HI[id] && hiFor(ctx)) { ctx.drawImage(baked(`emblem:${id}`, EMBLEM_HI[id], Object.fromEntries(Object.entries(e.c).map(([k, v]) => [k, [v, 1]]))), place(x + 3), place(y + 5), 16, 16); return; }
-  e.g.forEach((r, j) => { for (let i = 0; i < 16; i++) { const k = r[i]; if (k !== '.') rect(ctx, x + 3 + i, y + 5 + j, 1, 1, e.c[k]); } });
-}
 // 혼 등급(흔함 · 드묾 · 귀함): 격언 등급 테와 같은 빛깔(palette RARITY). 혼 깃든 기물은 그 혼의 등급
 export const soulRarity = (it) => (it.kind === 'soul' ? SOUL_BY_ID[it.id].rarity : it.kind === 'piece' && it.soul ? SOUL_BY_ID[it.soul].rarity : null);
 export const rarityLine = (rarity) => [RARITY_NAME[rarity], RARITY[rarity]];
-// 혼 그림: 기물 없이 혼의 빛깔로 도는 기운(혼도 주머니의 어느 기물에나 깃든다)
-export function soulEmblem(ctx, id, x, y, t = 0, { sq = true } = {}) {
-  const s = SOUL_BY_ID[id];
-  if (sq) rect(ctx, x, y, 22, 26, '#1b2b27');
-  const cx = x + 11, cy = y + 13;
-  for (let r = 8; r >= 2; r -= 2) { ctx.globalAlpha = 0.18 + (8 - r) * 0.06; for (let a = 0; a < 24; a++) { const q = (a / 24) * Math.PI * 2; rect(ctx, Math.round(cx + Math.cos(q) * r), Math.round(cy + Math.sin(q) * r), 1, 1, s.col); } }
-  ctx.globalAlpha = 1;
-  for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 6), Math.round(cy + Math.sin(q) * 6), 2, 2, s.col); }
-  // 가운데 문양(5×5): 혼이 열여섯이 되어 빛깔만으로는 갈리지 않는다(밤샘 2)
-  const g = SOUL_GLYPH[id];
-  if (g) { rect(ctx, cx - 3, cy - 3, 7, 7, '#1b2b27'); g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, cx - 2 + i, cy - 2 + j, 1, 1, PAL.white); }); }
-  else rect(ctx, cx - 1, cy - 1, 3, 3, PAL.white);
-}
-// 작은 혼 표(9×9): 혼 빛깔 바탕에 가운데 문양(도감 칸처럼 좁은 곳)
-export function soulGlyph(ctx, id, x, y) {
-  const s = SOUL_BY_ID[id];
-  rect(ctx, x, y, 9, 9, '#1b2b27');
-  frame(ctx, x, y, 9, 9, s.col);
-  const g = SOUL_GLYPH[id];
-  if (g) g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, x + 2 + i, y + 2 + j, 1, 1, PAL.white); });
-}
-export const SOUL_GLYPH = {
-  absorb: ['.###.', '#...#', '#.###', '#....', '.####'], echo: ['..#..', '.#.#.', '#.#.#', '.#.#.', '..#..'],
-  transcend: ['..#..', '.###.', '#.#.#', '..#..', '..#..'], hunger: ['#.#.#', '#.#.#', '#####', '..#..', '..#..'],
-  hunter: ['..#..', '.###.', '##.##', '.###.', '..#..'], martyr: ['..#..', '#####', '..#..', '..#..', '..#..'],
-  crown: ['##...', '###..', '####.', '#....', '#....'], shade: ['#...#', '.###.', '.....', '.###.', '#...#'],
-  inherit: ['#####', '#...#', '#.#.#', '..#..', '.###.'], relay: ['#....', '.#...', '..###', '...#.', '....#'],
-  retro: ['#...#', '#...#', '.#.#.', '.#.#.', '..#..'], duel: ['#...#', '##.##', '.###.', '##.##', '#...#'],
-  reaper: ['.###.', '#.#.#', '#####', '.#.#.', '.....'], spring: ['#####', '...#.', '..#..', '.#...', '#####'],
-  homing: ['.###.', '#...#', '#.#..', '..##.', '.###.'], ripple: ['.#.#.', '#...#', '..#..', '#...#', '.#.#.'],
-};
 // 두루마리 「깨우기」(CHM-17): 금 간 구슬에서 금빛이 새어 나온다
 export const AWAKEN_TEXT = '금이 간 혼 하나가 깨어난다';
 export const AWAKEN_MORE = '혼 깃든 기물로 사슬을 다섯 번 이으면 금이 간다';
-export function awakenArt(ctx, x, y, t = 0, { sq = true } = {}) {
-  if (sq) rect(ctx, x, y, 22, 26, '#1b2b27');
-  const cx = x + 11, cy = y + 13;
-  for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) { const d = i * i + j * j; if (d <= 25) rect(ctx, cx + i, cy + j, 1, 1, d > 16 ? PAL.goldDk : i + j < -3 ? PAL.goldHi : PAL.gold); }
-  for (const [i, j] of [[-1, -5], [0, -4], [0, -3], [1, -2], [1, -1], [0, 0], [1, 1], [2, 2], [2, 3]]) rect(ctx, cx + i, cy + j, 1, 1, PAL.ink);
-  const k = Math.floor(t * 4) % 4;
-  for (let r = 0; r < 4; r++) { const q = (r * Math.PI) / 2 + Math.PI / 4; const d = 7 + ((k + r) % 2); rect(ctx, Math.round(cx + Math.cos(q) * d), Math.round(cy + Math.sin(q) * d), 1, 1, PAL.goldHi); }
-}
-// 진화 그림: 체스 기물 › 이형(나이트 › 낙타)
-export function evolveArt(ctx, x, y, t = 0) {
-  rect(ctx, x, y, 44, 26, '#1b2b27');
-  sprite(ctx, 'N', 'w', x + 1, y + 2);
-  const k = Math.floor(t * 3) % 2;
-  for (let i = 0; i < 3; i++) rect(ctx, x + 19 + i + k, y + 11 + i, 1, 1, PAL.gold), rect(ctx, x + 19 + i + k, y + 15 - i, 1, 1, PAL.gold);
-  sprite(ctx, 'L', 'w', x + 26, y + 2, { tier: 1 });
-}
-
 // 카드에 적는 효과 한 줄(말풍선은 덧붙임만)
 export function itemEffect(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).text;
@@ -567,15 +496,6 @@ export function itemExtraTip(it) {
   return lines.length ? tipLines(itemName(it), lines, 170) : null;
 }
 
-// 명국 조각 모양(금빛 깨진 판 조각)
-export const SHARD_ROWS = ['..####..', '.######.', '########', '#######.', '.#####..', '..###...', '...#....'];
-export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
-  // 화면 배율 2 이상: 두 번 다듬은 32×28 반 도트 조각(art-hi.js, CHM-39 2단계)을 같은 16×14 자리에
-  if (hiFor(ctx)) { ctx.drawImage(baked(`shard:${col}:${dk}`, SHARD_HI, { c: [col, 1], h: [PAL.goldHi, 1], d: [dk, 1] }), place(x), place(y), 16, 14); return; }
-  const rows = SHARD_ROWS;
-  rows.forEach((r, j) => { for (let i = 0; i < 8; i++) if (r[i] === '#') rect(ctx, x + i * 2, y + j * 2, 2, 2, (i + j) % 4 === 0 ? PAL.goldHi : j > 3 ? dk : col); });
-}
-
 // wide: 폭이 88보다 좁아도 넓은 카드로(꾸러미 카드 넷 — 효과 글을 카드에 그대로 적는다)
 export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false, hold = false } = {}) {
   if (scaleX <= 0.02) return;
@@ -666,31 +586,10 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
 }
 
 // 넓은 카드(상점 진열 · 꾸러미): 윗줄 종류, 그림 옆에 이름, 그 아래 효과를 늘 적는다. 맨 아래에 시너지 칩과 흐린 쓰는 법.
-function itemArt(ctx, it, x, y, t, run) {
-  if (it.kind === 'maxim') { rect(ctx, x, y, 22, 26, '#e3d6b8'); drawIcon(ctx, it.id, x + 5, y + 7); return 22; }
-  if (it.kind === 'piece') { rect(ctx, x, y, 22, 26, '#e3d6b8'); sprite(ctx, it.t, 'w', x + 3, y + 2, { tier: run ? tierOf(run.charts[chartForm(it.t)]) : 0, soul: it.soul || null, time: t }); return 22; }
-  if (it.kind === 'chart') {
-    // 모습 표: 점선 테 안의 흐린 윤곽 = 「이 모습일 때」
-    rect(ctx, x, y, 22, 26, '#e8dcc0');
-    dots(ctx, x, y, 22, 26, PAL.cardDim, 2);
-    const lv = run ? run.charts[it.form] || 0 : 0;
-    sprite(ctx, it.form, 'w', x + 3, y + 2, { tier: tierOf(lv + 1) });
-    return 22;
-  }
-  if (it.kind === 'engraving') { engravingEmblem(ctx, it.id, x, y); return 22; }
-  if (it.kind === 'soul') { soulEmblem(ctx, it.id, x, y, t); return 22; }
-  if (it.kind === 'evolve') { evolveArt(ctx, x, y, t); return 44; }
-  if (it.kind === 'awaken') { awakenArt(ctx, x, y, t); return 22; }
-  if (it.kind === 'tactic') { rect(ctx, x, y, 22, 26, '#1b2b27'); tacticIcon(ctx, it.id, x + 3, y + 7); return 22; }
-  if (it.kind === 'gamble') { rect(ctx, x, y, 22, 26, '#1b2b27'); textMid(ctx, '?', x + 11, y, 26, `hsl(${Math.floor(t * 200) % 360},70%,70%)`, { align: 'center', bold: true, scale: 2 }); return 22; }
-  if (it.kind === 'fragment') { shardIcon(ctx, x + 3, y + 5); return 22; }
-  return 0;
-}
 // 넓은 카드 쌓기(재기와 그리기가 같이 쓴다 — PAD_CARD · 토큰):
 //   종류(머릿말, 오른쪽에 값) → 묶음 안 틈 → 그림 · 이름(제목 줄, 두 줄까지) → 묶음 틈(가운데 가로줄) → 효과 글 줄들(단계 · 판본 · 쓰는 법)
 //   → 묶음 틈 → 시너지 칩 줄 → 안 여백. 효과 글은 자르지 않는다 — 카드가 글에 맞춰 길어진다.
 function itemNameOf(it) { return it.kind === 'chart' ? `${PIECE_NAME[it.form]} 모습` : it.kind === 'engraving' ? engravingInfo(it.id).name : it.kind === 'soul' ? SOUL_BY_ID[it.id].name : itemName(it); }
-const artW = (it) => (it.kind === 'evolve' ? 44 : 22);
 // 카드의 칩 줄 수(못 놓은 시너지는 「+N」 — 전부는 가리키면 말풍선에)
 export const CARD_CHIP_ROWS = 1;
 // 찜 책갈피(상점 진열, CHM-58 F): 위 테에서 늘어져 값 왼쪽에 선다. 폭 w · 높이 h, 값과 사이 gap.
@@ -905,17 +804,3 @@ export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9, ste
   return list.length * w;
 }
 
-// 묘수 그림 16×16: 빙결 = 눈송이 · 재장전 = 수 구슬 더하기 · 도발 = 손짓하는 폰
-export const TACTIC_G = {
-  freeze: ['.......#........', '...#...#...#....', '....#..#..#.....', '.....#.#.#......', '......###.......', '.#############..', '......###.......', '.....#.#.#......', '....#..#..#.....', '...#...#...#....', '.......#........'],
-  reload: ['................', '..##########....', '..#........#....', '..##########....', '................', '.......##.......', '.......##.......', '....########....', '....########....', '.......##.......', '.......##.......'],
-  taunt: ['......##........', '.....####....#..', '.....####...#...', '......##...#....', '....######......', '......##........', '......##........', '.....####.......', '....######......', '...########.....', '................'],
-};
-export const TACTIC_COL = { freeze: '#9fd3e0', reload: '#efbd55', taunt: '#df8a45' };
-export function tacticIcon(ctx, id, x, y) {
-  const G = TACTIC_G[id] || [];
-  const col = TACTIC_COL[id] || '#ffffff';
-  // 화면 배율 2 이상: 32×22 반 도트 그림(art-hi.js, CHM-39 2단계)을 같은 16×11 자리에
-  if (TACTIC_HI[id] && hiFor(ctx)) { ctx.drawImage(baked(`tactic:${id}`, TACTIC_HI[id], { '#': [col, 1] }), place(x), place(y), 16, 11); return; }
-  G.forEach((r, j) => { for (let i = 0; i < 16; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, col); });
-}
