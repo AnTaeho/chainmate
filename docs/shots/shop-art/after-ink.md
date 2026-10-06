@@ -7,6 +7,7 @@
 | 묶음 | 수 | 벗어남 0 아님 | 과녁 밖 | 예외 |
 |---|---|---|---|---|
 | art | 111 | 0 | 0 | evolve: |
+| maxim-cell | 75 | 0 | 0 | - |
 | scroll | 33 | 0 | 0 | evolve: |
 | card-tab | 12 | 0 | 0 | - |
 | card-art | 12 | 0 | 0 | chart:R · evolve: · piece:N |
@@ -90,6 +91,7 @@
 | 묶음 | 수 | 벗어남 0 아님 | 과녁 밖 | 예외 |
 |---|---|---|---|---|
 | art | 111 | 0 | 0 | evolve: |
+| maxim-cell | 75 | 0 | 0 | - |
 | scroll | 33 | 0 | 0 | evolve: |
 | card-tab | 12 | 0 | 0 | - |
 | card-art | 12 | 0 | 0 | chart:R · evolve: · piece:N |
