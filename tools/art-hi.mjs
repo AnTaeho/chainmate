@@ -1,4 +1,5 @@
-// 두 배 도트 그림 마스크(CHM-39 2단계): 격언 아이콘 · 종류 딱지 문양 · 세력 문장 · 카드 그림(각인 재료 · 전술 · 명경기 조각)을
+// 두 배 도트 그림 마스크(CHM-39 2단계): 격언 아이콘 · 종류 딱지 문양 · 세력 문장 · 작은 자리 그림(전술 · 명경기 조각)과
+// 그림 칸 그림(CHM-69 — src/render/art16.js의 16×16 원본: 격언 75 · 각인 12 · 전술 3 · 조각 · 도박 · 깨우기 · 혼 문양)을
 // 원래 마스크에서 만든다. 결과는 src/render/art-hi.js에 글자 줄로 쓴다 — 실행 때는 이 도구를 부르지 않는다.
 //   node tools/art-hi.mjs           → src/render/art-hi.js를 다시 쓴다
 //   node tools/art-hi.mjs --print   → 마스크를 글로 찍어 본다
@@ -18,7 +19,8 @@ setCanvasFactory(() => dom.document.createElement('canvas'));
 const { ICON_ROWS } = await import('../src/render/icons.js');
 const { KIND } = await import('../src/ui/kinds.js');
 const { CREST } = await import('../src/render/crests.js');
-const { EMBLEM, TACTIC_G, SHARD_ROWS } = await import('../src/ui/parts.js');
+const { TACTIC_G, SHARD_ROWS } = await import('../src/ui/parts.js');
+const A16 = await import('../src/render/art16.js');
 const { STAR_ROWS } = await import('../src/ui/stars.js');
 
 // Scale2x: rows(문자 줄) → 두 배 줄. 그림 밖은 빈칸(.)
@@ -40,12 +42,16 @@ const nearest = (rows) => rows.flatMap((r) => { const d = [...r].map((c) => c + 
 // 네모 테 · 칸 무늬 · 글자 같은 그림: 둥글게 다듬으면 판 · 상자의 뜻이 흐려진다 — 그대로 두 배
 const NEAREST = {
   icon: new Set(['edge', 'bare_board', 'welcome', 'checkerboard', 'full_board', 'encircle', 'last_square', 'asceticism', 'whim', 'menu_codex']),
+  kind: new Set(['chart']), // 기보 공책의 칸 무늬
+  maxim16: new Set(A16.MAXIM16_NEAREST),
+  tactic16: new Set(['reload']),
   crest: new Set(['tower']), // 성탑 창(빈칸 구멍)이 모래시계 꼴로 바뀌었다
   tactic: new Set(['reload']), // 더하기가 마름모로 바뀌었다
 };
 // 한 그림 안에서 이 빛깔만 그대로 두 배(작은 더하기 · 네모 표가 마름모 · 동그라미로 바뀌지 않게) — 나머지 선은 다듬는다
 const KEEP = {
   icon: { payback: 'r', reversal: 'r', soul_collector: 'p', center: 'g', specialty: 'b' },
+  maxim16: A16.MAXIM16_KEEP,
 };
 const keep = (rows, hi, chars) => {
   const nn = nearest(rows);
@@ -70,7 +76,6 @@ function build(group, src, { width = null } = {}) {
 const ICON_HI = build('icon', ICON_ROWS);
 const KIND_HI = build('kind', Object.fromEntries(Object.entries(KIND).map(([k, v]) => [k, v.g])));
 const CREST_HI = build('crest', CREST);
-const EMBLEM_HI = build('emblem', Object.fromEntries(Object.entries(EMBLEM).map(([k, v]) => [k, v.g])));
 const TACTIC_HI = build('tactic', TACTIC_G, { width: 16 });
 // 명경기 조각: 1배는 8×7 마스크를 2도트씩(16×14). 빛깔은 자리로 정한다(h 밝은 금 · d 짙은 금 · c 금) — 두 번 다듬어 32×28 반 도트
 const shardChars = SHARD_ROWS.map((r, j) => [...r].map((ch, i) => (ch !== '#' ? '.' : (i + j) % 4 === 0 ? 'h' : j > 3 ? 'd' : 'c')).join(''));
@@ -78,13 +83,22 @@ const SHARD_HI = scale2x(scale2x(shardChars));
 // 사슬 평가 별(CHM-47, stars.js STAR_ROWS 9×9): 작은 별(1도트)은 한 번 다듬어 18×18, 도장(2도트 이상)은 두 번 다듬어 36×36
 const STAR_HI = scale2x(STAR_ROWS);
 const STAR_HI4 = scale2x(STAR_HI);
+// 그림 칸 그림(CHM-69): 16×16 안팎 원본을 한 번 다듬어 반 칸 그림으로. 줄 길이는 그림마다 다르다(잉크 상자로 가운데 맞춘다 — ink.js)
+const MAXIM_ART = build('maxim16', A16.MAXIM16);
+const EMBLEM_ART = build('emblem16', A16.EMBLEM16);
+const TACTIC_ART = build('tactic16', A16.TACTIC16);
+const SOUL_ART = build('soul7', A16.SOUL7);
+const ONE_ART = build('one16', { SHARD_ART: A16.SHARD16, POTION_ART: A16.POTION16, ROULETTE_ART: A16.ROULETTE16, AWAKEN_ART: A16.AWAKEN16 });
 
 const SETS = {
   ICON_HI: [ICON_HI, '격언 · 전설 아이콘 24×24(12×12 자리). 문자는 icons.js와 같다: # 먹 · g 금 · r 붉음 · w 흰 · s 은 · p 보라 · b 파랑 · G 풀빛'],
   KIND_HI: [KIND_HI, '종류 딱지 문양 24×24(12×12 자리, kinds.js). # 문양'],
   CREST_HI: [CREST_HI, '세력 문장 24×24(12×12 자리, crests.js). o 테 · # 세력 빛깔 · h 밝은 빛 · s 은빛 · w 나무'],
-  EMBLEM_HI: [EMBLEM_HI, '각인 재료 그림 32×32(16×16 자리, parts.js EMBLEM). o 테 · m 그늘 · h 몸 · w 빛'],
-  TACTIC_HI: [TACTIC_HI, '전술 그림 32×22(16×11 자리, parts.js TACTIC_G). # 그림'],
+  TACTIC_HI: [TACTIC_HI, '전술 그림 32×22(16×11 자리, art.js TACTIC_G — 대국 손 줄의 작은 칸). # 그림'],
+  MAXIM_ART: [MAXIM_ART, '그림 칸의 격언 · 전설(art16.js MAXIM16을 다듬은 반 칸 그림). 문자는 art16.js와 같다'],
+  EMBLEM_ART: [EMBLEM_ART, '그림 칸의 각인 재료(art16.js EMBLEM16). o 테 · m 그늘 · h 몸 · w 빛'],
+  TACTIC_ART: [TACTIC_ART, '그림 칸의 전술(art16.js TACTIC16). # 그림'],
+  SOUL_ART: [SOUL_ART, '혼 고리 가운데 문양 14×14(art16.js SOUL7). # 흰'],
 };
 for (const [name, [set]] of Object.entries(SETS)) for (const [id, rows] of Object.entries(set)) {
   const w = rows[0].length;
@@ -94,6 +108,7 @@ for (const [name, [set]] of Object.entries(SETS)) for (const [id, rows] of Objec
 if (process.argv.includes('--print')) {
   for (const [name, [set]] of Object.entries(SETS)) for (const [id, rows] of Object.entries(set)) console.log(`${name}.${id}\n${rows.join('\n')}\n`);
   console.log(`SHARD_HI\n${SHARD_HI.join('\n')}`);
+  for (const [name, rows] of Object.entries(ONE_ART)) console.log(`\n${name}\n${rows.join('\n')}`);
   console.log(`STAR_HI\n${STAR_HI.join('\n')}\n\nSTAR_HI4\n${STAR_HI4.join('\n')}`);
 } else {
   const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -111,8 +126,9 @@ ${STAR_HI.map((r) => `  '${r}',`).join('\n')}
 export const STAR_HI4 = [
 ${STAR_HI4.map((r) => `  '${r}',`).join('\n')}
 ];
-`;
+// 그림 칸의 명경기 조각 · 물약 · 룰렛 · 깨우기(art16.js)
+${Object.entries(ONE_ART).map(([name, rows]) => `export const ${name} = [\n${rows.map((r) => `  '${r}',`).join('\n')}\n];\n`).join('')}`;
   fs.writeFileSync(path.join(ROOT, 'src/render/art-hi.js'), src);
-  console.log('씀 src/render/art-hi.js', Object.entries(SETS).map(([n, [s]]) => `${n} ${Object.keys(s).length}`).join(' · '), '· SHARD_HI 1 · STAR_HI 2');
+  console.log('씀 src/render/art-hi.js', Object.entries(SETS).map(([n, [s]]) => `${n} ${Object.keys(s).length}`).join(' · '), '· SHARD_HI 1 · STAR_HI 2 · 그림 칸 낱그림', Object.keys(ONE_ART).length);
 }
 delete globalThis.document; delete globalThis.window;
