@@ -1,7 +1,7 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { richText } from './glossary.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, frame, dots, sprite, measure, line, digits, place } from '../render/gfx.js';
+import { box, rect, text, textMid, frame, dots, sprite, measure, line, digits, place } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf, baked, hiFor } from '../render/sprites.js';
 import { EMBLEM_HI, TACTIC_HI, SHARD_HI } from '../render/art-hi.js';
@@ -634,7 +634,7 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   } else if (it.kind === 'gamble') {
     rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
     const hue = Math.floor(t * 200) % 360;
-    text(ctx, '?', cx, y + 24, `hsl(${hue},70%,70%)`, { align: 'center', bold: true, scale: 2 });
+    textMid(ctx, '?', cx, y + 20, 26, `hsl(${hue},70%,70%)`, { align: 'center', bold: true, scale: 2 });
     text(ctx, it.id === 'potion' ? '물약' : '룰렛', cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
   } else if (it.kind === 'evolve' || it.kind === 'tactic') {
     rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
@@ -682,7 +682,7 @@ function itemArt(ctx, it, x, y, t, run) {
   if (it.kind === 'evolve') { evolveArt(ctx, x, y, t); return 44; }
   if (it.kind === 'awaken') { awakenArt(ctx, x, y, t); return 22; }
   if (it.kind === 'tactic') { rect(ctx, x, y, 22, 26, '#1b2b27'); tacticIcon(ctx, it.id, x + 3, y + 7); return 22; }
-  if (it.kind === 'gamble') { rect(ctx, x, y, 22, 26, '#1b2b27'); text(ctx, '?', x + 11, y + 2, `hsl(${Math.floor(t * 200) % 360},70%,70%)`, { align: 'center', bold: true, scale: 2 }); return 22; }
+  if (it.kind === 'gamble') { rect(ctx, x, y, 22, 26, '#1b2b27'); textMid(ctx, '?', x + 11, y, 26, `hsl(${Math.floor(t * 200) % 360},70%,70%)`, { align: 'center', bold: true, scale: 2 }); return 22; }
   if (it.kind === 'fragment') { shardIcon(ctx, x + 3, y + 5); return 22; }
   return 0;
 }

@@ -19,8 +19,15 @@ export const RARITY = { common: '#8ea198', uncommon: '#6fb3c8', rare: '#d27fd6',
 // 판본 빛깔(카드 테두리 · 반짝임)
 export const EDITION_TINT = { foil: '#d8dee6', pearl: '#f2d6e4', rainbow: '#9fe0a0', obsidian: '#8a5cc8' };
 
-// '#rrggbb' → [r, g, b]
-export function rgb(hex) {
-  const n = parseInt(hex.slice(1), 16);
+// '#rrggbb' → [r, g, b]. 'hsl(h,s%,l%)'도 읽는다(무지갯빛으로 도는 글자 — 글자 그림은 이 값으로 화소를 다시 칠한다)
+export function rgb(col) {
+  const m = /^hsla?\(\s*(-?[\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%/.exec(col);
+  if (m) {
+    const h = (((+m[1] % 360) + 360) % 360) / 30, s = Math.min(100, +m[2]) / 100, l = Math.min(100, +m[3]) / 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n) => { const k = (n + h) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+    return [f(0), f(8), f(4)];
+  }
+  const n = parseInt(col.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }

@@ -1,6 +1,6 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL } from './palette.js';
-import { textImage, textWidth } from './text.js';
+import { textImage, textWidth, inkBox } from './text.js';
 import { spriteCanvas, tierSparkle, soulOrb, hiFor, SW, SH, spritePixels } from './sprites.js';
 import { chartForm } from '../data/pieces.js';
 import { L } from '../ui/lang.js';
@@ -101,6 +101,13 @@ export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false
 }
 
 export const measure = (s, bold = false) => textWidth(s, bold);
+
+// 높이 h인 칸(위 y) 안에 글자의 잉크를 세로 가운데로 놓는다(그림 칸 안의 큰 글자 — 잉크 높이를 재어 위아래 여백을 같게)
+export function textMid(ctx, s, x, y, h, col = PAL.ink, opts = {}) {
+  const scale = opts.scale || 1;
+  const ink = inkBox(textImage(L(String(s)), col, !!opts.bold));
+  return text(ctx, s, x, y + Math.floor((h - ink.h * scale) / 2) - ink.top * scale, col, opts);
+}
 
 // 기물. sx: 가로 배율(뒤집힘 1 → 0 → 1), lift: 위로 띄우기, alpha
 // eng: 각인 id(몸 톤) · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게(없으면 멈춘 모습)

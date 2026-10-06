@@ -1,5 +1,7 @@
 // 도트 글자: Galmuri11을 12px로 오프스크린에 그리고 알파를 문턱값(> 0.5)으로 잘라 또렷하게 캐시한다.
 // 숫자와 제목은 굵게(Bold 파일).
+// 글자 세로 자리 보정(docs/design-notes/layout.md 「글자 세로 자리 보정」): textBaseline 'top'이 가리키는 줄은 브라우저마다 다르다
+// (같은 글꼴로 Safari는 크로미움보다 2px 아래에 그린다). 굵기마다 한 번 기준 글자의 잉크 윗줄을 재어 그 차이만큼 올려 그린다.
 import { makeCanvas, context } from './surface.js';
 import { rgb } from './palette.js';
 import { L } from '../ui/lang.js';
@@ -23,10 +25,59 @@ export function textWidth(s, bold = false) {
   return Math.ceil(ctx.measureText(L(String(s))).width);
 }
 
-export function clearTextCache() { CACHE.clear(); }
+// 기준 글자 「가A」의 잉크 윗줄이 설 자리(글자 그림의 0번째 줄 — 크로미움에서 fillText y = 1일 때의 자리). 줄 높이 11(0 ~ 10줄)
+const INK_TOP = 0, INK_H = 11, PROBE = '가A';
+const SHIFT = new Map(); // 굵기 → fillText y에 더할 값
+let unready = false;     // 글꼴이 오기 전에 그린 글자 그림이 캐시에 있다
+
+// 글꼴이 왔는가. 물어볼 길이 없으면(시험 환경) 왔다고 본다
+function fontReady(bold) {
+  const f = typeof document !== 'undefined' ? document.fonts : null;
+  if (!f || typeof f.check !== 'function') return true;
+  try { return f.check(fontOf(bold)); } catch { return true; }
+}
+
+// 그림의 잉크 첫 · 끝 줄. 잉크가 없으면 null
+function inkRows(ctx, w, h) {
+  const d = ctx.getImageData(0, 0, w, h).data;
+  let top = -1, bottom = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 127) { if (top < 0) top = y; bottom = y; break; }
+  return top < 0 ? null : { top, bottom };
+}
+
+// 글꼴이 온 뒤 굵기마다 한 번 잰다. 글꼴이 아직 없으면 0으로 그리되 적어 두지 않는다(오면 캐시를 비우고 다시 잰다).
+// 잉크를 못 재는 곳(가짜 캔버스)은 0
+function shiftOf(bold) {
+  let v = SHIFT.get(bold);
+  if (v !== undefined) return v;
+  if (!fontReady(bold)) { unready = true; return 0; }
+  const w = 32, pad = H;
+  const ctx = context(makeCanvas(w, H + pad * 2));
+  ctx.font = fontOf(bold);
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(PROBE, 0, pad + 1);
+  const ink = inkRows(ctx, w, H + pad * 2);
+  v = ink ? pad + INK_TOP - ink.top : 0;
+  SHIFT.set(bold, v);
+  return v;
+}
+
+export function clearTextCache() { CACHE.clear(); SHIFT.clear(); unready = false; }
+
+// 글자 그림(textImage 결과)의 잉크 상자: 첫 줄 top · 끝 줄 bottom · 높이 h(1배 화소). 그림 칸 안에 글자를 가운데 놓을 때 쓴다.
+// 잉크를 못 재는 곳은 대문자 · 한글 · 숫자의 자리(0 ~ 10줄)
+export function inkBox(img) {
+  if (!img.ink) {
+    const r = inkRows(context(img.c), img.c.width, img.c.height) || { top: INK_TOP, bottom: INK_TOP + INK_H - 1 };
+    img.ink = { top: r.top, bottom: r.bottom, h: r.bottom - r.top + 1 };
+  }
+  return img.ink;
+}
 
 export function textImage(s, col, bold = false) {
   s = String(s);
+  if (unready && fontReady(false) && fontReady(true)) clearTextCache();
   const key = `${bold ? 1 : 0}${col}${s}`;
   let hit = CACHE.get(key);
   if (hit) return hit;
@@ -36,7 +87,7 @@ export function textImage(s, col, bold = false) {
   ctx.font = fontOf(bold);
   ctx.textBaseline = 'top';
   ctx.fillStyle = col;
-  ctx.fillText(s, 0, 1);
+  ctx.fillText(s, 0, 1 + shiftOf(bold));
   const img = ctx.getImageData(0, 0, w, H);
   const d = img.data;
   const [r, g, b] = rgb(col);
