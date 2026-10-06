@@ -1,9 +1,10 @@
-// 물건 종류 표시(CHM-37, docs/design-notes/layout.md 「종류 표시」): 종류마다 12×12 문양 하나와 빛깔 둘(밝은 문양 · 짙은 바탕).
+// 물건 종류 표시(CHM-37, docs/design-notes/layout.md 「종류 표시」): 종류마다 문양 하나(12×12 마스크, 잉크 10×10 안)와 빛깔 둘(밝은 문양 · 짙은 바탕).
 // 종류 빛깔은 늘 짙은 바탕 위 밝은 문양으로만 쓴다 — 얇은 선으로 쓰는 등급 · 판본 · 혼/각인 테와 다른 층이다.
 // 카드 · 꾸러미 봉투는 딱지(kindTab, 14×14), 두루마리 칸은 왼쪽 띠(kindBand). 종류 빛깔과 문양은 이 표 한 곳에만 둔다.
 import { rect, place } from '../render/gfx.js';
 import { baked, hiFor } from '../render/sprites.js';
 import { KIND_HI } from '../render/art-hi.js';
+import { inkBox, centre } from '../render/ink.js';
 
 // 혼은 드묾 등급(#6fb3c8)과 갈리게 흰 청백(KIND_SOUL). 혼마다의 빛깔(src/data/souls.js col)은 혼 하나하나의 것이라 그대로 둔다
 export const KIND_SOUL = '#e4f4fa';
@@ -28,44 +29,34 @@ export const KIND = {
   // 뜨는 눈(깨우기)
   awaken: { col: '#fff1b8', bg: '#6b4410', g: ['............', '............', '..#..##..#..', '............', '...######...', '.##......##.', '.#...##...#.', '.#...##...#.', '.##......##.', '...######...', '............', '............'] },
   // 깨진 판 조각(명경기 조각)
-  fragment: { col: '#efbd55', bg: '#6b4410', g: ['............', '...####.....', '..######....', '.########...', '.#######.#..', '..#####..##.', '...###..###.', '....#..####.', '.......###..', '......##....', '............', '............'] },
+  fragment: { col: '#efbd55', bg: '#6b4410', g: ['............', '...####.....', '..######....', '.########...', '.########...', '.#######.#..', '..#####..##.', '...###..###.', '....#..####.', '.......###..', '......##....', '............'] },
 };
 // 꾸러미 → 안에 든 물건의 종류(금빛 꾸러미는 판본 격언)
 export const PACK_KIND = { piece: 'piece', chart: 'chart', engraving: 'engraving', golden: 'maxim' };
 
-export const TAB = 14;  // 딱지 한 변(문양 12 + 둘레 1)
+export const TAB = 14;  // 딱지 한 변(문양 잉크 10 안 + 둘레 2 이상)
 export const TAB_GAP = 2; // 딱지와 그 옆 글 사이
 export const BAND = 14; // 두루마리 칸 왼쪽 띠 폭
 
-// 문양: 화면 배율 2 이상이면 24×24 반 도트 그림(art-hi.js, CHM-39 2단계)을 12×12 자리에 — 갈라질 때는 왼쪽 · 오른쪽 반을 따로
-function glyph(ctx, g, x, y, col, split = 0, drop = 0, kind = null) {
-  if (kind && KIND_HI[kind] && hiFor(ctx)) {
-    const c = baked(`kind:${kind}:${col}`, KIND_HI[kind], { '#': [col, 1] });
-    if (split || drop) {
-      ctx.drawImage(c, 0, 0, 12, 24, place(x - split), place(y + drop), 6, 12);
-      ctx.drawImage(c, 12, 0, 12, 24, place(x + 6 + split), place(y + drop), 6, 12);
-    } else ctx.drawImage(c, place(x), place(y), 12, 12);
-    return;
-  }
-  for (let j = 0; j < 12; j++) {
-    const r = g[j];
-    for (let i = 0; i < 12; i++) if (r[i] === '#') rect(ctx, x + i + (i < 6 ? -split : split), y + j + drop, 1, 1, col);
-  }
+// 문양을 칸(cw × ch) 가운데에: 잉크 상자로 잰다(render/ink.js). 화면 배율 2 이상이면 24×24 반 도트 그림(art-hi.js)을 12×12 자리에
+const BOX = {};
+const boxOf = (kind) => BOX[kind] || (BOX[kind] = inkBox(KIND[kind].g));
+export function kindGlyph(ctx, kind, x, y, cw, ch, col = KIND[kind].col) {
+  const o = centre(cw, ch, boxOf(kind)), g = KIND[kind].g;
+  if (KIND_HI[kind] && hiFor(ctx)) { ctx.drawImage(baked(`kind:${kind}:${col}`, KIND_HI[kind], { '#': [col, 1] }), place(x + o.x), place(y + o.y), 12, 12); return; }
+  for (let j = 0; j < 12; j++) for (let i = 0; i < 12; i++) if (g[j][i] === '#') rect(ctx, x + o.x + i, y + o.y + j, 1, 1, col);
 }
-// 딱지: 짙은 바탕 14×14에 밝은 문양. split · drop은 꾸러미 봉랍처럼 깨질 때(왼쪽 반 · 오른쪽 반이 갈라져 떨어진다)
-export function kindTab(ctx, kind, x, y, { split = 0, drop = 0 } = {}) {
+// 딱지: 짙은 바탕 14×14에 밝은 문양(잉크 가운데)
+export function kindTab(ctx, kind, x, y) {
   const K = KIND[kind];
   if (!K) return;
-  if (split || drop) {
-    rect(ctx, x - split, y + drop, TAB / 2, TAB, K.bg);
-    rect(ctx, x + TAB / 2 + split, y + drop, TAB / 2, TAB, K.bg);
-  } else rect(ctx, x, y, TAB, TAB, K.bg);
-  glyph(ctx, K.g, x + 1, y + 1, K.col, split, drop, kind);
+  rect(ctx, x, y, TAB, TAB, K.bg);
+  kindGlyph(ctx, kind, x, y, TAB, TAB);
 }
-// 두루마리 칸 왼쪽 띠: 폭 BAND, 높이 h를 종류 바탕으로 칠하고 문양을 세로 가운데
+// 두루마리 칸 왼쪽 띠: 폭 BAND, 높이 h를 종류 바탕으로 칠하고 문양을 잉크 가운데
 export function kindBand(ctx, kind, x, y, h) {
   const K = KIND[kind];
   if (!K) return;
   rect(ctx, x, y, BAND, h, K.bg);
-  glyph(ctx, K.g, x + 1, y + Math.floor((h - 12) / 2), K.col, 0, 0, kind);
+  kindGlyph(ctx, kind, x, y, BAND, h);
 }
