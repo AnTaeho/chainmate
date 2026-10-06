@@ -122,7 +122,7 @@ test('그리는 곳: N = 1은 옛 그림, N = 3은 두 배 그림을 같은 자�
   }
 });
 
-test('두 배로 크게 그리는 곳은 N = 1에서도 두 배 그림이 1:1(좁은 격언 칸 · 문장 2배 · 초상 2배)', () => {
+test('두 배로 크게 그리는 곳은 N = 1에서도 두 배 그림이 1:1(문장 2배 · 초상 2배)', () => {
   const fid = factions.FACTIONS[0].id;
   const c = rec(1);
   crests.drawCrest(c.ctx, fid, 0, 0, { scale: 2 });
@@ -130,11 +130,21 @@ test('두 배로 크게 그리는 곳은 N = 1에서도 두 배 그림이 1:1(�
   const p = rec(1);
   portraits.drawPortrait(p.ctx, 'grandmaster', 0, 0, 2);
   assert.deepEqual([images(p.calls)[0][1].width, ...images(p.calls)[0].slice(4)], [64, 64, 64]);
-  // 좁은 격언 칸(아이콘을 24×24로): 1배 화면에서 실제 배율 2
-  const m = rec(1);
-  parts.maximCard(m.ctx, { id: 'chivalry', uid: 1, data: {} }, 0, 0, 30, 40, { narrow: true });
-  const ic = images(m.calls).find((x) => x[1].width === 24 && x[5] === 24);
-  assert.ok(ic, '좁은 칸 아이콘은 24×24 그림');
+});
+
+test('격언 칸 그림: 3배는 그림 칸 20 × 22를 구운 그림 하나(40 × 44)로 정수 칸에, 좁은 칸은 가운데 · 1배는 옛 아이콘', () => {
+  const C = parts.MAXIM_CELL;
+  assert.deepEqual([C.w, C.h], [20, 22]);
+  for (const [narrow, w, ax] of [[false, 112, 112 - C.inset - C.w], [true, 54, (54 - C.w) / 2]]) {
+    const h = rec(3);
+    parts.maximCard(h.ctx, { id: 'chivalry', uid: 1, data: {} }, 0, 0, w, 28, { narrow });
+    const im = images(h.calls).filter((x) => x[1].width === C.w * 2 && x[1].height === C.h * 2);
+    assert.equal(im.length, 1, `좁은 칸 ${narrow}`);
+    assert.deepEqual(im[0].slice(2), [ax, 3, C.w, C.h]);
+    const lo = rec(1);
+    parts.maximCard(lo.ctx, { id: 'chivalry', uid: 1, data: {} }, 0, 0, w, 28, { narrow });
+    assert.ok(images(lo.calls).some((x) => x[1].width === 12 && x[4] === 12), '1배는 옛 12×12 아이콘');
+  }
 });
 
 test('꾸러미 봉투: 구운 그림 하나를 정수 칸에(3배는 반 칸 도트, 열리면 위로 솟을 자리만큼 크다)', async () => {
