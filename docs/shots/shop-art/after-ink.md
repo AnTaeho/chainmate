@@ -22,7 +22,7 @@
 | art | evolve: | 44×26 | 38×21.5 | 3 · 3 · 2.5 · 2 |
 | scroll | evolve: | 18×22 | 12×10 | 3 · 3 · 6 · 6 |
 | card-tab | maxim | 14×14 | 10×10 | 2 · 2 · 2 · 2 |
-| card-art | maxim:chivalry | 22×26 | 15×16 | 3.5 · 3.5 · 5 · 5 |
+| card-art | maxim:chivalry | 22×26 | 16×16 | 3 · 3 · 5 · 5 |
 | card-tab | maxim | 14×14 | 10×10 | 2 · 2 · 2 · 2 |
 | card-art | maxim:vault | 22×26 | 16×16 | 3 · 3 · 5 · 5 |
 | card-tab | chart | 14×14 | 10×10 | 2 · 2 · 2 · 2 |
@@ -106,7 +106,7 @@
 | art | evolve: | 44×26 | 38×21.5 | 3 · 3 · 2.5 · 2 |
 | scroll | evolve: | 18×22 | 12×10 | 3 · 3 · 6 · 6 |
 | card-tab | maxim | 14×14 | 10×10 | 2 · 2 · 2 · 2 |
-| card-art | maxim:chivalry | 22×26 | 15×16 | 3.5 · 3.5 · 5 · 5 |
+| card-art | maxim:chivalry | 22×26 | 16×16 | 3 · 3 · 5 · 5 |
 | card-tab | maxim | 14×14 | 10×10 | 2 · 2 · 2 · 2 |
 | card-art | maxim:vault | 22×26 | 16×16 | 3 · 3 · 5 · 5 |
 | card-tab | chart | 14×14 | 10×10 | 2 · 2 · 2 · 2 |
