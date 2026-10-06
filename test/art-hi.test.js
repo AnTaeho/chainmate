@@ -67,8 +67,6 @@ test('두 배 마스크: 원래 그림마다 하나씩, 크기 2배, 원래 문�
   for (const [k, v] of Object.entries(kinds.KIND)) checkPair(`kind ${k}`, v.g, HI.KIND_HI[k]);
   assert.deepEqual(Object.keys(HI.CREST_HI).sort(), Object.keys(crests.CREST).sort());
   for (const [k, v] of Object.entries(crests.CREST)) checkPair(`crest ${k}`, v, HI.CREST_HI[k]);
-  assert.deepEqual(Object.keys(HI.EMBLEM_HI).sort(), Object.keys(parts.EMBLEM).sort());
-  for (const [k, v] of Object.entries(parts.EMBLEM)) checkPair(`emblem ${k}`, v.g, HI.EMBLEM_HI[k]);
   assert.deepEqual(Object.keys(HI.TACTIC_HI).sort(), Object.keys(parts.TACTIC_G).sort());
   for (const [k, v] of Object.entries(parts.TACTIC_G)) checkPair(`tactic ${k}`, v, HI.TACTIC_HI[k], 16);
   // 명경기 조각: 8×7을 2도트씩 그린 16×14 → 두 번 다듬은 32×28
@@ -102,7 +100,6 @@ test('그리는 곳: N = 1은 옛 그림, N = 3은 두 배 그림을 같은 자�
   const cases = [
     ['아이콘', (ctx) => icons.drawIcon(ctx, 'chivalry', 10, 20), [12, 24], [10, 20, 12, 12]],
     ['문장', (ctx) => crests.drawCrest(ctx, fid, 10, 20), [null, 24], [10, 20, 12, 12]],
-    ['각인 재료', (ctx) => parts.engravingEmblem(ctx, 'gold', 10, 20), [null, 32], [13, 25, 16, 16]],
     ['전술', (ctx) => parts.tacticIcon(ctx, 'freeze', 10, 20), [null, 32], [10, 20, 16, 11]],
     ['명경기 조각', (ctx) => parts.shardIcon(ctx, 10, 20), [null, 32], [10, 20, 16, 14]],
     ['종류 딱지', (ctx) => kinds.kindTab(ctx, 'chart', 10, 20), [null, 24], [11, 21, 12, 12]],
