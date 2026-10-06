@@ -89,15 +89,14 @@ export function tagIcon(ctx, tag, x, y, sc = 1) {
   const v = tag && TAG_VIEW[tag.kind];
   if (!v) return;
   const [k, id] = v.icon(tag);
+  // 봉투는 늘이지 않고 그 크기(12 × 10의 sc배)로 바로 그린다 — 테 1칸 · 문양이 또렷하게
+  if (k === 'env' || k === 'slot') envelope(ctx, Math.round(x), Math.round(y) + sc, 12 * sc, 10 * sc, id);
   ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.scale(sc, sc);
   if (k === 'icon') drawIcon(ctx, id, 0, 0);
   else if (k === 'light') drawIconLight(ctx, id, 0, 0);
   else if (k === 'tab') kindTab(ctx, id, -1, -1);
-  else {
-    envelope(ctx, 0, 1, 12, 10, id);
-    // 꾸러미 칸 +1: 봉투 오른쪽 위에 금빛 「+」
-    if (k === 'slot') { rect(ctx, 8, 0, 4, 4, PAL.feltDk); rect(ctx, 9, 1, 3, 1, PAL.goldHi); rect(ctx, 10, 0, 1, 3, PAL.goldHi); }
-  }
+  // 꾸러미 칸 +1: 봉투 오른쪽 위에 금빛 「+」
+  else if (k === 'slot') { rect(ctx, 8, 0, 4, 4, PAL.feltDk); rect(ctx, 9, 1, 3, 1, PAL.goldHi); rect(ctx, 10, 0, 1, 3, PAL.goldHi); }
   ctx.restore();
 }
 

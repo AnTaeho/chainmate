@@ -1,7 +1,7 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { richText } from './glossary.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, textMid, frame, dots, sprite, measure, line, digits, place } from '../render/gfx.js';
+import { box, rect, text, frame, dots, sprite, measure, digits, place } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf, hiFor } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
@@ -21,8 +21,8 @@ import { shade, glow, flicker } from '../render/light.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox, logClip } from '../render/layoutlog.js';
-import { kindTab, TAB, TAB_GAP, PACK_KIND } from './kinds.js';
-import { itemArt, artW, engravingEmblem, soulEmblem, awakenArt, shardIcon, tacticIcon } from './art.js';
+import { kindTab, TAB, TAB_GAP } from './kinds.js';
+import { itemArt, artW, shardIcon } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
 export { EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, SHARD_ROWS, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
 
@@ -398,37 +398,9 @@ export function panel(ctx, x, y, w, h) {
 
 export const labelW = (s) => measure(s);
 
-// ── 꾸러미 봉투: 접힌 덮개 · 봉랍 자리의 종류 딱지(기물 · 기보 · 각인 · 금빛은 판본 격언).
-// open 0 → 1: 딱지가 갈라지고(0~0.4) 덮개가 젖혀진다(0.4~1). SEAL은 기보 표 · 봉투 밖 연출이 쓰는 빛깔(청록 등)
+// ── 꾸러미 봉투는 envelope.js(종류마다 통째로 그린 봉투). SEAL은 기보 표 · 봉투 밖 연출이 쓰는 빛깔(청록 등)
 export const SEAL = { piece: ['#c8b48a', '#efe3c7', '#6b5132'], chart: ['#3f8f86', '#8fd3c6', '#1d4a45'], engraving: ['#8a4a6a', '#d690b4', '#4a2438'], golden: ['#c8902c', '#fff1b8', '#6b4410'] };
-export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}) {
-  const gold = kind === 'golden';
-  const paper = gold ? PAL.gold : '#c9a36a', paperHi = gold ? PAL.goldHi : '#e6c690', paperDk = gold ? PAL.goldDk : '#8a6a3a';
-  box(ctx, x, y, w, h, paper, hover ? PAL.white : PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, paperHi);
-  rect(ctx, x + 1, y + h - 2, w - 2, 1, paperDk);
-  // 아래 접힌 두 날개(대각선)
-  const cy = y + Math.floor(h * 0.62);
-  line(ctx, x + 1, y + h - 2, x + Math.floor(w / 2), cy, paperDk);
-  line(ctx, x + w - 2, y + h - 2, x + Math.floor(w / 2), cy, paperDk);
-  // 위 덮개: 닫히면 아래로 뾰족, 열리면 위로 젖혀진다
-  const flap = Math.max(0, (open - 0.4) / 0.6);
-  const tipY = Math.round(cy + (y - 12 - cy) * flap);
-  for (let i = 0; i <= w - 2; i++) {
-    const k = 1 - Math.abs(i - (w - 2) / 2) / ((w - 2) / 2);
-    const yy = Math.round(y + 1 + (tipY - y - 1) * k);
-    if (flap < 0.5) { rect(ctx, x + 1 + i, y + 1, 1, Math.max(0, yy - y - 1), paper); rect(ctx, x + 1 + i, yy, 1, 1, paperDk); }
-    else { rect(ctx, x + 1 + i, yy, 1, Math.max(0, y + 1 - yy), paperHi); rect(ctx, x + 1 + i, yy, 1, 1, paperDk); }
-  }
-  // 봉랍 자리에 안에 든 물건의 종류 딱지(kinds.js — 진열 카드의 딱지와 같은 것). 열리면 봉랍처럼 반으로 갈라져 떨어진다
-  const sx = x + Math.floor(w / 2), sy = cy - 2;
-  const crack = Math.min(1, open / 0.4);
-  if (flap < 0.3) {
-    const split = crack > 0.3 ? Math.round(crack * 3) : 0;
-    const drop = crack > 0.3 ? Math.round(crack * crack * 4) : 0;
-    kindTab(ctx, PACK_KIND[kind] || 'piece', sx - TAB / 2, sy - TAB / 2, { split, drop });
-  }
-}
+export { envelope, ENV_COL } from './envelope.js';
 
 // ── 상점 · 꾸러미 물건 카드
 export const ITEM_KIND = { maxim: '격언', chart: '기보', engraving: '각인', piece: '기물', fragment: '명경기 조각', soul: '혼', evolve: '진화', tactic: '전술', gamble: '도박', awaken: '각성' };
@@ -524,59 +496,21 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
     const fams = it.kind === 'maxim' ? maximFamilies(it.id) : PIECES[it.t].families;
     familyGlyphs(ctx, fams, x + w - 8 * fams.length - 1, y + 4);
   }
-  if (it.kind === 'maxim') {
-    const info = maximInfo(it.id);
-    rect(ctx, x + 6, y + 19, w - 12, 2, RARITY[info.rarity]);
-    drawIcon(ctx, it.id, cx - 6, y + 25);
-    const lines = wrap(info.name, w - 8, true);
-    lines.slice(0, 2).forEach((l, k) => text(ctx, l, cx, y + 40 + k * LINE, PAL.cardInk, { align: 'center', bold: true }));
-    if (it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + h - 28, PAL.goldDk, { align: 'center' });
-  } else if (it.kind === 'chart' || it.kind === 'piece') {
-    const t = it.kind === 'chart' ? it.form : it.t;
-    if (it.kind === 'chart') {
-      box(ctx, cx - 13, y + 20, 26, 30, '#e8dcc0', PAL.cardDim);
-      // 사면 오를 단계를 작게 미리: 내 기물이 그 단계의 모습으로
-      const lv = run ? run.charts[t] || 0 : null;
-      if (lv != null) {
-        sprite(ctx, t, 'w', cx - 8, y + 24, { tier: tierOf(lv + 1) });
-        text(ctx, `${lv} › ${lv + 1}`, cx, y + 66, PAL.cardDim, { align: 'center' });
-      } else sprite(ctx, t, 'b', cx - 8, y + 24);
-    } else sprite(ctx, t, 'w', cx - 8, y + 24, { tier: run ? tierOf(run.charts[chartForm(t)]) : 0, soul: it.soul || null, time: t0 });
-    text(ctx, PIECE_NAME[t], cx, y + 54, PAL.cardInk, { align: 'center', bold: true });
-  } else if (it.kind === 'engraving') {
-    const col = ENG_EDGE[it.id] || PAL.gold;
-    frame(ctx, x + 1, y + 1, w - 2, h - 2, col);
-    cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, col, 3);
-    engravingEmblem(ctx, it.id, cx - 11, y + 20);
-    const e = engravingInfo(it.id);
-    text(ctx, e.name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
-    rect(ctx, cx - 10, y + 63, 20, 1, col);
-  } else if (it.kind === 'gamble') {
-    rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
-    const hue = Math.floor(t * 200) % 360;
-    textMid(ctx, '?', cx, y + 20, 26, `hsl(${hue},70%,70%)`, { align: 'center', bold: true, scale: 2 });
-    text(ctx, it.id === 'potion' ? '물약' : '룰렛', cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
-  } else if (it.kind === 'evolve' || it.kind === 'tactic') {
-    rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
-    if (it.kind === 'evolve') { rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27'); rect(ctx, cx - 7, y + 33, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, cx - 3 + i, y + 32 - i, 1, 1, PAL.gold); rect(ctx, cx + 1, y + 25, 6, 8, PAL.gold); }
-    else tacticIcon(ctx, it.id, cx - 8, y + 25);
-    text(ctx, it.kind === 'evolve' ? '진화' : TACTIC_BY_ID[it.id].name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
-  } else if (it.kind === 'awaken') {
-    frame(ctx, x + 1, y + 1, w - 2, h - 2, PAL.gold);
-    awakenArt(ctx, cx - 11, y + 20, t);
-    text(ctx, '깨우기', cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
-  } else if (it.kind === 'soul') {
-    const s = SOUL_BY_ID[it.id];
-    frame(ctx, x + 1, y + 1, w - 2, h - 2, s.col);
-    rect(ctx, x + 6, y + 16, w - 12, 2, RARITY[s.rarity]);
-    rect(ctx, cx - 11, y + 20, 22, 26, '#1b2b27');
-    soulEmblem(ctx, it.id, cx - 11, y + 20, t);
-    text(ctx, s.name, cx, y + 50, PAL.cardInk, { align: 'center', bold: true });
-  } else if (it.kind === 'fragment') {
-    shardIcon(ctx, cx - 8, y + 22);
-    const lines = wrap(LEGEND_BY_ID[it.legend].name, w - 8, true);
-    lines.slice(0, 2).forEach((l, k) => text(ctx, l, cx, y + 42 + k * LINE, PAL.cardInk, { align: 'center', bold: true }));
-  }
+  // 그림은 진열 카드와 같은 그림 칸(art.js itemArt, 22×26 — 진화는 겹 꺾쇠만)
+  const ay = y + 22;
+  if (it.kind === 'engraving') { const col = ENG_EDGE[it.id] || PAL.gold; frame(ctx, x + 1, y + 1, w - 2, h - 2, col); cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, col, 3); }
+  else if (it.kind === 'awaken') frame(ctx, x + 1, y + 1, w - 2, h - 2, PAL.gold);
+  else if (it.kind === 'soul') frame(ctx, x + 1, y + 1, w - 2, h - 2, SOUL_BY_ID[it.id].col);
+  const rar = it.kind === 'maxim' ? maximInfo(it.id).rarity : it.kind === 'soul' ? SOUL_BY_ID[it.id].rarity : null;
+  if (rar) rect(ctx, x + 6, y + 18, w - 12, 2, RARITY[rar]);
+  itemArt(ctx, it, cx - 11, ay, t0, run, { w: 22 });
+  const name = it.kind === 'maxim' ? maximInfo(it.id).name : it.kind === 'chart' ? PIECE_NAME[it.form] : it.kind === 'piece' ? PIECE_NAME[it.t] : it.kind === 'engraving' ? engravingInfo(it.id).name
+    : it.kind === 'gamble' ? (it.id === 'potion' ? '물약' : '룰렛') : it.kind === 'evolve' ? '진화' : it.kind === 'tactic' ? TACTIC_BY_ID[it.id].name : it.kind === 'awaken' ? '깨우기' : it.kind === 'soul' ? SOUL_BY_ID[it.id].name : LEGEND_BY_ID[it.legend].name;
+  const lines = wrap(name, w - 8, true).slice(0, 2);
+  lines.forEach((l, k) => text(ctx, l, cx, ay + 30 + k * LINE, PAL.cardInk, { align: 'center', bold: true }));
+  // 기보: 사면 오를 단계
+  if (it.kind === 'chart' && run) { const lv = run.charts[it.form] || 0; text(ctx, `${lv} › ${lv + 1}`, cx, ay + 30 + lines.length * LINE, PAL.cardDim, { align: 'center' }); }
+  if (it.kind === 'maxim' && it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + h - 28, PAL.goldDk, { align: 'center' });
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '샀다', cx, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
@@ -742,7 +676,7 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
   const verb = lay.swap ? '바꾸기' : what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : what.kind === 'awaken' ? '깨운다' : '자란다';
   if (p && lay.swap) {
     // 옛 문양(가리키면 옛 효과) › 새 문양(금빛 테)
-    const mark = (id, mx, my) => (what.kind === 'engraving' ? engravingEmblem(ctx, id, mx, my) : soulEmblem(ctx, id, mx, my, ui.time));
+    const mark = (id, mx, my) => itemArt(ctx, { kind: what.kind, id }, mx, my, ui.time);
     const old = lay.swap;
     ui.region(`${idPrefix}:swap`, x + P, y + P + 1, 22, 26, { tip: () => (what.kind === 'engraving' ? tipLines(`${engravingInfo(old).name} 각인`, engravingInfo(old).text) : tipLines(`${SOUL_BY_ID[old].name}의 혼`, SOUL_BY_ID[old].text)) });
     mark(old, x + P, y + P + 1);

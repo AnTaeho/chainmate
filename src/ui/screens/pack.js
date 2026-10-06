@@ -9,7 +9,7 @@ import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button } from '../ui.js';
-import { itemCard, itemRowH, itemKeys, itemExtraTip, itemEffect, itemName, maximGrid, maximGridH, envelope, targetPanel, targetOk, isSwap, cardBase, fitText, shardIcon } from '../parts.js';
+import { itemCard, itemRowH, itemKeys, itemExtraTip, itemEffect, itemName, maximGrid, maximGridH, envelope, ENV_COL, targetPanel, targetOk, isSwap, cardBase, fitText, shardIcon } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, BTN_H, GAP_GROUP, LIST_GAP, PAD_CARD, flow, BTN_S } from '../frame.js';
@@ -167,8 +167,10 @@ export class PackScreen {
       if (!shown) {
         const nw = Math.max(2, Math.round(w * scaleX));
         if (this.t < OPEN) return;
-        box(ctx, x + Math.floor((w - nw) / 2), y, nw, h, gold ? PAL.gold : '#c9a36a', PAL.frameDk);
-        if (nw > 20) rect(ctx, x + Math.floor(w / 2) - 6, y + Math.min(46, Math.floor(h / 2) - 6), 12, 12, gold ? PAL.goldHi : '#e6c690');
+        // 카드 뒷면: 봉투 몸 종이에 덮개 빛깔 네모
+        const E = ENV_COL[pack.kind] || ENV_COL.piece;
+        box(ctx, x + Math.floor((w - nw) / 2), y, nw, h, E.body, PAL.frameDk);
+        if (nw > 20) rect(ctx, x + Math.floor(w / 2) - 6, y + Math.min(46, Math.floor(h / 2) - 6), 12, 12, E.flap);
       } else draw(scaleX, ui.isHover(id));
     };
     lay.cards.forEach((i, k) => {

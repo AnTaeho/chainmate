@@ -4,19 +4,19 @@ import { sway } from '../sway.js';
 import { hint as coachHint } from '../coach.js';
 import { PAL, RARITY } from '../../render/palette.js';
 import { wrap } from '../../render/text.js';
-import { W, text, box, rect, frame, sprite, dots, measure } from '../../render/gfx.js';
+import { W, text, box, rect, frame, measure } from '../../render/gfx.js';
 import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } from '../../sim/run.js';
 import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button, growHit } from '../ui.js';
-import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, tacticIcon, engravingEmblem, soulEmblem, chartLevel, SEAL, targetOk, isSwap, rarityLine, awakenArt, HOLD_MARK, itemName, itemCardLayout } from '../parts.js';
+import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, itemArt, chartLevel, SEAL, targetOk, isSwap, rarityLine, HOLD_MARK, itemName, itemCardLayout } from '../parts.js';
 import { EDITION_BY_ID } from '../../data/editions.js';
 import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { familyCounts, FAMILY_BY_ID, setName } from '../../data/families.js';
 import { SOUL_BY_ID, isCracked } from '../../data/souls.js';
-import { kindBand, kindTab, BAND, TAB, PACK_KIND } from '../kinds.js';
+import { kindBand, BAND } from '../kinds.js';
 import { awakenFlow } from './awaken.js';
 import { TACTIC_BY_ID, evolveTo } from '../../data/tactics.js';
 const ENG_NAME = (id) => engravingInfo(id).name;
@@ -127,7 +127,7 @@ export function consumableCard(ctx, c, x, y, w, h, hover, { names = true } = {})
   // 혼 두루마리: 띠 오른끝(문양 옆 빈 줄)에 겹쳐 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙) — 이름과 한 칸 띄운다
   if (c.kind === 'soul') rect(ctx, x + BAND, y + 2, 2, h - 4, RARITY[SOUL_BY_ID[c.id].rarity]);
   const bx = x + 1 + BAND + 2; // 띠(와 등급 막대) 뒤 글 · 그림이 서는 왼끝
-  const ay = y + Math.floor((h - 18) / 2);
+  const ay = y + Math.floor((h - SCROLL_ART.h) / 2);
   if (narrow && names) { const nx = bx, nw = scrollNameRoom(w); fitText(ctx, name, nx + Math.floor(nw / 2), y + textY(P), nw, PAL.cardInk, { align: 'center' }); closeBox(); return; }
   if (narrow) { scrollArt(ctx, c, bx + Math.floor((scrollNameRoom(w) - 18) / 2), ay); closeBox(); return; }
   const ax = bx + 1;
@@ -136,19 +136,12 @@ export function consumableCard(ctx, c, x, y, w, h, hover, { names = true } = {})
   fitText(ctx, name, nx, y + textY(P), scrollNameRoom(w), PAL.cardInk);
   closeBox();
 }
-// 두루마리 그림(18 × 18): 각인 = 재료, 혼 = 기운, 깨우기, 진화 = 자라는 화살, 전술, 기보 = 모습 윤곽
-function scrollArt(ctx, c, ax, ay) {
-  rect(ctx, ax, ay, 18, 18, '#1b2b27');
-  if (c.kind === 'engraving') engravingEmblem(ctx, c.id, ax - 3, ay - 5, { sq: false });
-  else if (c.kind === 'soul') soulEmblem(ctx, c.id, ax - 3, ay - 4, 0, { sq: false });
-  else if (c.kind === 'awaken') awakenArt(ctx, ax - 3, ay - 4, 0, { sq: false });
-  else if (c.kind === 'evolve') { rect(ctx, ax + 3, ay + 11, 3, 3, PAL.ink); for (let i = 0; i < 4; i++) rect(ctx, ax + 7 + i, ay + 10 - i, 1, 1, PAL.gold); rect(ctx, ax + 10, ay + 4, 5, 6, PAL.gold); }
-  else if (c.kind === 'tactic') tacticIcon(ctx, c.id, ax + 1, ay + 4);
-  else if (c.kind === 'chart') { dots(ctx, ax, ay, 18, 18, PAL.dim, 2); sprite(ctx, c.form, 'w', ax + 1, ay - 3, { alpha: 0.9 }); }
-}
+// 두루마리 그림(18 × 22): 진열 카드와 같은 그림을 좁은 그림 칸에(art.js itemArt — 진화는 겹 꺾쇠만)
+const SCROLL_ART = { w: 18, h: 22 };
+function scrollArt(ctx, c, ax, ay) { itemArt(ctx, c, ax, ay, 0, null, SCROLL_ART); }
 // 꾸러미 칸 쌓기(재기와 그리기가 같이 쓴다): 왼쪽 봉투(ENV), 오른쪽 이름 → 값(두 줄, 봉투 높이 가운데).
 // 봉투 속 「무엇 셋 중 하나」는 가리키면 왼쪽 칸 설명에(packTip)
-const ENV = { w: 26, h: 20 };
+const ENV = { w: 28, h: 22 };
 const PACK_INSIDE = { piece: '기물 셋 중 하나', chart: '기보 셋 중 하나', engraving: '각인 셋 중 하나', golden: '판본 격언 셋 중 하나' };
 export const packTip = (pk) => tipLines(PACK_NAME[pk.kind], PACK_INSIDE[pk.kind] || '');
 const PACK_GAP = 4;
@@ -445,8 +438,8 @@ export class ShopScreen {
       closeBox();
       return;
     }
-    // 봉투가 없는 좁은 칸(셋)은 종류 딱지를 값 줄 오른쪽에(이름 줄은 폭을 다 쓴다)
-    if (lay.env == null) kindTab(ctx, PACK_KIND[pk.kind], x + w - P - TAB, y + lay.price - ((LINE - 11) >> 1));
+    // 좁은 칸(셋 · 넷)은 작은 봉투를 값 줄 오른쪽에(이름 줄은 폭을 다 쓴다)
+    if (lay.env == null) envelope(ctx, x + w - P - ENV_XS.w, y + lay.price - ((LINE - 11) >> 1) + 1, ENV_XS.w, ENV_XS.h, pk.kind, { hover });
     fitText(ctx, packShortName(pk), x + lay.tx, y + lay.name, lay.tw, PAL.ink);
     text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, y + lay.price, PAL.gold, { bold: true });
     closeBox();
