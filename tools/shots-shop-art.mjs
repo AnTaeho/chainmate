@@ -1,7 +1,7 @@
 // 상점 카드 그림 정돈(CHM-69) — 그림 판 · 장면 스크린샷과 화면에서 잰 잉크 상자 표(docs/design-notes/layout.md 「종류 표시」).
 //   NPM_CONFIG_PREFIX=<playwright 있는 곳> node tools/shots-shop-art.mjs [--out docs/shots/shop-art] [--browsers webkit,chromium] [--do sheets,scenes,measure]
 //   sheets:  after-maxims · after-maxims-vs-old · after-engravings-tactics-souls · after-all (@6x)
-//   scenes:  상점 셋 + 영어 · 두루마리가 찬 상점 · 꾸러미 여는 화면 셋 · 관 선택 · 도감 · 대국 (@3x) · 1배 상점
+//   scenes:  상점 셋 + 영어 · 두루마리 · 격언 칸이 찬 상점 · 꾸러미 여는 화면 셋 · 금빛 꾸러미 격언 격자 · 관 선택 · 도감 둘 · 전설 화면 둘 · 대국 (@3x) · 1배 상점
 //   measure: 종류 딱지 10 · 그림 칸 전부 · 봉투 넷의 잉크 상자를 캔버스 화소에서 잰다 → after-ink.md
 // 파일 이름은 after-<이름>-<브라우저>@Nx.png. 시계를 멈춰 찍는다. 서버는 빈 포트(8123은 건드리지 않는다).
 import http from 'node:http';
@@ -56,12 +56,14 @@ async function sheetIn({ name, S }) {
   let W = 480, H = 270, draw = () => {};
   const label = (g, s, cx, y, w, col = PAL.dim) => wrap(String(s), w, false).slice(0, 2).forEach((l, k) => G.text(g, l, cx, y + k * 12, col, { align: 'center' }));
   if (name === 'maxims' || name === 'maxims-vs-old') {
-    const vs = name === 'maxims-vs-old', per = vs ? 8 : 10, cw = vs ? 74 : 58, ch = 54;
+    const vs = name === 'maxims-vs-old', per = 8, cw = 74, ch = 54;
     W = 8 + per * cw; H = 8 + Math.ceil(maxims.length / per) * ch;
     draw = (g) => maxims.forEach((it, i) => {
-      const x = 8 + (i % per) * cw, y = 8 + Math.floor(i / per) * ch, ax = x + Math.floor((cw - 8 - (vs ? 22 + 6 + 24 : 22)) / 2);
+      const x = 8 + (i % per) * cw, y = 8 + Math.floor(i / per) * ch, ax = x + Math.floor((cw - 8 - (22 + 6 + 24)) / 2);
       A.itemArt(g, it, ax, y, 0, run);
       rects.push({ group: 'art', key: `maxim:${it.id}`, x: ax, y, w: 22, h: 26 });
+      // 옆: 격언 칸의 작은 그림 칸(밝은 카드 위 20 × 22)
+      if (!vs) { G.rect(g, ax + 27, y, 26, 26, PAL.card); A.maximArt(g, it.id, ax + 30, y + 2); rects.push({ group: 'maxim-cell', key: `maxim:${it.id}`, x: ax + 30, y: y + 2, w: 20, h: 22 }); }
       if (vs) { G.rect(g, ax + 28, y + 1, 24, 24, PAL.card); g.save(); g.translate(ax + 28, y + 1); g.scale(2, 2); IC.drawIcon(g, it.id, 0, 0); g.restore(); }
       label(g, maximInfo(it.id).name, x + Math.floor((cw - 8) / 2), y + 28, cw - 6, PAL.ink);
     });
@@ -272,6 +274,34 @@ for (const name of BROWSERS) {
         // 도감 격언 탭
         await s.page.evaluate(async () => { const a = window.__app; const { MAXIMS } = await import('/src/data/maxims.js'); a.records.codex.maxims = Object.fromEntries(MAXIMS.map((m) => [m.id, true])); a.go('codex'); a.screen.tab = 'maxims'; a.screen.page = 0; });
         await s.page.clock.runFor(400); await s.shot('codex-maxims');
+        // 도감 명경기 탭
+        await s.page.evaluate(async () => { const a = window.__app; const { LEGENDS } = await import('/src/data/legends.js'); a.records.codex.legends = Object.fromEntries(LEGENDS.map((l, i) => [l.id, 1 + (i % 3)])); a.screen.tab = 'legends'; a.screen.page = 0; });
+        await s.page.clock.runFor(400); await s.shot('codex-legends');
+        // 금빛 꾸러미: 펼친 격언 칸(격언 격자)
+        await s.page.evaluate(() => {
+          const a = window.__app; a.newRun({ seed: 11 }); const r = a.run;
+          if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
+          r.maxims = ['kings_step', 'thrift', 'ambusher', 'pilgrimage', 'opera'].map((id, i) => ({ uid: 800 + i, id, data: {}, edition: i === 1 ? 'foil' : null, paid: 4 }));
+          r.shop = { rng: null, display: [], packs: [], rerolls: 0, promoted: false, removed: false }; r.phase = 'pack';
+          r.pack = { kind: 'golden', options: [{ kind: 'maxim', id: 'memory', edition: 'foil' }, { kind: 'maxim', id: 'chivalry', edition: 'rainbow' }, { kind: 'maxim', id: 'vault', edition: 'pearl' }] };
+          a.go('pack'); a.screen.t = 10; a.screen.togglePanel();
+        });
+        await s.page.clock.runFor(400); await s.shot('pack-golden-maxims');
+        // 전설 화면: 격언 다섯 + 전설 셋(두 줄 — 그림만) · 칸이 끝까지 찬 판(네 줄)
+        for (const [tag, plain, obsidian, legends] of [['legend', 5, 0, ['evergreen', 'opera', 'immortal']], ['legend-max', 15, 10, ['evergreen', 'opera', 'immortal', 'eight_pawns']]]) {
+          await s.page.evaluate(async ({ plain, obsidian, legends }) => {
+            const a = window.__app; const { MAXIMS } = await import('/src/data/maxims.js');
+            a.closeOverlay(); a.newRun({ seed: 21 }); const r = a.run;
+            if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
+            const pool = MAXIMS.filter((m) => m.rarity !== 'legendary');
+            r.maxims = pool.slice(0, plain).map((m, i) => ({ uid: 700 + i, id: m.id, data: {}, edition: i < obsidian ? 'obsidian' : null, paid: 0 }));
+            for (const id of [...legends, 'century']) { r.maxims.push({ uid: 900 + r.maxims.length, id, data: {}, edition: null, paid: 0, legendary: true }); r.legends.push(id); }
+            a.toasts = []; a.flow([['legend', { legend: 'century' }]]);
+          }, { plain, obsidian, legends });
+          await s.page.clock.runFor(9000); await s.shot(tag);
+        }
+        // 격언 칸이 찬 상점(한 줄 다섯) · 두 줄로 접힌 상점은 shop-scrolls
+        await openShop(s.page, { ...SHOPS[0], maxims: ['kings_step', 'thrift', 'ambusher', 'pilgrimage', 'opera'] }); await s.page.clock.runFor(900); await s.shot('shop-maxims');
         // 대국: 격언 칸 + 손 줄 전술
         await s.page.evaluate(() => {
           const a = window.__app; a.newRun({ seed: 11 }); const r = a.run;
@@ -302,13 +332,13 @@ if (DO.includes('measure')) {
       const exc = rs.filter((r) => /art|scroll/.test(gr) && EXC.test(r.key));
       const rest = rs.filter((r) => !exc.includes(r));
       const off = rest.filter((r) => !r.ink || r.dx !== 0 || r.dy !== 0);
-      const tgt = (r) => (gr === 'art' || gr === 'card-art' ? r.ink.w >= 14 && r.ink.w <= 18 && r.ink.h >= 16 && r.ink.h <= 20 : gr === 'scroll' ? r.ink.w <= 16 && r.ink.h <= 20 : /tab|band/.test(gr) ? r.ink.w <= 10 && r.ink.h <= 10 : true);
+      const tgt = (r) => (gr === 'maxim-cell' ? r.ink.w <= 18 && r.ink.h <= 20 : gr === 'art' || gr === 'card-art' ? r.ink.w >= 14 && r.ink.w <= 18 && r.ink.h >= 16 && r.ink.h <= 20 : gr === 'scroll' ? r.ink.w <= 16 && r.ink.h <= 20 : /tab|band/.test(gr) ? r.ink.w <= 10 && r.ink.h <= 10 : true);
       const out = rest.filter((r) => r.ink && !tgt(r));
       lines.push(`| ${gr} | ${rs.length} | ${off.length} | ${out.length} | ${exc.map((r) => r.key).join(' · ') || '-'} |`);
       bad.push(...off.map((r) => `${gr} ${r.key} 벗어남 ${r.ink ? `${r.dx} · ${r.dy}` : '잉크 없음'}`), ...out.map((r) => `${gr} ${r.key} 과녁 밖 ${r.ink.w}×${r.ink.h}`));
     }
     lines.push('', bad.length ? bad.map((b) => `- ${b}`).join('\n') : '벗어남 0 · 과녁 밖 0', '', '| 묶음 | 물건 | 칸 | 잉크 | 왼 · 오른 · 위 · 아래 |', '|---|---|---|---|---|');
-    for (const r of rows.filter((r) => !/^art$|^scroll$/.test(r.group) || EXC.test(r.key))) lines.push(`| ${r.group} | ${r.key} | ${r.w}×${r.h} | ${r.ink ? `${r.ink.w}×${r.ink.h}` : '-'} | ${r.ink ? [r.L, r.R, r.T, r.B].join(' · ') : '-'} |`);
+    for (const r of rows.filter((r) => !/^art$|^scroll$|^maxim-cell$/.test(r.group) || EXC.test(r.key))) lines.push(`| ${r.group} | ${r.key} | ${r.w}×${r.h} | ${r.ink ? `${r.ink.w}×${r.ink.h}` : '-'} | ${r.ink ? [r.L, r.R, r.T, r.B].join(' · ') : '-'} |`);
     lines.push('');
     console.log(name, bad.length ? bad.join('\n') : '잉크 상자: 벗어남 0 · 과녁 밖 0', `(잰 것 ${rows.length})`);
   }
