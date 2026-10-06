@@ -4,24 +4,24 @@
 
 // 격언 · 전설 75. # 밝은 몸 · d 그늘 · k 먹 · g 금 · o 짙은 금 · r 붉음 · w 흰 · s 은 · p 보라 · b 파랑 · G 풀빛(빛깔은 art.js MAXIM_COL)
 export const MAXIM16 = {
-  // 금빛 깃털을 단 기사 투구(옆모습 — 면갑의 눈 틈)
+  // 붉은 바탕 흰 십자의 문장 방패와 뒤로 엇갈린 검 둘
   chivalry: [
-    '...gggggg.......',
-    '.ggggggggg......',
-    'ggggg.sssss.....',
-    'ggg..ssssssss...',
-    'gg..sswsssssss..',
-    '.g..swsssssssss.',
-    '.g..sssssssssss.',
-    '....sskkkkkkkks.',
-    '....ssssssssssss',
-    '....sssdsdsdsss.',
-    '....ssssssssss..',
-    '....sssssssss...',
-    '.....sssssss....',
-    '....ggggggggg...',
-    '...sssssssssss..',
-    '...sssssssssss..',
+    'w..............w',
+    'sw..kkkkkkkk..ws',
+    '.swkrrrwwrrrkws.',
+    '..skrrrwwrrrks..',
+    '...krrrwwrrrk...',
+    '...kwwwwwwwwk...',
+    '...kwwwwwwwwk...',
+    '...krrrwwrrrk...',
+    '...krrrwwrrrk...',
+    '...krrrwwrrrk...',
+    '....krrwwrrk....',
+    'g...krrwwrrk...g',
+    '.g.wskrwwrksw.g.',
+    '..gs..kwwk..sg..',
+    'ggsg...kk...gsgg',
+    'gg..g......g..gg',
   ],
   // 양옆 화살과 함께 나아가는 폰
   pawn_march: [
