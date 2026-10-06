@@ -129,7 +129,7 @@ for (const sc of SCALES) {
         ICON_IDS.forEach((id, i) => drawIcon(g, id, 4 + (i % 25) * 19, 4 + Math.floor(i / 25) * 17));
         const KK = Object.keys(kinds.KIND);
         KK.forEach((k, i) => kinds.kindTab(g, k, 4 + i * 18, 60));
-        kinds.kindTab(g, 'chart', 4 + KK.length * 18, 60, { split: 2, drop: 2 });
+        ['piece', 'chart', 'engraving', 'golden'].forEach((k, i) => parts.envelope(g, 4 + (KK.length + 1) * 18 + i * 32, 56, 28, 22, k, { open: i === 3 ? 0.4 : 0 }));
         FACTIONS.forEach((f, i) => { drawCrest(g, f.id, 4 + i * 16, 80); drawCrest(g, f.id, 140 + i * 28, 80, { scale: 2 }); });
         FACTIONS.forEach((f, i) => drawCrest(g, f.id, 4 + i * 16, 96, { dim: true }));
         PORTRAIT_IDS.forEach((id, i) => drawPortrait(g, id, 4 + i * 36, 116));
