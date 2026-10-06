@@ -10,10 +10,9 @@ import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { EDITIONS } from '../../data/editions.js';
 import { button } from '../ui.js';
-import { tipLines, miniShard, moveTip, cardBase, wrapName, drawName, fragmentSteps, rarityLine, soulGlyph } from '../parts.js';
+import { tipLines, miniShard, moveTip, cardBase, wrapName, drawName, fragmentSteps, rarityLine, soulGlyph, maximArt, MAXIM_CELL, MAXIM_ICON_W } from '../parts.js';
 import { SOULS, soulPrice } from '../../data/souls.js';
 import { L } from '../lang.js';
-import { drawIcon } from '../../render/icons.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
 import { pageHead, pageButtons, tabRow } from './common.js';
 import { PAGE, PAD_CARD, LIST_GAP, GAP_GROUP, LINE, textY, rowBoxH, BTN_S } from '../frame.js';
@@ -22,8 +21,8 @@ import { openBox, closeBox } from '../../render/layoutlog.js';
 // 도감 격자(CHM-46): 칸 이름은 낱말 단위로 두 줄까지 — 굵게 → 보통 굵기. 두 줄로도 안 되는 이름이 탭에 하나라도 있으면 그 탭만 열 수를 하나 줄인다.
 // 줄 높이 · 열 수는 본 것 · 안 본 것을 가리지 않고 탭의 모든 이름으로 잰다(도감이 차도 쪽이 바뀌지 않는다)
 const GRID = { x: 12, w: W - 24, gap: 4, cols: [5, 4, 3] };
-// 오른쪽 그림 자리(아이콘 12 · 기물 16 · 혼 문양 9 · 문장 · 조각 셋)
-const artW = (tab, e) => (e.piece ? 16 + 2 : e.soul ? 9 + 2 : e.crest || tab === 'maxims' || tab === 'legends' ? 12 + 2 : e.parts != null ? 18 + 2 : 0);
+// 오른쪽 그림 자리(격언 그림 칸 20 · 기물 16 · 혼 문양 9 · 문장 · 조각 셋)
+const artW = (tab, e) => (e.piece ? 16 + 2 : e.soul ? 9 + 2 : tab === 'maxims' || tab === 'legends' ? MAXIM_ICON_W : e.crest ? 12 + 2 : e.parts != null ? 18 + 2 : 0);
 // 격자 자리: { cols, cw, pages: [[{ i, x, y, h, name, nameW }]] } — 쪽마다 들어가는 줄까지, 줄 높이는 그 줄의 가장 긴 이름
 export function codexLayout(tab, list) {
   const P = PAD_CARD, room = PAGE.btnY - GAP_GROUP - PAGE.bodyY;
@@ -102,11 +101,13 @@ export class CodexScreen {
       // 이름(두 줄까지)은 칸 가운데 높이에, 오른쪽 그림(아이콘 12 · 기물 16 · 조각 셋)은 오른쪽 안 여백 안
       const nm = c.name, top = (ch - (nm ? nm.lines.length : 1) * LINE) >> 1;
       drawName(ctx, e.name, nm, x + P, [0, 1].map((k) => y + textY(top + k * LINE)), c.nameW, PAL.cardInk);
-      if (this.tab === 'maxims' || this.tab === 'legends') drawIcon(ctx, e.id, x + cw - P - 12, y + Math.floor((ch - 12) / 2), 0.9);
+      // 명경기 칸(두 줄)은 그림 칸을 위로 붙이고 그 아래에 조각 셋
+      const low = e.parts != null && ch >= MAXIM_CELL.inset + MAXIM_CELL.h + 5 + P;
+      if (this.tab === 'maxims' || this.tab === 'legends') maximArt(ctx, e.id, x + cw - MAXIM_CELL.inset - MAXIM_CELL.w, y + (low ? MAXIM_CELL.inset : Math.floor((ch - MAXIM_CELL.h) / 2)));
       if (e.soul) soulGlyph(ctx, e.soul, x + cw - P - 9, y + Math.floor((ch - 9) / 2));
       if (e.piece) sprite(ctx, e.piece, 'w', x + cw - P - 16, y + Math.floor((ch - 22) / 2));
       if (e.crest) drawCrest(ctx, e.crest, x + cw - P - CREST_SIZE, y + Math.floor((ch - CREST_SIZE) / 2));
-      if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - P - 18 + k * 6, y + ch - P - 5, PAL.goldDk); }
+      if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - (low ? MAXIM_CELL.inset + 19 : P + 18) + k * 6, y + ch - P - 5, PAL.goldDk); }
       closeBox();
     }
     button(ctx, ui, 'codex:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.app.go('title') });

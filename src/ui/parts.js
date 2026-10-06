@@ -16,15 +16,14 @@ import { CHARTS, chartText } from '../data/charts.js';
 import { PIECE_NAME, PIECE_MOVE, FRAG_SOURCE } from './words.js';
 import { wrap } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
-import { drawIcon, iconCanvas } from '../render/icons.js';
 import { shade, glow, flicker } from '../render/light.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 import { kindTab, TAB, TAB_GAP } from './kinds.js';
-import { itemArt, artW, shardIcon } from './art.js';
+import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
-export { EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, SHARD_ROWS, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
+export { maximArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, SHARD_ROWS, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
 
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
 // 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
@@ -150,8 +149,9 @@ export function editionShine(ctx, edition, x, y, w, h, t) {
 // 잠들었으면 붉은 줄을 긋는다. overlay: 끄는 중인 카드(다른 칸 위에 뜬다)
 // narrow(격언 칸이 두 줄로 나란히 — maximColumn): 이름 없이 아이콘만 두 배로 가운데(이름은 가리키면 말풍선에 — CHM-40)
 export const maximCellH = () => rowBoxH(PAD_CARD);
-// 이름 자리: 아이콘(12 + 틈 3)은 이름이 굵게 들어갈 때만 둔다(아이콘은 이름보다 덜 중요하다 — CHM-40)
-export const maximIconW = (name, w) => (w >= 60 && measure(L(String(name)), true) <= w - PAD_CARD * 2 - 15 ? 15 : 0);
+// 이름 자리: 그림 칸(20 + 틈 3, 오른쪽 테에서 3 — 안 여백 7보다 4 바깥)은 이름이 굵게 들어갈 때만 둔다(그림은 이름보다 덜 중요하다 — CHM-40)
+export const MAXIM_ICON_W = MAXIM_CELL.w + MAXIM_CELL.gap + MAXIM_CELL.inset - PAD_CARD;
+export const maximIconW = (name, w) => (w >= 60 && measure(L(String(name)), true) <= w - PAD_CARD * 2 - MAXIM_ICON_W ? MAXIM_ICON_W : 0);
 export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift = 0, t = 0, overlay = false, narrow = false } = {}) {
   const info = maximInfo(m.id);
   const legendary = info.rarity === 'legendary';
@@ -174,17 +174,12 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   if (hot) frame(ctx, x, y, w, h, PAL.gold);
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
   const P = PAD_CARD;
-  if (narrow) {
-    const c = iconCanvas(m.id, hiFor(ctx, 2));
-    if (c) {
-      if (off) ctx.globalAlpha = 0.35;
-      ctx.drawImage(c, Math.round(x + (w - 24) / 2), Math.round(y + (h - 24) / 2), 24, 24);
-      ctx.globalAlpha = 1;
-    }
-  } else {
-    // 아이콘(12)은 오른쪽 안 여백 안에, 이름은 그 왼쪽까지(넘치면 fitText가 보통 굵기 → 「…」)
+  // 그림은 진열 카드와 같은 그림을 작은 그림 칸(20 × 22)에(art.js maximArt — CHM-69). 좁은 칸은 그림만 가운데
+  const ay = y + Math.floor((h - MAXIM_CELL.h) / 2);
+  if (narrow) maximArt(ctx, m.id, x + Math.floor((w - MAXIM_CELL.w) / 2), ay, off ? 0.35 : 1);
+  else {
     const iconW = maximIconW(info.name, w);
-    if (iconW) drawIcon(ctx, m.id, x + w - P - 12, y + Math.floor((h - 12) / 2), off ? 0.35 : 1);
+    if (iconW) maximArt(ctx, m.id, x + w - MAXIM_CELL.inset - MAXIM_CELL.w, ay, off ? 0.35 : 1);
     fitText(ctx, info.name, x + P, y + textY(P), w - P * 2 - iconW, ink);
   }
   if (off) { rect(ctx, x + 4, y + Math.floor(h / 2), w - 8, 1, PAL.red); }

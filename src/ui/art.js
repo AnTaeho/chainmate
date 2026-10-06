@@ -229,6 +229,13 @@ export function itemArt(ctx, it, x, y, t = 0, run = null, { w = artW(it), h = AR
   if (it.kind === 'awaken' && hi) { const k = Math.floor(t * 4) % 2; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (!(((sx + sy) / 2 + k) & 1)) rect(ctx, cx + (sx > 0 ? 7 : -8), cy + (sy > 0 ? 7 : -8), 1, 1, PAL.goldHi); }
   return w;
 }
+// 격언 칸 · 도감 칸의 작은 그림 칸(20 × 22): 진열 카드와 같은 그림을 밝은 카드 위 어두운 받침에. 1배 화면은 옛 아이콘
+export const MAXIM_CELL = { w: 20, h: 22, gap: 3, inset: 3 };
+export function maximArt(ctx, id, x, y, alpha = 1) {
+  if (alpha !== 1) ctx.globalAlpha = alpha;
+  itemArt(ctx, { kind: 'maxim', id }, x, y, 0, null, MAXIM_CELL);
+  if (alpha !== 1) ctx.globalAlpha = 1;
+}
 // 1배 화면: 옛 그림을 잉크 가운데로
 function loRows(ctx, rows, cols, x, y, w, h) {
   const b = inkBox(rows);
