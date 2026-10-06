@@ -100,6 +100,33 @@ test('종류 문양: 열 종류 모두 잉크 10×10 안', () => {
   }
 });
 
+test('종류 딱지 · 띠: 문양 잉크가 딱지(14×14) · 띠(14×26) 한가운데(벗어남 0)', () => {
+  for (const [k, v] of Object.entries(kinds.KIND)) {
+    const b = inkBox(v.g);
+    for (const [w, h] of [[kinds.TAB, kinds.TAB], [kinds.BAND, 26]]) { const g = margins(w, h, b); assert.deepEqual([g.dx, g.dy], [0, 0], `${k} ${w}×${h} 왼 ${g.L} 오른 ${g.R} 위 ${g.T} 아래 ${g.B}`); }
+  }
+});
+
+test('꾸러미 봉투: 덮개에 찍는 문양이 덮개 한가운데 · 덮개 안, 아주 작은 봉투(1배 12×10)는 빈 덮개', async () => {
+  const env = await import('../src/ui/envelope.js');
+  // [폭, 높이, 도트 배율, 문양 잉크 한 변(도트)]: 상점 칸 · 좁은 칸 · 아주 좁은 칸 · 건너뛰기 패 · 여는 연출
+  const sizes = [[28, 22, 2, 20], [28, 22, 1, 10], [24, 20, 2, 20], [24, 20, 1, 10], [14, 12, 2, 10], [12, 10, 2, 10], [96, 66, 2, 60], [96, 66, 1, 20]];
+  for (const kind of ['piece', 'chart', 'engraving', 'golden']) {
+    assert.ok(env.ENV_COL[kind], kind);
+    for (const [w, h, u, ink] of sizes) {
+      const W = w * u, H = h * u, G = env.envGlyph(kind, W, H, u), S = env.envShape(W, H, u), name = `${kind} ${w}×${h} ×${u}`;
+      assert.ok(G, `${name} 문양 없음`);
+      const bw = G.b.w * G.m, bh = G.b.h * G.m, L = G.x + G.b.x * G.m, T = G.y + G.b.y * G.m;
+      assert.ok(Math.max(bw, bh) === ink, `${name} 잉크 ${bw}×${bh}`);
+      assert.equal(L, W - L - bw, `${name} 가로`);
+      assert.equal(T - u, S.fe - S.e - (T + bh), `${name} 세로`);
+      // 문양 맨 아랫줄이 그 줄의 덮개 폭 안
+      assert.ok(bw / 2 <= S.half(T + bh - 1) - S.e, `${name} 덮개 밖`);
+    }
+    assert.equal(env.envGlyph(kind, 12, 10, 1), null);
+  }
+});
+
 test('기물 · 기보: 가로 잉크 자리를 스프라이트에서 잰다(1배 16 안 · 두 배 32 안)', () => {
   for (const t of ['P', 'N', 'B', 'R', 'Q', 'K', 'L']) {
     const lo = art.pieceBox(t, false), hi = art.pieceBox(t, true);

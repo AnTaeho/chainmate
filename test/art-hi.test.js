@@ -103,6 +103,7 @@ test('그리는 곳: N = 1은 옛 그림, N = 3은 두 배 그림을 같은 자�
     ['전술', (ctx) => parts.tacticIcon(ctx, 'freeze', 10, 20), [null, 32], [10, 20, 16, 11]],
     ['명경기 조각', (ctx) => parts.shardIcon(ctx, 10, 20), [null, 32], [10, 20, 16, 14]],
     ['종류 딱지', (ctx) => kinds.kindTab(ctx, 'chart', 10, 20), [null, 24], [11, 21, 12, 12]],
+    ['종류 띠', (ctx) => kinds.kindBand(ctx, 'tactic', 10, 20, 26), [null, 24], [11, 27, 12, 12]],
     ['초상', (ctx) => portraits.drawPortrait(ctx, 'fog', 10, 20), [32, 64], [10, 20, 32, 32]],
   ];
   for (const [name, draw, [loW, hiW], box] of cases) {
@@ -136,13 +137,18 @@ test('두 배로 크게 그리는 곳은 N = 1에서도 두 배 그림이 1:1(�
   assert.ok(ic, '좁은 칸 아이콘은 24×24 그림');
 });
 
-test('종류 딱지가 갈라질 때(꾸러미 봉투): 두 배 문양을 왼쪽 · 오른쪽 반으로', () => {
-  const h = rec(3);
-  kinds.kindTab(h.ctx, 'engraving', 10, 20, { split: 2, drop: 3 });
-  const im = images(h.calls);
-  assert.equal(im.length, 2);
-  assert.deepEqual(im[0].slice(2), [0, 0, 12, 24, 9, 24, 6, 12]);
-  assert.deepEqual(im[1].slice(2), [12, 0, 12, 24, 19, 24, 6, 12]);
+test('꾸러미 봉투: 구운 그림 하나를 정수 칸에(3배는 반 칸 도트, 열리면 위로 솟을 자리만큼 크다)', async () => {
+  const env = await import('../src/ui/envelope.js');
+  for (const [n, u] of [[1, 1], [3, 2]]) {
+    const h = rec(n);
+    env.envelope(h.ctx, 10, 20, 28, 22, 'chart');
+    env.envelope(h.ctx, 50, 20, 96, 66, 'golden', { open: 0.4 });
+    const im = images(h.calls);
+    assert.equal(im.length, 2);
+    assert.deepEqual([im[0][1].width, im[0][1].height, ...im[0].slice(2)], [28 * u, 22 * u, 10, 20, 28, 22]);
+    assert.deepEqual([im[1][1].width, im[1][1].height, ...im[1].slice(2)], [96 * u, (66 + env.ENV_RISE) * u, 50, 20 - env.ENV_RISE, 96, 66 + env.ENV_RISE]);
+    assert.equal(halfFills(h.calls).length, 0);
+  }
 });
 
 test('타이틀 시연 판: 기물 그림을 판 하나에 하나로(hi를 주면 줄마다 배율이 달라도 같은 그림)', () => {
