@@ -301,12 +301,12 @@ for (const name of BROWSERS) {
           await s.page.clock.runFor(9000); await s.shot(tag);
         }
         // 격언 칸이 찬 상점(한 줄 다섯) · 두 줄로 접힌 상점은 shop-scrolls
-        await openShop(s.page, { ...SHOPS[0], maxims: ['kings_step', 'thrift', 'ambusher', 'pilgrimage', 'opera'] }); await s.page.clock.runFor(900); await s.shot('shop-maxims');
+        await openShop(s.page, { ...SHOPS[0], display: [{ kind: 'maxim', id: 'chivalry', price: 5 }, SHOPS[0].display[1]], maxims: ['chivalry', 'kings_step', 'thrift', 'ambusher', 'pilgrimage'] }); await s.page.clock.runFor(900); await s.shot('shop-maxims');
         // 대국: 격언 칸 + 손 줄 전술
         await s.page.evaluate(() => {
           const a = window.__app; a.newRun({ seed: 11 }); const r = a.run;
           if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
-          ['kings_step', 'thrift', 'ambusher', 'vault', 'opera'].forEach((id, i) => r.maxims.push({ uid: 800 + i, id, data: {}, edition: null, paid: 0 }));
+          ['chivalry', 'kings_step', 'thrift', 'ambusher', 'opera'].forEach((id, i) => r.maxims.push({ uid: 800 + i, id, data: {}, edition: null, paid: 0 }));
           r.consumableSlots = 3; r.consumables = [{ kind: 'tactic', id: 'freeze' }, { kind: 'tactic', id: 'reload' }, { kind: 'tactic', id: 'taunt' }];
           const e0 = a.cmd({ type: 'play' }); a.go('battle', { events: e0 });
         });
