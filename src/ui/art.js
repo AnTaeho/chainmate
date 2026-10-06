@@ -258,7 +258,7 @@ function evolveCell(ctx, x, y, w, h, hi) {
       }
       g.fillStyle = PAL.gold;
       const k = wide ? 1 : 2; // 좁은 칸은 화살을 두 배로
-      for (const ox of [-5, 1]) for (let i = 0; i < 5; i++) { g.fillRect(w + (ox + i) * k, h + (-5 + i) * k, 2 * k, k); g.fillRect(w + (ox + i) * k, h + (4 - i) * k, 2 * k, k); }
+      for (const ox of [-6, 0]) for (let i = 0; i < 5; i++) { g.fillRect(w + (ox + i) * k, h + (-5 + i) * k, 2 * k, k); g.fillRect(w + (ox + i) * k, h + (4 - i) * k, 2 * k, k); }
     }), place(x), place(y), w, h);
     return;
   }
