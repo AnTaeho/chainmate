@@ -3,7 +3,6 @@
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, sprite, fitNum, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
-import { today } from '../records.js';
 import { danName } from './setup.js';
 import { pageHead } from './common.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, GAP_IN, flow, textY } from '../frame.js';
@@ -16,7 +15,7 @@ export class RecordsScreen {
   draw(ctx, ui) {
     const r = this.app.records;
     pageHead(ctx, '기록');
-    const d = r.daily && r.daily.date === today() ? r.daily : null;
+    const d = r.daily && r.daily.date === this.app.today() ? r.daily : null;
     const rows = [
       ['판', `${r.runs}`], ['이긴 판', `${r.wins}`], ['최고 관', r.bestAnte ? `${r.bestAnte}관` : '-'],
       ['체크메이트', `${r.mates}`], ['탁월수 !!', `${r.brilliants || 0}`], ['전설 완성', `${r.legends}`], ['신의 한 수(★★★)', `${(r.grades['★★★'] || 0) + (r.grades['∞'] || 0)}`],

@@ -165,7 +165,7 @@ export async function boot(env = {}) {
   });
   const track = (name, props) => tel.track(name, props);
   track.off = () => tel.off();
-  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track });
+  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, today: env.today });
   win.addEventListener('error', (e) => tel.error((e && e.error) || (e && e.message) || 'error'));
   win.addEventListener('unhandledrejection', (e) => tel.error((e && e.reason) || 'unhandledrejection'));
   // 화면이 숨거나 떠날 때 남은 것을 보낸다

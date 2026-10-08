@@ -31,7 +31,7 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // track(name, props): 기록 보내기(CHM-63, src/ui/telemetry.js) — main.js가 넘긴다. 없으면 아무것도 보내지 않는다(Node 시험 · 도구)
 // platform: 'web' | 'app'(Tauri). share(name, text) · download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null }) {
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, today: dayNow = today }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -179,12 +179,14 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.visited.add(name);
   };
   app.closeOverlay = () => { app.overlay = null; };
+  // 오늘 날짜(YYYY-MM-DD): 오늘의 대국 시드 · 기록 화면의 오늘 줄이 이것을 쓴다. 게임은 진짜 달력, 연기 시험은 고정 날짜를 넣는다
+  app.today = () => dayNow();
 
   // ── 판
   app.hasSave = () => !!store.get(KEYS.run);
   // opts.script: 첫 대국을 킹과 두는 대본 대국으로(CHM-22) — 관 선택을 건너뛰고 곧바로 대국
   app.newRun = (opts = {}) => {
-    const daily = opts.daily ? today() : null;
+    const daily = opts.daily ? app.today() : null;
     const seed = daily ? dailySeed(daily) : opts.seed ?? app.nextSeed ?? ((Math.floor(now() * 7919) ^ Date.now()) >>> 0) % 2147483647;
     app.nextSeed = null;
     // 끝나지 않은 판을 새 판으로 덮어쓴다: 「그만둠」으로 남긴다(이긴 뒤 끝없는 대국이면 그 판 줄을 갈아 끼운다)

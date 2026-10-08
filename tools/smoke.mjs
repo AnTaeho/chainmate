@@ -26,6 +26,9 @@ const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] :
 const SEED = Number(opt('--seed', 3));
 const LANG = opt('--lang', 'ko');
 const RUNS = Number(opt('--runs', 2));
+// 오늘의 대국 판의 날짜(그 판의 시드가 여기서 나온다). 달력을 읽으면 날마다 다른 판을 돌아 결과가 날짜에 달린다(CHM-63) — 고정해 넣는다.
+// 다른 날짜의 판을 보려면 --date YYYY-MM-DD
+const DATE = opt('--date', '2026-10-07');
 const VERBOSE = args.includes('--verbose');
 // --spacing pad8,card7,line14,title18,in3,group8: 글 간격 시안으로 자리 규칙을 잰다(src/ui/frame.js applySpacing)
 if (opt('--spacing', null)) globalThis.__SPACING = opt('--spacing', null);
@@ -112,7 +115,7 @@ let app = null;
 
 async function start() {
   if (LANG !== 'ko') dom.store.set('chainmate.settings.v1', JSON.stringify({ lang: LANG }));
-  app = await boot({ window: dom.window, document: dom.document });
+  app = await boot({ window: dom.window, document: dom.document, today: () => DATE });
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -825,7 +828,7 @@ async function reload() {
   seen();
   // 앞 앱은 같은 가짜 창에 듣개가 남아 있다: 누르기가 앞 앱 화면에도 닿지 않게 끊는다
   app.pointer = () => {}; app.key = () => {};
-  app = await boot({ window: dom.window, document: dom.document });
+  app = await boot({ window: dom.window, document: dom.document, today: () => DATE });
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -1140,7 +1143,7 @@ app.records.unlocked.openings = ['standard', 'london', 'sicilian', 'queens_gambi
 app.records.unlocked.dan = 8;
 results.push(await playOne(SEED + 50, { opening: 'sicilian', dan: 3 }));
 results.push(await playOne(0, { daily: true }));
-if (!app.run.daily || !app.records.daily) throw new Error('daily not recorded');
+if (app.run.daily !== DATE || !app.records.daily || app.records.daily.date !== DATE) throw new Error('daily not recorded');
 // 전설 셋을 쥐여 준 판: 상록(다시 떨구기) · 오페라(판 다시 채우기) · 불멸(끊김 넘기기)의 연출
 results.push(await playOne(SEED + 100, {
   inject: (run) => {
@@ -1500,6 +1503,33 @@ const awakeSeen = { crack: 0, toast: 0, hint: 0, skip: 0, preview: 0, screen: 0,
   app.toTitle(); pump(1);
 }
 
+// 점화 막간 걸음(CHM-63): 봇 판에서 점화가 몇 번 나는지는 판 구성에 달렸다(오늘의 대국 판이 한 번 보태 주던 날만 셋이었다) —
+//   「누름 · Enter · 저절로」가 그 우연에 기대지 않게 점화가 확실한 판을 심는다: 새 판 첫 대국을 사슬 8이 나는 판(test/helpers/run.js plantChain8 — 넘침 ×10은 3관부터만 센다)으로 갈아 끼우고 그 사슬을 둔다.
+//   막간은 판당 한 번이라 판을 새로 열어, 적어도 한 번 · 저절로 닫히는 것까지 볼 때까지 거듭한다(앞의 둘은 igniteWatch가 눌러 · Enter로 닫는다)
+const { plantChain8 } = await import('../test/helpers/run.js');
+const ignPlant = { runs: 0, opened: 0, bad: [] };
+for (let k = 0; k < 3 && (!k || igSeen.opened < 3 || !igSeen.auto); k++) {
+  const bad = (m) => ignPlant.bad.push(m);
+  app.overlay = null; app.nextSeed = 21 + k; app.newRun(); if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
+  app.goPhase(); pump(30);
+  click('select:play'); pump(2);
+  ignPlant.runs++;
+  if (screen() !== 'battle') bad(`대국이 열리지 않았다(${screen()})`);
+  else {
+    idle();
+    const b = app.run.battle, s = app.screen, before = igSeen.opened;
+    const [drop, ...caps] = plantChain8(b);
+    s.sync();
+    click(`hand:${drop.handIndex}`); click(`sq:${drop.sq}`); idle();
+    for (const c of caps) { if (!app.run.battle || app.screen.name !== 'battle' || app.run.battle.status !== 'chain') break; click(`sq:${c.sq}`); idle(); }
+    // 막간이 저절로 닫힐 때까지(앉은 뒤 2초 — 넉넉히 6초)
+    for (let n = 0; n < 360 && app.screen.combo; n++) pump(1);
+    s.seq.trace = [];
+    if (igSeen.opened === before + 1) ignPlant.opened++; else bad(`심은 판에서 막간이 열리지 않았다(${igSeen.opened - before})`);
+  }
+  app.toTitle(); pump(1);
+}
+
 // 탁월수 걸음(CHM-43): 봇 판은 탁월수가 드물어(판의 3%) 하나를 세운다. 손 폰 넷 · 주머니 맨 앞 나이트 · 판에 지키는 적 없는 킹 하나 →
 //   폰 하나를 바친다(카드가 흩어지고 나이트가 들어온다) → 나이트에 「!?」 · 처음 안내 · 바친 줄 → 나이트를 들어 킹에 닿는 칸에 떨군다(「!?」가 사라진다) →
 //   킹을 먹는다: 메이트 + 탁월수 「!!」(h8 — 오른쪽 끝 · 맨 윗줄이라 딱지가 아래 왼쪽으로 뒤집힌다) · 배수 ×2 · 기록. 한 수 연출(×1)을 잰다
@@ -1656,7 +1686,7 @@ const mainApp = app;
   seen();
   app.pointer = () => {}; app.key = () => {};
   for (const k of [...dom.store.keys()]) dom.store.delete(k);
-  app = await boot({ window: dom.window, document: dom.document });
+  app = await boot({ window: dom.window, document: dom.document, today: () => DATE });
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -1917,8 +1947,8 @@ console.log(`길 중 멈춤: Esc ${pauseSeen.esc} · ≡ ${pauseSeen.button} · 
 if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseSeen.title || !pauseSeen.resume || !pauseSeen.skip || !pauseSeen.lessonTitle) { console.log('길 중에 멈춤이 열리지 않았거나, 닫은 뒤 · 타이틀로 · 건너뛰기가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }
 console.log(`처음 안내: ${[...hintsShown].join(' ')}`);
-console.log(`점화 막간: 열림 ${igSeen.opened} · 닫힘 ${igSeen.closed}(누름 ${igSeen.tap} · Enter ${igSeen.key} · 저절로 ${igSeen.auto}) · 판의 기록과 같음 ${igSeen.data} · 한 판에 두 번 ${igSeen.twice} · 떠 있는 동안 잰 구역 ${igSeen.regions}(샌 것 ${igSeen.leak.length}${igSeen.leak.length ? ': ' + [...new Set(igSeen.leak)].slice(0, 8).join(' ') : ''}) · 가장 오래 ${igSeen.maxT.toFixed(2)}s${igSeen.bad.length ? ` · 어긋남: ${igSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
-if (igSeen.opened < 3 || igSeen.closed !== igSeen.opened || !igSeen.tap || !igSeen.key || !igSeen.auto || igSeen.twice || igSeen.leak.length || igSeen.data !== igSeen.opened || igSeen.bad.length) { console.log('점화 막간이 열리고 닫히지 않았거나, 한 판에 두 번 열렸거나, 떠 있는 동안 다른 것이 눌렸다'); fail = true; }
+console.log(`점화 막간: 심은 판 ${ignPlant.runs}(열림 ${ignPlant.opened}${ignPlant.bad.length ? ` · 어긋남: ${ignPlant.bad.join(' | ')}` : ''}) · 열림 ${igSeen.opened} · 닫힘 ${igSeen.closed}(누름 ${igSeen.tap} · Enter ${igSeen.key} · 저절로 ${igSeen.auto}) · 판의 기록과 같음 ${igSeen.data} · 한 판에 두 번 ${igSeen.twice} · 떠 있는 동안 잰 구역 ${igSeen.regions}(샌 것 ${igSeen.leak.length}${igSeen.leak.length ? ': ' + [...new Set(igSeen.leak)].slice(0, 8).join(' ') : ''}) · 가장 오래 ${igSeen.maxT.toFixed(2)}s${igSeen.bad.length ? ` · 어긋남: ${igSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
+if (ignPlant.bad.length || igSeen.opened < 3 || igSeen.closed !== igSeen.opened || !igSeen.tap || !igSeen.key || !igSeen.auto || igSeen.twice || igSeen.leak.length || igSeen.data !== igSeen.opened || igSeen.bad.length) { console.log('점화 막간이 열리고 닫히지 않았거나, 한 판에 두 번 열렸거나, 떠 있는 동안 다른 것이 눌렸다'); fail = true; }
 console.log(`다음 수: 결정 ${nextSeen.moves}번 · 들어온 기물 ${nextSeen.drawn} · 손을 새로 쥠 ${nextSeen.regrip} · 화면 = 규칙 잰 수 ${nextSeen.view} · 어긋남 ${nextSeen.bad.length}${nextSeen.bad.length ? `: ${nextSeen.bad.join(' | ')}` : ''}`);
 if (nextSeen.bad.length || nextSeen.moves < 10 || nextSeen.drawn < 10) { console.log('보이던 다음 둘이 실제로 그 차례로 들어오지 않았거나, 잰 결정이 너무 적다'); fail = true; }
 console.log(`판 보기: 관 선택 ${peekSeen.selects} · 두기 ${peekSeen.played}(미리 본 판 = 시작 판 ${peekSeen.same}) · 앞서 본 판을 그 차례에 다시 ${peekSeen.ahead}(같음 ${peekSeen.aheadSame} · 판 짓기 규칙이 바뀌어 다시 지음 ${peekSeen.regen} · 금빛의 부름으로 금빛 적만 더해짐 ${peekSeen.gold} · 예고가 더 멀리 보임 ${peekSeen.sight}) · 어긋남 ${peekSeen.bad.length}${peekSeen.bad.length ? `: ${peekSeen.bad.slice(0, 8).join(' | ')}` : ''}`);
