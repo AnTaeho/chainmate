@@ -12,7 +12,7 @@
 - 판을 부수는 드문 보상은 한 번에 주지 않고, 중간~낮은 확률의 조각을 이어 모아야 얻게 한다(HOOKS.md 「불멸의 기보」).
 
 ## 구조 규칙
-- 바닐라 JS ES 모듈, 빌드·npm 의존성 없음. `python3 -m http.server`로 연다.
+- 게임(`src/` · `index.html`)은 바닐라 JS ES 모듈, 빌드·npm 의존성 없음. `python3 -m http.server`로 연다. npm 패키지는 순위 서버 함수(`api/`, Vercel Functions — CHM-70)만 쓴다. `src/`의 게임 코드는 npm 패키지를 import하지 않고, `api/`는 `tools/` · `test/`에 기대지 않는다(배포에서 빠진다).
 - 데스크톱 포장(Tauri 2)은 `desktop/` 안에만 둔다. 게임 파일은 고치지 않고 `desktop/collect.sh`가 모아 쓴다(`desktop/README.md`).
 - `src/sim/`·`src/data/`는 DOM·canvas 접근 금지(Node에서 돈다). 모든 무작위는 시드 rng. 상태는 JSON 왕복 안전.
 - 상태 변경은 명령 객체로만(`apply`, `applyRun`). 봇과 화면이 같은 명령을 쓴다.
@@ -63,6 +63,7 @@
 - 사람 손으로 해 본 적이 없다. 첫 사람 판에서 볼 것은 `docs/reports/onboarding.md` 「알려진 문제」와 `night.md` 「남은 목록」.
 - 사람 판 기록(CHM-50, `docs/design-notes/human-runs.md`): 판이 끝날 때(이김 · 짐 · 끝없는 대국 끝 · 새 판으로 덮어쓴 「그만둠」) 하네스 dump와 같은 열쇠의 한 줄을 `chainmate.runs.v1`에 200판까지 남긴다(수업 · 대본 대국 · scratch 빼고). 설정 「기록 내보내기」로 JSON을 받아 `node tools/humans.mjs <파일> [--vs <run.mjs dump>]`로 하네스와 나란히 본다. 요약 `src/sim/runlog.js` `runRow`는 `run.mjs` `one()`과 따로 두고 `test/runlog.test.js`가 값까지 견준다 — 하네스 판 열쇠를 바꾸면 둘 다.
 - 기록 보내기(CHM-63, `docs/design-notes/telemetry.md` — 사건 표 · 보내는 조건 · HogQL 예시): 호스트가 `chainmate.papercut.kr`이거나 앱(Tauri)이고, `navigator.webdriver`가 아니고, 설정 「기록 보내기」가 켜져 있을 때만 나간다(수업 · 대본 대국 · scratch 판 빼고). 로컬 서버 · smoke · 스크린샷 도구는 0건(smoke 「기록 보내기: 0건」). 판 사건은 화면에서 부르지 않고 `app.cmd`가 `telemetry.js`의 표(`EVENT_MAP` · `commandEvents`)로 옮긴다 — 규칙 사건을 더하거나 `runRow` 열쇠를 바꾸면 그 표와 `test/telemetry.test.js` · telemetry.md도.
+- 순위 서버가 생겼다(CHM-70, `docs/design-notes/leaderboard.md` — 줄 세우기 · API · 스키마 · 한도): 오늘의 대국 판은 넣은 명령을 `run.cmds`에 남기고(`src/sim/daily.js` `createDailyRun` — 화면과 서버가 같은 함수), 서버(`api/_lib/verify.js`)가 그 줄을 같은 규칙으로 처음부터 다시 두어 성적을 스스로 셈한다. 그래서 sim 규칙 · 판 만들기 · 명령 꼴을 바꾸면 서버의 다시 두기도 같이 바뀐다 — 새 명령 종류 · 칸은 `verify.js` `SHAPES`에도 넣는다(`test/daily-verify.test.js` · smoke 「순위 확인」이 잡는다). 배포는 정적 파일과 함수가 한 묶음이고(`vercel.json`), 미리 보기 배포도 프로덕션과 같은 DB(Neon)를 쓴다 — 시험 자료는 `node tools/daily-e2e.mjs --cleanup`으로 지운다.
 
 ### 다음
 1. 사람 판으로 한 번: 처음 켠 10분(수업 열 · 처음 안내 · 카드 글이 읽히나, `docs/reports/ux.md` 「남은 헷갈림」), 미리 보기 · 소리 · 마스터 세기, 5관의 정보량.
