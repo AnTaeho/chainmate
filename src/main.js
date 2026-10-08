@@ -240,7 +240,7 @@ export async function boot(env = {}) {
   win.addEventListener('keydown', (e) => {
     if (e.repeat) return;
     const k = e.key;
-    if ([' ', 'Enter', 'Escape', '1', '2', '3', '4', '5', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(k)) e.preventDefault();
+    if ([' ', 'Enter', 'Escape', 'Backspace', '1', '2', '3', '4', '5', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(k)) e.preventDefault();
     app.key(k);
   });
 

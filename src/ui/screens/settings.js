@@ -2,6 +2,7 @@
 // 맨 아래 수업 · 킹과 다시 두기(다음 새 판의 첫 대국을 킹과 둔다, CHM-22) · 기록 내보내기(사람 판 기록 JSON, CHM-50) · 돌아가기.
 // 기록 내보내기는 줄 하나를 더하면 상자가 화면(270)을 넘어 맨 아래 단추 줄에 둔다.
 // 순위 이름(CHM-70): 「큰 글자」 · 「언어」 줄의 빈 오른쪽 반에 두 줄 — 윗줄 「이름 졸린 수달」, 아랫줄 주사위 「다시 짓기」. 순위에 오른 적이 있을 때만(열쇠가 있을 때) 보인다.
+// 기기 잇기(CHM-71): 언어 줄 오른쪽, 「다시 짓기」 왼쪽에 단추 하나(이름이 없으면 그 자리 오른끝). 판 밖(첫 화면에서 연 설정)에서만 · 순위에 닿는 곳에서만 보인다.
 import { PAL } from '../../render/palette.js';
 import { W, text, box, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
@@ -14,11 +15,16 @@ export const TELEMETRY_TIP = '이름 없이 판 결과만 보낸다 · 화면은
 // 다시 짓기를 가리키면 제목 자리에 뜨는 한 줄(오늘 남은 횟수 — 서버가 알려 준 뒤에만)
 export const rerollTip = (left) => (left == null ? '순위에 오르는 이름을 새로 짓는다' : left > 0 ? `오늘 ${left}번 더 지을 수 있다` : '오늘은 다 지었다 · 내일 다시 지을 수 있다');
 // 이름 줄의 자리(재는 쪽 test/layout.test.js와 같이 쓴다): 이름은 오른끝 맞춤, 「이름」 이름표는 이름 왼쪽에 들어갈 때만
+export const LINK_TIP = '다른 기기와 기록을 잇는다';
 export const NAME_X = 192;
 export function nameRow(x, w, name) {
   const x0 = x + NAME_X, x1 = x + w - PAD_BOX, nw = measure(name, true), lw = measure('이름') + 6;
   return { x0, x1, nameX: x1 - nw, label: x1 - nw - lw >= x0 ? x1 - nw - lw : null };
 }
+
+// 기기 잇기 단추: 순위에 닿는 곳 · 판 밖에서만. 폭은 글에 맞춘다
+export const linkShown = (app) => !!app.rank.allowed && !app.run;
+export const linkW = () => measure('기기 잇기', true) + 12;
 
 export class SettingsScreen {
   constructor(app, { back = null } = {}) { this.app = app; this.back = back; }
@@ -37,6 +43,7 @@ export class SettingsScreen {
     const me = app.rank.player();
     if (ui.isHover('set:telemetry')) text(ctx, TELEMETRY_TIP, W / 2, y + ty, PAL.ink, { align: 'center' });
     else if (me && ui.isHover('set:name')) text(ctx, rerollTip(me.rerolls), W / 2, y + ty, PAL.ink, { align: 'center' });
+    else if (ui.isHover('set:link')) text(ctx, LINK_TIP, W / 2, y + ty, PAL.ink, { align: 'center' });
     else text(ctx, '설정', W / 2, y + ty, PAL.gold, { align: 'center', bold: true });
     const row = (i, label) => { const top = y + rowTops[i]; text(ctx, label, x + PAD_BOX + 4, textY(top, RH), PAL.ink); return top; };
     const set = (k, v) => { s[k] = v; app.saveSettings(); if (app.audio) app.audio.apply(s); app.track('setting_change', { key: k, value: v }, { always: true }); };
@@ -63,12 +70,19 @@ export class SettingsScreen {
     yy = row(4, '큰 글자');
     button(ctx, ui, 'set:big', x + 120, yy, 64, 18, s.big ? '켬' : '끔', { onClick: () => set('big', !s.big), tone: s.big ? 'gold' : 'plain', grow: G });
     // 순위 이름: 큰 글자 줄(4) 오른쪽에 이름, 언어 줄(5) 오른쪽에 「다시 짓기」
+    let linkR = x + w - PAD_BOX;
     if (me) {
       const at = nameRow(x, w, me.name), top4 = y + rowTops[4], top5 = y + rowTops[5];
       if (at.label != null) text(ctx, '이름', at.label, textY(top4, RH), PAL.ink);
       text(ctx, me.name, at.x1, textY(top4, RH), PAL.gold, { align: 'right', bold: true });
       const nw = measure('다시 짓기', true) + 10 + 12;
       button(ctx, ui, 'set:name', at.x1 - nw, top5, nw, RH, '다시 짓기', { icon: diceIcon, enabled: !this.rolling && me.rerolls !== 0, onClick: () => this.reroll(), grow: G });
+      linkR = at.x1 - nw - 6;
+    }
+    // 기기 잇기: 언어 줄(5), 「다시 짓기」 왼쪽
+    if (linkShown(app)) {
+      const lkw = linkW();
+      button(ctx, ui, 'set:link', linkR - lkw, y + rowTops[5], lkw, RH, '기기 잇기', { onClick: () => { app.closeOverlay(); app.go('link'); }, grow: G });
     }
     yy = row(6, '처음 안내');
     button(ctx, ui, 'set:coach', x + 120, yy, 30, 18, s.coach === false ? '끔' : '켬', { onClick: () => set('coach', s.coach === false), tone: s.coach === false ? 'plain' : 'gold', grow: G });

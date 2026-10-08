@@ -6,6 +6,16 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 // 효과 글: 「Condition: effect」, 수치는 +20 Value · ×2 Mult · +$2 · +1 Move. Value · Mult · Target은 늘 대문자, 다른 낱말과 기물 이름은 문장 안에서 소문자.
 export const EN = {
+  // 기기 잇기(CHM-71): 설정 단추 · 기기 잇기 화면
+  '기기 잇기': 'Link devices', '다른 기기와 기록을 잇는다': 'Share your records with another device',
+  '이 기기의 코드': "This device's code", '다른 기기의 코드 넣기': "Enter another device's code", '코드 받기': 'Get a code',
+  '다른 기기에서 이 숫자를 넣는다': 'Type it on the other device', '숫자를 받는 중': 'Getting a code', '시간이 지났다': 'Time ran out',
+  '오늘은 다 받았다': 'No more codes today', '내일 다시 받을 수 있다': 'More tomorrow', '닿지 못했다': "Couldn't connect",
+  '지우기': 'Delete', '잇기': 'Link', '잇는 중': 'Linking', '이어졌다': 'Linked',
+  '이 기기의 기록이 그 기기의 기록과 합쳐진다': "This device's records merge with that device's",
+  '숫자가 맞지 않는다': "Those digits don't match", '시간이 지난 숫자다': 'That code has run out', '이 기기의 숫자다': "That is this device's own code", '잠시 뒤에 다시 넣는다': 'Try again in a while',
+  '이 기기 떼기': 'Unlink this device', '떼기': 'Unlink', '떼어졌다': 'Unlinked', '이 기기 혼자다': 'Only this device',
+  '이 기기만 따로 간다': 'This device splits off', '기록은 양쪽에 남는다': 'Records stay on both', '방금': 'just now',
   // 순위(CHM-70): 순위 화면 · 결과 카드 · 설정 이름 줄
   '순위': 'Ranks', '오늘': 'Today', '어제': 'Yesterday', '이름': 'Name', '닿은 곳': 'Reached',
   '아직 아무도 두지 않았다': 'No one has played yet', '순위에 닿지 못했다': "Couldn't reach the ranks", '순위표를 펴는 중': 'Opening the ranks',
@@ -559,6 +569,15 @@ export const PRE = [
 ];
 
 export const TEMPLATES = [
+  // 기기 잇기(CHM-71)
+  [/^기기 (\d+)대가 이어져 있다$/, (m) => `${m[1]} devices linked`],
+  [/^마지막으로 맞춘 때 (.+)$/, (m, tr) => `Last synced ${tr(m[1])}`],
+  [/^(\d+)분 전$/, (m) => `${m[1]} min ago`],
+  [/^(\d+)시간 전$/, (m) => `${m[1]} h ago`],
+  [/^(\d+)일 전$/, (m) => `${m[1]} d ago`],
+  [/^도감 (\d+)칸이 새로 채워졌다$/, (m) => `${m[1]} new Almanac ${m[1] === '1' ? 'entry' : 'entries'}`],
+  [/^레퍼토리 (\d+)개가 새로 열렸다$/, (m) => `${m[1]} new ${m[1] === '1' ? 'Repertoire' : 'Repertoires'} unlocked`],
+  [/^판 (\d+)개가 더해졌다$/, (m) => `${m[1]} more ${m[1] === '1' ? 'Run' : 'Runs'} counted`],
   // 순위(CHM-70)
   [/^오늘 ([\d,]+)등$/, (m) => `Today #${m[1]}`],
   [/^([\d,]+)등$/, (m) => `#${m[1]}`],
