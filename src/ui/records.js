@@ -137,11 +137,6 @@ export function nextUnlock(rec) {
   return { id: u.id, text: u.text, have: Math.min(u.have(rec), u.need), need: u.need };
 }
 
-// 오늘의 대국: 날짜(YYYY-MM-DD) → 시드. 같은 날엔 모두 같은 판.
-export function dailySeed(date) {
-  let h = 0x811c9dc5;
-  const s = `chainmate:${date}`;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-  return (h >>> 0) % 2147483646 + 1;
-}
+// 오늘의 대국 시드(날짜 → 시드)는 src/sim/daily.js — 서버도 같은 것을 쓴다(CHM-70)
+export { dailySeed } from '../sim/daily.js';
 export const today = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

@@ -6,6 +6,7 @@ import { flowLayer } from '../render/light.js';
 import { factionFor } from '../sim/run.js';
 import { FACTION_BY_ID } from '../data/factions.js';
 import { createRun, applyRun, migrateRun } from '../sim/run.js';
+import { createDailyRun } from '../sim/daily.js';
 import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, lift, fine, measure } from '../render/gfx.js';
 import { wrap } from '../render/text.js';
@@ -193,9 +194,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const old = app.run && !app.run.scratch ? app.run : store.get(KEYS.run);
     if (old && old.track && !old.scratch && old.phase !== 'won' && old.phase !== 'lost') app.keepRun(old, old.endless ? 'endless' : 'quit');
     const script = !!opts.script && !daily;
-    app.run = createRun({ seed, opening: daily ? 'standard' : opts.opening, dan: daily ? 0 : opts.dan || 0, script });
+    // 오늘의 대국 판은 서버와 같은 함수로 만든다(src/sim/daily.js — 넣은 명령을 run.cmds에 남겨 순위에 낸다, CHM-70)
+    app.run = daily ? createDailyRun(daily) : createRun({ seed, opening: opts.opening, dan: opts.dan || 0, script });
     if (script) { app.records.kingDone = true; app.records.kingAgain = false; app.saveRecords(); }
-    if (daily) app.run.daily = daily;
     app.run.track = newTrack({ startedAt: Date.now(), app: app.appInfo });
     app.fresh = [];
     app.tutStep = -1;

@@ -1077,6 +1077,8 @@ export function applyRun(run, cmd) {
     default: throw new Error(`unknown command ${cmd.type}`);
   }
   syncBoards(run);
+  // 오늘의 대국(CHM-70, src/sim/daily.js): 성공한 명령만 차례대로 남긴다 — 서버가 이 줄로 판을 다시 둔다. 끝없는 대국은 순위 밖이라 뺀다
+  if (run.cmds && !run.endless) run.cmds.push(JSON.parse(JSON.stringify(cmd)));
   return events;
 }
 
