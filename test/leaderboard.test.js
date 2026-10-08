@@ -2,8 +2,9 @@
 // · 좋은 기록만 갈아 끼우기 · 순위표 쪽 넘김 · 내 위아래 · 출처 확인 · JSON 읽기. DB는 기억 저장소(test/helpers/memstore.js) — 진짜 SQL은 tools/daily-e2e.mjs가 본다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createService, LIMITS, hashKey, utcDate } from '../api/_lib/service.js';
-import { route, originOk, readJson } from '../api/_lib/http.js';
+import { route, routes, originOk, readJson } from '../api/_lib/http.js';
 import { memStore } from './helpers/memstore.js';
 import { createDailyRun } from '../src/sim/daily.js';
 import { NAME_COUNT } from '../src/data/names.js';
@@ -239,4 +240,31 @@ test('함수: 안에서 난 오류는 500 { error: server }뿐 — 내부 메시
   assert.equal(res.status, 500);
   assert.equal(await res.text(), '{"error":"server"}');
   assert.equal(seen.length, 1);
+});
+
+test('함수: 길 표(routes)는 주소의 마지막 조각으로 고른다 — 모르는 조각 404 not_found · 다른 출처 403 · 한도와 OPTIONS는 route와 같다', async () => {
+  const seen = [];
+  const h = routes('POST', { one: (s, b) => { seen.push(['one', b]); return { status: 200, body: { hit: 'one' } }; }, two: (s, b) => { seen.push(['two', b]); return { status: 200, body: { hit: 'two' } }; } }, fake, { limit: 64 });
+  const post = (path, body = '{}', headers = {}) => h.POST(req(`https://a.b${path}`, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body }));
+  assert.deepEqual(Object.keys(h).sort(), ['OPTIONS', 'POST']);
+  assert.deepEqual(await (await post('/api/x/one', '{"a":1}')).json(), { hit: 'one' });
+  assert.deepEqual(await (await post('/api/x/two?action=one', '{}', { authorization: `Bearer ${'a'.repeat(64)}` })).json(), { hit: 'two' });
+  assert.deepEqual(seen, [['one', { a: 1 }], ['two', { key: 'a'.repeat(64) }]], '주소의 물음은 입력에 섞이지 않는다');
+  for (const path of ['/api/x/nope', '/api/x', '/api/x/toString', '/api/x/constructor']) {
+    const miss = await post(path);
+    assert.deepEqual([miss.status, await miss.json()], [404, { error: 'not_found' }], path);
+  }
+  assert.equal((await post('/api/x/nope', '{}', { origin: 'https://evil.example' })).status, 403);
+  assert.equal((await post('/api/x/one', '{}', { origin: 'https://evil.example' })).status, 403);
+  assert.equal((await post('/api/x/one', JSON.stringify({ pad: 'x'.repeat(64) }))).status, 413);
+  assert.equal((await post('/api/x/one', '{}', { 'content-type': 'text/plain' })).status, 415);
+  const pre = await h.OPTIONS(req('https://a.b/api/x/one', { method: 'OPTIONS', headers: { origin: 'https://a.b' } }));
+  assert.deepEqual([pre.status, pre.headers.get('access-control-allow-methods')], [204, 'POST, OPTIONS']);
+  assert.equal(seen.length, 2);
+});
+
+test('배포: api/ 아래 함수 파일(_lib 밖 .js)은 12개까지 — Vercel Hobby 요금제의 배포당 한도', () => {
+  const root = new URL('../api/', import.meta.url);
+  const files = fs.readdirSync(root, { recursive: true }).map(String).filter((f) => f.endsWith('.js') && !f.split(/[\\/]/).includes('_lib'));
+  assert.ok(files.length > 0 && files.length <= 12, `함수 ${files.length}개: ${files.sort().join(', ')}`);
 });
