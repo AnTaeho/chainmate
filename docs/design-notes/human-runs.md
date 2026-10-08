@@ -1,6 +1,6 @@
 # 사람 판 기록 (CHM-50)
 
-모든 수치(승률 · 곡선 · 희생 세기)는 봇 하네스에서 나왔다. 사람이 둔 판을 같은 잣대로 보려고, 판마다 한 줄 요약을 기기에 남기고 사람이 직접 내보낸다. 서버로 보내지 않는다.
+모든 수치(승률 · 곡선 · 희생 세기)는 봇 하네스에서 나왔다. 사람이 둔 판을 같은 잣대로 보려고, 판마다 한 줄 요약을 기기에 남기고 사람이 직접 내보낸다. 「기록 보내기」를 켜 둔 사람의 같은 한 줄은 판이 끝날 때 PostHog로도 간다(CHM-63, `telemetry.md`).
 
 ## 흐름
 - **세기:** 새 판(`app.newRun`)이 `run.track`(`src/sim/runlog.js` `newTrack`)을 단다. `app.cmd`가 명령마다 `trackCommand`로 센다. 판 저장(`KEYS.run`)에 함께 들어가 이어 하기에도 남는다. 판 시간은 `app.update`가 판이 살아 있는 동안 프레임 시간을 더한다(화면이 숨으면 프레임이 멈춰 세지 않는다).
@@ -10,6 +10,7 @@
 - **내보내기:** 설정 맨 아래 「기록 내보내기」(영어 Export runs). 웹 · 앱(Tauri) 모두 `<a download>` Blob으로 `chainmate-runs-YYYYMMDD-HHMM.json`을 받는다. 받을 길이 없으면 클립보드로 복사하고, 둘 다 안 되면 「내보내지 못했다」. 받은 판 수는 알림 한 줄(「판 N개를 내보냈다」).
   - **폰 브라우저는 공유 시트(CHM-54):** 손가락 기기에서 `navigator.canShare({ files })`가 되면 누른 그 순간 `navigator.share`로 같은 이름의 JSON 파일 하나를 보낸다(iOS 사파리 · 안드로이드 크롬). 데스크톱 크롬 · 사파리에도 share가 있지만 마우스 기기는 받기 그대로다. 공유를 그만두면(AbortError) 알림 없이 끝나고, 다른 까닭으로 실패하면 클립보드 → 「내보내지 못했다」 차례다. 성공 알림은 공유를 마친 뒤에만 뜬다. 손가락 기기의 앱(WKWebView)은 `<a download>`가 아무 일도 하지 않아 받기 길을 건너뛴다(`src/main.js` `share` · `download`, 시험 `test/export.test.js`, 웹 흉내 화면 `docs/shots/fix-54/`).
 - **요약:** `node tools/humans.mjs <내보낸.json> [--vs <run.mjs --dump 파일>]` — 판 승률 · 관별 도달 · 통과 · 점수/목표 · 대국당 희생 · 탁월수 판 · 시너지 판 끝 · 진 대국의 자리 · 단별. 판 단위 수치는 끝낸 판만, 대국 단위 수치는 그만둔 판의 대국도 센다.
+- **모인 판(CHM-63):** `POSTHOG_PERSONAL_KEY=… POSTHOG_PROJECT_ID=… node tools/humans.mjs --posthog [--days 90] [--vs <dump>]` — PostHog에 모인 `run_end`의 `row`를 내려받아 같은 표로 찍는다(키는 환경 변수로만, `telemetry.md` 「`humans.mjs --posthog`」). 두 길 모두 끝난 관 · 레퍼토리 · 격언 · 시너지별 고른 판 수와 그 판 승률 표를 낸다.
 
 ## 열쇠
 내보낸 JSON은 `{ kind: 'chainmate-runs', v: 1, exportedAt, app, runs: [판] }` — 하네스 dump(`{ timeouts, runs }`)처럼 `runs`에 판이 있어 같은 도구로 읽는다.
