@@ -6,6 +6,8 @@ const W_REG = [5,4,4,8,8,10,8,4,4,4,6,8,4,6,4,6,8,6,8,8,8,8,8,8,8,8,4,4,5,6,5,6,
 const W_BOLD = [5,5,6,10,9,12,11,5,5,5,7,9,5,6,5,7,8,5,8,8,8,8,8,8,8,8,5,5,7,6,7,7,9,9,8,8,8,7,7,8,8,5,8,9,7,10,8,8,8,8,8,8,9,8,9,13,8,9,8,5,7,5,6,8,5,7,8,8,8,8,6,8,8,3,5,8,3,11,8,8,8,8,6,7,6,8,8,11,8,8,7,6,5,6,10,5,9,12,10,5,5,12,12,12,12,12,12,12,12,12,8,5,5,6,6];
 const W_MAP = new Map([...W_CHARS].map((c, i) => [c, [W_REG[i], W_BOLD[i]]]));
 const charW = (ch, bold) => { const w = W_MAP.get(ch); return w ? w[bold ? 1 : 0] : ch.charCodeAt(0) > 0x2000 ? 12 : 6; };
+// 글 한 줄의 폭(논리 px) — 시험이 화면 없이 길이 한도를 잴 때(test/names.test.js)
+export const textWidth = (s, bold = false) => [...String(s)].reduce((a, ch) => a + charW(ch, bold), 0);
 export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
   const counter = { calls: 0 };
   function makeCtx(canvas) {
