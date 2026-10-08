@@ -309,5 +309,12 @@ export function rankSubmitProps(st) {
 //   link_redeem { ok, reason }   다른 기기의 코드를 넣었다(reason: bad · expired · self · limit · unreached, 이어졌으면 null)
 //   link_unlink {}   이 기기를 뗐다
 //   save_sync { pulled, pushed, conflict }   하루 동안 저장을 당긴 · 올린 · 어긋난 수(날이 바뀐 뒤 한 번)
+// ── 계정(CHM-72, src/ui/screens/account.js): 아이디 · 비번 · 열쇠 · 이름은 싣지 않는다.
+//   account_signup { ok, reason }   계정을 만들었다(reason: taken · username · weak · has · limit · unreached, 만들었으면 null)
+//   account_login { ok, reason }    들어왔다(reason: bad · locked · other · unreached)
+//   account_logout {}               나갔다
+//   account_password { reset }      비번을 바꿨다(reset: 지금 비번 없이 새로 정했나)
+//   account_delete {}               계정을 지웠다
+export const accountProps = (r) => ({ ok: !!(r && r.ok), reason: r && r.ok ? null : (r && r.why) || 'unreached' });
 export const linkRedeemProps = (r) => ({ ok: !!(r && r.ok), reason: r && r.ok ? null : (r && r.why) || 'unreached' });
 export const saveSyncProps = (m) => (m && (m.pulled || m.pushed || m.conflict) ? { pulled: m.pulled || 0, pushed: m.pushed || 0, conflict: m.conflict || 0 } : null);
