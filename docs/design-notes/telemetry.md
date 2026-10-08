@@ -16,7 +16,7 @@
 | 설정 「기록 보내기」 켬(`settings.telemetry`, 기본 켬) | `enabled()` |
 | 수업 · 대본 대국 · scratch 판이 아님(판 기록과 같은 기준) | `app.track`(scratch) · `commandEvents`(대본 대국) |
 
-- 예외로 늘 나가는 것(조건 위 셋은 그대로): 튜토리얼 진행(`tutorial_*` · `lesson_done`) · `setting_change` · 오류.
+- 예외로 늘 나가는 것(조건 위 셋은 그대로): 튜토리얼 진행(`tutorial_*` · `lesson_done`) · `setting_change` · `rank_submit` · `name_reroll` · 오류.
 - localhost(8123 포함) · Vercel 미리 보기 주소 · smoke · Playwright 도구에서는 0건이다. smoke는 가짜 `fetch` · `sendBeacon` 셈을 「기록 보내기: 0건」으로 찍고, `tools/shots-telemetry.mjs`가 크로미움 · 웹킷에서 로컬 0건과 배포 주소인 척(가로챔) 묶음이 나가는 것을 본다.
 
 ## 익명 방침
@@ -59,6 +59,9 @@
 | `review_open` ★ · `review_replay` ★ | `ante` · `kind` | 복기 카드를 보나 · 다시 두나 |
 | `peek_hover` ★ | `ante` · `blind` | 판 보기 큰 판을 가리켜 보나(판마다 첫 번만) |
 | `setting_change` ★ | `key` · `value` | 무엇을 바꾸나 |
+| `rank_open` ★ | `tab`(today · yesterday) | 순위 화면을 여나 · 어제 것을 보나(CHM-70) |
+| `rank_submit` | `ok`(순위에 올랐나) · `improved`(그날 기록을 갈아 끼웠나) · `rank` · `total` · `stale`(새 배포라 내지 못함) | 오늘의 대국이 순위에 닿는 비율. `app.js`가 제출 결과마다 한 번(`telemetry.js` `rankSubmitProps`). 이름(번호) · 열쇠 · 점수는 싣지 않는다 |
+| `name_reroll` ★ | — | 이름을 다시 짓는 사람 수 |
 | `telemetry_off` | — | 보내기를 끈 사람 수 |
 | `$exception` | `$exception_list`(PostHog Error Tracking 꼴) · `screen` · `app_version` | `window.onerror` · `unhandledrejection`. 같은 메시지 + 첫 스택 줄은 세션에 한 번, 세션당 5건 |
 
