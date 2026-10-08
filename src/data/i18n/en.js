@@ -287,7 +287,7 @@ export const EN = {
   // 혼
   '계승': 'Heir', '사슬이 끝나면 이 기물이 마지막 모습이 된다': 'Chain ends: this piece becomes its last form', '주머니의 기물이 바뀐다 · 킹 모습은 빼고': 'The piece in your bag changes · never into a king',
   '계주': 'Relay', '더 먹을 적이 없으면 손의 다음 기물이 그 칸에서 이어 먹는다': 'When stuck: your next hand piece takes over', '대국마다 한 번 · 이어 먹은 기물도 쓴 것이 된다': 'Once per match · the relay piece is spent too',
-  '역행': 'Backstep', '폰 모습이면 아래 대각으로도 먹는다': 'As a pawn: also takes diagonally backward',
+  '역행': 'Backstep', '폰 모습이면 아래 대각으로도 먹는다': 'As a pawn: takes diagonally backward too',
   '결투': 'Duel', '같은 종류를 두 번 못 먹는다 · 배수 ×2': 'No taking the same kind twice · ×2 Mult', '킹은 빼고': 'Kings excepted',
   '사신': 'Reaper', '킹을 지키는 적을 먹을 때마다 배수 +3': "Each king's guard taken: +3 Mult",
   '도약': 'Pounce', '첫 먹기: 두 칸 안의 적이면 어디든 먹는다': 'First take: any enemy within two squares',
@@ -454,7 +454,7 @@ export const EN = {
   '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 잇는다': 'Once, when stuck: back to your first form',
   '먹을 때마다 한 단계 위 기물이 된다': 'Each take: become the next piece up',
   '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …': '2nd take +10 Value · 3rd +20 · 4th +30 …',
-  '폰 모습이면 여섯째 줄에서 아마존으로 프로모션': 'As a pawn: promote to amazon on the 6th rank',
+  '폰 모습이면 여섯째 줄에서 아마존으로 프로모션': 'As a pawn: amazon promotion on the 6th rank',
   '지키는 적을 무시한다 · 배수 −1': 'Ignore guards · −1 Mult', '지켜진 킹은 먹을 수 없다': 'A guarded king still cannot be taken',
   // 적 특성 · 묘수 · 명인
   '사슬의 첫 먹기로는 못 먹는다': "Can't be a chain's first take", '먹으면 둘레의 적도 함께 먹는다': 'Taking it takes the enemies around it too',
