@@ -33,6 +33,7 @@ export function emptyRecords() {
     reviews: 0,                // 복기 갈림길 카드를 본 수(길 있음 · 길 없음, CHM-59)
     reviewReplays: 0,          // 갈림길 카드에서 「다시 두기」를 누른 수
   };
+  // 칸을 더하면 기기 사이 합치는 규칙도 넣는다(src/ui/merge.js RULES, CHM-71)
 }
 
 export function loadRecords(store) {
