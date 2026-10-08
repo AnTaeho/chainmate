@@ -55,6 +55,7 @@
 ## API
 열쇠는 `Authorization: Bearer <열쇠>` 머리말로 받는다(CHM-72 — 아래 표의 `key`는 옛 꼴이고 한동안 같이 받는다. 「계정」 절 「열쇠 머리말」). 모두 JSON. 오류는 `{ "error": 코드 }`(500은 `server`뿐 — 내부 메시지를 싣지 않는다). 응답은 `Cache-Control: no-store`.
 출처는 같은 출처만 받는다: `Origin`이 없거나 요청 호스트와 같을 때(미리 보기 배포 주소도 자기 호스트면 통과). 그 밖의 출처는 403 `bad_origin`. 앱(Tauri) 출처는 `api/_lib/http.js` `ALLOWED_ORIGINS`에 붙인다.
+Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`로 묶었다(`api/account/[action].js` · `api/link/[action].js` — `api/_lib/http.js` `routes`가 주소의 마지막 조각으로 고르고, 모르는 조각은 404 `not_found`). 지금 함수는 8개이고 `test/leaderboard.test.js`가 12개를 넘으면 실패한다. 묶은 파일에는 POST 길만 둔다 — Vercel이 주소 조각을 물음(`?action=`)으로도 넘기는데 GET 길은 물음을 통째로 입력으로 쓴다.
 
 | 길 | 받는 것 | 주는 것 |
 |---|---|---|
@@ -174,7 +175,7 @@
 ## 기기 잇기 · 클라우드 저장 (CHM-71)
 계정 없이 **코드로 두 기기를 한 플레이어로 잇고**, 플레이어마다 **저장 한 덩이**를 서버에 둔다. 아이디 · 비번 계정은 아래 「계정」(CHM-72).
 
-- 서버: `api/link/code.js` · `redeem.js` · `devices.js` · `unlink.js` · `api/save.js`(로직은 `api/_lib/service.js` — `linkCode` · `linkRedeem` · `linkDevices` · `linkUnlink` · `saveGet` · `savePut`, SQL은 `store.js`).
+- 서버: `api/link/[action].js`(`code` · `redeem` · `devices` · `unlink` 네 길을 한 함수가 받는다) · `api/save.js`(로직은 `api/_lib/service.js` — `linkCode` · `linkRedeem` · `linkDevices` · `linkUnlink` · `saveGet` · `savePut`, SQL은 `store.js`).
 - 화면 쪽: `src/ui/merge.js`(합치는 규칙) · `src/ui/cloud.js`(맞추기 — `createCloud`를 `createApp({ cloud })`로) · `src/ui/rank.js`(열쇠가 드는 부름) · `src/ui/screens/link.js`(기기 잇기 화면) · `screens/settings.js`(「기기 잇기」 단추). 화면의 칸은 `layout.md` 23절, 스크린샷은 `docs/shots/link/`.
 
 ### 잇기
@@ -297,7 +298,7 @@
 ## 계정 (CHM-72)
 아이디 · 비번 계정. 이메일은 없다. 목적은 하나 — 열쇠가 든 브라우저 저장이 지워져도, 어느 기기에서든 들어오면 내 기록 · 순위 이름으로 돌아오는 것.
 
-- 서버: `api/account.js`(GET) · `api/account/signup.js` · `login.js` · `logout.js` · `password.js` · `delete.js`(로직은 `api/_lib/service.js` `account*`, 규칙 · 해시는 `api/_lib/auth.js`, SQL은 `store.js`).
+- 서버: `api/account.js`(GET) · `api/account/[action].js`(`signup` · `login` · `logout` · `password` · `delete` 다섯 길을 한 함수가 받는다)(로직은 `api/_lib/service.js` `account*`, 규칙 · 해시는 `api/_lib/auth.js`, SQL은 `store.js`).
 - 화면 쪽: `src/ui/rank.js`(계정 부름) · `src/ui/screens/account.js`(계정 화면) · `src/ui/textfield.js`(입력 칸 — `layout.md` 24절) · `privacy.html`. 스크린샷 `docs/shots/account/`.
 
 ### 모델
