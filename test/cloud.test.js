@@ -480,13 +480,16 @@ test('앱: 기기 잇기 화면으로 두 기기를 잇는다 — 코드 받기 
   A.app.records.codex.maxims = { m1: true, m2: true }; A.app.records.runs = 6; A.app.saveRecords();
   const click = (x, id) => { tick(x.app, 1); const r = x.app.ui.regions.find((q) => q.id === id); assert.ok(r && r.enabled, id); r.onClick(); };
   // A: 설정 → 기기 잇기 → 코드 받기
+  // 설정의 「계정」 단추는 계정 화면을 연다(CHM-72) — 탭 「기기 잇기」로 간다
   A.app.openOverlay('settings'); click(A, 'set:link');
+  assert.equal(A.app.screen.name, 'account');
+  click(A, 'acct:tab:link');
   assert.equal(A.app.screen.name, 'link');
   click(A, 'link:code'); await settle(); tick(A.app, 1);
   const code = A.app.screen.mine.code;
   assert.match(code, /^\d{8}$/);
   // B: 틀린 숫자 → 한 줄, 맞는 숫자 → 확인 → 이어졌다
-  B.app.openOverlay('settings'); click(B, 'set:link');
+  B.app.openOverlay('settings'); click(B, 'set:link'); click(B, 'acct:tab:link');
   for (const k of '00000000') B.app.key(k);
   B.app.key('Enter'); B.app.key('Enter'); await settle();
   assert.equal(B.app.screen.entry.fail, 'bad');

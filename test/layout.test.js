@@ -953,9 +953,12 @@ test('설정 「기기 잇기」: 언어 줄 오른쪽 — 다시 짓기 · 언�
     assert.ok(link.x >= langBtn.x + langBtn.w + 8, `${lang}: 기기 잇기가 언어 단추에 닿는다 ${link.x} / ${langBtn.x + langBtn.w}`);
     assert.ok(link.x + link.w + 6 <= name.x, `${lang}: 기기 잇기가 다시 짓기에 닿는다`);
     assert.equal(link.w, S.linkW());
-    // 누르면 설정이 닫히고 기기 잇기 화면으로
+    // 누르면 설정이 닫히고 계정 화면으로(CHM-72 — 탭 「기기 잇기」로 기기 잇기 화면)
     link.onClick();
-    assert.deepEqual([a.app.overlay, a.app.screen.name], [null, 'link']);
+    assert.deepEqual([a.app.overlay, a.app.screen.name], [null, 'account']);
+    a.frame();
+    region(a, 'acct:tab:link').onClick();
+    assert.equal(a.app.screen.name, 'link');
     // 판을 두는 중(멈춤에서 연 설정)에는 없다
     a.app.newRun({ seed: 7 });
     a.app.openOverlay('settings', { back: 'pause' });
@@ -1115,6 +1118,116 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
     a.app.key('Escape');
     assert.equal(a.app.screen.name, 'title');
     assert.equal(a.app.stats.errors, 0);
+  }
+  M.lang.setLang('ko');
+});
+
+test('계정 화면: 입력 칸 · 단추가 칸 안에서 서로 닿지 않고, 상태마다(없음 · 한 줄 알림 모두 · 만들었다 · 들어왔다 · 비번 바꾸기 · 나가기 확인 · 지우기 확인 둘 · 가장 넓은 아이디) 글이 넘치지 않는다(한국어 · 영어)', async () => {
+  const K = await import('../src/ui/screens/account.js');
+  const { measure } = await import('../src/render/gfx.js');
+  const lay = K.accountLayout();
+  // 칸: 왼쪽 · 오른쪽 상자가 겹치지 않고 본 칸 안, 단추 줄 위
+  assert.ok(lay.left.x >= 8 && lay.left.x + lay.left.w + 8 <= lay.right.x && lay.right.x + lay.right.w <= 472);
+  assert.ok(lay.left.y >= 32 && lay.left.y + lay.left.h + 8 <= 244);
+  // 입력 칸: 상자 안 · 위쪽 띠(y 110 위 — 폰 키보드) · 손가락 높이 18 · 서로 겹치지 않는다 · 상태 줄 · 단추와도
+  for (const [id, f] of Object.entries(lay.fields)) {
+    const b = id === 'user' || id === 'pass' ? lay.left : lay.right;
+    assert.ok(f.x >= b.x + 8 + K.LABEL_W && f.x + f.w <= b.x + b.w - 8 && f.w >= 120 && f.h === 18, `입력 칸 ${id}`);
+    assert.ok(f.y >= lay.titleY + 14 && f.y + f.h <= 110, `입력 칸 ${id} 위쪽 띠`);
+  }
+  assert.ok(lay.fields.user.y + lay.fields.user.h + 4 <= lay.fields.pass.y && lay.fields.cur.y + lay.fields.cur.h + 4 <= lay.fields.next.y);
+  assert.ok(lay.fields.pass.y + lay.fields.pass.h + 4 <= lay.msgY && lay.msgY + K.MSG_LINES * 14 <= lay.btnY && lay.btn3Y + 18 <= lay.left.y + lay.left.h - 8 && lay.btn2Y + 18 + 8 <= lay.privacyY + 18);
+  assert.equal(K.lockedText(15), '잠겼다 · 15분 뒤에 다시 들어온다');
+
+  for (const lang of LANGS) {
+    const a = await rankApp({ lang, others: 0 });
+    const L = M.lang.L, tag = (s) => `${lang} ${s}`;
+    a.app.go('account');
+    const scr = a.app.screen;
+    await a.settle();
+    const good = (f, name) => {
+      assert.deepEqual(f.bad, [], tag(name));
+      for (const b of f.boxes.filter((q) => q.kind === 'panel')) assert.ok(b.x >= 0 && b.y >= 0 && b.x + b.w <= 480 && b.y + b.h <= 270, tag(`${name}: 상자 ${b.name}`));
+      for (const q of f.texts.filter((t) => t.box && t.box.kind === 'panel')) assert.ok(q.x >= q.box.x + 4 && q.x + q.w <= q.box.x + q.box.w - 4 && q.y + 11 <= q.box.y + q.box.h - 4, tag(`${name}: 「${q.s}」 ${q.x} ~ ${q.x + q.w} / ${q.box.x} ~ ${q.box.x + q.box.w}`));
+      return f;
+    };
+    const said = (f, s) => f.texts.some((q) => q.s === L(s));
+    const reg = (id) => a.app.ui.regions.find((r) => r.id === id);
+    const apart = (ids, name) => { const rs = ids.map(reg); rs.forEach((r, i) => { assert.ok(r, tag(`${name}: ${ids[i]}`)); for (const o of rs.slice(i + 1)) assert.ok(r.x + r.w + 4 <= o.x || o.x + o.w + 4 <= r.x || r.y + r.h + 4 <= o.y || o.y + o.h + 4 <= r.y, tag(`${name}: ${r.id} · ${o.id}`)); }); };
+    // 계정 없음: 이름표 · 입력 칸 둘 · 단추 둘 · 알림 줄 셋 · 처리방침
+    let f = good(a.frame(), '없음');
+    assert.ok(said(f, '계정') && said(f, '아이디') && said(f, '비번') && said(f, '아이디로 들어오기') && said(f, '기기 잇기'));
+    assert.deepEqual(a.app.fields.ids(), ['user', 'pass']);
+    apart(['acct:login', 'acct:signup'], '없음');
+    assert.ok(reg('acct:privacy') && reg('acct:back') && reg('acct:tab:account') && reg('acct:tab:link'));
+    for (const id of ['acct:login', 'acct:signup']) assert.ok(reg(id).x + reg(id).w <= lay.left.x + lay.left.w - 8, tag(id));
+    // 이름표는 입력 칸 왼쪽에 닿지 않는다
+    for (const s of ['아이디', '비번', '지금 비번', '새 비번']) assert.ok(measure(s) + 4 <= K.LABEL_W, tag(`이름표 「${L(s)}」 ${measure(s)}`));
+    // 한 줄 알림: 모두 두 줄 안
+    const { wrap } = await import('../src/render/text.js');
+    for (const [why, s] of [...Object.entries(K.ACCOUNT_FAIL), ['locked', K.lockedText(15)], ['locked1', K.lockedText(1)], ...Object.entries(K.ACCOUNT_OK)]) {
+      assert.ok(wrap(s, lay.left.w - 16).length <= K.MSG_LINES, tag(`알림 ${why} 「${L(s)}」`));
+      scr.msg = { text: s, tone: K.ACCOUNT_OK[why] ? 'gold' : 'red', gain: null };
+      good(a.frame(), `알림 ${why}`);
+    }
+    scr.msg = null;
+    for (const s of [K.LOGOUT_TEXT, K.DELETE_TEXT, K.FORGOT_TEXT]) assert.ok(wrap(s, lay.right.w - 16).length * 14 <= lay.msgY - lay.r1 + 4, tag(`확인 글 「${L(s)}」`));
+    assert.ok(wrap(K.FORGOT_TEXT, lay.right.w - 16).length * 14 <= lay.r2 - lay.r1 + 2, tag('지금 비번 없이 — 새 비번 칸 위에'));
+    // 들어와 있음: 아이디 · 기기 수 · 단추 셋(가장 넓은 아이디 — m 스무 자)
+    for (const username of ['taeho_an', 'm'.repeat(20), 'w_w_w_w_w_w_w_w_w_w_']) {
+      scr.acct = { username, devices: 2 };
+      scr.msg = { text: K.ACCOUNT_OK.in, tone: 'gold', gain: { codex: 12, openings: 0, runs: 0 } };
+      f = good(a.frame(), `들어와 있음 ${username}`);
+      assert.ok(f.texts.some((q) => q.s === username) && said(f, '기기 2대') && said(f, '들어왔다') && said(f, '도감 12칸이 새로 채워졌다'), tag(username));
+      assert.deepEqual(a.app.fields.ids(), [], '들어와 있으면 입력 칸이 없다');
+    }
+    apart(['acct:password', 'acct:logout', 'acct:delete'], '들어와 있음');
+    scr.msg = null;
+    // 비번 바꾸기 · 지금 비번 없이
+    reg('acct:password').onClick();
+    f = good(a.frame(), '비번 바꾸기');
+    assert.deepEqual(a.app.fields.ids(), ['cur', 'next']);
+    apart(['acct:yes', 'acct:no', 'acct:forgot'], '비번 바꾸기');
+    scr.msg = { text: K.ACCOUNT_FAIL.wrongpw, tone: 'red' };
+    good(a.frame(), '비번 틀림');
+    reg('acct:forgot').onClick();
+    f = good(a.frame(), '지금 비번 없이');
+    assert.deepEqual(a.app.fields.ids(), ['next']);
+    // 나가기 확인
+    reg('acct:logout').onClick();
+    f = good(a.frame(), '나가기 확인');
+    assert.deepEqual([scr.mode, a.app.fields.ids()], ['logout', []]);
+    apart(['acct:yes', 'acct:no'], '나가기 확인');
+    // 지우기 확인 둘
+    reg('acct:delete').onClick();
+    f = good(a.frame(), '지우기 확인 1');
+    assert.equal(scr.mode, 'delete1');
+    reg('acct:yes').onClick();
+    scr.msg = { text: K.ACCOUNT_FAIL.wrongpw, tone: 'red' };
+    f = good(a.frame(), '지우기 확인 2');
+    assert.deepEqual([scr.mode, a.app.fields.ids()], ['delete2', ['del']]);
+    apart(['acct:yes', 'acct:no'], '지우기 확인 2');
+    a.app.key('Escape');
+    good(a.frame(), '닫음');
+    assert.equal(scr.mode, null);
+    // 기기 잇기 화면도 같은 머리줄 · 탭
+    reg('acct:tab:link').onClick();
+    f = good(a.frame(), '기기 잇기 탭');
+    assert.ok(a.app.screen.name === 'link' && reg('acct:tab:account') && said(f, '계정'));
+    // 첫 화면 알림 줄: 「처리방침」까지 화면 안, 누르면 쪽을 열고 알림은 그대로
+    a.app.toTitle();
+    a.app.records.coachSeen = {};
+    f = a.frame();
+    assert.deepEqual(f.bad, [], tag('첫 화면 알림'));
+    const T = await import('../src/ui/screens/title.js'), nl = T.noteLayout();
+    assert.ok(nl.x >= 4 && nl.x + nl.w <= 476 && nl.link.x + nl.link.w <= nl.x + nl.w, tag(`알림 줄 ${nl.x} ~ ${nl.x + nl.w}`));
+    assert.ok(f.texts.some((q) => q.s === L(T.NOTE_LINK)));
+    const opened = [];
+    a.app.openPage = (u) => { opened.push(u); return true; };
+    a.app.pointer('down', nl.link.x + 10, nl.link.y + 8); a.app.pointer('up', nl.link.x + 10, nl.link.y + 8);
+    assert.deepEqual([opened, a.app.screen.noteOn()], [['privacy.html'], true]);
+    a.app.pointer('down', 240, 150); a.app.pointer('up', 240, 150);
+    assert.equal(a.app.screen.noteOn(), false);
   }
   M.lang.setLang('ko');
 });

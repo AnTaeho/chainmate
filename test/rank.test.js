@@ -60,7 +60,7 @@ test('열쇠: 처음 필요할 때 만들어 저장에 두고 다시 쓴다 — 
   assert.equal(next.rank.player().name, nameText(s.a, s.n, 'en'), '서버에 묻기 전에도 저장의 이름을 보인다');
   assert.equal(next.rank.player().rerolls, null);
   await next.rank.ensurePlayer(); await next.rank.ensurePlayer();
-  assert.deepEqual(api.named('/api/player').slice(1).map((c) => c.body), [{ key: s.key }]);
+  assert.deepEqual(api.named('/api/player').slice(1).map((c) => [c.body, c.auth]), [[{}, s.key]], '열쇠는 머리말로만(CHM-72)');
   assert.equal(next.rank.player().rerolls, LIMITS.rerolls);
   assert.equal(api.store.players.length, 1);
 });
@@ -118,8 +118,8 @@ test('제출: 켤 때 받은 배포 식별자와 명령 줄을 내고, 서버가
   assert.deepEqual(seen, [[DATE, 'ok']]);
   const sub = api.named('/api/daily/submit');
   assert.equal(sub.length, 1);
-  assert.deepEqual(Object.keys(sub[0].body).sort(), ['build', 'cmds', 'date', 'key']);
-  assert.deepEqual([sub[0].body.build, sub[0].body.date, sub[0].body.key], ['test-build', DATE, stored(storage).key]);
+  assert.deepEqual(Object.keys(sub[0].body).sort(), ['build', 'cmds', 'date'], '열쇠는 본문에 없다(머리말로 — CHM-72)');
+  assert.deepEqual([sub[0].body.build, sub[0].body.date, sub[0].auth], ['test-build', DATE, stored(storage).key]);
   assert.deepEqual(sub[0].body.cmds, cmds);
   assert.equal(storage.getItem(QUEUE_KEY), null);
   // 같은 줄을 또 내면 그대로(improved 거짓)
@@ -223,7 +223,8 @@ test('순위표: 같은 쪽은 30초 동안 다시 묻지 않는다 · 쪽 · �
   const v = rank.board(DATE, 1);
   assert.equal(v.phase, 'ok');
   assert.deepEqual([v.data.total, v.data.page, v.data.pages, v.data.rows.length, v.data.me], [0, 1, 1, 0, null]);
-  assert.ok(api.named('/api/daily/board')[0].query.key, '내 줄을 받으려고 열쇠를 싣는다(순위 화면을 열 때 만든다)');
+  assert.ok(api.named('/api/daily/board')[0].auth, '내 줄을 받으려고 열쇠를 싣는다(순위 화면을 열 때 만든다)');
+  assert.ok(api.calls.every((c) => !/[0-9a-f]{64}/.test(c.url) && !(c.body && c.body.key)), '열쇠는 주소 · 본문에 싣지 않는다(CHM-72)');
   clock.t += CACHE_MS - 1;
   rank.board(DATE, 1); await flush();
   assert.equal(boards(), 1);

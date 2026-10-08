@@ -6,9 +6,10 @@ import { memStore } from './memstore.js';
 // api.mode: 'ok' | 'fail'(망이 끊김 — fetch가 거절) | 'html'(다른 서버가 답함 — JSON이 아닌 404) | 'hang'(답이 안 온다)
 // api.calls: 받은 요청 [{ method, path, query, body }]. api.setBuild(b): 새로 배포된 것처럼 배포 식별자를 바꾼다
 // newCode: 옮기기 코드를 정해 줄 때(없으면 진짜 무작위)
-export function fakeApi({ build = 'test-build', now = () => Date.now(), store = memStore(), rand = Math.random, newCode = null } = {}) {
+// scryptN: 비번 해시의 N — 시험은 작게(진짜 값은 한 번에 수십 ms · 32MiB)
+export function fakeApi({ build = 'test-build', now = () => Date.now(), store = memStore(), rand = Math.random, newCode = null, scryptN = 16 } = {}) {
   const api = { store, mode: 'ok', calls: [], build };
-  const more = newCode ? { newCode } : {};
+  const more = { scryptN, ...(newCode ? { newCode } : {}) };
   let service = createService({ store, build, now, rand, ...more });
   api.setBuild = (b) => { api.build = b; service = createService({ store, build: b, now, rand, ...more }); };
   api.named = (path) => api.calls.filter((c) => c.path === path);
@@ -17,8 +18,11 @@ export function fakeApi({ build = 'test-build', now = () => Date.now(), store = 
     const method = (init.method || 'GET').toUpperCase();
     let body = null;
     try { body = init.body ? JSON.parse(init.body) : null; } catch { body = undefined; }
-    const query = Object.fromEntries(u.searchParams);
-    api.calls.push({ method, path: u.pathname, query, body, keepalive: !!init.keepalive });
+    let query = Object.fromEntries(u.searchParams);
+    // 열쇠 머리말(api/_lib/http.js bearer와 같은 뜻): 머리말이 있으면 그것이 이긴다. calls에는 보낸 그대로(주소 · 본문) + auth(머리말의 열쇠)
+    const h = init.headers || {}, m = /^Bearer\s+(\S+)$/i.exec(h.Authorization || h.authorization || '');
+    api.calls.push({ method, path: u.pathname, query, body, keepalive: !!init.keepalive, auth: m ? m[1] : null, url: String(url) });
+    if (m) { if (method === 'GET') query = { ...query, key: m[1] }; else if (body && typeof body === 'object') body = { ...body, key: m[1] }; else if (body === null) body = { key: m[1] }; }
     if (api.mode === 'hang') return new Promise(() => {});
     if (api.mode === 'fail') throw new TypeError('Failed to fetch');
     const html = { ok: false, status: 404, json: async () => { throw new SyntaxError('Unexpected token <'); } };
@@ -34,6 +38,12 @@ export function fakeApi({ build = 'test-build', now = () => Date.now(), store = 
     else if (method === 'POST' && u.pathname === '/api/link/unlink') r = await service.linkUnlink(body);
     else if (method === 'GET' && u.pathname === '/api/save') r = await service.saveGet(query);
     else if (method === 'PUT' && u.pathname === '/api/save') r = await service.savePut(body);
+    else if (method === 'GET' && u.pathname === '/api/account') r = await service.accountGet(query);
+    else if (method === 'POST' && u.pathname === '/api/account/signup') r = await service.accountSignup(body);
+    else if (method === 'POST' && u.pathname === '/api/account/login') r = await service.accountLogin(body);
+    else if (method === 'POST' && u.pathname === '/api/account/logout') r = await service.accountLogout(body);
+    else if (method === 'POST' && u.pathname === '/api/account/password') r = await service.accountPassword(body);
+    else if (method === 'POST' && u.pathname === '/api/account/delete') r = await service.accountDelete(body);
     if (!r) return html;
     const out = JSON.parse(JSON.stringify(r.body));
     return { ok: r.status >= 200 && r.status < 300, status: r.status, json: async () => out };

@@ -4,11 +4,12 @@ import { compareRank, better } from '../../api/_lib/rank.js';
 export function memStore() {
   const players = [], scores = [], logs = new Map();
   const keys = new Map(), codes = new Map(), limits = new Map(), saves = new Map(); // CHM-71
+  const accounts = new Map(); // CHM-72: username → { playerId, username, hash }
   let seq = 0, tick = 0;
   const ranked = (date) => scores.filter((s) => s.date === date)
     .sort((x, y) => compareRank(x, y) || x.at - y.at || x.pid - y.pid).map((s, i) => ({ ...s, rank: i + 1 }));
   return {
-    players, scores, logs, keys, codes, limits, saves,
+    players, scores, logs, keys, codes, limits, saves, accounts,
     async createPlayer(keyHash, a, n) { const p = { id: String(++seq), keyHash, a, n, rd: null, rn: 0, sd: null, sn: 0 }; players.push(p); keys.set(keyHash, p.id); return { id: p.id, a, n }; },
     // 열쇠 표로 찾고, 옛 배포가 만든 플레이어(players.keyHash에만 있다)는 그 자리에서 옮겨 읽는다
     async getPlayer(keyHash, today) {
@@ -79,6 +80,7 @@ export function memStore() {
       for (const [h, v] of keys) if (v === from) keys.delete(h);
       for (const [h, c] of codes) if (c.playerId === from) codes.delete(h);
       saves.delete(from);
+      for (const [u, a] of accounts) if (a.playerId === from) accounts.delete(u);
       players.splice(players.findIndex((x) => x.id === from), 1);
     },
     async splitKey(keyHash, id, filler) {
@@ -97,5 +99,27 @@ export function memStore() {
       saves.set(id, { rev: baseRev + 1, blob: blobText, updatedAt: now });
       return baseRev + 1;
     },
+    // ── 계정(CHM-72)
+    async findAccount(username) { const a = accounts.get(username); return a ? { ...a } : null; },
+    async accountOfPlayer(id) { const a = [...accounts.values()].find((x) => x.playerId === id); return a ? { username: a.username, hash: a.hash } : null; },
+    async createAccount(id, username, hash) {
+      if (accounts.has(username) || [...accounts.values()].some((x) => x.playerId === id)) return false;
+      accounts.set(username, { playerId: id, username, hash, changed: 0 });
+      return true;
+    },
+    async setPassword(id, hash, now) { const a = [...accounts.values()].find((x) => x.playerId === id); if (a) { a.hash = hash; a.changed = now; } },
+    async dropKey(keyHash, filler) { for (const p of players) if (p.keyHash === keyHash) p.keyHash = filler; keys.delete(keyHash); },
+    async deletePlayer(id) {
+      for (let i = scores.length - 1; i >= 0; i--) if (scores[i].pid === Number(id)) scores.splice(i, 1);
+      for (const k of [...logs.keys()]) if (k.startsWith(`${id}:`)) logs.delete(k);
+      for (const [h, v] of keys) if (v === id) keys.delete(h);
+      for (const [h, c] of codes) if (c.playerId === id) codes.delete(h);
+      for (const [u, a] of accounts) if (a.playerId === id) accounts.delete(u);
+      for (const k of [...limits.keys()]) { const [kind, who] = k.split(':'); if (who === id && kind !== 'login' && kind !== 'loginlock') limits.delete(k); }
+      saves.delete(id);
+      const i = players.findIndex((x) => x.id === id);
+      if (i >= 0) players.splice(i, 1);
+    },
+    async setMark(kind, who, bucket, n) { limits.set(`${kind}:${who}:${bucket}`, n); },
   };
 }
