@@ -5,6 +5,7 @@
 import { KEYS } from './save.js';
 import { setLang } from './lang.js';
 import { mergeInto, cloudRecords, mergeGain } from './merge.js';
+import { saveSyncProps } from './telemetry.js';
 
 export const CLOUD_KEY = 'chainmate.cloud.v1'; // { rev, runAt(판이 끝난 때), setAt, snap, at(마지막으로 맞춘 때), sum }
 export const PUSH_GAP = 15000;                 // 올리기 사이 최소 간격
@@ -35,8 +36,8 @@ export function createCloud({ rank, now = () => Date.now(), setTimer = (fn, ms) 
     s.sum[k]++;
   };
   function tell() {
-    const m = st().sum;
-    if (m && (m.pulled || m.pushed || m.conflict)) app.track('save_sync', { pulled: m.pulled, pushed: m.pushed, conflict: m.conflict }, { always: true });
+    const p = saveSyncProps(st().sum);
+    if (p) app.track('save_sync', p, { always: true });
     st().sum = null;
   }
 

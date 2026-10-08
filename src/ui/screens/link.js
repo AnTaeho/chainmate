@@ -8,6 +8,7 @@ import { button } from '../ui.js';
 import { pageHead } from './common.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, BTN_S, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
+import { linkRedeemProps } from '../telemetry.js';
 
 export const CODE_LEN = 8;
 export const POLL_SEC = 5;       // 코드를 띄운 동안 이어졌는지 묻는 간격
@@ -102,7 +103,7 @@ export class LinkScreen {
     if (e.phase !== 'confirm') return;
     e.phase = 'working';
     app.rank.linkRedeem(e.digits).then(async (r) => {
-      app.track('link_redeem', r.ok ? { ok: true, reason: null } : { ok: false, reason: r.why }, { always: true });
+      app.track('link_redeem', linkRedeemProps(r), { always: true });
       if (!r.ok) { this.entry = { phase: 'type', digits: '', fail: r.why }; return; }
       this.entry = { phase: 'done', name: r.name, gain: null };
       this.devices = r.devices;
