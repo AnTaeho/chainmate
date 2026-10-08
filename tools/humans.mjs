@@ -1,17 +1,32 @@
 // 사람 판 요약(CHM-50): 설정 「기록 내보내기」로 받은 JSON을 판 하네스와 같은 꼴로 찍는다. --vs로 하네스 dump를 나란히.
 //   node tools/humans.mjs <내보낸.json> [--vs <run.mjs --dump 파일>]
+//   node tools/humans.mjs --posthog [--days 90] [--vs <dump>]   PostHog에 모인 판(CHM-63, tools/posthog.mjs)을 같은 표로.
+//     환경 변수 POSTHOG_PERSONAL_KEY(개인 API 키) · POSTHOG_PROJECT_ID가 있어야 한다
 // 판 줄의 열쇠는 하네스 dump와 같다(docs/design-notes/human-runs.md). 판 단위 수치는 끝낸 판(이김 · 짐 · 끝없는 대국)만,
 // 대국 단위 수치(희생 · 진 대국의 자리)는 그만둔 판의 대국까지 센다. 하네스 dump에는 단이 없어(--dan 한 값) 단별은 사람 판만.
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { FAMILIES, THRESHOLDS } from '../src/data/families.js';
+import { JOSEKI_BY_ID } from '../src/data/josekis.js';
+import { MAXIM_BY_ID } from '../src/data/maxims.js';
+import { fetchRows } from './posthog.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
-const file = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--vs');
-if (!file) { console.error('쓰는 법: node tools/humans.mjs <내보낸.json> [--vs <run.mjs dump>]'); process.exit(1); }
+const POSTHOG = args.includes('--posthog');
+const file = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--vs' && args[i - 1] !== '--days');
+if (!file && !POSTHOG) { console.error('쓰는 법: node tools/humans.mjs <내보낸.json> [--vs <run.mjs dump>] · node tools/humans.mjs --posthog [--days 90] [--vs <dump>]'); process.exit(1); }
 const load = (p) => { const d = JSON.parse(readFileSync(p, 'utf8')); return Array.isArray(d) ? d : d.runs || []; };
-const H = load(file);
+let H;
+if (POSTHOG) {
+  const key = process.env.POSTHOG_PERSONAL_KEY, project = process.env.POSTHOG_PROJECT_ID;
+  if (!key || !project) { console.error('PostHog 개인 API 키가 없다 — 환경 변수 POSTHOG_PERSONAL_KEY · POSTHOG_PROJECT_ID를 넣고 다시 부른다(docs/design-notes/telemetry.md)'); process.exit(1); }
+  const days = Number(opt('--days') || 90);
+  const got = await fetchRows({ key, project, days, ...(process.env.POSTHOG_APP_HOST ? { host: process.env.POSTHOG_APP_HOST } : {}) });
+  H = got.runs;
+  console.log(`PostHog 지난 ${days}일: 판 ${H.length}개 · 사람(익명 ID) ${got.people}${got.trimmed ? ` · 대국 줄이 빠진 판 ${got.trimmed}(대국 단위 수치에서 빠진다)` : ''}${got.bad ? ` · 읽지 못한 줄 ${got.bad}` : ''}`);
+} else H = load(file);
+if (!H.length) { console.log('판이 없다'); process.exit(0); }
 const vsFile = opt('--vs');
 const V = vsFile ? load(vsFile) : null;
 
@@ -94,6 +109,32 @@ table(v ? ['관', '진 대국', '점수/목표p50', '|', '봇 진 대국', 'p50'
   h.antes.map((a, i) => (v ? [String(i + 1), String(a.lost), f2(a.lostRatio), '|', String(v.antes[i].lost), f2(v.antes[i].lostRatio)] : [String(i + 1), String(a.lost), f2(a.lostRatio)])));
 const ends = {}; for (const r of H) ends[r.end || '?'] = (ends[r.end || '?'] || 0) + 1;
 console.log(`판이 끝난 꼴: ${Object.entries(ends).map(([k, x]) => `${k} ${x}`).join(' · ')}`);
+
+// 끝난 관: 판이 끝난 관마다 진 판 · 그만둔 판(이긴 판은 8관 뒤)
+console.log('\n끝난 관: 진 판 · 그만둔 판' + (v ? ' — 봇 진 판' : ''));
+{
+  const lostAt = (R, a) => R.filter((r) => r.end !== 'quit' && !r.won && r.ante === a).length;
+  const rows = [];
+  for (let a = 1; a <= 8; a++) rows.push([String(a), String(lostAt(H, a)), String(H.filter((r) => r.end === 'quit' && r.ante === a).length), ...(V ? ['|', String(lostAt(V, a))] : [])]);
+  rows.push(['이김', String(H.filter((r) => r.end !== 'quit' && r.won).length), '-', ...(V ? ['|', String(V.filter((r) => r.won).length)] : [])]);
+  table(V ? ['관', '진 판', '그만둠', '|', '봇 진 판'] : ['관', '진 판', '그만둠'], rows);
+}
+
+// 고른 것별 승률(끝낸 판): 그것을 고른(판 끝에 가진) 판 수와 그 판들의 승률
+function byPick(title, R, idsOf, nameOf, min = 1) {
+  const done = R.filter((r) => r.end !== 'quit');
+  const tally = (D) => { const m = new Map(); for (const r of D) for (const id of new Set(idsOf(r))) { const x = m.get(id) || { n: 0, w: 0 }; x.n++; if (r.won) x.w++; m.set(id, x); } return m; };
+  const h = tally(done), b = V ? tally(V.filter((r) => r.end !== 'quit')) : null;
+  const rows = [...h].filter(([, x]) => x.n >= min).sort((p, q) => q[1].n - p[1].n || q[1].w / q[1].n - p[1].w / p[1].n)
+    .map(([id, x]) => [nameOf(id), String(x.n), pc(x.n / Math.max(1, done.length)), pc(x.w / x.n), ...(b ? ['|', String((b.get(id) || { n: 0 }).n), b.get(id) ? pc(b.get(id).w / b.get(id).n) : '-'] : [])]);
+  console.log(`\n${title}(끝낸 판 ${done.length}, 전체 승률 ${pc(done.filter((r) => r.won).length / Math.max(1, done.length))})`);
+  if (!rows.length) { console.log('  없음'); return; }
+  table(b ? ['', '판', '고른 몫', '승률', '|', '봇 판', '봇 승률'] : ['', '판', '고른 몫', '승률'], rows);
+}
+const named = (by) => (id) => (by[id] && by[id].name ? `${by[id].name} ${id}` : id);
+byPick('레퍼토리별: 고른 판 · 그 판 승률', H, (r) => r.josekis || [], named(JOSEKI_BY_ID));
+byPick('격언별: 판 끝에 가진 판 · 그 판 승률', H, (r) => r.final || [], named(MAXIM_BY_ID));
+byPick(`시너지별: 판 끝에 ${THRESHOLDS[0]} 이상 모은 판 · 그 판 승률`, H, (r) => FAMILIES.filter((f) => ((r.fam || {})[f.id] || 0) >= THRESHOLDS[0]).map((f) => f.id), (id) => FAMILIES.find((f) => f.id === id).name);
 
 console.log('\n단별(사람 판, 끝낸 판)' + (v ? ' — 봇 dump에는 단이 없다(하네스 --dan 한 값)' : ''));
 const dans = [...new Set(H.map((r) => r.dan || 0))].sort((a, b) => a - b);
