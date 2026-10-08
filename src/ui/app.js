@@ -238,7 +238,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (!r || r.scratch) return;   // 수업용 판은 남기지 않는다
     // 저장한 때(updatedAt): 기기 사이에서 더 늦은 판이 이긴다(CHM-71). 끝난 판은 지운 때를 남긴다
     if (r.phase === 'lost' || r.phase === 'won') { if (store.get(KEYS.run)) app.cloud.noteRunEnd(); store.del(KEYS.run); }
-    else { r.updatedAt = app.cloud.now(); store.set(KEYS.run, r); }
+    else { r.updatedAt = app.cloud.now(); store.set(KEYS.run, r); app.cloud.mark(); }
   };
   app.saveSettings = () => { const ok = store.set(KEYS.settings, app.settings); app.cloud.noteSettings(); return ok; };
   // 명령 하나(봇과 같은 명령). 이벤트를 돌려준다.
