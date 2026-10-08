@@ -8,3 +8,5 @@ node_modules/
 *.md
 desktop
 .env*
+.agents
+skills-lock.json
