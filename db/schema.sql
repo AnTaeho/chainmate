@@ -1,4 +1,4 @@
--- 순위(CHM-70, docs/design-notes/leaderboard.md). tools/db-migrate.mjs가 적용한다 — 여러 번 돌려도 안전하게(if not exists)만 쓴다.
+-- 순위(CHM-70, docs/design-notes/leaderboard.md). tools/db-migrate.mjs가 적용한다 — 여러 번 돌려도 안전하게(if not exists · on conflict do nothing)만 쓴다.
 -- 사람을 가리키는 것은 두지 않는다: 무작위 열쇠의 해시 · 이름 번호 · 그날 성적뿐. IP · 기기 정보는 없다.
 
 create table if not exists players (
@@ -37,4 +37,45 @@ create table if not exists daily_logs (
   date         date not null,
   cmds         text not null,
   primary key (player_id, date)
+);
+
+-- ── 기기 잇기 · 클라우드 저장(CHM-71, leaderboard.md 「기기 잇기 · 클라우드 저장」)
+
+-- 플레이어 하나에 열쇠 여럿(기기마다 하나). 열쇠 찾기는 이 표로 한다. players.key_hash는 옛 배포가 읽는 동안 두 벌로 남긴다
+create table if not exists player_keys (
+  key_hash     text primary key,              -- 열쇠의 SHA-256
+  player_id    bigint not null references players(id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  label        text                           -- 기기 이름표(아직 쓰지 않는다)
+);
+create index if not exists player_keys_player on player_keys (player_id);
+-- 옛 열쇠 옮기기: 이미 옮긴 줄은 건너뛴다
+insert into player_keys (key_hash, player_id, created_at)
+  select key_hash, id, created_at from players on conflict (key_hash) do nothing;
+
+-- 옮기기 코드(숫자 여덟 자리)의 해시. 10분 · 한 번
+create table if not exists link_codes (
+  code_hash    text primary key,
+  player_id    bigint not null references players(id) on delete cascade,
+  expires_at   timestamptz not null,
+  used_at      timestamptz
+);
+create index if not exists link_codes_player on link_codes (player_id);
+
+-- 한도 세기: kind(code · redeem · lock · save) · who(플레이어 id, 전체는 0) · bucket(날짜 · 시각 창)
+create table if not exists link_limits (
+  kind         text not null,
+  who          bigint not null default 0,
+  bucket       text not null,
+  n            integer not null default 0,
+  at           timestamptz not null default now(),
+  primary key (kind, who, bucket)
+);
+
+-- 플레이어마다 저장 한 덩이(기록 · 진행 중인 판 · 설정 몇 칸의 JSON 글). rev로 낙관적 잠금
+create table if not exists saves (
+  player_id    bigint primary key references players(id) on delete cascade,
+  rev          integer not null,
+  blob         text not null,
+  updated_at   timestamptz not null default now()
 );
