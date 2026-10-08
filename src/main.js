@@ -4,6 +4,7 @@ import { createApp } from './ui/app.js';
 import { chooseFit, stageTransform, toGame as pointToGame } from './ui/fit.js';
 import { drawPad, resetPad } from './render/backdrop.js';
 import { createTelemetry } from './ui/telemetry.js';
+import { createRank } from './ui/rank.js';
 import { VERSION } from './version.js';
 
 export async function boot(env = {}) {
@@ -165,7 +166,14 @@ export async function boot(env = {}) {
   });
   const track = (name, props) => tel.track(name, props);
   track.off = () => tel.off();
-  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, today: env.today });
+  // 순위(CHM-70, src/ui/rank.js): 배포 주소 · 앱에서만, 자동화 브라우저가 아닐 때만 /api를 부른다(설정 「기록 보내기」와는 상관없다).
+  // env.rankBase: 도구(연기 시험 · 스크린샷 · 실제 서버 확인)가 boot()에 주소 머리를 넘길 때만 — 게임은 주지 않는다
+  const rank = createRank({
+    fetch: typeof win.fetch === 'function' ? (url, init) => win.fetch(url, init) : null,
+    storage: win.localStorage, host: (win.location && win.location.hostname) || '', platform, webdriver: !!nav.webdriver,
+    today: env.today, lang: () => (app ? app.settings.lang : 'ko'), base: env.rankBase ?? null,
+  });
+  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, today: env.today });
   win.addEventListener('error', (e) => tel.error((e && e.error) || (e && e.message) || 'error'));
   win.addEventListener('unhandledrejection', (e) => tel.error((e && e.reason) || 'unhandledrejection'));
   // 화면이 숨거나 떠날 때 남은 것을 보낸다
@@ -174,6 +182,7 @@ export async function boot(env = {}) {
   app.setScale(pendingScale);
   refit();
   tel.open();
+  rank.open();
   if (audio) audio.apply(app.settings);
 
   // 누른 자리 → 게임 좌표(보이는 캔버스 사각형 기준 — 확대 · DPR · 가장자리 여백과 상관없다). 돌려 그렸으면 돌린 축으로 되돌린다

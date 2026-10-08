@@ -23,6 +23,7 @@ import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, to
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
 import { telBefore, commandEvents, runStartProps, runEndProps } from './telemetry.js';
+import { createRank } from './rank.js';
 import { VERSION, COMMIT } from '../version.js';
 import { SCREENS } from './screens/index.js';
 import { coachDown, updateGuide, drawCoach, coachPlan } from './coach.js';
@@ -31,8 +32,9 @@ import { foldSide } from './fold.js';
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // track(name, props): 기록 보내기(CHM-63, src/ui/telemetry.js) — main.js가 넘긴다. 없으면 아무것도 보내지 않는다(Node 시험 · 도구)
+// rank: 순위(CHM-70, src/ui/rank.js createRank) — main.js가 넘긴다. 없으면 닿지 못하는 순위(한 번도 부르지 않는다)
 // platform: 'web' | 'app'(Tauri). share(name, text) · download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, today: dayNow = today }) {
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, today: dayNow = today }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -108,6 +110,12 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.settings.telemetry = !!on;
     app.saveSettings();
     if (on) app.track('setting_change', { key: 'telemetry', value: true }, { always: true });
+  };
+  // 순위(CHM-70): 오늘의 대국 판이 끝나면 넣은 명령 줄을 낸다(서버가 다시 두어 성적을 셈한다). 옛 저장(cmds 없음) · 끝없는 대국의 끝은 내지 않는다
+  app.rank = rank || createRank();
+  app.submitDaily = (run) => {
+    if (!run || run.scratch || run.endless || !run.daily || !Array.isArray(run.cmds)) return null;
+    return app.rank.submit(run.daily, clone(run.cmds));
   };
   app.keepRun = (run, end) => {
     if (!run || run.scratch || !run.track) return -1;
@@ -235,7 +243,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (tb) for (const [name, props] of commandEvents(run, cmd, ev, tb)) app.track(name, props);
     if (prev) {
       trackCommand(run.track, run, cmd, ev, prev);
-      if ((run.phase === 'won' || run.phase === 'lost') && prev.phase !== run.phase) app.keepRun(run, run.phase === 'won' ? 'won' : run.endless ? 'endless' : 'lost');
+      if ((run.phase === 'won' || run.phase === 'lost') && prev.phase !== run.phase) {
+        app.keepRun(run, run.phase === 'won' ? 'won' : run.endless ? 'endless' : 'lost');
+        // 끝난 판의 저장은 바로 아래 save()가 지운다 — 명령 줄은 여기서 챙겨 낸다
+        app.submitDaily(run);
+      }
     }
     app.save();
     if (run.scratch) { if (app.onCommand) app.onCommand(cmd, ev); return ev; }
