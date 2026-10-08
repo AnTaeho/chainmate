@@ -9,9 +9,11 @@ import { pageHead } from './common.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, BTN_S, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { linkRedeemProps } from '../telemetry.js';
+import { mergeGain } from '../merge.js';
 
 export const CODE_LEN = 8;
 export const POLL_SEC = 5;       // 코드를 띄운 동안 이어졌는지 묻는 간격
+export const JOIN_TRIES = 3;     // 이어진 뒤 그 기기의 기록을 당겨 보는 횟수
 const CARD_BG = '#0e1814';
 // 숫자판: 세 줄 × 네 칸(오른쪽 칸이 지우기 · 0 · 잇기)
 export const PAD_ROWS = [['1', '2', '3', 'del'], ['4', '5', '6', '0'], ['7', '8', '9', 'go']];
@@ -61,7 +63,8 @@ export class LinkScreen {
     if (this.mine.phase === 'loading') return;
     this.mine = { phase: 'loading' };
     app.sfx('pick');
-    app.rank.linkCode().then((r) => {
+    // 숫자를 받기 전에 이 기기의 것을 먼저 올려 둔다(넣는 기기가 곧바로 받아 가게)
+    app.cloud.push().then(() => app.rank.linkCode()).then((r) => {
       if (!r.ok) { this.mine = { phase: r.why === 'limit' ? 'limit' : 'unreached' }; return; }
       this.mine = { phase: 'code', code: r.code, ttl: r.ttl, until: app.cloud.now() + r.ttl, base: this.devices };
       this.poll = 0;
@@ -73,6 +76,12 @@ export class LinkScreen {
   // 코드를 띄운 동안: 시간이 지나면 거두고, 몇 초마다 이어졌는지 묻는다
   update(dt) {
     const app = this.app, m = this.mine;
+    // 이어진 뒤: 그 기기가 올린 것이 늦게 닿을 수 있어 몇 번 더 당겨 본다
+    if (m.phase === 'linked' && m.tries < JOIN_TRIES && !m.busy) {
+      this.poll += dt;
+      if (this.poll >= POLL_SEC || !m.tries) this.joinMine(m);
+      return;
+    }
     if (m.phase !== 'code') return;
     if (app.cloud.now() >= m.until) { this.mine = { phase: 'expired' }; return; }
     this.poll += dt;
@@ -82,10 +91,14 @@ export class LinkScreen {
       this.asking = false;
       if (this.mine !== m || n == null || m.base == null || n <= m.base) return;
       // 다른 기기가 이 숫자를 넣었다: 그 기기의 기록을 당겨 온다
-      this.mine = { phase: 'linked', gain: null };
+      this.mine = { phase: 'linked', gain: null, before: JSON.parse(JSON.stringify(app.records)), tries: 0, busy: false };
       app.sfx('buy');
-      app.cloud.join().then((r) => { if (this.mine.phase === 'linked' && r.ok) this.mine.gain = r.gain; }, () => {});
     });
+  }
+  joinMine(m) {
+    const app = this.app;
+    this.poll = 0; m.tries++; m.busy = true;
+    app.cloud.join().then(() => { m.busy = false; m.gain = mergeGain(m.before, app.records); if (gainText(m.gain)) m.tries = JOIN_TRIES; }, () => { m.busy = false; });
   }
 
   // ── 다른 기기의 코드 넣기
