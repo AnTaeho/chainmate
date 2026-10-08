@@ -36,11 +36,11 @@ export function createRank({
   const rank = { allowed, stats, onResult: null };
 
   // 돌려주는 것: { status(0 = 닿지 못함), body }
-  async function call(method, path, body = null) {
+  async function call(method, path, body = null, more = null) {
     stats.requests++;
     let res;
     try {
-      res = await fetch(root + path, { method, cache: 'no-store', ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) });
+      res = await fetch(root + path, { method, cache: 'no-store', ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}), ...(more || {}) });
     } catch { return { status: 0, body: null }; }
     let j = null;
     try { j = await res.json(); } catch { /* JSON이 아니다(다른 서버가 답했다) */ }
@@ -192,6 +192,67 @@ export function createRank({
   };
   rank.status = (date) => (allowed ? subs.get(date) || { date, phase: 'none' } : { date, phase: 'unreached' });
   rank.stale = () => stale;
+
+  // ── 기기 잇기 · 클라우드 저장(CHM-71, leaderboard.md 「기기 잇기 · 클라우드 저장」): 열쇠가 드는 부름은 모두 여기서 한다 — 열쇠는 밖으로 나가지 않는다.
+  // 서버가 열쇠를 모르면(401) 열쇠를 버린다(다음에 필요할 때 새로 만든다)
+  const lost = (r) => { if (r.status === 401) { checked = false; keep(null); pages.clear(); } return r; };
+  rank.hasKey = () => allowed && !!load();
+  // 이 기기의 코드: { ok, code, ttl } | { ok: false, why: 'limit' | 'unreached' }
+  rank.linkCode = async () => {
+    for (let i = 0; i < 2; i++) {
+      const p = await ensurePlayer();
+      if (!p) break;
+      const r = lost(await call('POST', '/api/link/code', { key: p.key }));
+      if (r.status === 401) continue;
+      if (r.status === 200 && typeof r.body.code === 'string') return { ok: true, code: r.body.code, ttl: r.body.ttl };
+      return { ok: false, why: r.status === 429 ? 'limit' : 'unreached' };
+    }
+    return { ok: false, why: 'unreached' };
+  };
+  // 다른 기기의 코드를 넣는다: 받은 새 열쇠로 갈아탄다. { ok, name, devices } | { ok: false, why: 'bad' | 'expired' | 'self' | 'limit' | 'unreached' }
+  rank.linkRedeem = async (code) => {
+    for (let i = 0; i < 2; i++) {
+      const p = await ensurePlayer();
+      if (!p) break;
+      const r = lost(await call('POST', '/api/link/redeem', { key: p.key, code }));
+      if (r.status === 401) continue;
+      if (r.status === 200 && /^[0-9a-f]{64}$/.test(r.body.key || '')) {
+        keep(r.body); checked = true; pages.clear(); subs.clear();
+        return { ok: true, name: nameText(me.a, me.n, lang()), devices: r.body.devices };
+      }
+      return { ok: false, why: { 404: 'bad', 410: 'expired', 429: 'limit' }[r.status] || (r.status === 400 && r.body.error === 'self' ? 'self' : r.status === 400 ? 'bad' : 'unreached') };
+    }
+    return { ok: false, why: 'unreached' };
+  };
+  // 이어진 기기 수(열쇠가 없으면 묻지 않는다). 못 닿으면 null
+  rank.devices = async () => {
+    const p = allowed ? load() : null;
+    if (!p) return null;
+    const r = lost(await call('POST', '/api/link/devices', { key: p.key }));
+    return r.status === 200 && Number.isInteger(r.body.devices) ? r.body.devices : null;
+  };
+  // 이 기기 떼기: 열쇠는 그대로, 서버에서 새 플레이어가 된다. { ok } | { ok: false, why: 'alone' | 'unreached' }
+  rank.unlink = async () => {
+    const p = allowed ? load() : null;
+    if (!p) return { ok: false, why: 'unreached' };
+    const r = lost(await call('POST', '/api/link/unlink', { key: p.key }));
+    if (r.status === 200) { keep({ ...r.body, key: p.key }); pages.clear(); subs.clear(); return { ok: true }; }
+    return { ok: false, why: r.status === 400 ? 'alone' : 'unreached' };
+  };
+  // 저장 덩이 읽기(열쇠가 없으면 묻지 않는다 — status -1). { status, rev, blob }
+  rank.saveGet = async () => {
+    const p = allowed ? load() : null;
+    if (!p) return { status: -1 };
+    const r = lost(await call('GET', `/api/save?key=${p.key}`));
+    return r.status === 200 ? { status: 200, rev: r.body.rev || 0, blob: r.body.blob || null } : { status: r.status };
+  };
+  // 저장 덩이 올리기(열쇠가 없으면 make일 때만 만든다). { status, rev, blob(409일 때 서버 것) }
+  rank.savePut = async (baseRev, blob, { keepalive = false, make = true } = {}) => {
+    const p = !allowed ? null : make ? await ensurePlayer() : load();
+    if (!p) return { status: 0 };
+    const r = lost(await call('PUT', '/api/save', { key: p.key, baseRev, blob }, keepalive ? { keepalive: true } : null));
+    return { status: r.status, rev: r.body ? r.body.rev : null, blob: r.body ? r.body.blob || null : null };
+  };
 
   // 켤 때: 배포 식별자를 받아 두고(실패해도 조용히), 못 보낸 판이 있으면 한 번 더
   rank.open = async () => {

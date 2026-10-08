@@ -24,6 +24,7 @@ import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
 import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps } from './telemetry.js';
 import { createRank } from './rank.js';
+import { createCloud } from './cloud.js';
 import { VERSION, COMMIT } from '../version.js';
 import { SCREENS } from './screens/index.js';
 import { coachDown, updateGuide, drawCoach, coachPlan } from './coach.js';
@@ -33,8 +34,9 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // track(name, props): 기록 보내기(CHM-63, src/ui/telemetry.js) — main.js가 넘긴다. 없으면 아무것도 보내지 않는다(Node 시험 · 도구)
 // rank: 순위(CHM-70, src/ui/rank.js createRank) — main.js가 넘긴다. 없으면 닿지 못하는 순위(한 번도 부르지 않는다)
+// cloud: 클라우드 저장(CHM-71, src/ui/cloud.js createCloud) — main.js가 넘긴다. 없으면 아무것도 맞추지 않는다
 // platform: 'web' | 'app'(Tauri). share(name, text) · download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, today: dayNow = today }) {
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, today: dayNow = today }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -88,7 +90,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.records = loadRecords(store);
   setLang(app.settings.lang);
   app.fresh = [];   // 이번 판에 새로 채운 도감 칸
-  app.saveRecords = () => store.set(KEYS.records, app.records);
+  app.saveRecords = () => { const ok = store.set(KEYS.records, app.records); if (app.cloud) app.cloud.mark(); return ok; };
   // 사람 판 기록(CHM-50): 판마다 run.track에 세고, 판이 끝나면 한 줄을 KEYS.runs에 남긴다. 수업 · 대본 대국 · scratch 판은 남기지 않는다
   app.appInfo = { version: VERSION, commit: COMMIT, platform };
   // 기록 보내기(CHM-63): scratch 판 위에서는 always(수업 진행 · 설정)만 나간다. 판 사건은 app.cmd가 표(commandEvents)로 옮긴다
@@ -115,6 +117,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   // 낸 결과(올랐나 · 등수)만 기록 보내기로 알린다 — 이름 · 열쇠는 싣지 않는다
   app.rank = rank || createRank();
   app.rank.onResult = (date, st) => { const p = rankSubmitProps(st); if (p) app.track('rank_submit', p, { always: true }); };
+  // 클라우드 저장(CHM-71): 기록 · 진행 중인 판을 서버의 한 덩이와 맞춘다. 화면에는 드러내지 않는다
+  app.cloud = cloud || createCloud({ rank: app.rank });
+  app.cloud.attach(app);
   app.submitDaily = (run) => {
     if (!run || run.scratch || run.endless || !run.daily || !Array.isArray(run.cmds)) return null;
     return app.rank.submit(run.daily, clone(run.cmds));
@@ -170,6 +175,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     run.recorded = true;
     run.recordedOut = out;
     app.saveRecords();
+    app.cloud.touch(); // 판 수 · 해금까지 적힌 뒤의 기록을 올린다
     return out;
   };
 
@@ -230,10 +236,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.save = () => {
     const r = app.run;
     if (!r || r.scratch) return;   // 수업용 판은 남기지 않는다
-    if (r.phase === 'lost' || r.phase === 'won') store.del(KEYS.run);
-    else store.set(KEYS.run, r);
+    // 저장한 때(updatedAt): 기기 사이에서 더 늦은 판이 이긴다(CHM-71). 끝난 판은 지운 때를 남긴다
+    if (r.phase === 'lost' || r.phase === 'won') { if (store.get(KEYS.run)) app.cloud.noteRunEnd(); store.del(KEYS.run); }
+    else { r.updatedAt = app.cloud.now(); store.set(KEYS.run, r); }
   };
-  app.saveSettings = () => store.set(KEYS.settings, app.settings);
+  app.saveSettings = () => { const ok = store.set(KEYS.settings, app.settings); app.cloud.noteSettings(); return ok; };
   // 명령 하나(봇과 같은 명령). 이벤트를 돌려준다.
   app.cmd = (cmd) => {
     const run = app.run;
@@ -252,6 +259,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       }
     }
     app.save();
+    // 맞추는 때(CHM-71): 판이 끝남 · 상점을 떠남 · 관 선택에 섬
+    if (prev && (prev.phase !== run.phase) && (run.phase === 'won' || run.phase === 'lost' || run.phase === 'select' || prev.phase === 'shop')) app.cloud.touch();
     if (run.scratch) { if (app.onCommand) app.onCommand(cmd, ev); return ev; }
     const before = app.fresh.length;
     observe(app.records, app.run, ev, app.fresh);
@@ -279,7 +288,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     else app.goPhase();
   };
   // 따라 하는 길도 닫는다(수업 ⑩의 길은 화면이 아니라 판에 걸려 있어 화면을 떠나도 남는다)
-  app.toTitle = () => { app.overlay = null; app.guide = null; app.run = null; app.fx.clear(); app.go('title'); };
+  // 두는 동안 다른 기기에서 온 더 늦은 판은 여기서 반영한다(cloud.settle)
+  app.toTitle = () => { app.overlay = null; app.guide = null; app.run = null; app.fx.clear(); app.cloud.settle(); app.go('title'); };
 
   // ── 효과
   app.shake = (px, dur = 0.25) => {
