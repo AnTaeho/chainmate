@@ -10,3 +10,4 @@ desktop
 .env*
 .agents
 skills-lock.json
+db/
