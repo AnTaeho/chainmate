@@ -115,6 +115,7 @@
   - 도감 명경기 칸 말풍선(CHM-46, 자리 119~165): 불멸의 대국 둘째 조각 「Take two rooks in one unbroken chain」 → 「Two rooks in one unbroken chain」(168 → 154, 자리 165).
   - 판본 격언 카드 160: Shadow Reading은 옛 「See 2 waves · Drop on one」으로 되돌렸다. Back Rank Dream · Trophy Case · Passed Pawn · Long Diagonal · Specialty도 줄였다.
   - 혼 카드: Mimic · Echo · Martyr · Relay · Ripple을 줄였다.
+  - 혼 깃든 특수 기물 카드(CHM-63): 특수 기물은 시너지 칩 줄(+22)이 있어 효과 글이 다섯 줄까지다(160). 역행 「As a pawn: also takes diagonally backward」 · 선봉 「As a pawn: promote to amazon on the 6th rank」가 「이름 Soul:」 뒤에서 여섯 줄(172)이 돼 꾸러미 칸이 주머니 줄을 2 덮었다 → 「As a pawn: takes diagonally backward too」 · 「As a pawn: amazon promotion on the 6th rank」(다섯 줄, 158).
   - 카드 아래 쓰는 법 줄(폭 94): Onto a piece · Into a piece · Evolve one · In a match.
   - 관 선택 카드: Clock −1. 설정 오프닝 규칙 줄: Fewer big chests · Fewer fragments.
 - 낱말 풀이 화면은 낱말 칸이 100 폭이다. 「Sacrifice synergy」 · 「Counter synergy」 · 「Ambush synergy」는 바꾸기 전에도 풀이 글을 덮고 있었다(smoke가 재지 않는 화면). 그래서 시너지 낱말의 제목에서 synergy를 뺐다(Rider · Fortress …). 탭 이름이 Synergy이고, 글 안에서는 여전히 「Rider synergy」 꼴을 찾아 빛낸다.
