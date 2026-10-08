@@ -236,7 +236,9 @@ async function allItems(price = true) {
   for (const f of Object.keys(D.charts.CHARTS)) a.push({ kind: 'chart', form: f });
   for (const l of D.legends.LEGENDS) a.push({ kind: 'fragment', legend: l.id });
   // 깨우기 · 혼 깃든 기물도 진열에 나온다(깨우기는 금이 간 혼이 있을 때 — CHM-42 전엔 이 목록에 없어 160 한도도 재지 않았다)
-  for (const s of D.souls.SOULS) a.push({ kind: 'piece', t: 'N', soul: s.id });
+  // 혼은 모든 기물 종류에 깃들어 나온다(sim/shop.js rollItem). 특수 기물은 시너지 칩 줄(+22)이 있어 나이트보다 높다 — 나이트만 재던 때는
+  // 영어 「특수 기물 + 역행 · 선봉의 혼」(효과 여섯 줄 + 칩 = 172)이 한도 160을 넘어 꾸러미 칸이 주머니 줄을 덮는 것을 놓쳤다(CHM-63)
+  for (const t of Object.keys(D.pieces.PIECES)) if (!D.pieces.PIECES[t].thing && t !== 'K') for (const s of D.souls.SOULS) a.push({ kind: 'piece', t, soul: s.id });
   a.push({ kind: 'evolve' }, { kind: 'awaken' }, { kind: 'gamble', id: 'potion' }, { kind: 'gamble', id: 'roulette' });
   if (price) for (const it of a) it.price = 13;
   return a;
@@ -249,11 +251,12 @@ test('상점: 모든 진열 카드(판본 · 명국 조각 포함) → 꾸러미
   const items = await allItems(true);
   for (const lang of LANGS) {
     M.lang.setLang(lang);
-    const pack = Math.max(...['piece', 'chart', 'engraving', 'golden'].map((kind) => Math.max(packCellH({ kind }, CARD.w), packCellH({ kind }, 72))));
+    // 꾸러미 칸 폭: 둘까지 108 · 셋 72 · 넷 53(shop.js centerLayout), 연 칸도
+    const pack = Math.max(...['piece', 'chart', 'engraving', 'golden'].map((kind) => Math.max(...[CARD.w, 72, 53].map((w) => Math.max(packCellH({ kind }, w), packCellH({ kind, sold: true }, w))))));
     // 진열 카드는 찜 책갈피 자리를 머릿말에서 뺀다(hold, CHM-58 F) — 머릿말이 한 줄 더 접혀도 한도 안
     for (const it of items) for (const hold of [false, true]) {
       const h = M.parts.itemCardH(it, CARD.w, { run, hold });
-      assert.ok(TOP + h + GAP_GROUP + pack + GAP_GROUP + 28 <= BOTTOM, `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend} ${it.edition || ''}${hold ? ' 찜' : ''} ${h}`);
+      assert.ok(TOP + h + GAP_GROUP + pack + GAP_GROUP + 28 <= BOTTOM, `${lang} ${it.kind} ${it.id || it.t || it.form || it.legend} ${it.edition || it.soul || ''}${hold ? ' 찜' : ''} ${h}`);
     }
   }
 });
