@@ -85,7 +85,7 @@ async function makeApp({ save = false, calm = false } = {}) {
 function drawTitle(app, ctx) {
   app.ui.begin();
   app.screen.draw(ctx, app.ui);
-  const ids = app.ui.regions.map((r) => r.id);
+  const ids = app.ui.regions.filter((r) => !r.passive).map((r) => r.id); // 누르지 못하는 구역(처음 안내가 가리키는 네모)은 빼고
   app.ui.end();
   return ids;
 }
@@ -115,8 +115,8 @@ test('움직임 줄이기: 하늘의 사슬 · 흔들림 · 번쩍임 · 로고 
   assert.notDeepEqual(d.calls, e.calls);
 });
 
-test('메뉴: 구역 일곱(저장 있음) · 여섯(저장 없음), 주인공 단추가 먼저, 키보드로 고른다', async () => {
-  const ALL = ['title:continue', 'title:new', 'title:lesson', 'title:daily', 'title:codex', 'title:records', 'title:settings'];
+test('메뉴: 구역 여덟(저장 있음 — 아이콘 일곱 칸은 폭 68) · 일곱(저장 없음 — 여섯 칸은 폭 72), 주인공 단추가 먼저, 키보드로 고른다', async () => {
+  const ALL = ['title:continue', 'title:new', 'title:lesson', 'title:daily', 'title:rank', 'title:codex', 'title:records', 'title:settings'];
   for (const n of [1, 2, 3]) {
     LOOK.n = n;
     const yes = await makeApp({ save: true });
@@ -132,7 +132,7 @@ test('메뉴: 구역 일곱(저장 있음) · 여섯(저장 없음), 주인공 �
   // 구역: 화면 안, 서로 겹치지 않고, 아이콘 칸은 누르기 쉬운 크기(높이 44 · 폭 60 이상)
   const app = await makeApp({ save: true });
   drawTitle(app, rec().ctx);
-  const rs = app.ui.regions;
+  const rs = app.ui.regions.filter((r) => !r.passive); // 누르지 못하는 구역(처음 안내가 가리키는 네모)은 빼고
   for (const r of rs) assert.ok(r.x >= 0 && r.y >= 0 && r.x + r.w <= 480 && r.y + r.h <= 270, r.id);
   for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
     const a = rs[i], b = rs[j];
@@ -140,6 +140,9 @@ test('메뉴: 구역 일곱(저장 있음) · 여섯(저장 없음), 주인공 �
   }
   for (const r of rs.slice(1)) assert.ok(r.h >= 44 && r.w >= 60, `${r.id} ${r.w}×${r.h}`);
   assert.ok(rs[0].h >= 30 && rs[0].w >= 112);
+  // 아이콘 일곱 칸(순위가 든 뒤, CHM-70)은 칸 폭 68, 여섯 칸은 72 — 구역은 칸보다 4 좁다
+  assert.equal(T.rowCw(7), 68); assert.equal(T.rowCw(6), 72);
+  assert.deepEqual(rs.slice(1).map((r) => r.w), Array(7).fill(64));
   // 키보드: 아래 → 줄, 좌우 → 옆 칸, 위 → 주인공, Enter → 그 항목
   const scr = app.screen;
   assert.equal(scr.sel, 0);
@@ -148,7 +151,7 @@ test('메뉴: 구역 일곱(저장 있음) · 여섯(저장 없음), 주인공 �
   scr.key('ArrowUp'); assert.equal(scr.sel, 0);
   scr.key('ArrowDown'); assert.equal(scr.sel, 3, '줄로 돌아가면 고르던 칸');
   scr.key('ArrowLeft'); scr.key('ArrowLeft'); scr.key('ArrowLeft'); assert.equal(scr.sel, 0);
-  scr.key('ArrowLeft'); assert.equal(scr.sel, 6, '왼쪽 끝에서 돌아 줄 끝');
+  scr.key('ArrowLeft'); assert.equal(scr.sel, 7, '왼쪽 끝에서 돌아 줄 끝');
   scr.key('Enter');
   assert.equal(app.overlay && app.overlay.name, 'settings');
 });

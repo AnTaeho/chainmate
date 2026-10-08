@@ -54,9 +54,11 @@ export const LOGO_Y = 34, SUB_Y = 82;
 export const TELEMETRY_NOTE = '판 결과를 이름 없이 모은다 · 설정에서 끌 수 있다';
 export const NOTE_Y = 4, NOTE_H = 16;
 export const HERO = { w: 112, h: 26, y: 196 };
+// 아이콘 줄 칸 폭: 여섯 칸까지 72, 일곱 칸(저장이 있을 때 — 「순위」가 든 뒤, CHM-70)이면 화면 폭에 맞춰 68
 export const ROW = { y: 226, cw: 72, box: 22, boxH: 16 };
+export const rowCw = (n) => (n * ROW.cw > W - 4 ? Math.floor((W - 4) / n) : ROW.cw);
 
-const ICON = { 'title:continue': 'menu_continue', 'title:new': 'menu_new', 'title:lesson': 'menu_lesson', 'title:daily': 'menu_daily', 'title:codex': 'menu_codex', 'title:records': 'menu_records', 'title:settings': 'menu_settings' };
+const ICON = { 'title:continue': 'menu_continue', 'title:new': 'menu_new', 'title:lesson': 'menu_lesson', 'title:daily': 'menu_daily', 'title:rank': 'menu_rank', 'title:codex': 'menu_codex', 'title:records': 'menu_records', 'title:settings': 'menu_settings' };
 
 export class TitleScreen {
   constructor(app) {
@@ -78,6 +80,7 @@ export class TitleScreen {
     const rest = [
       ['title:lesson', '수업', () => app.go('lessons')],
       ['title:daily', '오늘의 대국', () => app.newRun({ daily: true })],
+      ['title:rank', '순위', () => app.go('rank')],
       ['title:codex', '도감', () => app.go('codex')],
       ['title:records', '기록', () => app.go('records')],
       ['title:settings', '설정', () => app.openOverlay('settings')],
@@ -110,6 +113,9 @@ export class TitleScreen {
   draw(ctx, ui) {
     const app = this.app;
     if (app.pixelScale && app.pixelScale < 2 && !app.settings.big) hint(app, 'bigText', 'title:settings');
+    // 순위에 이름이 생긴 뒤 첫 화면에 돌아온 순간 한 번(CHM-70): 이름은 설정에서 다시 짓는다 — 설정 칸을 가리킨다.
+    // 가리키는 네모는 설정 칸에서 화면 오른끝까지(누르지 못하는 구역 — drawMenu): 말풍선(폭 176)이 오른끝에 붙어 주인공 단추를 덮지 않는다
+    if (app.rank.player()) hint(app, 'rankName', 'title:settings:tip');
     const f = (this.snap = this.sky());
     const [dx, dy] = f.shake;
     // 달밤: 멈춘 바탕 · 별 · 실루엣(흔들림을 따라 정수 칸으로 옮긴다)
@@ -172,11 +178,12 @@ export class TitleScreen {
     text(ctx, hlabel, W / 2, hy + 6, PAL.linkInk, { align: 'center', bold: true });
     closeBox();
     // 아이콘 줄: 같은 폭 칸, 칸마다 어두운 상자 + 도트 아이콘 + 이름(넘치면 낱말 단위 두 줄). 고른 칸은 한 칸 들리고 금빛 테
-    const row = items.slice(1), n = row.length, x0 = Math.round(W / 2 - (n * ROW.cw) / 2);
+    const row = items.slice(1), n = row.length, CW = rowCw(n), x0 = Math.round(W / 2 - (n * CW) / 2);
     row.forEach(([id, label, fn], k) => {
       const i = k + 1, on = this.sel === i;
-      const cx = x0 + k * ROW.cw + ROW.cw / 2, rx = x0 + k * ROW.cw + 2, rw = ROW.cw - 4, rh = H - ROW.y;
+      const cx = x0 + k * CW + CW / 2, rx = x0 + k * CW + 2, rw = CW - 4, rh = H - ROW.y;
       ui.region(id, rx, ROW.y, rw, rh, { onClick: fn });
+      if (id === 'title:settings') ui.region('title:settings:tip', rx, ROW.y, W - 2 - rx, rh, { passive: true });
       openBox('tile', rx, ROW.y, rw, rh, 0, { name: id });
       const lift = (on ? 1 : 0) - pressed(id);
       const bx = cx - ROW.box / 2, by = ROW.y + 2 - lift;
@@ -185,7 +192,8 @@ export class TitleScreen {
       // 기록 알림이 떠 있는 동안 설정 칸에 금빛 테가 깜박인다
       else if (id === 'title:settings' && this.noteOn() && (app.reducedMotion || Math.floor(app.time * 2) % 2 === 0)) frame(ctx, bx - 1, by - 1, ROW.box + 2, ROW.boxH + 2, PAL.goldHi);
       drawIcon(ctx, ICON[id], cx - 6, by + 2);
-      const lines = wrap(label, rw - 2);
+      // 일곱 칸(폭 68)은 구역 폭을 다 쓴다 — 「오늘의 대국」(63)이 한 줄에 들어간다
+      const lines = wrap(label, n > 6 ? rw : rw - 2);
       const ly = (lines.length > 1 ? ROW.y + 20 : ROW.y + 22) - lift;
       lines.forEach((s, j) => text(ctx, s, cx, ly + j * 11, on ? PAL.goldHi : PAL.dim, { align: 'center', shadow: PAL.shadow }));
       closeBox();
