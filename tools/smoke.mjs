@@ -41,7 +41,16 @@ globalThis.document = dom.document;
 globalThis.window = dom.window;
 // 기록 보내기(CHM-63): 가짜 fetch · sendBeacon으로 나간 요청을 센다 — 연기 시험에서는 한 건도 나가면 안 된다(보내는 호스트가 아니다)
 const telSent = { n: 0 };
-dom.window.fetch = async () => { telSent.n++; return { ok: true }; };
+// 순위(CHM-70): /api로 가는 요청은 가짜 서버(진짜 요청 → 응답 로직 api/_lib/service.js + 기억 저장소 — test/helpers/fakeapi.js)가 받는다.
+// 서버의 「오늘」은 연기 시험의 고정 날짜. 다른 사람들의 성적을 오늘 · 어제에 미리 넣어 둔다(쪽 넘김 · 긴 이름 · 큰 점수)
+const { fakeApi, seedBoard, demoRows } = await import('../test/helpers/fakeapi.js');
+const { shiftDate, PLAYER_KEY } = await import('../src/ui/rank.js');
+let rankRng = 20261007;
+const rankApi = fakeApi({ build: 'smoke', now: () => Date.parse(`${DATE}T12:00:00Z`), rand: () => { rankRng = (rankRng * 1103515245 + 12345) & 0x7fffffff; return rankRng / 0x80000000; } });
+await seedBoard(rankApi, DATE, demoRows(24));
+await seedBoard(rankApi, shiftDate(DATE, -1), demoRows(13));
+const netSettle = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
+dom.window.fetch = async (url, init) => { if (String(url).startsWith('/api/')) return rankApi.fetch(url, init); telSent.n++; return { ok: true }; };
 dom.window.navigator = { sendBeacon: () => { telSent.n++; return true; } };
 const { boot } = await import('../src/main.js');
 const lessonMod = await import('../src/ui/lessons.js');
@@ -116,7 +125,7 @@ let app = null;
 
 async function start() {
   if (LANG !== 'ko') dom.store.set('chainmate.settings.v1', JSON.stringify({ lang: LANG }));
-  app = await boot({ window: dom.window, document: dom.document, today: () => DATE });
+  app = await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '' });
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -408,6 +417,8 @@ const HINT_SUBJECT = {
   next: (id, run) => id === 'next' && scrName() === 'battle' && !!run.battle && nextDraws(run.battle).length > 0,
   // 판 보기(CHM-61): 지금 대국 카드(작은 판이 있는 카드)
   preview: (id, run) => scrName() === 'select' && id === `select:board:${run.blind}`,
+  // 순위(CHM-70): 순위에 이름이 생긴 뒤의 첫 화면 설정 칸(이름은 설정에서 다시 짓는다)
+  rankName: (id) => scrName() === 'title' && id === 'title:settings:tip' && !!app.rank.player(),
   brilliant: (id, run) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')], off = run.battle && run.battle.offering; return !!(p && off && (off.drawn || []).includes(p.id)); },
 };
 function hintSubject() {
@@ -417,7 +428,7 @@ function hintSubject() {
   const r = region(h.regionId), run = app.run;
   let ok = !!r && r.x >= 0 && r.y >= 0 && r.x + r.w <= 480 && r.y + r.h <= 270;
   if (ok && h.id.startsWith('faction_')) ok = scrName() === 'select' && h.regionId === 'faction' && !!run && factionFor(run, run.ante) === h.id.slice(8);
-  else if (ok) ok = !!HINT_SUBJECT[h.id] && (h.id === 'bigText' || !!run) && HINT_SUBJECT[h.id](h.regionId, run);
+  else if (ok) ok = !!HINT_SUBJECT[h.id] && (h.id === 'bigText' || h.id === 'rankName' || !!run) && HINT_SUBJECT[h.id](h.regionId, run);
   if (!subj.ids.has(key)) { subj.ids.add(key); subj.n++; }
   if (!ok && subj.bad.length < 20 && !subj.bad.includes(key)) subj.bad.push(key);
   // 같은 안내 두 번: 본 것으로 적힌 뒤 또 떴다
@@ -829,7 +840,7 @@ async function reload() {
   seen();
   // 앞 앱은 같은 가짜 창에 듣개가 남아 있다: 누르기가 앞 앱 화면에도 닿지 않게 끊는다
   app.pointer = () => {}; app.key = () => {};
-  app = await boot({ window: dom.window, document: dom.document, today: () => DATE });
+  app = await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '' });
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -1156,6 +1167,76 @@ const boardCheck = { cmds: 0, bytes: 0, ms: 0, same: false, screen: null, server
   try { const { used, ...got } = verifyDaily(DATE, sent); boardCheck.server = got; boardCheck.used = used; } catch (e) { boardCheck.error = `${e.code || e.message}${e.at != null ? ` @${e.at}` : ''}`; }
   boardCheck.ms = Math.round(performance.now() - t0);
   boardCheck.same = !!boardCheck.server && JSON.stringify(boardCheck.server) === JSON.stringify(boardCheck.screen) && boardCheck.used === boardCheck.cmds;
+}
+// ── 순위(CHM-70): 방금 끝낸 오늘의 대국 판이 순위에 오르고(제출 한 번), 결과 카드에 등수와 이웃이 보이고, 「순위 보기」 → 쪽 넘김 → 내 줄 → 어제 탭 →
+// 돌아와 설정에서 다시 지으면 이름이 바뀐다. 그리는 동안 글 넘침 · 자리 규칙 · 처음 안내는 pump가 잰다
+const rankSeen = { submit: 0, card: '', neighbours: 0, hint: 0, open: 0, pages: 0, turned: 0, mine: 0, yesterday: 0, back: 0, name: '', renamed: '', tip: 0, unreached: 0, unplayed: 0, play: 0, stale: 0, bad: [] };
+{
+  const { L } = await import('../src/ui/lang.js');
+  const drew = (ko) => LL.LOG.texts.some((q) => q.s === L(ko));
+  const bad = (m) => rankSeen.bad.push(m);
+  if (screen() !== 'result') bad(`결과 화면이 아니다 ${screen()}`);
+  pump(1);
+  if (app.rank.status(DATE).phase === 'pending' && drew('확인 중')) rankSeen.pending = 1;
+  await netSettle(); pump(3);
+  const st = app.rank.status(DATE);
+  rankSeen.submit = rankApi.named('/api/daily/submit').length;
+  if (st.phase !== 'ok' || !st.me) bad(`제출 뒤 상태 ${st.phase}`);
+  else {
+    const want = summarize(app.run);
+    if (st.me.ante !== want.ante || st.me.blind !== want.blind || st.me.won !== want.won || st.me.score !== want.score_total) bad('순위에 오른 성적이 화면 판과 다르다');
+    rankSeen.card = `${st.rank}등/${st.total}명`;
+    const card = LL.LOG.boxes.find((b) => b.name === '순위 카드');
+    if (!card || card.y + card.h > 270) bad('결과 화면에 순위 카드가 없다');
+    rankSeen.neighbours = LL.LOG.texts.filter((q) => q.box === card && st.around.some((r) => app.rank.nameOf(r) === q.s)).length;
+    if (!drew(`오늘 ${st.rank}등`) || rankSeen.neighbours < 1) bad('카드에 등수 · 내 줄이 없다');
+    click('result:rank'); pump(2); await netSettle(); pump(3);
+    if (screen() !== 'rank') bad(`순위 보기 → ${screen()}`);
+    else {
+      rankSeen.open = 1;
+      const d0 = app.rank.board(DATE, 1).data;
+      rankSeen.pages = d0 ? d0.pages : 0;
+      if (!d0 || d0.total !== 25 || d0.rows.length !== 10 || !region('rank:mine')) bad('순위표 첫 쪽이 어긋났다');
+      const rowsDrawn = () => LL.LOG.boxes.filter((b) => /^순위 줄 /.test(b.name || '')).map((b) => Number(b.name.slice(5)));
+      if (rowsDrawn().join() !== '1,2,3,4,5,6,7,8,9,10') bad(`첫 쪽 줄 ${rowsDrawn().join()}`);
+      click('rank:next'); pump(1); await netSettle(); pump(3);
+      if (rowsDrawn().join() === '11,12,13,14,15,16,17,18,19,20') rankSeen.turned++; else bad(`둘째 쪽 줄 ${rowsDrawn().join()}`);
+      dom.key('ArrowRight'); pump(1); await netSettle(); pump(3);
+      if (rowsDrawn().join() === '21,22,23,24,25') rankSeen.turned++; else bad(`셋째 쪽 줄 ${rowsDrawn().join()}`);
+      if (region('rank:next').enabled) bad('마지막 쪽에서 다음 쪽 단추가 켜져 있다');
+      click('rank:mine'); pump(1); await netSettle(); pump(3);
+      if (app.screen.page === Math.floor((st.rank - 1) / 10) && rowsDrawn().includes(st.rank)) rankSeen.mine = 1; else bad('내 줄을 눌러도 내 쪽으로 가지 않았다');
+      click('rank:tab:yesterday'); pump(1); await netSettle(); pump(3);
+      const y = app.rank.board(shiftDate(DATE, -1), 1).data;
+      if (y && y.total === 13 && y.me === null && rowsDrawn().length === 10 && drew('어제는 두지 않았다') && !region('rank:play')) rankSeen.yesterday = 1; else bad('어제 탭이 어긋났다');
+      click('rank:next'); pump(1); await netSettle(); pump(3);
+      click('rank:tab:today'); pump(1); await netSettle(); pump(3);
+      click('rank:back'); pump(2);
+      if (screen() === 'result' && region('result:rank')) rankSeen.back = 1; else bad(`돌아가기 → ${screen()}`);
+    }
+    // 설정의 이름 줄: 다시 지으면 이름이 바뀌고 순위표의 내 줄도 따라 바뀐다
+    click('result:title'); pump(2);
+    // 처음 안내: 순위에 이름이 생긴 뒤 첫 화면에서 한 번 — 설정 칸을 가리킨다. 누르면 사라지고 다시 안 뜬다
+    for (let n = 0; n < 120 && !(app.hintShown && app.hintShown.id === 'rankName'); n++) pump(1);
+    if (app.hintShown && app.hintShown.id === 'rankName') rankSeen.hint = 1;
+    click('title:settings'); pump(2);
+    if (!app.records.coachSeen.rankName) bad('이름 안내가 본 것으로 남지 않았다');
+    const before = app.rank.player();
+    rankSeen.name = before ? before.name : '';
+    if (!before || !region('set:name') || !drew(before.name)) bad('설정에 이름 줄이 없다');
+    else {
+      hover('set:name'); pump(2);
+      if (LL.LOG.texts.some((q) => q.s === L(`오늘 ${before.rerolls}번 더 지을 수 있다`))) rankSeen.tip = 1; else bad('다시 짓기를 가리켜도 남은 횟수가 안 보인다');
+      click('set:name'); pump(1); await netSettle(); pump(3);
+      const after = app.rank.player();
+      rankSeen.renamed = after.name;
+      if (after.name === before.name || after.rerolls !== before.rerolls - 1 || !drew(after.name) || JSON.parse(dom.store.get(PLAYER_KEY)).a !== after.a) bad('다시 지어도 이름이 바뀌지 않았다');
+      const mine = (await (await rankApi.fetch(`/api/daily/board?date=${DATE}&key=${JSON.parse(dom.store.get(PLAYER_KEY)).key}`)).json()).me;
+      if (!mine || mine.a !== after.a || mine.n !== after.n) bad('서버의 내 줄 이름이 바뀌지 않았다');
+    }
+    click('set:back'); pump(2);
+  }
+  if (app.toasts.length) bad(`알림이 떴다: ${app.toasts.map((q) => q.msg).join(' / ')}`);
 }
 // 전설 셋을 쥐여 준 판: 상록(다시 떨구기) · 오페라(판 다시 채우기) · 불멸(끊김 넘기기)의 연출
 results.push(await playOne(SEED + 100, {
@@ -1699,7 +1780,7 @@ const mainApp = app;
   seen();
   app.pointer = () => {}; app.key = () => {};
   for (const k of [...dom.store.keys()]) dom.store.delete(k);
-  app = await boot({ window: dom.window, document: dom.document, today: () => DATE });
+  app = await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '' });
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -1897,8 +1978,33 @@ const telNote = { shown: 0, gone: 0, again: 0, off: 0 };
   app = mainApp;
 }
 
+// ── 순위의 다른 상태(CHM-70): 새로 켠 앱에서 오늘 아직 안 둔 사람의 순위 화면(「오늘의 대국 두기」) · 서버에 닿지 못할 때(한 줄, 알림 없음)
+{
+  const mainApp = app;
+  const { L } = await import('../src/ui/lang.js');
+  const drew = (ko) => LL.LOG.texts.some((q) => q.s === L(ko));
+  await freshBoot(); pump(2);
+  click('title:rank'); pump(2); await netSettle(); pump(3);
+  if (screen() === 'rank' && region('rank:play') && drew('오늘은 아직 두지 않았다') && !region('rank:mine')) rankSeen.unplayed = 1; else rankSeen.bad.push('오늘 안 둔 사람의 순위 화면이 어긋났다');
+  click('rank:play'); pump(2);
+  if (app.run && app.run.daily === DATE && Array.isArray(app.run.cmds)) rankSeen.play = 1; else rankSeen.bad.push('「오늘의 대국 두기」가 오늘의 대국을 열지 않았다');
+  app.toTitle(); pump(1);
+  rankApi.mode = 'fail';
+  await freshBoot(); pump(2);
+  click('title:rank'); pump(2); await netSettle(); pump(3);
+  if (screen() === 'rank' && drew('순위에 닿지 못했다') && !region('rank:play') && !app.toasts.length) rankSeen.unreached = 1; else rankSeen.bad.push('닿지 못할 때의 순위 화면이 어긋났다');
+  click('rank:tab:yesterday'); pump(2); await netSettle(); pump(3);
+  if (!drew('순위에 닿지 못했다') || app.toasts.length) rankSeen.bad.push('닿지 못할 때 어제 탭이 어긋났다');
+  click('rank:back'); pump(2);
+  if (screen() !== 'title') rankSeen.bad.push(`닿지 못한 순위 화면에서 돌아가기 → ${screen()}`);
+  rankApi.mode = 'ok';
+  seen();
+  app.pointer = () => {}; app.key = () => {};
+  app = mainApp;
+}
+
 seen();
-const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review'];
+const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank'];
 const missing = need.filter((n) => !visited.has(n));
 const ms = app.stats.drawMs.slice().sort((a, b) => a - b);
 const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;
@@ -2042,6 +2148,11 @@ if (telSent.n) { console.log('연기 시험 중에 기록이 밖으로 나갔다
   const b = boardCheck, show = (r) => (r ? `${r.ante}관 ${r.blind + 1}번째 대국 · ${r.won ? '우승' : '짐'} · 점수 합 ${r.score_total} · 대국 ${r.battles} · 수 ${r.moves}` : '없음');
   console.log(`순위 확인: 화면 판 = 서버 셈 ${b.same ? '같음' : '다름'} — ${DATE} · 명령 ${b.cmds}개(${b.bytes}바이트) · 다시 두기 ${b.ms}ms · ${show(b.screen)}`);
   if (!b.same) { console.log(`화면이 둔 오늘의 대국 판과 서버의 다시 두기가 어긋났다: 화면 ${show(b.screen)} | 서버 ${b.error || show(b.server)}`); fail = true; }
+}
+{
+  const r = rankSeen;
+  console.log(`순위: 제출 ${r.submit} · 등수 표시 ${r.card || '없음'}(이웃 ${r.neighbours}줄) · 쪽 넘김 ${r.turned}(${r.pages}쪽) · 내 쪽으로 ${r.mine ? '확인' : '못 함'} · 어제 탭 ${r.yesterday ? '확인' : '못 함'} · 결과로 돌아옴 ${r.back ? '확인' : '못 함'} · 다시 짓기 ${r.renamed && r.renamed !== r.name ? `「${r.name}」 → 「${r.renamed}」` : '못 함'}(남은 횟수 줄 ${r.tip ? '확인' : '못 봄'}) · 처음 안내 ${r.hint ? '확인' : '못 봄'} · 안 둠 상태 ${r.unplayed ? '확인' : '못 봄'}(두기 ${r.play ? '확인' : '못 함'}) · 닿지 못함 상태 ${r.unreached ? '확인' : '못 봄'}${r.bad.length ? ` · 어긋남: ${r.bad.join(' | ')}` : ''}`);
+  if (r.bad.length || r.submit !== 1 || !r.card || !r.open || r.turned !== 2 || !r.mine || !r.yesterday || !r.back || !r.renamed || r.renamed === r.name || !r.tip || !r.hint || !r.unplayed || !r.play || !r.unreached) { console.log('순위 흐름(제출 → 결과 카드 → 순위 화면 → 쪽 넘김 → 어제 → 다시 짓기)이 어긋났다'); fail = true; }
 }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);
