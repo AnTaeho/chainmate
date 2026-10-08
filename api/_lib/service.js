@@ -79,8 +79,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
   const dummy = () => (dummyP ||= hashPassword(randomBytes(24).toString('hex'), { N: scryptN }));
   // 틀린 비번: 열쇠 · 전체 · (아이디) 한도를 센다. 아이디가 한도에 닿으면 잠근다. 답은 늘 같은 401
   const wrong = async (me, uid = null) => {
-    await store.bump('loginkey', me.id, hourOf(), LIMITS.keyLoginFails);
-    await store.bump('loginall', 0, allOf(), LIMITS.loginAllFails);
+    await Promise.all([store.bump('loginkey', me.id, hourOf(), LIMITS.keyLoginFails), store.bump('loginall', 0, allOf(), LIMITS.loginAllFails)]);
     if (uid != null) {
       const n = await store.bump('login', uid, failOf(), LIMITS.loginFails);
       if (n == null || n >= LIMITS.loginFails) await store.setMark('loginlock', uid, 'until', Math.ceil((now() + LIMITS.loginLock) / 1000) - LOCK_EPOCH);
@@ -279,20 +278,19 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
     async accountLogin(body) {
       const { key, username, password } = body || {};
       if (!isKey(key) || !text(username, 64) || !text(password, 512)) return err(400, 'bad_request');
-      if ((await store.peek('loginall', 0, allOf())) >= LIMITS.loginAllFails) return err(429, 'locked', { retryAfter: left(LIMITS.loginAllSpan) });
-      const me = await who(key);
+      // DB 왕복을 줄이려고 서로 기대지 않는 질의는 한꺼번에 묻는다(판정의 차례는 그대로)
+      const [all, me] = await Promise.all([store.peek('loginall', 0, allOf()), who(key)]);
+      if (all >= LIMITS.loginAllFails) return err(429, 'locked', { retryAfter: left(LIMITS.loginAllSpan) });
       if (!me) return err(401, 'unknown_key');
-      const busy = await keyBusy(me);
-      if (busy) return busy;
       const name = cleanUsername(username);
-      // 규칙에 안 맞는 아이디도 없는 아이디와 같은 길(같은 한도 · 같은 시간 · 같은 답)로 간다
-      const uid = usernameId(name || username.trim().toLowerCase());
-      const mark = await store.peek('loginlock', uid, 'until');
+      // 규칙에 안 맞는 아이디도 없는 아이디와 같은 길(같은 질의 · 같은 한도 · 같은 시간 · 같은 답)로 간다
+      const asked = name || username.trim().toLowerCase(), uid = usernameId(asked);
+      const [busy, mark, mine, found] = await Promise.all([keyBusy(me), store.peek('loginlock', uid, 'until'), store.accountOfPlayer(me.id), store.findAccount(asked)]);
+      if (busy) return busy;
       const until = mark ? (mark + LOCK_EPOCH) * 1000 : 0;
       if (until > now()) return err(429, 'locked', { retryAfter: Math.ceil((until - now()) / 1000) });
-      const mine = await store.accountOfPlayer(me.id);
       if (mine && mine.username !== name) return err(409, 'other_account');
-      const acct = name ? await store.findAccount(name) : null;
+      const acct = name ? found : null;
       const good = await verifyPassword(password, acct ? acct.hash : await dummy());
       if (!acct || !good) return wrong(me, uid);
       await store.setMark('login', uid, failOf(), 0);
