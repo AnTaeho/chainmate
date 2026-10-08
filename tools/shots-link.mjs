@@ -4,7 +4,7 @@
 //     설정의 자리 · 기기 잇기 화면의 상태(처음 · 코드 받음 · 숫자 넣는 중 · 확인 · 이어짐 · 틀린 코드 · 시간 지남 · 닿지 못함 · 기기 2대 · 떼기 확인) · 영어 · 1배를 찍는다.
 //   node tools/shots-link.mjs --live http://localhost:3210
 //     진짜 서버(vercel dev — 로컬 코드 + 실제 DB)로: 크로미움 기기가 코드를 받고 → 웹킷 기기가 화면의 숫자판을 눌러 넣고 → 웹킷에서 오늘의 대국을 봇 판으로 끝내면
-//     → 크로미움을 다시 켰을 때 기록 화면 · 순위의 내 줄이 같은지 본다(live-*). 만든 플레이어는 test 표시를 하고 끝나면 지운다. 열쇠 · 코드는 찍지 않는다(코드는 화면 그림에만).
+//     → 크로미움을 다시 켰을 때 기록 화면 · 순위의 내 줄이 같은지 본다(live-*). 만든 플레이어는 test 표시를 하고 끝나면 지운다. 열쇠 · 코드는 찍지 않는다(코드가 보이는 화면은 그림으로도 남기지 않는다).
 // 순위 · 저장은 배포 주소 · 앱에서만 부른다 — 이 도구는 boot({ rankBase })로 주소 머리를 넣어 켠다. Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
 import http from 'node:http';
 import fs from 'node:fs';
@@ -267,14 +267,13 @@ async function live() {
     check('A(크로미움): 코드를 받았다', !!(await a.until(async () => (await a.scr()).mine === 'code')));
     const aid = await mark(a);
     check('A의 플레이어에 test 표시', !!aid);
-    await a.shot('live-code-chromium');
+    // 코드가 보이는 화면(코드 받음 · 확인)은 찍지 않는다 — 진짜 코드를 그림으로 남기지 않는다
     const code = await a.code();
     // B: 플레이어를 먼저 만들어 표시해 두고(끊겨도 지울 수 있게) 화면의 숫자판으로 넣는다
     await b.ev(() => window.__app.rank.ensurePlayer());
     const bid = await mark(b);
     check('B의 플레이어에 test 표시', !!bid && bid !== aid);
     await b.toLink(); await b.type(code); await b.click('link:key:go');
-    await b.shot('live-confirm-webkit');
     await b.click('link:yes');
     const done = await b.until(async () => { const q = await b.scr(); return q.entry === 'done' && q.gain ? q : q.fail ? q : null; }, 30000);
     const nameA = await a.ev(() => window.__app.rank.player().name);
