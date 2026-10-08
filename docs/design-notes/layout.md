@@ -606,7 +606,7 @@ x   8 ─ 120 │ 128 ────────────── 352 │ 360 ─
 ## 24. 계정 — 글자 입력 칸 겹치기 · 계정 화면(CHM-72, 2026-10-08)
 아이디 · 비번을 받는 화면(모델 · 한도 · API는 `leaderboard.md` 「계정」). 스크린샷 `docs/shots/account/`.
 
-**글자 입력 칸(`src/ui/textfield.js`)** — 게임에서 글자를 받는 곳은 여기 하나다. 아이디 · 비번은 캔버스에 그린 가짜 칸으로 받지 않고 **브라우저 입력 칸(DOM `<input>`)을 캔버스 위에 겹친다**: 비번 관리자 · 폰 키보드 · 붙여넣기가 그래야 된다.
+**글자 입력 칸(`src/ui/textfield.js`)** — 게임에서 글자를 받는 곳은 여기 하나다. 아이디 · 비번은 **브라우저 입력 칸(DOM `<input>`)을 캔버스 위에 겹쳐** 받는다: 비번 관리자 · 폰 키보드 · 붙여넣기가 그래야 된다.
 - **입력 칸은 `textfield.js`로만 만든다.** 화면은 그릴 때마다 `app.fields.field(id, { x, y, w, h, label, type, autocomplete, … })`를 부르고, 캔버스에는 같은 자리에 이름표와 칸 바탕을 그린다. **그 프레임에 부르지 않은 칸은 치워진다** — 화면을 떠나거나 상태가 바뀌면 남는 칸이 없다(`app.go`도 한 번 더 치우고, 덮개가 뜨면 밑 화면의 칸도 치운다). smoke 「계정」 줄이 남은 입력 칸 0을 잰다.
 - 값은 입력 칸에만 있다. 화면은 내는 순간에만 `app.fields.value(id)`로 읽고 화면 상태 · 저장 · 기록 보내기로 옮기지 않는다.
 - 꼴: 칸들을 `<form>` 하나로 감싼다(Enter 제출 — 보이지 않는 제출 단추가 있다). `autocomplete`(`username` · `current-password` · `new-password`) · `type=password` · `autocapitalize=off` · `autocorrect=off` · `spellcheck=false` · `enterkeyhint`, 칸마다 `<label for>`(이름표는 캔버스가 그리므로 화면 읽기 프로그램에만 보인다).
