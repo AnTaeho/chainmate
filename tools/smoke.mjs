@@ -35,6 +35,10 @@ globalThis.__CHAINMATE_NO_BOOT__ = true;
 const dom = makeFakeDom({ width: 1366, height: 700, dpr: 1.25 });
 globalThis.document = dom.document;
 globalThis.window = dom.window;
+// 기록 보내기(CHM-63): 가짜 fetch · sendBeacon으로 나간 요청을 센다 — 연기 시험에서는 한 건도 나가면 안 된다(보내는 호스트가 아니다)
+const telSent = { n: 0 };
+dom.window.fetch = async () => { telSent.n++; return { ok: true }; };
+dom.window.navigator = { sendBeacon: () => { telSent.n++; return true; } };
 const { boot } = await import('../src/main.js');
 const lessonMod = await import('../src/ui/lessons.js');
 const { termsIn, TERM_BY_ID, KEY_MAX } = await import('../src/ui/glossary.js');
@@ -533,7 +537,7 @@ function battleStep() {
   const b = app.run.battle;
   // 대국 첫 띠의 「새로」 줄(이번 판에서 처음 나온 것)
   if (s.banner && s.banner.news && !s.newsCounted) { s.newsCounted = true; newsSeen.battles++; newsSeen.icons += s.banner.news.length; }
-  if (!paused) { dom.key('Escape'); pump(1); if (screen() !== 'pause') throw new Error('pause did not open'); click('pause:settings'); click('set:speed4'); click('set:shake'); click('set:big'); click('set:big'); click('set:back'); click('pause:resume'); paused = true; settingsSeen = true; }
+  if (!paused) { dom.key('Escape'); pump(1); if (screen() !== 'pause') throw new Error('pause did not open'); click('pause:settings'); click('set:speed4'); click('set:shake'); click('set:big'); click('set:big'); click('set:telemetry'); if (app.settings.telemetry !== false) throw new Error('telemetry setting did not turn off'); click('set:telemetry'); if (app.settings.telemetry !== true) throw new Error('telemetry setting did not turn on'); click('set:back'); click('pause:resume'); paused = true; settingsSeen = true; }
   if (!s.busy) notesOnce(b.status === 'chain' ? 'battle-chain' : 'battle', 6);
   if (b.status === 'chain') {
     // 사슬 한가운데서 이어 하기(드묾): 먹을 칸 하나
@@ -1832,6 +1836,23 @@ function checkShops(name, out, { firstNoMaxim = false } = {}) {
   seen();
   app = mainApp;
 }
+// ── 기록 보내기 알림(CHM-63): 새로 켠 첫 화면 맨 위에 한 줄 → 누르면 사라지고 다시 안 뜬다 → 설정에서 끄면 처음부터 안 뜬다
+const telNote = { shown: 0, gone: 0, again: 0, off: 0 };
+{
+  const mainApp = app;
+  const noteBox = () => LL.LOG.boxes.some((b) => b.name === '기록 알림');
+  await freshBoot(); pump(2);
+  if (app.screen.noteOn() && noteBox()) telNote.shown = 1;
+  dismissHint(); pump(2);
+  if (!noteBox() && app.records.coachSeen && app.records.coachSeen.telemetry) telNote.gone = 1;
+  app.go('title'); pump(2);
+  if (!noteBox()) telNote.again = 1;
+  await freshBoot(); app.settings.telemetry = false; pump(2);
+  if (!noteBox()) telNote.off = 1;
+  seen();
+  app.pointer = () => {}; app.key = () => {};
+  app = mainApp;
+}
 
 seen();
 const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review'];
@@ -1971,5 +1992,8 @@ console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음
 if (flow.held) fail = true;
 if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 5000 : 40).join('\n  ')); fail = true; }
 if (VERBOSE && flow.held) console.log('보류 화면에서 넘친 곳: ' + [...flow.seen].filter(([, w]) => w === 'held').map(([k]) => k).slice(0, 60).join('\n  '));
+console.log(`기록 보내기: ${telSent.n}건 · 첫 화면 알림 ${telNote.shown ? '뜸' : '안 뜸'} · 누르면 사라짐 ${telNote.gone ? '확인' : '못 함'} · 다시 안 뜸 ${telNote.again ? '확인' : '못 함'} · 끄면 안 뜸 ${telNote.off ? '확인' : '못 함'}`);
+if (!telNote.shown || !telNote.gone || !telNote.again || !telNote.off) { console.log('첫 화면의 기록 보내기 알림이 뜨고 사라지지 않았다'); fail = true; }
+if (telSent.n) { console.log('연기 시험 중에 기록이 밖으로 나갔다'); fail = true; }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);

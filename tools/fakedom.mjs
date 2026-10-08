@@ -85,6 +85,8 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
       else fire(screen.listeners[type], e);
     },
     key(k) { fire(winListeners.keydown, { key: k, repeat: false, preventDefault() {} }); },
+    // 창 사건(error · unhandledrejection · pagehide …)
+    emit(type, e = {}) { fire(winListeners[type], e); },
     frame(t) { const cb = rafCb; rafCb = null; if (cb) cb(t); },
   };
 }
