@@ -55,11 +55,27 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
   const store = new Map();
   let rafCb = null;
   const winListeners = {};
+  // 가짜 요소(CHM-72 — 글자 입력 칸 src/ui/textfield.js): form · input · label · button · div. 붙이기 · 떼기 · 속성 · 듣개 · 초점만 한다
+  class FakeEl {
+    constructor(tag) { this.tagName = String(tag).toUpperCase(); this.style = {}; this.attrs = {}; this.children = []; this.listeners = {}; this.parent = null; this.value = ''; this.className = ''; const cls = new Set(); this.classList = { toggle: (c, on) => { if (on === undefined ? !cls.has(c) : on) cls.add(c); else cls.delete(c); }, add: (c) => cls.add(c), remove: (c) => cls.delete(c), contains: (c) => cls.has(c) }; }
+    setAttribute(k, v) { this.attrs[k] = String(v); }
+    getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }
+    appendChild(el) { el.parent = this; this.children.push(el); return el; }
+    remove() { if (!this.parent) return; const i = this.parent.children.indexOf(this); if (i >= 0) this.parent.children.splice(i, 1); this.parent = null; if (document.activeElement === this) document.activeElement = null; }
+    addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
+    emit(type, e = {}) { for (const fn of this.listeners[type] || []) fn({ target: this, preventDefault() {}, ...e }); }
+    focus() { if (document.activeElement === this) return; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); document.activeElement = this; this.emit('focus'); }
+    blur() { if (document.activeElement !== this) return; document.activeElement = null; this.emit('blur'); }
+    getBoundingClientRect() { return { left: parseFloat(this.style.left) || 0, top: parseFloat(this.style.top) || 0, width: parseFloat(this.style.width) || 0, height: parseFloat(this.style.height) || 0 }; }
+  }
+  const body = new FakeEl('body');
   const document = {
     getElementById: () => screen,
-    createElement: () => new FakeCanvas(),
+    createElement: (tag) => (tag && String(tag).toLowerCase() !== 'canvas' ? new FakeEl(tag) : new FakeCanvas()),
     fonts: { load: async () => [] },
+    body, activeElement: null,
   };
+  const walk = (el, out = []) => { for (const c of el.children) { out.push(c); walk(c, out); } return out; };
   const window = {
     innerWidth: width, innerHeight: height, devicePixelRatio: dpr,
     addEventListener(type, fn) { (winListeners[type] ||= []).push(fn); },
@@ -86,7 +102,12 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
       if (type === 'mouseup') fire(winListeners.mouseup, e);
       else fire(screen.listeners[type], e);
     },
-    key(k) { fire(winListeners.keydown, { key: k, repeat: false, preventDefault() {} }); },
+    key(k) { fire(winListeners.keydown, { key: k, repeat: false, preventDefault() {}, target: document.activeElement || body }); },
+    // 글자 입력 칸: 지금 문서에 붙어 있는 <input> · 이름으로 찾기 · 사람이 치듯 값 넣기(input 사건) · Enter(form 제출)
+    inputs() { return walk(body).filter((el) => el.tagName === 'INPUT'); },
+    input(id) { return walk(body).find((el) => el.tagName === 'INPUT' && el.id === `tf-${id}`) || null; },
+    type(id, text) { const el = this.input(id); if (!el) throw new Error(`입력 칸 없음: ${id}`); el.focus(); el.value = String(text); el.emit('input'); return el; },
+    submit() { const f = walk(body).find((el) => el.tagName === 'FORM'); if (f) f.emit('submit'); },
     // 창 사건(error · unhandledrejection · pagehide …)
     emit(type, e = {}) { fire(winListeners[type], e); },
     frame(t) { const cb = rafCb; rafCb = null; if (cb) cb(t); },

@@ -48,7 +48,7 @@ const srv = http.createServer(async (req, res) => {
     if (!world || world.mode === 'fail') { req.socket.destroy(); return; }
     const chunks = [];
     for await (const c of req) chunks.push(c);
-    const r = await world.fetch(req.url, { method: req.method, body: chunks.length ? Buffer.concat(chunks).toString('utf8') : undefined });
+    const r = await world.fetch(req.url, { method: req.method, headers: req.headers.authorization ? { Authorization: req.headers.authorization } : {}, body: chunks.length ? Buffer.concat(chunks).toString('utf8') : undefined });
     let body = '';
     try { body = JSON.stringify(await r.json()); } catch { res.writeHead(404, { 'content-type': 'text/html' }); res.end('<h1>404</h1>'); return; }
     res.writeHead(r.status, { 'content-type': 'application/json', 'cache-control': 'no-store' });
@@ -110,7 +110,7 @@ async function open(browser, { lang = 'ko', base = `http://localhost:${port}`, t
   // 넘친 글(연기 시험과 같은 검사)을 이 프레임에 잰다
   const layout = () => ev(async () => { const LL = await import('/src/render/layoutlog.js'); LL.LOG.on = true; window.__app.draw(); const bad = LL.checkLayout().map((q) => q.msg); LL.LOG.on = false; return bad; });
   const until = async (fn, ms = 20000) => { const t0 = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t0 > ms) return null; await settle(150); } };
-  const toLink = async () => { await click('title:settings'); await click('set:link'); await until(() => ev(() => window.__app.screen.name === 'link')); };
+  const toLink = async () => { await click('title:settings'); await click('set:link'); await click('acct:tab:link'); await until(() => ev(() => window.__app.screen.name === 'link')); };
   const scr = () => ev(() => { const s = window.__app.screen; return { mine: s.mine && s.mine.phase, entry: s.entry && s.entry.phase, fail: s.entry && s.entry.fail, digits: s.entry && s.entry.digits, devices: s.devices, name: s.entry && s.entry.name, gain: s.entry && s.entry.gain }; });
   const code = () => ev(() => window.__app.screen.mine.code);
   // 숫자판을 눌러 넣는다(그림의 단추를 마우스로)
@@ -140,6 +140,7 @@ async function shots(browserType, name) {
       await lay(a, `설정 ${lang}`);
       if (ko) { await a.shot(`settings${tag}`); await a.point('set:link'); await a.snap(`settings-point${tag}`); }
       await a.click('set:link');
+      await a.click('acct:tab:link');
       // 처음
       await a.until(() => a.ev(() => window.__app.screen.name === 'link'));
       await lay(a, `처음 ${lang}`);

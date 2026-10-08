@@ -56,7 +56,7 @@ const srv = http.createServer(async (req, res) => {
     if (world.mode === 'hang') { hung.push(res); return; }
     const chunks = [];
     for await (const c of req) chunks.push(c);
-    const r = await world.fetch(req.url, { method: req.method, body: chunks.length ? Buffer.concat(chunks).toString('utf8') : undefined });
+    const r = await world.fetch(req.url, { method: req.method, headers: req.headers.authorization ? { Authorization: req.headers.authorization } : {}, body: chunks.length ? Buffer.concat(chunks).toString('utf8') : undefined });
     let body = '';
     try { body = JSON.stringify(await r.json()); } catch { res.writeHead(404, { 'content-type': 'text/html' }); res.end('<h1>404</h1>'); return; }
     res.writeHead(r.status, { 'content-type': 'application/json', 'cache-control': 'no-store' });
