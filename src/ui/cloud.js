@@ -155,6 +155,16 @@ export function createCloud({ rank, now = () => Date.now(), setTimer = (fn, ms) 
   // 이 기기를 뗀 뒤: 서버에서 새 저장(rev 1)이 됐다 — 다음에 올릴 때 409로 맞춰진다
   cloud.reset = () => { if (!on) return; st().rev = 0; sent = null; dirty = true; keep(); };
 
+  // 계정에서 나간 뒤 · 계정을 지운 뒤(CHM-72): 이 기기는 새 빈 플레이어다 — 맞춘 흔적을 비우고 걸어 둔 올리기도 거둔다(비운 기록이 떠나온 쪽에 올라가지 않게)
+  cloud.wipe = () => {
+    if (timer != null) { clearTimer(timer); timer = null; }
+    sent = null; parked = null; dirty = false; lastPush = -Infinity;
+    if (!on || !app) return;
+    const s = st();
+    state = { rev: 0, runAt: 0, setAt: s.setAt || 0, snap: s.snap, at: 0, sum: s.sum };
+    keep();
+  };
+
   // ── app이 알려 주는 것
   // 끝난 판의 저장을 지운 때(다른 기기의 늦지 않은 판이 되살아나지 않게)
   cloud.noteRunEnd = () => { if (!on || !app) return; st().runAt = now(); dirty = true; keep(); };

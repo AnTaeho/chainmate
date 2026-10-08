@@ -238,7 +238,7 @@ export function createRank({
     const p = allowed ? load() : null;
     if (!p) return { ok: false, why: 'unreached' };
     const r = lost(await call('POST', '/api/link/unlink', {}, null, p.key), p.key);
-    if (r.status === 200) { keep({ ...r.body, key: p.key }); pages.clear(); subs.clear(); return { ok: true }; }
+    if (r.status === 200) { keep({ ...r.body, key: p.key }); pages.clear(); subs.clear(); if (account) account = { username: null, devices: 1 }; return { ok: true }; }
     return { ok: false, why: r.status === 400 ? 'alone' : 'unreached' };
   };
   // 저장 덩이 읽기(열쇠가 없으면 묻지 않는다 — status -1). { status, rev, blob }
@@ -254,6 +254,82 @@ export function createRank({
     if (!p) return { status: 0 };
     const r = lost(await call('PUT', '/api/save', { baseRev, blob }, keepalive ? { keepalive: true } : null, p.key), p.key);
     return { status: r.status, rev: r.body ? r.body.rev : null, blob: r.body ? r.body.blob || null : null };
+  };
+
+  // ── 계정(CHM-72, leaderboard.md 「계정」): 아이디 · 비번은 본문으로 한 번 나갈 뿐 여기에도 저장에도 남기지 않는다.
+  let account = null;          // { username | null, devices } — 서버가 알려 준 뒤에만
+  const mins = (r) => Math.max(1, Math.round(((r.body && r.body.retryAfter) || 60) / 60));
+  const taken = (r) => { keep(r.body); checked = true; pages.clear(); subs.clear(); };
+  // 화면이 읽는 계정(아이디는 본인 화면에만 보인다). 아직 모르면 null
+  rank.account = () => (allowed ? account : null);
+  // 서버에 묻는다. 열쇠가 없으면 묻지 않고 「계정 없음」. 못 닿으면 null
+  rank.accountLoad = async () => {
+    const p = allowed ? load() : null;
+    if (!allowed) return null;
+    if (!p) { account = { username: null, devices: null }; return account; }
+    const r = lost(await call('GET', '/api/account', null, null, p.key), p.key);
+    if (r.status === 401) { account = { username: null, devices: null }; return account; }
+    if (r.status !== 200) return null;
+    account = { username: r.body.username || null, devices: r.body.devices };
+    return account;
+  };
+  // 계정 만들기: 지금 기기의 플레이어에 붙인다. { ok, username } | { ok: false, why: 'taken' | 'username' | 'weak' | 'has' | 'limit' | 'unreached' }
+  rank.signup = async (username, password) => {
+    for (let i = 0; i < 2; i++) {
+      const p = await ensurePlayer();
+      if (!p) break;
+      const r = lost(await call('POST', '/api/account/signup', { username, password }, null, p.key), p.key);
+      if (r.status === 401) continue;
+      if (r.status === 200) { account = { username: r.body.username, devices: account && account.devices ? account.devices : 1 }; return { ok: true, username: r.body.username }; }
+      const e = r.body ? r.body.error : null;
+      return { ok: false, why: { taken: 'taken', has_account: 'has', bad_username: 'username', weak_password: 'weak', signup_limit: 'limit', bad_request: 'username' }[e] || 'unreached' };
+    }
+    return { ok: false, why: 'unreached' };
+  };
+  // 들어오기: 받은 새 열쇠로 갈아탄다(기기 잇기의 넣기와 같다). { ok, name, devices, username } | { ok: false, why: 'bad' | 'locked'(wait 분) | 'other' | 'unreached' }
+  rank.login = async (username, password) => {
+    for (let i = 0; i < 2; i++) {
+      const p = await ensurePlayer();
+      if (!p) break;
+      const r = lost(await call('POST', '/api/account/login', { username, password }, null, p.key), p.key);
+      const e = r.body ? r.body.error : null;
+      if (r.status === 401 && e === 'unknown_key') continue;
+      if (r.status === 200 && /^[0-9a-f]{64}$/.test(r.body.key || '')) {
+        taken(r);
+        account = { username: r.body.username, devices: r.body.devices };
+        return { ok: true, name: nameText(me.a, me.n, lang()), devices: r.body.devices, username: r.body.username };
+      }
+      if (r.status === 429) return { ok: false, why: 'locked', wait: mins(r) };
+      return { ok: false, why: r.status === 401 || r.status === 400 ? 'bad' : r.status === 409 ? 'other' : 'unreached' };
+    }
+    return { ok: false, why: 'unreached' };
+  };
+  // 나가기: 이 기기는 새 빈 플레이어의 새 열쇠를 받는다. { ok } | { ok: false, why: 'none' | 'unreached' }
+  rank.logout = async () => {
+    const p = allowed ? load() : null;
+    if (!p) return { ok: false, why: 'unreached' };
+    const r = lost(await call('POST', '/api/account/logout', {}, null, p.key), p.key);
+    if (r.status === 200 && /^[0-9a-f]{64}$/.test(r.body.key || '')) { taken(r); dequeue(null); account = { username: null, devices: 1 }; return { ok: true }; }
+    if (r.status === 400 && r.body.error === 'no_account') { account = { username: null, devices: account ? account.devices : null }; return { ok: false, why: 'none' }; }
+    return { ok: false, why: 'unreached' };
+  };
+  // 비번 바꾸기: current가 없으면 「들어와 있는 기기에서 새로 정하기」. { ok, reset } | { ok: false, why: 'bad' | 'weak' | 'limit' | 'unreached' }
+  rank.setPassword = async (next, current = null) => {
+    const p = allowed ? load() : null;
+    if (!p) return { ok: false, why: 'unreached' };
+    const r = lost(await call('POST', '/api/account/password', { next, ...(current ? { current } : {}) }, null, p.key), p.key);
+    if (r.status === 200) return { ok: true, reset: !current };
+    const e = r.body ? r.body.error : null;
+    return { ok: false, why: e === 'bad_login' ? 'bad' : e === 'weak_password' || e === 'bad_request' ? 'weak' : r.status === 429 ? 'limit' : 'unreached', ...(r.status === 429 ? { wait: mins(r) } : {}) };
+  };
+  // 계정 지우기: 서버에서 모두 지우고 이 기기는 새 빈 플레이어. { ok } | { ok: false, why: 'bad' | 'limit' | 'unreached' }
+  rank.deleteAccount = async (password) => {
+    const p = allowed ? load() : null;
+    if (!p) return { ok: false, why: 'unreached' };
+    const r = lost(await call('POST', '/api/account/delete', { password }, null, p.key), p.key);
+    if (r.status === 200 && /^[0-9a-f]{64}$/.test(r.body.key || '')) { taken(r); dequeue(null); account = { username: null, devices: 1 }; return { ok: true }; }
+    const e = r.body ? r.body.error : null;
+    return { ok: false, why: e === 'bad_login' || e === 'bad_request' ? 'bad' : r.status === 429 ? 'limit' : 'unreached', ...(r.status === 429 ? { wait: mins(r) } : {}) };
   };
 
   // 켤 때: 배포 식별자를 받아 두고(실패해도 조용히), 못 보낸 판이 있으면 한 번 더

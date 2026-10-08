@@ -19,12 +19,13 @@ import { placeNotes, noteMode, noteWidth, NOTE_GAP } from './placement.js';
 import { familyCounts, THRESHOLDS, levelOf } from '../data/families.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
-import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
+import { loadRecords, emptyRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
 import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps } from './telemetry.js';
 import { createRank } from './rank.js';
 import { createCloud } from './cloud.js';
+import { createFields } from './textfield.js';
 import { VERSION, COMMIT } from '../version.js';
 import { SCREENS } from './screens/index.js';
 import { coachDown, updateGuide, drawCoach, coachPlan } from './coach.js';
@@ -36,7 +37,7 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 // rank: 순위(CHM-70, src/ui/rank.js createRank) — main.js가 넘긴다. 없으면 닿지 못하는 순위(한 번도 부르지 않는다)
 // cloud: 클라우드 저장(CHM-71, src/ui/cloud.js createCloud) — main.js가 넘긴다. 없으면 아무것도 맞추지 않는다
 // platform: 'web' | 'app'(Tauri). share(name, text) · download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, today: dayNow = today }) {
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, fields = null, openPage = null, today: dayNow = today }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -120,6 +121,20 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   // 클라우드 저장(CHM-71): 기록 · 진행 중인 판을 서버의 한 덩이와 맞춘다. 화면에는 드러내지 않는다
   app.cloud = cloud || createCloud({ rank: app.rank });
   app.cloud.attach(app);
+  // 글자 입력 칸(CHM-72, src/ui/textfield.js): main.js가 넘긴다. 없으면(Node 시험) 값만 드는 가짜
+  app.fields = fields || createFields();
+  // 새 탭으로 쪽 열기(개인정보 처리방침). 못 열면 거짓
+  app.openPage = (url) => (openPage ? !!openPage(url) : false);
+  // 계정에서 나가거나 계정을 지운 뒤(CHM-72): 이 기기의 기록 · 진행 중인 판 · 사람 판 기록을 비운다(설정은 기기 취향이라 둔다).
+  // 서버가 새 열쇠를 준 뒤에만 부른다 — 먼저 비우면 비운 기록이 계정 쪽 저장에 올라갈 수 있다
+  app.wipeDevice = () => {
+    store.del(KEYS.run); store.del(KEYS.runs);
+    for (const k of Object.keys(app.records)) delete app.records[k];
+    Object.assign(app.records, emptyRecords());
+    store.set(KEYS.records, app.records);
+    app.run = null; app.fresh = []; app.guide = null;
+    app.cloud.wipe();
+  };
   app.submitDaily = (run) => {
     if (!run || run.scratch || run.endless || !run.daily || !Array.isArray(run.cmds)) return null;
     return app.rank.submit(run.daily, clone(run.cmds));
@@ -183,6 +198,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const S = SCREENS[name];
     if (!S) throw new Error(`no screen ${name}`);
     if (app.screen && app.screen.onLeave) app.screen.onLeave();
+    app.fields.clear(); // 화면을 떠나면 입력 칸을 반드시 치운다
     app.screen = new S(app, args);
     app.screen.name = name;
     app.visited.add(name);
@@ -391,7 +407,10 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     }
     ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8);
     flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16);
+    // 입력 칸: 이번 프레임에 화면이 부른 칸만 남긴다(덮개가 뜨면 밑 화면의 칸은 치운다)
+    app.fields.begin();
     if (app.screen) app.screen.draw(ctx, ui);
+    if (app.overlay) app.fields.begin();
     foldUnder(ctx);
     // 연출(떠오르는 수 · 날아가는 조각)은 칸을 넘나든다 — 글 넘침은 재지 않는다
     openBox('fx', 0, 0, W, H, 0, { loose: true, name: '연출' });
@@ -408,6 +427,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       ctx.globalAlpha = 1;
       app.overlay.draw(ctx, ui);
     }
+    app.fields.end();
     // 알림(화면 위에 잠깐 뜬다). 화면이 자리를 정하면(toastSpot — 대국은 판 아래쪽, CHM-48) 그 칸 폭 안에서 낱말 단위로 줄을 바꾸고
     // 아래에서 위로 쌓는다. 그 자리의 알림은 뜨지 않는 상자로 적어 smoke 「글 넘침」이 목표 막대와 겹침을 잰다. 다른 화면은 위 가운데
     const spot = !app.overlay && app.screen && app.screen.toastSpot ? app.screen.toastSpot() : null;
