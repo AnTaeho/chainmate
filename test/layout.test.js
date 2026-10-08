@@ -679,3 +679,245 @@ test('전설 화면 격언 칸: 칸이 끝까지 찬 판(흑요 포함)도 제�
   // smoke가 만난 판(격언 다섯 + 전설 셋)
   assert.equal(check(8, 'smoke 판').cols, 2);
 });
+
+// ── 순위(CHM-70, docs/design-notes/layout.md 「순위」)
+test('순위 줄: 가장 긴 이름 · 큰 점수(3,482,150) · 네 자리 인원(14 / 1,204)이 칸끼리 닿지 않고 들어간다(한국어 · 영어)', async () => {
+  const R = await import('../src/ui/screens/rank.js');
+  const { measure, fitNum } = await import('../src/render/gfx.js');
+  const { nameText, NAMES } = await import('../src/data/names.js');
+  const { LONG_KO, LONG_EN } = await import('./helpers/fakeapi.js');
+  const { COL } = R;
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    // 목록에서 가장 넓은 조합이 머리말의 그 이름인가(폭 한국어 130 · 영어 173)
+    const widest = Math.max(...NAMES[lang].adj.map((a) => measure(a))) + measure(' ') + Math.max(...NAMES[lang].animal.map((a) => measure(a)));
+    const long = nameText(...Object.values(lang === 'ko' ? LONG_KO : LONG_EN), lang);
+    assert.ok(measure(long) >= widest - 1 && measure(long) <= (lang === 'ko' ? 130 : 173), `${lang} ${long} ${measure(long)} / ${widest}`);
+    const reaches = [{ ante: 8, blind: 2, won: true }, { ante: 8, blind: 0, won: false }, { ante: 8, blind: 1, won: false }, { ante: 8, blind: 2, won: false }].map(R.reachText);
+    assert.ok(reaches.every((s) => !/[가-힣]/.test(M.lang.L(s)) || lang === 'ko'), `${lang} 닿은 곳이 옮겨지지 않았다`);
+    for (const reach of reaches) for (const [label, mine, full] of [['9,999', false, true], ['14 / 1,204', true, true], ['1,204 / 1,204', true, true], ['9,999 / 9,999', true, false]]) {
+      const at = R.colsFor(label, long, reach, mine), tag = `${lang} 「${label}」 ${long} · ${reach}`;
+      assert.ok(at.rank + measure(label, true) + COL.gap <= at.name, `${tag}: 등수가 이름에 닿는다`);
+      assert.ok(at.name + measure(long, mine) + COL.gap <= at.reach, `${tag}: 이름이 닿은 곳에 닿는다`);
+      const score = fitNum(3482150, at.scoreRoom);
+      assert.ok(at.reach + measure(reach) + COL.gap <= at.score - measure(score, true), `${tag}: 닿은 곳이 점수에 닿는다`);
+      assert.ok(at.score <= COL.x1 - 2 && at.rank >= COL.x0 + 2);
+      // 두 자리 등수 / 네 자리 인원까지는 점수를 줄이지 않고 다 적는다
+      if (full) assert.equal(score, '3,482,150', tag);
+      // 보통 줄은 봇이 실제로 내는 열 자리 점수(1,010,796,771)도 다 적는다
+      if (!mine) assert.equal(fitNum(1010796771, at.scoreRoom), '1,010,796,771', tag);
+    }
+    // 보통 줄(등수만)은 칸이 밀리지 않는다 — 머릿줄 이름표와 같은 자리
+    assert.deepEqual((({ name, reach }) => [name, reach])(R.colsFor('9,999', long, reaches[0])), [COL.name, COL.reach], lang);
+  }
+  M.lang.setLang('ko');
+});
+
+// 순위 화면 · 결과 카드 · 설정 이름 줄을 가짜 서버(진짜 응답 로직 + 기억 저장소)에 물려 그리고 글 넘침을 잰다
+const RANK_DAY = '2026-10-08';
+async function rankApp({ lang = 'ko', others = 24, mode = 'ok', me = null } = {}) {
+  const { makeFakeDom } = await import('../tools/fakedom.mjs');
+  const { boot } = await import('../src/main.js');
+  const F = await import('./helpers/fakeapi.js');
+  const { hashKey } = await import('../api/_lib/service.js');
+  const LL = await import('../src/render/layoutlog.js');
+  const d = makeFakeDom();
+  const api = F.fakeApi({ now: () => Date.parse(`${RANK_DAY}T12:00:00Z`) });
+  if (others) await F.seedBoard(api, RANK_DAY, F.demoRows(others));
+  if (lang !== 'ko') d.window.localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang }));
+  d.window.fetch = (url, init) => (String(url).startsWith('/api/') ? api.fetch(url, init) : Promise.resolve({ ok: true, status: 200 }));
+  const app = await boot({ window: d.window, document: d.document, today: () => RANK_DAY, rankBase: '' });
+  app.records.kingDone = true; app.records.runs = 3; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
+  const settle = async () => { for (let i = 0; i < 12; i++) await new Promise((r) => setImmediate(r)); };
+  await settle();
+  const long = lang === 'ko' ? F.LONG_KO : F.LONG_EN;
+  // me: 내 성적을 순위표에 넣는다(이름은 그 언어의 가장 넓은 이름). everyone: 다른 사람도 모두 가장 넓은 이름으로
+  if (me) {
+    await app.rank.ensurePlayer();
+    const key = JSON.parse(d.window.localStorage.getItem('chainmate.player.v1')).key;
+    const p = api.store.players.find((q) => q.keyHash === hashKey(key));
+    if (me.everyone) for (const q of api.store.players) Object.assign(q, long);
+    Object.assign(p, long);
+    d.window.localStorage.setItem('chainmate.player.v1', JSON.stringify({ key, ...long }));
+    await api.store.putScore(p.id, RANK_DAY, { ante: me.ante, blind: me.blind ?? 2, won: !!me.won, score_total: me.score, battles: 9, moves: 30, ignite: null }, 'test-build', '[]');
+  }
+  api.mode = mode;
+  // 한 프레임 그리고 넘친 곳 · 상자 · 글을 돌려준다
+  const frame = () => { LL.LOG.on = true; try { app.frame((app.last || 0) + 16); return { bad: LL.checkLayout().map((q) => q.msg), boxes: LL.LOG.boxes.slice(), texts: LL.LOG.texts.slice() }; } finally { LL.LOG.on = false; } };
+  const has = (id) => app.ui.regions.some((r) => r.id === id);
+  const board = async (page = 1) => (await (await api.fetch(`/api/daily/board?date=${RANK_DAY}&page=${page}&key=${JSON.parse(d.window.localStorage.getItem('chainmate.player.v1')).key}`)).json());
+  return { app, api, d, F, settle, frame, has, board, long };
+}
+const rowNums = (f) => f.boxes.filter((b) => /^순위 줄 /.test(b.name)).map((b) => Number(b.name.slice(5)));
+
+test('순위 화면: 불러오는 중 · 줄 있음 · 안 둠 · 내 쪽(긴 이름 · 1,204명) · 어제 · 빈 순위표 · 닿지 못함 — 글이 칸을 넘지 않는다(한국어 · 영어)', async () => {
+  for (const lang of LANGS) {
+    const tag = (s) => `${lang} ${s}`;
+    const drew = (f, ko) => f.texts.some((q) => q.s === M.lang.L(ko));
+    // 오늘 안 둔 사람
+    const a = await rankApp({ lang });
+    a.app.go('rank');
+    let f = a.frame();
+    assert.deepEqual(f.bad, [], tag('불러오는 중'));
+    assert.ok(drew(f, '순위표를 펴는 중'), tag('불러오는 중'));
+    await a.settle();
+    f = a.frame();
+    assert.deepEqual(f.bad, [], tag('첫 쪽'));
+    assert.deepEqual(rowNums(f), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], tag('열 줄'));
+    assert.ok(a.has('rank:play') && !a.has('rank:mine') && drew(f, '오늘은 아직 두지 않았다'), tag('안 둠 → 두기 단추'));
+    assert.ok(a.has('rank:next') && a.has('rank:prev'), tag('쪽 단추'));
+    // 어제(아무도 안 둠)
+    a.app.screen.setTab('yesterday'); a.frame(); await a.settle();
+    f = a.frame();
+    assert.deepEqual(f.bad, [], tag('어제'));
+    assert.ok(drew(f, '아직 아무도 두지 않았다') && drew(f, '어제는 두지 않았다') && !a.has('rank:play') && !a.has('rank:next'), tag('어제 빈 순위표'));
+    // 내 줄: 가장 넓은 이름 · 네 자리 인원(맨 아래 등수 — 「1,204 / 1,204」) · 맨 위에는 큰 점수
+    const b = await rankApp({ lang, others: 1203, me: { ante: 1, blind: 0, score: 7 } });
+    b.app.go('rank'); b.frame(); await b.settle();
+    f = b.frame();
+    assert.deepEqual(f.bad, [], tag('내 줄'));
+    assert.ok(b.has('rank:mine') && !b.has('rank:play'));
+    for (const s of ['1,204 / 1,204', '1,010,796,771', '3,482,150', b.app.rank.nameOf(b.long)]) assert.ok(f.texts.some((q) => q.s === s), tag(`「${s}」`));
+    // 내 줄을 누르면 내 쪽(121쪽)
+    b.app.ui.regions.find((r) => r.id === 'rank:mine').onClick(); b.frame(); await b.settle();
+    f = b.frame();
+    assert.deepEqual(f.bad, [], tag('내 쪽'));
+    assert.equal(b.app.screen.page, 120);
+    assert.deepEqual(rowNums(f), [1201, 1202, 1203, 1204], tag('내 쪽 줄'));
+    assert.ok(f.texts.some((q) => q.s === '121/121'));
+    // 큰 글자 · 움직임 줄이기에서도 같다
+    b.app.settings.big = true; b.app.settings.calm = true;
+    assert.deepEqual(b.frame().bad, [], tag('큰 글자 · 움직임 줄이기'));
+    // 빈 순위표(오늘 아무도 안 둠)
+    const c = await rankApp({ lang, others: 0 });
+    c.app.go('rank'); c.frame(); await c.settle();
+    f = c.frame();
+    assert.deepEqual(f.bad, [], tag('빈 순위표'));
+    assert.ok(drew(f, '아직 아무도 두지 않았다') && c.has('rank:play') && !c.has('rank:next'), tag('빈 순위표'));
+    // 닿지 못함: 한 줄뿐, 알림 없음
+    const e = await rankApp({ lang, mode: 'fail' });
+    e.app.go('rank'); e.frame(); await e.settle();
+    f = e.frame();
+    assert.deepEqual(f.bad, [], tag('닿지 못함'));
+    assert.ok(drew(f, '순위에 닿지 못했다') && !e.has('rank:play') && !e.has('rank:mine') && e.app.toasts.length === 0, tag('닿지 못함'));
+  }
+  M.lang.setLang('ko');
+});
+
+// 끝난 오늘의 대국 판을 세운다(결과 화면용): 판 상태를 바로 채운다
+async function endDaily(app, { won = false, frags = 0 } = {}) {
+  const { LEGENDS } = await import('../src/data/legends.js');
+  app.newRun({ daily: true });
+  const run = app.run;
+  if (run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
+  run.ante = won ? 8 : 6; run.money = 31; run.phase = won ? 'won' : 'lost';
+  run.log.push({ ante: run.ante, blind: 2, kind: 'master', score: won ? 1108800 : 233410, target: won ? 1108800 : 271040, best: 188400, won });
+  LEGENDS.slice(0, frags).forEach((l) => { run.fragments[l.id] = { first: true, feat: false, gold: false }; });
+  return run;
+}
+
+test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 한 줄이 남고(이웃은 자리에 맞춰 둘씩 · 하나씩), 긴 이름이 닿은 곳 · 점수에 닿지 않는다(한국어 · 영어)', async () => {
+  const R = await import('../src/ui/screens/rank.js');
+  const { measure } = await import('../src/render/gfx.js');
+  for (const lang of LANGS) {
+    // 모두 가장 넓은 이름, 나는 둘째(열 자리 · 아홉 자리 · 일곱 자리 점수 사이)
+    const a = await rankApp({ lang, me: { everyone: true, ante: 8, won: true, score: 500000000 } });
+    const data = await a.board(1);
+    assert.equal(data.me.rank, 2);
+    const ok = { date: RANK_DAY, phase: 'ok', sent: true, improved: true, rank: data.me.rank, total: data.total, me: data.me, around: data.around };
+    let st = ok;
+    a.app.rank.status = () => st;
+    // 판 밖 알림 줄: 카드 아래 · 단추 줄 위의 글
+    const note = (f, card) => { const by = a.app.ui.regions.find((r) => r.id === 'result:again').y; return f.texts.some((q) => q.y >= card.y + card.h && q.y + q.h <= by); };
+    const draw = async (o) => { await endDaily(a.app, o); a.app.go('result'); return a.frame(); };
+    for (const [won, frags, rows, wantNote] of [[false, 0, 3, true], [true, 0, 4, true], [false, 3, null, false], [true, 3, null, false], [false, 1, null, false]]) {
+      const tag = `${lang} ${won ? '이긴 판' : '진 판'} 조각 ${frags}`;
+      st = ok;
+      const f = await draw({ won, frags });
+      assert.deepEqual(f.bad, [], tag);
+      const box = f.boxes.find((q) => q.name === '결과'), card = f.boxes.find((q) => q.name === '순위 카드');
+      assert.ok(box.y >= 0 && box.y + box.h <= 270, `${tag}: 결과 상자 ${box.y} ~ ${box.y + box.h}`);
+      assert.ok(card && card.y >= box.y && card.y + card.h <= box.y + box.h, `${tag}: 카드가 상자 안`);
+      assert.ok(f.texts.some((q) => q.s === M.lang.L(`오늘 ${data.me.rank}등`)), `${tag}: 등수`);
+      assert.ok(a.has('result:rank') && a.has('result:again') && a.has('result:title'), `${tag}: 단추`);
+      // 이웃 줄 수: 카드 안의 이름 글
+      const names = f.texts.filter((q) => q.box === card && q.s === a.app.rank.nameOf(a.long));
+      if (rows != null) assert.equal(names.length, rows, `${tag}: 줄 수`); // 나는 둘째라 둘씩이어도 위는 하나(네 줄)
+      else assert.ok(names.length <= 3, `${tag}: 줄 수 ${names.length}`);
+      if (wantNote) assert.ok(note(f, card), `${tag}: 판 밖 알림 줄이 빠졌다`);
+      // 카드 줄의 글끼리 4 이상 떨어져 있다(이름 · 닿은 곳 · 점수)
+      const byY = new Map();
+      for (const q of f.texts.filter((x) => x.box === card)) byY.set(q.y, [...(byY.get(q.y) || []), q]);
+      for (const line of byY.values()) { line.sort((x, y) => x.x - y.x); for (let i = 1; i < line.length; i++) assert.ok(line[i - 1].x + line[i - 1].w + 4 <= line[i].x || line[i].s.startsWith(' / '), `${tag}: 「${line[i - 1].s}」 · 「${line[i].s}」`); }
+      // 상태 넷: 확인 중 · 새 배포 · 닿지 못함 · 낸 것 없음(카드 없음 — 날짜 줄이 돌아온다)
+      for (const [phase, say] of [['pending', '확인 중'], ['stale', R.STALE_LINES[0]], ['unreached', '순위에 닿지 못했다'], ['none', null]]) {
+        st = { date: RANK_DAY, phase };
+        a.app.go('result', { quiet: true });
+        const g = a.frame(), gb = g.boxes.find((q) => q.name === '결과'), gc = g.boxes.find((q) => q.name === '순위 카드');
+        assert.deepEqual(g.bad, [], `${tag} ${phase}`);
+        assert.ok(gb.y >= 0 && gb.y + gb.h <= 270, `${tag} ${phase}: 결과 상자`);
+        assert.equal(!!gc, phase !== 'none', `${tag} ${phase}: 카드`);
+        if (say) assert.ok(g.texts.some((q) => q.box === gc && q.s === M.lang.L(say)), `${tag} ${phase}: 「${say}」`);
+        else assert.ok(g.texts.some((q) => q.s === M.lang.L(`오늘의 대국 ${RANK_DAY}`)) || frags > 0, `${tag}: 날짜 줄`);
+        if (phase === 'stale') for (const s of R.STALE_LINES) assert.ok(measure(s) <= gc.w - 16, `${tag}: 「${s}」`);
+      }
+    }
+    // 카드 줄의 칸: 가장 넓은 영어 이름이면 닿은 곳 칸을 줄 전체에서 뺀다, 한국어는 남는다 — 어느 쪽이든 이름과 다음 글 사이 6 이상
+    const names = data.around.map((r) => a.app.rank.nameOf(r)), at = R.cardCols(data.around, names, 20, 298);
+    assert.equal(at.reach == null, lang === 'en', `${lang}: 닿은 곳 칸`);
+    const { fitNum } = await import('../src/render/gfx.js');
+    data.around.forEach((r, i) => {
+      // 점수는 이름 옆에 남는 폭에 맞춘다(가장 넓은 영어 이름 + 열 자리 점수면 짧은 꼴)
+      const score = fitNum(r.score, at.scoreRoom(i)), next = at.reach != null ? at.reach - measure(lang === 'ko' ? '이김' : 'Hall 8') : at.score - measure(score, true);
+      assert.ok(at.name + measure(names[i], true) + 6 <= next, `${lang}: 이름이 다음 글에 닿는다(${names[i]} · ${score})`);
+      if (lang === 'ko') assert.equal(score, r.score.toLocaleString('en-US'), '한국어는 열 자리 점수도 다 적는다');
+    });
+  }
+  M.lang.setLang('ko');
+});
+
+test('설정 이름 줄: 큰 글자 · 언어 줄의 오른쪽 반에 이름 + 다시 짓기 — 긴 이름이면 「이름」 이름표를 빼고, 상자는 그대로 270 안(한국어 · 영어)', async () => {
+  const S = await import('../src/ui/screens/settings.js');
+  const { measure } = await import('../src/render/gfx.js');
+  const { nameText } = await import('../src/data/names.js');
+  for (const lang of LANGS) {
+    // 이름이 없으면(순위에 오른 적이 없다) 줄도 없다
+    const none = await rankApp({ lang });
+    none.app.openOverlay('settings');
+    let f = none.frame();
+    assert.deepEqual(f.bad, [], `${lang} 이름 없음`);
+    assert.ok(!none.has('set:name'));
+    const size = (g) => { const b = g.boxes.find((q) => q.name === '설정'); return [b.x, b.y, b.w, b.h]; };
+    const plain = size(f);
+    assert.ok(plain[1] >= 0 && plain[1] + plain[3] <= 270);
+    for (const longName of [true, false]) {
+      const a = await rankApp({ lang, me: { ante: 3, score: 900 } });
+      if (!longName) { const k = JSON.parse(a.d.window.localStorage.getItem('chainmate.player.v1')); a.d.window.localStorage.setItem('chainmate.player.v1', JSON.stringify({ ...k, a: 0, n: 0 })); }
+      // 저장을 고쳤으니 새로 읽게 앱을 다시 켠 셈으로: 순위만 새로 만든다
+      const { createRank } = await import('../src/ui/rank.js');
+      a.app.rank = createRank({ fetch: a.d.window.fetch, storage: a.d.window.localStorage, base: '', today: () => RANK_DAY, lang: () => lang });
+      const name = a.app.rank.player().name;
+      assert.equal(name, longName ? nameText(a.long.a, a.long.n, lang) : nameText(0, 0, lang));
+      a.app.openOverlay('settings');
+      f = a.frame();
+      const tag = `${lang} 「${name}」`;
+      assert.deepEqual(f.bad, [], tag);
+      assert.deepEqual(size(f), plain, `${tag}: 설정 상자가 달라졌다`);
+      assert.ok(a.has('set:name'), tag);
+      const [x, , w] = plain, at = S.nameRow(x, w, name);
+      // 이름은 큰 글자 단추(x + 120 ~ 184)에 닿지 않는다
+      assert.ok(at.nameX >= x + 184 + 8, `${tag}: 이름이 단추에 닿는다 ${at.nameX}`);
+      assert.equal(at.label == null, longName, `${tag}: 「이름」 이름표`);
+      assert.equal(f.texts.some((q) => q.s === M.lang.L('이름')), !longName, tag);
+      assert.ok(f.texts.some((q) => q.s === name));
+      if (at.label != null) assert.ok(at.label >= at.x0 && at.label + measure('이름') + 6 <= at.nameX);
+      // 다시 짓기 단추는 언어 단추에 닿지 않는다 · 가리키면 제목 자리에 한 줄
+      const btn = a.app.ui.regions.find((r) => r.id === 'set:name'), langBtn = a.app.ui.regions.find((r) => r.id === 'set:lang');
+      assert.ok(btn.x >= langBtn.x + langBtn.w + 8, `${tag}: 다시 짓기가 언어 단추에 닿는다`);
+      for (const left of [null, 19, 1, 0]) assert.ok(measure(S.rerollTip(left)) <= w - 16, `${tag}: 「${S.rerollTip(left)}」`);
+      a.app.settings.big = true;
+      assert.deepEqual(a.frame().bad, [], `${tag} 큰 글자`);
+    }
+  }
+  M.lang.setLang('ko');
+});

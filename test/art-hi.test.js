@@ -168,3 +168,18 @@ test('타이틀 시연 판: 기물 그림을 판 하나에 하나로(hi를 주�
     assert.equal(images(r.calls).pop()[1].width, 32, `sy ${sy}`);
   }
 });
+
+test('주사위(설정 「다시 짓기」, CHM-70): 반 칸 그림은 1배 그림과 짝 · 잉크가 7×7 자리를 꽉 채운다 · 배율에 맞는 그림을 7×7 자리에 찍는다', async () => {
+  const D = await import('../src/render/dice.js');
+  const { inkBox } = await import('../src/render/ink.js');
+  checkPair('dice', D.DICE_ROWS, D.DICE_HI);
+  assert.deepEqual(inkBox(D.DICE_ROWS), { x: 0, y: 0, w: D.DICE, h: D.DICE });
+  assert.deepEqual(inkBox(D.DICE_HI), { x: 0, y: 0, w: D.DICE * 2, h: D.DICE * 2 });
+  // 눈 다섯(네 귀 · 가운데)은 두 배에서도 뚫려 있다
+  for (const [x, y] of [[1, 1], [5, 1], [3, 3], [1, 5], [5, 5]]) { assert.equal(D.DICE_ROWS[y][x], '.'); assert.equal(D.DICE_HI[y * 2][x * 2], '.'); }
+  const draws = [];
+  const ctx = (scale) => ({ getTransform: () => ({ a: scale, b: 0 }), drawImage: (c, x, y, w, h) => draws.push([c.width, c.height, x, y, w, h]) });
+  D.diceIcon(ctx(1), 10, 20, '#fff');
+  D.diceIcon(ctx(3), 10, 20, '#fff');
+  assert.deepEqual(draws, [[7, 7, 10, 20, 7, 7], [14, 14, 10, 20, 7, 7]]);
+});
