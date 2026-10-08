@@ -83,7 +83,7 @@ const I = {
   kings_step: ['....g.g.....', '....ggg.....', '....ggg.....', '............', '.##......##.', '.##......##.', '.#........#.', '............', '..##....##..', '..##....##..', '..#......#..', '............'],
   ambusher: ['............', '...GGGG.....', '..GGGGGGG...', '.GGwGGGwGG..', '.GG#GGG#GG..', '.GGGGGGGGGG.', 'GGGGGGGGGGGG', '.GGGGGGGGGG.', '............', '..#.#.#.#...', '............', '............'],
   counter_book: ['............', '.##########.', '.#rr....rr#.', '.#..r..r..#.', '.#...rr...#.', '.#..r..r..#.', '.#rr....rr#.', '.##########.', '.#........#.', '.##########.', '............', '............'],
-  // 첫 화면 메뉴(CHM-49): 이어 하기 ▶ · 새 판 폰 · 수업 책 · 오늘의 대국 해 · 도감 칸 · 기록 왕관 · 설정 톱니
+  // 첫 화면 메뉴(CHM-49): 이어 하기 ▶ · 새 판 폰 · 수업 책 · 오늘의 대국 해 · 도감 칸 · 기록 왕관 · 설정 톱니 · 순위 우승컵(CHM-70)
   menu_continue: ['............', '....y.......', '....yy......', '....yyy.....', '....yyyy....', '....yyyyy...', '....yyyyy...', '....yyyy....', '....yyy.....', '....yy......', '....y.......', '............'],
   menu_new: ['..........y.', '.....yy..yyy', '....yyyy..y.', '....yyyy....', '.....yy.....', '....yyyy....', '.....yy.....', '.....yy.....', '....yyyy....', '...yyyyyy...', '...yyyyyy...', '............'],
   menu_lesson: ['............', '.yyyy..yyyy.', 'y....yy....y', 'y.gg.yy.gg.y', 'y....yy....y', 'y.gg.yy.gg.y', 'y....yy....y', 'y.gg.yy.gg.y', 'y....yy....y', 'yyyyyyyyyyyy', '.....yy.....', '............'],
@@ -91,6 +91,7 @@ const I = {
   menu_codex: ['............', '.yyyyyyyyyy.', '.y..y..y..y.', '.y..y..y..y.', '.yyyyyyyyyy.', '.y..y..y..y.', '.y..y..y..y.', '.yyyyyyyyyy.', '.y..y..y..y.', '.y..y..y..y.', '.yyyyyyyyyy.', '............'],
   menu_records: ['............', '............', 'y....yy....y', 'yy...yy...yy', 'yyy.yyyy.yyy', 'yyyyyyyyyyyy', 'yyyyyyyyyyyy', 'yyyyyyyyyyyy', '.yyyyyyyyyy.', '............', '.yyyyyyyyyy.', '............'],
   menu_settings: ['....yyyy....', '.yy.yyyy.yy.', '.yyyyyyyyyy.', '..yyy..yyy..', 'yyyy....yyyy', 'yyy......yyy', 'yyy......yyy', 'yyyy....yyyy', '..yyy..yyy..', '.yyyyyyyyyy.', '.yy.yyyy.yy.', '....yyyy....'],
+  menu_rank: ['..yyyyyyyy..', 'yyyyyyyyyyyy', 'y.yyyggyyy.y', 'y.yyggggyy.y', '.yyyyggyyyy.', '..yyyyyyyy..', '...yyyyyy...', '....yyyy....', '.....yy.....', '.....yy.....', '...yyyyyy...', '..yyyyyyyy..'],
 };
 
 const CACHE = new Map();
