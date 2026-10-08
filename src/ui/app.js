@@ -21,6 +21,7 @@ import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
+import { telBefore, commandEvents, runStartProps, runEndProps } from './telemetry.js';
 import { VERSION, COMMIT } from '../version.js';
 import { SCREENS } from './screens/index.js';
 import { coachDown, updateGuide, drawCoach, coachPlan } from './coach.js';
@@ -28,8 +29,9 @@ import { foldSide } from './fold.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
+// track(name, props): 기록 보내기(CHM-63, src/ui/telemetry.js) — main.js가 넘긴다. 없으면 아무것도 보내지 않는다(Node 시험 · 도구)
 // platform: 'web' | 'app'(Tauri). share(name, text) · download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null }) {
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -86,10 +88,32 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.saveRecords = () => store.set(KEYS.records, app.records);
   // 사람 판 기록(CHM-50): 판마다 run.track에 세고, 판이 끝나면 한 줄을 KEYS.runs에 남긴다. 수업 · 대본 대국 · scratch 판은 남기지 않는다
   app.appInfo = { version: VERSION, commit: COMMIT, platform };
+  // 기록 보내기(CHM-63): scratch 판 위에서는 always(수업 진행 · 설정)만 나간다. 판 사건은 app.cmd가 표(commandEvents)로 옮긴다
+  const onceSeen = new Set();
+  app.track = (name, props = {}, { always = false } = {}) => {
+    if (!track || (!always && app.run && app.run.scratch)) return;
+    try { track(name, props); } catch { /* 게임은 모른다 */ }
+  };
+  // 판마다 첫 번만(판 보기 큰 판)
+  app.trackOnce = (name, props = {}) => {
+    const k = `${app.run ? app.run.seed : ''}:${name}`;
+    if (onceSeen.has(k)) return;
+    onceSeen.add(k);
+    app.track(name, props);
+  };
+  // 설정 「기록 보내기」: 끄는 순간 마지막으로 한 번 알리고 곧바로 보낸다
+  app.setTelemetry = (on) => {
+    if (!on && track && track.off) { try { track.off(); } catch { /* 그대로 */ } }
+    app.settings.telemetry = !!on;
+    app.saveSettings();
+    if (on) app.track('setting_change', { key: 'telemetry', value: true }, { always: true });
+  };
   app.keepRun = (run, end) => {
     if (!run || run.scratch || !run.track) return -1;
     const row = runRow(run, run.track, { end, endedAt: new Date().toISOString() });
     run.track.kept = row.id;
+    // 같은 끝은 한 번만 보낸다(복기가 끝난 판의 줄을 갈아 끼울 때 또 부른다)
+    if (run.track.told !== row.end) { run.track.told = row.end; app.track('run_end', runEndProps(row), { always: true }); }
     return keepRow(store, row);
   };
   // 설정 「기록 내보내기」: 손가락 기기는 공유 시트, 그 밖은 파일로 받고, 둘 다 없거나 안 되면 글을 클립보드로
@@ -172,6 +196,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (daily) app.run.daily = daily;
     app.run.track = newTrack({ startedAt: Date.now(), app: app.appInfo });
     app.fresh = [];
+    app.tutStep = -1;
+    app.track('run_start', runStartProps(app.run, { script }));
     observe(app.records, app.run, [], app.fresh);
     // 스크린샷 · 영상 도구(window.__autoDraft): 정석 첫째를 곧바로 골라 예전 흐름으로
     if (globalThis.__autoDraft && app.run.phase === 'draft') applyRun(app.run, { type: 'joseki', index: 0 });
@@ -201,7 +227,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     // 사람 판 기록: 옛 저장에서 이어 둔 판은 여기서 세기 시작한다
     if (!run.scratch && !run.track) run.track = newTrack({ startedAt: null, app: app.appInfo });
     const prev = run.scratch ? null : trackBefore(run);
+    const tb = track && !run.scratch ? telBefore(run) : null;
     const ev = applyRun(run, cmd);
+    if (tb) for (const [name, props] of commandEvents(run, cmd, ev, tb)) app.track(name, props);
     if (prev) {
       trackCommand(run.track, run, cmd, ev, prev);
       if ((run.phase === 'won' || run.phase === 'lost') && prev.phase !== run.phase) app.keepRun(run, run.phase === 'won' ? 'won' : run.endless ? 'endless' : 'lost');
@@ -317,6 +345,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (app.overlay && app.overlay.update) app.overlay.update(dt);
     else if (app.screen && app.screen.update) app.screen.update(dt);
     updateGuide(app, dt);
+    // 첫 판 대본 대국의 걸음(기록 보내기): 새로 닿은 걸음마다 한 번
+    { const g = app.guide, r = app.run; if (g && r && !r.scratch && r.battle && r.battle.script && g.i > (app.tutStep ?? -1)) { app.tutStep = g.i; app.track('tutorial_step', { step: g.i }); } }
     if (app.audio) app.audio.update(dt, app);
   };
 

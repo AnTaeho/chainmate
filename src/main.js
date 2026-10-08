@@ -3,6 +3,8 @@
 import { createApp } from './ui/app.js';
 import { chooseFit, stageTransform, toGame as pointToGame } from './ui/fit.js';
 import { drawPad, resetPad } from './render/backdrop.js';
+import { createTelemetry } from './ui/telemetry.js';
+import { VERSION } from './version.js';
 
 export async function boot(env = {}) {
   const win = env.window || globalThis.window;
@@ -149,9 +151,29 @@ export async function boot(env = {}) {
   const copyText = (text) => {
     try { return win.navigator.clipboard.writeText(text).then(() => true, () => false); } catch { return Promise.resolve(false); }
   };
-  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText });
+  // 기록 보내기(CHM-63, src/ui/telemetry.js): 배포 주소 · 앱에서만, 자동화 브라우저가 아닐 때만, 설정이 켜져 있을 때만 나간다
+  const nav = win.navigator || {};
+  const tel = createTelemetry({
+    fetch: typeof win.fetch === 'function' ? (url, init) => win.fetch(url, init) : null,
+    beacon: typeof nav.sendBeacon === 'function' ? (url, body) => nav.sendBeacon(url, body) : null,
+    storage: win.localStorage, host: (win.location && win.location.hostname) || '',
+    platform: platform === 'app' ? (coarse() ? 'ios' : 'desktop') : 'web',
+    webdriver: !!nav.webdriver, ua: nav.userAgent || '', version: VERSION,
+    ...(typeof win.setTimeout === 'function' && typeof win.clearTimeout === 'function' ? { setTimer: (fn, ms) => win.setTimeout(fn, ms), clearTimer: (t) => win.clearTimeout(t) } : {}),
+    enabled: () => !app || app.settings.telemetry !== false,
+    context: () => (app ? { lang: app.settings.lang, dan: app.records.unlocked ? app.records.unlocked.dan : null, screen_w: win.innerWidth, screen_h: win.innerHeight, scale: app.scale, screen: (app.overlay || app.screen || {}).name || null } : {}),
+  });
+  const track = (name, props) => tel.track(name, props);
+  track.off = () => tel.off();
+  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track });
+  win.addEventListener('error', (e) => tel.error((e && e.error) || (e && e.message) || 'error'));
+  win.addEventListener('unhandledrejection', (e) => tel.error((e && e.reason) || 'unhandledrejection'));
+  // 화면이 숨거나 떠날 때 남은 것을 보낸다
+  win.addEventListener('pagehide', () => tel.flushNow());
+  if (doc.addEventListener) doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'hidden') tel.flushNow(); });
   app.setScale(pendingScale);
   refit();
+  tel.open();
   if (audio) audio.apply(app.settings);
 
   // 누른 자리 → 게임 좌표(보이는 캔버스 사각형 기준 — 확대 · DPR · 가장자리 여백과 상관없다). 돌려 그렸으면 돌린 축으로 되돌린다

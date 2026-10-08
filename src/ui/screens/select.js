@@ -272,6 +272,7 @@ export class SelectScreen {
         ui.region(`select:board:${i}`, x, y, w, h, { tip, keys: [master ? lay.m.text : tagText(info.tag)] });
         miniBoard(ctx, pv, x + P + lay.peek.x, y + lay.peek.y, { dim: !cur });
         if (cur) hint(this.app, 'preview', `select:board:${i}`);
+        if (ui.isHover(`select:board:${i}`)) this.app.trackOnce('peek_hover', { ante: run.ante, blind: i });
       }
       if (master) {
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)

@@ -826,6 +826,7 @@ export class BattleScreen {
       this.sync();
     }
     app.records.reviews = (app.records.reviews || 0) + 1;
+    app.track('review_open', { ante: app.run.ante, kind: res.kind });
     app.saveRecords();
     this.snd(res.kind === 'path' ? 'pick' : 'lose');
   }
@@ -841,6 +842,7 @@ export class BattleScreen {
     const rv = this.rv, app = this.app;
     if (!rv || !rv.res || rv.res.kind !== 'path') return;
     app.records.reviewReplays = (app.records.reviewReplays || 0) + 1;
+    app.track('review_replay', { ante: app.run.ante });
     app.saveRecords();
     const lost = this.runEvents.find((e) => e.type === 'clockLost');
     app.go('review', { res: rv.res, trail: this.trail, list: rv.list, clock: lost ? lost.clock : null });

@@ -32,6 +32,7 @@ export function openLesson(app, i, from = app.lessonFrom) {
 // 수업이 끝나면: 본 것으로 적고, 목록에서 왔으면 목록으로, 아니면 다음 수업(끝이면 첫 판)
 export function lessonDone(app, i) {
   finishLessons.mark(app, LESSONS[i].id);
+  app.track('lesson_done', { id: LESSONS[i].id }, { always: true });
   if (app.run && app.run.scratch) app.run = null;
   if (app.lessonFrom === 'list') return app.go('lessons');
   if (LESSONS[i + 1]) return openLesson(app, i + 1);
