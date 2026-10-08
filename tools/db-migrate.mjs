@@ -24,13 +24,15 @@ export async function cleanupTests(sql) {
   const has = (await sql.query("select count(*)::int as n from information_schema.tables where table_schema = 'public' and table_name = 'player_keys'"))[0].n > 0;
   if (has) await sql.query('delete from link_limits where who in (select id from players where test)');
   const gone = await sql.query('delete from players where test returning id');
-  const T = has ? ['players', 'daily_scores', 'daily_logs', 'player_keys', 'link_codes', 'saves'] : ['players', 'daily_scores', 'daily_logs'];
+  const acc = (await sql.query("select count(*)::int as n from information_schema.tables where table_schema = 'public' and table_name = 'accounts'"))[0].n > 0;
+  const T = has ? ['players', 'daily_scores', 'daily_logs', 'player_keys', 'link_codes', 'saves', ...(acc ? ['accounts'] : [])] : ['players', 'daily_scores', 'daily_logs'];
   const count = async (where) => { const out = {}; for (const t of T) out[t] = (await sql.query(`select count(*)::int as n from ${t} x ${where(t)}`))[0].n; return out; };
   const left = await count((t) => (t === 'players' ? 'where x.test' : 'join players p on p.id = x.player_id where p.test'));
   const all = await count(() => '');
   if (has) {
     // 플레이어가 없는 한도 줄(지운 시험 플레이어의 것)도 남기지 않는다. 전체 잠금 줄(who 0)은 도구가 제 손으로 되돌린다
-    await sql.query('delete from link_limits where who <> 0 and who not in (select id from players)');
+    // 들어오기 한도 줄(login · loginlock)의 who는 아이디의 번호라 플레이어와 견주지 않는다 — 만든 도구가 제 손으로 지운다
+    await sql.query("delete from link_limits where who <> 0 and kind not in ('login', 'loginlock') and who not in (select id from players)");
     all.link_limits = (await sql.query('select count(*)::int as n from link_limits'))[0].n;
   }
   return { gone: gone.length, left, all };
@@ -48,5 +50,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const [k] = await sql.query(`select (select count(*)::int from players) as players, (select count(*)::int from player_keys) as keys,
     (select count(*)::int from players p where not exists (select 1 from player_keys k where k.key_hash = p.key_hash and k.player_id = p.id)) as missing,
     (select count(*)::int from information_schema.columns where table_name = 'players' and column_name = 'key_hash') as old_column`);
+  const [ac] = await sql.query('select count(*)::int as n from accounts');
+  console.log(`계정: ${ac.n}`);
   console.log(`열쇠 옮김: 플레이어 ${k.players} · 열쇠 ${k.keys} · 열쇠 표에 없는 옛 열쇠 ${k.missing} · 옛 칸 players.key_hash ${k.old_column ? '그대로' : '없음'}`);
 }

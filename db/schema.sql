@@ -79,3 +79,13 @@ create table if not exists saves (
   blob         text not null,
   updated_at   timestamptz not null default now()
 );
+
+-- ── 계정(CHM-72, leaderboard.md 「계정」): 플레이어에 붙는 자격 하나. 이메일은 없다. 비번은 scrypt 해시 글(scrypt$N$r$p$salt$hash)만 둔다
+create table if not exists accounts (
+  id            bigint generated always as identity primary key,
+  username      text not null unique,          -- 영문 소문자 · 숫자 · _ 3~20자(소문자로 저장). 남에게 보이지 않는다
+  pw_hash       text not null,
+  player_id     bigint not null unique references players(id) on delete cascade,
+  created_at    timestamptz not null default now(),
+  pw_changed_at timestamptz not null default now()
+);
