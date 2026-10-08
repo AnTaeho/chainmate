@@ -36,6 +36,7 @@ export const LIMITS = {
 };
 
 const DAY = 86400000;
+const LOCK_EPOCH = 1700000000; // 잠금이 풀리는 때는 이 초부터 센 초로 적는다(한도 표의 n은 정수 칸)
 export const utcDate = (ms) => new Date(ms).toISOString().slice(0, 10);
 export const hashKey = (key) => createHash('sha256').update(key).digest('hex');
 const isKey = (k) => typeof k === 'string' && /^[0-9a-f]{64}$/.test(k);
@@ -82,7 +83,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
     await store.bump('loginall', 0, allOf(), LIMITS.loginAllFails);
     if (uid != null) {
       const n = await store.bump('login', uid, failOf(), LIMITS.loginFails);
-      if (n == null || n >= LIMITS.loginFails) await store.setMark('loginlock', uid, 'until', Math.ceil((now() + LIMITS.loginLock) / 60000));
+      if (n == null || n >= LIMITS.loginFails) await store.setMark('loginlock', uid, 'until', Math.ceil((now() + LIMITS.loginLock) / 1000) - LOCK_EPOCH);
     }
     return err(401, 'bad_login');
   };
@@ -286,7 +287,8 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       const name = cleanUsername(username);
       // 규칙에 안 맞는 아이디도 없는 아이디와 같은 길(같은 한도 · 같은 시간 · 같은 답)로 간다
       const uid = usernameId(name || username.trim().toLowerCase());
-      const until = (await store.peek('loginlock', uid, 'until')) * 60000;
+      const mark = await store.peek('loginlock', uid, 'until');
+      const until = mark ? (mark + LOCK_EPOCH) * 1000 : 0;
       if (until > now()) return err(429, 'locked', { retryAfter: Math.ceil((until - now()) / 1000) });
       const mine = await store.accountOfPlayer(me.id);
       if (mine && mine.username !== name) return err(409, 'other_account');
