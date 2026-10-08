@@ -13,7 +13,7 @@ import { nameText } from '../src/data/names.js';
 import { summarize } from '../api/_lib/verify.js';
 import { hashKey, utcDate, LIMITS } from '../api/_lib/service.js';
 import { playRun } from './shopbot.mjs';
-import { direct } from './db-migrate.mjs';
+import { direct, cleanupTests, cleanupLine } from './db-migrate.mjs';
 
 const args = process.argv.slice(2);
 const BASE = (args.find((a) => /^https?:/.test(a)) || '').replace(/\/$/, '');
@@ -21,13 +21,9 @@ const VERCEL = args.includes('--vercel'), KEEP = args.includes('--keep'), ONLY_C
 const sql = direct();
 
 async function cleanup() {
-  const gone = await sql.query('delete from players where test returning id');
-  const [left] = await sql.query(`select (select count(*)::int from players where test) as players,
-    (select count(*)::int from daily_scores s join players p on p.id = s.player_id where p.test) as scores,
-    (select count(*)::int from daily_logs l join players p on p.id = l.player_id where p.test) as logs`);
-  const [all] = await sql.query('select (select count(*)::int from players) as players, (select count(*)::int from daily_scores) as scores, (select count(*)::int from daily_logs) as logs');
-  console.log(`정리: 시험 플레이어 ${gone.length}명 지움 · 남은 시험 자료 플레이어 ${left.players} · 성적 ${left.scores} · 명령 줄 ${left.logs} · DB 전체 플레이어 ${all.players} · 성적 ${all.scores} · 명령 줄 ${all.logs}`);
-  if (left.players || left.scores || left.logs) throw new Error('시험 자료가 남았다');
+  const r = await cleanupTests(sql);
+  console.log(cleanupLine(r));
+  if (Object.values(r.left).some(Boolean)) throw new Error('시험 자료가 남았다');
 }
 if (ONLY_CLEAN) { await cleanup(); process.exit(0); }
 if (!BASE) { console.error('주소를 준다: node tools/daily-e2e.mjs <주소> [--vercel]'); process.exit(2); }

@@ -2,7 +2,7 @@
 //   node tools/smoke.mjs [--seed 3] [--runs 2] [--verbose] [--lang en] [--spacing pad8,line14,…]
 // 확인: 예외 0 · 모든 화면 방문 · 프레임당 그리기 시간 · 한 수 연출 시간(×1) · 저장 → 이어 하기.
 import { makeFakeDom } from './fakedom.mjs';
-import { decideBattle } from './bot.mjs';
+import { decideBattle, stepBattle } from './bot.mjs';
 import { lineCommands, previewDrop, bestMove } from '../src/sim/solver.js';
 import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
@@ -2003,8 +2003,99 @@ const telNote = { shown: 0, gone: 0, again: 0, off: 0 };
   app = mainApp;
 }
 
+// ── 기기 잇기(CHM-71): 기기 둘(가짜 서버 하나 + 앱 둘 — 저장은 따로)로 코드 받기 → 넣기 → 같은 이름 → 한쪽에서 판을 두고 → 다른 쪽을 다시 켜면
+// 기록 · 진행 중인 판이 보이는가(첫 화면 「이어 하기」가 그 판을 연다). 끝에 이 기기 떼기. 저장 덩이 올리기의 크기도 잰다
+const linkSeen = { code: 0, typed: 0, name: '', same: 0, back: 0, run: '', cont: 0, records: '', line: 0, unlink: 0, frames: 0, flow: [], bad: [] };
+{
+  const mainApp = app;
+  const bad = (m) => linkSeen.bad.push(m);
+  const calm = (a) => { a.records.kingDone = true; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true }; a.saveRecords(); };
+  await freshBoot(); calm(app); pump(2);
+  const A = app;
+  // 둘째 기기: 제 저장을 가진 가짜 DOM
+  const domB = makeFakeDom({ width: 1366, height: 700, dpr: 1.25 });
+  domB.window.fetch = dom.window.fetch; domB.window.navigator = dom.window.navigator;
+  if (LANG !== 'ko') domB.store.set('chainmate.settings.v1', JSON.stringify({ lang: LANG }));
+  let B = null, tB = 0;
+  const bootB = async () => { if (B) { B.pointer = () => {}; B.key = () => {}; } B = await boot({ window: domB.window, document: domB.document, today: () => DATE, rankBase: '' }); apps.push(B); B.onError = (e) => { errors.push(e); console.error(e); }; };
+  const frameB = (n = 1) => { for (let i = 0; i < n; i++) { tB += 1000 / 60; domB.frame(tB); linkSeen.frames++; for (const q of LL.checkLayout()) if (!linkSeen.flow.includes(q.msg)) linkSeen.flow.push(q.msg); } };
+  const regionB = (id) => B.ui.regions.find((r) => r.id === id);
+  const clickB = (id) => { const r = regionB(id); if (!r) throw new Error(`둘째 기기: no region ${id} on ${B.overlay ? B.overlay.name : B.screen.name}`); const gx = r.x + (r.w >> 1), gy = r.y + (r.h >> 1); domB.mouse('mousemove', gx, gy); domB.mouse('mousedown', gx, gy); domB.mouse('mouseup', gx, gy); frameB(1); };
+  const drew = (ko) => LL.LOG.texts.some((q) => q.s === L(ko) || q.s.startsWith(L(ko)));
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  await bootB(); calm(B); frameB(2);
+  // A: 설정 → 기기 잇기 → 코드 받기
+  click('title:settings'); pump(1); click('set:link'); pump(2);
+  if (screen() !== 'link') bad(`설정의 기기 잇기 → ${screen()}`);
+  click('link:code'); pump(1); await netSettle(24); pump(2);
+  const code = A.screen.mine && A.screen.mine.code;
+  if (/^\d{8}$/.test(code || '') && LL.LOG.texts.some((q) => q.s === `${code.slice(0, 4)} ${code.slice(4)}`) && drew('다른 기기에서 이 숫자를 넣는다')) linkSeen.code = 1; else bad('코드 받기가 큰 숫자를 띄우지 않았다');
+  // B: 설정 → 기기 잇기 → 숫자판으로 넣기 → 확인 → 이어졌다
+  clickB('title:settings'); clickB('set:link'); frameB(2);
+  for (const d of code || '') { clickB(`link:key:${d}`); linkSeen.typed++; }
+  clickB('link:key:go'); frameB(1);
+  if (!regionB('link:yes') || !regionB('link:no') || regionB('link:key:1')) bad('잇기 전 확인이 뜨지 않았다');
+  clickB('link:yes'); await netSettle(36); frameB(3);
+  linkSeen.name = A.rank.player() ? A.rank.player().name : '';
+  if (B.screen.entry.phase === 'done' && B.rank.player() && B.rank.player().name === linkSeen.name && drew('이어졌다') && LL.LOG.texts.some((q) => q.s === linkSeen.name)) linkSeen.same = 1; else bad(`넣은 기기가 같은 이름이 되지 않았다(${B.screen.entry.phase} · ${B.screen.entry.fail})`);
+  // A: 띄워 둔 코드가 쓰인 것을 몇 초 안에 안다
+  for (let i = 0; i < 4 && A.screen.mine.phase !== 'linked'; i++) { pump(330); await netSettle(24); pump(2); }
+  await netSettle(24); pump(2);
+  if (A.screen.mine.phase === 'linked' && A.screen.devices === 2 && drew('이어졌다') && drew('기기 2대가 이어져 있다')) linkSeen.back = 1; else bad('코드를 낸 기기가 이어진 것을 알지 못했다');
+  click('link:back'); pump(2);
+  if (screen() !== 'title') bad(`기기 잇기에서 돌아가기 → ${screen()}`);
+  // A: 판 하나를 끝까지 두고(기록), 새 판을 첫 상점 뒤 관 선택까지 둔다(진행 중인 판)
+  const play = (stop) => {
+    for (let guard = 0; guard < 5000 && app.run.phase !== 'lost' && app.run.phase !== 'won' && !stop(app.run); guard++) {
+      const ph = app.run.phase;
+      if (ph === 'draft') app.cmd({ type: 'joseki', index: 0 });
+      else if (ph === 'select') app.cmd({ type: 'play' });
+      else if (ph === 'battle') { for (let i = 0; i < 400 && app.run.phase === 'battle'; i++) if (!stepBattle(app.run.battle, (c) => app.cmd(c), {})) break; }
+      else if (ph === 'shop') app.cmd({ type: 'leave' });
+      else if (ph === 'pack') app.cmd({ type: 'skipPack' });
+    }
+  };
+  app.newRun({ seed: 1000003 }); play(() => false);
+  app.goPhase(); pump(3);
+  app.toTitle(); pump(1);
+  app.newRun({ seed: 77 });
+  let shops = 0;
+  play((r) => r.phase === 'shop' && shops++ > 0);
+  if (app.run.phase === 'shop') app.cmd({ type: 'leave' });
+  const mine = { seed: app.run.seed, ante: app.run.ante, blind: app.run.blind, phase: app.run.phase, money: app.run.money, deck: app.run.deck.length };
+  linkSeen.run = `${mine.ante}관 ${mine.blind + 1}번째 대국 ${mine.phase} · $${mine.money}`;
+  app.toTitle(); pump(1);
+  // 화면이 가려질 때 올린다(15초 묶음을 기다리지 않는다)
+  await wait(5); dom.emit('pagehide'); await netSettle(36);
+  // B: 다시 켠다 → 당겨 온다 → 첫 화면의 「이어 하기」가 그 판을 연다
+  await bootB(); await netSettle(36); frameB(3);
+  if (!regionB('title:continue')) bad('다른 기기의 진행 중인 판이 첫 화면에 보이지 않는다');
+  else {
+    clickB('title:continue'); frameB(2);
+    const r = B.run;
+    if (r && r.seed === mine.seed && r.ante === mine.ante && r.blind === mine.blind && r.phase === mine.phase && r.money === mine.money && r.deck.length === mine.deck && B.screen.name === 'select') linkSeen.cont = 1;
+    else bad(`이어 하기가 다른 판을 열었다(${r ? `${r.seed} ${r.ante}관 ${r.phase}` : '없음'})`);
+    B.toTitle(); frameB(1);
+  }
+  const cells = (rec) => Object.values(rec.codex).reduce((n, k) => n + Object.values(k).filter(Boolean).length, 0);
+  clickB('title:records'); frameB(2);
+  linkSeen.records = `판 ${B.records.runs} · 도감 ${cells(B.records)}칸 · 닿은 관 ${B.records.bestAnte}`;
+  if (!(B.screen.name === 'records' && A.records.runs >= 1 && B.records.runs === A.records.runs && cells(B.records) === cells(A.records) && cells(B.records) > 1 && B.records.bestAnte === A.records.bestAnte && LL.LOG.texts.some((q) => q.s === `${A.records.runs}`))) bad(`다른 기기의 기록이 같지 않다(이쪽 판 ${A.records.runs} · 도감 ${cells(A.records)} / 저쪽 ${linkSeen.records})`);
+  B.toTitle(); frameB(1);
+  // B: 아래 한 줄 · 이 기기 떼기
+  clickB('title:settings'); clickB('set:link'); await netSettle(24); frameB(2);
+  if (drew('기기 2대가 이어져 있다') && regionB('link:unlink')) linkSeen.line = 1; else bad('이어진 기기 줄이 보이지 않는다');
+  if (regionB('link:unlink')) { clickB('link:unlink'); frameB(1); clickB('link:unlink:yes'); await netSettle(24); frameB(2); }
+  if (B.screen.devices === 1 && !regionB('link:unlink') && (await A.rank.devices()) === 1) linkSeen.unlink = 1; else bad('이 기기 떼기가 되지 않았다');
+  for (const v of B.visited) visited.add(v);
+  B.pointer = () => {}; B.key = () => {};
+  seen();
+  app.pointer = () => {}; app.key = () => {};
+  app = mainApp;
+}
+
 seen();
-const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank'];
+const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank', 'link'];
 const missing = need.filter((n) => !visited.has(n));
 const ms = app.stats.drawMs.slice().sort((a, b) => a - b);
 const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;
@@ -2153,6 +2244,14 @@ if (telSent.n) { console.log('연기 시험 중에 기록이 밖으로 나갔다
   const r = rankSeen;
   console.log(`순위: 제출 ${r.submit} · 등수 표시 ${r.card || '없음'}(이웃 ${r.neighbours}줄) · 쪽 넘김 ${r.turned}(${r.pages}쪽) · 내 쪽으로 ${r.mine ? '확인' : '못 함'} · 어제 탭 ${r.yesterday ? '확인' : '못 함'} · 결과로 돌아옴 ${r.back ? '확인' : '못 함'} · 다시 짓기 ${r.renamed && r.renamed !== r.name ? `「${r.name}」 → 「${r.renamed}」` : '못 함'}(남은 횟수 줄 ${r.tip ? '확인' : '못 봄'}) · 처음 안내 ${r.hint ? '확인' : '못 봄'} · 안 둠 상태 ${r.unplayed ? '확인' : '못 봄'}(두기 ${r.play ? '확인' : '못 함'}) · 닿지 못함 상태 ${r.unreached ? '확인' : '못 봄'}${r.bad.length ? ` · 어긋남: ${r.bad.join(' | ')}` : ''}`);
   if (r.bad.length || r.submit !== 1 || !r.card || !r.open || r.turned !== 2 || !r.mine || !r.yesterday || !r.back || !r.renamed || r.renamed === r.name || !r.tip || !r.hint || !r.unplayed || !r.play || !r.unreached) { console.log('순위 흐름(제출 → 결과 카드 → 순위 화면 → 쪽 넘김 → 어제 → 다시 짓기)이 어긋났다'); fail = true; }
+}
+{
+  const r = linkSeen, yes = (v) => (v ? '확인' : '못 함');
+  // 저장 덩이: 연기 시험 내내 올린 본문(열쇠 · baseRev 포함)의 크기
+  const sizes = rankApi.named('/api/save').filter((c) => c.method === 'PUT').map((c) => Buffer.byteLength(JSON.stringify(c.body))).sort((a, b) => a - b);
+  console.log(`기기 잇기: 코드 받기 ${yes(r.code)} · 숫자판으로 넣기 ${r.typed}칸 · 같은 이름 ${r.same ? `「${r.name}」` : '못 함'} · 코드를 낸 쪽도 이어짐 ${yes(r.back)} · 한쪽 판(${r.run}) → 다른 쪽 이어 하기 ${yes(r.cont)} · 기록 같음(${r.records}) · 기기 2대 줄 ${yes(r.line)} · 이 기기 떼기 ${yes(r.unlink)} · 둘째 기기 글 넘침 ${r.flow.length}(프레임 ${r.frames}) · 저장 올리기 ${sizes.length}번(중간 ${sizes[sizes.length >> 1] || 0} · 최대 ${sizes.at(-1) || 0}바이트)${r.bad.length ? ` · 어긋남: ${r.bad.join(' | ')}` : ''}`);
+  if (r.flow.length) console.log('  둘째 기기에서 넘친 곳: ' + r.flow.slice(0, 20).join('\n  '));
+  if (r.bad.length || r.flow.length || !r.code || r.typed !== 8 || !r.same || !r.back || !r.cont || !r.line || !r.unlink || (sizes.at(-1) || 0) > 200 * 1024) { console.log('기기 잇기 흐름(코드 받기 → 넣기 → 같은 이름 → 판 · 기록이 건너감 → 떼기)이 어긋났다'); fail = true; }
 }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);
