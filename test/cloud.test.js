@@ -391,8 +391,12 @@ test('앱: 관 선택에 설 때 · 상점을 떠날 때 · 판이 끝날 때 �
   assert.equal(api.store.players.length, 1, '처음 맞추는 때에 열쇠가 생긴다');
   const s1 = await saved(api, key());
   assert.deepEqual([s1.rev, s1.blob.run.seed, s1.blob.run.phase, s1.blob.runAt], [1, 1000003, 'select', stored().updatedAt]);
-  // 대국 중의 명령은 맞추는 때가 아니다
+  // 대국 중의 명령은 맞추는 때가 아니다 — 다만 화면이 가려지면 그때의 판을 한 번 올린다
   app.cmd({ type: 'play' });
+  assert.equal(await app.cloud.hidden(), true);
+  const mid = await saved(api, key());
+  assert.deepEqual([mid.rev, mid.blob.run.phase, mid.blob.runAt], [2, 'battle', app.run.updatedAt]);
+  assert.equal(await app.cloud.hidden(), false, '달라진 것이 없으면 또 올리지 않는다');
   const n = touched;
   playUntil(app, (r) => r.phase !== 'battle');
   assert.ok(touched - n <= 1);
