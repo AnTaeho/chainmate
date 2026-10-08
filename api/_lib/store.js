@@ -1,4 +1,4 @@
-// 순위(CHM-70) · 기기 잇기와 클라우드 저장(CHM-71) DB 접근 층. sql: (text, params) => rows — 함수에서는 Neon HTTP 드라이버(api/_lib/http.js), 시험은 같은 꼴의 기억 저장소
+// 순위(CHM-70) · 기기 잇기와 클라우드 저장(CHM-71) · 계정(CHM-72) DB 접근 층. sql: (text, params) => rows — 함수에서는 Neon HTTP 드라이버(api/_lib/http.js), 시험은 같은 꼴의 기억 저장소
 // (test/helpers/memstore.js). SQL은 모두 매개변수 바인딩. 날짜는 글(YYYY-MM-DD)로 주고받는다. 스키마는 db/schema.sql.
 // HTTP 드라이버에는 주고받는 트랜잭션이 없다 — 한도 세기 · 기록 갈아 끼우기는 조건을 단 한 문장으로 한다(경합에도 안전).
 
@@ -146,6 +146,35 @@ export function createStore(sql) {
         : await one(`update saves set rev = rev + 1, blob = $2, updated_at = to_timestamp($3::double precision / 1000)
             where player_id = $1::bigint and rev = $4 returning rev`, [id, blobText, now, baseRev]);
       return r ? r.rev : null;
+    },
+    // ── 계정(CHM-72)
+    async findAccount(username) {
+      return one('select player_id::text as "playerId", username, pw_hash as hash from accounts where username = $1', [username]);
+    },
+    async accountOfPlayer(id) {
+      return one('select username, pw_hash as hash from accounts where player_id = $1::bigint', [id]);
+    },
+    // 계정 만들기(한 문장): 아이디가 이미 있거나 그 플레이어에 계정이 있으면 거짓
+    async createAccount(id, username, hash) {
+      return !!(await one('insert into accounts (username, pw_hash, player_id) values ($1, $2, $3::bigint) on conflict do nothing returning id', [username, hash, id]));
+    },
+    async setPassword(id, hash, now) {
+      await sql('update accounts set pw_hash = $2, pw_changed_at = to_timestamp($3::double precision / 1000) where player_id = $1::bigint', [id, hash, now]);
+    },
+    // 열쇠 하나를 지운다. 옛 칸 players.key_hash에 같은 값이 남아 있으면 쓰이지 않을 값으로 바꾼다(getPlayer가 옛 칸에서 되살리지 않게)
+    async dropKey(keyHash, filler) {
+      await sql('update players set key_hash = $2 where key_hash = $1', [keyHash, filler]);
+      await sql('delete from player_keys where key_hash = $1', [keyHash]);
+    },
+    // 플레이어와 딸린 것(계정 · 열쇠 · 성적 · 명령 줄 · 코드 · 저장 — cascade) + 그 사람의 한도 줄
+    async deletePlayer(id) {
+      await sql("delete from link_limits where who = $1::bigint and kind not in ('login', 'loginlock')", [id]);
+      await sql('delete from players where id = $1::bigint', [id]);
+    },
+    // 한도 표에 값을 그대로 적는다(잠금이 풀리는 때 · 틀린 수 되돌리기)
+    async setMark(kind, who, bucket, n) {
+      await sql(`insert into link_limits (kind, who, bucket, n) values ($1, $2::bigint, $3, $4)
+        on conflict (kind, who, bucket) do update set n = excluded.n, at = now()`, [kind, who, bucket, n]);
     },
   };
 }
