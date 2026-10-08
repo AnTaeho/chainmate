@@ -86,3 +86,16 @@ export function route(method, run, make = getService, { limit = LIMITS.body, all
   };
   return { [method]: handle, OPTIONS: options };
 }
+
+// 한 파일이 여러 길을 받는다(api/x/[action].js): 주소의 마지막 조각으로 table의 run을 고른다. 모르는 조각은 404 not_found
+export function routes(method, table, make = getService, opts = {}) {
+  const made = new Map(Object.entries(table).map(([name, run]) => [name, route(method, run, make, opts)]));
+  const handle = (request) => {
+    const name = new URL(request.url, 'http://x').pathname.split('/').filter(Boolean).pop();
+    const hit = made.get(name);
+    if (hit) return hit[method](request);
+    const o = originOk(request);
+    return o.ok ? json(404, { error: 'not_found' }, o.cors) : json(403, { error: 'bad_origin' });
+  };
+  return { [method]: handle, OPTIONS: route(method, null, make, opts).OPTIONS };
+}
