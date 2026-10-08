@@ -1,4 +1,4 @@
-// 순위(CHM-70) · 기기 잇기(CHM-71) 함수의 HTTP 껍데기: 출처 확인 · JSON 읽기(크기 한도) · 오류 감싸기. 로직은 api/_lib/service.js.
+// 순위(CHM-70) · 기기 잇기(CHM-71) · 계정(CHM-72) 함수의 HTTP 껍데기: 출처 확인 · JSON 읽기(크기 한도) · 오류 감싸기. 로직은 api/_lib/service.js.
 // IP는 읽지도 남기지도 않는다. 500에는 내부 메시지를 싣지 않는다(기록은 함수 로그에만).
 import { createStore } from './store.js';
 import { createService, LIMITS } from './service.js';
@@ -48,6 +48,15 @@ export async function readJson(request, limit = LIMITS.body) {
   return { body };
 }
 
+// 열쇠는 Authorization: Bearer <key> 머리말로 받는다(CHM-72 — 주소 · 접근 로그에 실리지 않게). 머리말이 있으면 그것이 이긴다.
+// 옛 클라이언트(본문 · 주소의 key)는 한동안 그대로 받는다 — 배포 사이에 열려 있는 탭이 있다
+export function bearer(request) {
+  const h = request.headers.get('authorization');
+  if (!h) return null;
+  const m = /^Bearer\s+(\S+)$/i.exec(h.trim());
+  return m ? m[1] : '';
+}
+
 // method: 'GET' | 'POST' | 'PUT'. run(service, 입력) → { status, body }. 돌려주는 것: Vercel 함수가 내보낼 { GET | POST | PUT, OPTIONS }
 // make: 서비스를 만드는 함수(시험이 가짜를 넘긴다). limit: 본문 한도(바이트). allow: 이 길이 받는 방식 모두(OPTIONS 답 — 한 파일이 둘을 내보낼 때)
 export function route(method, run, make = getService, { limit = LIMITS.body, allow = method } = {}) {
@@ -61,6 +70,8 @@ export function route(method, run, make = getService, { limit = LIMITS.body, all
         if (r.error) return json(r.error[0], { error: r.error[1] }, o.cors);
         input = r.body;
       } else input = Object.fromEntries(new URL(request.url, 'http://x').searchParams);
+      const key = bearer(request);
+      if (key != null) input.key = key;
       const out = await run(await make(), input);
       return json(out.status, out.body, o.cors);
     } catch (e) {
@@ -71,7 +82,7 @@ export function route(method, run, make = getService, { limit = LIMITS.body, all
   const options = (request) => {
     const o = originOk(request);
     if (!o.ok) return json(403, { error: 'bad_origin' });
-    return new Response(null, { status: 204, headers: { ...o.cors, 'Access-Control-Allow-Methods': `${allow}, OPTIONS`, 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400' } });
+    return new Response(null, { status: 204, headers: { ...o.cors, 'Access-Control-Allow-Methods': `${allow}, OPTIONS`, 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Max-Age': '86400' } });
   };
   return { [method]: handle, OPTIONS: options };
 }

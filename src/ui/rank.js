@@ -35,12 +35,13 @@ export function createRank({
   const pages = new Map();     // `${date}:${page}` → { phase, data, at, p }
   const rank = { allowed, stats, onResult: null };
 
-  // 돌려주는 것: { status(0 = 닿지 못함), body }
-  async function call(method, path, body = null, more = null) {
+  // 돌려주는 것: { status(0 = 닿지 못함), body }. key: 열쇠 — Authorization 머리말로만 싣는다(CHM-72 — 주소 · 본문에 싣지 않는다)
+  async function call(method, path, body = null, more = null, key = null) {
     stats.requests++;
     let res;
     try {
-      res = await fetch(root + path, { method, cache: 'no-store', ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}), ...(more || {}) });
+      const headers = { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(key ? { Authorization: `Bearer ${key}` } : {}) };
+      res = await fetch(root + path, { method, cache: 'no-store', ...(body || key ? { headers } : {}), ...(body ? { body: JSON.stringify(body) } : {}), ...(more || {}) });
     } catch { return { status: 0, body: null }; }
     let j = null;
     try { j = await res.json(); } catch { /* JSON이 아니다(다른 서버가 답했다) */ }
@@ -72,7 +73,7 @@ export function createRank({
     const had = load();
     if (had && checked) return Promise.resolve(had);
     playerP = (async () => {
-      let r = had ? await call('POST', '/api/player', { key: had.key }) : null;
+      let r = had ? await call('POST', '/api/player', {}, null, had.key) : null;
       if (r && r.status === 0) return had;
       if (!r || (r.status === 401 && r.body.error === 'unknown_key')) r = await call('POST', '/api/player', {});
       if (r.status !== 200) return had && r.status !== 401 ? had : load();
@@ -93,7 +94,7 @@ export function createRank({
   rank.reroll = async () => {
     const p = await ensurePlayer();
     if (!p) return { ok: false, why: 'unreached' };
-    let r = await call('POST', '/api/player', { key: p.key, reroll: true });
+    let r = await call('POST', '/api/player', { reroll: true }, null, p.key);
     if (r.status === 401) { checked = false; keep(null); const q = await ensurePlayer(); return q ? { ok: true, name: nameText(q.a, q.n, lang()) } : { ok: false, why: 'unreached' }; }
     if (r.status === 429) { rerolls = 0; return { ok: false, why: 'limit' }; }
     if (r.status !== 200) return { ok: false, why: 'unreached' };
@@ -130,7 +131,7 @@ export function createRank({
   // ── 순위표
   async function fetchBoard(date, page) {
     const p = await ensurePlayer();
-    const r = await call('GET', `/api/daily/board?date=${date}&page=${page}${p ? `&key=${p.key}` : ''}`);
+    const r = await call('GET', `/api/daily/board?date=${date}&page=${page}`, null, null, p ? p.key : null);
     return r.status === 200 && Array.isArray(r.body.rows) ? r.body : null;
   }
   // 지금 아는 쪽을 돌려주고(없으면 loading), 낡았으면 뒤에서 다시 묻는다. page는 1부터
@@ -173,8 +174,8 @@ export function createRank({
     if (!b) return fail();
     let p = await ensurePlayer();
     if (!p) return fail();
-    let r = await call('POST', '/api/daily/submit', { key: p.key, date, build: b, cmds });
-    if (r.status === 401) { checked = false; keep(null); p = await ensurePlayer(); if (!p) return fail(); r = await call('POST', '/api/daily/submit', { key: p.key, date, build: b, cmds }); }
+    let r = await call('POST', '/api/daily/submit', { date, build: b, cmds }, null, p.key);
+    if (r.status === 401) { checked = false; keep(null); p = await ensurePlayer(); if (!p) return fail(); r = await call('POST', '/api/daily/submit', { date, build: b, cmds }, null, p.key); }
     if (r.status === 0) return fail();
     dequeue(date);
     // 새로 배포됐다: 규칙이 다를 수 있어 서버가 다시 두지 않는다 — 이 세션에서는 더 보내지 않는다
@@ -195,14 +196,15 @@ export function createRank({
 
   // ── 기기 잇기 · 클라우드 저장(CHM-71, leaderboard.md 「기기 잇기 · 클라우드 저장」): 열쇠가 드는 부름은 모두 여기서 한다 — 열쇠는 밖으로 나가지 않는다.
   // 서버가 열쇠를 모르면(401) 열쇠를 버린다(다음에 필요할 때 새로 만든다)
-  const lost = (r) => { if (r.status === 401) { checked = false; keep(null); pages.clear(); } return r; };
+  // 그 사이 열쇠가 바뀌었으면(들어오기 · 나가기) 늦게 온 옛 열쇠의 401은 흘려보낸다
+  const lost = (r, used = null) => { if (r.status === 401 && r.body && r.body.error === 'unknown_key' && (!used || (me && me.key === used))) { checked = false; keep(null); pages.clear(); } return r; };
   rank.hasKey = () => allowed && !!load();
   // 이 기기의 코드: { ok, code, ttl } | { ok: false, why: 'limit' | 'unreached' }
   rank.linkCode = async () => {
     for (let i = 0; i < 2; i++) {
       const p = await ensurePlayer();
       if (!p) break;
-      const r = lost(await call('POST', '/api/link/code', { key: p.key }));
+      const r = lost(await call('POST', '/api/link/code', {}, null, p.key), p.key);
       if (r.status === 401) continue;
       if (r.status === 200 && typeof r.body.code === 'string') return { ok: true, code: r.body.code, ttl: r.body.ttl };
       return { ok: false, why: r.status === 429 ? 'limit' : 'unreached' };
@@ -214,13 +216,13 @@ export function createRank({
     for (let i = 0; i < 2; i++) {
       const p = await ensurePlayer();
       if (!p) break;
-      const r = lost(await call('POST', '/api/link/redeem', { key: p.key, code }));
+      const r = lost(await call('POST', '/api/link/redeem', { code }, null, p.key), p.key);
       if (r.status === 401) continue;
       if (r.status === 200 && /^[0-9a-f]{64}$/.test(r.body.key || '')) {
         keep(r.body); checked = true; pages.clear(); subs.clear();
         return { ok: true, name: nameText(me.a, me.n, lang()), devices: r.body.devices };
       }
-      return { ok: false, why: { 404: 'bad', 410: 'expired', 429: 'limit' }[r.status] || (r.status === 400 && r.body.error === 'self' ? 'self' : r.status === 400 ? 'bad' : 'unreached') };
+      return { ok: false, why: { 404: 'bad', 410: 'expired', 429: 'limit', 409: 'account' }[r.status] || (r.status === 400 && r.body.error === 'self' ? 'self' : r.status === 400 ? 'bad' : 'unreached') };
     }
     return { ok: false, why: 'unreached' };
   };
@@ -228,14 +230,14 @@ export function createRank({
   rank.devices = async () => {
     const p = allowed ? load() : null;
     if (!p) return null;
-    const r = lost(await call('POST', '/api/link/devices', { key: p.key }));
+    const r = lost(await call('POST', '/api/link/devices', {}, null, p.key), p.key);
     return r.status === 200 && Number.isInteger(r.body.devices) ? r.body.devices : null;
   };
   // 이 기기 떼기: 열쇠는 그대로, 서버에서 새 플레이어가 된다. { ok } | { ok: false, why: 'alone' | 'unreached' }
   rank.unlink = async () => {
     const p = allowed ? load() : null;
     if (!p) return { ok: false, why: 'unreached' };
-    const r = lost(await call('POST', '/api/link/unlink', { key: p.key }));
+    const r = lost(await call('POST', '/api/link/unlink', {}, null, p.key), p.key);
     if (r.status === 200) { keep({ ...r.body, key: p.key }); pages.clear(); subs.clear(); return { ok: true }; }
     return { ok: false, why: r.status === 400 ? 'alone' : 'unreached' };
   };
@@ -243,14 +245,14 @@ export function createRank({
   rank.saveGet = async () => {
     const p = allowed ? load() : null;
     if (!p) return { status: -1 };
-    const r = lost(await call('GET', `/api/save?key=${p.key}`));
+    const r = lost(await call('GET', '/api/save', null, null, p.key), p.key);
     return r.status === 200 ? { status: 200, rev: r.body.rev || 0, blob: r.body.blob || null } : { status: r.status };
   };
   // 저장 덩이 올리기(열쇠가 없으면 make일 때만 만든다). { status, rev, blob(409일 때 서버 것) }
   rank.savePut = async (baseRev, blob, { keepalive = false, make = true } = {}) => {
     const p = !allowed ? null : make ? await ensurePlayer() : load();
     if (!p) return { status: 0 };
-    const r = lost(await call('PUT', '/api/save', { key: p.key, baseRev, blob }, keepalive ? { keepalive: true } : null));
+    const r = lost(await call('PUT', '/api/save', { baseRev, blob }, keepalive ? { keepalive: true } : null, p.key), p.key);
     return { status: r.status, rev: r.body ? r.body.rev : null, blob: r.body ? r.body.blob || null : null };
   };
 
