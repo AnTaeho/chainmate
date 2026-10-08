@@ -292,3 +292,14 @@ export function runEndProps(row) {
     row,
   };
 }
+
+// ── 순위(CHM-70, src/ui/rank.js): 화면이 app.track으로 부르는 사건 셋. 이름(번호) · 열쇠는 싣지 않는다.
+//   rank_open { tab: 'today' | 'yesterday' }   순위 화면을 열거나 탭을 바꿨다
+//   rank_submit { ok, improved, rank, total, stale }   오늘의 대국 판을 냈다(ok: 순위에 올랐나 · stale: 새 배포라 내지 못함)
+//   name_reroll {}   설정에서 이름을 다시 지었다
+// 제출 결과(rank.js status) → 속성. 확인 중처럼 끝나지 않은 것은 null
+export function rankSubmitProps(st) {
+  if (!st || st.phase === 'pending') return null;
+  const ok = st.phase === 'ok' && st.sent !== false;
+  return { ok, improved: ok && !!st.improved, rank: ok ? st.rank ?? null : null, total: ok ? st.total ?? null : null, stale: st.phase === 'stale' };
+}

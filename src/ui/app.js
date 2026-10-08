@@ -22,7 +22,7 @@ import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
-import { telBefore, commandEvents, runStartProps, runEndProps } from './telemetry.js';
+import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps } from './telemetry.js';
 import { createRank } from './rank.js';
 import { VERSION, COMMIT } from '../version.js';
 import { SCREENS } from './screens/index.js';
@@ -111,8 +111,10 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.saveSettings();
     if (on) app.track('setting_change', { key: 'telemetry', value: true }, { always: true });
   };
-  // 순위(CHM-70): 오늘의 대국 판이 끝나면 넣은 명령 줄을 낸다(서버가 다시 두어 성적을 셈한다). 옛 저장(cmds 없음) · 끝없는 대국의 끝은 내지 않는다
+  // 순위(CHM-70): 오늘의 대국 판이 끝나면 넣은 명령 줄을 낸다(서버가 다시 두어 성적을 셈한다). 옛 저장(cmds 없음) · 끝없는 대국의 끝은 내지 않는다.
+  // 낸 결과(올랐나 · 등수)만 기록 보내기로 알린다 — 이름 · 열쇠는 싣지 않는다
   app.rank = rank || createRank();
+  app.rank.onResult = (date, st) => { const p = rankSubmitProps(st); if (p) app.track('rank_submit', p, { always: true }); };
   app.submitDaily = (run) => {
     if (!run || run.scratch || run.endless || !run.daily || !Array.isArray(run.cmds)) return null;
     return app.rank.submit(run.daily, clone(run.cmds));
