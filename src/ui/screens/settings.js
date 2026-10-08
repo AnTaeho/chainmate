@@ -2,7 +2,7 @@
 // 맨 아래 수업 · 킹과 다시 두기(다음 새 판의 첫 대국을 킹과 둔다, CHM-22) · 기록 내보내기(사람 판 기록 JSON, CHM-50) · 돌아가기.
 // 기록 내보내기는 줄 하나를 더하면 상자가 화면(270)을 넘어 맨 아래 단추 줄에 둔다.
 // 순위 이름(CHM-70): 「큰 글자」 · 「언어」 줄의 빈 오른쪽 반에 두 줄 — 윗줄 「이름 졸린 수달」, 아랫줄 주사위 「다시 짓기」. 순위에 오른 적이 있을 때만(열쇠가 있을 때) 보인다.
-// 기기 잇기(CHM-71): 언어 줄 오른쪽, 「다시 짓기」 왼쪽에 단추 하나(이름이 없으면 그 자리 오른끝). 판 밖(첫 화면에서 연 설정)에서만 · 순위에 닿는 곳에서만 보인다.
+// 계정 · 기기 잇기(CHM-71 · CHM-72): 언어 줄 오른쪽, 「다시 짓기」 왼쪽에 단추 「계정」 하나(이름이 없으면 그 자리 오른끝). 판 밖(첫 화면에서 연 설정)에서만 · 순위에 닿는 곳에서만 보인다.
 import { PAL } from '../../render/palette.js';
 import { W, text, box, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
@@ -15,7 +15,7 @@ export const TELEMETRY_TIP = '이름 없이 판 결과만 보낸다 · 화면은
 // 다시 짓기를 가리키면 제목 자리에 뜨는 한 줄(오늘 남은 횟수 — 서버가 알려 준 뒤에만)
 export const rerollTip = (left) => (left == null ? '순위에 오르는 이름을 새로 짓는다' : left > 0 ? `오늘 ${left}번 더 지을 수 있다` : '오늘은 다 지었다 · 내일 다시 지을 수 있다');
 // 이름 줄의 자리(재는 쪽 test/layout.test.js와 같이 쓴다): 이름은 오른끝 맞춤, 「이름」 이름표는 이름 왼쪽에 들어갈 때만
-export const LINK_TIP = '다른 기기와 기록을 잇는다';
+export const LINK_TIP = '아이디로 들어오거나 다른 기기와 잇는다';
 export const NAME_X = 192;
 export function nameRow(x, w, name) {
   const x0 = x + NAME_X, x1 = x + w - PAD_BOX, nw = measure(name, true), lw = measure('이름') + 6;
@@ -24,7 +24,9 @@ export function nameRow(x, w, name) {
 
 // 기기 잇기 단추: 순위에 닿는 곳 · 판 밖에서만. 폭은 글에 맞춘다
 export const linkShown = (app) => !!app.rank.allowed && !app.run;
-export const linkW = () => measure('기기 잇기', true) + 12;
+// 계정(CHM-72): 같은 자리의 단추가 계정 화면(탭 「아이디」 · 「기기 잇기」)을 연다
+export const LINK_LABEL = '계정';
+export const linkW = () => measure(LINK_LABEL, true) + 16;
 
 export class SettingsScreen {
   constructor(app, { back = null } = {}) { this.app = app; this.back = back; }
@@ -82,7 +84,7 @@ export class SettingsScreen {
     // 기기 잇기: 언어 줄(5), 「다시 짓기」 왼쪽
     if (linkShown(app)) {
       const lkw = linkW();
-      button(ctx, ui, 'set:link', linkR - lkw, y + rowTops[5], lkw, RH, '기기 잇기', { onClick: () => { app.closeOverlay(); app.go('link'); }, grow: G });
+      button(ctx, ui, 'set:link', linkR - lkw, y + rowTops[5], lkw, RH, LINK_LABEL, { onClick: () => { app.closeOverlay(); app.go('account'); }, grow: G });
     }
     yy = row(6, '처음 안내');
     button(ctx, ui, 'set:coach', x + 120, yy, 30, 18, s.coach === false ? '끔' : '켬', { onClick: () => set('coach', s.coach === false), tone: s.coach === false ? 'plain' : 'gold', grow: G });

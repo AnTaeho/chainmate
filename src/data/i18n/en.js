@@ -6,6 +6,29 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 // 효과 글: 「Condition: effect」, 수치는 +20 Value · ×2 Mult · +$2 · +1 Move. Value · Mult · Target은 늘 대문자, 다른 낱말과 기물 이름은 문장 안에서 소문자.
 export const EN = {
+  // 계정(CHM-72): 설정 단추 · 계정 화면
+  '계정': 'Account', '아이디': 'Username', '비번': 'Password', '아이디로 들어오거나 다른 기기와 잇는다': 'Sign in or link another device',
+  '아이디로 들어오기': 'Sign in with a username', '이 기기의 계정': "This device's account", '알아 둘 것': 'Good to know',
+  '들어오기': 'Sign in', '들어오는 중': 'Signing in', '계정 만들기': 'Create account', '비번 바꾸기': 'Change password', '나가기': 'Sign out', '나가는 중': 'Signing out',
+  '계정 지우기': 'Delete account', '지우는 중': 'Deleting', '정하기': 'Set', '정하는 중': 'Setting',
+  '지금 비번': 'Current', '새 비번': 'New', '지금 비번을 잊었다': 'Forgot the current one', '지금 비번을 안다': 'I know the current one',
+  '개인정보 처리방침': 'Privacy policy', '처리방침': 'Privacy', '열지 못했다': "Couldn't open it",
+  '어느 기기에서든 들어오면 기록과 순위 이름이 따라온다': 'Sign in on any device and your records and rank name follow',
+  '비번을 잊으면 들어와 있는 기기에서만 새로 정할 수 있다': 'A forgotten password can only be reset on a device that is still signed in',
+  '아이디는 남에게 보이지 않는다': 'No one else sees your username',
+  '아이디나 비번이 맞지 않는다': "Username or password doesn't match", '이미 있는 아이디다': 'That username is taken',
+  '아이디는 영문 소문자 · 숫자 · _ 3~20자': 'Usernames: a to z, digits, _ · 3 to 20 long',
+  '비번은 8자 이상 · 흔한 것은 안 된다': 'At least 8 characters · nothing common',
+  '이 기기는 다른 계정으로 들어와 있다 · 먼저 나간다': 'This device is in another account · sign out first',
+  '이 기기는 이미 계정에 들어와 있다': 'This device is already signed in',
+  '오늘은 더 할 수 없다 · 내일 다시 한다': 'No more today · try tomorrow',
+  '아이디와 비번을 넣는다': 'Enter a username and password', '아이디는 영문으로 친다': 'Type the username in English letters',
+  '비번이 맞지 않는다': "That password doesn't match", '비번을 넣는다': 'Enter the password',
+  '잠겼다': 'Locked', '만들었다': 'Created', '들어왔다': 'Signed in', '비번을 바꿨다': 'Password changed', '나갔다': 'Signed out', '계정을 지웠다': 'Account deleted',
+  '이 기기의 기록이 지워진다 · 계정에는 남아 있다': "This device's records are cleared · they stay in the account",
+  '계정과 기록 · 순위 성적이 모두 지워진다 · 되돌릴 수 없다': 'The account, records and rank scores are all deleted · this cannot be undone',
+  '비번을 넣으면 지워진다': 'Enter the password to delete', '지금 비번 없이 새로 정한다': 'No current password needed',
+  '이 기기에서 코드를 받는다': 'Get the code on this device',
   // 기기 잇기(CHM-71): 설정 단추 · 기기 잇기 화면
   '기기 잇기': 'Link devices', '다른 기기와 기록을 잇는다': 'Share your records with another device',
   '이 기기의 코드': "This device's code", '다른 기기의 코드 넣기': "Enter another device's code", '코드 받기': 'Get a code',
@@ -571,6 +594,9 @@ export const PRE = [
 export const TEMPLATES = [
   // 기기 잇기(CHM-71)
   [/^기기 (\d+)대가 이어져 있다$/, (m) => `${m[1]} devices linked`],
+  // 계정(CHM-72)
+  [/^기기 (\d+)대$/, (m) => (m[1] === '1' ? '1 device' : `${m[1]} devices`)],
+  [/^(\d+)분 뒤에 다시 들어온다$/, (m) => `try again in ${m[1]} min`],
   [/^마지막으로 맞춘 때 (.+)$/, (m, tr) => `Last synced ${tr(m[1])}`],
   [/^(\d+)분 전$/, (m) => `${m[1]} min ago`],
   [/^(\d+)시간 전$/, (m) => `${m[1]} h ago`],

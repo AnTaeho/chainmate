@@ -10,6 +10,7 @@ import { PAGE, PAD_BOX, LINE, GAP_GROUP, BTN_S, textY, inkY } from '../frame.js'
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { linkRedeemProps } from '../telemetry.js';
 import { mergeGain } from '../merge.js';
+import { accountTabs } from './account.js';
 
 export const CODE_LEN = 8;
 export const POLL_SEC = 5;       // 코드를 띄운 동안 이어졌는지 묻는 간격
@@ -41,7 +42,8 @@ export function gainText(g) {
   if (g.runs) return `판 ${g.runs}개가 더해졌다`;
   return null;
 }
-export const REDEEM_FAIL = { bad: '숫자가 맞지 않는다', expired: '시간이 지난 숫자다', self: '이 기기의 숫자다', limit: '잠시 뒤에 다시 넣는다', unreached: '닿지 못했다' };
+// account: 계정에 들어와 있는 기기는 남의 코드를 넣지 못한다(CHM-72 — 넣으면 제 계정이 지워진다). 이 기기에서 코드를 받아 저쪽에 넣는다
+export const REDEEM_FAIL = { bad: '숫자가 맞지 않는다', expired: '시간이 지난 숫자다', self: '이 기기의 숫자다', limit: '잠시 뒤에 다시 넣는다', unreached: '닿지 못했다', account: '이 기기에서 코드를 받는다' };
 export const CONFIRM_TEXT = '이 기기의 기록이 그 기기의 기록과 합쳐진다';
 export const UNLINK_TEXT = '이 기기만 따로 간다 · 기록은 양쪽에 남는다';
 
@@ -143,7 +145,9 @@ export class LinkScreen {
 
   draw(ctx, ui) {
     const app = this.app, lay = linkLayout(), P = PAD_BOX;
-    pageHead(ctx, '기기 잇기');
+    // 계정(CHM-72)과 한 머리줄: 탭 「아이디」 · 「기기 잇기」
+    pageHead(ctx, '계정');
+    accountTabs(ctx, ui, app, 'link');
     this.drawMine(ctx, ui, lay);
     this.drawEntry(ctx, ui, lay);
     // 아래 한 줄: 이어진 기기 수 · 마지막으로 맞춘 때 · [이 기기 떼기]

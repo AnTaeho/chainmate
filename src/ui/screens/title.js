@@ -53,6 +53,12 @@ function bakeLogo() {
 export const LOGO_Y = 34, SUB_Y = 82;
 export const TELEMETRY_NOTE = '판 결과를 이름 없이 모은다 · 설정에서 끌 수 있다';
 export const NOTE_Y = 4, NOTE_H = 16;
+// 알림 줄 오른쪽의 「처리방침」: 누르면 개인정보 처리방침 쪽을 새 탭으로 연다(CHM-72). 알림은 그대로 둔다
+export const NOTE_LINK = '처리방침', NOTE_URL = 'privacy.html';
+export function noteLayout() {
+  const tw = measure(TELEMETRY_NOTE), lw = measure(NOTE_LINK, true), w = 8 + tw + 10 + lw + 8, x = Math.round(W / 2 - w / 2);
+  return { x, w, textX: x + 8, link: { x: x + 8 + tw + 6, y: NOTE_Y, w: lw + 8, h: NOTE_H } };
+}
 export const HERO = { w: 112, h: 26, y: 196 };
 // 아이콘 줄 칸 폭: 여섯 칸까지 72, 일곱 칸(저장이 있을 때 — 「순위」가 든 뒤, CHM-70)이면 화면 폭에 맞춰 68
 export const ROW = { y: 226, cw: 72, box: 22, boxH: 16 };
@@ -141,13 +147,20 @@ export class TitleScreen {
   // 기록 보내기 알림(CHM-63): 켜져 있으면 처음 한 번, 화면 맨 위 작은 줄. 무엇이든 누르면 사라지고 다시 안 뜬다(설정 「다시 보기」로 되살린다)
   noteOn() { const app = this.app; return app.settings.telemetry !== false && !(app.records.coachSeen && app.records.coachSeen.telemetry); }
   seeNote() { if (this.noteOn()) markSeen(this.app, 'telemetry'); }
-  pointerDown() { this.seeNote(); }
+  pointerDown(x, y) {
+    if (this.noteOn() && x != null) {
+      const k = noteLayout().link;
+      if (x >= k.x && x < k.x + k.w && y >= k.y && y < k.y + k.h + 4) { this.app.openPage(NOTE_URL); return; }
+    }
+    this.seeNote();
+  }
   drawNote(ctx) {
     if (!this.noteOn()) return;
-    const w = measure(TELEMETRY_NOTE) + 16, x = Math.round(W / 2 - w / 2);
+    const { x, w, textX, link } = noteLayout();
     openBox('edge', x, NOTE_Y, w, NOTE_H, 0, { name: '기록 알림' });
     ctx.globalAlpha = 0.7; rect(ctx, x, NOTE_Y, w, NOTE_H, '#081012'); ctx.globalAlpha = 1;
-    text(ctx, TELEMETRY_NOTE, W / 2, inkY(NOTE_Y, NOTE_H), PAL.ink, { align: 'center' });
+    text(ctx, TELEMETRY_NOTE, textX, inkY(NOTE_Y, NOTE_H), PAL.ink);
+    text(ctx, NOTE_LINK, link.x + 4, inkY(NOTE_Y, NOTE_H), PAL.gold, { bold: true });
     closeBox();
   }
   drawLogo(ctx, calm) {
