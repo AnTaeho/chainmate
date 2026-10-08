@@ -6,6 +6,14 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 // 효과 글: 「Condition: effect」, 수치는 +20 Value · ×2 Mult · +$2 · +1 Move. Value · Mult · Target은 늘 대문자, 다른 낱말과 기물 이름은 문장 안에서 소문자.
 export const EN = {
+  // 순위(CHM-70): 순위 화면 · 결과 카드 · 설정 이름 줄
+  '순위': 'Ranks', '오늘': 'Today', '어제': 'Yesterday', '이름': 'Name', '닿은 곳': 'Reached',
+  '아직 아무도 두지 않았다': 'No one has played yet', '순위에 닿지 못했다': "Couldn't reach the ranks", '순위표를 펴는 중': 'Opening the ranks',
+  '오늘은 아직 두지 않았다': 'Not played yet today', '어제는 두지 않았다': 'Not played yesterday', '오늘의 대국 두기': "Play Today's Match",
+  '순위 보기': 'See ranks', '확인 중': 'Checking', '다시 짓기': 'Reroll',
+  '게임이 새로 나왔다': 'A new version is out', '새로 고치면 다음 판부터 순위에 오른다': 'Refresh to rank from your next run',
+  '순위에 오르는 이름을 새로 짓는다': 'Rerolls your name on the ranks', '오늘은 다 지었다': 'No rerolls left today', '내일 다시 지을 수 있다': 'More tomorrow',
+  '이름은 설정에서 다시 지을 수 있다': 'You can reroll your name in Settings',
   // 찜(CHM-58 F)
   '찜': 'Hold', '찜했다': 'Held',
   '다음 상점까지 맡아 둔다': 'Keep it for the next shop',
@@ -551,6 +559,13 @@ export const PRE = [
 ];
 
 export const TEMPLATES = [
+  // 순위(CHM-70)
+  [/^오늘 ([\d,]+)등$/, (m) => `Today #${m[1]}`],
+  [/^([\d,]+)등$/, (m) => `#${m[1]}`],
+  [/^ \/ ([\d,]+)명$/, (m) => ` / ${m[1]}`],
+  [/^([\d,]+)명$/, (m) => `${m[1]} ${m[1] === '1' ? 'player' : 'players'}`],
+  [/^(\d+)월 (\d+)일$/, (m) => `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m[1] - 1]} ${m[2]}`],
+  [/^오늘 (\d+)번 더 지을 수 있다$/, (m) => `${m[1]} more ${m[1] === '1' ? 'reroll' : 'rerolls'} today`],
   [/^(\d+) 먹음$/, (m) => `${m[1]} capture${m[1] === '1' ? '' : 's'}`], // 점화 불씨 말풍선(뒤의 「 · 점수」는 쪼개 옮긴다)
   [/^판 (\d+)개를 (내보냈다|복사했다)$/, (m) => `${m[2] === '내보냈다' ? 'Exported' : 'Copied'} ${m[1]} run${m[1] === '1' ? '' : 's'}`],
   [/^(.+) 기보가 적용된다$/, (m, tr) => `${tr(m[1])} Tome applies`],
