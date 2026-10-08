@@ -12,6 +12,7 @@ import { boardFrom } from '../src/sim/board.js';
 import { chainCaptures } from '../src/sim/chain.js';
 import { reboardOn } from '../src/sim/tuning.js';
 import { CRACK, isCracked } from '../src/data/souls.js';
+import { verifyDaily, summarize } from '../api/_lib/verify.js';
 const { targetOk } = await import('../src/ui/parts.js');
 const { FAMILIES, familyCounts } = await import('../src/data/families.js');
 const { L } = await import('../src/ui/lang.js');
@@ -1144,6 +1145,18 @@ app.records.unlocked.dan = 8;
 results.push(await playOne(SEED + 50, { opening: 'sicilian', dan: 3 }));
 results.push(await playOne(0, { daily: true }));
 if (app.run.daily !== DATE || !app.records.daily || app.records.daily.date !== DATE) throw new Error('daily not recorded');
+// 순위(CHM-70): 화면이 둔 오늘의 대국 판이 남긴 명령 줄(run.cmds)을 서버의 다시 두기(api/_lib/verify.js)에 넣어 같은 성적이 나오는지 잰다
+const boardCheck = { cmds: 0, bytes: 0, ms: 0, same: false, screen: null, server: null, error: null };
+{
+  const run = app.run, sent = JSON.parse(JSON.stringify(run.cmds || null));
+  boardCheck.cmds = sent ? sent.length : 0;
+  boardCheck.bytes = JSON.stringify(sent).length;
+  boardCheck.screen = summarize(run);
+  const t0 = performance.now();
+  try { const { used, ...got } = verifyDaily(DATE, sent); boardCheck.server = got; boardCheck.used = used; } catch (e) { boardCheck.error = `${e.code || e.message}${e.at != null ? ` @${e.at}` : ''}`; }
+  boardCheck.ms = Math.round(performance.now() - t0);
+  boardCheck.same = !!boardCheck.server && JSON.stringify(boardCheck.server) === JSON.stringify(boardCheck.screen) && boardCheck.used === boardCheck.cmds;
+}
 // 전설 셋을 쥐여 준 판: 상록(다시 떨구기) · 오페라(판 다시 채우기) · 불멸(끊김 넘기기)의 연출
 results.push(await playOne(SEED + 100, {
   inject: (run) => {
@@ -2025,5 +2038,10 @@ if (VERBOSE && flow.held) console.log('보류 화면에서 넘친 곳: ' + [...f
 console.log(`기록 보내기: ${telSent.n}건 · 첫 화면 알림 ${telNote.shown ? '뜸' : '안 뜸'} · 누르면 사라짐 ${telNote.gone ? '확인' : '못 함'} · 다시 안 뜸 ${telNote.again ? '확인' : '못 함'} · 끄면 안 뜸 ${telNote.off ? '확인' : '못 함'}`);
 if (!telNote.shown || !telNote.gone || !telNote.again || !telNote.off) { console.log('첫 화면의 기록 보내기 알림이 뜨고 사라지지 않았다'); fail = true; }
 if (telSent.n) { console.log('연기 시험 중에 기록이 밖으로 나갔다'); fail = true; }
+{
+  const b = boardCheck, show = (r) => (r ? `${r.ante}관 ${r.blind + 1}번째 대국 · ${r.won ? '우승' : '짐'} · 점수 합 ${r.score_total} · 대국 ${r.battles} · 수 ${r.moves}` : '없음');
+  console.log(`순위 확인: 화면 판 = 서버 셈 ${b.same ? '같음' : '다름'} — ${DATE} · 명령 ${b.cmds}개(${b.bytes}바이트) · 다시 두기 ${b.ms}ms · ${show(b.screen)}`);
+  if (!b.same) { console.log(`화면이 둔 오늘의 대국 판과 서버의 다시 두기가 어긋났다: 화면 ${show(b.screen)} | 서버 ${b.error || show(b.server)}`); fail = true; }
+}
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);
