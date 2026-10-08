@@ -3,13 +3,19 @@ import { compareRank, better } from '../../api/_lib/rank.js';
 
 export function memStore() {
   const players = [], scores = [], logs = new Map();
+  const keys = new Map(), codes = new Map(), limits = new Map(), saves = new Map(); // CHM-71
   let seq = 0, tick = 0;
   const ranked = (date) => scores.filter((s) => s.date === date)
     .sort((x, y) => compareRank(x, y) || x.at - y.at || x.pid - y.pid).map((s, i) => ({ ...s, rank: i + 1 }));
   return {
-    players, scores, logs,
-    async createPlayer(keyHash, a, n) { const p = { id: String(++seq), keyHash, a, n, rd: null, rn: 0, sd: null, sn: 0 }; players.push(p); return { id: p.id, a, n }; },
-    async getPlayer(keyHash, today) { const p = players.find((x) => x.keyHash === keyHash); return p ? { id: p.id, a: p.a, n: p.n, rerolls: p.rd === today ? p.rn : 0 } : null; },
+    players, scores, logs, keys, codes, limits, saves,
+    async createPlayer(keyHash, a, n) { const p = { id: String(++seq), keyHash, a, n, rd: null, rn: 0, sd: null, sn: 0 }; players.push(p); keys.set(keyHash, p.id); return { id: p.id, a, n }; },
+    // 열쇠 표로 찾고, 옛 배포가 만든 플레이어(players.keyHash에만 있다)는 그 자리에서 옮겨 읽는다
+    async getPlayer(keyHash, today) {
+      if (!keys.has(keyHash)) { const old = players.find((x) => x.keyHash === keyHash); if (!old) return null; keys.set(keyHash, old.id); }
+      const p = players.find((x) => x.id === keys.get(keyHash));
+      return p ? { id: p.id, a: p.a, n: p.n, rerolls: p.rd === today ? p.rn : 0 } : null;
+    },
     async reroll(id, a, n, today, limit) {
       const p = players.find((x) => x.id === id);
       if (p.rd === today && p.rn >= limit) return null;
@@ -44,6 +50,52 @@ export function memStore() {
         me: me ? rowOf(me) : null,
         around: me ? all.filter((s) => Math.abs(s.rank - me.rank) <= span).map(rowOf) : [],
       };
+    },
+    // ── 기기 잇기 · 클라우드 저장(CHM-71)
+    async keyCount(id) { return [...keys.values()].filter((v) => v === id).length; },
+    async bump(kind, who, bucket, limit) { const k = `${kind}:${who}:${bucket}`, n = limits.get(k) || 0; if (n >= limit) return null; limits.set(k, n + 1); return n + 1; },
+    async peek(kind, who, bucket) { return limits.get(`${kind}:${who}:${bucket}`) || 0; },
+    async putCode(id, codeHash, expires) {
+      for (const [h, c] of codes) if (c.playerId === id) codes.delete(h);
+      if (codes.has(codeHash)) return false;
+      codes.set(codeHash, { playerId: id, expires, used: false });
+      return true;
+    },
+    async findCode(codeHash) { const c = codes.get(codeHash); return c ? { ...c } : null; },
+    async claimCode(codeHash, now) { const c = codes.get(codeHash); if (!c || c.used || c.expires <= now) return false; c.used = true; return true; },
+    async absorb(from, to, oldKeyHash, newKeyHash) {
+      for (const s of scores.filter((x) => x.pid === Number(from))) {
+        const i = scores.findIndex((x) => x.pid === Number(to) && x.date === s.date);
+        if (i >= 0 && !better(s, scores[i])) continue;
+        const moved = { ...s, pid: Number(to) }; // 낸 차례(at)는 그대로
+        if (i >= 0) scores[i] = moved; else scores.push(moved);
+        if (logs.has(`${from}:${s.date}`)) logs.set(`${to}:${s.date}`, logs.get(`${from}:${s.date}`));
+      }
+      keys.set(newKeyHash, to);
+      for (const [h, v] of keys) if (v === from && h !== oldKeyHash) keys.set(h, to);
+      // 플레이어를 지우면 딸린 것도 지워진다(cascade)
+      for (let i = scores.length - 1; i >= 0; i--) if (scores[i].pid === Number(from)) scores.splice(i, 1);
+      for (const k of [...logs.keys()]) if (k.startsWith(`${from}:`)) logs.delete(k);
+      for (const [h, v] of keys) if (v === from) keys.delete(h);
+      for (const [h, c] of codes) if (c.playerId === from) codes.delete(h);
+      saves.delete(from);
+      players.splice(players.findIndex((x) => x.id === from), 1);
+    },
+    async splitKey(keyHash, id, filler) {
+      const old = players.find((x) => x.id === id);
+      if (!old || keys.get(keyHash) !== id) return null;
+      const p = { id: String(++seq), keyHash: filler, a: old.a, n: old.n, rd: null, rn: 0, sd: null, sn: 0 };
+      players.push(p);
+      if (saves.has(id)) saves.set(p.id, { ...saves.get(id), rev: 1 });
+      keys.set(keyHash, p.id);
+      return p.id;
+    },
+    async getSave(id) { const s = saves.get(id); return s ? { ...s } : null; },
+    async putSave(id, baseRev, blobText, now) {
+      const s = saves.get(id);
+      if ((s ? s.rev : 0) !== baseRev) return null;
+      saves.set(id, { rev: baseRev + 1, blob: blobText, updatedAt: now });
+      return baseRev + 1;
     },
   };
 }

@@ -5,10 +5,12 @@ import { memStore } from './memstore.js';
 
 // api.mode: 'ok' | 'fail'(망이 끊김 — fetch가 거절) | 'html'(다른 서버가 답함 — JSON이 아닌 404) | 'hang'(답이 안 온다)
 // api.calls: 받은 요청 [{ method, path, query, body }]. api.setBuild(b): 새로 배포된 것처럼 배포 식별자를 바꾼다
-export function fakeApi({ build = 'test-build', now = () => Date.now(), store = memStore(), rand = Math.random } = {}) {
+// newCode: 옮기기 코드를 정해 줄 때(없으면 진짜 무작위)
+export function fakeApi({ build = 'test-build', now = () => Date.now(), store = memStore(), rand = Math.random, newCode = null } = {}) {
   const api = { store, mode: 'ok', calls: [], build };
-  let service = createService({ store, build, now, rand });
-  api.setBuild = (b) => { api.build = b; service = createService({ store, build: b, now, rand }); };
+  const more = newCode ? { newCode } : {};
+  let service = createService({ store, build, now, rand, ...more });
+  api.setBuild = (b) => { api.build = b; service = createService({ store, build: b, now, rand, ...more }); };
   api.named = (path) => api.calls.filter((c) => c.path === path);
   api.fetch = async (url, init = {}) => {
     const u = new URL(url, 'http://fake.local');
@@ -16,7 +18,7 @@ export function fakeApi({ build = 'test-build', now = () => Date.now(), store = 
     let body = null;
     try { body = init.body ? JSON.parse(init.body) : null; } catch { body = undefined; }
     const query = Object.fromEntries(u.searchParams);
-    api.calls.push({ method, path: u.pathname, query, body });
+    api.calls.push({ method, path: u.pathname, query, body, keepalive: !!init.keepalive });
     if (api.mode === 'hang') return new Promise(() => {});
     if (api.mode === 'fail') throw new TypeError('Failed to fetch');
     const html = { ok: false, status: 404, json: async () => { throw new SyntaxError('Unexpected token <'); } };
@@ -26,6 +28,12 @@ export function fakeApi({ build = 'test-build', now = () => Date.now(), store = 
     else if (method === 'POST' && u.pathname === '/api/player') r = await service.player(body);
     else if (method === 'POST' && u.pathname === '/api/daily/submit') r = await service.submit(body);
     else if (method === 'GET' && u.pathname === '/api/daily/board') r = await service.board(query);
+    else if (method === 'POST' && u.pathname === '/api/link/code') r = await service.linkCode(body);
+    else if (method === 'POST' && u.pathname === '/api/link/redeem') r = await service.linkRedeem(body);
+    else if (method === 'POST' && u.pathname === '/api/link/devices') r = await service.linkDevices(body);
+    else if (method === 'POST' && u.pathname === '/api/link/unlink') r = await service.linkUnlink(body);
+    else if (method === 'GET' && u.pathname === '/api/save') r = await service.saveGet(query);
+    else if (method === 'PUT' && u.pathname === '/api/save') r = await service.savePut(body);
     if (!r) return html;
     const out = JSON.parse(JSON.stringify(r.body));
     return { ok: r.status >= 200 && r.status < 300, status: r.status, json: async () => out };

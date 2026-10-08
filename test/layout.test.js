@@ -921,3 +921,200 @@ test('설정 이름 줄: 큰 글자 · 언어 줄의 오른쪽 반에 이름 + �
   }
   M.lang.setLang('ko');
 });
+
+// ── 기기 잇기(CHM-71, docs/design-notes/layout.md 23절)
+test('설정 「기기 잇기」: 언어 줄 오른쪽 — 다시 짓기 · 언어 단추에 닿지 않고 상자는 그대로, 판을 두는 중 · 순위에 닿지 못하는 곳에서는 없다(한국어 · 영어)', async () => {
+  const S = await import('../src/ui/screens/settings.js');
+  const { measure } = await import('../src/render/gfx.js');
+  const { createRank } = await import('../src/ui/rank.js');
+  for (const lang of LANGS) {
+    const size = (g) => { const b = g.boxes.find((q) => q.name === '설정'); return [b.x, b.y, b.w, b.h]; };
+    // 이름이 없을 때: 줄의 오른끝
+    const none = await rankApp({ lang });
+    none.app.openOverlay('settings');
+    let f = none.frame();
+    assert.deepEqual(f.bad, [], `${lang} 이름 없음`);
+    const plain = size(f), [x, , w] = plain;
+    const region = (a, id) => a.app.ui.regions.find((r) => r.id === id);
+    let link = region(none, 'set:link');
+    assert.ok(link && !none.has('set:name'), `${lang}: 이름이 없어도 기기 잇기는 있다`);
+    assert.equal(link.x + link.w, x + w - 8);
+    assert.ok(link.x >= region(none, 'set:lang').x + region(none, 'set:lang').w + 8);
+    assert.ok(measure(S.LINK_TIP) <= w - 16, `${lang}: 「${S.LINK_TIP}」`);
+    // 가장 넓은 이름 · 다시 짓기 옆
+    const a = await rankApp({ lang, me: { ante: 3, score: 900 } });
+    a.app.rank = createRank({ fetch: a.d.window.fetch, storage: a.d.window.localStorage, base: '', today: () => RANK_DAY, lang: () => lang });
+    a.app.openOverlay('settings');
+    f = a.frame();
+    assert.deepEqual(f.bad, [], `${lang} 이름 있음`);
+    assert.deepEqual(size(f), plain, `${lang}: 설정 상자가 달라졌다`);
+    link = region(a, 'set:link');
+    const name = region(a, 'set:name'), langBtn = region(a, 'set:lang');
+    assert.ok(link.x >= langBtn.x + langBtn.w + 8, `${lang}: 기기 잇기가 언어 단추에 닿는다 ${link.x} / ${langBtn.x + langBtn.w}`);
+    assert.ok(link.x + link.w + 6 <= name.x, `${lang}: 기기 잇기가 다시 짓기에 닿는다`);
+    assert.equal(link.w, S.linkW());
+    // 누르면 설정이 닫히고 기기 잇기 화면으로
+    link.onClick();
+    assert.deepEqual([a.app.overlay, a.app.screen.name], [null, 'link']);
+    // 판을 두는 중(멈춤에서 연 설정)에는 없다
+    a.app.newRun({ seed: 7 });
+    a.app.openOverlay('settings', { back: 'pause' });
+    f = a.frame();
+    assert.ok(!a.has('set:link') && a.has('set:name'), `${lang}: 두는 중`);
+    assert.deepEqual(f.bad, []);
+    // 순위에 닿지 못하는 곳(로컬 서버)에는 없다
+    a.app.toTitle();
+    a.app.rank = createRank();
+    a.app.openOverlay('settings');
+    a.frame();
+    assert.ok(!a.has('set:link') && !a.has('set:name'), `${lang}: 닿지 못하는 곳`);
+  }
+  M.lang.setLang('ko');
+});
+
+test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안에서 서로 닿지 않고, 상태마다(처음 · 코드 받음 · 넣는 중 · 확인 · 이어짐 · 틀림 · 시간 지남 · 닿지 못함 · 기기 2대 · 떼기) 글이 넘치지 않는다(한국어 · 영어)', async () => {
+  const K = await import('../src/ui/screens/link.js');
+  const { measure } = await import('../src/render/gfx.js');
+  const { nameText } = await import('../src/data/names.js');
+  const lay = K.linkLayout();
+  // 칸: 왼쪽 · 오른쪽 상자가 겹치지 않고 본 칸 안, 아래 한 줄은 단추 줄 위
+  assert.ok(lay.left.x >= 8 && lay.left.x + lay.left.w + 8 <= lay.right.x && lay.right.x + lay.right.w <= 472);
+  assert.ok(lay.left.y >= 32 && lay.left.y + lay.left.h + 8 <= lay.status.y && lay.status.y + lay.status.h + 8 <= 244);
+  // 숫자 여덟 칸: 넷씩 띄우고 상자 안
+  assert.equal(lay.cells.length, 8);
+  lay.cells.forEach((c, i) => {
+    assert.ok(c.x >= lay.right.x + 8 && c.x + c.w <= lay.right.x + lay.right.w - 8 && c.w >= 16);
+    if (i) assert.ok(c.x >= lay.cells[i - 1].x + lay.cells[i - 1].w + (i === 4 ? 8 : 2), `칸 ${i}`);
+  });
+  // 숫자판: 0~9 · 지우기 · 잇기, 서로 닿지 않고 상자 안, 손가락 구역(넓힌 것)끼리도 겹치지 않는다
+  assert.deepEqual(lay.keys.map((k) => k.k).sort(), ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', 'go']);
+  const grown = lay.keys.map((k) => ({ ...k, x: k.x - lay.grow.l, y: k.y - lay.grow.u, w: k.w + lay.grow.l + lay.grow.r, h: k.h + lay.grow.u + lay.grow.d }));
+  grown.forEach((k, i) => {
+    assert.ok(k.x >= lay.right.x + 4 && k.x + k.w <= lay.right.x + lay.right.w - 4 && k.y >= lay.cells[0].y + lay.cells[0].h && k.y + k.h <= lay.right.y + lay.right.h - 4, `숫자판 ${k.k}`);
+    assert.ok(k.w >= 44 && k.h >= 26, `숫자판 ${k.k} 손가락 구역 ${k.w} × ${k.h}`);
+    for (const o of grown.slice(i + 1)) assert.ok(k.x + k.w <= o.x || o.x + o.w <= k.x || k.y + k.h <= o.y || o.y + o.h <= k.y, `${k.k} · ${o.k}`);
+  });
+  assert.equal(K.codeText('48271593'), '4827 1593');
+  assert.deepEqual([0, 59999, 60000, 3599999, 3600000, 86400000 * 3].map(K.agoText), ['방금', '방금', '1분 전', '59분 전', '1시간 전', '3일 전']);
+  assert.deepEqual([K.gainText({ codex: 12, openings: 1, runs: 3, ante: 5 }), K.gainText({ codex: 0, openings: 2, runs: 3, ante: 0 }), K.gainText({ codex: 0, openings: 0, runs: 3, ante: 0 }), K.gainText({ codex: 0, openings: 0, runs: 0, ante: 0 }), K.gainText(null)],
+    ['도감 12칸이 새로 채워졌다', '레퍼토리 2개가 새로 열렸다', '판 3개가 더해졌다', null, null]);
+
+  for (const lang of LANGS) {
+    const a = await rankApp({ lang, others: 0 });
+    const L = M.lang.L, tag = (s) => `${lang} ${s}`;
+    a.app.go('link');
+    const scr = a.app.screen;
+    const good = (f, name) => {
+      assert.deepEqual(f.bad, [], tag(name));
+      for (const b of f.boxes.filter((q) => q.kind === 'panel')) assert.ok(b.x >= 0 && b.y >= 0 && b.x + b.w <= 480 && b.y + b.h <= 270, tag(`${name}: 상자 ${b.name}`));
+      // 상자 안의 글은 상자 안쪽(안 여백 4 이상)에
+      for (const q of f.texts.filter((t) => t.box && t.box.kind === 'panel')) assert.ok(q.x >= q.box.x + 4 && q.x + q.w <= q.box.x + q.box.w - 4, tag(`${name}: 「${q.s}」 ${q.x} ~ ${q.x + q.w} / ${q.box.x} ~ ${q.box.x + q.box.w}`));
+      return f;
+    };
+    const said = (f, s) => f.texts.some((q) => q.s === L(s));
+    // 처음: 열쇠가 없다 — 코드 받기 · 빈 칸 · 숫자판(지우기 · 잇기는 꺼짐)
+    let f = good(a.frame(), '처음');
+    assert.ok(a.has('link:code') && a.has('link:back') && !a.has('link:unlink'));
+    assert.ok(said(f, '기기 잇기') && said(f, '이 기기의 코드') && said(f, '다른 기기의 코드 넣기'));
+    const reg = (id) => a.app.ui.regions.find((r) => r.id === id);
+    assert.deepEqual([reg('link:key:del').enabled, reg('link:key:go').enabled, reg('link:key:7').enabled], [false, false, true]);
+    assert.equal(a.api.calls.filter((c) => c.path.startsWith('/api/link/')).length, 0, '열쇠가 없으면 기기 수도 묻지 않는다');
+    // 코드 받기 → 큰 숫자 · 막대 · 한 줄
+    reg('link:code').onClick();
+    f = good(a.frame(), '받는 중');
+    assert.ok(said(f, '숫자를 받는 중'));
+    await a.settle();
+    f = good(a.frame(), '코드 받음');
+    assert.equal(scr.mine.phase, 'code');
+    assert.match(scr.mine.code, /^\d{8}$/);
+    const big = f.texts.find((q) => q.s === K.codeText(scr.mine.code));
+    assert.ok(big && big.w >= 120 && big.x >= lay.left.x + 8 && big.x + big.w <= lay.left.x + lay.left.w - 8, tag('큰 숫자'));
+    assert.ok(said(f, '다른 기기에서 이 숫자를 넣는다') && !a.has('link:code'));
+    assert.equal(scr.devices, 1);
+    f = good(a.frame(), '혼자');
+    assert.ok(f.texts.some((q) => q.s.startsWith(L('이 기기 혼자다'))) && !a.has('link:unlink'));
+    // 숫자 넣는 중: 키보드 · 숫자판
+    for (const k of ['4', '8', 'x', '2']) a.app.key(k);
+    reg('link:key:7').onClick();
+    assert.equal(scr.entry.digits, '4827');
+    a.app.key('Backspace'); reg('link:key:del').onClick();
+    assert.equal(scr.entry.digits, '48');
+    f = good(a.frame(), '넣는 중');
+    assert.ok(reg('link:key:del').enabled && !reg('link:key:go').enabled);
+    a.app.key('Enter');
+    assert.equal(scr.entry.phase, 'type', '여덟 자리가 차기 전에는 잇기가 안 눌린다');
+    for (const k of '00000099') a.app.key(k);
+    assert.equal(scr.entry.digits, '48000000');
+    f = good(a.frame(), '다 넣음');
+    assert.deepEqual([reg('link:key:go').enabled, reg('link:key:3').enabled], [true, false]);
+    // 확인: 한 줄 글 + 잇기 · 그만
+    a.app.key('Enter');
+    f = good(a.frame(), '확인');
+    assert.ok(a.has('link:yes') && a.has('link:no') && !a.has('link:key:1'));
+    assert.ok(K.CONFIRM_TEXT.length && f.texts.filter((q) => q.box && q.box.name === '다른 기기의 코드 넣기').length >= 2);
+    a.app.key('Escape');
+    assert.deepEqual([scr.entry.phase, scr.entry.digits, a.app.screen.name], ['type', '48000000', 'link']);
+    // 틀린 코드: 한 줄, 칸은 비운다
+    a.app.key('Enter'); a.app.key('Enter');
+    assert.equal(scr.entry.phase, 'working');
+    f = good(a.frame(), '잇는 중');
+    assert.ok(said(f, '잇는 중'));
+    await a.settle();
+    assert.deepEqual([scr.entry.phase, scr.entry.digits, scr.entry.fail], ['type', '', 'bad']);
+    for (const why of Object.keys(K.REDEEM_FAIL)) {
+      scr.entry.fail = why;
+      f = good(a.frame(), `실패 ${why}`);
+      assert.ok(said(f, K.REDEEM_FAIL[why]), tag(why));
+      assert.ok(measure(K.REDEEM_FAIL[why]) <= lay.right.w - 16, tag(K.REDEEM_FAIL[why]));
+    }
+    // 이어짐: 가장 넓은 이름 + 합쳐진 것 한 줄
+    const longName = nameText(a.long.a, a.long.n, lang);
+    for (const gain of [{ codex: 128, openings: 4, runs: 99, ante: 8 }, { codex: 0, openings: 4, runs: 9, ante: 0 }, { codex: 0, openings: 0, runs: 1200, ante: 0 }, null]) {
+      scr.entry = { phase: 'done', name: longName, gain };
+      f = good(a.frame(), '이어짐');
+      assert.ok(said(f, '이어졌다') && f.texts.some((q) => q.s === longName) && !a.has('link:key:1'));
+      if (gain) assert.ok(said(f, K.gainText(gain)), tag(K.gainText(gain)));
+    }
+    // 이 기기의 코드 쪽 상태: 시간 지남 · 닿지 못함 · 오늘은 다 받음 · 이어짐
+    for (const [phase, say, btn] of [['expired', '시간이 지났다', true], ['unreached', '닿지 못했다', true], ['limit', '오늘은 다 받았다', false], ['idle', null, true]]) {
+      scr.mine = { phase };
+      f = good(a.frame(), `내 코드 ${phase}`);
+      if (say) assert.ok(said(f, say), tag(say));
+      assert.equal(a.has('link:code'), btn, tag(phase));
+    }
+    scr.mine = { phase: 'linked', gain: { codex: 128, openings: 0, runs: 0, ante: 0 }, tries: K.JOIN_TRIES };
+    f = good(a.frame(), '내 코드 이어짐');
+    assert.ok(said(f, '도감 128칸이 새로 채워졌다'));
+    // 시간이 다 되면 코드를 거둔다
+    scr.mine = { phase: 'code', code: '48271593', ttl: 600000, until: a.app.cloud.now() - 1, base: 1 };
+    a.frame();
+    assert.equal(scr.mine.phase, 'expired');
+    // 아래 한 줄: 기기 2대 · 마지막으로 맞춘 때 · 이 기기 떼기 → 확인
+    scr.devices = 12;
+    const st = a.app.cloud.status;
+    for (const ago of [0, 59 * 60000, 23 * 3600000, 364 * 86400000]) {
+      a.app.cloud.status = () => ({ at: a.app.cloud.now() - ago - 5, rev: 3 });
+      f = good(a.frame(), `기기 12대 ${ago}`);
+      const line = f.texts.find((q) => q.s.startsWith(L('기기 12대가 이어져 있다')));
+      const un = reg('link:unlink');
+      assert.ok(line && un && line.x + line.w + 8 <= un.x, tag(`아래 줄이 단추에 닿는다 「${line && line.s}」`));
+      assert.ok(line.s.endsWith(L(K.agoText(ago))), tag(line.s));
+    }
+    a.app.cloud.status = st;
+    reg('link:unlink').onClick();
+    f = good(a.frame(), '떼기 확인');
+    assert.ok(a.has('link:unlink:yes') && a.has('link:unlink:no') && !a.has('link:unlink'));
+    const ask = f.texts.find((q) => q.s === L(K.UNLINK_TEXT));
+    assert.ok(ask && ask.x + ask.w + 8 <= reg('link:unlink:yes').x, tag('떼기 글이 단추에 닿는다'));
+    a.app.key('Escape');
+    assert.deepEqual([scr.unlinking, a.app.screen.name], [null, 'link']);
+    // 큰 글자에서도 넘치지 않는다 · Esc는 첫 화면으로
+    a.app.settings.big = true;
+    good(a.frame(), '큰 글자');
+    a.app.settings.big = false;
+    a.app.key('Escape');
+    assert.equal(a.app.screen.name, 'title');
+    assert.equal(a.app.stats.errors, 0);
+  }
+  M.lang.setLang('ko');
+});
