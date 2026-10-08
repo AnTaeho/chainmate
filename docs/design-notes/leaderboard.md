@@ -50,10 +50,10 @@
 
 ## 계정 없음: 플레이어 열쇠
 - 기기마다 무작위 비밀 하나(256비트, 16진수 64자). 서버가 만들어 한 번 돌려주고, DB에는 SHA-256 해시만 둔다. 비번 · 이메일은 없다.
-- 열쇠를 잃으면(브라우저 저장을 지움) 새 사람이 된다. 다른 기기로는 코드로 잇는다(아래 「기기 잇기 · 클라우드 저장」, CHM-71) — 이어 둔 기기가 없이 열쇠를 잃으면 되찾지 못한다(아이디 · 비번 계정은 CHM-72).
+- 열쇠를 잃으면(브라우저 저장을 지움) 새 사람이 된다. 다른 기기로는 코드로 잇는다(아래 「기기 잇기 · 클라우드 저장」, CHM-71) — 이어 둔 기기가 없이 열쇠를 잃으면 되찾지 못한다 — 그래서 아이디 · 비번 계정을 둔다(아래 「계정」, CHM-72).
 
 ## API
-모두 JSON. 오류는 `{ "error": 코드 }`(500은 `server`뿐 — 내부 메시지를 싣지 않는다). 응답은 `Cache-Control: no-store`.
+열쇠는 `Authorization: Bearer <열쇠>` 머리말로 받는다(CHM-72 — 아래 표의 `key`는 옛 꼴이고 한동안 같이 받는다. 「계정」 절 「열쇠 머리말」). 모두 JSON. 오류는 `{ "error": 코드 }`(500은 `server`뿐 — 내부 메시지를 싣지 않는다). 응답은 `Cache-Control: no-store`.
 출처는 같은 출처만 받는다: `Origin`이 없거나 요청 호스트와 같을 때(미리 보기 배포 주소도 자기 호스트면 통과). 그 밖의 출처는 403 `bad_origin`. 앱(Tauri) 출처는 `api/_lib/http.js` `ALLOWED_ORIGINS`에 붙인다.
 
 | 길 | 받는 것 | 주는 것 |
@@ -63,7 +63,7 @@
 | | `{ key }` | 지금 이름 `{ key, a, n, rerolls }`. 모르는 열쇠 401 `unknown_key` |
 | | `{ key, reroll: true }` | 새 이름(앞의 것과 다르다). 하루 한도를 넘으면 429 `reroll_limit` |
 | `POST /api/daily/submit` | `{ key, date, build, cmds }` | `{ ok: true, best, rank, total, improved }` |
-| `GET /api/daily/board` | `?date=YYYY-MM-DD&page=N&key=…`(모두 없어도 된다) | `{ date, total, page, pages, rows, me, around }` |
+| `GET /api/daily/board` | `?date=YYYY-MM-DD&page=N`(모두 없어도 된다) + 열쇠 | `{ date, total, page, pages, rows, me, around }` |
 
 - `best` = `{ ante, blind, won, score, battles, moves, ignite }`(그날 그 사람의 가장 좋은 기록 — 방금 낸 판이 더 나쁘면 앞의 것), `rank` = 그 기록의 등수, `total` = 그날 오른 사람 수, `improved` = 방금 낸 판으로 갈아 끼웠나.
 - `rows` · `around` · `me`의 한 줄 = `{ rank, a, n, ante, blind, won, score }`(score = 점수 합). 한 쪽은 10줄. `me`는 key의 그날 줄(없으면 null), `around`는 내 줄과 위아래 둘씩(내 줄 포함, 등수 차례). key가 없거나 모르는 열쇠면 구경(`me: null`, `around: []`).
@@ -100,7 +100,7 @@
 - 미리 보기 배포도 프로덕션과 **같은 DB**를 쓴다.
 
 ## 개인정보
-저장하는 것: **무작위 열쇠의 해시 · 이름 번호 한 쌍 · 그날 성적**(과 가장 좋은 판의 명령 줄, 하루 한도를 세는 수), 그리고 CHM-71부터 **그 사람의 저장 한 덩이**(기록 · 도감 · 해금 · 진행 중인 판 · 설정 세 칸 — 아래 「무엇을 저장하나」)와 옮기기 코드의 해시(10분).
+계정을 만든 사람은 **아이디 · 비번의 scrypt 해시**도 둔다(CHM-72 — 사람에게 보이는 쪽은 `privacy.html`). 그 밖에 저장하는 것: **무작위 열쇠의 해시 · 이름 번호 한 쌍 · 그날 성적**(과 가장 좋은 판의 명령 줄, 하루 한도를 세는 수), 그리고 CHM-71부터 **그 사람의 저장 한 덩이**(기록 · 도감 · 해금 · 진행 중인 판 · 설정 세 칸 — 아래 「무엇을 저장하나」)와 옮기기 코드의 해시(10분).
 
 - IP · UA · 기기 정보 · 주소는 읽지도 남기지도 않는다. 이름은 목록에서 뽑은 낱말이라 사람이 쓴 글이 들어가지 않는다.
 - 열쇠 원문은 그 기기의 저장에만 있다. 서버 기록(함수 로그)에도 찍지 않는다.
@@ -172,7 +172,7 @@
 나가는 것은 무작위 열쇠 · 그 판의 명령 줄뿐이고, 이름은 목록에서 뽑은 낱말이다. 오늘의 대국을 두는 것이 곧 순위에 내는 것이라 따로 끄는 스위치를 두지 않았다(설정 상자도 268/270으로 줄을 더할 자리가 없다). 필요해지면 설정의 이름 줄 자리(「다시 짓기」 왼쪽)에 「순위에 오르기 켬 · 끔」으로 둔다.
 
 ## 기기 잇기 · 클라우드 저장 (CHM-71)
-계정 없이 **코드로 두 기기를 한 플레이어로 잇고**, 플레이어마다 **저장 한 덩이**를 서버에 둔다. 아이디 · 비번 계정은 다음 카드(CHM-72)다.
+계정 없이 **코드로 두 기기를 한 플레이어로 잇고**, 플레이어마다 **저장 한 덩이**를 서버에 둔다. 아이디 · 비번 계정은 아래 「계정」(CHM-72).
 
 - 서버: `api/link/code.js` · `redeem.js` · `devices.js` · `unlink.js` · `api/save.js`(로직은 `api/_lib/service.js` — `linkCode` · `linkRedeem` · `linkDevices` · `linkUnlink` · `saveGet` · `savePut`, SQL은 `store.js`).
 - 화면 쪽: `src/ui/merge.js`(합치는 규칙) · `src/ui/cloud.js`(맞추기 — `createCloud`를 `createApp({ cloud })`로) · `src/ui/rank.js`(열쇠가 드는 부름) · `src/ui/screens/link.js`(기기 잇기 화면) · `screens/settings.js`(「기기 잇기」 단추). 화면의 칸은 `layout.md` 23절, 스크린샷은 `docs/shots/link/`.
@@ -293,6 +293,100 @@
 - `npm run smoke` — 「기기 잇기」 줄: 가짜 서버 하나 + 앱 둘로 코드 받기 → 숫자판으로 넣기 → 같은 이름 → 한쪽에서 판을 두고 → 다른 쪽을 다시 켜면 기록과 「이어 하기」의 판이 같은지 → 이 기기 떼기. 저장 올리기 크기도 찍는다.
 - `node tools/link-e2e.mjs http://localhost:3210`(`vercel dev --listen 3210` 뒤) — 진짜 DB의 SQL까지: 코드 · 넣기 · 성적 합침(낸 시각) · 저장 409 · 떼기 · 한도 · 잠금 · 지난 코드 · 옛 열쇠 옮겨 읽기. 만든 것은 `test` 표시 뒤 지운다(전체 잠금 줄은 손댄 만큼 되돌린다).
 - `node tools/shots-link.mjs` — 크로미움 · 웹킷으로 화면 상태를 찍는다(`docs/shots/link/`). `--live http://localhost:3210`은 진짜 서버로 크로미움 기기 ↔ 웹킷 기기를 화면으로 잇고, 웹킷에서 오늘의 대국을 끝낸 뒤 다시 켠 크로미움의 기록 · 순위의 내 줄이 같은지 본다(`live-*`).
+
+## 계정 (CHM-72)
+아이디 · 비번 계정. 이메일은 없다. 목적은 하나 — 열쇠가 든 브라우저 저장이 지워져도, 어느 기기에서든 들어오면 내 기록 · 순위 이름으로 돌아오는 것.
+
+- 서버: `api/account.js`(GET) · `api/account/signup.js` · `login.js` · `logout.js` · `password.js` · `delete.js`(로직은 `api/_lib/service.js` `account*`, 규칙 · 해시는 `api/_lib/auth.js`, SQL은 `store.js`).
+- 화면 쪽: `src/ui/rank.js`(계정 부름) · `src/ui/screens/account.js`(계정 화면) · `src/ui/textfield.js`(입력 칸 — `layout.md` 24절) · `privacy.html`. 스크린샷 `docs/shots/account/`.
+
+### 모델
+**계정 = 플레이어에 붙는 자격 하나.** 플레이어 · 열쇠 · 저장 덩이의 꼴은 그대로다.
+
+| 일 | 서버가 하는 일 |
+|---|---|
+| 가입 | 지금 기기의 플레이어에 아이디 · 비번 해시를 붙인다. 기록 · 이름 · 열쇠는 그대로 |
+| 들어오기 | 그 기기를 계정의 플레이어에 **새 열쇠**로 붙인다. 기기 잇기의 넣기와 같은 길(`store.absorb`) — 그 기기의 옛 플레이어 성적은 날짜마다 더 좋은 것으로 합친 뒤 옛 플레이어를 지우고, 화면이 계정의 저장 덩이를 당겨 제 것과 합쳐 올린다(`cloud.join`). 이미 그 계정의 기기면 열쇠 그대로 |
+| 나가기 | 이 기기의 열쇠만 지우고 **새 빈 플레이어**(새 열쇠 · 새 이름)를 준다. 기록 사본을 들고 가지 않는다 — 화면은 서버의 답을 받은 뒤 기기의 기록 · 진행 중인 판 · 사람 판 기록을 비운다(`app.wipeDevice`, 설정은 둔다). 나가기 앞에 이 기기의 것을 한 번 올리고, 못 올리면 나가지 않는다. 마지막 기기가 나가도 계정은 남는다(열쇠 0) |
+| 비번 바꾸기 | 지금 비번 + 새 비번. **지금 비번이 없으면** 그 열쇠가 계정 플레이어의 것이기만 하면 된다(열쇠가 곧 자격) — 하루 3번 |
+| 지우기 | 비번을 견준 뒤 플레이어를 지운다 — 계정 · 열쇠(이어진 기기 모두) · 순위 성적 · 명령 줄 · 저장 덩이 · 코드가 같이 지워진다(cascade) + 그 사람의 한도 줄. 이 기기는 새 빈 플레이어 |
+
+- **되찾기는 없다.** 이메일을 받지 않는다. 비번을 잊으면 아직 들어와 있는 기기에서만 새로 정할 수 있다(화면이 한 줄로 알린다). 들어와 있는 기기가 하나도 없으면 그 계정은 못 연다.
+- **아이디는 어디에도 보이지 않는다**(본인의 계정 화면에만). 순위표 이름은 계속 「형용사 + 동물」이고, 사람이 쓴 글이 남에게 보이는 자리는 없다.
+- 계정이 붙은 기기는 다른 아이디로 들어오지 못한다(409 `other_account` — 「먼저 나간다」). **남의 기기 잇기 코드도 넣지 못한다**(409 `has_account`): 넣는 쪽의 옛 플레이어를 지우는 길이라 계정까지 지워진다. 계정 쪽 기기에서 코드를 받아 저쪽에 넣는 것은 된다.
+- 알려진 가장자리:
+  - 계정을 지우면 이어져 있던 다른 기기의 열쇠도 죽는다(401 → 다음에 새 사람). 그 기기에 남은 기록은 그 기기의 새 플레이어로 올라간다.
+  - 비번을 바꿔도 이미 들어와 있는 기기는 그대로 쓴다(열쇠를 거두지 않는다).
+  - 아이디 잠금은 남이 걸 수 있다(다섯 번 틀리면 15분). 들어와 있는 기기는 잠겨도 그대로 쓴다.
+  - 들어오기의 답이 오는 길에 끊기면 그 기기는 옛 열쇠를 들고 있고 서버는 지운 뒤다 → 새 사람이 된다(기록은 기기에 있다. 다시 들어오면 된다). 기기 잇기와 같다.
+
+### 아이디 · 비번 규칙(`api/_lib/auth.js`)
+- 아이디: 영문 소문자 · 숫자 · `_`, 3~20자. 대문자는 소문자로 고쳐 저장한다(대소문자를 가리지 않는다). 예약어 25개(`admin` · `root` · `chainmate` …)는 400 `bad_username`. 화면의 입력 칸도 같은 글자만 남긴다.
+- 비번: 8~72자. 흔한 비번 54개(`password` · `12345678` · `qwerty123` … — 소문자로 견준다)와 아이디와 같은 것은 400 `weak_password`.
+- **해시**: `node:crypto`의 scrypt — **N 2^15(32768) · r 8 · p 1 · 무작위 salt 16바이트 · 값 32바이트**, 저장은 글 `scrypt$32768$8$1$<salt base64>$<hash base64>`(86자). 견줌은 `timingSafeEqual`. 외부 패키지 없음. 비번은 NFKC로 고른 뒤 넣는다.
+  - 한 번에 **39ms · 메모리 33MB**(M4 · Node 22에서 열 번: 38.8 / 39.5 / 43.4ms, RSS 41 → 74MB). Node의 scrypt 기본 한도가 32MiB라 `maxmem` 96MiB를 준다. 저장된 글의 N을 읽어 견주므로 나중에 N을 올려도 옛 해시가 그대로 맞는다.
+  - 시험은 `createService({ scryptN: 16 })`로 작게 돈다(진짜 값은 `test/account.test.js`가 한 번 잰다).
+- **아이디가 있는지 새지 않게**: 없는 아이디 · 규칙 밖 아이디에도 같은 질의와 같은 값의 가짜 해시 견줌을 하고, 같은 한도 줄을 세고, 답은 「아이디나 비번이 맞지 않는다」(401 `bad_login`) 하나다. 가입의 「이미 있는 아이디」(409 `taken`)만은 알려 준다(피할 수 없다 — 전체 한도로 묶는다).
+- 아이디 · 비번은 로그 · 기록 보내기 · 오류 답에 싣지 않는다. 화면은 값을 입력 칸에만 두고 내는 순간에만 읽는다(저장 · 화면 상태에 없다).
+
+### API
+열쇠는 **`Authorization: Bearer <열쇠>` 머리말**로 받는다(아래 「열쇠 머리말」). 본문 한도 4KB.
+
+| 길 | 받는 것 | 주는 것 |
+|---|---|---|
+| `GET /api/account` | — | `{ username | null, devices }` |
+| `POST /api/account/signup` | `{ username, password }` | `{ username }`. 400 `bad_username` · `weak_password` · 409 `taken` · `has_account` · 429 `signup_limit` |
+| `POST /api/account/login` | `{ username, password }` | `{ key(이 기기의 새 열쇠), a, n, rerolls, devices, username }`. 401 `bad_login` · 429 `locked`(아이디 · 전체 — `retryAfter` 초) · `login_limit`(열쇠) · 409 `other_account` |
+| `POST /api/account/logout` | `{}` | `{ key(새 빈 플레이어), a, n, rerolls, devices: 1 }`. 400 `no_account` |
+| `POST /api/account/password` | `{ current?, next }` | `{ ok, reset }`. 401 `bad_login` · 400 `weak_password` · `no_account` · 429 `reset_limit` |
+| `POST /api/account/delete` | `{ password }` | `{ key(새 빈 플레이어), a, n, rerolls, devices: 1 }`. 401 `bad_login` · 400 `no_account` |
+
+- 모두 모르는 열쇠는 401 `unknown_key`, 꼴이 틀리면 400 `bad_request`. 429에는 `retryAfter`(초)가 붙는다.
+- 들어오기의 차례: 꼴 → 전체 잠금 → 열쇠 → 열쇠 한도 → 아이디 잠금 → 다른 계정 → 비번 견줌 → 합치기. 서로 기대지 않는 질의는 한꺼번에 묻는다(DB 왕복을 줄이려고).
+- 나가기 · 지우기는 새 플레이어를 **먼저** 만들고 옛 것을 지운다(중간에 끊겨도 옛 열쇠가 살아 있다).
+
+### 한도
+| 무엇 | 값 | 어디 |
+|---|---|---|
+| 틀린 비번 — 아이디 | 15분 창에 5번 → 그때부터 15분 잠금(맞는 비번도 429 `locked`). 맞게 들어오면 센 수를 되돌린다 | `LIMITS.loginFails` · `loginSpan` · `loginLock` |
+| 틀린 비번 — 열쇠(플레이어) | 한 시간 20번(429 `login_limit`). 비번 바꾸기 · 지우기에서 틀린 것도 센다 | `LIMITS.keyLoginFails` |
+| 틀린 비번 — 전체 | 10분 창에 1000번이면 그 창 동안 들어오기 잠금(429 `locked`) | `LIMITS.loginAllFails` · `loginAllSpan` |
+| 가입 — 열쇠(플레이어) | 하루(UTC) 3번 | `LIMITS.signups` |
+| 가입 — 전체 | 한 시간 500번(이미 있는 아이디를 물은 것도 센다) | `LIMITS.signupAll` |
+| 지금 비번 없이 새로 정하기 | 플레이어당 하루 3번(429 `reset_limit`) | `LIMITS.pwResets` |
+| 계정 길의 본문 | 4KB(넘으면 413) | `LIMITS.account` |
+
+- 표 `link_limits`에 센다: `login`(아이디 · 창) · `loginlock`(아이디 — 풀리는 때) · `loginkey` · `loginall` · `signup` · `signupall` · `pwreset`. 아이디 쪽 줄의 `who`는 **아이디 해시의 앞 60비트**다(아이디 원문은 한도 표에 두지 않는다).
+- 「이미 있는 아이디」는 열쇠 한도에 세지 않는다(겹치는 아이디 몇 번에 그날 가입이 막히지 않게). 전체 한도에는 센다.
+- 열쇠 한도는 열쇠를 새로 만들면 피해지므로(플레이어 만들기에 한도가 없다) 실제로 막는 것은 아이디 잠금과 전체 잠금이다.
+
+### 열쇠 머리말
+- 예전에는 `GET /api/save?key=` · `GET /api/daily/board?key=`처럼 열쇠가 주소(접근 로그)에 실렸다. 이제 화면 쪽은 **모든 길에서 머리말만** 쓴다(주소 · 본문에 열쇠 없음 — `test/rank.test.js` · `accountui.test.js`).
+- 서버(`api/_lib/http.js` `bearer`)는 머리말이 있으면 그것을 쓰고, 없으면 옛 꼴(본문 · 주소의 `key`)을 그대로 받는다 — 배포 사이에 열려 있는 탭이 있다. 옛 꼴 받기는 옛 배포가 더 돌지 않는 것을 본 뒤 걷는다(`players.key_hash` 걷기와 같은 때).
+- CORS 허용 머리말에 `Authorization`을 넣었다(같은 출처에서는 사전 요청이 없다. 앱 출처를 붙일 때 쓰인다).
+- `tools/daily-e2e.mjs` · `link-e2e.mjs`는 옛 꼴로 부른다(옛 길이 도는지의 확인을 겸한다). `account-e2e.mjs`는 머리말로 부른다.
+
+### DB
+- `accounts(id, username unique, pw_hash, player_id unique → players on delete cascade, created_at, pw_changed_at)`. 더하기만 한 마이그레이션이다(옛 배포는 이 표를 모른다 — 2026-10-08 적용 뒤 프로덕션 `/api/hello` · 플레이어 만들기 · 다시 읽기 · 순위표 200 확인).
+- 옛 칸 `players.key_hash` 두 벌 쓰기는 그대로다. 나가기는 지운 열쇠가 옛 칸에 남아 있으면 쓰이지 않을 값으로 바꾼다(`store.dropKey` — `getPlayer`가 옛 칸에서 되살리지 않게).
+
+### 화면
+`layout.md` 24절. 요약:
+- 설정 언어 줄의 단추가 「계정」이 됐다(CHM-71의 「기기 잇기」 자리). 누르면 계정 화면 — 머리줄 「계정」 + 탭 「아이디」 · 「기기 잇기」(기기 잇기 화면도 같은 머리줄). 순위 · 저장과 같은 조건에서만 보이고 부른다.
+- 계정 없음: 「아이디」 「비번」 입력 칸 + [들어오기] [계정 만들기], 오른쪽에 알림 줄 셋과 [개인정보 처리방침](새 탭).
+- 들어와 있음: 「아이디 taeho_an」 · 「기기 2대」 + [비번 바꾸기] [나가기] [계정 지우기]. 고른 일은 오른쪽 칸에: 비번 칸 둘(「지금 비번을 잊었다」를 누르면 새 비번 칸만) · 나가기 확인 · 지우기 확인 둘(둘째에 비번 칸).
+- 상태 한 줄: 「아이디나 비번이 맞지 않는다」 · 「잠겼다 · 15분 뒤에 다시 들어온다」 · 「이미 있는 아이디다」 · 「닿지 못했다」 · 「만들었다」 · 「들어왔다」 + 합쳐서 늘어난 것 한 줄(기기 잇기와 같은 `gainText`) · 「아이디는 영문으로 친다」(한글 자판).
+- 기록 보내기 사건: `account_signup` · `account_login { ok, reason }` · `account_logout` · `account_password { reset }` · `account_delete`(아이디 없음).
+- `privacy.html`: 정적 쪽(한국어 + 영어). 계정 화면과 첫 화면 알림 줄의 「처리방침」에서 새 탭으로 연다. **법률 문서가 아닌 초안이다** — 사람이 검토하고 `TODO(사람)` 자리(문의 주소 · 운영자 · 시행일 · PostHog 보관 기간)를 채운다.
+
+### 배포 차례
+① 마이그레이션(끝남 — 더하기만) → ② 새 코드 배포. 순서를 바꾸면 새 코드의 계정 길이 없는 표를 불러 500이 난다(다른 길은 그대로). ② 뒤에 옛 배포로 되돌리면 계정 길이 사라질 뿐이고(404 → 화면은 「닿지 못했다」), 그 사이 들어온 기기의 열쇠는 `player_keys`에 있어 옛 코드(CHM-71)도 읽는다. 옛 클라이언트(열려 있던 탭)는 옛 꼴로 계속 부른다.
+
+### 확인
+- `npm test` — `test/account.test.js`(서버 로직 — 기억 저장소) · `test/accountui.test.js`(화면 쪽 — 가짜 서버 + 가짜 DOM, 기기 둘) · `test/layout.test.js`(계정 화면 칸 · 영어).
+- `npm run smoke` — 「계정」 줄: 만들기 → 다른 기기에서 들어오기 → 같은 이름 · 기록 → 비번 바꾸기 → 나가기(기록 비움) → 지우기 · 남은 입력 칸 0.
+- `node tools/account-e2e.mjs http://localhost:3210`(`vercel dev --listen 3210` 뒤) — 진짜 DB의 SQL까지. 만든 것은 `test` 표시 뒤 지우고, 전체 한도 줄은 손댄 만큼 되돌린다.
+- `node tools/shots-account.mjs` — 크로미움 · 웹킷으로 **진짜 입력 칸에 키보드로 쳐서** 화면 상태를 찍는다(입력 칸이 그린 칸 위에 놓였나 · 초점 동안 키 막기 · 한글 자판 · 폰 가로 · 폰 세로). `--live http://localhost:3210`은 진짜 서버로 크로미움 기기 가입 → 웹킷 기기 들어오기 → 나가기 → 지우기(`live-*`).
 
 ## 확인하는 법
 - `npm test` — `test/names.test.js` · `test/daily-verify.test.js` · `test/leaderboard.test.js`(DB는 기억 저장소 `test/helpers/memstore.js`).

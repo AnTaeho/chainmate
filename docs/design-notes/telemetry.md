@@ -16,7 +16,7 @@
 | 설정 「기록 보내기」 켬(`settings.telemetry`, 기본 켬) | `enabled()` |
 | 수업 · 대본 대국 · scratch 판이 아님(판 기록과 같은 기준) | `app.track`(scratch) · `commandEvents`(대본 대국) |
 
-- 예외로 늘 나가는 것(조건 위 셋은 그대로): 튜토리얼 진행(`tutorial_*` · `lesson_done`) · `setting_change` · `rank_submit` · `name_reroll` · 기기 잇기(`link_code` · `link_redeem` · `link_unlink` · `save_sync`) · 오류.
+- 예외로 늘 나가는 것(조건 위 셋은 그대로): 튜토리얼 진행(`tutorial_*` · `lesson_done`) · `setting_change` · `rank_submit` · `name_reroll` · 기기 잇기(`link_code` · `link_redeem` · `link_unlink` · `save_sync`) · 계정(`account_*`) · 오류.
 - localhost(8123 포함) · Vercel 미리 보기 주소 · smoke · Playwright 도구에서는 0건이다. smoke는 가짜 `fetch` · `sendBeacon` 셈을 「기록 보내기: 0건」으로 찍고, `tools/shots-telemetry.mjs`가 크로미움 · 웹킷에서 로컬 0건과 배포 주소인 척(가로챔) 묶음이 나가는 것을 본다.
 
 ## 익명 방침
@@ -62,6 +62,11 @@
 | `rank_open` ★ | `tab`(today · yesterday) | 순위 화면을 여나 · 어제 것을 보나(CHM-70) |
 | `rank_submit` | `ok`(순위에 올랐나) · `improved`(그날 기록을 갈아 끼웠나) · `rank` · `total` · `stale`(새 배포라 내지 못함) | 오늘의 대국이 순위에 닿는 비율. `app.js`가 제출 결과마다 한 번(`telemetry.js` `rankSubmitProps`). 이름(번호) · 열쇠 · 점수는 싣지 않는다 |
 | `name_reroll` ★ | — | 이름을 다시 짓는 사람 수 |
+| `account_signup` | `ok` · `reason`(`taken` · `username` · `weak` · `has` · `limit` · `unreached`, 만들었으면 null) | 계정을 만드는 사람 수와 막히는 까닭(CHM-72). 아이디 · 비번 · 열쇠는 싣지 않는다 |
+| `account_login` | `ok` · `reason`(`bad` · `locked` · `other` · `unreached`) | 다른 기기에서 들어오는 수 · 틀리는 수 |
+| `account_logout` | — | 나간 수 |
+| `account_password` | `reset`(지금 비번 없이 새로 정했나) | 비번을 잊는 사람이 얼마나 되나 |
+| `account_delete` | — | 계정을 지운 수 |
 | `link_code` | — | 기기 잇기 화면에서 코드를 받은 수(CHM-71) |
 | `link_redeem` | `ok` · `reason`(bad · expired · self · limit · unreached, 이어졌으면 null) | 코드를 넣어 이어지는 비율 · 왜 실패하나(`telemetry.js` `linkRedeemProps`). 열쇠 · 코드 · 이름은 싣지 않는다 |
 | `link_unlink` | — | 이 기기를 뗀 수 |
