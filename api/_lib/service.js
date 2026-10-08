@@ -1,6 +1,6 @@
-// 순위(CHM-70) 서버 로직: 요청 하나 → { status, body }. HTTP · DB를 모른다(저장소 · 시계 · 무작위를 받아 쓴다) — 시험은 가짜를 넘긴다.
+// 순위(CHM-70) · 기기 잇기와 클라우드 저장(CHM-71) 서버 로직: 요청 하나 → { status, body }. HTTP · DB를 모른다(저장소 · 시계 · 무작위를 받아 쓴다) — 시험은 가짜를 넘긴다.
 // 오류는 { error: 코드 }뿐. API · 한도 표는 docs/design-notes/leaderboard.md.
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { randomName } from '../../src/data/names.js';
 import { verifyDaily, VerifyError, isDate, LIMITS as VERIFY_LIMITS } from './verify.js';
 
@@ -12,6 +12,15 @@ export const LIMITS = {
   page: 10,                // 순위표 한 쪽
   around: 2,               // 내 위아래 줄
   dateSpan: 1,             // 제출 날짜: 서버 날짜(UTC) ± 며칠(시간대가 달라도 그 사람의 「오늘」이 들어온다)
+  // 기기 잇기 · 클라우드 저장(CHM-71)
+  codeTtl: 10 * 60 * 1000, // 옮기기 코드가 사는 시간
+  codes: 10,               // 플레이어당 하루 코드 받기
+  redeemFails: 10,         // 넣는 쪽 열쇠당 한 시간에 틀릴 수 있는 수
+  lockFails: 500,          // 모두 합쳐 10분에 이만큼 틀리면 그 10분 동안 코드 넣기를 잠근다
+  lockSpan: 10 * 60 * 1000,
+  save: 200 * 1024,        // 저장 올리기 본문(바이트)
+  saves: 500,              // 플레이어당 하루 저장 올리기
+  saveDepth: 40,           // 저장 덩이의 가장 깊은 겹
 };
 
 const DAY = 86400000;
@@ -20,11 +29,32 @@ export const hashKey = (key) => createHash('sha256').update(key).digest('hex');
 const isKey = (k) => typeof k === 'string' && /^[0-9a-f]{64}$/.test(k);
 const err = (status, error, more = {}) => ({ status, body: { error, ...more } });
 const ok = (body) => ({ status: 200, body });
+const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+export const hashCode = (code) => createHash('sha256').update(`link:${code}`).digest('hex');
+// 저장 덩이의 꼴: 최상위 열쇠 · 타입 · 깊이만 본다(크기는 본문 한도). 내용은 믿지도 읽지도 않는다 — 그 사람 자신의 저장이다
+const BLOB_KEYS = ['v', 'records', 'run', 'runAt', 'settings', 'setAt'];
+const stamp = (v) => v == null || (typeof v === 'number' && Number.isFinite(v) && v >= 0);
+function deep(v, left) {
+  if (!v || typeof v !== 'object') return true;
+  if (left <= 0) return false;
+  for (const x of Array.isArray(v) ? v : Object.values(v)) if (!deep(x, left - 1)) return false;
+  return true;
+}
+export function blobOk(blob) {
+  if (!isObj(blob) || blob.v !== 1 || Object.keys(blob).some((k) => !BLOB_KEYS.includes(k))) return false;
+  if (!isObj(blob.records) || !(blob.run === null || isObj(blob.run)) || !stamp(blob.runAt) || !stamp(blob.setAt)) return false;
+  if (blob.settings != null && (!isObj(blob.settings) || Object.keys(blob.settings).length > 8 || Object.values(blob.settings).some((v) => v !== null && typeof v === 'object'))) return false;
+  return deep(blob, LIMITS.saveDepth);
+}
 const dayGap = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / DAY);
 
 // store: api/_lib/store.js createStore 꼴. build: 이 배포의 식별자. now: () => ms. newKey: () => 64자 16진수. rand: () => [0, 1)
-export function createService({ store, build = 'dev', now = Date.now, newKey = () => randomBytes(32).toString('hex'), rand = Math.random }) {
+// newCode: () => 숫자 여덟 자리 글
+export function createService({ store, build = 'dev', now = Date.now, newKey = () => randomBytes(32).toString('hex'), rand = Math.random, newCode = () => String(randomInt(0, 1e8)).padStart(8, '0') }) {
   const today = () => utcDate(now());
+  const who = async (key) => (isKey(key) ? store.getPlayer(hashKey(key), today()) : null);
+  const hourOf = () => new Date(now()).toISOString().slice(0, 13);
+  const lockOf = () => `lock:${Math.floor(now() / LIMITS.lockSpan)}`;
   return {
     hello: async () => ok({ build }),
 
@@ -79,6 +109,96 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       const pg = Number(page);
       const b = await store.board(date, (pg - 1) * LIMITS.page, LIMITS.page, p ? p.id : null, LIMITS.around);
       return ok({ date, total: b.total, page: pg, pages: Math.max(1, Math.ceil(b.total / LIMITS.page)), rows: b.rows, me: b.me, around: b.around });
+    },
+    // ── 기기 잇기(CHM-71)
+    // { key } → { code, expiresAt, ttl }. 새로 받으면 앞의 코드는 무효. DB에는 코드의 해시만
+    async linkCode(body) {
+      const { key } = body || {};
+      if (!isKey(key)) return err(400, 'bad_request');
+      const p = await who(key);
+      if (!p) return err(401, 'unknown_key');
+      if ((await store.bump('code', p.id, today(), LIMITS.codes)) == null) return err(429, 'code_limit');
+      const expiresAt = now() + LIMITS.codeTtl;
+      for (let i = 0; i < 6; i++) {
+        const code = newCode();
+        if (await store.putCode(p.id, hashCode(code), expiresAt)) return ok({ code, expiresAt, ttl: LIMITS.codeTtl });
+      }
+      return err(503, 'busy');
+    },
+
+    // { key, code } → { key(이 기기의 새 열쇠 — 코드를 낸 플레이어의 것), a, n, rerolls, devices }. 넣은 쪽의 옛 플레이어는 성적을 합친 뒤 지운다.
+    // 차례: 꼴 → 전체 잠금 → key → 열쇠 한도 → 코드(없음 · 지남 · 자기 것) → 쓰기 → 합치기
+    async linkRedeem(body) {
+      const { key, code } = body || {};
+      if (!isKey(key) || typeof code !== 'string' || !/^\d{8}$/.test(code)) return err(400, 'bad_request');
+      if ((await store.peek('lock', 0, lockOf())) >= LIMITS.lockFails) return err(429, 'locked');
+      const me = await who(key);
+      if (!me) return err(401, 'unknown_key');
+      if ((await store.peek('redeem', me.id, hourOf())) >= LIMITS.redeemFails) return err(429, 'redeem_limit');
+      const miss = async (status, error) => {
+        await store.bump('redeem', me.id, hourOf(), LIMITS.redeemFails);
+        await store.bump('lock', 0, lockOf(), LIMITS.lockFails);
+        return err(status, error);
+      };
+      const hash = hashCode(code), c = await store.findCode(hash);
+      if (!c || c.used) return miss(404, 'bad_code');
+      if (c.expires <= now()) return miss(410, 'expired');
+      if (c.playerId === me.id) return err(400, 'self');
+      if (!(await store.claimCode(hash, now()))) return miss(404, 'bad_code');
+      const fresh = newKey();
+      await store.absorb(me.id, c.playerId, hashKey(key), hashKey(fresh));
+      const p = await store.getPlayer(hashKey(fresh), today());
+      return ok({ key: fresh, a: p.a, n: p.n, rerolls: Math.max(0, LIMITS.rerolls - p.rerolls), devices: await store.keyCount(p.id) });
+    },
+
+    // { key } → { devices }(이 플레이어에 이어진 열쇠 수)
+    async linkDevices(body) {
+      const { key } = body || {};
+      if (!isKey(key)) return err(400, 'bad_request');
+      const p = await who(key);
+      if (!p) return err(401, 'unknown_key');
+      return ok({ devices: await store.keyCount(p.id) });
+    },
+
+    // { key } → 이 열쇠만 떼어 새 플레이어로(이름 · 저장 덩이 사본을 들고. 순위 성적은 남은 쪽에 둔다). 혼자인 열쇠는 400 not_linked
+    async linkUnlink(body) {
+      const { key } = body || {};
+      if (!isKey(key)) return err(400, 'bad_request');
+      const p = await who(key);
+      if (!p) return err(401, 'unknown_key');
+      if ((await store.keyCount(p.id)) < 2) return err(400, 'not_linked');
+      // 새 플레이어의 players.key_hash(옛 칸)에는 쓰이지 않을 값을 채운다 — 이 열쇠의 해시는 떠나온 쪽의 옛 칸에 남아 있을 수 있다
+      const id = await store.splitKey(hashKey(key), p.id, hashKey(`split:${newKey()}`));
+      if (!id) return err(400, 'not_linked');
+      return ok({ key, a: p.a, n: p.n, rerolls: LIMITS.rerolls, devices: 1 });
+    },
+
+    // ── 클라우드 저장(CHM-71)
+    // { key } → { rev, updatedAt, blob } 또는 { rev: 0 }
+    async saveGet(query) {
+      const { key } = query || {};
+      if (!isKey(key)) return err(400, 'bad_request');
+      const p = await who(key);
+      if (!p) return err(401, 'unknown_key');
+      const s = await store.getSave(p.id);
+      if (!s) return ok({ rev: 0 });
+      return ok({ rev: s.rev, updatedAt: s.updatedAt, blob: JSON.parse(s.blob) });
+    },
+
+    // { key, baseRev, blob } → { rev, updatedAt } 또는 409 { error: 'conflict', rev, updatedAt, blob }(서버 것 — 합쳐서 다시 올린다)
+    async savePut(body) {
+      const { key, baseRev, blob } = body || {};
+      if (!isKey(key) || !Number.isInteger(baseRev) || baseRev < 0) return err(400, 'bad_request');
+      if (!blobOk(blob)) return err(400, 'bad_blob');
+      const text = JSON.stringify(blob);
+      if (Buffer.byteLength(text) > LIMITS.save) return err(413, 'too_large');
+      const p = await who(key);
+      if (!p) return err(401, 'unknown_key');
+      if ((await store.bump('save', p.id, today(), LIMITS.saves)) == null) return err(429, 'save_limit');
+      const rev = await store.putSave(p.id, baseRev, text, now());
+      if (rev != null) return ok({ rev, updatedAt: now() });
+      const s = await store.getSave(p.id);
+      return err(409, 'conflict', s ? { rev: s.rev, updatedAt: s.updatedAt, blob: JSON.parse(s.blob) } : { rev: 0 });
     },
   };
 }

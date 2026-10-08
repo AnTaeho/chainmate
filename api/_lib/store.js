@@ -1,4 +1,4 @@
-// 순위(CHM-70) DB 접근 층. sql: (text, params) => rows — 함수에서는 Neon HTTP 드라이버(api/_lib/http.js), 시험은 같은 꼴의 기억 저장소
+// 순위(CHM-70) · 기기 잇기와 클라우드 저장(CHM-71) DB 접근 층. sql: (text, params) => rows — 함수에서는 Neon HTTP 드라이버(api/_lib/http.js), 시험은 같은 꼴의 기억 저장소
 // (test/helpers/memstore.js). SQL은 모두 매개변수 바인딩. 날짜는 글(YYYY-MM-DD)로 주고받는다. 스키마는 db/schema.sql.
 // HTTP 드라이버에는 주고받는 트랜잭션이 없다 — 한도 세기 · 기록 갈아 끼우기는 조건을 단 한 문장으로 한다(경합에도 안전).
 
@@ -10,12 +10,21 @@ const ROW = 'r.rank, p.a, p.n, r.ante, r.blind, r.won, r.score_total as score';
 export function createStore(sql) {
   const one = async (text, params) => (await sql(text, params))[0] || null;
   return {
+    // 새 플레이어 + 첫 열쇠(한 문장). players.key_hash에도 같이 적는다(옛 배포가 읽는 동안 두 벌)
     async createPlayer(keyHash, a, n) {
-      return one('insert into players (key_hash, a, n) values ($1, $2, $3) returning id::text as id, a, n', [keyHash, a, n]);
+      return one(`with p as (insert into players (key_hash, a, n) values ($1, $2, $3) returning id, a, n),
+          k as (insert into player_keys (key_hash, player_id) select $1, id from p)
+        select id::text as id, a, n from p`, [keyHash, a, n]);
     },
+    // 열쇠 → 플레이어(player_keys). 옛 배포가 만든 플레이어(players.key_hash에만 있다)는 그 자리에서 옮겨 읽는다
     async getPlayer(keyHash, today) {
-      return one(`select id::text as id, a, n, case when rerolls_date = $2::date then rerolls_day else 0 end as rerolls
-        from players where key_hash = $1`, [keyHash, today]);
+      const find = () => one(`select p.id::text as id, p.a, p.n, case when p.rerolls_date = $2::date then p.rerolls_day else 0 end as rerolls
+        from player_keys k join players p on p.id = k.player_id where k.key_hash = $1`, [keyHash, today]);
+      const hit = await find();
+      if (hit) return hit;
+      const moved = await sql(`insert into player_keys (key_hash, player_id, created_at)
+        select key_hash, id, created_at from players where key_hash = $1 on conflict (key_hash) do nothing returning key_hash`, [keyHash]);
+      return moved.length ? find() : null;
     },
     // 다시 짓기: 하루 한도 안이면 이름을 바꾸고 { a, n, rerolls(오늘 쓴 수) }, 한도면 null
     async reroll(id, a, n, today, limit) {
@@ -69,6 +78,74 @@ export function createStore(sql) {
       const strip = ({ me, ...x }) => x;
       const mine = near.find((x) => x.me);
       return { total: t.total, rows, me: mine ? strip(mine) : null, around: near.map(strip) };
+    },
+    // ── 기기 잇기 · 클라우드 저장(CHM-71)
+    async keyCount(id) { return (await one('select count(*)::int as n from player_keys where player_id = $1::bigint', [id])).n; },
+    // 한도 세기: 한 번 세고 센 수를 돌려준다. 한도에 닿았으면 null(세지 않는다)
+    async bump(kind, who, bucket, limit) {
+      const r = await one(`insert into link_limits (kind, who, bucket, n) values ($1, $2::bigint, $3, 1)
+        on conflict (kind, who, bucket) do update set n = link_limits.n + 1, at = now() where link_limits.n < $4 returning n`, [kind, who, bucket, limit]);
+      return r ? r.n : null;
+    },
+    async peek(kind, who, bucket) {
+      const r = await one('select n from link_limits where kind = $1 and who = $2::bigint and bucket = $3', [kind, who, bucket]);
+      return r ? r.n : 0;
+    },
+    // 새 코드: 그 사람의 앞 코드는 지운다. 같은 해시가 살아 있으면 거짓(다른 숫자로 다시)
+    async putCode(id, codeHash, expires) {
+      await sql('delete from link_codes where player_id = $1::bigint or expires_at < to_timestamp($2::double precision / 1000) - interval \'1 day\'', [id, expires]);
+      await sql('delete from link_limits where at < now() - interval \'2 days\'', []);
+      return !!(await one(`insert into link_codes (code_hash, player_id, expires_at) values ($1, $2::bigint, to_timestamp($3::double precision / 1000))
+        on conflict (code_hash) do nothing returning code_hash`, [codeHash, id, expires]));
+    },
+    async findCode(codeHash) {
+      return one(`select player_id::text as "playerId", (extract(epoch from expires_at) * 1000)::bigint::float8 as expires, used_at is not null as used
+        from link_codes where code_hash = $1`, [codeHash]);
+    },
+    // 코드를 쓴다(한 번만). 그 사이 쓰였거나 시간이 지났으면 거짓
+    async claimCode(codeHash, now) {
+      return !!(await one(`update link_codes set used_at = to_timestamp($2::double precision / 1000)
+        where code_hash = $1 and used_at is null and expires_at > to_timestamp($2::double precision / 1000) returning code_hash`, [codeHash, now]));
+    },
+    // from의 것을 to로 합치고 from을 지운다: 날짜마다 더 좋은 성적(낸 시각 그대로) + 그 명령 줄 → 이 기기의 새 열쇠 → from의 다른 기기 열쇠 → from 지우기(옛 열쇠 oldKeyHash는 같이 지워진다).
+    // 차례가 중간에 끊겨도 잃는 것은 없다(성적은 이미 옮겨졌고 from은 남는다)
+    async absorb(from, to, oldKeyHash, newKeyHash) {
+      await sql(`with moved as (
+          insert into daily_scores (player_id, date, ante, blind, won, score_total, battles, moves, ignite, build, submitted_at)
+          select $2::bigint, date, ante, blind, won, score_total, battles, moves, ignite, build, submitted_at from daily_scores where player_id = $1::bigint
+          on conflict (player_id, date) do update set ante = excluded.ante, blind = excluded.blind, won = excluded.won,
+            score_total = excluded.score_total, battles = excluded.battles, moves = excluded.moves, ignite = excluded.ignite,
+            build = excluded.build, submitted_at = excluded.submitted_at
+          where (excluded.ante, excluded.blind, excluded.won, excluded.score_total)
+              > (daily_scores.ante, daily_scores.blind, daily_scores.won, daily_scores.score_total)
+          returning date)
+        insert into daily_logs (player_id, date, cmds)
+        select $2::bigint, l.date, l.cmds from daily_logs l join moved m on m.date = l.date where l.player_id = $1::bigint
+        on conflict (player_id, date) do update set cmds = excluded.cmds`, [from, to]);
+      await sql('insert into player_keys (key_hash, player_id) values ($1, $2::bigint)', [newKeyHash, to]);
+      await sql('update player_keys set player_id = $2::bigint where player_id = $1::bigint and key_hash <> $3', [from, to, oldKeyHash]);
+      await sql('delete from players where id = $1::bigint', [from]);
+    },
+    // 이 열쇠만 떼어 새 플레이어로(이름 · 저장 덩이 사본을 들고). 한 문장. 돌려주는 것: 새 플레이어 id
+    async splitKey(keyHash, id, filler) {
+      const r = await one(`with old as (select a, n from players where id = $2::bigint),
+          np as (insert into players (key_hash, a, n) select $3, a, n from old returning id),
+          sv as (insert into saves (player_id, rev, blob, updated_at) select np.id, 1, s.blob, s.updated_at from saves s, np where s.player_id = $2::bigint),
+          mv as (update player_keys set player_id = (select id from np) where key_hash = $1 and player_id = $2::bigint returning key_hash)
+        select id::text as id from np`, [keyHash, id, filler]);
+      return r ? r.id : null;
+    },
+    async getSave(id) {
+      return one('select rev, blob, (extract(epoch from updated_at) * 1000)::bigint::float8 as "updatedAt" from saves where player_id = $1::bigint', [id]);
+    },
+    // baseRev가 서버 것과 같을 때만 갈아 끼운다(없는 저장은 0). 돌려주는 것: 새 rev, 어긋나면 null
+    async putSave(id, baseRev, blobText, now) {
+      const r = baseRev === 0
+        ? await one(`insert into saves (player_id, rev, blob, updated_at) values ($1::bigint, 1, $2, to_timestamp($3::double precision / 1000))
+            on conflict (player_id) do nothing returning rev`, [id, blobText, now])
+        : await one(`update saves set rev = rev + 1, blob = $2, updated_at = to_timestamp($3::double precision / 1000)
+            where player_id = $1::bigint and rev = $4 returning rev`, [id, blobText, now, baseRev]);
+      return r ? r.rev : null;
     },
   };
 }
