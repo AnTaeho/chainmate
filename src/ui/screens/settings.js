@@ -1,4 +1,4 @@
-// 설정(덮개): 소리 크기 · 음악 · 연출 속도 ×1/×2/×4 · 화면 흔들림 · 복기 · 큰 글자 · 언어 · 처음 안내 · 움직임 줄이기,
+// 설정(덮개): 소리 크기 · 음악 · 연출 속도 ×1/×2/×4 · 화면 흔들림 · 복기 · 큰 글자 · 언어 · 처음 안내 · 움직임 줄이기 · 기록 보내기(CHM-63),
 // 맨 아래 수업 · 킹과 다시 두기(다음 새 판의 첫 대국을 킹과 둔다, CHM-22) · 기록 내보내기(사람 판 기록 JSON, CHM-50) · 돌아가기.
 // 기록 내보내기는 줄 하나를 더하면 상자가 화면(270)을 넘어 맨 아래 단추 줄에 둔다.
 import { PAL } from '../../render/palette.js';
@@ -7,6 +7,8 @@ import { button } from '../ui.js';
 import { setLang } from '../lang.js';
 import { PAD_BOX, GAP_GROUP, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
+
+export const TELEMETRY_TIP = '이름 없이 판 결과만 보낸다 · 화면은 보지 않는다';
 
 export class SettingsScreen {
   constructor(app, { back = null } = {}) { this.app = app; this.back = back; }
@@ -21,9 +23,11 @@ export class SettingsScreen {
     const w = Math.max(240, lw + kw + ew + bw + 8 * 3 + PAD_BOX * 2), h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
     openBox('panel', x, y, w, h, PAD_BOX, { name: '설정' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
-    text(ctx, '설정', W / 2, y + ty, PAL.gold, { align: 'center', bold: true });
+    // 기록 보내기를 가리키면 제목 자리에 무엇을 보내는지 한 줄(상자가 화면에 꽉 차 말풍선을 띄울 자리가 없다)
+    if (ui.isHover('set:telemetry')) text(ctx, TELEMETRY_TIP, W / 2, y + ty, PAL.ink, { align: 'center' });
+    else text(ctx, '설정', W / 2, y + ty, PAL.gold, { align: 'center', bold: true });
     const row = (i, label) => { const top = y + rowTops[i]; text(ctx, label, x + PAD_BOX + 4, textY(top, RH), PAL.ink); return top; };
-    const set = (k, v) => { s[k] = v; app.saveSettings(); if (app.audio) app.audio.apply(s); };
+    const set = (k, v) => { s[k] = v; app.saveSettings(); if (app.audio) app.audio.apply(s); app.track('setting_change', { key: k, value: v }, { always: true }); };
     // 손가락 구역(CHM-52): 줄 사이 틈(8)을 반씩, ± 단추는 바깥쪽과 숫자 쪽으로 6씩, 연출 속도는 단추 사이 틈(4)을 반씩
     const G = { u: 4, d: 4 }, GM = { ...G, l: 6, r: 6 }, GS = { ...G, l: 2, r: 2 };
     let yy = row(0, '소리');
@@ -53,6 +57,10 @@ export class SettingsScreen {
     button(ctx, ui, 'set:coachReset', x + w - PAD_BOX - rw, yy, rw, 18, '다시 보기', { onClick: () => { app.records.coachSeen = {}; app.saveRecords(); set('coach', true); app.toast('처음 안내를 다시 보인다', PAL.gold); }, grow: G });
     yy = row(7, '움직임 줄이기');
     button(ctx, ui, 'set:calm', x + 120, yy, 64, 18, s.calm ? '켬' : '끔', { onClick: () => set('calm', !s.calm), tone: s.calm ? 'gold' : 'plain', grow: G });
+    // 기록 보내기(CHM-63): 줄을 더하면 상자가 화면(270)을 넘어 움직임 줄이기 줄 오른쪽에 둔다(복기와 같은 꼴)
+    const tel = s.telemetry !== false;
+    text(ctx, '기록 보내기', x + w - PAD_BOX - rbw - 6, textY(yy, RH), PAL.ink, { align: 'right' });
+    button(ctx, ui, 'set:telemetry', x + w - PAD_BOX - rbw, yy, rbw, 18, tel ? '켬' : '끔', { onClick: () => app.setTelemetry(!tel), tone: tel ? 'gold' : 'plain', grow: G });
     const bx0 = Math.floor(W / 2 - (lw + kw + ew + bw + 24) / 2), by = y + btnTop;
     button(ctx, ui, 'set:lessons', bx0, by, lw, 18, '수업', { onClick: () => { app.closeOverlay(); app.guide = null; if (app.run && app.run.scratch) app.run = null; app.fx.clear(); app.go('lessons'); }, grow: G });
     const again = !!app.records.kingAgain;

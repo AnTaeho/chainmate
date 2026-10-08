@@ -1,6 +1,6 @@
 // localStorage 저장. 실패해도 게임은 돈다(사생활 창 · 막힌 저장소).
 export const KEYS = { run: 'chainmate.run.v1', settings: 'chainmate.settings.v1', records: 'chainmate.records.v1', runs: 'chainmate.runs.v1' };
-export const DEFAULT_SETTINGS = { volume: 0.6, music: 0.5, speed: 1, shake: true, big: false, lang: 'ko', coach: true, replay: true };
+export const DEFAULT_SETTINGS = { volume: 0.6, music: 0.5, speed: 1, shake: true, big: false, lang: 'ko', coach: true, replay: true, telemetry: true };
 
 export function makeStore(storage) {
   const s = {

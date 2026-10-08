@@ -2,9 +2,10 @@
 // (하늘의 사슬 — src/ui/skychain.js 시간표 · src/render/night.js 그림). 로고는 글자마다 정수 칸으로 오르내리고,
 // 주인공 단추 하나(저장이 있으면 「이어 하기」, 없으면 「새 판」)가 금빛으로 숨 쉬며, 나머지는 아래 도트 아이콘 줄이다.
 // 바탕(하늘 · 달 · 별 · 실루엣 · 가장자리 어둡기)은 여백 판이 창 전체로 같은 함수로 이어 칠한다(surroundScene).
-import { hint } from '../coach.js';
+import { hint, markSeen } from '../coach.js';
+import { inkY } from '../frame.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, rect, frame } from '../../render/gfx.js';
+import { W, H, text, rect, frame, measure } from '../../render/gfx.js';
 import { makeCanvas, context } from '../../render/surface.js';
 import { textImage, textWidth, wrap } from '../../render/text.js';
 import { drawIcon } from '../../render/icons.js';
@@ -50,6 +51,8 @@ function bakeLogo() {
   return { s, letters, w: textWidth(s, true) * sc + 4, h: 16 * sc + 4 };
 }
 export const LOGO_Y = 34, SUB_Y = 82;
+export const TELEMETRY_NOTE = '판 결과를 이름 없이 모은다 · 설정에서 끌 수 있다';
+export const NOTE_Y = 4, NOTE_H = 16;
 export const HERO = { w: 112, h: 26, y: 196 };
 export const ROW = { y: 226, cw: 72, box: 22, boxH: 16 };
 
@@ -127,6 +130,19 @@ export class TitleScreen {
     this.drawLogo(ctx, f.calm);
     text(ctx, '잡고, 바뀌고, 또 잡는다', W / 2, SUB_Y, PAL.ink, { align: 'center', bold: true, shadow: PAL.shadow });
     this.drawMenu(ctx, ui);
+    this.drawNote(ctx);
+  }
+  // 기록 보내기 알림(CHM-63): 켜져 있으면 처음 한 번, 화면 맨 위 작은 줄. 무엇이든 누르면 사라지고 다시 안 뜬다(설정 「다시 보기」로 되살린다)
+  noteOn() { const app = this.app; return app.settings.telemetry !== false && !(app.records.coachSeen && app.records.coachSeen.telemetry); }
+  seeNote() { if (this.noteOn()) markSeen(this.app, 'telemetry'); }
+  pointerDown() { this.seeNote(); }
+  drawNote(ctx) {
+    if (!this.noteOn()) return;
+    const w = measure(TELEMETRY_NOTE) + 16, x = Math.round(W / 2 - w / 2);
+    openBox('edge', x, NOTE_Y, w, NOTE_H, 0, { name: '기록 알림' });
+    ctx.globalAlpha = 0.7; rect(ctx, x, NOTE_Y, w, NOTE_H, '#081012'); ctx.globalAlpha = 1;
+    text(ctx, TELEMETRY_NOTE, W / 2, inkY(NOTE_Y, NOTE_H), PAL.ink, { align: 'center' });
+    closeBox();
   }
   drawLogo(ctx, calm) {
     if (!logo || logo.s !== L('체인메이트')) logo = bakeLogo();
@@ -166,6 +182,8 @@ export class TitleScreen {
       const bx = cx - ROW.box / 2, by = ROW.y + 2 - lift;
       ctx.globalAlpha = 0.85; rect(ctx, bx, by, ROW.box, ROW.boxH, '#081012'); ctx.globalAlpha = 1;
       if (on) frame(ctx, bx - 1, by - 1, ROW.box + 2, ROW.boxH + 2, PAL.gold);
+      // 기록 알림이 떠 있는 동안 설정 칸에 금빛 테가 깜박인다
+      else if (id === 'title:settings' && this.noteOn() && (app.reducedMotion || Math.floor(app.time * 2) % 2 === 0)) frame(ctx, bx - 1, by - 1, ROW.box + 2, ROW.boxH + 2, PAL.goldHi);
       drawIcon(ctx, ICON[id], cx - 6, by + 2);
       const lines = wrap(label, rw - 2);
       const ly = (lines.length > 1 ? ROW.y + 20 : ROW.y + 22) - lift;
@@ -174,6 +192,7 @@ export class TitleScreen {
     });
   }
   key(k) {
+    this.seeNote();
     const items = this.items(), n = items.length;
     const pick = (i) => { if (i !== this.sel) { this.sel = i; if (i > 0) this.row = i; this.app.sfx('pick'); } };
     if (k === 'ArrowRight') pick((this.sel + 1) % n);
