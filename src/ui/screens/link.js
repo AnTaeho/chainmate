@@ -148,24 +148,27 @@ export class LinkScreen {
     this.drawEntry(ctx, ui, lay);
     // 아래 한 줄: 이어진 기기 수 · 마지막으로 맞춘 때 · [이 기기 떼기]
     const s = lay.status, at = app.cloud.status().at;
-    openBox('panel', s.x, s.y, s.w, s.h, P, { name: '이어진 기기' });
-    box(ctx, s.x, s.y, s.w, s.h, PAL.feltDk, PAL.frameHi);
-    const ty = inkY(s.y + P, BTN_S);
-    if (this.unlinking) {
-      text(ctx, UNLINK_TEXT, s.x + P, ty, PAL.ink);
-      const bw = Math.max(44, measure('떼기', true) + 12), cw = Math.max(44, measure('그만', true) + 12), x1 = s.x + s.w - P;
-      button(ctx, ui, 'link:unlink:no', x1 - cw, s.y + P, cw, BTN_S, '그만', { enabled: this.unlinking === 'ask', onClick: () => { this.unlinking = null; } });
-      button(ctx, ui, 'link:unlink:yes', x1 - cw - 6 - bw, s.y + P, bw, BTN_S, '떼기', { tone: 'red', enabled: this.unlinking === 'ask', onClick: () => this.unlink() });
-    } else {
-      const linked = this.devices != null && this.devices >= 2;
-      const parts = [this.devices == null ? null : linked ? `기기 ${this.devices}대가 이어져 있다` : '이 기기 혼자다', at ? `마지막으로 맞춘 때 ${agoText(Math.max(0, app.cloud.now() - at))}` : null].filter(Boolean);
-      if (parts.length) text(ctx, parts.join(' · '), s.x + P, ty, linked ? PAL.ink : PAL.dim);
-      if (linked) {
-        const bw = measure('이 기기 떼기', true) + 12;
-        button(ctx, ui, 'link:unlink', s.x + s.w - P - bw, s.y + P, bw, BTN_S, '이 기기 떼기', { onClick: () => { this.unlinking = 'ask'; app.sfx('pick'); } });
+    const linked = this.devices != null && this.devices >= 2;
+    const parts = [this.devices == null ? null : linked ? `기기 ${this.devices}대가 이어져 있다` : '이 기기 혼자다', at ? `마지막으로 맞춘 때 ${agoText(Math.max(0, app.cloud.now() - at))}` : null].filter(Boolean);
+    // 말할 것이 없으면(열쇠가 없다 · 닿지 못했다) 줄도 없다
+    if (this.unlinking || parts.length) {
+      openBox('panel', s.x, s.y, s.w, s.h, P, { name: '이어진 기기' });
+      box(ctx, s.x, s.y, s.w, s.h, PAL.feltDk, PAL.frameHi);
+      const ty = inkY(s.y + P, BTN_S);
+      if (this.unlinking) {
+        text(ctx, UNLINK_TEXT, s.x + P, ty, PAL.ink);
+        const bw = Math.max(44, measure('떼기', true) + 12), cw = Math.max(44, measure('그만', true) + 12), x1 = s.x + s.w - P;
+        button(ctx, ui, 'link:unlink:no', x1 - cw, s.y + P, cw, BTN_S, '그만', { enabled: this.unlinking === 'ask', onClick: () => { this.unlinking = null; } });
+        button(ctx, ui, 'link:unlink:yes', x1 - cw - 6 - bw, s.y + P, bw, BTN_S, '떼기', { tone: 'red', enabled: this.unlinking === 'ask', onClick: () => this.unlink() });
+      } else {
+        text(ctx, parts.join(' · '), s.x + P, ty, linked ? PAL.ink : PAL.dim);
+        if (linked) {
+          const bw = measure('이 기기 떼기', true) + 12;
+          button(ctx, ui, 'link:unlink', s.x + s.w - P - bw, s.y + P, bw, BTN_S, '이 기기 떼기', { onClick: () => { this.unlinking = 'ask'; app.sfx('pick'); } });
+        }
       }
+      closeBox();
     }
-    closeBox();
     button(ctx, ui, 'link:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.leave() });
   }
 
