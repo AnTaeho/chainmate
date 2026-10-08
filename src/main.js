@@ -6,6 +6,7 @@ import { drawPad, resetPad } from './render/backdrop.js';
 import { createTelemetry } from './ui/telemetry.js';
 import { createRank } from './ui/rank.js';
 import { createCloud } from './ui/cloud.js';
+import { createFields, keyboardLift } from './ui/textfield.js';
 import { VERSION } from './version.js';
 
 export async function boot(env = {}) {
@@ -69,7 +70,25 @@ export async function boot(env = {}) {
   };
 
   let app = null, fit = null, pendingScale = 1;
-  function refit() {
+  // 글자 입력 칸(CHM-72, src/ui/textfield.js): 캔버스 위에 겹치는 아이디 · 비번 칸. 가짜 DOM에 body가 없으면 값만 드는 가짜가 된다
+  const fields = createFields({ doc, win, canvas, rot: () => !!(fit && fit.rot), safeTop: () => { const i = inset(); return i ? i.top : 0; } });
+  // 입력 칸에 초점이 있는 동안에는 창이 줄어도(폰 키보드) 화면을 다시 맞추지 않는다 — 키보드 위 좁은 띠에 맞추면 글이 읽히지 않는다.
+  // 대신 칸이 키보드에 가리면 틀을 그만큼 올린다. 돌려 그린 화면은 칸을 위쪽에 바로 세운다(textfield.js lift)
+  let lifted = 0;
+  const liftStage = () => {
+    let up = 0;
+    const id = fields.focused(), vv = win.visualViewport;
+    if (id && stage && vv && !(fit && fit.rot)) {
+      const at = fields.rectOf(id);
+      if (at) up = keyboardLift(at.top + lifted + at.height, vv.offsetTop + vv.height);
+    }
+    if (up === lifted) return;
+    lifted = up;
+    stage.style.top = up ? `${-up}px` : '';
+    fields.layout();
+  };
+  function refit(force = false) {
+    if (!force && fit && fields.focused()) { liftStage(); return; }
     const { vw, vh, full } = viewport();
     fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: coarse() });
     // 화면 글 12px가 몇 배로 보이나(CSS 화소). 작은 창에서 처음 안내가 큰 글자를 권한다
@@ -96,13 +115,17 @@ export async function boot(env = {}) {
     win.__fit = fit;
     // 뒷면 캔버스 배율 N(빛과 움직임, src/ui/fit.js backScale). 480×270 좌표는 그대로, 움직이는 것만 1/N 칸에 선다
     if (app) app.setScale(fit.n); else pendingScale = fit.n;
+    fields.layout();
   }
   refit();
   // 창 크기가 바뀌면 조금 기다렸다 한 번만 다시 고른다(주소창이 접히는 동안 배율이 오락가락하지 않게). 기기를 돌리면 곧바로 + 늦게 한 번 더
   let timer = null;
   const later = (ms = 120) => { if (timer) win.clearTimeout(timer); timer = win.setTimeout ? win.setTimeout(() => { timer = null; refit(); }, ms) : (refit(), null); };
   win.addEventListener('resize', () => later());
-  win.addEventListener('orientationchange', () => { refit(); later(350); });
+  win.addEventListener('orientationchange', () => { fields.blur(); refit(true); later(350); });
+  // 초점이 풀리면 올린 틀을 내리고 그사이 바뀐 창에 다시 맞춘다
+  fields.onFocus = (id) => { if (id) { liftStage(); return; } if (lifted) { lifted = 0; if (stage) stage.style.top = ''; } later(60); };
+  if (win.visualViewport && win.visualViewport.addEventListener) win.visualViewport.addEventListener('scroll', () => { if (fields.focused()) liftStage(); });
   // 홈 화면 앱으로 돌아오거나 뒤로 가기로 다시 보일 때(주소창 · 창 크기가 그사이 바뀌었을 수 있다)
   win.addEventListener('pageshow', () => later(60));
   if (win.visualViewport && win.visualViewport.addEventListener) win.visualViewport.addEventListener('resize', () => later());
@@ -179,7 +202,9 @@ export async function boot(env = {}) {
     rank,
     ...(typeof win.setTimeout === 'function' && typeof win.clearTimeout === 'function' ? { setTimer: (fn, ms) => win.setTimeout(fn, ms), clearTimer: (t) => win.clearTimeout(t) } : {}),
   });
-  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, today: env.today });
+  // 새 탭으로 열기(개인정보 처리방침). 누른 그 순간 안에서 부른다
+  const openPage = (url) => { try { if (typeof win.open === 'function') { win.open(url, '_blank', 'noopener'); return true; } } catch { /* 막혔다 */ } return false; };
+  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, fields, openPage, today: env.today });
   win.addEventListener('error', (e) => tel.error((e && e.error) || (e && e.message) || 'error'));
   win.addEventListener('unhandledrejection', (e) => tel.error((e && e.reason) || 'unhandledrejection'));
   // 화면이 숨거나 떠날 때 남은 것을 보낸다
@@ -195,7 +220,8 @@ export async function boot(env = {}) {
   // 누른 자리 → 게임 좌표(보이는 캔버스 사각형 기준 — 확대 · DPR · 가장자리 여백과 상관없다). 돌려 그렸으면 돌린 축으로 되돌린다
   const toGame = (e) => pointToGame(e.clientX, e.clientY, canvas.getBoundingClientRect(), !!(fit && fit.rot));
   canvas.addEventListener('mousemove', (e) => { const [x, y] = toGame(e); app.pointer('move', x, y); });
-  canvas.addEventListener('mousedown', (e) => { e.preventDefault(); const [x, y] = toGame(e); app.pointer('down', x, y, e.button); });
+  // 캔버스를 누르면 입력 칸의 초점을 푼다(mousedown을 막아 두어 저절로 풀리지 않는다)
+  canvas.addEventListener('mousedown', (e) => { e.preventDefault(); fields.blur(); const [x, y] = toGame(e); app.pointer('down', x, y, e.button); });
   win.addEventListener('mouseup', (e) => { const [x, y] = toGame(e); app.pointer('up', x, y, e.button); });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   // 손가락: 한 손가락만 받는다(두 손가락은 확대 몸짓이라 무시). 오른쪽 누르기(판 위 표시)는 손가락에는 없다
@@ -219,6 +245,7 @@ export async function boot(env = {}) {
   touchEl.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (finger != null || e.touches.length > 1) return;
+    fields.blur();
     app.touch = true;
     const t = e.changedTouches[0];
     finger = t.identifier;
@@ -238,6 +265,8 @@ export async function boot(env = {}) {
     doc.addEventListener('dblclick', stop, { passive: false });
   }
   win.addEventListener('keydown', (e) => {
+    // 입력 칸에 초점이 있는 동안 게임은 키를 받지 않는다(빈칸 · Enter · 방향키 · 단축키 모두). Esc는 초점만 푼다
+    if (fields.owns(e.target) || fields.focused()) { if (e.key === 'Escape') { if (e.preventDefault) e.preventDefault(); fields.blur(); } return; }
     if (e.repeat) return;
     const k = e.key;
     if ([' ', 'Enter', 'Escape', 'Backspace', '1', '2', '3', '4', '5', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(k)) e.preventDefault();

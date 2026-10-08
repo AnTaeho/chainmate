@@ -28,3 +28,24 @@ canvas {
 }
 /* 캔버스 · 여백 판이 놓이는 틀. 폰 세로면 main.js가 틀을 창 높이 × 창 폭으로 잡고 시계 방향 90도 돌린다(src/ui/fit.js stageTransform) */
 #stage { position: fixed; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; transform-origin: 0 0; }
+/* 글자 입력 칸(CHM-72, src/ui/textfield.js): 캔버스 위에 겹치는 아이디 · 비번 칸. 자리 · 크기 · 글 크기는 textfield.js가 게임 좌표에서 옮겨 적는다.
+   body가 글 고르기를 막고 있어 칸에서만 푼다(안 풀면 아이폰에서 글 자리 표시가 안 뜬다) */
+.tf { position: fixed; left: 0; top: 0; width: 0; height: 0; margin: 0; padding: 0; z-index: 5; }
+.tf-in {
+  position: fixed; box-sizing: border-box; margin: 0; border: 1px solid #6a4526; border-radius: 0;
+  background: #0e1814; color: #fff1b8; caret-color: #efbd55; outline: none;
+  font-family: "Galmuri11", monospace; font-weight: 400; line-height: 1; letter-spacing: 0;
+  transform-origin: 0 0; -webkit-appearance: none; appearance: none;
+  -webkit-user-select: text; user-select: text; touch-action: manipulation; -webkit-touch-callout: default;
+  image-rendering: pixelated; -webkit-font-smoothing: none; font-smooth: never;
+}
+.tf-in:focus { border-color: #efbd55; }
+.tf-in::selection { background: #efbd55; color: #2a1c08; }
+/* 비번 관리자가 채운 칸의 바탕을 게임 결로 */
+.tf-in:-webkit-autofill { -webkit-text-fill-color: #fff1b8; box-shadow: 0 0 0 1000px #0e1814 inset; caret-color: #efbd55; }
+/* 이름표는 캔버스가 그린다 — 화면 읽기 프로그램에만 보인다 */
+.tf-label { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; color: #ece3cf; font-family: "Galmuri11", sans-serif; }
+.tf-go { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* 폰 세로(돌려 그린 화면)에서 초점이 가면: 어두운 바탕 위, 화면 위쪽에 바로 선 칸과 이름표 */
+.tf.lift { width: 100%; height: 100%; background: rgba(8, 16, 18, 0.86); }
+.tf.lift .tf-label { width: auto; height: auto; overflow: visible; clip-path: none; }
