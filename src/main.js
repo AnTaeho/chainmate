@@ -243,7 +243,7 @@ export async function boot(env = {}) {
   const touchEl = stage || canvas;
   let finger = null;
   touchEl.addEventListener('touchstart', (e) => {
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault(); // 화면이 끌리는 중(입력 칸에 초점이 가며)에는 막을 수 없다 — 막으려 들면 크롬이 콘솔에 오류를 남긴다
     if (finger != null || e.touches.length > 1) return;
     fields.blur();
     app.touch = true;
