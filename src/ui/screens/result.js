@@ -1,5 +1,6 @@
 // 판 결과: 이김/짐, 도달 관, 최고 한 수(작은 판에 다시 둔다 — 대국 화면과 같은 길), 목표에 모자란 점수(아슬아슬), 모은 조각,
-// 새 도감 칸 · 해금 알림 · 다음 해금까지. 「다시」 / 「타이틀」.
+// 새 도감 칸 · 해금 알림 · 다음 해금까지. 「다시」 / 「타이틀」. 오늘의 대국이면 순위 카드(CHM-70, screens/rank.js).
+// quiet: 순위 화면에서 돌아올 때 — 소리를 다시 내지 않는다
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, sprite, num, short, fitNum, line, measure, fine } from '../../render/gfx.js';
 import { LEGENDS } from '../../data/legends.js';
@@ -13,13 +14,14 @@ import { lerp } from '../anim.js';
 import { PAD_BOX, LINE, GAP_GROUP, GAP_IN, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { replayState, routeAt } from '../fxroute.js';
+import { rankCard, drawRankCard, CARD_NEIGHBOURS } from './rank.js';
 
 const Q = 16, MX = 330, ROW_R = 300; // 다시 보기 판: 칸 16px. 윗변 MY는 결과 상자 자리에 따라(draw가 정한다). ROW_R: 기록 줄 수치의 오른끝
 let MY = 50;
 const STEP = 0.5;
 
 export class ResultScreen {
-  constructor(app) {
+  constructor(app, { quiet = false } = {}) {
     this.app = app;
     this.t = 0;
     const run = app.run;
@@ -31,7 +33,7 @@ export class ResultScreen {
     this.short = !this.won && last && last.target ? Math.max(0, last.target - last.score) : 0;
     this.pct = last && last.target ? Math.floor((last.score / last.target) * 100) : 0;
     this.replay = run.bestReplay || null;
-    app.sfx(this.won ? 'fanfare' : 'lose');
+    if (!quiet) app.sfx(this.won ? 'fanfare' : 'lose');
     this.out = app.finishRun() || { unlocked: [], dan: null, fresh: 0 };
     this.next = nextUnlock(app.records);
   }
@@ -113,17 +115,29 @@ export class ResultScreen {
     for (const id of this.out.unlocked) notes.push([`오프닝 「${OPENINGS[id].name}」이 열렸다`, PAL.gold]);
     if (this.out.dan) notes.push([`레이팅 ${rating(this.out.dan)}이 열렸다`, PAL.gold]);
     if (!this.out.unlocked.length && this.next) notes.push([`다음 해금 ${OPENINGS[this.next.id].name}: ${this.next.text} ${this.next.have}/${this.next.need}`, PAL.dim]);
-    if (run.daily) notes.push([`오늘의 대국 ${run.daily}`, PAL.goldDk]);
-    const shown = notes.slice(-3);
-    // 상자 윗변을 0으로 재고(오른쪽 판: 이름표 → 4 → 판 → 4 → 점수) 화면 가운데에 놓는다
-    const f = flow(P);
-    const titleY = f.space(LINE * 2);
-    f.gap(GAP_GROUP);
-    const rowYs = rows.map(() => f.line());
-    let fragY = null, fragYs = [];
-    if (got.length) { f.gap(GAP_GROUP); fragY = f.line(); f.gap(GAP_IN); fragYs = got.map(() => f.line()); }
+    // 순위 카드(CHM-70): 오늘의 대국 판이면 왼쪽 칸 아래에. 카드가 「오늘의 대국 날짜」 줄을 대신한다
+    const hasCard = !!rankCard(app, run, 0);
+    if (run.daily && !hasCard) notes.push([`오늘의 대국 ${run.daily}`, PAL.goldDk]);
+    // 상자 윗변을 0으로 재고(오른쪽 판: 이름표 → 4 → 판 → 4 → 점수) 화면 가운데에 놓는다.
+    // 카드의 이웃 줄은 판 밖 알림 한 줄이 살아남는 가장 큰 수(둘씩 → 하나씩 → 내 줄만 → 머리만)로, 알림은 270 안에 들어가는 만큼(셋까지)
     const boardTop = P + LINE + 4;
-    f.y = Math.max(f.y, boardTop + Q * 8 + 4 + LINE);
+    const lay = (n) => {
+      const f = flow(P), o = { f };
+      o.titleY = f.space(LINE * 2);
+      f.gap(GAP_GROUP);
+      o.rowYs = rows.map(() => f.line());
+      o.fragY = null; o.fragYs = [];
+      if (got.length) { f.gap(GAP_GROUP); o.fragY = f.line(); f.gap(GAP_IN); o.fragYs = got.map(() => f.line()); }
+      o.card = hasCard ? rankCard(app, run, n) : null;
+      if (o.card) { f.gap(GAP_GROUP); o.cardY = f.space(o.card.h); }
+      f.y = Math.max(f.y, boardTop + Q * 8 + 4 + LINE);
+      o.room = Math.floor((270 - (f.y + GAP_GROUP + 18 + P) - GAP_GROUP) / LINE);
+      return o;
+    };
+    let L0 = null;
+    for (const n of hasCard ? CARD_NEIGHBOURS : [0]) { L0 = lay(n); if (L0.room >= Math.min(1, notes.length)) break; }
+    const { f, titleY, rowYs, fragY, fragYs, card } = L0;
+    const shown = L0.room > 0 ? notes.slice(-Math.min(3, L0.room)) : [];
     const noteYs = shown.map((_, i) => (i ? f : f.gap(GAP_GROUP)).line());
     const btnY = f.gap(GAP_GROUP).space(18);
     const h = f.y + P, y = Math.max(0, Math.floor((270 - h) / 2));
@@ -160,6 +174,7 @@ export class ResultScreen {
         }
       });
     }
+    if (card) drawRankCard(ctx, ui, app, card, x + P, y + L0.cardY, leftW);
     shown.forEach(([s2, c], i) => text(ctx, s2, W / 2, noteYs[i], c, { align: 'center' }));
     if (this.won) {
       button(ctx, ui, 'result:endless', W / 2 - 150, by, 90, 18, '계속 두기', { onClick: () => this.endless() });

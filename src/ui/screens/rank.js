@@ -115,3 +115,73 @@ export class RankScreen {
     else if (k === 'ArrowLeft' && this.page > 0) this.go(this.page - 1);
   }
 }
+
+// ── 결과 화면의 순위 카드(hug). 상태(rank.js status)마다:
+//   pending  「확인 중」 + 빈 줄 셋            ok  머리(「오늘 14등 / 312명」) + 내 위아래 이웃(n줄까지)
+//   stale    두 줄 글(새로 고치면 다음 판부터)   unreached  한 줄 글          none  카드 없음(null)
+export const CARD_NEIGHBOURS = [5, 3, 1, 0]; // 결과 화면이 자리에 맞는 가장 큰 것을 고른다
+export const STALE_LINES = ['게임이 새로 나왔다', '새로 고치면 다음 판부터 순위에 오른다'];
+// n: 보일 줄 수(내 줄 포함 — 5 · 3 · 1 · 0). 돌려주는 것: { phase, rows, h } | null
+export function rankCard(app, run, n = 5) {
+  if (!run || !run.daily) return null;
+  const st = app.rank.status(run.daily), P = PAD_BOX;
+  if (st.phase === 'none') return null;
+  if (st.phase === 'unreached') return { st, phase: 'unreached', rows: [], h: P * 2 + LINE };
+  if (st.phase === 'stale') return { st, phase: 'stale', rows: [], h: P * 2 + LINE * STALE_LINES.length };
+  let rows = [];
+  if (st.phase === 'ok' && st.me) {
+    const span = (n - 1) >> 1;
+    rows = n ? (st.around || []).filter((r) => Math.abs(r.rank - st.me.rank) <= span) : [];
+    if (n && !rows.some((r) => r.rank === st.me.rank)) rows = [st.me];
+  }
+  const count = st.phase === 'pending' ? Math.min(n, 3) : rows.length;
+  return { st, phase: st.phase, rows, count, h: P * 2 + BTN_S + (count ? GAP_IN + count * LINE : 0) };
+}
+// 카드 줄의 글 자리(재는 쪽과 그리는 쪽이 같이 쓴다): 등수 · 이름 · [닿은 곳] · 점수. 한 줄이라도 이름이 닿은 곳에 닿으면 닿은 곳 칸을 줄 전체에서 뺀다
+export function cardCols(rows, names, x, w) {
+  const P = PAD_BOX, rankW = Math.max(0, ...rows.map((r) => measure(num(r.rank), true)));
+  const nameX = x + P + 4 + rankW + 6, scoreR = x + w - P - 2;
+  const scoreW = Math.max(0, ...rows.map((r) => measure(num(r.score), true)));
+  const reachR = scoreR - scoreW - 6, reachW = Math.max(0, ...rows.map((r) => measure(reachShort(r))));
+  const nameEnd = Math.max(0, ...rows.map((r, i) => nameX + measure(names[i], true)));
+  const reach = nameEnd + 6 <= reachR - reachW;
+  return { rank: x + P + 4, name: nameX, reach: reach ? reachR : null, score: scoreR, scoreRoom: (i) => scoreR - (nameX + measure(names[i], true) + 6) };
+}
+export function drawRankCard(ctx, ui, app, card, x, y, w) {
+  const P = PAD_BOX, { st, phase, rows, h } = card;
+  openBox('panel', x, y, w, h, P, { name: '순위 카드' });
+  box(ctx, x, y, w, h, CARD_BG, phase === 'ok' ? PAL.gold : PAL.frameHi);
+  if (phase === 'unreached') { text(ctx, '순위에 닿지 못했다', x + P, textY(y + P), PAL.dim); closeBox(); return; }
+  if (phase === 'stale') { STALE_LINES.forEach((s, i) => text(ctx, s, x + P, textY(y + P + i * LINE), i ? PAL.dim : PAL.ink)); closeBox(); return; }
+  const hy = inkY(y + P, BTN_S);
+  if (phase === 'pending' || !st.rank) text(ctx, '확인 중', x + P, hy, PAL.dim, { bold: true });
+  else {
+    const today = st.date === app.today();
+    const a = today ? `오늘 ${num(st.rank)}등` : `${num(st.rank)}등`;
+    text(ctx, a, x + P, hy, PAL.gold, { bold: true });
+    text(ctx, ` / ${peopleText(st.total)}`, x + P + measure(a, true), hy, PAL.dim);
+  }
+  const bw = measure('순위 보기', true) + 12;
+  button(ctx, ui, 'result:rank', x + w - P - bw, y + P, bw, BTN_S, '순위 보기', { onClick: () => app.go('rank', { back: 'result' }) });
+  const y0 = y + P + BTN_S + GAP_IN;
+  if (phase === 'pending') {
+    // 서버가 판을 다시 두는 동안: 빈 줄(가운데가 내 줄 자리)
+    for (let i = 0; i < card.count; i++) {
+      const top = y0 + i * LINE, mid = i === (card.count >> 1);
+      if (mid) { rect(ctx, x + P, top, w - P * 2, LINE, MINE_BG); rect(ctx, x + P, top, 2, LINE, PAL.gold); }
+      rect(ctx, x + P + 4, top + 6, 12, 2, PAL.feltHi); rect(ctx, x + P + 24, top + 6, 70 - (i % 2) * 18, 2, PAL.feltHi); rect(ctx, x + w - P - 42, top + 6, 40, 2, PAL.feltHi);
+    }
+    closeBox();
+    return;
+  }
+  const names = rows.map((r) => app.rank.nameOf(r)), at = cardCols(rows, names, x, w);
+  rows.forEach((r, i) => {
+    const top = y0 + i * LINE, ty = textY(top), mine = r.rank === st.me.rank, c = mine ? PAL.gold : PAL.ink;
+    if (mine) { rect(ctx, x + P, top, w - P * 2, LINE, MINE_BG); rect(ctx, x + P, top, 2, LINE, PAL.gold); }
+    text(ctx, num(r.rank), at.rank, ty, mine ? PAL.gold : PAL.dim, { bold: mine });
+    text(ctx, names[i], at.name, ty, c, { bold: mine });
+    if (at.reach != null) text(ctx, reachShort(r), at.reach, ty, r.won || mine ? PAL.gold : PAL.dim, { align: 'right' });
+    text(ctx, fitNum(r.score, at.scoreRoom(i)), at.score, ty, c, { align: 'right', bold: true });
+  });
+  closeBox();
+}
