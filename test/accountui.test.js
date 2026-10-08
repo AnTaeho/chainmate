@@ -279,7 +279,7 @@ test('계정 흐름: A 만들기 → B 들어오기(같은 이름 · 기록을 �
     B.click('acct:yes'); await settle(); B.frame(2);
     assert.deepEqual([B.app.screen.in(), B.app.screen.msg.text], [false, '나갔다']);
     assert.notEqual(B.key(), keyIn);
-    assert.deepEqual([B.app.records.runs, B.app.records.bestAnte, B.app.records.codex.maxims, B.app.records.coachSeen], [0, 0, {}, {}], '기기의 기록이 비었다');
+    assert.deepEqual([B.app.records.runs, B.app.records.bestAnte, B.app.records.codex.maxims, B.app.records.kingDone], [0, 0, {}, true], '기기의 기록이 비었고 본 안내는 남았다');
     assert.deepEqual([B.store.get(KEYS.run), B.store.get(KEYS.runs), JSON.parse(B.store.get(KEYS.records)).runs, JSON.parse(B.store.get(CLOUD_KEY)).rev], [undefined, undefined, 0, 0]);
     assert.notEqual(B.app.rank.player().name, undefined);
     assert.deepEqual(B.app.rank.account(), { username: null, devices: 1 });

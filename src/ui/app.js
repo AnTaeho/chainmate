@@ -125,12 +125,13 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.fields = fields || createFields();
   // 새 탭으로 쪽 열기(개인정보 처리방침). 못 열면 거짓
   app.openPage = (url) => (openPage ? !!openPage(url) : false);
-  // 계정에서 나가거나 계정을 지운 뒤(CHM-72): 이 기기의 기록 · 진행 중인 판 · 사람 판 기록을 비운다(설정은 기기 취향이라 둔다).
+  // 계정에서 나가거나 계정을 지운 뒤(CHM-72): 이 기기의 기록 · 진행 중인 판 · 사람 판 기록을 비운다(설정과 본 안내는 기기의 것이라 둔다).
   // 서버가 새 열쇠를 준 뒤에만 부른다 — 먼저 비우면 비운 기록이 계정 쪽 저장에 올라갈 수 있다
   app.wipeDevice = () => {
     store.del(KEYS.run); store.del(KEYS.runs);
+    const { coachSeen, kingDone, lessonsDone } = app.records;
     for (const k of Object.keys(app.records)) delete app.records[k];
-    Object.assign(app.records, emptyRecords());
+    Object.assign(app.records, emptyRecords(), { coachSeen, kingDone, lessonsDone });
     store.set(KEYS.records, app.records);
     app.run = null; app.fresh = []; app.guide = null;
     app.cloud.wipe();
