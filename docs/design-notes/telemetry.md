@@ -62,6 +62,9 @@
 | `rank_open` ★ | `tab`(today · yesterday) | 순위 화면을 여나 · 어제 것을 보나(CHM-70) |
 | `rank_submit` | `ok`(순위에 올랐나) · `improved`(그날 기록을 갈아 끼웠나) · `rank` · `total` · `stale`(새 배포라 내지 못함) | 오늘의 대국이 순위에 닿는 비율. `app.js`가 제출 결과마다 한 번(`telemetry.js` `rankSubmitProps`). 이름(번호) · 열쇠 · 점수는 싣지 않는다 |
 | `name_reroll` ★ | — | 이름을 다시 짓는 사람 수 |
+| `highlight_open` ★ | — | 결과 화면에서 하이라이트 카드를 여는 사람 수(CHM-73) |
+| `highlight_save` ★ | — | 그림을 받은 수(받기가 된 때만) |
+| `highlight_share` ★ | `ok`(공유 시트에서 끝까지 보냈나 — 그만두거나 실패하면 false) | 공유 시트를 연 수와 끝까지 가는 비율. 그림 · 이름 · 판의 내용은 싣지 않는다 |
 | `account_signup` | `ok` · `reason`(`taken` · `username` · `weak` · `has` · `limit` · `unreached`, 만들었으면 null) | 계정을 만드는 사람 수와 막히는 까닭(CHM-72). 아이디 · 비번 · 열쇠는 싣지 않는다 |
 | `account_login` | `ok` · `reason`(`bad` · `locked` · `other` · `unreached`) | 다른 기기에서 들어오는 수 · 틀리는 수 |
 | `account_logout` | — | 나간 수 |

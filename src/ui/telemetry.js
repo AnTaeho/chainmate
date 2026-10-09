@@ -304,6 +304,10 @@ export function rankSubmitProps(st) {
   return { ok, improved: ok && !!st.improved, rank: ok ? st.rank ?? null : null, total: ok ? st.total ?? null : null, stale: st.phase === 'stale' };
 }
 
+// ── 하이라이트 카드(CHM-73, src/ui/screens/highlight.js): 그림 · 이름 · 판의 내용은 싣지 않는다.
+//   highlight_open {}         결과 화면에서 카드를 열었다
+//   highlight_save {}         그림을 받았다
+//   highlight_share { ok }    공유 시트를 열었다(ok: 끝까지 보냈나 — 그만두면 false)
 // ── 기기 잇기 · 클라우드 저장(CHM-71, src/ui/screens/link.js · cloud.js): 열쇠 · 코드 · 이름은 싣지 않는다.
 //   link_code {}   이 기기의 코드를 받았다
 //   link_redeem { ok, reason }   다른 기기의 코드를 넣었다(reason: bad · expired · self · limit · unreached, 이어졌으면 null)
