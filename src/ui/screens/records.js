@@ -65,7 +65,7 @@ export class RecordsScreen {
       if (bay != null) text(ctx, `${bb.ante}관`, bx + bw - P, bay, PAL.dim, { align: 'right' });
     } else text(ctx, '아직', bx + P, textY(oy), PAL.dimDk);
     closeBox();
-    button(ctx, ui, 'records:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.app.go('title') });
+    button(ctx, ui, 'records:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.app.go('title') });
   }
   key(k) { if (k === 'Escape' || k === 'Enter') this.app.go('title'); }
 }

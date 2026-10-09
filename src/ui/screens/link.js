@@ -43,9 +43,9 @@ export function gainText(g) {
   return null;
 }
 // account: 계정에 들어와 있는 기기는 남의 코드를 넣지 못한다(CHM-72 — 넣으면 제 계정이 지워진다). 이 기기에서 코드를 받아 저쪽에 넣는다
-export const REDEEM_FAIL = { bad: '숫자가 맞지 않는다', expired: '시간이 지난 숫자다', self: '이 기기의 숫자다', limit: '잠시 뒤에 다시 넣는다', unreached: '연결하지 못했어요', account: '이 기기에서 코드를 받는다' };
+export const REDEEM_FAIL = { bad: '코드가 맞지 않아요', expired: '시간이 지난 코드예요', self: '이 기기의 코드예요', limit: '잠시 뒤에 다시 입력해 주세요', unreached: '연결하지 못했어요', account: '이 기기에서 코드를 받으세요' };
 export const CONFIRM_TEXT = '이 기기의 기록이 그 기기의 기록과 합쳐져요';
-export const UNLINK_TEXT = '이 기기만 따로 간다 · 기록은 양쪽에 남는다';
+export const UNLINK_TEXT = '이 기기만 연결이 끊겨요 · 기록은 양쪽에 남아요';
 
 export class LinkScreen {
   constructor(app) {
@@ -138,7 +138,7 @@ export class LinkScreen {
       this.devices = 1;
       if (this.mine.phase === 'linked') this.mine = { phase: 'idle' };
       if (this.entry.phase === 'done') this.entry = { phase: 'type', digits: '', fail: null };
-      app.toast('떼어졌다', PAL.gold);
+      app.toast('연결을 끊었어요', PAL.gold);
     }, () => { this.unlinking = null; });
   }
   leave() { this.app.toTitle(); }
@@ -153,27 +153,27 @@ export class LinkScreen {
     // 아래 한 줄: 이어진 기기 수 · 마지막으로 맞춘 때 · [이 기기 떼기]
     const s = lay.status, at = app.cloud.status().at;
     const linked = this.devices != null && this.devices >= 2;
-    const parts = [this.devices == null ? null : linked ? `기기 ${this.devices}대가 이어져 있다` : '이 기기 혼자다', at ? `마지막으로 맞춘 때 ${agoText(Math.max(0, app.cloud.now() - at))}` : null].filter(Boolean);
+    const parts = [this.devices == null ? null : linked ? `기기 ${this.devices}대 연결됨` : '연결된 기기 없음', at ? `마지막 동기화 ${agoText(Math.max(0, app.cloud.now() - at))}` : null].filter(Boolean);
     // 말할 것이 없으면(열쇠가 없다 · 닿지 못했다) 줄도 없다
     if (this.unlinking || parts.length) {
-      openBox('panel', s.x, s.y, s.w, s.h, P, { name: '이어진 기기' });
+      openBox('panel', s.x, s.y, s.w, s.h, P, { name: '연결된 기기' });
       box(ctx, s.x, s.y, s.w, s.h, PAL.feltDk, PAL.frameHi);
       const ty = inkY(s.y + P, BTN_S);
       if (this.unlinking) {
         text(ctx, UNLINK_TEXT, s.x + P, ty, PAL.ink);
-        const bw = Math.max(44, measure('떼기', true) + 12), cw = Math.max(44, measure('그만', true) + 12), x1 = s.x + s.w - P;
-        button(ctx, ui, 'link:unlink:no', x1 - cw, s.y + P, cw, BTN_S, '그만', { enabled: this.unlinking === 'ask', onClick: () => { this.unlinking = null; } });
-        button(ctx, ui, 'link:unlink:yes', x1 - cw - 6 - bw, s.y + P, bw, BTN_S, '떼기', { tone: 'red', enabled: this.unlinking === 'ask', onClick: () => this.unlink() });
+        const bw = Math.max(44, measure('연결 해제', true) + 12), cw = Math.max(44, measure('취소', true) + 12), x1 = s.x + s.w - P;
+        button(ctx, ui, 'link:unlink:no', x1 - cw, s.y + P, cw, BTN_S, '취소', { enabled: this.unlinking === 'ask', onClick: () => { this.unlinking = null; } });
+        button(ctx, ui, 'link:unlink:yes', x1 - cw - 6 - bw, s.y + P, bw, BTN_S, '연결 해제', { tone: 'red', enabled: this.unlinking === 'ask', onClick: () => this.unlink() });
       } else {
         text(ctx, parts.join(' · '), s.x + P, ty, linked ? PAL.ink : PAL.dim);
         if (linked) {
-          const bw = measure('이 기기 떼기', true) + 12;
-          button(ctx, ui, 'link:unlink', s.x + s.w - P - bw, s.y + P, bw, BTN_S, '이 기기 떼기', { onClick: () => { this.unlinking = 'ask'; app.sfx('pick'); } });
+          const bw = measure('이 기기 연결 해제', true) + 12;
+          button(ctx, ui, 'link:unlink', s.x + s.w - P - bw, s.y + P, bw, BTN_S, '이 기기 연결 해제', { onClick: () => { this.unlinking = 'ask'; app.sfx('pick'); } });
         }
       }
       closeBox();
     }
-    button(ctx, ui, 'link:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.leave() });
+    button(ctx, ui, 'link:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.leave() });
   }
 
   drawMine(ctx, ui, lay) {
@@ -192,12 +192,12 @@ export class LinkScreen {
       const k = Math.max(0, Math.min(1, (m.until - app.cloud.now()) / m.ttl)), by = y0 + dh + 6;
       rect(ctx, dx, by, dw, 3, PAL.feltHi);
       rect(ctx, dx, by, Math.round(dw * k), 3, k < 0.2 ? PAL.red : PAL.gold);
-      say('다른 기기에서 이 숫자를 넣는다', by + 3 + 8, PAL.ink);
+      say('다른 기기에서 이 코드를 입력하세요', by + 3 + 8, PAL.ink);
     } else if (m.phase === 'linked') {
-      say('이어졌다', y0 + 4, PAL.gold, true);
+      say('연결됐어요', y0 + 4, PAL.gold, true);
       const g = gainText(m.gain);
       if (g) say(g, y0 + 4 + LINE + 6, PAL.ink);
-    } else if (m.phase === 'loading') say('숫자를 받는 중', y0 + 4);
+    } else if (m.phase === 'loading') say('코드 받는 중', y0 + 4);
     else if (m.phase === 'limit') { say('오늘은 더 받을 수 없어요', y0 + 4); say('내일 다시 받을 수 있어요', y0 + 4 + LINE); }
     else {
       if (m.phase === 'expired') say('시간이 지났어요', y0 + 4);
@@ -209,13 +209,13 @@ export class LinkScreen {
 
   drawEntry(ctx, ui, lay) {
     const { right: b } = lay, P = PAD_BOX, e = this.entry, cx = b.x + (b.w >> 1);
-    openBox('panel', b.x, b.y, b.w, b.h, P, { name: '다른 기기의 코드 넣기' });
+    openBox('panel', b.x, b.y, b.w, b.h, P, { name: '다른 기기의 코드 입력' });
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, e.phase === 'done' ? PAL.gold : PAL.frameHi);
-    text(ctx, '다른 기기의 코드 넣기', b.x + P, textY(lay.titleY), PAL.dim);
+    text(ctx, '다른 기기의 코드 입력', b.x + P, textY(lay.titleY), PAL.dim);
     if (e.phase === 'done') {
       // 「이어졌다 · 이름 졸린 수달」 + 합쳐진 것 한 줄
       const y0 = lay.cells[0].y + 4;
-      text(ctx, '이어졌다', cx, textY(y0), PAL.gold, { align: 'center', bold: true });
+      text(ctx, '연결됐어요', cx, textY(y0), PAL.gold, { align: 'center', bold: true });
       // 「이름」 이름표는 이름 옆에 들어갈 때만(가장 넓은 영어 이름이면 뺀다)
       const nw = measure(e.name, true), lw = measure('이름') + 6 + nw <= b.w - P * 2 ? measure('이름') + 6 : 0, nx = cx - ((lw + nw) >> 1), ny = textY(y0 + LINE + 6);
       if (lw) text(ctx, '이름', nx, ny, PAL.dim);
@@ -235,17 +235,17 @@ export class LinkScreen {
       // 잇기 전 확인
       const lines = wrap(CONFIRM_TEXT, b.w - P * 2);
       lines.forEach((l, i) => text(ctx, l, cx, textY(lay.msgY + 6 + i * LINE), PAL.ink, { align: 'center' }));
-      const by = lay.msgY + 6 + lines.length * LINE + 10, gw = Math.max(64, measure('잇기', true) + 16), nw = Math.max(64, measure('그만', true) + 16);
+      const by = lay.msgY + 6 + lines.length * LINE + 10, gw = Math.max(64, measure('연결', true) + 16), nw = Math.max(64, measure('취소', true) + 16);
       const busy = e.phase === 'working';
-      button(ctx, ui, 'link:yes', cx - gw - 4, by, gw, BTN_S, busy ? '잇는 중' : '잇기', { tone: 'gold', enabled: !busy, onClick: () => this.redeem() });
-      button(ctx, ui, 'link:no', cx + 4, by, nw, BTN_S, '그만', { enabled: !busy, onClick: () => { e.phase = 'type'; } });
+      button(ctx, ui, 'link:yes', cx - gw - 4, by, gw, BTN_S, busy ? '연결 중' : '연결', { tone: 'gold', enabled: !busy, onClick: () => this.redeem() });
+      button(ctx, ui, 'link:no', cx + 4, by, nw, BTN_S, '취소', { enabled: !busy, onClick: () => { e.phase = 'type'; } });
       closeBox();
       return;
     }
     if (e.fail) text(ctx, REDEEM_FAIL[e.fail] || REDEEM_FAIL.unreached, cx, textY(lay.msgY), PAL.red, { align: 'center' });
     const full = e.digits.length === CODE_LEN;
     for (const k of lay.keys) {
-      const label = k.k === 'del' ? '지우기' : k.k === 'go' ? '잇기' : k.k;
+      const label = k.k === 'del' ? '지우기' : k.k === 'go' ? '연결' : k.k;
       const on = k.k === 'del' ? !!e.digits : k.k === 'go' ? full : !full;
       button(ctx, ui, `link:key:${k.k}`, k.x, k.y, k.w, k.h, label, { tone: k.k === 'go' && full ? 'gold' : 'plain', enabled: on, onClick: () => this.press(k.k), grow: lay.grow });
     }

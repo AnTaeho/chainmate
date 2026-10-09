@@ -184,7 +184,7 @@ async function shots(browserType, name) {
         // Enter는 비번 칸에서 들어오기 — 없는 아이디라 「맞지 않는다」
         await a.key('Enter');
         const q0 = await a.done();
-        check(`${name} 비번 칸의 Enter = 들어오기(없는 아이디 → 맞지 않는다)`, q0.msg === '아이디나 비번이 맞지 않는다' && q0.name === 'account', q0.msg);
+        check(`${name} 비번 칸의 Enter = 들어오기(없는 아이디 → 맞지 않는다)`, q0.msg === '아이디나 비밀번호가 맞지 않아요' && q0.name === 'account', q0.msg);
         await lay(a, '맞지 않음');
         await a.shot(`bad${tag}`);
       }
@@ -265,14 +265,14 @@ async function shots(browserType, name) {
         await b.click('acct:logout'); await b.click('acct:yes');
         const out = await b.done();
         const rec = await b.ev(() => ({ runs: window.__app.records.runs, run: localStorage.getItem('chainmate.run.v1'), name: window.__app.rank.player().name }));
-        check(`${name} 나가기: 기기의 기록이 비고 새 이름 · 계정에는 남는다`, out.in === false && out.msg === '나갔다' && rec.runs === 0 && rec.run === null && rec.name !== nameA && world.store.accounts.size === 1, `판 ${rec.runs} · 「${rec.name}」`);
-        await lay(b, '나갔다');
+        check(`${name} 나가기: 기기의 기록이 비고 새 이름 · 계정에는 남는다`, out.in === false && out.msg === '로그아웃했어요' && rec.runs === 0 && rec.run === null && rec.name !== nameA && world.store.accounts.size === 1, `판 ${rec.runs} · 「${rec.name}」`);
+        await lay(b, '로그아웃했어요');
         await b.shot(`out${tag}`);
         // A: 지우기
         await a.click('acct:delete'); await a.click('acct:yes');
         await a.type('del', PW); await a.key('Enter');
         const del = await a.done();
-        check(`${name} 지우기(Enter로 낸다): 계정이 사라진다`, del.in === false && del.msg === '계정을 지웠다' && world.store.accounts.size === 0, del.msg);
+        check(`${name} 지우기(Enter로 낸다): 계정이 사라진다`, del.in === false && del.msg === '계정을 삭제했어요' && world.store.accounts.size === 0, del.msg);
         await a.shot(`deleted${tag}`);
         // 비번 · 열쇠가 저장 · 주소에 없다
         const stores = (await a.ev(() => JSON.stringify(Object.entries(localStorage)))) + (await b.ev(() => JSON.stringify(Object.entries(localStorage)))) + (await c.ev(() => JSON.stringify(Object.entries(localStorage))));
@@ -370,7 +370,7 @@ async function live() {
     await b.type('user', U); await b.type('pass', `${P}x`);
     await b.click('acct:login');
     const bad = await b.until(async () => { const q = await b.scr(); return !q.busy && q.msg ? q : null; }, 40000);
-    check('B(웹킷): 틀린 비번 → 「아이디나 비번이 맞지 않는다」', !!bad && bad.msg === '아이디나 비번이 맞지 않는다' && !bad.in, bad && bad.msg);
+    check('B(웹킷): 틀린 비번 → 「아이디나 비번이 맞지 않는다」', !!bad && bad.msg === '아이디나 비밀번호가 맞지 않아요' && !bad.in, bad && bad.msg);
     await b.type('pass', P);
     await b.key('Enter');
     const got = await b.until(async () => { const q = await b.scr(); return q.in && q.gain ? q : null; }, 60000);
@@ -387,7 +387,7 @@ async function live() {
     const out = await b.until(async () => { const q = await b.scr(); return !q.busy && q.msg ? q : null; }, 60000);
     const nb = await mark(b);
     const recOut = await b.ev(() => ({ runs: window.__app.records.runs, name: window.__app.rank.player().name }));
-    check('B: 나갔다 — 기기의 기록이 비고 새 이름(새 플레이어)', !!out && out.in === false && out.msg === '나갔다' && recOut.runs === 0 && recOut.name !== nameA && !!nb && nb !== aid, `${out && out.msg} · 판 ${recOut.runs}`);
+    check('B: 나갔다 — 기기의 기록이 비고 새 이름(새 플레이어)', !!out && out.in === false && out.msg === '로그아웃했어요' && recOut.runs === 0 && recOut.name !== nameA && !!nb && nb !== aid, `${out && out.msg} · 판 ${recOut.runs}`);
     const save = await sql.query('select blob from saves where player_id = $1::bigint', [aid]);
     check('DB: 계정의 저장 · 열쇠 하나는 그대로', save.length === 1 && JSON.parse(save[0].blob).records.runs === 14 && (await sql.query('select count(*)::int as n from player_keys where player_id = $1::bigint', [aid]))[0].n === 1);
     await b.shot('live-out-webkit');
@@ -397,7 +397,7 @@ async function live() {
     await a.click('acct:yes');
     const del = await a.until(async () => { const q = await a.scr(); return !q.busy && q.msg ? q : null; }, 60000);
     const na = await mark(a);
-    check('A: 계정을 지웠다 — 이 기기는 새 빈 플레이어', !!del && del.in === false && del.msg === '계정을 지웠다' && !!na && na !== aid, del && del.msg);
+    check('A: 계정을 지웠다 — 이 기기는 새 빈 플레이어', !!del && del.in === false && del.msg === '계정을 삭제했어요' && !!na && na !== aid, del && del.msg);
     const left = await sql.query(`select (select count(*)::int from accounts where username = $2) as accounts, (select count(*)::int from players where id = $1::bigint) as players,
       (select count(*)::int from player_keys where player_id = $1::bigint) as keys, (select count(*)::int from saves where player_id = $1::bigint) as saves`, [aid, U]);
     check('DB: 계정 · 플레이어 · 열쇠 · 저장이 모두 0', Object.values(left[0]).every((n) => n === 0), JSON.stringify(left[0]));

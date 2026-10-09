@@ -19,7 +19,7 @@ const CARD_BG = '#0e1814';
 export const PRIVACY_URL = 'privacy.html';
 export const FIELD_H = 18, LABEL_W = 68, MSG_LINES = 2;
 // 탭 줄(기기 잇기 화면과 같이 쓴다)
-export const ACCOUNT_TABS = [['account', '아이디'], ['link', '기기 잇기']];
+export const ACCOUNT_TABS = [['account', '아이디'], ['link', '기기 연결']];
 export function accountTabs(ctx, ui, app, cur) {
   tabRow(ctx, ui, 'acct', ACCOUNT_TABS, cur, PAGE.titleX + measure('계정', true) + 10, 5, BTN_S, (id) => { if (id !== cur) { app.sfx('pick'); app.go(id); } });
 }
@@ -39,17 +39,17 @@ export function accountLayout() {
 
 // 상태 한 줄(붉은 것 · 금빛 것)
 export const ACCOUNT_FAIL = {
-  bad: '아이디나 비번이 맞지 않는다', taken: '이미 쓰고 있는 아이디예요', username: '아이디는 영문 소문자 · 숫자 · _ 3~20자', weak: '비번은 8자 이상 · 흔한 것은 안 된다',
-  other: '이 기기는 다른 계정으로 들어와 있다 · 먼저 나간다', has: '이 기기는 이미 계정에 들어와 있다', limit: '오늘은 더 할 수 없어요 · 내일 다시 해 주세요',
-  unreached: '연결하지 못했어요', empty: '아이디와 비번을 넣는다', hangul: '아이디는 영문으로 입력하세요', wrongpw: '비번이 맞지 않는다', nopw: '비번을 넣는다',
+  bad: '아이디나 비밀번호가 맞지 않아요', taken: '이미 쓰고 있는 아이디예요', username: '아이디는 영문 소문자 · 숫자 · _ 3~20자', weak: '비밀번호는 8자 이상 · 흔한 것은 안 돼요',
+  other: '다른 계정으로 로그인되어 있어요 · 먼저 로그아웃하세요', has: '이 기기는 이미 로그인되어 있어요', limit: '오늘은 더 할 수 없어요 · 내일 다시 해 주세요',
+  unreached: '연결하지 못했어요', empty: '아이디와 비밀번호를 입력하세요', hangul: '아이디는 영문으로 입력하세요', wrongpw: '비밀번호가 맞지 않아요', nopw: '비밀번호를 입력하세요',
 };
-export const lockedText = (min) => `잠겼다 · ${min}분 뒤에 다시 들어온다`;
-export const ACCOUNT_OK = { made: '만들었다', in: '들어왔다', changed: '비번을 바꿨다', out: '나갔다', gone: '계정을 지웠다' };
-export const ACCOUNT_INFO = ['어느 기기에서든 들어오면 기록과 순위 이름이 따라온다', '비번을 잊으면 들어와 있는 기기에서만 새로 정할 수 있다', '아이디는 남에게 보이지 않아요'];
+export const lockedText = (min) => `잠겼어요 · ${min}분 뒤에 다시 로그인하세요`;
+export const ACCOUNT_OK = { made: '계정을 만들었어요', in: '로그인했어요', changed: '비밀번호를 바꿨어요', out: '로그아웃했어요', gone: '계정을 삭제했어요' };
+export const ACCOUNT_INFO = ['어느 기기에서든 로그인하면 기록과 순위 이름이 따라와요', '비밀번호를 잊으면 로그인된 기기에서만 새로 정할 수 있어요', '아이디는 남에게 보이지 않아요'];
 export const LOGOUT_TEXT = '이 기기의 기록이 지워져요 · 계정에는 남아 있어요';
-export const DELETE_TEXT = '계정과 기록 · 순위 성적이 모두 지워진다 · 되돌릴 수 없다';
-export const DELETE_TEXT2 = '비번을 넣으면 지워진다';
-export const FORGOT_TEXT = '지금 비번 없이 새로 정한다';
+export const DELETE_TEXT = '계정과 기록 · 순위 성적이 모두 삭제돼요 · 되돌릴 수 없어요';
+export const DELETE_TEXT2 = '비밀번호를 입력하면 삭제돼요';
+export const FORGOT_TEXT = '지금 비밀번호 없이 새로 정해요';
 
 export class AccountScreen {
   constructor(app) {
@@ -171,24 +171,24 @@ export class AccountScreen {
     accountTabs(ctx, ui, app, 'account');
     if (this.in()) this.drawIn(ctx, ui, lay); else this.drawOut(ctx, ui, lay);
     this.drawRight(ctx, ui, lay);
-    button(ctx, ui, 'acct:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.leave() });
+    button(ctx, ui, 'acct:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.leave() });
   }
 
   // 계정 없음: 아이디 · 비번 + [들어오기] [계정 만들기]
   drawOut(ctx, ui, lay) {
     const b = lay.left, P = PAD_BOX, f = this.app.fields;
-    openBox('panel', b.x, b.y, b.w, b.h, P, { name: '아이디로 들어오기' });
+    openBox('panel', b.x, b.y, b.w, b.h, P, { name: '아이디로 로그인' });
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, PAL.frameHi);
-    text(ctx, '아이디로 들어오기', b.x + P, textY(lay.titleY), PAL.dim);
+    text(ctx, '아이디로 로그인', b.x + P, textY(lay.titleY), PAL.dim);
     this.cell(ctx, 'user', '아이디', lay.fields.user, { type: 'text', autocomplete: 'username', name: 'username', max: 20, filter: USERNAME_FILTER, hint: 'next', enter: () => f.focus('pass') });
-    this.cell(ctx, 'pass', '비번', lay.fields.pass, { type: 'password', autocomplete: 'current-password', name: 'password', max: 72, hint: 'go', enter: () => this.login() });
+    this.cell(ctx, 'pass', '비밀번호', lay.fields.pass, { type: 'password', autocomplete: 'current-password', name: 'password', max: 72, hint: 'go', enter: () => this.login() });
     // 한글 자판으로 친 아이디는 걸러진다 — 한 줄로 알린다
     if (f.rejected('user') && !this.msg) this.fail('hangul');
     else if (this.msg && this.msg.text === ACCOUNT_FAIL.hangul && !f.rejected('user')) this.msg = null;
     if (this.unreached && !this.msg && !this.acct) text(ctx, ACCOUNT_FAIL.unreached, b.x + P, textY(lay.msgY), PAL.dim);
     this.say(ctx, b, lay);
     this.row(ctx, ui, b.x + P, lay.btnY, [
-      ['acct:login', this.busy ? '들어오는 중' : '들어오기', { tone: 'gold', onClick: () => this.login() }],
+      ['acct:login', this.busy ? '로그인 중' : '로그인', { tone: 'gold', onClick: () => this.login() }],
       ['acct:signup', '계정 만들기', { onClick: () => this.signup() }],
     ]);
     closeBox();
@@ -207,38 +207,38 @@ export class AccountScreen {
     if (a.devices != null) text(ctx, `기기 ${a.devices}대`, b.x + P, textY(lay.r2, FIELD_H), PAL.ink);
     if (!this.mode) this.say(ctx, b, lay);
     const x = b.x + P;
-    this.row(ctx, ui, x, lay.btnY, [['acct:password', '비번 바꾸기', { tone: this.mode === 'password' ? 'gold' : 'plain', onClick: () => this.open('password') }]]);
-    this.row(ctx, ui, x, lay.btn2Y, [['acct:logout', '나가기', { tone: this.mode === 'logout' ? 'gold' : 'plain', onClick: () => this.open('logout') }]]);
-    this.row(ctx, ui, x, lay.btn3Y, [['acct:delete', '계정 지우기', { tone: this.mode === 'delete1' || this.mode === 'delete2' ? 'gold' : 'plain', onClick: () => this.open('delete1') }]]);
+    this.row(ctx, ui, x, lay.btnY, [['acct:password', '비밀번호 바꾸기', { tone: this.mode === 'password' ? 'gold' : 'plain', onClick: () => this.open('password') }]]);
+    this.row(ctx, ui, x, lay.btn2Y, [['acct:logout', '로그아웃', { tone: this.mode === 'logout' ? 'gold' : 'plain', onClick: () => this.open('logout') }]]);
+    this.row(ctx, ui, x, lay.btn3Y, [['acct:delete', '계정 삭제', { tone: this.mode === 'delete1' || this.mode === 'delete2' ? 'gold' : 'plain', onClick: () => this.open('delete1') }]]);
     closeBox();
   }
 
   // 오른쪽 칸: 알림 줄 또는 고른 일
   drawRight(ctx, ui, lay) {
     const app = this.app, b = lay.right, P = PAD_BOX, x = b.x + P, mode = this.in() ? this.mode : null;
-    const title = { password: '비번 바꾸기', logout: '나가기', delete1: '계정 지우기', delete2: '계정 지우기' }[mode] || '알아 둘 것';
+    const title = { password: '비밀번호 바꾸기', logout: '로그아웃', delete1: '계정 삭제', delete2: '계정 삭제' }[mode] || '알아 둘 것';
     openBox('panel', b.x, b.y, b.w, b.h, P, { name: title });
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, mode === 'delete1' || mode === 'delete2' ? PAL.red : PAL.frameHi);
     text(ctx, title, x, textY(lay.titleY), PAL.dim);
     const para = (s, y, col = PAL.ink) => { const lines = wrap(s, b.w - P * 2); lines.forEach((l, i) => text(ctx, l, x, textY(y + i * LINE), col)); return y + lines.length * LINE; };
-    const stop = ['acct:no', '그만', { onClick: () => { this.mode = null; this.msg = null; } }];
+    const stop = ['acct:no', '취소', { onClick: () => { this.mode = null; this.msg = null; } }];
     if (mode) this.say(ctx, b, lay);
     if (mode === 'password') {
       if (this.forgot) para(FORGOT_TEXT, lay.r1 + 2, PAL.dim);
-      else this.cell(ctx, 'cur', '지금 비번', lay.fields.cur, { type: 'password', autocomplete: 'current-password', name: 'current-password', max: 72, hint: 'next', enter: () => app.fields.focus('next') });
-      this.cell(ctx, 'next', '새 비번', lay.fields.next, { type: 'password', autocomplete: 'new-password', name: 'new-password', max: 72, hint: 'go', enter: () => this.password() });
-      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '정하는 중' : '정하기', { tone: 'gold', onClick: () => this.password() }], stop]);
-      this.row(ctx, ui, x, lay.btn2Y, [['acct:forgot', this.forgot ? '지금 비번을 안다' : '지금 비번을 잊었다', { onClick: () => { this.forgot = !this.forgot; this.msg = null; } }]]);
+      else this.cell(ctx, 'cur', '현재', lay.fields.cur, { type: 'password', autocomplete: 'current-password', name: 'current-password', max: 72, hint: 'next', enter: () => app.fields.focus('next') });
+      this.cell(ctx, 'next', '새로', lay.fields.next, { type: 'password', autocomplete: 'new-password', name: 'new-password', max: 72, hint: 'go', enter: () => this.password() });
+      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '변경 중' : '변경', { tone: 'gold', onClick: () => this.password() }], stop]);
+      this.row(ctx, ui, x, lay.btn2Y, [['acct:forgot', this.forgot ? '비밀번호를 알아요' : '비밀번호를 잊었어요', { onClick: () => { this.forgot = !this.forgot; this.msg = null; } }]]);
     } else if (mode === 'logout') {
       para(LOGOUT_TEXT, lay.r1);
-      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '나가는 중' : '나가기', { tone: 'red', onClick: () => this.logout() }], stop]);
+      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '로그아웃 중' : '로그아웃', { tone: 'red', onClick: () => this.logout() }], stop]);
     } else if (mode === 'delete1') {
       para(DELETE_TEXT, lay.r1);
       this.row(ctx, ui, x, lay.btnY, [['acct:yes', '계속', { tone: 'red', onClick: () => this.open('delete2') }], stop]);
     } else if (mode === 'delete2') {
-      this.cell(ctx, 'del', '비번', lay.fields.del, { type: 'password', autocomplete: 'current-password', name: 'password', max: 72, hint: 'go', enter: () => this.remove() });
+      this.cell(ctx, 'del', '비밀번호', lay.fields.del, { type: 'password', autocomplete: 'current-password', name: 'password', max: 72, hint: 'go', enter: () => this.remove() });
       para(DELETE_TEXT2, lay.r2 + 2, PAL.red);
-      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '지우는 중' : '계정 지우기', { tone: 'red', onClick: () => this.remove() }], stop]);
+      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '삭제 중' : '계정 삭제', { tone: 'red', onClick: () => this.remove() }], stop]);
     } else {
       let y = lay.titleY + LINE + 6;
       for (const s of ACCOUNT_INFO) y = para(s, y) + 6;

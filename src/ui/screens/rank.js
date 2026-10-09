@@ -106,7 +106,7 @@ export class RankScreen {
       closeBox();
     }
     if (pages > 1) pager(ctx, ui, this.page, pages, (p) => this.go(p));
-    button(ctx, ui, 'rank:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.leave() });
+    button(ctx, ui, 'rank:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.leave() });
   }
   key(k) {
     const pages = this.seen ? this.seen.pages : 1;

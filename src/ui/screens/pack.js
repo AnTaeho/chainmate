@@ -148,7 +148,7 @@ export class PackScreen {
     if (lay.tag) button(ctx, ui, 'pack:maxims', MAIN.x, TAG_Y, maximTagW(run), BTN_H, `격언 ${maximCount(run)}/${maximCapacity(run)}`, { tone: this.panel ? 'gold' : 'plain', onClick: () => this.togglePanel() });
     if (this.panel) this.drawPanel(ctx, ui, lay);
     else this.drawCards(ctx, ui, lay, gold);
-    if (this.panel) button(ctx, ui, 'pack:back', lay.skip.x, lay.skip.y, lay.skip.w, BTN_H, '그만', { onClick: () => this.togglePanel() });
+    if (this.panel) button(ctx, ui, 'pack:back', lay.skip.x, lay.skip.y, lay.skip.w, BTN_H, '취소', { onClick: () => this.togglePanel() });
     else button(ctx, ui, 'pack:skip', lay.skip.x, lay.skip.y, lay.skip.w, BTN_H, '건너뛰기', { onClick: () => this.finish({ type: 'skipPack' }) });
     // 「셋 중 하나」 안내는 카드 줄이 셋일 때 그 첫 카드에(금빛 꾸러미의 명경기 조각은 줄 밖)
     const row = pack.options.map((o, i) => i).filter((i) => !(gold && pack.options[i].kind === 'fragment'));

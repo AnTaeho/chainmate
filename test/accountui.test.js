@@ -117,7 +117,7 @@ test('계정 화면의 입력 칸: 캔버스 위 그 자리에 <input> — 비�
     const label = el.parent.children.find((c) => c.tagName === 'LABEL' && c.attrs.for === el.id);
     assert.ok(label && label.textContent, `${el.id} 이름표`);
   }
-  assert.deepEqual(ins.map((el) => el.parent.children.find((c) => c.attrs.for === el.id).textContent), ['아이디', '비번']);
+  assert.deepEqual(ins.map((el) => el.parent.children.find((c) => c.attrs.for === el.id).textContent), ['아이디', '비밀번호']);
   assert.deepEqual([ins[0].maxLength, ins[1].maxLength], [20, 72]);
   assert.ok(ins[0].parent.children.some((c) => c.tagName === 'BUTTON' && c.type === 'submit'), 'Enter로 내려면 제출 단추가 있어야 한다');
   // 자리: 창 1280 × 720 → 2배, 캔버스가 (160, 90)에. 입력 칸은 위쪽 띠(게임 y 110 위)
@@ -180,7 +180,7 @@ test('화면을 떠나면 입력 칸이 남지 않는다: 돌아가기 · 탭 ·
   a.app.closeOverlay(); a.frame();
   assert.deepEqual(left(), [2, 1, 2]);
   a.click('acct:back');
-  assert.deepEqual([a.app.screen.name, left()], ['title', [0, 0, 0]], '돌아가기');
+  assert.deepEqual([a.app.screen.name, left()], ['title', [0, 0, 0]], '뒤로');
   // 프레임이 돌지 않아도(app.go 그 자리에서) 치운다
   a.open();
   a.app.go('title');
@@ -238,7 +238,7 @@ test('계정 흐름: A 만들기 → B 들어오기(같은 이름 · 기록을 �
     assert.ok(A.has('acct:signup') && A.has('acct:login') && A.has('acct:privacy') && !A.has('acct:logout'));
     A.d.type('user', 'Taeho_An'); A.d.type('pass', PW);
     A.click('acct:signup'); await settle(); A.frame(2);
-    assert.deepEqual([A.app.screen.acct.username, A.app.screen.msg.text], ['taeho_an', '만들었다']);
+    assert.deepEqual([A.app.screen.acct.username, A.app.screen.msg.text], ['taeho_an', '계정을 만들었어요']);
     assert.ok(A.has('acct:password') && A.has('acct:logout') && A.has('acct:delete') && !A.has('acct:signup'));
     assert.ok(api.store.accounts.has('taeho_an'));
     const nameA = A.app.rank.player().name;
@@ -247,12 +247,12 @@ test('계정 흐름: A 만들기 → B 들어오기(같은 이름 · 기록을 �
     B.open();
     B.d.type('user', 'taeho_an'); B.d.type('pass', 'wrong-password');
     B.click('acct:login'); await settle(); B.frame(2);
-    assert.deepEqual([B.app.screen.msg.text, B.app.screen.msg.tone, B.app.screen.in()], ['아이디나 비번이 맞지 않는다', 'red', false]);
+    assert.deepEqual([B.app.screen.msg.text, B.app.screen.msg.tone, B.app.screen.in()], ['아이디나 비밀번호가 맞지 않아요', 'red', false]);
     const oldKeyB = B.key();
     B.d.type('pass', PW);
     B.d.submit(); await settle(); B.frame(2);
     assert.equal(B.app.screen.in(), true);
-    assert.deepEqual([B.app.screen.msg.text, B.app.screen.msg.gain.codex], ['들어왔다', 2]);
+    assert.deepEqual([B.app.screen.msg.text, B.app.screen.msg.gain.codex], ['로그인했어요', 2]);
     assert.equal(B.app.rank.player().name, nameA, '같은 이름');
     assert.notEqual(B.key(), oldKeyB);
     assert.equal(api.store.keys.get(hashKey(B.key())), api.store.keys.get(hashKey(A.key())), '같은 플레이어');
@@ -265,10 +265,10 @@ test('계정 흐름: A 만들기 → B 들어오기(같은 이름 · 기록을 �
     B.click('acct:password');
     B.d.type('cur', 'wrong-password'); B.d.type('next', PW2);
     B.click('acct:yes'); await settle(); B.frame(2);
-    assert.deepEqual([B.app.screen.msg.text, B.app.screen.mode], ['비번이 맞지 않는다', 'password']);
+    assert.deepEqual([B.app.screen.msg.text, B.app.screen.mode], ['비밀번호가 맞지 않아요', 'password']);
     B.d.type('cur', PW); B.d.type('next', PW2);
     B.click('acct:yes'); await settle(); B.frame(2);
-    assert.deepEqual([B.app.screen.msg.text, B.app.screen.mode, B.d.inputs().length], ['비번을 바꿨다', null, 0]);
+    assert.deepEqual([B.app.screen.msg.text, B.app.screen.mode, B.d.inputs().length], ['비밀번호를 바꿨어요', null, 0]);
     // B: 판을 하나 두는 중에 나간다 → 확인 → 기기의 기록 · 판이 비고 새 사람이 된다. 계정 쪽에는 남는다
     B.app.newRun({ seed: 3 }); B.app.save(); B.app.toTitle();
     assert.ok(B.store.get(KEYS.run));
@@ -277,7 +277,7 @@ test('계정 흐름: A 만들기 → B 들어오기(같은 이름 · 기록을 �
     assert.ok(B.app.screen.mode === 'logout' && B.has('acct:yes') && B.has('acct:no'));
     const keyIn = B.key();
     B.click('acct:yes'); await settle(); B.frame(2);
-    assert.deepEqual([B.app.screen.in(), B.app.screen.msg.text], [false, '나갔다']);
+    assert.deepEqual([B.app.screen.in(), B.app.screen.msg.text], [false, '로그아웃했어요']);
     assert.notEqual(B.key(), keyIn);
     assert.deepEqual([B.app.records.runs, B.app.records.bestAnte, B.app.records.codex.maxims, B.app.records.kingDone], [0, 0, {}, true], '기기의 기록이 비었고 본 안내는 남았다');
     assert.deepEqual([B.store.get(KEYS.run), B.store.get(KEYS.runs), JSON.parse(B.store.get(KEYS.records)).runs, JSON.parse(B.store.get(CLOUD_KEY)).rev], [undefined, undefined, 0, 0]);
@@ -299,10 +299,10 @@ test('계정 흐름: A 만들기 → B 들어오기(같은 이름 · 기록을 �
     assert.equal(A.app.screen.mode, 'delete2');
     A.d.type('del', PW);
     A.click('acct:yes'); await settle(); A.frame(2);
-    assert.deepEqual([A.app.screen.msg.text, A.app.screen.mode, api.store.accounts.size], ['비번이 맞지 않는다', 'delete2', 1]);
+    assert.deepEqual([A.app.screen.msg.text, A.app.screen.mode, api.store.accounts.size], ['비밀번호가 맞지 않아요', 'delete2', 1]);
     A.d.type('del', PW2);
     A.d.submit(); await settle(); A.frame(2);
-    assert.deepEqual([A.app.screen.in(), A.app.screen.msg.text, api.store.accounts.size], [false, '계정을 지웠다', 0]);
+    assert.deepEqual([A.app.screen.in(), A.app.screen.msg.text, api.store.accounts.size], [false, '계정을 삭제했어요', 0]);
     assert.ok(!api.store.players.some((p) => p.id === acctPlayer) && !api.store.saves.has(acctPlayer));
     assert.deepEqual([A.app.records.runs, A.store.get(KEYS.run)], [0, undefined]);
     // 사건: 아이디 · 비번 · 열쇠가 없다
@@ -333,21 +333,21 @@ test('잠김 · 이미 있는 아이디 · 닿지 못함 · 다른 계정: 상�
   B.open();
   const say = async (user, pass, btn) => { B.d.type('user', user); B.d.type('pass', pass); B.click(btn); await settle(); B.frame(2); return B.app.screen.msg && B.app.screen.msg.text; };
   assert.equal(await say('taeho_an', PW, 'acct:signup'), '이미 쓰고 있는 아이디예요');
-  assert.equal(await say('bobby', 'password', 'acct:signup'), '비번은 8자 이상 · 흔한 것은 안 된다');
+  assert.equal(await say('bobby', 'password', 'acct:signup'), '비밀번호는 8자 이상 · 흔한 것은 안 돼요');
   assert.equal(await say('ab', PW, 'acct:signup'), '아이디는 영문 소문자 · 숫자 · _ 3~20자');
   B.d.type('user', ''); B.d.type('pass', '');
   B.click('acct:login');
-  assert.equal(B.app.screen.msg.text, '아이디와 비번을 넣는다');
+  assert.equal(B.app.screen.msg.text, '아이디와 비밀번호를 입력하세요');
   // 다섯 번 틀리면 잠긴다 — 몇 분 뒤
-  for (let i = 0; i < 5; i++) assert.equal(await say('taeho_an', 'wrong-password', 'acct:login'), '아이디나 비번이 맞지 않는다');
-  assert.equal(await say('taeho_an', PW, 'acct:login'), '잠겼다 · 15분 뒤에 다시 들어온다');
+  for (let i = 0; i < 5; i++) assert.equal(await say('taeho_an', 'wrong-password', 'acct:login'), '아이디나 비밀번호가 맞지 않아요');
+  assert.equal(await say('taeho_an', PW, 'acct:login'), '잠겼어요 · 15분 뒤에 다시 로그인하세요');
   assert.deepEqual(B.events.at(-1), ['account_login', { ok: false, reason: 'locked' }]);
   // 닿지 못함
   api.mode = 'fail';
   assert.equal(await say('taeho_an', PW, 'acct:login'), '연결하지 못했어요');
   api.mode = 'ok';
   // 다른 계정으로 들어와 있는 기기
-  assert.equal(await say('bobby', PW2, 'acct:signup'), '만들었다');
+  assert.equal(await say('bobby', PW2, 'acct:signup'), '계정을 만들었어요');
   B.click('acct:logout'); B.click('acct:no');
   const r = await B.app.rank.login('taeho_an', PW);
   assert.deepEqual(r, { ok: false, why: 'locked', wait: 15 });
@@ -357,7 +357,7 @@ test('잠김 · 이미 있는 아이디 · 닿지 못함 · 다른 계정: 상�
   A.click('acct:password'); A.click('acct:forgot');
   A.d.type('next', PW2);
   A.d.submit(); await settle(); A.frame(2);
-  assert.equal(A.app.screen.msg.text, '비번을 바꿨다');
+  assert.equal(A.app.screen.msg.text, '비밀번호를 바꿨어요');
   assert.deepEqual(A.events.at(-1), ['account_password', { reset: true }]);
   const C = await device(api);
   assert.equal((await C.app.rank.login('taeho_an', PW2)).ok, true, '새 비번으로 들어온다');

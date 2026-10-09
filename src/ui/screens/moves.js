@@ -94,8 +94,8 @@ export class MovesScreen {
       text(ctx, label, px + PAGE_BTN + lw / 2, y + textY(py, BTN_S), PAL.dim, { align: 'center' });
       button(ctx, ui, 'moves:next', px + PAGE_BTN + lw, y + py, PAGE_BTN, BTN_S, '›', { enabled: page < pages - 1, onClick: () => { this.page = page + 1; } });
     }
-    const bw = Math.max(64, measure('돌아가기', true) + 8);
-    button(ctx, ui, 'moves:back', x + w - PAD_BOX - bw, y + by, bw, BTN_S, '돌아가기', { onClick: () => app.closeOverlay() });
+    const bw = Math.max(64, measure('뒤로', true) + 8);
+    button(ctx, ui, 'moves:back', x + w - PAD_BOX - bw, y + by, bw, BTN_S, '뒤로', { onClick: () => app.closeOverlay() });
     closeBox();
   }
   // 카드 하나: 왼쪽 행마 그림 · 기물, 오른쪽 이름(「새로」는 이름 줄 오른끝) · 행마 글

@@ -692,7 +692,7 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
   const noAt = lay.side ? [bx, y + P + TP_BTN.h + GAP_IN] : [bx, y + lay.btnY];
   if (p && onConfirm) button(ctx, ui, `${idPrefix}:ok`, okAt[0], okAt[1], TP_BTN.w, TP_BTN.h, verb, { tone: 'gold', onClick: onConfirm });
   const back = lay.swap && onBack ? onBack : onCancel;
-  if (back) button(ctx, ui, `${idPrefix}:cancel`, noAt[0], noAt[1], TP_BTN.w, TP_BTN.h, '그만', { onClick: back });
+  if (back) button(ctx, ui, `${idPrefix}:cancel`, noAt[0], noAt[1], TP_BTN.w, TP_BTN.h, '취소', { onClick: back });
   closeBox();
   return h;
 }

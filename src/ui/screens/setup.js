@@ -95,7 +95,7 @@ export class SetupScreen {
     f.gap(GAP_GROUP);
     const rules = DANS.filter((x) => x.n <= this.dan).map((x) => x.text);
     wrap(rules.length ? rules.join(' · ') : '더하는 규칙 없음', W - 30).forEach((l) => text(ctx, l, 14, f.line(), this.dan ? PAL.red : PAL.dim));
-    button(ctx, ui, 'setup:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => this.app.go('title') });
+    button(ctx, ui, 'setup:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.app.go('title') });
     button(ctx, ui, 'setup:start', W - PAGE.titleX - 100, PAGE.btnY, 100, PAGE.btnH, '두기', { onClick: () => this.start(), tone: 'gold' });
   }
   key(k) {

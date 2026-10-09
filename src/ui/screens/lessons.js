@@ -123,7 +123,7 @@ export class LessonsScreen {
       });
       closeBox();
     });
-    button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => app.toTitle() });
+    button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => app.toTitle() });
     button(ctx, ui, 'lessons:terms', W - PAGE.titleX - 100, PAGE.btnY, 100, PAGE.btnH, '낱말 풀이', { onClick: () => { this.terms = true; } });
   }
   // 낱말 풀이: 카드 옆 낱말 상자와 같은 표(glossary.js TERMS)를 묶음 탭(대국 · 판 · 물건 · 모음)과 쪽으로
@@ -147,7 +147,7 @@ export class LessonsScreen {
     }
     closeBox();
     if (pages.length > 1) pageButtons(ctx, ui, 'terms', page, pages.length, (p) => { this.termPage = p; });
-    button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '돌아가기', { onClick: () => { this.terms = false; } });
+    button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => { this.terms = false; } });
   }
   // 한 묶음의 낱말을 쪽으로 나눈다: 낱말마다 풀이 줄들(본문 줄), 낱말 사이 GAP_GROUP. 쪽 높이는 상자 안 여백 안(TERM_BOX.h)
   termPages(tab) {

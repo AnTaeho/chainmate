@@ -494,7 +494,7 @@ test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) �
     }
     // 머리 줄: 제목 · 탭 셋 · 돌아가기가 한 줄에
     const tabs = moves.MOVE_TABS.reduce((a, [, l]) => a + Math.max(44, text.textWidth(l, true) + 6) + 4, -4);
-    const head = text.textWidth('행마', true) + 8 + tabs + 8 + Math.max(64, text.textWidth('돌아가기', true) + 8);
+    const head = text.textWidth('행마', true) + 8 + tabs + 8 + Math.max(64, text.textWidth('뒤로', true) + 8);
     assert.ok(head <= moves.cardW() * 2 + 6, `${lang} 머리 줄 ${head}`);
   }
   M.lang.setLang('ko');
@@ -1029,24 +1029,24 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
     // 처음: 열쇠가 없다 — 코드 받기 · 빈 칸 · 숫자판(지우기 · 잇기는 꺼짐)
     let f = good(a.frame(), '처음');
     assert.ok(a.has('link:code') && a.has('link:back') && !a.has('link:unlink'));
-    assert.ok(said(f, '기기 잇기') && said(f, '이 기기의 코드') && said(f, '다른 기기의 코드 넣기'));
+    assert.ok(said(f, '기기 연결') && said(f, '이 기기의 코드') && said(f, '다른 기기의 코드 입력'));
     const reg = (id) => a.app.ui.regions.find((r) => r.id === id);
     assert.deepEqual([reg('link:key:del').enabled, reg('link:key:go').enabled, reg('link:key:7').enabled], [false, false, true]);
     assert.equal(a.api.calls.filter((c) => c.path.startsWith('/api/link/')).length, 0, '열쇠가 없으면 기기 수도 묻지 않는다');
     // 코드 받기 → 큰 숫자 · 막대 · 한 줄
     reg('link:code').onClick();
     f = good(a.frame(), '받는 중');
-    assert.ok(said(f, '숫자를 받는 중'));
+    assert.ok(said(f, '코드 받는 중'));
     await a.settle();
     f = good(a.frame(), '코드 받음');
     assert.equal(scr.mine.phase, 'code');
     assert.match(scr.mine.code, /^\d{8}$/);
     const big = f.texts.find((q) => q.s === K.codeText(scr.mine.code));
     assert.ok(big && big.w >= 120 && big.x >= lay.left.x + 8 && big.x + big.w <= lay.left.x + lay.left.w - 8, tag('큰 숫자'));
-    assert.ok(said(f, '다른 기기에서 이 숫자를 넣는다') && !a.has('link:code'));
+    assert.ok(said(f, '다른 기기에서 이 코드를 입력하세요') && !a.has('link:code'));
     assert.equal(scr.devices, 1);
     f = good(a.frame(), '혼자');
-    assert.ok(f.texts.some((q) => q.s.startsWith(L('이 기기 혼자다'))) && !a.has('link:unlink'));
+    assert.ok(f.texts.some((q) => q.s.startsWith(L('연결된 기기 없음'))) && !a.has('link:unlink'));
     // 숫자 넣는 중: 키보드 · 숫자판
     for (const k of ['4', '8', 'x', '2']) a.app.key(k);
     reg('link:key:7').onClick();
@@ -1065,14 +1065,14 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
     a.app.key('Enter');
     f = good(a.frame(), '확인');
     assert.ok(a.has('link:yes') && a.has('link:no') && !a.has('link:key:1'));
-    assert.ok(K.CONFIRM_TEXT.length && f.texts.filter((q) => q.box && q.box.name === '다른 기기의 코드 넣기').length >= 2);
+    assert.ok(K.CONFIRM_TEXT.length && f.texts.filter((q) => q.box && q.box.name === '다른 기기의 코드 입력').length >= 2);
     a.app.key('Escape');
     assert.deepEqual([scr.entry.phase, scr.entry.digits, a.app.screen.name], ['type', '48000000', 'link']);
     // 틀린 코드: 한 줄, 칸은 비운다
     a.app.key('Enter'); a.app.key('Enter');
     assert.equal(scr.entry.phase, 'working');
-    f = good(a.frame(), '잇는 중');
-    assert.ok(said(f, '잇는 중'));
+    f = good(a.frame(), '연결 중');
+    assert.ok(said(f, '연결 중'));
     await a.settle();
     assert.deepEqual([scr.entry.phase, scr.entry.digits, scr.entry.fail], ['type', '', 'bad']);
     for (const why of Object.keys(K.REDEEM_FAIL)) {
@@ -1086,7 +1086,7 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
     for (const gain of [{ codex: 128, openings: 4, runs: 99, ante: 8 }, { codex: 0, openings: 4, runs: 9, ante: 0 }, { codex: 0, openings: 0, runs: 1200, ante: 0 }, null]) {
       scr.entry = { phase: 'done', name: longName, gain };
       f = good(a.frame(), '이어짐');
-      assert.ok(said(f, '이어졌다') && f.texts.some((q) => q.s === longName) && !a.has('link:key:1'));
+      assert.ok(said(f, '연결됐어요') && f.texts.some((q) => q.s === longName) && !a.has('link:key:1'));
       if (gain) assert.ok(said(f, K.gainText(gain)), tag(K.gainText(gain)));
     }
     // 이 기기의 코드 쪽 상태: 시간 지남 · 닿지 못함 · 오늘은 다 받음 · 이어짐
@@ -1109,7 +1109,7 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
     for (const ago of [0, 59 * 60000, 23 * 3600000, 364 * 86400000]) {
       a.app.cloud.status = () => ({ at: a.app.cloud.now() - ago - 5, rev: 3 });
       f = good(a.frame(), `기기 12대 ${ago}`);
-      const line = f.texts.find((q) => q.s.startsWith(L('기기 12대가 이어져 있다')));
+      const line = f.texts.find((q) => q.s.startsWith(L('기기 12대 연결됨')));
       const un = reg('link:unlink');
       assert.ok(line && un && line.x + line.w + 8 <= un.x, tag(`아래 줄이 단추에 닿는다 「${line && line.s}」`));
       assert.ok(line.s.endsWith(L(K.agoText(ago))), tag(line.s));
@@ -1148,7 +1148,7 @@ test('계정 화면: 입력 칸 · 단추가 칸 안에서 서로 닿지 않고,
   }
   assert.ok(lay.fields.user.y + lay.fields.user.h + 4 <= lay.fields.pass.y && lay.fields.cur.y + lay.fields.cur.h + 4 <= lay.fields.next.y);
   assert.ok(lay.fields.pass.y + lay.fields.pass.h + 4 <= lay.msgY && lay.msgY + K.MSG_LINES * 14 <= lay.btnY && lay.btn3Y + 18 <= lay.left.y + lay.left.h - 8 && lay.btn2Y + 18 + 8 <= lay.privacyY + 18);
-  assert.equal(K.lockedText(15), '잠겼다 · 15분 뒤에 다시 들어온다');
+  assert.equal(K.lockedText(15), '잠겼어요 · 15분 뒤에 다시 로그인하세요');
 
   for (const lang of LANGS) {
     const a = await rankApp({ lang, others: 0 });
@@ -1167,13 +1167,13 @@ test('계정 화면: 입력 칸 · 단추가 칸 안에서 서로 닿지 않고,
     const apart = (ids, name) => { const rs = ids.map(reg); rs.forEach((r, i) => { assert.ok(r, tag(`${name}: ${ids[i]}`)); for (const o of rs.slice(i + 1)) assert.ok(r.x + r.w + 4 <= o.x || o.x + o.w + 4 <= r.x || r.y + r.h + 4 <= o.y || o.y + o.h + 4 <= r.y, tag(`${name}: ${r.id} · ${o.id}`)); }); };
     // 계정 없음: 이름표 · 입력 칸 둘 · 단추 둘 · 알림 줄 셋 · 처리방침
     let f = good(a.frame(), '없음');
-    assert.ok(said(f, '계정') && said(f, '아이디') && said(f, '비번') && said(f, '아이디로 들어오기') && said(f, '기기 잇기'));
+    assert.ok(said(f, '계정') && said(f, '아이디') && said(f, '비밀번호') && said(f, '아이디로 로그인') && said(f, '기기 연결'));
     assert.deepEqual(a.app.fields.ids(), ['user', 'pass']);
     apart(['acct:login', 'acct:signup'], '없음');
     assert.ok(reg('acct:privacy') && reg('acct:back') && reg('acct:tab:account') && reg('acct:tab:link'));
     for (const id of ['acct:login', 'acct:signup']) assert.ok(reg(id).x + reg(id).w <= lay.left.x + lay.left.w - 8, tag(id));
     // 이름표는 입력 칸 왼쪽에 닿지 않는다
-    for (const s of ['아이디', '비번', '지금 비번', '새 비번']) assert.ok(measure(s) + 4 <= K.LABEL_W, tag(`이름표 「${L(s)}」 ${measure(s)}`));
+    for (const s of ['아이디', '비밀번호', '현재', '새로']) assert.ok(measure(s) + 4 <= K.LABEL_W, tag(`이름표 「${L(s)}」 ${measure(s)}`));
     // 한 줄 알림: 모두 두 줄 안
     const { wrap } = await import('../src/render/text.js');
     for (const [why, s] of [...Object.entries(K.ACCOUNT_FAIL), ['locked', K.lockedText(15)], ['locked1', K.lockedText(1)], ...Object.entries(K.ACCOUNT_OK)]) {
@@ -1189,16 +1189,16 @@ test('계정 화면: 입력 칸 · 단추가 칸 안에서 서로 닿지 않고,
       scr.acct = { username, devices: 2 };
       scr.msg = { text: K.ACCOUNT_OK.in, tone: 'gold', gain: { codex: 12, openings: 0, runs: 0 } };
       f = good(a.frame(), `들어와 있음 ${username}`);
-      assert.ok(f.texts.some((q) => q.s === username) && said(f, '기기 2대') && said(f, '들어왔다') && said(f, '도감 12칸이 새로 채워졌어요'), tag(username));
+      assert.ok(f.texts.some((q) => q.s === username) && said(f, '기기 2대') && said(f, '로그인했어요') && said(f, '도감 12칸이 새로 채워졌어요'), tag(username));
       assert.deepEqual(a.app.fields.ids(), [], '들어와 있으면 입력 칸이 없다');
     }
     apart(['acct:password', 'acct:logout', 'acct:delete'], '들어와 있음');
     scr.msg = null;
     // 비번 바꾸기 · 지금 비번 없이
     reg('acct:password').onClick();
-    f = good(a.frame(), '비번 바꾸기');
+    f = good(a.frame(), '비밀번호 바꾸기');
     assert.deepEqual(a.app.fields.ids(), ['cur', 'next']);
-    apart(['acct:yes', 'acct:no', 'acct:forgot'], '비번 바꾸기');
+    apart(['acct:yes', 'acct:no', 'acct:forgot'], '비밀번호 바꾸기');
     scr.msg = { text: K.ACCOUNT_FAIL.wrongpw, tone: 'red' };
     good(a.frame(), '비번 틀림');
     reg('acct:forgot').onClick();

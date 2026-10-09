@@ -13,9 +13,9 @@ import { diceIcon } from '../../render/dice.js';
 
 export const TELEMETRY_TIP = '이름 없이 판 결과만 보낸다 · 화면은 보지 않는다';
 // 다시 짓기를 가리키면 제목 자리에 뜨는 한 줄(오늘 남은 횟수 — 서버가 알려 준 뒤에만)
-export const rerollTip = (left) => (left == null ? '순위에 오르는 이름을 새로 짓는다' : left > 0 ? `오늘 ${left}번 더 지을 수 있다` : '오늘은 다 지었다 · 내일 다시 지을 수 있다');
+export const rerollTip = (left) => (left == null ? '순위에 오르는 이름을 바꿔요' : left > 0 ? `오늘 ${left}번 더 바꿀 수 있어요` : '오늘은 더 바꿀 수 없어요 · 내일 다시 바꿀 수 있어요');
 // 이름 줄의 자리(재는 쪽 test/layout.test.js와 같이 쓴다): 이름은 오른끝 맞춤, 「이름」 이름표는 이름 왼쪽에 들어갈 때만
-export const LINK_TIP = '아이디로 들어오거나 다른 기기와 잇는다';
+export const LINK_TIP = '로그인하거나 다른 기기와 연결해요';
 export const NAME_X = 192;
 export function nameRow(x, w, name) {
   const x0 = x + NAME_X, x1 = x + w - PAD_BOX, nw = measure(name, true), lw = measure('이름') + 6;
@@ -77,8 +77,8 @@ export class SettingsScreen {
       const at = nameRow(x, w, me.name), top4 = y + rowTops[4], top5 = y + rowTops[5];
       if (at.label != null) text(ctx, '이름', at.label, textY(top4, RH), PAL.ink);
       text(ctx, me.name, at.x1, textY(top4, RH), PAL.gold, { align: 'right', bold: true });
-      const nw = measure('다시 짓기', true) + 10 + 12;
-      button(ctx, ui, 'set:name', at.x1 - nw, top5, nw, RH, '다시 짓기', { icon: diceIcon, enabled: !this.rolling && me.rerolls !== 0, onClick: () => this.reroll(), grow: G });
+      const nw = measure('이름 바꾸기', true) + 10 + 12;
+      button(ctx, ui, 'set:name', at.x1 - nw, top5, nw, RH, '이름 바꾸기', { icon: diceIcon, enabled: !this.rolling && me.rerolls !== 0, onClick: () => this.reroll(), grow: G });
       linkR = at.x1 - nw - 6;
     }
     // 기기 잇기: 언어 줄(5), 「다시 짓기」 왼쪽
@@ -102,7 +102,7 @@ export class SettingsScreen {
     const again = !!app.records.kingAgain;
     button(ctx, ui, 'set:king', bx0 + lw + 8, by, kw, 18, '킹과 다시 두기', { tone: again ? 'gold' : 'plain', onClick: () => { app.records.kingAgain = !again; app.saveRecords(); if (!again) app.toast('다음 새 판은 킹과 둔다', PAL.gold); }, grow: G });
     button(ctx, ui, 'set:export', bx0 + lw + kw + 16, by, ew, 18, '기록 내보내기', { onClick: () => app.exportRuns(), grow: G });
-    button(ctx, ui, 'set:back', bx0 + lw + kw + ew + 24, by, bw, 18, '돌아가기', { onClick: () => this.close(), grow: G });
+    button(ctx, ui, 'set:back', bx0 + lw + kw + ew + 24, by, bw, 18, '뒤로', { onClick: () => this.close(), grow: G });
     closeBox();
   }
   // 이름 다시 짓기: 서버가 새 이름을 뽑는다. 닿지 못하면 한 줄 알림
@@ -114,7 +114,7 @@ export class SettingsScreen {
     app.rank.reroll().then((r) => {
       this.rolling = false;
       if (r.ok) { app.track('name_reroll', {}, { always: true }); return; }
-      app.toast(r.why === 'limit' ? '오늘은 다 지었다' : '순위를 불러오지 못했어요', PAL.ink);
+      app.toast(r.why === 'limit' ? '오늘은 더 바꿀 수 없어요' : '순위를 불러오지 못했어요', PAL.ink);
     }, () => { this.rolling = false; });
   }
   close() { if (this.back) this.app.openOverlay(this.back); else this.app.closeOverlay(); }
