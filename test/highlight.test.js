@@ -78,8 +78,12 @@ test('카드 글: 기물 · 격언 수를 바꿔도 넘침 0 · 줄인 글 0, �
     const cases = [];
     for (const deck of [1, 8, 14, 15, 30, 80]) for (const maxims of [0, 3, 6, 8, 9, 20]) cases.push({ deck, maxims });
     cases.push({ won: false, ante: 3 }, { won: false, ante: 12, endless: true, score: 9876543210987654 }, { score: 999999999999999 }, { score: 1234567890 }, { chain: 0, score: 40 }, { josekis: 0 }, { josekis: 1 });
+    // 꼬리표: 가장 긴 레이팅(2400) · 오늘의 대국
+    cases.push({ dan: 8 }, { dan: 8, won: false, ante: 7 }, { daily: '2026-10-09' });
     for (const o of cases) {
-      const run = finishedRun(o), tag = `${lang} ${JSON.stringify(o)}`;
+      const run = Object.assign(finishedRun(o), o.dan != null ? { dan: o.dan } : {}, o.daily ? { daily: o.daily } : {}), tag = `${lang} ${JSON.stringify(o)}`;
+      if (o.dan === 8) assert.equal(M.lang.L(highlightLayout(run).tag.s), lang === 'en' ? 'Rating 2400' : '레이팅 2400', tag);
+      if (o.daily) assert.equal(highlightLayout(run).tag.s, '오늘의 대국', tag);
       const { lay, bad, clips } = drawn(run, 40, 8);
       assert.deepEqual(bad, [], tag);
       assert.deepEqual(clips.map((c) => c.src), [], `${tag}: 줄인 글`);
