@@ -15,38 +15,38 @@ import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 처음 만나는 것마다 한 줄. 글은 「언제 → 무엇」, 한 문장.
 export const HINTS = {
-  shop: '산 격언은 오른쪽 칸에서 판 내내 힘을 낸다',
-  pack: '셋 중 하나를 고른다. 넘겨도 된다',
-  scroll: '두루마리를 누르고 덱의 기물을 골라 쓴다',
-  draft: '레퍼토리는 판 끝까지 간다. 레퍼토리마다 시너지가 다르다',
-  family: '같은 시너지를 2 · 4 · 6개 모으면 효과가 켜진다',
-  master: '마스터는 규칙 하나를 비튼다',
-  golden: '금빛 적을 먹고 이기면 금빛 꾸러미를 받는다',
-  trait: '발밑 문양은 특성. 가리키면 무엇을 하는지 보인다',
-  things: '벽과 보석은 가리키면 무엇을 하는지 보인다',
-  fairy: '특수 기물은 체스에 없는 행마를 쓴다. 누르면 먹을 칸이 보인다',
-  incoming: '점선 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다',
-  next: '흐린 둘은 다음에 손에 들어올 기물. 위가 먼저 온다',
-  preview: '카드의 작은 판이 그 대국에서 둘 판이다',
-  maximSell: '격언을 누르면 팔 수 있고, 끌면 순서가 바뀐다',
-  hold: '책갈피를 누르면 그 카드를 다음 상점까지 맡아 둔다',
-  joseki: '고른 레퍼토리는 가리키면 무엇을 하는지 보인다',
-  tactic: '전술은 떨구기 전에 눌러 이번 대국에 한 번 쓴다',
-  bigText: '창이 작아 글이 작다. 설정에서 큰 글자를 켤 수 있다',
-  clock: '대국을 지면 시계 한 칸이 준다. 시계를 다 쓰면 판이 끝난다',
-  crack: '혼에 금이 갔다. 금빛 적 · 마스터의 상자 · 깨우기로 깨어난다',
-  replay: '이길 길도 이 대국의 실제 뽑기와 증원 그대로 둔 길이다',
-  rankName: '이름은 설정에서 다시 지을 수 있다',
-  brilliant: '이 기물로 곧바로 메이트하면 탁월수. 바친 기물이 무거울수록 배수가 커지고 명경기 조각도 하나 얻는다',
+  shop: '산 격언은 오른쪽 칸에 들어가. 판이 끝날 때까지 효과가 있어',
+  pack: '셋 중 하나를 골라 봐. 건너뛰어도 돼',
+  scroll: '두루마리를 누른 뒤 덱에서 기물을 골라',
+  draft: '레퍼토리는 판 끝까지 가. 레퍼토리마다 시너지가 달라',
+  family: '같은 시너지를 2 · 4 · 6개 모으면 효과가 켜져',
+  master: '마스터전에는 특수 규칙이 하나 붙어',
+  golden: '금빛 적을 먹고 이기면 금빛 팩을 받아',
+  trait: '발밑 문양은 특성이야. 가리키면 무엇을 하는지 보여',
+  things: '벽과 보석은 가리키면 무엇을 하는지 보여',
+  fairy: '특수 기물은 체스에 없는 행마를 써. 누르면 먹을 칸이 보여',
+  incoming: '점선 그림자는 증원이야. 이 수가 끝나면 그 칸에 적이 들어와',
+  next: '흐린 둘은 다음에 뽑을 기물이야. 위가 먼저 나와',
+  preview: '카드의 작은 판이 그 대국에서 둘 판이야',
+  maximSell: '격언을 누르면 팔 수 있고, 끌면 순서가 바뀌어',
+  hold: '책갈피를 누르면 찜이야. 그 카드는 다음 상점에도 남아',
+  joseki: '고른 레퍼토리는 가리키면 무엇을 하는지 보여',
+  tactic: '전술은 놓기 전에 눌러서 이번 대국에 한 번 써',
+  bigText: '창이 작아서 글이 작아. 설정에서 큰 글자를 켤 수 있어',
+  clock: '대국을 지면 시계 한 칸이 줄어. 시계를 다 쓰면 판이 끝나',
+  crack: '혼에 금이 갔어. 금빛 적 · 마스터의 상자 · 깨우기로 깨어나',
+  replay: '이기는 수도 이 대국의 실제 뽑기와 증원 그대로야',
+  rankName: '이름은 설정에서 바꿀 수 있어',
+  brilliant: '이 기물로 곧바로 메이트하면 탁월수야. 희생한 기물이 무거울수록 배수가 커지고 명경기 조각도 하나 얻어',
   // 세력(factions.js): 새 세력을 처음 만나는 관 선택에서, 버릇만
-  faction_peasants: '농민군 땅이다. 적 폰이 옆 칸도 지킨다',
-  faction_cavalry: '기병대 땅이다. 증원이 나이트 무리로 온다',
-  faction_abbey: '수도원 땅이다. 돌기둥이 길을 막는다',
-  faction_fortress: '성채 땅이다. 성벽을 넘는 길은 문 하나다',
-  faction_hunters: '숲 사냥꾼 땅이다. 위 두 줄은 숲이라 떨굴 수 없다',
-  faction_heralds: '전령단 땅이다. 증원이 하나 더 온다',
-  faction_mercs: '용병단 땅이다. 적 특성이 두 배로 붙는다',
-  faction_royal: '왕궁 근위 땅이다. 킹을 지키는 적이 하나 더 있다',
+  faction_peasants: '농민군 땅이야. 적 폰이 옆 칸도 지켜',
+  faction_cavalry: '기병대 땅이야. 증원이 나이트 무리로 와',
+  faction_abbey: '수도원 땅이야. 돌기둥이 길을 막아',
+  faction_fortress: '성채 땅이야. 성벽을 넘는 길은 문 하나뿐이야',
+  faction_hunters: '숲 사냥꾼 땅이야. 위 두 줄은 숲이라 놓을 수 없어',
+  faction_heralds: '전령단 땅이야. 증원이 하나 더 와',
+  faction_mercs: '용병단 땅이야. 적 특성이 두 배로 붙어',
+  faction_royal: '왕궁 근위 땅이야. 킹을 지키는 적이 하나 더 있어',
 };
 
 const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id]);
@@ -73,7 +73,7 @@ export function coachDown(app, x, y) {
   const st = g.steps[g.i];
   if (!st || (g.hold && g.hold(app))) return true;   // 길이 쉬는 동안(연출 중)은 막지 않는다
   const r = guideRegion(app, st);
-  // 가리키는 구역 밖은 누를 수 없다(「알았다」 · 「건너뛰기」 단추는 안내가 그린다). 멈춤(≡)은 늘 눌린다
+  // 가리키는 구역 밖은 누를 수 없다(「알겠어」 · 「건너뛰기」 단추는 안내가 그린다). 멈춤(≡)은 늘 눌린다
   const inside = (q) => q && x >= q.x && y >= q.y && x < q.x + q.w && y < q.y + q.h;
   const reg = (id) => app.ui.regions.find((q) => q.id === id);
   return inside(r) || inside(reg('guide:ok')) || inside(reg('guide:skip')) || inside(reg('btn:pause'));
@@ -110,7 +110,7 @@ export function coachPlan(app) {
     if (!st || (g.hold && g.hold(app))) return null;
     if (st.screen && app.screen && app.screen.name !== st.screen) return null;
     r = guideRegion(app, st); say = st.say;
-    opts = { ok: st.ok ? '알았다' : null, okLabel: st.okLabel, skip: st.noSkip ? null : g.skip };
+    opts = { ok: st.ok ? '알겠어' : null, okLabel: st.okLabel, skip: st.noSkip ? null : g.skip };
   } else {
     const onScreen = (q) => q && q.w > 0 && q.h > 0 && q.x >= 0 && q.y >= 0 && q.x + q.w <= W && q.y + q.h <= H;
     for (const c of app.hintNow || []) { const q = app.ui.regions.find((x) => x.id === c.regionId); if (onScreen(q)) { r = q; say = HINTS[c.id]; break; } }
@@ -122,7 +122,7 @@ export function coachPlan(app) {
 function bubbleRect(app, r, say, { ok = null, okLabel = null, skip = null } = {}) {
   const mode = noteMode(app.screen);
   const w = noteWidth(mode);
-  const lay = bubbleLayout(say, w, { ok: ok ? okLabel || '알았다' : null, skip: skip ? '건너뛰기' : null });
+  const lay = bubbleLayout(say, w, { ok: ok ? okLabel || '알겠어' : null, skip: skip ? '건너뛰기' : null });
   const p = placeBubble(mode, r, lay.h, { W, H });
   return { x: p.x, y: p.y, w, h: lay.h, arrow: p.arrow, lay };
 }
@@ -168,7 +168,7 @@ export function drawCoach(ctx, app) {
 //   판 밖 틀: 가리키는 것 바로 아래(모자라면 위).
 // 쌓기: 안 여백 → 머리(킹 얼굴 · 이름 「킹」, KING_HEAD) → 묶음 안 틈 → 글 줄들 → (묶음 틈 → 단추 줄) → 안 여백
 // 시안 셋(docs/shots/tutorial/draft-*)에서 1 「머리줄」을 골랐다: 2 「기대기」는 킹이 상자 위 칸을 덮고, 3 「초상 칸」은 첫 줄이 좁아 글이 끊겼다.
-// ok가 있으면 「알았다」(okLabel), skip이 있으면 「건너뛰기」 단추. joy면 금관이 반짝인다.
+// ok가 있으면 「알겠어」(okLabel), skip이 있으면 「건너뛰기」 단추. joy면 금관이 반짝인다.
 export const KING_HEAD = 18;
 const KING_NAME = '킹';
 // 금관 자리(킹 스프라이트의 c 칸, 위 여덟 줄)
@@ -183,7 +183,7 @@ export function bubbleLayout(say, w, { ok = null, skip = null } = {}) {
   f.gap(GAP_IN);
   const lines = wrap(say, w - PAD_BOX * 2);
   const ys = lines.map(() => f.line());
-  // 단추 줄: 「알았다」 · 「건너뛰기」가 한 줄에 안 들어가면 두 줄(「알았다」 위)
+  // 단추 줄: 「알겠어」 · 「건너뛰기」가 한 줄에 안 들어가면 두 줄(「알겠어」 위)
   const labels = [ok, skip].filter(Boolean);
   const oneRow = labels.reduce((a, l) => a + bubbleBtnW(l) + 4, -4) <= w - PAD_BOX * 2;
   const rows = labels.length ? (oneRow ? [labels] : labels.map((l) => [l])) : [];
@@ -209,7 +209,7 @@ export function drawKing(ctx, app, x, y, { joy = false } = {}) {
 }
 export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip = null, joy = false } = {}) {
   if (say !== talkSay) { talkSay = say; talkT0 = app.time; }
-  const okText = ok ? okLabel || '알았다' : null, skipText = skip ? '건너뛰기' : null;
+  const okText = ok ? okLabel || '알겠어' : null, skipText = skip ? '건너뛰기' : null;
   const p = bubbleRect(app, r, say, { ok, okLabel, skip });
   const { x, y, w, h, lay } = p;
   app.hintRect = { x, y, w, h };

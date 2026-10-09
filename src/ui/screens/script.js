@@ -80,7 +80,7 @@ export class ScriptScreen extends BattleScreen {
     this.bRef = this.app.run.battle;
     this.sel = []; this.targets = null; this.drops = null; this.pvCache = null;
     this.sync();
-    this.word('되돌린다', PAL.gold, 1, 2);
+    this.word('되돌리기', PAL.gold, 1, 2);
     this.snd('pick');
   }
   skip() {
