@@ -86,6 +86,29 @@ test('영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · �
   assert.deepEqual(missing(all), []);
 });
 
+test('영어: 안내 · 알림 글(처음 안내 · 킹의 말 · 수업 · 계정 · 기기 연결 · 순위 · 설정 · 복기)이 모두 옮겨진다', async () => {
+  const { missing } = await import('../src/ui/lang.js');
+  const { HINTS } = await import('../src/ui/coach.js');
+  const { TUTORIAL_STEPS } = await import('../src/ui/tutorial.js');
+  const { LESSONS } = await import('../src/ui/lessons.js');
+  const A = await import('../src/ui/screens/account.js');
+  const K = await import('../src/ui/screens/link.js');
+  const R = await import('../src/ui/screens/rank.js');
+  const S = await import('../src/ui/screens/settings.js');
+  const T = await import('../src/ui/screens/title.js');
+  const V = await import('../src/ui/review.js');
+  const fork = { move: 3, mate: true, scores: { mine: 120, best: 2340, target: 150 }, best: [{ kind: 'reboard' }], mines: [] };
+  const all = [
+    ...Object.values(HINTS), ...TUTORIAL_STEPS.flatMap((s) => [s.say, s.okLabel]), ...LESSONS.flatMap((l) => [l.title, ...[...(l.steps || []), ...(l.demo || [])].map((s) => s.say)]),
+    ...Object.values(A.ACCOUNT_FAIL), ...Object.values(A.ACCOUNT_OK), ...A.ACCOUNT_INFO, A.LOGOUT_TEXT, A.DELETE_TEXT, A.DELETE_TEXT2, A.FORGOT_TEXT, A.lockedText(15),
+    ...Object.values(K.REDEEM_FAIL), K.CONFIRM_TEXT, K.UNLINK_TEXT, K.agoText(0), K.agoText(180000), ...[{ codex: 2 }, { openings: 1 }, { runs: 3 }].map(K.gainText),
+    ...R.STALE_LINES, S.TELEMETRY_TIP, S.LINK_TIP, S.rerollTip(null), S.rerollTip(2), S.rerollTip(0), T.TELEMETRY_NOTE,
+    V.NO_PATH, V.forkTitle(fork), V.forkLine(fork, []), V.forkScores(fork), ...V.forkScoreLines(fork), ...V.forkScoreRows(fork),
+    V.forkLine({ ...fork, split: { best: { type: 'capture', sq: 36 } } }, []), V.forkLine({ ...fork, best: [{ kind: 'drop', t: 'N', sq: 18 }] }, []), V.forkLine({ ...fork, best: [{ kind: 'discard', t: 'P' }] }, []),
+  ].filter(Boolean);
+  assert.deepEqual(missing(all), []);
+});
+
 test('낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고, 시너지(가족)마다 낱말이 있다', async () => {
   const { TERMS, TERM_GROUPS, splitTerms } = await import('../src/ui/glossary.js');
   const { FAMILIES } = await import('../src/data/families.js');
