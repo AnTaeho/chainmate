@@ -185,8 +185,8 @@ test('갈림길 카드 글: 떨구기 · 희생 · 다시 놓기 · 같은 떨�
   const base = { move: 3, mine: { kind: 'drop', t: 'P', sq: 12, cmds: [] }, scores: { mine: 120, best: 2340, target: 150 }, split: null, mate: false };
   const drop = { ...base, best: [{ kind: 'drop', t: 'N', sq: 18, cmds: [] }] };
   assert.equal(R.forkTitle(drop), '3번째 수가 승부처였어요');
-  assert.equal(R.forkLine(drop, []), '나이트를 c3에 떨궜다면 이겼다');
-  assert.equal(R.forkLine({ ...base, best: [{ kind: 'drop', t: 'R', sq: 0 }] }, []), '룩을 a1에 떨궜다면 이겼다');
+  assert.equal(R.forkLine(drop, []), '나이트를 c3에 놓았다면 이겼어요');
+  assert.equal(R.forkLine({ ...base, best: [{ kind: 'drop', t: 'R', sq: 0 }] }, []), '룩을 a1에 놓았다면 이겼어요');
   assert.equal(R.forkLine({ ...base, best: [{ kind: 'discard', t: 'P' }] }, []), '폰을 희생했다면 이겼어요');
   assert.equal(R.forkLine({ ...base, best: [{ kind: 'reboard' }] }, []), '판을 다시 놓았다면 이겼어요');
   assert.equal(R.forkScores(drop), '내가 둔 수 120 · 이기는 수 2,340 / 목표 150');

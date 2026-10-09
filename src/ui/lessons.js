@@ -16,23 +16,23 @@ export const LESSON_GROUPS = [
 
 export const LESSONS = [
   // ── 기초
-  { id: 'drop', group: 'basic', title: '떨구고 먹는다', target: 10, hand: ['N'], board: { e5: 'P' },
+  { id: 'drop', group: 'basic', title: '놓고 먹는다', target: 10, hand: ['N'], board: { e5: 'P' },
     steps: [
       { pick: 0, say: '손에 있는 나이트를 누르세요' },
-      { drop: 'd3', say: '빛나는 칸에 떨군다. 먹을 적이 닿는 칸만 빛난다' },
+      { drop: 'd3', say: '빛나는 칸에 놓으세요. 적을 먹을 수 있는 칸만 빛나요' },
       { cap: 'e5', say: '흔들리는 적을 눌러 먹으세요' },
     ] },
   { id: 'become', group: 'basic', title: '먹으면 그 기물로 바뀐다', target: 160, hand: ['N'], board: { d4: 'R', d8: 'B' }, preview: true, bigFlip: true,
     steps: [
       { pick: 0, say: '나이트를 누르세요' },
-      { drop: 'c2', say: '떨군다' },
+      { drop: 'c2', say: '놓으세요' },
       { cap: 'd4', say: '룩을 먹으면 내 기물이 룩이 돼요' },
       { cap: 'd8', say: '이제 룩처럼 곧게 미끄러져 먹어요' },
     ] },
   { id: 'chain', group: 'basic', title: '이을수록 곱해진다', target: 800, hand: ['N'], board: { d5: 'Q', d2: 'B', h6: 'R', h2: 'B' }, preview: true,
     steps: [
       { pick: 0, say: '나이트를 누르세요' },
-      { drop: 'e7', say: '떨군다' },
+      { drop: 'e7', say: '놓으세요' },
       { cap: 'd5', say: '먹을 때마다 흰 칸의 값이 더해지고, 금빛 칸의 배수가 1씩 늘어요' },
       { cap: 'd2' },
       { cap: 'h6', say: '점수 = 값 × 배수. 길게 이을수록 커져요' },
@@ -42,7 +42,7 @@ export const LESSONS = [
     demo: [{ pick: 0 }, { drop: 'c3' }, { cap: 'd5', say: '룩을 먼저 먹으면 비숍이 그 칸을 지켜요. 룩 모습으로는 비숍을 못 먹어서 끊겨요' }],
     steps: [
       { pick: 0, say: '나이트를 누르세요' },
-      { drop: null, say: '비숍을 먹을 수 있는 칸에 떨군다' },
+      { drop: null, say: '비숍을 먹을 수 있는 칸에 놓으세요' },
       { cap: 'f7', say: '룩을 지키는 비숍부터 먹으세요' },
       { cap: 'd5', say: '지키던 비숍이 없으니 룩을 먹어도 끊기지 않아요' },
     ] },
@@ -58,7 +58,7 @@ export const LESSONS = [
     ] },
   { id: 'redraw', group: 'battle', title: '손과 희생', target: 90, moves: 1, discards: 1, hand: ['P', 'P', 'P', 'P'], bag: ['N'], board: { h8: 'Q' },
     steps: [
-      { pick: 0, say: '폰은 떨굴 곳이 없다. 바칠 폰을 누른다' },
+      { pick: 0, say: '폰은 놓을 곳이 없어요. 희생할 폰을 누르세요' },
       { discard: true, say: '희생하면 새로 뽑아요. 희생한 폰은 이번 대국에 돌아오지 않아요' },
       { pick: 3, say: '새로 뽑은 나이트를 누르세요. 이것으로 곧바로 메이트하면 탁월수예요' },
       { drop: 'g6' },
@@ -76,7 +76,7 @@ export const LESSONS = [
   { id: 'mate', group: 'battle', title: '체크메이트', target: 99999, hand: ['N'], board: { e7: 'K', a7: 'R', h1: 'P' }, preview: true,
     steps: [
       { pick: 0, say: '킹은 지키는 적이 있으면 못 먹어요. 지금은 룩이 지키고 있어요' },
-      { drop: 'b5', say: '지키는 룩을 먹을 수 있는 칸에 떨군다' },
+      { drop: 'b5', say: '지키는 룩을 먹을 수 있는 칸에 놓으세요' },
       { cap: 'a7', say: '지키던 룩을 먹으면 내 기물이 룩이 돼요' },
       { cap: 'e7', say: '지키는 적이 없는 킹을 먹으면 체크메이트. 점수와 상관없이 이겨요' },
     ] },
@@ -84,7 +84,7 @@ export const LESSONS = [
   { id: 'fairy', group: 'run', title: '체스 밖의 행마', target: 80, hand: ['O'], board: { d4: 'P', d7: 'R', h7: 'B' }, preview: true,
     steps: [
       { pick: 0, say: '포는 특수 기물이에요. 기물 하나를 넘어서 먹어요' },
-      { drop: 'd1', say: '폰을 받침으로 넘을 수 있는 칸에 떨군다' },
+      { drop: 'd1', say: '폰을 넘어 먹을 수 있는 칸에 놓으세요' },
       { cap: 'd7', say: '폰을 넘어 룩을 먹으세요' },
       { cap: 'h7', say: '룩이 됐으니 곧게 미끄러져 비숍까지 먹으세요' },
     ] },

@@ -21,10 +21,10 @@ function maxim(id, name, text, verb, rarity, price, { more = null, ...def }) {
 }
 
 // ── 떨구기
-maxim('chivalry', '기사도', '나이트로 시작: 배수 ×1.5', '떨구기', 'uncommon', 5, {
+maxim('chivalry', '기사도', '나이트로 시작: 배수 ×1.5', '놓기', 'uncommon', 5, {
   onChainEnd(ctx) { if (ctx.chain.dropType === 'N') ctx.mulMult(1.5); },
 });
-maxim('pawn_march', '폰의 행진', '폰으로 시작: 값 +40', '떨구기', 'common', 3, {
+maxim('pawn_march', '폰의 행진', '폰으로 시작: 값 +40', '놓기', 'common', 3, {
   onChainEnd(ctx) { if (ctx.chain.dropType === 'P') ctx.addValue(40); },
 });
 
@@ -159,7 +159,7 @@ maxim('small_bag', '작은 덱', '덱 기물 여덟 이하: 배수 ×1.5', '덱'
 maxim('welcome', '증원 환영', '막 들어온 증원을 먹으면 값 +40', '증원', 'common', 3, {
   onCapture(ctx) { if (ctx.event.born >= 0 && ctx.event.born === num(ctx.t.movesUsed)) ctx.addValue(40); },
 });
-maxim('shadow_reading', '그림자 읽기', '증원을 두 수 앞까지 본다 · 증원 자리에 떨구면 배수 +4', '증원', 'common', 3, {
+maxim('shadow_reading', '그림자 읽기', '증원을 두 수 앞까지 본다 · 증원 자리에 놓으면 배수 +4', '증원', 'common', 3, {
   onBattleStart(ctx) { ctx.rules.lookahead = Math.max(ctx.rules.lookahead || 1, 2); },
   onDrop(ctx) {
     const t = ctx.t;
@@ -183,7 +183,7 @@ maxim('collector', '기보 수집가', '이번 판에 쓴 기보마다 배수 +1
 });
 
 // ── 밤샘 D-8: 여덟 더(뿌리의 동사마다 하나 이상)
-maxim('light_step', '가벼운 발', '폰이나 나이트로 시작: 배수 +3', '떨구기', 'common', 4, {
+maxim('light_step', '가벼운 발', '폰이나 나이트로 시작: 배수 +3', '놓기', 'common', 4, {
   onChainEnd(ctx) { if (ctx.chain.dropType === 'P' || ctx.chain.dropType === 'N') ctx.addMult(3); },
 });
 maxim('queen_hunt', '퀸 사냥', '퀸을 먹을 때마다 값 +60', '먹기', 'common', 4, {
@@ -249,15 +249,15 @@ maxim('loner', '외톨이', '지키는 적이 없는 적을 먹을 때마다 값
   onCapture(ctx) { if (ctx.event.piece !== 'K' && ctx.attackers(ctx.event.to).length === 0) ctx.addValue(15); },
 });
 maxim('full_board', '가득 찬 판', '판에 적이 열여섯 이상: 배수 ×1.5', '증원', 'common', 4, {
-  more: '떨굴 때 판의 적을 센다',
+  more: '놓을 때 판의 적을 센다',
   onDrop(ctx) { if (ctx.t.board.filter(foe).length >= 16) ctx.flags.fullBoard = true; },
   onChainEnd(ctx) { if (ctx.flags.fullBoard) ctx.mulMult(1.5); },
 });
-maxim('youngest', '막내', '손에서 값이 가장 낮은 기물로 시작: 배수 +4', '떨구기', 'common', 4, {
+maxim('youngest', '막내', '손에서 값이 가장 낮은 기물로 시작: 배수 +4', '놓기', 'common', 4, {
   onDrop(ctx) { const v = valueOf(ctx.event.type); if ((ctx.t.hand || []).every((p) => valueOf(p.t) >= v)) ctx.flags.youngest = true; },
   onChainEnd(ctx) { if (ctx.flags.youngest) ctx.addMult(4); },
 });
-maxim('eldest', '맏이', '손에서 값이 가장 높은 기물로 시작: 값 +50', '떨구기', 'common', 3, {
+maxim('eldest', '맏이', '손에서 값이 가장 높은 기물로 시작: 값 +50', '놓기', 'common', 3, {
   onDrop(ctx) { const v = valueOf(ctx.event.type); if ((ctx.t.hand || []).every((p) => valueOf(p.t) <= v)) ctx.flags.eldest = true; },
   onChainEnd(ctx) { if (ctx.flags.eldest) ctx.addValue(50); },
 });
@@ -329,7 +329,7 @@ maxim('pilgrimage', '순례', '판의 네 구역을 모두 밟은 사슬: 배수
 maxim('kings_step', '왕의 발자국', '킹 옆 칸에서 먹을 때마다 배수 +3', '체크메이트', 'uncommon', 5, {
   onCapture(ctx) { const b = ctx.t.board; if (ctx.event.piece !== 'K' && around(ctx.event.to).some((s) => b[s] && !b[s].mine && b[s].t === 'K')) ctx.addMult(3); },
 });
-maxim('ambusher', '매복병', '증원 자리에 떨구면 값 +40', '증원', 'common', 3, {
+maxim('ambusher', '매복병', '증원 자리에 놓으면 값 +40', '증원', 'common', 3, {
   onDrop(ctx) { if ((ctx.t.incoming || []).some((r) => r.sq === ctx.event.sq)) ctx.flags.ambushDrop = true; },
   onChainEnd(ctx) { if (ctx.flags.ambushDrop) ctx.addValue(40); },
 });

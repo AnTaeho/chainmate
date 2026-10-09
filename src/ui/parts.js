@@ -426,7 +426,7 @@ export function itemTip(it) {
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
   if (it.kind === 'awaken') return tipLines('깨우기', [AWAKEN_TEXT, AWAKEN_MORE]);
   if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 진화한다', '폰 › 궁수 · 화약병 · 나이트 › 낙타 · 광대 · 비숍 › 물수제비 · 까마귀 · 룩 › 포 · 유령 · 꺾쇠 · 퀸 › 아마존']);
-  if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`전술 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
+  if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`전술 ${x.name}`, [x.text, '대국 중 놓기 전에 써요']); }
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(l.name, ['조각 셋이면 전설', ...fragmentSteps(l, {}), `전설: ${l.text}`]); }
   return null;
 }

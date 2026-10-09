@@ -25,7 +25,7 @@ engraving('glass', '유리', '배수 ×2 · 4번에 1번 깨진다', 'common', {
 engraving('silver', '은', '첫 먹기에선 끊기지 않는다', 'uncommon', {
   onCut(ctx) { if (ctx.chain.captures.length === 1) ctx.cancelCut(); },
 });
-engraving('feather', '깃', '지켜진 칸에도 떨굴 수 있다', 'common', {
+engraving('feather', '깃', '지켜진 칸에도 놓을 수 있다', 'common', {
   onDropCheck(ctx) { ctx.event.allow.attacked = true; },
 });
 

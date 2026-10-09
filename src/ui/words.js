@@ -35,6 +35,6 @@ export const PACK_NAME = { piece: '기물 팩', chart: '기보 팩', engraving: 
 export const PART_NAME = { first: '첫 조각', feat: '재현 조각', gold: '금빛 조각' };
 // 명국 첫 조각이 나오는 곳(legends.js source)
 export const FRAG_SOURCE = { display: '상점 진열', piece: '기물 팩', chart: '기보 팩', engraving: '각인 팩' };
-export const END_REASON = { moves: '수를 다 썼다', stuck: '떨굴 곳이 없다', mate: '체크메이트', score: '목표 달성' };
+export const END_REASON = { moves: '수를 다 썼다', stuck: '놓을 곳이 없다', mate: '체크메이트', score: '목표 달성' };
 export const money = (n) => `$${n}`;
 export const anteName = (a) => `${a}관`;

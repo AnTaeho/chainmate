@@ -16,8 +16,8 @@ export function forkLine(r, board) {
     const c = board && board[s.sq];
     return c && !c.mine && PIECE_NAME[c.t] ? `${sqName(s.sq)}의 ${josa(PIECE_NAME[c.t], '을/를')} 먹었다면 이겼어요` : `${sqName(s.sq)}의 적을 먹었다면 이겼어요`;
   }
-  if (s && s.type === 'redrop') return `${sqName(s.sq)}에 다시 떨궜다면 이겼다`;
-  if (b0.kind === 'drop') return `${josa(PIECE_NAME[b0.t], '을/를')} ${sqName(b0.sq)}에 떨궜다면 이겼다`;
+  if (s && s.type === 'redrop') return `${sqName(s.sq)}에 한 번 더 놓았다면 이겼어요`;
+  if (b0.kind === 'drop') return `${josa(PIECE_NAME[b0.t], '을/를')} ${sqName(b0.sq)}에 놓았다면 이겼어요`;
   if (b0.kind === 'discard') return `${josa(PIECE_NAME[b0.t], '을/를')} 희생했다면 이겼어요`;
   return '판을 다시 놓았다면 이겼어요';
 }

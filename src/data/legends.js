@@ -50,7 +50,7 @@ legend('century', {
 
 legend('evergreen', {
   name: '상록의 대국', year: 1852, story: '끝없이 이어지는 공격',
-  text: '사슬이 멈추면 한 번, 그 모습으로 다시 떨궈 잇는다', verb: '떨구기',
+  text: '사슬이 멈추면 한 번, 그 모습으로 한 번 더 놓아 잇는다', verb: '놓기',
   feat: '한 사슬에 여덟을 먹는다', source: 'engraving',
   check: (h) => h.captures >= 8,
 }, {

@@ -14,7 +14,7 @@ function master(id, rule, text, def) {
 master('iron_wall', '철벽', '지켜진 적을 먹으면 곧바로 끊긴다', {
   onBattleStart(ctx) { ctx.rules.noReply = true; },
 });
-master('fog', '안개', '위 다섯 줄은 안개라 떨굴 수 없다 · 내 기물의 행마가 닿으면 걷힌다', {
+master('fog', '안개', '위 다섯 줄은 안개라 놓을 수 없다 · 내 기물이 갈 수 있으면 걷힌다', {
   onBattleStart(ctx) { ctx.rules.fog = 5; },
 });
 // 한 사슬에서 같은 종류의 적을 두 번 먹지 못한다(킹은 하나뿐이라 뺀다)
@@ -28,7 +28,7 @@ master('mirror', '거울', '한 사슬에서 같은 종류를 두 번 먹지 못
 master('hourglass', '모래시계', '수 2번 · 희생 1번만 가능', {
   onBattleStart(ctx) { ctx.rules.moves = 2; ctx.rules.discards = 1; },
 });
-master('heavy_hand', '무거운 손', '퀸과 룩은 떨굴 수 없다', {
+master('heavy_hand', '무거운 손', '퀸과 룩은 놓을 수 없다', {
   onBattleStart(ctx) { ctx.rules.noHeavyDrop = true; },
 });
 master('silence', '침묵', '맨 위 격언 둘이 잠든다', {

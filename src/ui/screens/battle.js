@@ -644,7 +644,7 @@ export class BattleScreen {
           done: () => { v.board = clone(post); if (v.chain) { v.chain.path = [e.sq]; v.chain.bends = []; } },
         }); break;
         case 'redropReady': add(0.15, {
-          begin: () => { if (v.chain) { v.board[v.chain.sq] = null; v.chain.awaiting = e.squares.slice(); } this.word('다시 떨군다', PAL.gold, 1); },
+          begin: () => { if (v.chain) { v.board[v.chain.sq] = null; v.chain.awaiting = e.squares.slice(); } this.word('한 번 더 놓기', PAL.gold, 1); },
         }); break;
         case 'end': this.endSteps(e); break;
         case 'overflow': add(0.08, {
@@ -713,7 +713,7 @@ export class BattleScreen {
           },
         }); break;
         case 'win': if (this.src.kind === 'lesson') break; add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); } }); break;
-        case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '남은 수 없음', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
+        case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '놓을 곳 없음' : '남은 수 없음', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
         // 점화(CHM-67): 걸음 없이 적어 두고, 한 수 연출이 끝난 뒤(afterSeq) 막간을 연다
         case 'ignite': this.ignPending = e; break;
         case 'fragment': add(0.05, { begin: () => { this.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); this.snd('fragment'); { const to = shardTo(); this.app.flyShard(BX + 112, BY + 112, to.x, to.y); } } }); this.runEvents.push(e); break;
@@ -1685,7 +1685,7 @@ export class BattleScreen {
     const y2 = TOP + h1 + LIST_GAP * 2, h2 = P * 2 + LINE;
     openBox('panel', RX, y2, RW, h2, P, { overlay: true, name: '그다음' });
     panel(ctx, RX, y2, RW, h2);
-    const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['체크메이트', PAL.gold] : pv.redrop ? ['다시 떨군다', PAL.gold]
+    const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['체크메이트', PAL.gold] : pv.redrop ? ['한 번 더 놓기', PAL.gold]
       : pv.done ? ['사슬이 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red]
       // 먹을 적이 두 자리면(넓은 행마의 새 특수 기물, CHM-55) 폭에 맞춰 짧은 말로
       : [measure(L(`다음에 먹을 적 ${pv.next.length}`), true) <= RW - P * 2 ? `다음에 먹을 적 ${pv.next.length}` : `먹을 적 ${pv.next.length}`, PAL.gold];
@@ -1883,7 +1883,7 @@ export class BattleScreen {
       for (let i = 0; i < n; i++) rect(ctx2, LX + pipX + i * pipStep, ty + 3, pipW, 7, i < left ? col : PAL.frame);
     };
     const rows = [
-      { id: 'pips:moves', label: '수', tip: () => tipLines('수', '이번 대국에 떨굴 수 있는 횟수. 다 쓰면 대국이 끝난다'), draw: (ctx2, ty) => { text(ctx2, '수', LX + P, ty, PAL.dim); pips(v.moves, v.movesLeft, PAL.gold)(ctx2, ty); } },
+      { id: 'pips:moves', label: '수', tip: () => tipLines('수', '이번 대국에 놓을 수 있는 횟수. 다 쓰면 대국이 끝나요'), draw: (ctx2, ty) => { text(ctx2, '수', LX + P, ty, PAL.dim); pips(v.moves, v.movesLeft, PAL.gold)(ctx2, ty); } },
       { id: 'pips:discards', label: '희생', tip: () => this.offeredTip(), draw: (ctx2, ty) => { text(ctx2, '희생', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); this.offeredRow(ctx2, LX + pipX + Math.max(0, v.discards - 1) * pipStep + pipW + 3, LX + LW - 2, ty); } },
     ];
     if (hasClock(run)) rows.push(clockRow(app, run));

@@ -22,7 +22,7 @@ export const FAMILIES = [
   { id: 'hunt', name: '사냥', col: '#8ec07c', text: ['같은 종류를 잇달아 먹으면 값 +30', '판에서 값이 가장 큰 적을 먹으면 배수 +4', '같은 종류를 잇달아 먹을 때마다 배수 ×1.5'] },
   // 밤샘 2: 지키는 적(응수)과 증원에 하나씩
   { id: 'counter', name: '역습', col: '#f080a8', text: ['지키는 적을 먹을 때마다 값 +40', '지키는 적을 먹을 때마다 배수 +3', '지키는 적을 먹을 때마다 배수 ×1.3'] },
-  { id: 'ambush', name: '매복', col: '#c0c8d0', text: ['증원을 먹을 때마다 배수 +3', '증원 자리에 떨구면 배수 +4', '증원을 먹을 때마다 배수 ×2'] },
+  { id: 'ambush', name: '매복', col: '#c0c8d0', text: ['증원을 먹을 때마다 배수 +3', '증원 자리에 놓으면 배수 +4', '증원을 먹을 때마다 배수 ×2'] },
 ];
 export const FAMILY_BY_ID = Object.fromEntries(FAMILIES.map((f) => [f.id, f]));
 // 화면 이름: 「기사 시너지」(옛 이름 가족 · 모음 — docs/design-notes/voice.md). 칩 · 띠는 이름만(「기사 +1」 · 「기사 2/4」)
