@@ -2097,7 +2097,7 @@ const linkSeen = { code: 0, typed: 0, name: '', same: 0, back: 0, run: '', cont:
   }
   const cells = (rec) => Object.values(rec.codex).reduce((n, k) => n + Object.values(k).filter(Boolean).length, 0);
   clickB('title:records'); frameB(2);
-  linkSeen.records = `판 ${B.records.runs} · 도감 ${cells(B.records)}칸 · 닿은 관 ${B.records.bestAnte}`;
+  linkSeen.records = `판 ${B.records.runs} · 도감 ${cells(B.records)}칸 · 도달한 관 ${B.records.bestAnte}`;
   if (!(B.screen.name === 'records' && A.records.runs >= 1 && B.records.runs === A.records.runs && cells(B.records) === cells(A.records) && cells(B.records) > 1 && B.records.bestAnte === A.records.bestAnte && LL.LOG.texts.some((q) => q.s === `${A.records.runs}`))) bad(`다른 기기의 기록이 같지 않다(이쪽 판 ${A.records.runs} · 도감 ${cells(A.records)} / 저쪽 ${linkSeen.records})`);
   B.toTitle(); frameB(1);
   // B: 아래 한 줄 · 이 기기 떼기
@@ -2155,7 +2155,7 @@ const acctSeen = { made: 0, fields: 0, keys: 0, name: '', same: 0, records: '', 
   domB.type('user', USER); domB.type('pass', PW);
   clickB('acct:login'); await netSettle(60); frameB(3);
   const cells = (a) => Object.values(a.records.codex).reduce((n, k) => n + Object.values(k).filter(Boolean).length, 0);
-  acctSeen.records = `판 ${B.records.runs} · 도감 ${cells(B)}칸 · 닿은 관 ${B.records.bestAnte}`;
+  acctSeen.records = `판 ${B.records.runs} · 도감 ${cells(B)}칸 · 도달한 관 ${B.records.bestAnte}`;
   if (B.screen.in() && B.rank.player() && B.rank.player().name === acctSeen.name && B.records.runs === A.records.runs && cells(B) === cells(A) && B.records.bestAnte === 5 && drew('들어왔다')) acctSeen.same = 1; else bad(`들어온 기기가 같은 이름 · 기록이 되지 않았다(${B.screen.msg && B.screen.msg.text} · ${acctSeen.records})`);
   // B: 비번 바꾸기
   clickB('acct:password'); frameB(1);
