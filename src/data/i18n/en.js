@@ -108,7 +108,7 @@ export const EN = {
   '되돌리기': 'Rewind', '행마': 'Moves', '이 판': 'Board', '기본 기물': 'Chess pieces', '특수 기물': 'Special pieces', '움직임 줄이기': 'Reduce Motion', '첫 대국 다시': 'Replay with the King', '튜토리얼': 'Lessons',
   '다음 새 판을 킹과 함께 시작해요': 'Your next run starts with the King',
   // 첫 수업 열 · 처음 안내(친절 손질)
-  '기초': 'Basics', '목표 체크메이트': 'Goal: checkmate', '대국': 'Matches', '보기': 'Watch', '할 일': 'Your turn', '화면을 누르면 직접 해 볼 수 있어요': 'Tap to try it yourself', '튜토리얼 건너뛰기': 'Skip lessons',
+  '기초': 'Basics', '목표 체크메이트': 'Goal: checkmate', '대국': 'Matches', '보기': 'Watch', '할 일': 'Your turn', '화면을 누르면 직접 해 볼 수 있어요': 'Tap to try it yourself', '모두 건너뛰기': 'Skip lessons',
   '목표와 수': 'Target and Moves', '체스 밖의 행마': 'Beyond Chess',
   '손에 있는 나이트를 누르세요': 'Tap the knight in your hand',
   '빛나는 칸에 놓으세요. 적을 먹을 수 있는 칸만 빛나요': 'Drop it on a glowing square. Only squares with prey in reach glow',
@@ -414,7 +414,7 @@ export const EN = {
   '폰 넷': '4 pawns', '폰 다섯': '5 pawns', '폰 셋': '3 pawns', '나이트 둘': '2 knights', '나이트 셋': '3 knights', '비숍 둘': '2 bishops', '룩 둘': '2 rooks',
   '목표 ×1.25': 'Target ×1.25', '증원 +1': '+1 recruit', '상점 값 +1': 'Prices +$1',
   '수 −1': '−1 Move',
-  '시계 −1': 'Clock −1', '상자 5칸 확률 절반 · 첫 조각 확률 절반': 'Rarer chests', '상자 다섯 칸': 'Fewer big chests', '첫 조각이 반': 'Fewer fragments',
+  '시계 −1': 'Clock −1', '상자 5칸 확률 절반 · 첫 조각 확률 절반': 'Rarer chests', '상자 5칸 확률 절반': 'Fewer big chests', '첫 조각 확률 절반': 'Fewer fragments',
   // 낱말 손질(docs/design-notes/terms.md)
   '빠른 갈아입기': 'Quick Change',
   '되받아치기': 'Riposte',

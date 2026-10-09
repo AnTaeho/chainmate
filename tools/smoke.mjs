@@ -1226,7 +1226,7 @@ const rankSeen = { submit: 0, card: '', neighbours: 0, hint: 0, open: 0, pages: 
     if (!before || !region('set:name') || !drew(before.name)) bad('설정에 이름 줄이 없다');
     else {
       hover('set:name'); pump(2);
-      if (LL.LOG.texts.some((q) => q.s === L(`오늘 ${before.rerolls}번 더 지을 수 있다`))) rankSeen.tip = 1; else bad('다시 짓기를 가리켜도 남은 횟수가 안 보인다');
+      if (LL.LOG.texts.some((q) => q.s === L(`오늘 ${before.rerolls}번 더 바꿀 수 있어요`))) rankSeen.tip = 1; else bad('다시 짓기를 가리켜도 남은 횟수가 안 보인다');
       click('set:name'); pump(1); await netSettle(); pump(3);
       const after = app.rank.player();
       rankSeen.renamed = after.name;

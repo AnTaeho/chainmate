@@ -78,7 +78,7 @@ test('영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · �
     ...MAXIMS.flatMap((m) => [m.name, m.text, m.verb]), ...MASTERS.flatMap((m) => [m.name, m.text]), ...FACTIONS.flatMap((f) => [f.name, f.habit.text]),
     ...LEGENDS.flatMap((l) => [l.name, l.story, l.text, l.feat, l.verb]), ...ENGRAVINGS.flatMap((e) => [e.name, e.text]),
     ...EDITIONS.flatMap((e) => [e.name, e.text]), ...Object.values(OPENINGS).flatMap((o) => [o.name, o.text]),
-    ...Object.keys(CHARTS).flatMap((f) => [CHARTS[f].name, chartText(f)]), ...DANS.map((d) => d.text), ...UNLOCKS.map((u) => u.text),
+    ...Object.keys(CHARTS).flatMap((f) => [CHARTS[f].name, chartText(f)]), ...DANS.map((d) => d.text), DANS.map((d) => d.text).join(' · '), ...UNLOCKS.map((u) => u.text),
 
     // 말풍선에만 보이는 덧말
     ...[...MAXIMS, ...SOULS, ...JOSEKIS].map((x) => x.more).filter(Boolean),

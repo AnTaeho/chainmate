@@ -217,7 +217,7 @@ export class LessonScreen extends BattleScreen {
       if (r) { ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); frame(ctx, r.x - 2, r.y - 2 + (st.pick != null ? 4 : 0), r.w + 4, st.pick != null ? 40 : r.h + 4, PAL.goldHi, 1); ctx.globalAlpha = 1; }
     }
     // 수업 건너뛰기(처음 켠 사람도 곧바로 판으로 갈 수 있게): 오른쪽 칸 위 이름표 줄(수업에는 격언이 없다), 멈춤 단추 왼쪽
-    button(ctx, ui, 'lesson:skip', RX, 2, PAUSE.x - 6 - RX, BTN_S, '튜토리얼 건너뛰기', { onClick: () => this.skipAll() });
+    button(ctx, ui, 'lesson:skip', RX, 2, PAUSE.x - 6 - RX, BTN_S, '모두 건너뛰기', { onClick: () => this.skipAll() });
   }
   // 머리 칸: 대국 제목 대신 수업 묶음과 지금 수업(제목은 두 줄까지), 목표는 점수나 외통
   headSpec() {
