@@ -1268,6 +1268,24 @@ if (app.run.phase === 'won') {
   if (!app.records.bestEndless) throw new Error('endless not recorded');
   log('  끝없는 대국', app.run.ante, '관까지');
 }
+// ── 하이라이트 카드(CHM-73): 결과 화면 「하이라이트」 → 카드 + 미리 만든 그림(1200 × 675) → Esc · 바깥 누르기 · 「닫기」로 닫힌다. 글 넘침은 pump가 잰다.
+// 그림을 기다리며 한 박자 쉬므로(순위 · 저장의 약속이 같이 풀린다) 순위 흐름 뒤, 끝없는 대국이 끝난 결과 화면에서 본다
+const hlSeen = { button: 0, open: 0, image: 0, esc: 0, outside: 0, close: 0, bad: [] };
+if (screen() === 'result' && app.run.bestReplay) {
+  const s = hlSeen, open = () => { click('result:highlight'); pump(2); return screen() === 'highlight'; };
+  s.button = region('result:highlight') ? 1 : 0;
+  if (s.button && open()) {
+    s.open = 1;
+    await new Promise((r) => setImmediate(r)); pump(2);
+    const b = app.overlay.blob;
+    if (b && b.size === 1200 * 675 && region('hl:save').enabled) s.image = 1; else s.bad.push(`그림이 없다(${b && b.size})`);
+    if (region('hl:share')) s.bad.push('공유를 못 하는 곳인데 「공유」 단추가 있다');
+    dom.key('Escape'); pump(1);
+    if (screen() === 'result') s.esc = 1;
+    if (open()) { dom.mouse('mousedown', 5, 264); dom.mouse('mouseup', 5, 264); pump(1); if (screen() === 'result') s.outside = 1; }
+    if (open()) { click('hl:close'); if (screen() === 'result') s.close = 1; }
+  }
+} else hlSeen.bad.push(`결과 화면에 최고 한 수가 없다(${screen()})`);
 // 결과 화면에서 다시 → 타이틀, 전설 장면 직접
 click('result:title');
 app.run = results[results.length - 1];
@@ -2173,7 +2191,7 @@ const acctSeen = { made: 0, fields: 0, keys: 0, name: '', same: 0, records: '', 
 }
 
 seen();
-const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank', 'link', 'account'];
+const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank', 'link', 'account', 'highlight'];
 const missing = need.filter((n) => !visited.has(n));
 const ms = app.stats.drawMs.slice().sort((a, b) => a - b);
 const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;
@@ -2336,6 +2354,11 @@ if (telSent.n) { console.log('연기 시험 중에 기록이 밖으로 나갔다
   console.log(`계정: 만들기 ${yes(r.made)}(입력 칸 ${r.fields} · 초점 동안 키 막기 ${yes(r.keys)}) → 다른 기기에서 들어오기 → 같은 이름 ${r.same ? `「${r.name}」` : '못 함'} · 기록(${r.records}) → 비번 바꾸기 ${yes(r.changed)} → 나가기(기록 비움) ${yes(r.out)} · 계정에는 남음 ${yes(r.kept)} → 지우기 ${yes(r.gone)} · 남은 입력 칸 ${r.left} · 둘째 기기 글 넘침 ${r.flow.length}(프레임 ${r.frames})${r.bad.length ? ` · 어긋남: ${r.bad.join(' | ')}` : ''}`);
   if (r.flow.length) console.log('  둘째 기기에서 넘친 곳: ' + r.flow.slice(0, 20).join('\n  '));
   if (r.bad.length || r.flow.length || !r.made || !r.keys || !r.same || !r.changed || !r.out || !r.kept || !r.gone || r.left !== 0) { console.log('계정 흐름(만들기 → 들어오기 → 같은 이름 · 기록 → 비번 바꾸기 → 나가기 → 지우기 · 남은 입력 칸 0)이 어긋났다'); fail = true; }
+}
+{
+  const r = hlSeen, yes = (v) => (v ? '확인' : '못 함');
+  console.log(`하이라이트: 단추 ${yes(r.button)} · 열기 ${yes(r.open)} · 그림 1200 × 675 ${yes(r.image)} · Esc ${yes(r.esc)} · 바깥 누르기 ${yes(r.outside)} · 닫기 ${yes(r.close)}${r.bad.length ? ` · 어긋남: ${r.bad.join(' | ')}` : ''}`);
+  if (r.bad.length || !r.button || !r.open || !r.image || !r.esc || !r.outside || !r.close) { console.log('하이라이트 카드(결과 화면 단추 → 열기 → 그림 → 닫기)가 어긋났다'); fail = true; }
 }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);
