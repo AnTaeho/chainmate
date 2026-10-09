@@ -862,13 +862,24 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
         if (phase === 'stale') for (const s of R.STALE_LINES) assert.ok(measure(s) <= gc.w - 16, `${tag}: 「${s}」`);
       }
     }
-    // 카드 줄의 칸: 가장 넓은 영어 이름이면 닿은 곳 칸을 줄 전체에서 뺀다, 한국어는 남는다 — 어느 쪽이든 이름과 다음 글 사이 6 이상
+    // 카드 줄의 칸: 가장 넓은 이름 + 열 자리 점수면 닿은 곳을 짧은 꼴(관만)로 — 가장 넓은 영어 이름이면 칸을 줄 전체에서 뺀다. 어느 쪽이든 이름과 다음 글 사이 6 이상
     const names = data.around.map((r) => a.app.rank.nameOf(r)), at = R.cardCols(data.around, names, 20, 298);
+    assert.equal(at.reachOf, lang === 'en' ? null : R.reachShort, `${lang}: 닿은 곳 칸`);
     assert.equal(at.reach == null, lang === 'en', `${lang}: 닿은 곳 칸`);
     const { fitNum } = await import('../src/render/gfx.js');
+    // 보통 이름 + 일곱 자리 점수(영어는 「Hall 8 Practice」가 넓어 여섯 자리까지): 순위 화면과 같은 글(관 + 대국)이 다 들어간다 — 대국 셋 · 이김 모두
+    const kinds = [{ ante: 8, blind: 0, won: false }, { ante: 8, blind: 1, won: false }, { ante: 8, blind: 2, won: false }, { ante: 8, blind: 2, won: true }];
+    const plain = kinds.map((k, i) => ({ ...k, rank: 97 + i, a: 0, n: 0, score: (lang === 'ko' ? 3482150 : 519509) - i })), plainNames = plain.map((r) => a.app.rank.nameOf(r));
+    const pt = R.cardCols(plain, plainNames, 20, 298);
+    assert.equal(pt.reachOf, R.reachText, `${lang}: 보통 이름이면 관 + 대국을 다 적는다(이름 ${measure(plainNames[0], true)})`);
+    plain.forEach((r, i) => {
+      assert.equal(pt.reachOf(r), R.reachText(r), `${lang}: 순위 화면과 같은 글`);
+      assert.ok(pt.name + measure(plainNames[i], true) + 6 <= pt.reach - measure(R.reachText(r)), `${lang}: 이름이 닿은 곳에 닿는다(${R.reachText(r)})`);
+      assert.ok(pt.reach + 6 <= pt.score - measure(fitNum(r.score, pt.scoreRoom(i)), true), `${lang}: 닿은 곳이 점수에 닿는다`);
+    });
     data.around.forEach((r, i) => {
       // 점수는 이름 옆에 남는 폭에 맞춘다(가장 넓은 영어 이름 + 열 자리 점수면 짧은 꼴)
-      const score = fitNum(r.score, at.scoreRoom(i)), next = at.reach != null ? at.reach - measure(lang === 'ko' ? '이김' : 'Hall 8') : at.score - measure(score, true);
+      const score = fitNum(r.score, at.scoreRoom(i)), next = at.reach != null ? at.reach - measure(at.reachOf(r)) : at.score - measure(score, true);
       assert.ok(at.name + measure(names[i], true) + 6 <= next, `${lang}: 이름이 다음 글에 닿는다(${names[i]} · ${score})`);
       if (lang === 'ko') assert.equal(score, r.score.toLocaleString('en-US'), '한국어는 열 자리 점수도 다 적는다');
     });

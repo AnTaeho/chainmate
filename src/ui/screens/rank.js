@@ -1,7 +1,7 @@
 // 순위(CHM-70, docs/design-notes/leaderboard.md 「화면」 · layout.md 「순위」): 오늘의 대국 순위표(판 밖 틀)와 결과 화면의 순위 카드.
 // 자료는 src/ui/rank.js가 아는 것만 읽는다(app.rank.board · status) — 화면은 서버를 직접 부르지 않는다.
 //   순위 화면: 머리줄(제목 · 「오늘 · 어제」 탭 · 날짜와 사람 수) → 머릿줄 → 열 줄 → 붙박은 내 줄(금빛) 또는 「오늘의 대국 두기」 → 단추 줄(쪽 넘김)
-//   결과 카드: 「오늘 14등 / 312명」 · 「순위 보기」 → 내 위아래 이웃(자리가 되는 만큼 둘씩 · 하나씩 · 내 줄만)
+//   결과 카드: 「오늘 14등 / 312명」 · 「순위 보기」 → 내 위아래 이웃(자리가 되는 만큼 둘씩 · 하나씩 · 내 줄만), 줄마다 등수 · 이름 · 닿은 곳(순위 화면과 같은 글) · 점수
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, measure, num, fitNum } from '../../render/gfx.js';
 import { button } from '../ui.js';
@@ -18,8 +18,8 @@ const KIND = { ko: ['연습 대국', '정식 대국', '마스터전'], en: ['Pra
 export const reachText = (r) => (en()
   ? `Hall ${r.ante} ${r.won ? 'Won' : KIND.en[r.blind] || ''}`
   : `${r.ante}관 ${r.won ? '이김' : KIND.ko[r.blind] || ''}`);
-// 좁은 카드의 닿은 곳: 관만(이겼으면 「이김」)
-const reachShort = (r) => (r.won ? '이김' : `${r.ante}관`);
+// 결과 카드의 닿은 곳이 이름에 닿을 때만 쓰는 짧은 꼴: 관만(이겼으면 「이김」)
+export const reachShort = (r) => (r.won ? '이김' : `${r.ante}관`);
 export const dayText = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}월 ${d}일`; };
 export const peopleText = (n) => `${num(n)}명`;
 
@@ -137,15 +137,16 @@ export function rankCard(app, run, n = 5) {
   const count = st.phase === 'pending' ? Math.min(n, 3) : rows.length;
   return { st, phase: st.phase, rows, count, h: P * 2 + BTN_S + (count ? GAP_IN + count * LINE : 0) };
 }
-// 카드 줄의 글 자리(재는 쪽과 그리는 쪽이 같이 쓴다): 등수 · 이름 · [닿은 곳] · 점수. 한 줄이라도 이름이 닿은 곳에 닿으면 닿은 곳 칸을 줄 전체에서 뺀다
+// 카드 줄의 글 자리(재는 쪽과 그리는 쪽이 같이 쓴다): 등수 · 이름 · [닿은 곳] · 점수. 닿은 곳은 순위 화면과 같은 글(reachText — 관 + 대국).
+// 한 줄이라도 이름이 닿은 곳에 닿으면 줄 전체를 짧은 꼴(관만)로, 그래도 닿으면 닿은 곳 칸을 뺀다. reachOf: 줄 → 닿은 곳 글(칸이 없으면 null)
 export function cardCols(rows, names, x, w) {
   const P = PAD_BOX, rankW = Math.max(0, ...rows.map((r) => measure(num(r.rank), true)));
   const nameX = x + P + 4 + rankW + 6, scoreR = x + w - P - 2;
   const scoreW = Math.max(0, ...rows.map((r) => measure(num(r.score), true)));
-  const reachR = scoreR - scoreW - 6, reachW = Math.max(0, ...rows.map((r) => measure(reachShort(r))));
+  const reachR = scoreR - scoreW - 6;
   const nameEnd = Math.max(0, ...rows.map((r, i) => nameX + measure(names[i], true)));
-  const reach = nameEnd + 6 <= reachR - reachW;
-  return { rank: x + P + 4, name: nameX, reach: reach ? reachR : null, score: scoreR, scoreRoom: (i) => scoreR - (nameX + measure(names[i], true) + 6) };
+  const reachOf = [reachText, reachShort].find((f) => nameEnd + 6 <= reachR - Math.max(0, ...rows.map((r) => measure(f(r))))) || null;
+  return { rank: x + P + 4, name: nameX, reach: reachOf ? reachR : null, reachOf, score: scoreR, scoreRoom: (i) => scoreR - (nameX + measure(names[i], true) + 6) };
 }
 export function drawRankCard(ctx, ui, app, card, x, y, w) {
   const P = PAD_BOX, { st, phase, rows, h } = card;
@@ -180,7 +181,7 @@ export function drawRankCard(ctx, ui, app, card, x, y, w) {
     if (mine) { rect(ctx, x + P, top, w - P * 2, LINE, MINE_BG); rect(ctx, x + P, top, 2, LINE, PAL.gold); }
     text(ctx, num(r.rank), at.rank, ty, mine ? PAL.gold : PAL.dim, { bold: mine });
     text(ctx, names[i], at.name, ty, c, { bold: mine });
-    if (at.reach != null) text(ctx, reachShort(r), at.reach, ty, r.won || mine ? PAL.gold : PAL.dim, { align: 'right' });
+    if (at.reach != null) text(ctx, at.reachOf(r), at.reach, ty, r.won || mine ? PAL.gold : PAL.dim, { align: 'right' });
     text(ctx, fitNum(r.score, at.scoreRoom(i)), at.score, ty, c, { align: 'right', bold: true });
   });
   closeBox();
