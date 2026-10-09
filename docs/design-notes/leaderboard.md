@@ -53,21 +53,21 @@
 - 열쇠를 잃으면(브라우저 저장을 지움) 새 사람이 된다. 다른 기기로는 코드로 잇는다(아래 「기기 잇기 · 클라우드 저장」, CHM-71) — 이어 둔 기기가 없이 열쇠를 잃으면 되찾지 못한다 — 그래서 아이디 · 비번 계정을 둔다(아래 「계정」, CHM-72).
 
 ## API
-열쇠는 `Authorization: Bearer <열쇠>` 머리말로 받는다(CHM-72 — 아래 표의 `key`는 옛 꼴이고 한동안 같이 받는다. 「계정」 절 「열쇠 머리말」). 모두 JSON. 오류는 `{ "error": 코드 }`(500은 `server`뿐 — 내부 메시지를 싣지 않는다). 응답은 `Cache-Control: no-store`.
-출처는 같은 출처만 받는다: `Origin`이 없거나 요청 호스트와 같을 때(미리 보기 배포 주소도 자기 호스트면 통과). 그 밖의 출처는 403 `bad_origin`. 앱(Tauri) 출처는 `api/_lib/http.js` `ALLOWED_ORIGINS`에 붙인다.
+열쇠는 `Authorization: Bearer <열쇠>` 머리말로만 받는다(CHM-72 — 본문 · 주소에 실려 온 `key`는 버린다. 「계정」 절 「열쇠 머리말」). 아래 표의 「열쇠」는 그 머리말이다. 모두 JSON. 오류는 `{ "error": 코드 }`(500은 `server`뿐 — 내부 메시지를 싣지 않는다). 응답은 `Cache-Control: no-store`.
+출처는 같은 출처만 받는다: `Origin`이 없거나 요청 호스트와 같을 때(미리 보기 배포 주소도 자기 호스트면 통과). 앱(Tauri 2)의 출처 둘(`tauri://localhost` — 맥 · iOS, `http://tauri.localhost` — 윈도 · 안드로이드)은 `api/_lib/http.js` `ALLOWED_ORIGINS`로 받고, 답에 그 출처를 `Access-Control-Allow-Origin`으로 돌려준다. 그 밖의 출처는 403 `bad_origin`. 쿠키를 쓰지 않아(열쇠 머리말뿐) 출처를 더 받아도 남의 자격으로 부를 길은 생기지 않는다.
 Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`로 묶었다(`api/account/[action].js` · `api/link/[action].js` — `api/_lib/http.js` `routes`가 주소의 마지막 조각으로 고르고, 모르는 조각은 404 `not_found`). 지금 함수는 8개이고 `test/leaderboard.test.js`가 12개를 넘으면 실패한다. 묶은 파일에는 POST 길만 둔다 — Vercel이 주소 조각을 물음(`?action=`)으로도 넘기는데 GET 길은 물음을 통째로 입력으로 쓴다.
 
 | 길 | 받는 것 | 주는 것 |
 |---|---|---|
 | `GET /api/hello` | — | `{ build }` — 배포 식별자(`VERCEL_DEPLOYMENT_ID` → `VERCEL_GIT_COMMIT_SHA` → `'dev'`). 클라이언트는 켤 때 받아 둔다 |
-| `POST /api/player` | `{}` | 새 플레이어 `{ key, a, n, rerolls }`(rerolls = 오늘 남은 다시 짓기) |
-| | `{ key }` | 지금 이름 `{ key, a, n, rerolls }`. 모르는 열쇠 401 `unknown_key` |
-| | `{ key, reroll: true }` | 새 이름(앞의 것과 다르다). 하루 한도를 넘으면 429 `reroll_limit` |
-| `POST /api/daily/submit` | `{ key, date, build, cmds }` | `{ ok: true, best, rank, total, improved }` |
+| `POST /api/player` | `{}`(열쇠 없이) | 새 플레이어 `{ key, a, n, rerolls }`(rerolls = 오늘 남은 다시 짓기). 전체 한도를 넘으면 429 `player_limit` + `retryAfter`(초) |
+| | 열쇠 + `{}` | 지금 이름 `{ key, a, n, rerolls }`. 모르는 열쇠 401 `unknown_key` |
+| | 열쇠 + `{ reroll: true }` | 새 이름(앞의 것과 다르다). 하루 한도를 넘으면 429 `reroll_limit` |
+| `POST /api/daily/submit` | 열쇠 + `{ date, build, cmds }` | `{ ok: true, best, rank, total, improved }` |
 | `GET /api/daily/board` | `?date=YYYY-MM-DD&page=N`(모두 없어도 된다) + 열쇠 | `{ date, total, page, pages, rows, me, around }` |
 
 - `best` = `{ ante, blind, won, score, battles, moves, ignite }`(그날 그 사람의 가장 좋은 기록 — 방금 낸 판이 더 나쁘면 앞의 것), `rank` = 그 기록의 등수, `total` = 그날 오른 사람 수, `improved` = 방금 낸 판으로 갈아 끼웠나.
-- `rows` · `around` · `me`의 한 줄 = `{ rank, a, n, ante, blind, won, score }`(score = 점수 합). 한 쪽은 10줄. `me`는 key의 그날 줄(없으면 null), `around`는 내 줄과 위아래 둘씩(내 줄 포함, 등수 차례). key가 없거나 모르는 열쇠면 구경(`me: null`, `around: []`).
+- `rows` · `around` · `me`의 한 줄 = `{ rank, a, n, ante, blind, won, score }`(score = 점수 합). 한 쪽은 10줄. `me`는 그 열쇠의 그날 줄(없으면 null), `around`는 내 줄과 위아래 둘씩(내 줄 포함, 등수 차례). 열쇠가 없거나 모르는 열쇠면 구경(`me: null`, `around: []`).
 - `date`의 기본은 서버 날짜(UTC). 화면은 자기 달력의 오늘 · 어제를 준다. 옛 날짜도 주면 준다(내일보다 뒤는 400 `bad_date`).
 
 ### 제출의 처리 차례
@@ -86,15 +86,16 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 | 명령 수 | 5000 | `verify.js` `LIMITS.cmds` |
 | 제출 | 플레이어당 하루(UTC) 30번 | `LIMITS.submits`, `players.submits_day` |
 | 다시 짓기 | 플레이어당 하루(UTC) 20번 | `LIMITS.rerolls`, `players.rerolls_day` |
+| 플레이어 만들기 | 모두 합쳐 한 시간 2000명(넘으면 429 `player_limit` + `retryAfter`) | `LIMITS.playersAll`, `link_limits`의 `playerall` 줄(`who` 0) |
 | 순위표 한 쪽 | 10줄 · 내 위아래 2줄씩 | `LIMITS.page` · `LIMITS.around` |
 | 함수 | 리전 iad1(DB us-east-1과 같은 곳) · 최대 30초 | `vercel.json` |
 
-플레이어 만들기에는 한도가 없다(IP를 남기지 않아 사람마다 셀 수 없다). 마구 만들면 다시 두기가 그만큼 돈다 — 문제가 되면 Vercel 방화벽의 요청 수 제한을 `/api/`에 건다.
+플레이어 만들기는 사람마다 세지 못한다(IP를 남기지 않는다). 그래서 모두 합친 수만 센다 — 열쇠 없이 부른 `POST /api/player`만 세고, 나가기 · 계정 지우기가 주는 새 빈 플레이어는 세지 않는다(계정이 있는 열쇠로만 부를 수 있다). 한도에 닿으면 새 사람은 그 시간 창이 끝날 때까지 순위 · 저장 없이 둔다: 화면 쪽은 `retryAfter`까지 만들기를 다시 부르지 않고, 끝낸 판은 대기열에 두었다가 그 뒤에 낸다(`src/ui/rank.js` `holdUntil`). 누가 한도를 일부러 채우면 새 사람이 한 시간씩 막힌다 — 그때는 Vercel 방화벽의 요청 수 제한을 `/api/player`에 건다.
 
 ## DB
 `db/schema.sql`, 적용은 `node tools/db-migrate.mjs`(`.env.local`의 `DATABASE_URL_UNPOOLED`, 여러 번 돌려도 같다). 함수는 `DATABASE_URL`(풀)을 `@neondatabase/serverless`의 HTTP 질의로 쓴다. 주고받는 트랜잭션이 없어 한도 세기 · 기록 갈아 끼우기는 조건을 단 한 문장으로 한다.
 
-- `players(id, key_hash unique, a, n, created_at, rerolls_day, rerolls_date, submits_day, submits_date, test)` — `key_hash`는 옛 칸이다(열쇠 찾기는 `player_keys` — 아래 「기기 잇기 · 클라우드 저장」 DB)
+- `players(id, a, n, created_at, rerolls_day, rerolls_date, submits_day, submits_date, test)` — 열쇠는 `player_keys`에 있다(아래 「기기 잇기 · 클라우드 저장」 DB)
 - `daily_scores(player_id → players, date, ante, blind, won, score_total, battles, moves, ignite, build, submitted_at, primary key(player_id, date))` + 인덱스 `daily_scores_rank(date, ante desc, blind desc, won desc, score_total desc, submitted_at, player_id)`
 - `daily_logs(player_id → players, date, cmds text, primary key(player_id, date))` — 그날 가장 좋은 기록의 명령 줄만(JSON 글, 우승 뒤 명령은 잘라 낸 것). 모든 제출의 원문은 남기지 않는다.
 - 플레이어를 지우면 성적 · 명령 줄도 같이 지워진다(cascade).
@@ -122,13 +123,13 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 ### 저장 열쇠(localStorage)
 | 열쇠 | 값 | 언제 |
 |---|---|---|
-| `chainmate.player.v1` | `{ key, a, n }` — 플레이어 열쇠 원문과 이름 번호 | **처음 필요할 때** 만든다: 판을 처음 두어 저장을 올릴 때(CHM-71) · 오늘의 대국을 끝냈을 때 · 순위 화면을 열 때(`POST /api/player {}`). 코드를 넣으면 받은 새 열쇠로 갈아탄다. 켠 뒤 처음 쓸 때 한 번 `{ key }`로 물어 이름 · 남은 다시 짓기를 맞추고, 401 `unknown_key`면 새로 만든다 |
+| `chainmate.player.v1` | `{ key, a, n }` — 플레이어 열쇠 원문과 이름 번호 | **처음 필요할 때** 만든다: 판을 처음 두어 저장을 올릴 때(CHM-71) · 오늘의 대국을 끝냈을 때 · 순위 화면을 열 때(`POST /api/player {}`). 코드를 넣으면 받은 새 열쇠로 갈아탄다. 켠 뒤 처음 쓸 때 한 번 열쇠를 실어 물어 이름 · 남은 다시 짓기를 맞추고, 401 `unknown_key`면 새로 만든다. 만들기가 429 `player_limit`이면 서버가 말한 때까지 물러난다 |
 | `chainmate.rankq.v1` | `{ date, cmds }` — 못 보낸 판 하나 | 아래 대기열 |
 
 열쇠는 화면 · 콘솔 · 기록 보내기 어디에도 싣지 않는다(`rank.player()`는 이름과 남은 횟수만 준다 — `test/rank.test.js`). 저장을 지우면 새 사람이 된다.
 
 ### 제출
-오늘의 대국 판이 끝나는 명령(`app.cmd` — 국면이 `won` · `lost`로 바뀐 그 자리, 끝난 판의 저장을 지우기 전)에서 `app.submitDaily(run)`이 `run.cmds`를 복사해 `POST /api/daily/submit { key, date: run.daily, build, cmds }`로 낸다.
+오늘의 대국 판이 끝나는 명령(`app.cmd` — 국면이 `won` · `lost`로 바뀐 그 자리, 끝난 판의 저장을 지우기 전)에서 `app.submitDaily(run)`이 `run.cmds`를 복사해 `POST /api/daily/submit { date: run.daily, build, cmds }`(+ 열쇠 머리말)로 낸다.
 
 - 내지 않는 판: 수업 · 대본 대국 · scratch(`app.cmd`가 세지 않는다) · 옛 저장(`run.cmds` 없음) · 보통 판 · 이긴 뒤 끝없는 대국의 끝(우승에서 이미 냈다).
 
@@ -166,6 +167,7 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 | 첫 화면 | 열쇠가 생긴 뒤 처음 | 처음 안내 「이름은 설정에서 다시 지을 수 있다」(설정 칸을 가리킨다, 한 번) |
 
 - 닿은 곳 표기: 이겼으면 「8관 이김」, 아니면 「7관 마스터전」 꼴(`screens/rank.js` `reachText`). 점수는 서버가 준 점수 합.
+- 결과 카드의 이웃 줄도 같은 글을 쓴다(줄 세우기의 둘째 열쇠인 대국 자리가 보이게). 카드 폭 298에 등수 · 이름 · 닿은 곳 · 점수가 한 줄이라, 한 줄이라도 이름이 닿은 곳에 닿으면 그 카드의 줄 전체를 관만 적은 짧은 꼴(「6관」 · 「이김」)로, 그래도 닿으면 닿은 곳 칸을 뺀다(`cardCols`). 잰 폭: 두 자리 등수 · 일곱 자리 점수(63)일 때 이름 + 닿은 곳이 245 안이면 다 적힌다 — 한국어는 이름 열에 아홉(폭 101 이하) + 「8관 정식 대국」(78)이 들어가고, 영어는 「Hall 8 Practice」(94)가 넓어 가운데 폭 이름(104)에서 이미 짧은 꼴이 된다.
 - 날짜는 화면의 달력(`app.today()`)으로 오늘 · 어제를 정한다. 판의 날짜는 `run.daily`(자정을 넘겨 끝내도 그 날로 낸다 — 서버는 ±1일을 받는다).
 - 기록 보내기 사건: `rank_open` · `rank_submit` · `name_reroll`(`telemetry.md` — 이름 · 열쇠 없음).
 
@@ -241,14 +243,14 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 ### API
 | 길 | 받는 것 | 주는 것 |
 |---|---|---|
-| `POST /api/link/code` | `{ key }` | `{ code, expiresAt, ttl }`. 하루 한도 429 `code_limit` |
-| `POST /api/link/redeem` | `{ key, code }` | `{ key, a, n, rerolls, devices }` — `key`는 **이 기기의 새 열쇠**(코드를 낸 플레이어에 붙은 것). 404 `bad_code`(없는 · 쓴 코드) · 410 `expired` · 400 `self`(자기 코드) · 429 `redeem_limit` · 429 `locked` |
-| `POST /api/link/devices` | `{ key }` | `{ devices }` — 이 플레이어의 열쇠 수 |
-| `POST /api/link/unlink` | `{ key }` | `{ key, a, n, rerolls, devices: 1 }`. 혼자면 400 `not_linked` |
-| `GET /api/save` | `?key=` | `{ rev, updatedAt, blob }` 또는 `{ rev: 0 }` |
-| `PUT /api/save` | `{ key, baseRev, blob }` | `{ rev, updatedAt }`. 어긋나면 409 `{ error: 'conflict', rev, updatedAt, blob }`(저장이 없으면 `{ rev: 0 }`). 꼴이 틀리면 400 `bad_blob` · 크면 413 · 429 `save_limit` |
+| `POST /api/link/code` | `{}` | `{ code, expiresAt, ttl }`. 하루 한도 429 `code_limit` |
+| `POST /api/link/redeem` | `{ code }` | `{ key, a, n, rerolls, devices }` — `key`는 **이 기기의 새 열쇠**(코드를 낸 플레이어에 붙은 것). 404 `bad_code`(없는 · 쓴 코드) · 410 `expired` · 400 `self`(자기 코드) · 429 `redeem_limit` · 429 `locked` |
+| `POST /api/link/devices` | `{}` | `{ devices }` — 이 플레이어의 열쇠 수 |
+| `POST /api/link/unlink` | `{}` | `{ key, a, n, rerolls, devices: 1 }`. 혼자면 400 `not_linked` |
+| `GET /api/save` | — | `{ rev, updatedAt, blob }` 또는 `{ rev: 0 }` |
+| `PUT /api/save` | `{ baseRev, blob }` | `{ rev, updatedAt }`. 어긋나면 409 `{ error: 'conflict', rev, updatedAt, blob }`(저장이 없으면 `{ rev: 0 }`). 꼴이 틀리면 400 `bad_blob` · 크면 413 · 429 `save_limit` |
 
-- 모두 모르는 열쇠는 401 `unknown_key`, 꼴이 틀리면 400 `bad_request`. 출처 · JSON 규칙은 위와 같다(`route`가 PUT과 길마다 본문 한도를 받는다).
+- 모두 열쇠 머리말이 든다. 모르는 열쇠는 401 `unknown_key`, 열쇠가 없거나 꼴이 틀리면 400 `bad_request`. 출처 · JSON 규칙은 위와 같다(`route`가 PUT과 길마다 본문 한도를 받는다).
 - 넣기의 처리 차례: 꼴 → 전체 잠금 → 열쇠 → 열쇠 한도 → 코드(없음 · 지남 · 자기 것) → 코드 쓰기 → 합치기. 틀린 것으로 세는 것은 없는 코드 · 지난 코드뿐이다.
 - 덩이 검사(`blobOk`): 최상위 열쇠(`v` · `records` · `run` · `runAt` · `settings` · `setAt`) · 타입 · 깊이(40겹)만 본다. **내용은 믿지도 읽지도 않는다** — 순위와 무관하고 그 사람 자신의 저장이다.
 - 기존 길(`player` · `daily/*`)은 열쇠를 `player_keys`로 찾는다.
@@ -264,7 +266,7 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 | 저장 올리기 | 플레이어당 하루(UTC) 500번 | `LIMITS.saves` |
 
 - 한도는 표 `link_limits(kind, who, bucket)`에 센다(함수는 상태가 없다). 이틀 지난 줄은 코드를 받을 때 지운다.
-- **「코드는 5번 틀리면 무효」는 넣지 못했다**: 서버는 코드의 해시만 가지고 있어 틀린 숫자가 어느 코드를 겨눈 것인지 알 수 없다(틀린 숫자는 어떤 줄과도 맞지 않는다). 대신 전체 잠금이 그 몫을 한다 — 코드 하나가 사는 10분 동안 모두 합쳐 500번까지만 틀릴 수 있어 숫자 여덟 자리(1억)에서 살아 있는 코드 하나를 맞힐 확률은 20만분의 1 아래다. 열쇠 한도는 열쇠를 새로 만들면 피해지므로(플레이어 만들기에 한도가 없다) 막는 것은 전체 잠금이다.
+- **「코드는 5번 틀리면 무효」는 넣지 못했다**: 서버는 코드의 해시만 가지고 있어 틀린 숫자가 어느 코드를 겨눈 것인지 알 수 없다(틀린 숫자는 어떤 줄과도 맞지 않는다). 대신 전체 잠금이 그 몫을 한다 — 코드 하나가 사는 10분 동안 모두 합쳐 500번까지만 틀릴 수 있어 숫자 여덟 자리(1억)에서 살아 있는 코드 하나를 맞힐 확률은 20만분의 1 아래다. 열쇠 한도는 열쇠를 새로 만들면 피해지므로(플레이어 만들기는 모두 합쳐 한 시간 2000명까지다) 막는 것은 전체 잠금이다.
 
 ### DB
 - `player_keys(key_hash primary key, player_id → players, created_at, label)` + 인덱스 `player_keys_player(player_id)` — 플레이어 하나에 열쇠 여럿. 열쇠 찾기는 이 표로 한다.
@@ -273,12 +275,15 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 - `saves(player_id primary key → players, rev, blob text, updated_at)` — 저장 한 덩이.
 - 플레이어를 지우면 열쇠 · 코드 · 저장도 같이 지워진다(cascade). 한도 줄은 도구(`cleanupTests`)가 지운다.
 
-#### 옛 칸 `players.key_hash` — 두 벌로 둔다
-- 마이그레이션(`db/schema.sql`)은 **더하기만** 한다: 새 표를 만들고 `players.key_hash`를 `player_keys`로 옮긴다(`on conflict do nothing` — 여러 번 돌려도 같다). 옛 칸은 지우지 않는다.
-- 옛 배포(CHM-70 코드)는 `players.key_hash`만 읽고 쓴다. 새 표를 모르므로 마이그레이션 뒤에도 그대로 돈다(2026-10-08 프로덕션에서 확인 — 플레이어 만들기 · 다시 읽기 · 순위표 200).
-- 새 코드는 플레이어를 만들 때 **두 곳에 다 쓰고**(`createPlayer` 한 문장), 찾을 때 `player_keys`를 먼저 본다. 거기 없으면 옛 칸을 보고 그 자리에서 `player_keys`로 옮긴다(`getPlayer`) — 마이그레이션과 새 배포 사이에 옛 코드가 만든 플레이어가 이 길로 들어온다.
-- 코드를 넣어 붙은 열쇠 · 뗀 열쇠는 `player_keys`에만 있다. 뗀 플레이어의 옛 칸에는 쓰이지 않을 값을 채운다(옛 칸은 `not null unique`).
-- **배포 차례**: ① 마이그레이션(끝남) → ② 새 코드 배포 → ③ 옛 배포가 더 돌지 않는 것을 본 뒤, 다음 카드에서 `createPlayer`의 옛 칸 쓰기 · `getPlayer`의 옛 칸 읽기를 걷고 `players.key_hash`를 지운다. ②보다 ③을 먼저 하면 옛 코드가 깨진다. ② 뒤에 옛 배포로 되돌리면(rollback) 그 사이 이어 붙인 기기의 열쇠는 옛 코드가 모른다(401 → 새 플레이어).
+#### 옛 칸 `players.key_hash` — 걷는 차례
+CHM-70은 열쇠 해시를 `players.key_hash`(not null unique)에 두었고, CHM-71 · 72는 `player_keys`와 두 벌로 썼다. 지금 코드는 옛 칸을 읽지도 쓰지도 않는다(`store.js` · `db/schema.sql`에 없다). 실제 DB의 칸은 두 걸음으로 걷는다 — 옛 칸에 쓰는 배포가 도는 동안 칸을 지우면 플레이어 만들기가 깨진다.
+
+1. **걸음 A** `node tools/db-migrate.mjs`: 옛 칸이 있으면 `not null`만 푼다(`alter table players alter column key_hash drop not null` — unique는 null을 여럿 받는다). 옛 칸에 쓰는 배포와 안 쓰는 배포가 둘 다 돈다. 여러 번 돌려도 같다.
+2. 옛 칸을 쓰지 않는 코드를 배포한다. **걸음 A보다 먼저 배포하면** 새 코드의 플레이어 만들기가 `not null`에 걸려 500이 난다.
+3. **걸음 B** `node tools/db-migrate.mjs --drop-old-key`: `alter table players drop column if exists key_hash`. 2의 배포가 자리 잡은 뒤에만 돌린다. 그 뒤로는 옛 배포로 되돌릴 수 없다(옛 코드가 없는 칸에 쓴다).
+
+- 기본 마이그레이션은 옛 칸이 있는 DB · 푼 DB · 없는 DB 모두에서 돈다(`tools/db-migrate.mjs` `oldKeyColumn` — 칸이 있는지 먼저 묻는다. `test/leaderboard.test.js`가 가짜 DB로 세 경우를 본다). 끝 줄이 칸의 상태를 적는다: 「옛 칸 players.key_hash 그대로(null 허용)」 · 「지웠다」 · 「없음」.
+- 옛 칸에서 `player_keys`로 옮기던 문장은 뺐다. 나가기 · 떼기가 옛 칸에 채운 쓰이지 않을 값까지 열쇠로 옮겨져 기기 수가 늘 수 있었다.
 
 ### 화면
 `layout.md` 23절. 요약:
@@ -292,7 +297,7 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 ### 확인
 - `npm test` — `test/merge.test.js`(합치기 성질) · `test/link.test.js`(서버 로직 — 기억 저장소) · `test/cloud.test.js`(화면 쪽 — 가짜 서버, 기기 둘) · `test/layout.test.js`(설정 단추 · 화면 칸 · 숫자판 · 긴 영어 글).
 - `npm run smoke` — 「기기 잇기」 줄: 가짜 서버 하나 + 앱 둘로 코드 받기 → 숫자판으로 넣기 → 같은 이름 → 한쪽에서 판을 두고 → 다른 쪽을 다시 켜면 기록과 「이어 하기」의 판이 같은지 → 이 기기 떼기. 저장 올리기 크기도 찍는다.
-- `node tools/link-e2e.mjs http://localhost:3210`(`vercel dev --listen 3210` 뒤) — 진짜 DB의 SQL까지: 코드 · 넣기 · 성적 합침(낸 시각) · 저장 409 · 떼기 · 한도 · 잠금 · 지난 코드 · 옛 열쇠 옮겨 읽기. 만든 것은 `test` 표시 뒤 지운다(전체 잠금 줄은 손댄 만큼 되돌린다).
+- `node tools/link-e2e.mjs http://localhost:3210`(`vercel dev --listen 3210` 뒤) — 진짜 DB의 SQL까지: 코드 · 넣기 · 성적 합침(낸 시각) · 저장 409 · 떼기 · 한도 · 잠금 · 지난 코드. 만든 것은 `test` 표시 뒤 지운다(전체 잠금 줄은 손댄 만큼 되돌린다).
 - `node tools/shots-link.mjs` — 크로미움 · 웹킷으로 화면 상태를 찍는다(`docs/shots/link/`). `--live http://localhost:3210`은 진짜 서버로 크로미움 기기 ↔ 웹킷 기기를 화면으로 잇고, 웹킷에서 오늘의 대국을 끝낸 뒤 다시 켠 크로미움의 기록 · 순위의 내 줄이 같은지 본다(`live-*`).
 
 ## 계정 (CHM-72)
@@ -359,17 +364,18 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 
 - 표 `link_limits`에 센다: `login`(아이디 · 창) · `loginlock`(아이디 — 풀리는 때) · `loginkey` · `loginall` · `signup` · `signupall` · `pwreset`. 아이디 쪽 줄의 `who`는 **아이디 해시의 앞 60비트**다(아이디 원문은 한도 표에 두지 않는다).
 - 「이미 있는 아이디」는 열쇠 한도에 세지 않는다(겹치는 아이디 몇 번에 그날 가입이 막히지 않게). 전체 한도에는 센다.
-- 열쇠 한도는 열쇠를 새로 만들면 피해지므로(플레이어 만들기에 한도가 없다) 실제로 막는 것은 아이디 잠금과 전체 잠금이다.
+- 열쇠 한도는 열쇠를 새로 만들면 피해지므로(플레이어 만들기는 모두 합쳐 한 시간 2000명까지다) 실제로 막는 것은 아이디 잠금과 전체 잠금이다.
 
 ### 열쇠 머리말
 - 예전에는 `GET /api/save?key=` · `GET /api/daily/board?key=`처럼 열쇠가 주소(접근 로그)에 실렸다. 이제 화면 쪽은 **모든 길에서 머리말만** 쓴다(주소 · 본문에 열쇠 없음 — `test/rank.test.js` · `accountui.test.js`).
-- 서버(`api/_lib/http.js` `bearer`)는 머리말이 있으면 그것을 쓰고, 없으면 옛 꼴(본문 · 주소의 `key`)을 그대로 받는다 — 배포 사이에 열려 있는 탭이 있다. 옛 꼴 받기는 옛 배포가 더 돌지 않는 것을 본 뒤 걷는다(`players.key_hash` 걷기와 같은 때).
+- 서버(`api/_lib/http.js` `route`)도 **머리말만** 받는다. 본문 · 주소에 실려 온 `key`는 읽기 전에 버린다(GET의 `?key=`도). 머리말이 `Bearer <열쇠>` 꼴이 아니면 열쇠가 틀린 것으로 본다(400 `bad_request`).
+- 옛 꼴로 부르면 열쇠 없는 요청이 된다: 열쇠가 드는 길은 400 `bad_request`, 순위표는 구경(`me: null`), `POST /api/player { key }`는 **새 플레이어**를 만든다. CHM-72 배포보다 앞서 열어 둔 탭(옛 꼴로 부르는 화면)은 새로 고치기 전까지 순위 · 저장에 닿지 못한다. CHM-72부터의 화면은 머리말만 쓴다.
 - CORS 허용 머리말에 `Authorization`을 넣었다(같은 출처에서는 사전 요청이 없다. 앱 출처를 붙일 때 쓰인다).
-- `tools/daily-e2e.mjs` · `link-e2e.mjs`는 옛 꼴로 부른다(옛 길이 도는지의 확인을 겸한다). `account-e2e.mjs`는 머리말로 부른다.
+- 도구(`tools/daily-e2e.mjs` · `link-e2e.mjs` · `account-e2e.mjs`)도 머리말로 부른다. 옛 꼴이 거절되는지는 `account-e2e.mjs`와 `test/account.test.js`가 본다.
 
 ### DB
 - `accounts(id, username unique, pw_hash, player_id unique → players on delete cascade, created_at, pw_changed_at)`. 더하기만 한 마이그레이션이다(옛 배포는 이 표를 모른다 — 2026-10-08 적용 뒤 프로덕션 `/api/hello` · 플레이어 만들기 · 다시 읽기 · 순위표 200 확인).
-- 옛 칸 `players.key_hash` 두 벌 쓰기는 그대로다. 나가기는 지운 열쇠가 옛 칸에 남아 있으면 쓰이지 않을 값으로 바꾼다(`store.dropKey` — `getPlayer`가 옛 칸에서 되살리지 않게).
+- 나가기는 이 기기의 열쇠 줄을 `player_keys`에서 지운다(`store.dropKey`). 옛 칸 `players.key_hash`는 더 쓰지 않는다(위 「옛 칸 — 걷는 차례」).
 
 ### 화면
 `layout.md` 24절. 요약:
@@ -381,7 +387,7 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 - `privacy.html`: 정적 쪽(한국어 + 영어). 계정 화면과 첫 화면 알림 줄의 「처리방침」에서 새 탭으로 연다. **초안이다(법률 검토를 거치지 않았다)** — 사람이 검토하고 `TODO(사람)` 자리(문의 주소 · 운영자 · 시행일 · PostHog 보관 기간)를 채운다.
 
 ### 배포 차례
-① 마이그레이션(끝남 — 더하기만) → ② 새 코드 배포. 순서를 바꾸면 새 코드의 계정 길이 없는 표를 불러 500이 난다(다른 길은 그대로). ② 뒤에 옛 배포로 되돌리면 계정 길이 사라질 뿐이고(404 → 화면은 「닿지 못했다」), 그 사이 들어온 기기의 열쇠는 `player_keys`에 있어 옛 코드(CHM-71)도 읽는다. 옛 클라이언트(열려 있던 탭)는 옛 꼴로 계속 부른다.
+① 마이그레이션(끝남 — 더하기만) → ② 새 코드 배포. 순서를 바꾸면 새 코드의 계정 길이 없는 표를 불러 500이 난다(다른 길은 그대로). ② 뒤에 옛 배포로 되돌리면 계정 길이 사라질 뿐이고(404 → 화면은 「닿지 못했다」), 그 사이 들어온 기기의 열쇠는 `player_keys`에 있어 옛 코드(CHM-71)도 읽는다. 옛 칸을 걷은 뒤의 차례는 「옛 칸 `players.key_hash` — 걷는 차례」.
 
 ### 확인
 - `npm test` — `test/account.test.js`(서버 로직 — 기억 저장소) · `test/accountui.test.js`(화면 쪽 — 가짜 서버 + 가짜 DOM, 기기 둘) · `test/layout.test.js`(계정 화면 칸 · 영어).
