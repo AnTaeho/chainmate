@@ -31,6 +31,8 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
   class FakeCanvas {
     constructor() { this.width = 300; this.height = 150; this.style = {}; this.listeners = {}; this._ctx = null; }
     getContext() { return this._ctx || (this._ctx = makeCtx(this)); }
+    // PNG 만들기(하이라이트 그림, CHM-73): 가짜 덩이를 돌려주고 센다
+    toBlob(cb, type = 'image/png') { counter.blobs = (counter.blobs || 0) + 1; cb({ size: this.width * this.height, type }); }
     addEventListener(type, fn) { (this.listeners[type] ||= []).push(fn); }
     getBoundingClientRect() {
       const w = parseFloat(this.style.width) || 480, h = parseFloat(this.style.height) || 270;
