@@ -15,7 +15,7 @@ function legend(id, fields, def) {
 }
 
 legend('immortal', {
-  name: '불멸의 대국', year: 1851, story: '앤더슨이 룩 둘 · 비숍 · 퀸을 바치고 이겼다',
+  name: '불멸의 대국', year: 1851, story: '앤더슨이 룩 둘 · 비숍 · 퀸을 희생하고 이겼다',
   text: '끊겨도 사슬이 이어진다 · 끊길 때마다 배수 ×2', verb: '끊김',
   feat: '한 사슬에서 끊기지 않고 룩 둘을 먹는다', source: 'display',
   check: (h) => h.cuts === 0 && count(h.caps, 'R') >= 2,

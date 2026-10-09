@@ -67,7 +67,7 @@ export function antePath(ctx, ui, run, cx, y, time) {
     } else box(ctx, x, py, pw, pw, PAL.feltDk, PAL.dimDk);
   }
   const fm = MASTER_BY_ID[FINAL_MASTER];
-  ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${FACTION_BY_ID[factionFor(run, ANTES)].name}`, josa(`마스터 ${fm.name}`, '을/를') + ' 꺾으면 판을 이긴다') });
+  ui.region('select:path', x0, y - 2, lw + 10 + trackW, 16, { tip: () => tipLines(`${ANTES}관 · ${FACTION_BY_ID[factionFor(run, ANTES)].name}`, josa(`마스터 ${fm.name}`, '을/를') + ' 이기면 클리어') });
 }
 
 // 건너뛰기 패(CHM-58 ②, 시안 2 「아이콘 + 글」 — docs/shots/skip-tags/): 받는 것 글(한국어 열쇠 — 그릴 때 옮긴다)과 그림.

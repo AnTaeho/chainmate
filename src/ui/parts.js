@@ -328,7 +328,7 @@ export const soulRarity = (it) => (it.kind === 'soul' ? SOUL_BY_ID[it.id].rarity
 export const rarityLine = (rarity) => [RARITY_NAME[rarity], RARITY[rarity]];
 // 두루마리 「깨우기」(CHM-17): 금 간 구슬에서 금빛이 새어 나온다
 export const AWAKEN_TEXT = '금이 간 혼 하나가 깨어난다';
-export const AWAKEN_MORE = '혼 깃든 기물로 사슬을 다섯 번 이으면 금이 간다';
+export const AWAKEN_MORE = '혼이 붙은 기물로 사슬을 다섯 번 이으면 금이 간다';
 // 카드에 적는 효과 한 줄(말풍선은 덧붙임만)
 export function itemEffect(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).text;
@@ -336,7 +336,7 @@ export function itemEffect(it) {
   if (it.kind === 'engraving') return engravingInfo(it.id).text;
   if (it.kind === 'piece') return (it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼: ${L(SOUL_BY_ID[it.soul].text)}` : PIECE_MOVE[it.t] || '');
   if (it.kind === 'soul') return SOUL_BY_ID[it.id].text;
-  if (it.kind === 'evolve') return '체스 기물 하나가 특수 기물로 자란다';
+  if (it.kind === 'evolve') return '체스 기물 하나가 특수 기물로 진화한다';
   if (it.kind === 'awaken') return AWAKEN_TEXT;
   if (it.kind === 'tactic') return TACTIC_BY_ID[it.id].text;
   if (it.kind === 'gamble') return it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로';
@@ -365,8 +365,8 @@ export function effectHead(s) {
 // 어떻게 쓰나(카드 아래 흐린 한 줄)
 export function itemUse(it) {
   if (it.kind === 'engraving') return '기물에 새겨요';
-  if (it.kind === 'soul') return '기물에 깃든다';
-  if (it.kind === 'evolve') return '기물이 자란다';
+  if (it.kind === 'soul') return '기물에 붙어요';
+  if (it.kind === 'evolve') return '기물이 진화해요';
   if (it.kind === 'awaken') return '금이 간 혼에 써요';
   if (it.kind === 'tactic') return '대국 중에 써요';
   return '';
@@ -422,10 +422,10 @@ export function itemTip(it) {
   if (it.kind === 'chart') return chartTip(it.form);
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '기물 하나에 새겨요']); }
   if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '덱에 들어와요']);
-  if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 깃든다'], 150, [rarityLine(s.rarity)]); }
+  if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 붙어요'], 150, [rarityLine(s.rarity)]); }
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
   if (it.kind === 'awaken') return tipLines('깨우기', [AWAKEN_TEXT, AWAKEN_MORE]);
-  if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 자란다', '폰 › 궁수 · 화약병 · 나이트 › 낙타 · 광대 · 비숍 › 물수제비 · 까마귀 · 룩 › 포 · 유령 · 꺾쇠 · 퀸 › 아마존']);
+  if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 진화한다', '폰 › 궁수 · 화약병 · 나이트 › 낙타 · 광대 · 비숍 › 물수제비 · 까마귀 · 룩 › 포 · 유령 · 꺾쇠 · 퀸 › 아마존']);
   if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`전술 ${x.name}`, [x.text, '대국 중 떨구기 전에 쓴다']); }
   if (it.kind === 'fragment') { const l = LEGEND_BY_ID[it.legend]; return tipLines(l.name, ['조각 셋이면 전설', ...fragmentSteps(l, {}), `전설: ${l.text}`]); }
   return null;
@@ -635,8 +635,8 @@ function targetText(run, what, p, to) {
     const s = SOUL_BY_ID[p.soul];
     return { title: `${s.name}의 혼이 깨어난다`, body: `각성 · ${L(s.awake)}`, after: { ...p, awake: true } };
   }
-  const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
-  if (!p) return { title: what.kind === 'engraving' ? '각인할 기물을 고르세요' : what.kind === 'soul' ? '덱에서 깃들 기물을 고른다' : '덱에서 자랄 기물을 고른다', body: eff };
+  const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 진화한다';
+  if (!p) return { title: what.kind === 'engraving' ? '각인할 기물을 고르세요' : what.kind === 'soul' ? '혼을 붙일 기물을 고르세요' : '진화할 기물을 고르세요', body: eff };
   const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
   // 바꾸기: 옛 것 › 새 것(문양 둘과 이름 둘)
   const held = heldOf(what, p);
@@ -668,7 +668,7 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
   ui.region(`${idPrefix}:panel`, x, y, w, h, {});
   openBox('panel', x, y, w, h, P, { name: '새기기 미리 보기' });
   box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
-  const verb = lay.swap ? '바꾸기' : what.kind === 'engraving' ? '새긴다' : what.kind === 'soul' ? '깃든다' : what.kind === 'awaken' ? '깨운다' : '자란다';
+  const verb = lay.swap ? '바꾸기' : what.kind === 'engraving' ? '새기기' : what.kind === 'soul' ? '붙이기' : what.kind === 'awaken' ? '깨우기' : '진화';
   if (p && lay.swap) {
     // 옛 문양(가리키면 옛 효과) › 새 문양(금빛 테)
     const mark = (id, mx, my) => itemArt(ctx, { kind: what.kind, id }, mx, my, ui.time);

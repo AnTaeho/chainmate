@@ -18,7 +18,7 @@ export function forkLine(r, board) {
   }
   if (s && s.type === 'redrop') return `${sqName(s.sq)}에 다시 떨궜다면 이겼다`;
   if (b0.kind === 'drop') return `${josa(PIECE_NAME[b0.t], '을/를')} ${sqName(b0.sq)}에 떨궜다면 이겼다`;
-  if (b0.kind === 'discard') return `${josa(PIECE_NAME[b0.t], '을/를')} 바쳤다면 이겼다`;
+  if (b0.kind === 'discard') return `${josa(PIECE_NAME[b0.t], '을/를')} 희생했다면 이겼어요`;
   return '판을 다시 놓았다면 이겼다';
 }
 export const forkScores = (r) => `네 수 ${num(r.scores.mine)} · 이길 길 ${r.mate ? '메이트' : num(r.scores.best)} / 목표 ${num(r.scores.target)}`;

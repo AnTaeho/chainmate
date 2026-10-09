@@ -59,7 +59,7 @@ export const LESSONS = [
   { id: 'redraw', group: 'battle', title: '손과 희생', target: 90, moves: 1, discards: 1, hand: ['P', 'P', 'P', 'P'], bag: ['N'], board: { h8: 'Q' },
     steps: [
       { pick: 0, say: '폰은 떨굴 곳이 없다. 바칠 폰을 누른다' },
-      { discard: true, say: '희생하면 새로 뽑는다. 바친 폰은 이번 대국에 돌아오지 않는다' },
+      { discard: true, say: '희생하면 새로 뽑아요. 희생한 폰은 이번 대국에 돌아오지 않아요' },
       { pick: 3, say: '새로 뽑은 나이트를 누르세요. 이것으로 곧바로 메이트하면 탁월수예요' },
       { drop: 'g6' },
       { cap: 'h8', say: '퀸을 먹으세요' },

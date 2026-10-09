@@ -134,13 +134,13 @@ export class TitleScreen {
     ctx.save();
     ctx.translate(dx, dy);
     // 「×N」은 부제(그림자 한 줄 포함) 밑변 아래 두 도트까지만 튄다 — 흔들림만큼 옮긴 좌표로(CHM-48)
-    const sw = textWidth('잡고, 바뀌고, 또 잡는다', true);
+    const sw = textWidth('먹고, 변하고, 또 먹는다', true);
     drawSky(ctx, f.st, skyScale(), { x0: W / 2 - sw / 2 - dx, x1: W / 2 + sw / 2 - dx, y1: SUB_Y + 14 - dy });
     ctx.restore();
     drawVignette(ctx, 0, 0, W, H);
     if (f.flash > 0) { ctx.globalAlpha = f.flash; rect(ctx, 0, 0, W, H, '#fff8e8'); ctx.globalAlpha = 1; }
     this.drawLogo(ctx, f.calm);
-    text(ctx, '잡고, 바뀌고, 또 잡는다', W / 2, SUB_Y, PAL.ink, { align: 'center', bold: true, shadow: PAL.shadow });
+    text(ctx, '먹고, 변하고, 또 먹는다', W / 2, SUB_Y, PAL.ink, { align: 'center', bold: true, shadow: PAL.shadow });
     this.drawMenu(ctx, ui);
     this.drawNote(ctx);
   }

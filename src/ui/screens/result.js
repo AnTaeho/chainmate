@@ -113,7 +113,7 @@ export class ResultScreen {
     // 판 밖에 남은 것: 새 도감 칸 · 해금 · 다음 해금까지
     const notes = [];
     if (this.out.fresh) notes.push([`도감 ${this.out.fresh}칸을 새로 채웠어요`, PAL.ink]);
-    if (this.out.deeper) notes.push([`끝없는 대국 가장 깊은 곳 ${this.out.endless}관`, PAL.gold]);
+    if (this.out.deeper) notes.push([`끝없는 대국 최고 도달 ${this.out.endless}관`, PAL.gold]);
     for (const id of this.out.unlocked) notes.push([`오프닝 「${OPENINGS[id].name}」이 열렸어요`, PAL.gold]);
     if (this.out.dan) notes.push([`레이팅 ${rating(this.out.dan)}이 열렸어요`, PAL.gold]);
     if (!this.out.unlocked.length && this.next) notes.push([`다음 해금 ${OPENINGS[this.next.id].name}: ${this.next.text} ${this.next.have}/${this.next.need}`, PAL.dim]);
@@ -149,7 +149,7 @@ export class ResultScreen {
     const tY = y + titleY, fY = fragY == null ? null : y + fragY;
     openBox('panel', x, y, w, h, P, { name: '결과' });
     box(ctx, x, y, w, h, PAL.feltDk, this.won ? PAL.gold : PAL.red);
-    const title = run.endless && !this.won ? `끝없는 대국 ${run.ante}관` : this.won ? '여덟 관을 꺾었다' : '판이 끝났어요';
+    const title = run.endless && !this.won ? `끝없는 대국 ${run.ante}관` : this.won ? '8관 돌파!' : '판이 끝났어요';
     // 큰 제목은 두 배, 왼쪽 칸(판 왼쪽까지)에 안 들어가면(영어) 한 배 굵게 — 같은 줄 높이 가운데
     const leftW = MX - 4 - GAP_GROUP - (x + P);
     const big = measure(title, true) * 2 <= leftW;

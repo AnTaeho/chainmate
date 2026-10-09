@@ -169,7 +169,7 @@ export const packNameRoom = (w) => packCellLayout({}, w).tw;
 export const packRowNames = (packs, w) => packEnv(w) || packs.every((pk) => measure(packShortName(pk), true) <= packNameRoom(w));
 // 덱의 기물을 골라 쓰는 두루마리(처음 안내 「두루마리를 누르고 덱의 기물을 골라 쓴다」의 대상)
 const SCROLL_ON_PIECE = ['engraving', 'soul', 'evolve', 'awaken'];
-export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' || c.kind === 'awaken' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
+export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' || c.kind === 'awaken' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 붙어요'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
 // ── 찜(CHM-58 F, docs/design-notes/layout.md 19절): 진열 카드 위 테에서 늘어진 책갈피(값 왼쪽). 누르면 찜, 다시 누르면 풀린다.
 // 리본(위 테 금빛 띠) = 이 상점에서 찜했거나 지난 상점에서 넘어온 카드, 채운 책갈피 = 다음 상점까지 맡아 둔 카드(run.hold).
@@ -200,7 +200,7 @@ function holdHit(ui, m) {
 // 찜한 카드 · 넘어온 카드를 가리키면 말풍선 첫 줄에 그 사실(금빛 한 줄)
 export function holdLine(run, it, i) {
   if (it.sold) return null;
-  if (isHeld(run, i)) return '찜했다 · 다음 상점까지 남는다';
+  if (isHeld(run, i)) return '찜함 · 다음 상점까지 남아요';
   if (it.kept) return '지난 상점에서 찜한 카드';
   return null;
 }
@@ -335,7 +335,7 @@ export class ShopScreen {
         const held = isHeld(run, i), mark = holdMarkAt(it, x, y, CARD_W), hid = `shop:hold:${i}`;
         if (!it.sold) {
           const g = holdHit(ui, mark);
-          ui.region(hid, g.x, g.y, g.w, g.h, { onClick: () => this.act({ type: 'hold', slot: i }, 'pick'), tip: () => tipLines(held ? '찜했다' : '찜', held ? '다음 상점 진열에 그대로 남는다' : it.kept ? '지난 상점에서 찜한 카드. 다시 찜하면 다음 상점에도 남는다' : '다음 상점까지 맡아 둔다', 130) });
+          ui.region(hid, g.x, g.y, g.w, g.h, { onClick: () => this.act({ type: 'hold', slot: i }, 'pick'), tip: () => tipLines(held ? '찜함' : '찜', held ? '다음 상점에도 그대로 남아요' : it.kept ? '지난 상점에서 찜한 카드예요. 다시 찜하면 다음 상점에도 남아요' : '다음 상점까지 남겨 둬요', 130) });
         }
         // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
         const hov = (ui.isHover(id) && ok) || ui.isHover(hid);
@@ -479,7 +479,7 @@ export class ShopScreen {
       // 고르면 미리 보기, 확인 단추로 쓴다
       const c = this.run.consumables[this.target.index];
       if (c && !targetOk(c, p)) return;
-      if (c && c.kind === 'evolve' && !evolveTo(this.run.seed, p)) { this.app.toast('이 기물은 자랄 곳이 없다', PAL.dim); return; }
+      if (c && c.kind === 'evolve' && !evolveTo(this.run.seed, p)) { this.app.toast('이 기물은 진화할 수 없어요', PAL.dim); return; }
       this.target = { ...this.target, pieceId: this.target.pieceId === p.id ? null : p.id };
       return;
     }

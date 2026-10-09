@@ -640,7 +640,7 @@ export class BattleScreen {
         // 탁월수 !!: 메이트 연출에 겹쳐 돈다(걸음 길이 0 — 한 수 연출 시간을 늘리지 않는다). 칸의 「!!」 · 빛살은 fx, 배수 칸 「×N」은 v.brill
         case 'brilliant': { const sq = mateSq; add(0, { begin: () => this.brilliantFx(sq, e) }); break; }
         case 'refill': add(0.35, {
-          begin: () => { this.word('적이 다시 찬다', PAL.gold, 1.1, 1); this.snd('refill'); },
+          begin: () => { this.word('적이 다시 나타났다!', PAL.gold, 1.1, 1); this.snd('refill'); },
           done: () => { v.board = clone(post); if (v.chain) { v.chain.path = [e.sq]; v.chain.bends = []; } },
         }); break;
         case 'redropReady': add(0.15, {
@@ -676,7 +676,7 @@ export class BattleScreen {
         case 'clockLost': add(0.9, {
           begin: () => {
             this.app.clockFx = { idx: e.clock, t: 0 };
-            this.word(e.clock > 0 ? '시계 −1' : '시간이 다했다', PAL.red, 1.3, 2); this.snd('glass'); this.shake(2, 0.2);
+            this.word(e.clock > 0 ? '시계 −1' : '시간 종료', PAL.red, 1.3, 2); this.snd('glass'); this.shake(2, 0.2);
           },
         }); this.runEvents.push(e); break;
         // 혼에 금이 간다(CHM-17): 짧은 금 소리 · 혼 빛깔 글. 처음이면 킹이 한 줄 안내
@@ -698,7 +698,7 @@ export class BattleScreen {
           },
         }); break;
         case 'regrip': add(0.45, {
-          begin: () => { this.word('손을 새로 쥔다', PAL.gold, 1.2, 1); this.snd('discard'); },
+          begin: () => { this.word('손 새로 뽑기', PAL.gold, 1.2, 1); this.snd('discard'); },
           done: () => { const b = this.bRef; v.hand = clone(b.hand); v.bag = b.bag.length; v.next = clone(nextDraws(b)); },
         }); break;
         // 희생: 바친 카드가 흩어지고(걸음 처음) 새 카드가 아래에서 올라온다(걸음 끝, 0.18초 — 손 그리기가 app.time으로)
@@ -713,7 +713,7 @@ export class BattleScreen {
           },
         }); break;
         case 'win': if (this.src.kind === 'lesson') break; add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); } }); break;
-        case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '수가 다했다', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
+        case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '떨굴 곳이 없다' : '남은 수 없음', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
         // 점화(CHM-67): 걸음 없이 적어 두고, 한 수 연출이 끝난 뒤(afterSeq) 막간을 연다
         case 'ignite': this.ignPending = e; break;
         case 'fragment': add(0.05, { begin: () => { this.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); this.snd('fragment'); { const to = shardTo(); this.app.flyShard(BX + 112, BY + 112, to.x, to.y); } } }); this.runEvents.push(e); break;
@@ -1907,8 +1907,8 @@ export class BattleScreen {
   }
   offeredTip() {
     const list = this.view.offered || [];
-    const body = ['손의 기물을 바치고 새로 뽑을 수 있는 횟수'];
-    if (list.length) body.push(`바친 기물: ${list.map((t) => PIECE_NAME[t]).join(' · ')}`);
+    const body = ['손의 기물을 희생하고 새로 뽑을 수 있는 횟수'];
+    if (list.length) body.push(`희생한 기물: ${list.map((t) => PIECE_NAME[t]).join(' · ')}`);
     return tipLines('희생', body);
   }
   // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠 → 손 이름표 줄(묘수 · 희생) → 손. 묶음 사이 GAP_GROUP
