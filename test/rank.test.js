@@ -192,6 +192,39 @@ test('망 실패: 한 건을 대기열에 남기고, 다음에 켤 때 한 번 �
   assert.equal(old.api.named('/api/daily/submit').length, 0);
 });
 
+test('플레이어 만들기 한도(429 player_limit): 조용히 물러난다 — 서버가 말한 때까지 다시 만들지 않고, 판은 대기열에 · 순위표는 구경으로, 그 뒤에 만들어 낸다', async () => {
+  const { rank, api, storage, clock } = fakeRank();
+  const hour = new Date(clock.t).toISOString().slice(0, 13);
+  api.store.limits.set(`playerall:0:${hour}`, LIMITS.playersAll);
+  const made = () => api.named('/api/player').length;
+  assert.equal(await rank.ensurePlayer(), null);
+  assert.equal(made(), 1);
+  assert.equal(storage.getItem(PLAYER_KEY), null, '열쇠를 지어내지 않는다');
+  assert.equal(rank.player(), null);
+  // 물러난 동안: 만들기를 다시 부르지 않는다. 낸 판은 대기열에 남고 순위표는 열쇠 없이 본다
+  const st = await rank.submit(DATE, botDaily().cmds);
+  assert.equal(st.phase, 'unreached');
+  assert.equal(stored(storage, QUEUE_KEY).date, DATE);
+  rank.board(DATE, 1);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(rank.board(DATE, 1).phase, 'ok');
+  assert.equal(rank.board(DATE, 1).data.me, null);
+  assert.deepEqual(await rank.reroll(), { ok: false, why: 'unreached' });
+  assert.deepEqual(await rank.linkCode(), { ok: false, why: 'unreached' });
+  assert.equal((await rank.savePut(0, { v: 1, records: {}, run: null })).status, 0);
+  clock.t += 30 * 60000;
+  assert.equal(await rank.ensurePlayer(), null);
+  assert.equal(made(), 1, '서버가 말한 때(한 시간 창의 끝)까지 다시 부르지 않는다');
+  assert.equal(api.named('/api/daily/submit').length, 0);
+  // 창이 지나면 다음에 필요할 때 만들고, 못 보낸 판도 나간다
+  clock.t += 31 * 60000;
+  const sent = await rank.retry();
+  assert.equal(sent.phase, 'ok');
+  assert.equal(made(), 2);
+  assert.match(stored(storage).key, /^[0-9a-f]{64}$/);
+  assert.equal(storage.getItem(QUEUE_KEY), null);
+});
+
 test('거절(422 · 429)은 조용히 버린다 — 대기열 없음, 앞서 낸 기록이 있으면 그 등수', async () => {
   const { rank, api, storage } = fakeRank();
   const { cmds } = botDaily();

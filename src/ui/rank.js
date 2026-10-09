@@ -30,6 +30,7 @@ export function createRank({
   let me = undefined;          // { key, a, n } | null(없음) | undefined(아직 저장을 안 읽음)
   let rerolls = null;          // 오늘 남은 다시 짓기(서버가 알려 준 뒤에만)
   let playerP = null, checked = false;
+  let holdUntil = 0;           // 서버가 플레이어 만들기를 미뤘다(429) — 이때까지 다시 만들려 하지 않는다
   let stale = false;
   const subs = new Map();      // date → status
   const pages = new Map();     // `${date}:${page}` → { phase, data, at, p }
@@ -72,10 +73,13 @@ export function createRank({
     if (playerP) return playerP;
     const had = load();
     if (had && checked) return Promise.resolve(had);
+    if (now() < holdUntil) return Promise.resolve(null);
     playerP = (async () => {
       let r = had ? await call('POST', '/api/player', {}, null, had.key) : null;
       if (r && r.status === 0) return had;
       if (!r || (r.status === 401 && r.body.error === 'unknown_key')) r = await call('POST', '/api/player', {});
+      // 만들기 한도(429 player_limit): 조용히 물러났다가 서버가 말한 때 뒤에 다시 만든다 — 그동안 순위 없이 돈다
+      if (r.status === 429) { holdUntil = now() + Math.min(3600, Math.max(1, Number(r.body.retryAfter) || 60)) * 1000; return null; }
       if (r.status !== 200) return had && r.status !== 401 ? had : load();
       checked = true;
       const changed = !had || had.a !== r.body.a || had.n !== r.body.n || had.key !== r.body.key;

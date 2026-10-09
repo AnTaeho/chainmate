@@ -44,7 +44,7 @@ const DAY = '2001-01-01'; // 성적 합침을 볼 날짜(아무도 두지 않은
 const putScore = (id, ante, at) => sql.query(`insert into daily_scores (player_id, date, ante, blind, won, score_total, battles, moves, ignite, build, submitted_at)
   values ($1::bigint, $2::date, $3, 0, false, $4, 1, 1, null, 'e2e', $5::timestamptz)`, [id, DAY, ante, ante * 100, at]);
 // 전체 한도 줄(who 0): 손대기 전 값을 적어 두었다가 되돌린다
-const allBuckets = () => { const k = Math.floor(Date.now() / LIMITS.loginAllSpan); const h = (d) => new Date(Date.now() + d).toISOString().slice(0, 13); return [['loginall', `login:${k}`], ['loginall', `login:${k + 1}`], ['signupall', h(0)], ['signupall', h(3600000)]]; };
+const allBuckets = () => { const k = Math.floor(Date.now() / LIMITS.loginAllSpan); const h = (d) => new Date(Date.now() + d).toISOString().slice(0, 13); return [['loginall', `login:${k}`], ['loginall', `login:${k + 1}`], ['signupall', h(0)], ['signupall', h(3600000)], ['playerall', h(0)], ['playerall', h(3600000)]]; };
 const before = new Map();
 async function noteAll() { for (const [kind, b] of allBuckets()) { const k = `${kind}|${b}`; if (!before.has(k)) { const r = await one('select n from link_limits where kind = $1 and who = 0 and bucket = $2', [kind, b]); before.set(k, r ? r.n : null); } } }
 async function restoreAll() {
@@ -63,7 +63,7 @@ async function cleanup() {
   const stray = await one("select count(*)::int as n from accounts where username like 'e2e\\_%'");
   const lim = await one("select count(*)::int as n from link_limits where kind in ('login', 'loginlock') and who = any($1::bigint[])", [ids]);
   console.log(`${cleanupLine(r)} · e2e 계정 ${stray.n} · e2e 아이디 한도 줄 ${lim.n}`);
-  const full = await one("select count(*)::int as n from link_limits where who = 0 and ((kind = 'loginall' and n >= $1) or (kind = 'signupall' and n >= $2))", [LIMITS.loginAllFails, LIMITS.signupAll]);
+  const full = await one("select count(*)::int as n from link_limits where who = 0 and ((kind = 'loginall' and n >= $1) or (kind = 'signupall' and n >= $2) or (kind = 'playerall' and n >= $3))", [LIMITS.loginAllFails, LIMITS.signupAll, LIMITS.playersAll]);
   if (full.n) console.log(`  한도까지 찬 전체 줄 ${full.n}`);
   if (Object.values(r.left).some(Boolean) || stray.n || lim.n || full.n) throw new Error('시험 자료가 남았다');
 }
@@ -157,6 +157,14 @@ try {
   for (const [kind, bk] of allBuckets().filter(([k]) => k === 'signupall')) await sql.query('insert into link_limits (kind, who, bucket, n) values ($1, 0, $2, $3) on conflict (kind, who, bucket) do update set n = excluded.n', [kind, bk, LIMITS.signupAll]);
   check(`가입은 모두 합쳐 한 시간 ${LIMITS.signupAll}번(429 signup_limit)`, E(await call('POST', '/api/account/signup', { username: user(), password: PW }, e.key), 429, 'signup_limit'));
   await restoreAll();
+
+  // ── 플레이어 만들기 전체 한도: 센 수를 한도까지 올려 두고(이번 · 다음 시간 창) 본 뒤 곧바로 되돌린다
+  for (const [kind, bk] of allBuckets().filter(([k]) => k === 'playerall')) await sql.query('insert into link_limits (kind, who, bucket, n) values ($1, 0, $2, $3) on conflict (kind, who, bucket) do update set n = excluded.n', [kind, bk, LIMITS.playersAll]);
+  const pm = await call('POST', '/api/player', {});
+  check(`플레이어 만들기는 모두 합쳐 한 시간 ${LIMITS.playersAll}명(429 player_limit + retryAfter)`, E(pm, 429, 'player_limit') && pm.body.retryAfter > 0 && pm.body.retryAfter <= 3600 && !pm.body.key);
+  check('한도 중에도 있는 열쇠로 읽기는 된다', (await call('POST', '/api/player', {}, a.key)).status === 200);
+  await restoreAll();
+  await noteAll();
 
   // ── 비번 바꾸기
   check('틀린 지금 비번 401', E(await call('POST', '/api/account/password', { current: WRONG, next: PW2 }, kb), 401, 'bad_login'));

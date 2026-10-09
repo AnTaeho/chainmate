@@ -53,6 +53,26 @@ test('플레이어: 새로 만들면 열쇠 · 이름 번호를 주고 DB에는 
   }
 });
 
+test('플레이어 만들기 한도: 모두 합쳐 한 시간 2000명 — 넘으면 429 player_limit + retryAfter, 있는 열쇠로 읽기 · 다시 짓기는 그대로, 다음 시간에 다시 된다', async () => {
+  const { svc, store, clock } = setup();
+  assert.equal(LIMITS.playersAll, 2000);
+  const first = (await svc.player({})).body;
+  const hour = new Date(clock.ms).toISOString().slice(0, 13);
+  assert.equal(store.limits.get(`playerall:0:${hour}`), 1, '만든 수를 전체 줄(who 0)에 센다');
+  await svc.player({ key: first.key });
+  assert.equal(store.limits.get(`playerall:0:${hour}`), 1, '읽기는 세지 않는다');
+  store.limits.set(`playerall:0:${hour}`, LIMITS.playersAll - 1);
+  assert.equal((await svc.player({})).status, 200, '2000번째까지 된다');
+  clock.ms += 20 * 60000;
+  const over = await svc.player({});
+  assert.deepEqual(over, { status: 429, body: { error: 'player_limit', retryAfter: 40 * 60 } });
+  assert.equal(store.players.length, 2, '넘은 요청은 플레이어를 만들지 않는다');
+  assert.equal((await svc.player({ key: first.key })).status, 200);
+  assert.equal((await svc.player({ key: first.key, reroll: true })).status, 200);
+  clock.ms += 40 * 60000;
+  assert.equal((await svc.player({})).status, 200, '다음 시간 창');
+});
+
 test('다시 짓기: 이름이 바뀌고, 하루 20번 뒤에는 429, 날이 바뀌면 다시 된다', async () => {
   const { svc, clock } = setup();
   const p = (await svc.player({})).body;

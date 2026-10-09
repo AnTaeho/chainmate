@@ -12,6 +12,7 @@ export const LIMITS = {
   rerolls: 20,             // 플레이어당 하루 다시 짓기
   page: 10,                // 순위표 한 쪽
   around: 2,               // 내 위아래 줄
+  playersAll: 2000,        // 모두 합쳐 한 시간 플레이어 만들기(IP를 남기지 않아 사람마다 세지 않는다)
   dateSpan: 1,             // 제출 날짜: 서버 날짜(UTC) ± 며칠(시간대가 달라도 그 사람의 「오늘」이 들어온다)
   // 기기 잇기 · 클라우드 저장(CHM-71)
   codeTtl: 10 * 60 * 1000, // 옮기기 코드가 사는 시간
@@ -96,13 +97,14 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
   return {
     hello: async () => ok({ build }),
 
-    // { key?, reroll? } → { key, a, n, rerolls(오늘 남은 다시 짓기) }. key가 없으면 새 플레이어
+    // { key?, reroll? } → { key, a, n, rerolls(오늘 남은 다시 짓기) }. key가 없으면 새 플레이어(모두 합쳐 한 시간 한도 — 429 player_limit)
     async player(body) {
       const { key, reroll } = body || {};
       if (key != null && !isKey(key)) return err(400, 'bad_request');
       if (reroll != null && typeof reroll !== 'boolean') return err(400, 'bad_request');
       if (key == null) {
         if (reroll) return err(400, 'bad_request');
+        if ((await store.bump('playerall', 0, hourOf(), LIMITS.playersAll)) == null) return err(429, 'player_limit', { retryAfter: left(3600000) });
         const fresh = newKey(), nm = randomName(rand);
         const p = await store.createPlayer(hashKey(fresh), nm.a, nm.n);
         return ok({ key: fresh, a: p.a, n: p.n, rerolls: LIMITS.rerolls });
