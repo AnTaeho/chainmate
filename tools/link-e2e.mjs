@@ -1,6 +1,6 @@
 // 기기 잇기 · 클라우드 저장 끝에서 끝까지 확인(CHM-71): 로컬 vercel dev(또는 배포)에 실제 요청을 보내 진짜 DB의 SQL까지 본다.
 //   node tools/link-e2e.mjs <주소> [--keep]      예: vercel dev --listen 3210 뒤 node tools/link-e2e.mjs http://localhost:3210
-// 플레이어 둘 → 코드 → 넣기 → 같은 플레이어(성적 합침) → 저장 올리기 · 당기기 · 409 → 떼기 → 한도 · 잠금 · 지난 코드 · 옛 열쇠 옮겨 읽기.
+// 플레이어 둘 → 코드 → 넣기 → 같은 플레이어(성적 합침) → 저장 올리기 · 당기기 · 409 → 떼기 → 한도 · 잠금 · 지난 코드.
 // 만든 플레이어는 곧바로 test 표시를 하고(.env.local의 직접 연결) 끝나면(실패해도) 지운다. 전체 잠금 줄은 손댄 만큼 되돌린다. 열쇠 · 코드는 찍지 않는다.
 import { createDailyRun } from '../src/sim/daily.js';
 import { summarize } from '../api/_lib/verify.js';
@@ -166,14 +166,6 @@ try {
   const rg = await call('POST', '/api/link/redeem', { key: g.key, code: open });
   check('잠금이 풀리면 같은 코드로 이어진다', rg.status === 200 && rg.body.devices === 2, `${rg.status}`);
 
-  // ── 옛 열쇠: 옛 배포가 만든 플레이어(players.key_hash에만 있다)도 읽고 그 자리에서 열쇠 표로 옮긴다
-  const oldKey = [...crypto.getRandomValues(new Uint8Array(32))].map((x) => x.toString(16).padStart(2, '0')).join('');
-  await sql.query('insert into players (key_hash, a, n, test) values ($1, 3, 5, true)', [hashKey(oldKey)]);
-  const po = await call('POST', '/api/player', { key: oldKey });
-  check('옛 칸에만 있는 열쇠도 읽는다', po.status === 200 && po.body.a === 3 && po.body.n === 5);
-  check('읽는 순간 열쇠 표로 옮겨졌다', (await idOf(oldKey)) !== null && (await call('POST', '/api/link/devices', { key: oldKey })).body.devices === 1);
-  const ro = await call('POST', '/api/link/redeem', { key: oldKey, code: await getCode(g.key === rg.body.key ? g.key : rg.body.key) });
-  check('옛 열쇠의 기기도 이어진다', ro.status === 200 && ro.body.devices === 3, `${ro.status} 기기 ${ro.body && ro.body.devices}대`);
   console.log(`요청 ${calls}번`);
 } catch (e) {
   failed++;

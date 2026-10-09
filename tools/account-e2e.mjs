@@ -174,7 +174,7 @@ try {
   check('새 빈 플레이어: 저장 없음 · 계정 없음 · 옛 열쇠 401', nid !== aid && (await call('GET', '/api/save', null, out.body.key)).body.rev === 0 && (await call('GET', '/api/account', null, out.body.key)).body.username === null && E(await call('GET', '/api/account', null, kb), 401, 'unknown_key'));
   check('계정 쪽은 그대로: 기기 1 · 저장 · 성적', (await call('GET', '/api/account', null, a.key)).body.devices === 1 && (await call('GET', '/api/save', null, a.key)).body.blob.records.runs === 7 && (await one('select count(*)::int as n from daily_scores where player_id = $1::bigint', [aid])).n === 1);
   check('계정이 없는 기기는 나갈 것이 없다(400 no_account)', E(await call('POST', '/api/account/logout', {}, out.body.key), 400, 'no_account'));
-  // 마지막 기기도 나간 뒤(열쇠 0) 다시 들어온다 — 옛 칸(players.key_hash)으로 되살아나지 않는다
+  // 마지막 기기도 나간 뒤(열쇠 0) 다시 들어온다
   const out2 = await call('POST', '/api/account/logout', {}, a.key);
   await mark(out2.body.key);
   check('마지막 기기가 나가도 계정은 남는다 · 옛 열쇠는 죽는다', out2.status === 200 && (await one('select count(*)::int as n from player_keys where player_id = $1::bigint', [aid])).n === 0 && E(await call('POST', '/api/player', {}, a.key), 401, 'unknown_key') && E(await call('POST', '/api/player', { key: a.key }), 401, 'unknown_key'));

@@ -1,7 +1,8 @@
 // 순위 DB 스키마 적용(CHM-70): node tools/db-migrate.mjs — db/schema.sql을 .env.local의 DATABASE_URL_UNPOOLED(풀 없는 직접 연결)로 넣는다.
-// 스키마는 if not exists · on conflict do nothing만 써서 여러 번 돌려도 같다. 비밀 값은 찍지 않는다.
+// 스키마는 if not exists만 써서 여러 번 돌려도 같다. 비밀 값은 찍지 않는다.
+//   node tools/db-migrate.mjs --drop-old-key   옛 칸 players.key_hash를 지운다(옛 칸을 쓰지 않는 코드가 프로덕션에 올라간 뒤에만)
 import fs from 'node:fs';
-import { neon } from '@neondatabase/serverless';
+import { createRequire } from 'node:module';
 
 const ROOT = new URL('..', import.meta.url);
 // .env.local에서 값 하나(없으면 환경 변수). 도구들이 함께 쓴다
@@ -15,7 +16,8 @@ export function envLocal(name) {
 export function direct() {
   const url = envLocal('DATABASE_URL_UNPOOLED');
   if (!url) throw new Error('DATABASE_URL_UNPOOLED가 없다(.env.local — vercel env pull .env.local)');
-  return neon(url);
+  // 드라이버는 여기서 싣는다 — 시험은 npm 패키지 없이 이 파일을 읽는다
+  return createRequire(import.meta.url)('@neondatabase/serverless').neon(url);
 }
 
 // 시험 플레이어(players.test)와 딸린 것을 모두 지우고 남은 수를 센다(tools/daily-e2e.mjs · link-e2e.mjs · shots-link.mjs가 함께 쓴다).
@@ -39,6 +41,17 @@ export async function cleanupTests(sql) {
 }
 export const cleanupLine = (r) => `정리: 시험 플레이어 ${r.gone}명 지움 · 남은 시험 자료 ${Object.entries(r.left).map(([k, v]) => `${k} ${v}`).join(' · ')} · DB 전체 ${Object.entries(r.all).map(([k, v]) => `${k} ${v}`).join(' · ')}`;
 
+// 옛 칸 players.key_hash(CHM-71까지 열쇠 해시를 두던 칸) 걷기. sql: (text, params) => rows. 옛 칸이 있는 DB와 없는 DB 둘 다에서 돈다.
+// 기본은 not null만 푼다(옛 칸에 쓰는 배포와 안 쓰는 배포가 둘 다 돈다). drop이면 칸을 지운다. 돌려주는 것: 'gone'(없다) | 'loose'(null 허용) | 'dropped'
+export async function oldKeyColumn(sql, { drop = false } = {}) {
+  const col = (await sql("select is_nullable from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'key_hash'", []))[0];
+  if (!col) return 'gone';
+  if (drop) { await sql('alter table players drop column if exists key_hash', []); return 'dropped'; }
+  if (col.is_nullable !== 'YES') await sql('alter table players alter column key_hash drop not null', []);
+  return 'loose';
+}
+export const OLD_KEY_LINE = { gone: '없음', loose: '그대로(null 허용)', dropped: '지웠다' };
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const sql = direct();
   const text = fs.readFileSync(new URL('db/schema.sql', ROOT), 'utf8').replace(/--.*$/gm, '');
@@ -46,11 +59,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const s of stmts) await sql.query(s);
   const tables = await sql.query("select table_name from information_schema.tables where table_schema = 'public' order by 1");
   console.log(`스키마 적용: 문장 ${stmts.length} · 표 ${tables.map((t) => t.table_name).join(' · ')}`);
-  // 열쇠 옮기기(CHM-71): players.key_hash가 모두 player_keys에 있나. 옛 칸은 지금 배포가 읽는 동안 그대로 둔다
+  const old = await oldKeyColumn((t, p) => sql.query(t, p), { drop: process.argv.includes('--drop-old-key') });
   const [k] = await sql.query(`select (select count(*)::int from players) as players, (select count(*)::int from player_keys) as keys,
-    (select count(*)::int from players p where not exists (select 1 from player_keys k where k.key_hash = p.key_hash and k.player_id = p.id)) as missing,
-    (select count(*)::int from information_schema.columns where table_name = 'players' and column_name = 'key_hash') as old_column`);
+    (select count(*)::int from players p where not exists (select 1 from player_keys k where k.player_id = p.id)) as bare`);
   const [ac] = await sql.query('select count(*)::int as n from accounts');
   console.log(`계정: ${ac.n}`);
-  console.log(`열쇠 옮김: 플레이어 ${k.players} · 열쇠 ${k.keys} · 열쇠 표에 없는 옛 열쇠 ${k.missing} · 옛 칸 players.key_hash ${k.old_column ? '그대로' : '없음'}`);
+  console.log(`열쇠: 플레이어 ${k.players} · 열쇠 ${k.keys} · 열쇠가 없는 플레이어 ${k.bare} · 옛 칸 players.key_hash ${OLD_KEY_LINE[old]}`);
 }

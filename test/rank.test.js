@@ -50,7 +50,7 @@ test('열쇠: 처음 필요할 때 만들어 저장에 두고 다시 쓴다 — 
   assert.deepEqual([p.a, p.n, p.name, p.rerolls], [s.a, s.n, nameText(s.a, s.n, 'ko'), LIMITS.rerolls]);
   assert.ok(!('key' in p), '화면이 읽는 것에 열쇠는 없다');
   assert.equal(api.store.players.length, 1);
-  assert.equal(api.store.players[0].keyHash, hashKey(s.key));
+  assert.equal(api.store.keys.get(hashKey(s.key)), api.store.players[0].id);
   assert.ok(!JSON.stringify(api.store.players).includes(s.key));
   // 또 불러도 새로 만들지 않는다
   await rank.ensurePlayer(); await rank.ensurePlayer();
@@ -74,7 +74,7 @@ test('열쇠: 서버가 모르는 열쇠(401)면 새로 만든다 · 깨진 저�
   const s = stored(storage);
   assert.notEqual(s.key, 'f'.repeat(64));
   assert.equal(api.store.players.length, 1);
-  assert.equal(api.store.players[0].keyHash, hashKey(s.key));
+  assert.equal(api.store.keys.get(hashKey(s.key)), api.store.players[0].id);
   const broken = fakeStorage();
   broken.setItem(PLAYER_KEY, '{nope');
   const b = fakeRank({}, { storage: broken });
@@ -142,7 +142,7 @@ test('제출: 저장의 열쇠를 서버가 모르면(401) 새로 만들어 한 
   const st = await rank.submit(DATE, botDaily().cmds);
   assert.equal(st.phase, 'ok');
   assert.equal(api.store.players.length, 1);
-  assert.equal(api.store.players[0].keyHash, hashKey(stored(storage).key));
+  assert.equal(api.store.keys.get(hashKey(stored(storage).key)), api.store.players[0].id);
 });
 
 test('새 배포(409 stale): 다시 보내지 않고 대기열에도 남기지 않는다 — 이 세션에서는 더 내지 않는다', async () => {

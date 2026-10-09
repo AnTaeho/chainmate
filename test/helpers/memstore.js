@@ -10,10 +10,9 @@ export function memStore() {
     .sort((x, y) => compareRank(x, y) || x.at - y.at || x.pid - y.pid).map((s, i) => ({ ...s, rank: i + 1 }));
   return {
     players, scores, logs, keys, codes, limits, saves, accounts,
-    async createPlayer(keyHash, a, n) { const p = { id: String(++seq), keyHash, a, n, rd: null, rn: 0, sd: null, sn: 0 }; players.push(p); keys.set(keyHash, p.id); return { id: p.id, a, n }; },
-    // 열쇠 표로 찾고, 옛 배포가 만든 플레이어(players.keyHash에만 있다)는 그 자리에서 옮겨 읽는다
+    async createPlayer(keyHash, a, n) { const p = { id: String(++seq), a, n, rd: null, rn: 0, sd: null, sn: 0 }; players.push(p); keys.set(keyHash, p.id); return { id: p.id, a, n }; },
     async getPlayer(keyHash, today) {
-      if (!keys.has(keyHash)) { const old = players.find((x) => x.keyHash === keyHash); if (!old) return null; keys.set(keyHash, old.id); }
+      if (!keys.has(keyHash)) return null;
       const p = players.find((x) => x.id === keys.get(keyHash));
       return p ? { id: p.id, a: p.a, n: p.n, rerolls: p.rd === today ? p.rn : 0 } : null;
     },
@@ -83,10 +82,10 @@ export function memStore() {
       for (const [u, a] of accounts) if (a.playerId === from) accounts.delete(u);
       players.splice(players.findIndex((x) => x.id === from), 1);
     },
-    async splitKey(keyHash, id, filler) {
+    async splitKey(keyHash, id) {
       const old = players.find((x) => x.id === id);
       if (!old || keys.get(keyHash) !== id) return null;
-      const p = { id: String(++seq), keyHash: filler, a: old.a, n: old.n, rd: null, rn: 0, sd: null, sn: 0 };
+      const p = { id: String(++seq), a: old.a, n: old.n, rd: null, rn: 0, sd: null, sn: 0 };
       players.push(p);
       if (saves.has(id)) saves.set(p.id, { ...saves.get(id), rev: 1 });
       keys.set(keyHash, p.id);
@@ -108,7 +107,7 @@ export function memStore() {
       return true;
     },
     async setPassword(id, hash, now) { const a = [...accounts.values()].find((x) => x.playerId === id); if (a) { a.hash = hash; a.changed = now; } },
-    async dropKey(keyHash, filler) { for (const p of players) if (p.keyHash === keyHash) p.keyHash = filler; keys.delete(keyHash); },
+    async dropKey(keyHash) { keys.delete(keyHash); },
     async deletePlayer(id) {
       for (let i = scores.length - 1; i >= 0; i--) if (scores[i].pid === Number(id)) scores.splice(i, 1);
       for (const k of [...logs.keys()]) if (k.startsWith(`${id}:`)) logs.delete(k);

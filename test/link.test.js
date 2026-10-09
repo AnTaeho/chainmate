@@ -1,5 +1,5 @@
 // 기기 잇기 · 클라우드 저장 서버 로직(CHM-71, api/_lib/service.js · http.js): 코드 발급 · 무효 · 만료 · 한도 · 전체 잠금, 코드를 넣은 뒤 열쇠 둘이 같은 플레이어,
-// 순위 성적 합침(낸 차례 그대로), 떼기, 저장 rev 충돌 · 꼴 · 한도, 옛 열쇠(players.key_hash) 옮겨 읽기. DB는 기억 저장소 — 진짜 SQL은 tools/link-e2e.mjs가 본다.
+// 순위 성적 합침(낸 차례 그대로), 떼기, 저장 rev 충돌 · 꼴 · 한도. DB는 기억 저장소 — 진짜 SQL은 tools/link-e2e.mjs가 본다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createService, LIMITS, hashKey, hashCode, blobOk } from '../api/_lib/service.js';
@@ -161,7 +161,7 @@ test('이 기기 떼기: 이 열쇠만 새 플레이어로 — 이름 · 저장 
   await store.putScore(aid, DATE, score(4), 'b1', '[]');
   assert.equal((await svc.savePut({ key: a.key, baseRev: 0, blob: blob({ runAt: 7 }) })).body.rev, 1);
   assert.equal((await svc.savePut({ key: kb, baseRev: 1, blob: blob({ runAt: 9 }) })).body.rev, 2);
-  // 코드를 낸 쪽(a)이 떼어도 된다 — 옛 칸(players.key_hash)에 그 해시가 남아 있어도 열쇠 표가 먼저다
+  // 코드를 낸 쪽(a)이 떼어도 된다
   const r = await svc.linkUnlink({ key: a.key });
   assert.deepEqual(r, { status: 200, body: { key: a.key, a: a.a, n: a.n, rerolls: LIMITS.rerolls, devices: 1 } });
   assert.equal(store.players.length, 2);
@@ -219,21 +219,6 @@ test('저장: 덩이의 꼴(최상위 열쇠 · 타입 · 깊이)만 본다 · 2
   assert.deepEqual(await svc.savePut({ key: a.key, baseRev: rev, blob: blob() }), E(429, 'save_limit'));
   clock.ms += 86400000;
   assert.equal((await svc.savePut({ key: a.key, baseRev: rev, blob: blob() })).status, 200);
-});
-
-test('옛 열쇠 옮기기: players.key_hash에만 있는 플레이어(옛 배포가 만든 것)도 찾고, 그 자리에서 열쇠 표로 옮긴다', async () => {
-  const { svc, store, player } = setup();
-  const a = await player(), old = await player();
-  store.keys.delete(hashKey(old.key)); // 옛 배포가 만든 것처럼: 열쇠 표에 없다
-  assert.deepEqual([(await svc.player({ key: old.key })).body.a, (await svc.player({ key: old.key })).body.n], [old.a, old.n]);
-  assert.ok(store.keys.has(hashKey(old.key)), '읽는 순간 열쇠 표로 옮겨진다');
-  store.keys.delete(hashKey(old.key));
-  assert.deepEqual((await svc.linkDevices({ key: old.key })).body, { devices: 1 });
-  store.keys.delete(hashKey(old.key));
-  const r = await svc.linkRedeem({ key: old.key, code: (await svc.linkCode({ key: a.key })).body.code });
-  assert.equal(r.status, 200);
-  assert.deepEqual(await svc.player({ key: old.key }), E(401, 'unknown_key'), '합친 뒤 옛 플레이어는 없다');
-  assert.deepEqual(await svc.player({ key: 'e'.repeat(64) }), E(401, 'unknown_key'));
 });
 
 test('함수: PUT도 JSON 본문만 받고, 저장 길은 본문 200KB에서 끊는다', async () => {

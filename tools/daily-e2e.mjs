@@ -56,7 +56,7 @@ const nm = (p) => `「${nameText(p.a, p.n, 'ko')}」(${nameText(p.a, p.n, 'en')}
 async function newPlayer() {
   const r = await call('POST', '/api/player', {});
   if (r.status !== 200) throw new Error(`플레이어 만들기 실패 ${r.status} ${JSON.stringify(r.body)}`);
-  const hit = await sql.query('update players set test = true where key_hash = $1 returning id', [hashKey(r.body.key)]);
+  const hit = await sql.query('update players set test = true where id = (select player_id from player_keys where key_hash = $1) returning id', [hashKey(r.body.key)]);
   if (hit.length !== 1) throw new Error('만든 플레이어가 DB에 없다(다른 DB를 보고 있나?)');
   return r.body;
 }

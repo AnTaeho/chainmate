@@ -3,7 +3,6 @@
 
 create table if not exists players (
   id           bigint generated always as identity primary key,
-  key_hash     text not null unique,          -- 플레이어 열쇠(무작위 256비트)의 SHA-256. 열쇠 원문은 두지 않는다
   a            smallint not null,             -- 이름: 형용사 번호(src/data/names.js)
   n            smallint not null,             -- 이름: 동물 번호
   created_at   timestamptz not null default now(),
@@ -41,17 +40,14 @@ create table if not exists daily_logs (
 
 -- ── 기기 잇기 · 클라우드 저장(CHM-71, leaderboard.md 「기기 잇기 · 클라우드 저장」)
 
--- 플레이어 하나에 열쇠 여럿(기기마다 하나). 열쇠 찾기는 이 표로 한다. players.key_hash는 옛 배포가 읽는 동안 두 벌로 남긴다
+-- 플레이어 하나에 열쇠 여럿(기기마다 하나). 열쇠 찾기는 이 표로 한다
 create table if not exists player_keys (
-  key_hash     text primary key,              -- 열쇠의 SHA-256
+  key_hash     text primary key,              -- 플레이어 열쇠(무작위 256비트)의 SHA-256. 열쇠 원문은 두지 않는다
   player_id    bigint not null references players(id) on delete cascade,
   created_at   timestamptz not null default now(),
   label        text                           -- 기기 이름표(아직 쓰지 않는다)
 );
 create index if not exists player_keys_player on player_keys (player_id);
--- 옛 열쇠 옮기기: 이미 옮긴 줄은 건너뛴다
-insert into player_keys (key_hash, player_id, created_at)
-  select key_hash, id, created_at from players on conflict (key_hash) do nothing;
 
 -- 옮기기 코드(숫자 여덟 자리)의 해시. 10분 · 한 번
 create table if not exists link_codes (

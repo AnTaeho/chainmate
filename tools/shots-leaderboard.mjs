@@ -141,11 +141,11 @@ async function live(browserType, name) {
     // 만든 플레이어에 곧바로 test 표시(지울 수 있게). 열쇠는 Node 안에서 해시로만 쓴다
     const key = await s.until(() => s.ev((k) => { try { return JSON.parse(localStorage.getItem(k)).key; } catch { return null; } }, PLAYER_KEY));
     hash = key ? hashKey(key) : null;
-    const marked = hash ? await sql.query('update players set test = true where key_hash = $1 returning id', [hash]) : [];
+    const marked = hash ? await sql.query('update players set test = true where id = (select player_id from player_keys where key_hash = $1) returning id', [hash]) : [];
     check('만든 플레이어에 test 표시', marked.length === 1);
     const st = await s.until(async () => { const q = await s.status(); return q.phase !== 'pending' && q.phase !== 'none' ? q : null; }, 40000);
     check('순위에 올랐다(서버가 다시 두어 등수를 돌려줬다)', !!st && st.phase === 'ok' && st.rank >= 1 && st.me, st ? `${st.phase} · ${st.rank}등 / ${st.total}명 · 이웃 ${st.around}줄` : '답 없음');
-    const row = await sql.query('select s.ante, s.blind, s.won, s.score_total from daily_scores s join players p on p.id = s.player_id where p.key_hash = $1', [hashKey(key || '')]);
+    const row = await sql.query('select s.ante, s.blind, s.won, s.score_total from daily_scores s join player_keys k on k.player_id = s.player_id where k.key_hash = $1', [hashKey(key || '')]);
     check('DB에 그날 성적이 남았다', row.length === 1, row.length ? `${row[0].ante}관 ${row[0].blind + 1}번째 대국 · 점수 합 ${row[0].score_total}` : '');
     await s.settle(600);
     check('결과 화면 글 넘침 없음', (await s.layout()).length === 0);
@@ -169,7 +169,7 @@ async function live(browserType, name) {
   } finally {
     await browser.close();
     // 표시가 안 된 채 끊겼어도 만든 플레이어는 해시로 지운다(성적 · 명령 줄도 같이)
-    if (hash) await sql.query('delete from players where key_hash = $1', [hash]).catch((e) => note(`플레이어 지우기 실패 ${e.message}`));
+    if (hash) await sql.query('delete from players where id = (select player_id from player_keys where key_hash = $1)', [hash]).catch((e) => note(`플레이어 지우기 실패 ${e.message}`));
   }
 }
 
@@ -240,7 +240,7 @@ async function shots(browserType, name) {
       // 가장 넓은 이름: 서버의 내 이름을 바꾸고 새로 켠다(저장의 이름도 같이)
       const key = await s.ev((k) => JSON.parse(localStorage.getItem(k)).key, PLAYER_KEY);
       const long = lang === 'ko' ? LONG_KO : LONG_EN;
-      Object.assign(world.store.players.find((p) => p.keyHash === hashKey(key)), long);
+      Object.assign(world.store.players.find((p) => p.id === world.store.keys.get(hashKey(key))), long);
       await s.context.close();
       s = await open(browser, { lang, today: DAY_LOST, storage: { [PLAYER_KEY]: JSON.stringify({ key, ...long }) } });
       await s.click('title:settings');

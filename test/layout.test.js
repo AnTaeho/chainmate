@@ -735,7 +735,7 @@ async function rankApp({ lang = 'ko', others = 24, mode = 'ok', me = null } = {}
   if (me) {
     await app.rank.ensurePlayer();
     const key = JSON.parse(d.window.localStorage.getItem('chainmate.player.v1')).key;
-    const p = api.store.players.find((q) => q.keyHash === hashKey(key));
+    const p = api.store.players.find((q) => q.id === api.store.keys.get(hashKey(key)));
     if (me.everyone) for (const q of api.store.players) Object.assign(q, long);
     Object.assign(p, long);
     d.window.localStorage.setItem('chainmate.player.v1', JSON.stringify({ key, ...long }));

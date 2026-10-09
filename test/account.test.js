@@ -238,7 +238,7 @@ test('나가기: 이 기기는 새 빈 플레이어(새 열쇠 · 새 이름 · 
   assert.deepEqual((await svc.accountGet({ key: a.key })).body, { username: 'taeho_an', devices: 1 });
   assert.equal((await svc.saveGet({ key: a.key })).body.blob.records.runs, 11);
   assert.equal(store.scores.filter((s) => s.pid === Number(aid)).length, 1);
-  // 마지막 기기가 나가도 계정은 남는다(열쇠 0) — 다시 들어올 수 있다. 옛 칸(players.keyHash)으로 되살아나지 않는다
+  // 마지막 기기가 나가도 계정은 남는다(열쇠 0) — 다시 들어올 수 있다
   const out2 = await svc.accountLogout({ key: a.key });
   assert.equal(out2.status, 200);
   assert.equal(await store.keyCount(aid), 0);

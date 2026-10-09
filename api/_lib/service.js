@@ -207,8 +207,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       const p = await who(key);
       if (!p) return err(401, 'unknown_key');
       if ((await store.keyCount(p.id)) < 2) return err(400, 'not_linked');
-      // 새 플레이어의 players.key_hash(옛 칸)에는 쓰이지 않을 값을 채운다 — 이 열쇠의 해시는 떠나온 쪽의 옛 칸에 남아 있을 수 있다
-      const id = await store.splitKey(hashKey(key), p.id, hashKey(`split:${newKey()}`));
+      const id = await store.splitKey(hashKey(key), p.id);
       if (!id) return err(400, 'not_linked');
       return ok({ key, a: p.a, n: p.n, rerolls: LIMITS.rerolls, devices: 1 });
     },
@@ -312,7 +311,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       if (!(await store.accountOfPlayer(me.id))) return err(400, 'no_account');
       // 새 플레이어를 먼저 만든다 — 중간에 끊겨도 옛 열쇠가 살아 있다
       const out = await blank();
-      await store.dropKey(hashKey(key), hashKey(`gone:${newKey()}`));
+      await store.dropKey(hashKey(key));
       return ok(out);
     },
 

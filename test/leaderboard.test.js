@@ -42,7 +42,8 @@ test('플레이어: 새로 만들면 열쇠 · 이름 번호를 주고 DB에는 
   assert.ok(Number.isInteger(r.body.n) && r.body.n >= 0 && r.body.n < NAME_COUNT.n);
   assert.equal(r.body.rerolls, LIMITS.rerolls);
   assert.equal(store.players.length, 1);
-  assert.equal(store.players[0].keyHash, hashKey(r.body.key));
+  assert.equal(store.keys.get(hashKey(r.body.key)), store.players[0].id);
+  assert.ok(!JSON.stringify([...store.keys]).includes(r.body.key));
   assert.ok(!JSON.stringify(store.players).includes(r.body.key));
   const again = await svc.player({ key: r.body.key });
   assert.deepEqual(again.body, r.body);
@@ -267,4 +268,37 @@ test('배포: api/ 아래 함수 파일(_lib 밖 .js)은 12개까지 — Vercel 
   const root = new URL('../api/', import.meta.url);
   const files = fs.readdirSync(root, { recursive: true }).map(String).filter((f) => f.endsWith('.js') && !f.split(/[\\/]/).includes('_lib'));
   assert.ok(files.length > 0 && files.length <= 12, `함수 ${files.length}개: ${files.sort().join(', ')}`);
+});
+
+test('옛 칸 걷기(tools/db-migrate.mjs oldKeyColumn): 기본은 not null만 풀고, --drop-old-key는 칸을 지운다 — 옛 칸이 있는 DB · 푼 DB · 없는 DB 모두 두 번 돌려 같다', async () => {
+  const { oldKeyColumn, OLD_KEY_LINE } = await import('../tools/db-migrate.mjs');
+  // 가짜 DB: players.key_hash 칸의 상태만 안다
+  const fakeDb = (col) => {
+    const db = { col, ran: [] };
+    db.sql = async (text) => {
+      if (/information_schema\.columns/.test(text)) return db.col ? [{ is_nullable: db.col.nullable ? 'YES' : 'NO' }] : [];
+      db.ran.push(text);
+      if (/alter column key_hash drop not null/.test(text)) db.col.nullable = true;
+      else if (/drop column if exists key_hash/.test(text)) db.col = null;
+      else throw new Error(`모르는 문장: ${text}`);
+      return [];
+    };
+    return db;
+  };
+  const old = fakeDb({ nullable: false });
+  assert.equal(await oldKeyColumn(old.sql), 'loose');
+  assert.deepEqual(old.ran, ['alter table players alter column key_hash drop not null']);
+  assert.equal(await oldKeyColumn(old.sql), 'loose');
+  assert.equal(old.ran.length, 1, '두 번째에는 아무것도 하지 않는다');
+  assert.equal(await oldKeyColumn(old.sql, { drop: true }), 'dropped');
+  assert.equal(old.col, null);
+  assert.equal(await oldKeyColumn(old.sql, { drop: true }), 'gone');
+  assert.equal(await oldKeyColumn(old.sql), 'gone');
+  assert.equal(old.ran.length, 2, '칸이 없는 DB에는 아무것도 하지 않는다');
+  assert.deepEqual(Object.keys(OLD_KEY_LINE).sort(), ['dropped', 'gone', 'loose']);
+  // 코드 · 스키마가 옛 칸을 더는 가리키지 않는다
+  const schema = fs.readFileSync(new URL('../db/schema.sql', import.meta.url), 'utf8');
+  assert.ok(!/create table if not exists players \([^;]*key_hash/.test(schema), 'schema.sql의 players에 key_hash가 없다');
+  const storeText = fs.readFileSync(new URL('../api/_lib/store.js', import.meta.url), 'utf8');
+  assert.ok(!/into players \(key_hash|players set key_hash|from players where key_hash/.test(storeText), 'store.js가 옛 칸을 읽거나 쓰지 않는다');
 });

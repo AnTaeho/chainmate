@@ -10,21 +10,16 @@ const ROW = 'r.rank, p.a, p.n, r.ante, r.blind, r.won, r.score_total as score';
 export function createStore(sql) {
   const one = async (text, params) => (await sql(text, params))[0] || null;
   return {
-    // 새 플레이어 + 첫 열쇠(한 문장). players.key_hash에도 같이 적는다(옛 배포가 읽는 동안 두 벌)
+    // 새 플레이어 + 첫 열쇠(한 문장)
     async createPlayer(keyHash, a, n) {
-      return one(`with p as (insert into players (key_hash, a, n) values ($1, $2, $3) returning id, a, n),
+      return one(`with p as (insert into players (a, n) values ($2, $3) returning id, a, n),
           k as (insert into player_keys (key_hash, player_id) select $1, id from p)
         select id::text as id, a, n from p`, [keyHash, a, n]);
     },
-    // 열쇠 → 플레이어(player_keys). 옛 배포가 만든 플레이어(players.key_hash에만 있다)는 그 자리에서 옮겨 읽는다
+    // 열쇠 → 플레이어(player_keys)
     async getPlayer(keyHash, today) {
-      const find = () => one(`select p.id::text as id, p.a, p.n, case when p.rerolls_date = $2::date then p.rerolls_day else 0 end as rerolls
+      return one(`select p.id::text as id, p.a, p.n, case when p.rerolls_date = $2::date then p.rerolls_day else 0 end as rerolls
         from player_keys k join players p on p.id = k.player_id where k.key_hash = $1`, [keyHash, today]);
-      const hit = await find();
-      if (hit) return hit;
-      const moved = await sql(`insert into player_keys (key_hash, player_id, created_at)
-        select key_hash, id, created_at from players where key_hash = $1 on conflict (key_hash) do nothing returning key_hash`, [keyHash]);
-      return moved.length ? find() : null;
     },
     // 다시 짓기: 하루 한도 안이면 이름을 바꾸고 { a, n, rerolls(오늘 쓴 수) }, 한도면 null
     async reroll(id, a, n, today, limit) {
@@ -127,12 +122,12 @@ export function createStore(sql) {
       await sql('delete from players where id = $1::bigint', [from]);
     },
     // 이 열쇠만 떼어 새 플레이어로(이름 · 저장 덩이 사본을 들고). 한 문장. 돌려주는 것: 새 플레이어 id
-    async splitKey(keyHash, id, filler) {
+    async splitKey(keyHash, id) {
       const r = await one(`with old as (select a, n from players where id = $2::bigint),
-          np as (insert into players (key_hash, a, n) select $3, a, n from old returning id),
+          np as (insert into players (a, n) select a, n from old returning id),
           sv as (insert into saves (player_id, rev, blob, updated_at) select np.id, 1, s.blob, s.updated_at from saves s, np where s.player_id = $2::bigint),
           mv as (update player_keys set player_id = (select id from np) where key_hash = $1 and player_id = $2::bigint returning key_hash)
-        select id::text as id from np`, [keyHash, id, filler]);
+        select id::text as id from np`, [keyHash, id]);
       return r ? r.id : null;
     },
     async getSave(id) {
@@ -161,9 +156,8 @@ export function createStore(sql) {
     async setPassword(id, hash, now) {
       await sql('update accounts set pw_hash = $2, pw_changed_at = to_timestamp($3::double precision / 1000) where player_id = $1::bigint', [id, hash, now]);
     },
-    // 열쇠 하나를 지운다. 옛 칸 players.key_hash에 같은 값이 남아 있으면 쓰이지 않을 값으로 바꾼다(getPlayer가 옛 칸에서 되살리지 않게)
-    async dropKey(keyHash, filler) {
-      await sql('update players set key_hash = $2 where key_hash = $1', [keyHash, filler]);
+    // 열쇠 하나를 지운다
+    async dropKey(keyHash) {
       await sql('delete from player_keys where key_hash = $1', [keyHash]);
     },
     // 플레이어와 딸린 것(계정 · 열쇠 · 성적 · 명령 줄 · 코드 · 저장 — cascade) + 그 사람의 한도 줄
