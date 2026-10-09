@@ -145,13 +145,13 @@ maxim('second_thought', '미련 없이', '희생 +1 · 탁월수: 배수 ×2', '
   onChainEnd(ctx) { if (ctx.event.reason === 'mate' && num(ctx.chain.offerWeight) > 0) ctx.mulMult(2); },
 });
 
-// ── 주머니
-maxim('empty_bag', '빈 주머니', '주머니에 남은 기물마다 배수 +1', '주머니', 'common', 4, {
+// ── 덱
+maxim('empty_bag', '빈 덱', '덱에 남은 기물마다 배수 +1', '덱', 'common', 4, {
   onChainEnd(ctx) { ctx.addMult(ctx.t.bag ? ctx.t.bag.length : 0); },
 });
-// ×2였을 때(2a) 판 봇의 주머니가 끝에 평균 6개라 조건이 늘 참이었고, 산 판 승률이 35%(평균 10%)로 홀로 높았다.
+// ×2였을 때(2a) 판 봇의 덱이 끝에 평균 6개라 조건이 늘 참이었고, 산 판 승률이 35%(평균 10%)로 홀로 높았다.
 // ×1.5로 낮췄다(보고서 docs/reports/2b.md).
-maxim('small_bag', '작은 주머니', '주머니 기물 여덟 이하: 배수 ×1.5', '주머니', 'uncommon', 6, {
+maxim('small_bag', '작은 덱', '덱 기물 여덟 이하: 배수 ×1.5', '덱', 'uncommon', 6, {
   onChainEnd(ctx) { if (num(ctx.t.deckSize, 99) <= 8) ctx.mulMult(1.5); },
 });
 
@@ -289,7 +289,7 @@ maxim('farmer', '농부', '폰을 먹을 때마다 값 +15', '먹기', 'common',
 maxim('blacksmith', '대장장이', '각인 기물로 시작: 배수 ×1.5', '각인', 'uncommon', 6, {
   onChainEnd(ctx) { if (ctx.chain.engraving) ctx.mulMult(1.5); },
 });
-maxim('soul_collector', '혼 수집가', '주머니의 혼 하나마다 배수 +2', '혼', 'uncommon', 5, {
+maxim('soul_collector', '혼 수집가', '덱의 혼 하나마다 배수 +2', '혼', 'uncommon', 5, {
   onBuild(spec, build) { spec.data = { ...(spec.data || {}), souls: (build.deck || []).filter((p) => p.soul).length }; },
   onChainEnd(ctx) { ctx.addMult(2 * num(ctx.data.souls)); },
 });

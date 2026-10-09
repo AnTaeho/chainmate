@@ -77,7 +77,7 @@ export function observe(rec, run, events, fresh = []) {
   mark(rec, 'openings', run.opening, fresh);
   for (const m of run.maxims) { if (!m.legendary) mark(rec, 'maxims', m.id, fresh); if (m.edition) mark(rec, 'editions', m.edition, fresh); }
   if (run.shop) for (const it of run.shop.display) { if (it.kind === 'maxim') { mark(rec, 'maxims', it.id, fresh); if (it.edition) mark(rec, 'editions', it.edition, fresh); } }
-  // 혼: 만난 혼(진열 두루마리 · 혼 깃든 진열 기물 · 가진 두루마리 · 주머니)
+  // 혼: 만난 혼(진열 두루마리 · 혼 깃든 진열 기물 · 가진 두루마리 · 덱)
   for (const p of run.deck) mark(rec, 'souls', p.soul, fresh);
   for (const c of run.consumables || []) if (c.kind === 'soul') mark(rec, 'souls', c.id, fresh);
   if (run.shop) for (const it of run.shop.display) mark(rec, 'souls', it.kind === 'soul' ? it.id : it.kind === 'piece' ? it.soul : null, fresh);

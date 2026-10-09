@@ -206,7 +206,7 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
 
 // draft: false면 정석 드래프트 없이(깊이 E 이전 규칙 — 시험 · 하네스 비교용)
 // script: 첫 대국(1관 연습)을 대본 대국으로(CHM-22, 기본 오프닝 · 단 0만). 레퍼토리 고르기는 그 대국 뒤로 미룬다 —
-//   레퍼토리가 판 위 사물 · 목표 · 주머니를 바꾸면 정해 둔 판이 어긋나서
+//   레퍼토리가 판 위 사물 · 목표 · 덱을 바꾸면 정해 둔 판이 어긋나서
 export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true, script = false } = {}) {
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
@@ -344,9 +344,9 @@ function startBattle(run) {
 
 // ── 판 보기(CHM-61, docs/design-notes/agency.md E 「구현 뒤」)
 // 관 선택에 서면 이 관의 남은 대국판을 미리 지어 run.boards에 둔다(저장 왕복). 두기는 지어 둔 판으로 대국을 연다 — 보인 판 = 두는 판.
-// 지은 뒤 주머니 · 기보가 바뀌어도(상점 · 두루마리 · 건너뛰기 패) 판은 그대로다. 판 짓기가 읽는 규칙(GEN_RULES — 시작 훅 뒤, 격언
+// 지은 뒤 덱 · 기보가 바뀌어도(상점 · 두루마리 · 건너뛰기 패) 판은 그대로다. 판 짓기가 읽는 규칙(GEN_RULES — 시작 훅 뒤, 격언
 // 「메이트 사냥꾼」 · 정석 「속기」 …)이 바뀌거나 대국 시드가 바뀌면(8관 마스터 다시 두기) 그 대국판만 다시 짓는다.
-// 손은 지어 두지 않는다: 대국을 열 때 지금 주머니를 섞어 쥔다(나쁜 판 거르기의 「첫 손」은 판을 지을 때의 주머니로 잰다).
+// 손은 지어 두지 않는다: 대국을 열 때 지금 덱을 섞어 쥔다(나쁜 판 거르기의 「첫 손」은 판을 지을 때의 덱으로 잰다).
 export const GEN_RULES = ['enemies', 'kings', 'guards', 'guardsBonus', 'pawnSides', 'mix', 'unique', 'walls', 'wallRow', 'things', 'traits', 'traitFrom', 'traitMult', 'hand', 'easyStart', 'noHeavyDrop', 'fog', 'openKings', 'highways'];
 function genKey(opts) {
   const r = battleRules(opts);
@@ -379,14 +379,14 @@ export function syncBoards(run) {
   }
   run.boards = out;
 }
-// 관 선택에 보일 대국: 두기를 누르면 열릴 대국과 같은 것(손 · 주머니는 화면이 쓰지 않는다)
+// 관 선택에 보일 대국: 두기를 누르면 열릴 대국과 같은 것(손 · 덱은 화면이 쓰지 않는다)
 export function previewBattle(run, blind = run.blind) {
   const { scripted, opts } = battleOpts(run, blind);
   if (scripted) return null;
   return createBattle({ ...opts, layout: layoutFor(run, blind) });
 }
 
-// 대본 판을 깐다: 적 · 손 · 주머니(판의 주머니에서 종류로 골라 같은 id) · 수마다 증원 · 목표
+// 대본 판을 깐다: 적 · 손 · 덱(판의 덱에서 종류로 골라 같은 id) · 수마다 증원 · 목표
 export function layScript(b, sc) {
   let id = 1;
   b.board = new Array(64).fill(null);
@@ -423,14 +423,14 @@ function endBattle(run, events) {
   const best = b.history.reduce((a, h) => Math.max(a, h.score), 0);
   const won = b.status === 'won';
   if (b.script) run.script = null; // 대본 대국은 한 번(뒤로 미룬 레퍼토리 고르기가 다음 대국 앞에 열린다)
-  // 깨진 기물(유리)은 주머니에서 빠진다
+  // 깨진 기물(유리)은 덱에서 빠진다
   if (b.shattered.length) run.deck = run.deck.filter((p) => !b.shattered.includes(p.id));
-  // 정석 「결사」: 첫 사슬을 푼 기물은 판에서 사라진다(주머니 여섯은 남긴다) · 「왕좌」: 승급한 폰은 퀸으로
+  // 정석 「결사」: 첫 사슬을 푼 기물은 판에서 사라진다(덱 여섯은 남긴다) · 「왕좌」: 승급한 폰은 퀸으로
   for (const id of b.exiled || []) if (run.deck.length > SHOP.deckMin) { run.deck = run.deck.filter((p) => p.id !== id); events.push({ type: 'exile', pieceId: id }); }
-  // 적 특성 「배신자」: 먹은 배신자가 내 주머니로(주머니가 너무 커지지 않게 열넷까지)
+  // 적 특성 「배신자」: 먹은 배신자가 내 덱으로(덱이 너무 커지지 않게 열넷까지)
   for (const t of b.traitors || []) if (run.deck.length < TRAIT_CHANCE.traitorDeckMax) addPiece(run, t, events);
   for (const id of b.crowned || []) { const p = run.deck.find((x) => x.id === id); if (p && p.t === 'P') { p.t = 'Q'; events.push({ type: 'evolve', pieceId: id, from: 'P', to: 'Q' }); } }
-  // 혼의 금: 대국에서 센 사슬 수를 주머니로(이기든 지든)
+  // 혼의 금: 대국에서 센 사슬 수를 덱으로(이기든 지든)
   for (const bp of [...b.hand, ...b.bag, ...b.used, ...(b.offered || [])]) { const p = bp.links && run.deck.find((x) => x.id === bp.id); if (p && p.soul === bp.soul) p.links = Math.max(p.links || 0, bp.links); }
   for (const e of b.cracks || []) (run.cracked || (run.cracked = [])).push({ soul: e.soul, ante: run.ante, blind: run.blind });
   // 혼 「계승」 각성: 마지막 모습의 기보 +1(대국마다 한 번)
@@ -456,7 +456,7 @@ function endBattle(run, events) {
     ante: run.ante, blind: run.blind, kind: info.kind, faction: info.faction, master: info.master, target: b.target ?? info.target,
     score: b.score, won, reason: b.result.reason, moves: b.movesUsed, best,
     goldenSeen: b.board.some((c) => c && c.gold) || b.golden > 0, golden: b.golden, overflow: b.overflow, grades,
-    // 하네스용: 이 대국 때 주머니에 있던 혼 · 외통을 낸 사슬의 혼
+    // 하네스용: 이 대국 때 덱에 있던 혼 · 외통을 낸 사슬의 혼
     souls: [...new Set(run.deck.filter((p) => p.soul).map((p) => p.soul))],
     mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
     discarded: b.discarded,
@@ -753,7 +753,7 @@ function engrave(run, pieceId, id, events) {
   events.push({ type: 'engrave', piece: p.t, pieceId, eng: id });
 }
 
-// 도박 물건(깊이 G): 수상한 물약 = 주머니의 아무 기물에 아무 혼 또는 각인 · 룰렛 = 아무 기물(킹 빼고)을 아무 이형으로
+// 도박 물건(깊이 G): 수상한 물약 = 덱의 아무 기물에 아무 혼 또는 각인 · 룰렛 = 아무 기물(킹 빼고)을 아무 이형으로
 function gamble(run, id, slot, events) {
   const r = fork(root(run), `gamble:${run.ante}:${run.blind}:${run.shop.rerolls}:${slot}`);
   const p = run.deck[int(r, run.deck.length)];

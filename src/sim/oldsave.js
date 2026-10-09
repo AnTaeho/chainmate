@@ -1,5 +1,5 @@
 // 옛 저장의 뺀 기물(CHM-55: 대주교 A · 재상 C · 야간기사 H · 메뚜기 G)을 새 기물로 바꿔 읽는다(pieces.js OLD_PIECE).
-// 판(주머니 · 대국 판 · 손 · 사슬 · 상점 · 꾸러미 · 기록 줄) · 기록(가장 큰 한 수 · 탁월수) · 사람 판 기록 어디에 남았든 같은 길로 바꾼다.
+// 판(덱 · 대국 판 · 손 · 사슬 · 상점 · 꾸러미 · 기록 줄) · 기록(가장 큰 한 수 · 탁월수) · 사람 판 기록 어디에 남았든 같은 길로 바꾼다.
 // 기물 id가 사는 자리를 열쇠로 알아본다 — 칸 번호(수)와 다른 글자 id(혼 · 격언 · 세력 …)는 건드리지 않는다.
 import { OLD_PIECE } from '../data/pieces.js';
 
@@ -35,7 +35,7 @@ function walk(v, key) {
   if (typeof v === 'string') {
     if (ONE.has(key)) return swap(v);
     if (LETTERS.has(key)) return [...v].map(swap).join('');
-    // 주머니 요약 줄(runlog · 하네스 deck: 「A B:gold C」)
+    // 덱 요약 줄(runlog · 하네스 deck: 「A B:gold C」)
     if (key === 'deck') return v.split(' ').map((w) => { const [t, ...rest] = w.split(':'); return [swap(t), ...rest].join(':'); }).join(' ');
   }
   return v;

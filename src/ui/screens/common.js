@@ -45,7 +45,7 @@ export function pageHead(ctx, title, right = null) {
 export const hallText = (run) => (run && !run.endless ? `${run.ante}/${ANTES}관` : `${run ? run.ante : 1}관`);
 
 // ── 판 틀의 왼쪽 칸 쌓기(docs/design-notes/layout.md 「왼쪽 칸」): 판넬마다 내용에 맞춘 높이(hug).
-// 머리 칸은 위(y 8)에서부터, 아래 칸(상금 · 주머니 — 대국은 그 위에 수 · 희생)은 아래(y 262)에서부터 쌓고,
+// 머리 칸은 위(y 8)에서부터, 아래 칸(상금 · 덱 — 대국은 그 위에 수 · 희생)은 아래(y 262)에서부터 쌓고,
 // 가운데 칸(짜임 칸 · 대국의 사슬 칸)이 남는 높이를 가진다. 판넬 사이는 GAP_GROUP.
 export const SIDE = { top: M, bottom: 270 - M };
 // 머리 칸: 머릿말(관) → 묶음 안 틈 → 제목(화면 이름, 제목 줄 · 줄 수 titleLines) → [묶음 틈 → 본문 줄 rows개]
@@ -101,7 +101,7 @@ export function drawFoot(ctx, ui, rows, name = '아래 칸') {
 }
 
 const familyCount = (run) => Object.values(familyCounts(run)).filter((n) => n > 0).length;
-// 판 틀의 왼쪽 칸(대국 말고): 머리 칸(관 · 화면 이름) · 짜임 칸(시너지 · 정석) · 아래 칸(상금 · 주머니).
+// 판 틀의 왼쪽 칸(대국 말고): 머리 칸(관 · 화면 이름) · 짜임 칸(시너지 · 정석) · 아래 칸(상금 · 덱).
 // 모두 가리키면 말풍선이 뜨는 것뿐이고 누를 것은 없다 — 이 칸이 판 틀의 설명 자리다(placement.js 'side').
 // 시계(밤샘 2 D1): 판의 목숨. 칸마다 작은 시계 판(9×9) — 남은 칸은 상아 판에 먹 바늘, 잃은 칸은 어둡게 꺼진다.
 // 잃는 순간(app.clockFx)에는 그 칸이 붉게 깜빡이며 금이 간다. 오른쪽 끝(x2)에 붙인다.
@@ -193,7 +193,7 @@ export function runSide(ctx, ui, app, title) {
     });
   }
   closeBox();
-  drawFoot(ctx, ui, [...(clock ? [clockRow(app, run)] : []), { money: run }, { label: '주머니', val: `${run.deck.length}` }]);
+  drawFoot(ctx, ui, [...(clock ? [clockRow(app, run)] : []), { money: run }, { label: '덱', val: `${run.deck.length}` }]);
 }
 
 // 탭 줄(도감 · 행마 보기): 이름마다 글에 맞춘 폭(글과 테 사이 2 이상, 가장 좁아도 44), 사이 4, 고른 탭은 금빛. 끝난 x를 돌려준다

@@ -30,7 +30,7 @@
 //   onBattleEnd    대국이 끝날 때. ctx.event = { status, reason }. ctx.addBattleMoney(n)로 상금.
 //   onChainLuck    사슬이 끝나 점수를 대국에 더하기 직전(battle.js endMove에서만 — 풀이기는 모른다, 각인 「유리」와 같은 자리).
 //                  ctx.roll()은 대국의 운 흐름에서 0~1, ctx.rescore(x)는 사슬 배수를 곱하고 점수를 다시 셈한다.
-//   onBuild(spec, build)  판(런)이 대국 조정자를 꾸릴 때(run.js battleMods). 짜임(주머니 · 격언 칸)에서 셀 값을 spec.data에 적는다.
+//   onBuild(spec, build)  판(런)이 대국 조정자를 꾸릴 때(run.js battleMods). 짜임(덱 · 격언 칸)에서 셀 값을 spec.data에 적는다.
 //
 // 사슬 밖에 남는 것: ctx.addMoney(n) — 이번 사슬에서 번 상금(chain.money). 대국이 모아 판(런)에 넘긴다.
 // 명세에 off: true가 붙으면 그 조정자는 꺼진다(명인 「침묵」 · 「대가」).

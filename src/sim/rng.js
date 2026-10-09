@@ -26,7 +26,7 @@ export function shuffle(rng, arr) {
 }
 
 // 이름표로 독립된 하위 스트림을 만든다. 부모 상태는 건드리지 않는다
-// (판 생성 · 주머니 · 증원이 서로의 뽑기 횟수에 흔들리지 않게).
+// (판 생성 · 덱 · 증원이 서로의 뽑기 횟수에 흔들리지 않게).
 export function fork(rng, label) {
   let h = 0x811c9dc5;
   const str = String(label);

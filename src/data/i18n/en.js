@@ -1,6 +1,6 @@
 // 영어 문구 표. 열쇠는 한국어 화면 글 그대로(화면이 그리기 직전에 바꾼다: src/ui/lang.js).
 // 낱말과 대소문자 규칙은 docs/design-notes/english-review.md가 기준이다(CHM-30).
-// 세계의 말: 판 Run · 관 Hall · 대국 Match · 마스터 Master · 마스터전 Master Match · 수 Move · 희생 Sacrifice · 손 Hand · 주머니 Bag · 사슬 Chain
+// 세계의 말: 판 Run · 관 Hall · 대국 Match · 마스터 Master · 마스터전 Master Match · 수 Move · 희생 Sacrifice · 손 Hand · 덱 Deck · 사슬 Chain
 // 값 Value · 배수 Mult · 목표 Target · 상금 Purse($) · 끊김 Break · 지키는 적 Guard · 증원 Recruit · 체크메이트 Checkmate(짧게 Mate) · 격언 Maxim
 // 기보 Tome · 각인 Engraving · 혼 Soul · 레퍼토리 Repertoire · 전술 Tactic · 프로모션 Promotion · 레이팅 Rating · 먹기 Take · 모습 Form
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
@@ -75,7 +75,7 @@ export const EN = {
   '기물에 새긴다': 'Onto a piece', '기물에 깃든다': 'Into a piece', '기물이 자란다': 'Evolve one',
 
   '새긴다': 'Engrave', '깃든다': 'Bind', '자란다': 'Evolve', '그만': 'Cancel', '바꾸기': 'Swap', '이 기물은 자랄 곳이 없다': 'This piece cannot evolve',
-  '주머니에서 새길 기물을 고른다': 'Choose a piece to engrave', '주머니에서 깃들 기물을 고른다': 'Choose a piece for the soul', '주머니에서 자랄 기물을 고른다': 'Choose a piece to evolve',
+  '덱에서 새길 기물을 고른다': 'Choose a piece to engrave', '덱에서 깃들 기물을 고른다': 'Choose a piece for the soul', '덱에서 자랄 기물을 고른다': 'Choose a piece to evolve',
   '체스 기물이 특수 기물로 자란다': 'A chess piece evolves into a special piece',
   // 첫 판 대본 대국(CHM-22): 킹의 말 · 행마 보기 · 설정
   '나는 킹이다. 첫 대국은 내가 이끈다. 알고 있다면 넘어가자': 'I am the King. I lead your first match. Know the way? Skip ahead',
@@ -149,7 +149,7 @@ export const EN = {
   '기록 내보내기': 'Export runs', '아직 끝낸 판이 없다': 'No finished runs yet', '내보내지 못했다': 'Could not export',
   '산 격언은 오른쪽 칸에서 판 내내 힘을 낸다': 'Maxims you buy work all run from the right column',
   '셋 중 하나를 고른다. 넘겨도 된다': 'Keep one of three, or skip',
-  '두루마리를 누르고 주머니의 기물을 골라 쓴다': 'Tap a scroll, then choose a piece in your bag',
+  '두루마리를 누르고 덱의 기물을 골라 쓴다': 'Tap a scroll, then choose a piece in your deck',
 
   '마스터는 규칙 하나를 비튼다': 'A master bends one rule',
   '금빛 적을 먹고 이기면 금빛 꾸러미를 받는다': 'Take a golden enemy and win to earn a golden bundle',
@@ -159,7 +159,7 @@ export const EN = {
   '점선 그림자는 증원. 이 수가 끝나면 그 칸에 적이 들어온다': 'A dotted shadow marks a recruit. An enemy arrives there when this move ends',
   '흐린 둘은 다음에 손에 들어올 기물. 위가 먼저 온다': 'The two faded pieces reach your hand next. The top one comes first',
   '카드의 작은 판이 그 대국에서 둘 판이다': 'The small board on each card is the board you will play',
-  '다음에 들어올 기물': 'Up next', '주머니가 비었다': 'The bag is empty',
+  '다음에 들어올 기물': 'Up next', '덱이 비었다': 'The deck is empty',
   // 복기(CHM-59)
   '이길 길도 이 대국의 실제 뽑기와 증원 그대로 둔 길이다': 'The winning line uses this match’s real draws and recruits',
   '이 판은 길이 없었다': 'No winning line on this board', '복기 중…': 'Reviewing…', '다시 두기': 'Replay', '넘어가기': 'Move on',
@@ -183,7 +183,7 @@ export const EN = {
   // 도박(깊이 G)
   '도박': 'Gamble', '수상한 물약': 'Shady Potion', '룰렛': 'Roulette', '물약': 'Potion',
   // 정석(깊이 E)
-  '레퍼토리': 'Repertoire', '주머니가 바뀌었다': 'Your bag changed',
+  '레퍼토리': 'Repertoire', '덱이 바뀌었다': 'Your deck changed',
   '기사 서약': "Knight's Oath",
   '성벽 쌓기': 'Rampart',
   '주교관': 'Mitre',
@@ -211,7 +211,7 @@ export const EN = {
   '기물 꾸러미 하나 열기': 'One piece bundle', '기보 꾸러미 하나 열기': 'One tome bundle', '각인 꾸러미 하나 열기': 'One engraving bundle',
   '다음 상점 꾸러미 칸 +1': '+1 bundle slot next visit', '다음 상점에서 다시 진열 2번': '2 rerolls at next shop',
   '가진 상금 두 배(최대 $10)': 'Double cash (max $10)', '판본 격언 셋 중 하나 고르기': 'Pick 1 of 3 edition maxims', '명경기 조각 하나': 'One classic fragment',
-  '점수': 'Score', '이 판의': "This run's", '콤비네이션': 'Combination', '이 판의 콤비네이션': "This run's Combination", '먹은 수': 'Captures', '수': 'Moves', '상금': 'Purse', '주머니': 'Bag', '손': 'Hand', '격언': 'Maxim',
+  '점수': 'Score', '이 판의': "This run's", '콤비네이션': 'Combination', '이 판의 콤비네이션': "This run's Combination", '먹은 수': 'Captures', '수': 'Moves', '상금': 'Purse', '덱': 'Deck', '손': 'Hand', '격언': 'Maxim',
   '대국 승리': 'Match Won', '체크메이트 승리': 'Won by Mate', '대국 기본': 'Base', '적립': 'Interest', '체크메이트': 'Checkmate', '메이트': 'Mate', '대국 중 번 상금': 'Earned in match', '합': 'Total',
   '금빛 꾸러미가 상점에 나왔다': 'A golden bundle is in the shop',
   '프로모션': 'Promotion', '넘겼다': 'Survived', '적이 다시 찬다': 'Enemies refill', '다시 떨군다': 'Drop again', '목표 달성': 'Target reached',
@@ -219,7 +219,7 @@ export const EN = {
   '관 선택': 'Matches', '상점': 'Shop', '진열': 'For Sale', '꾸러미': 'Bundles', '두루마리': 'Scrolls', '다음 대국': 'Next Match', '샀다': 'Sold', '열었다': 'Opened', '공짜': 'Free',
   '새길 기물': 'Choose a piece to engrave', '이번 상점에선 끝': 'Done for this shop', '할 수 없다': "Can't do that", '격언 칸이 찼다': 'Maxim slots full',
   '셋 중 하나를 고른다': 'Keep one of three',
-  '주머니에 들어온다': 'Goes into your bag', '비었다': 'Empty',
+  '덱에 들어온다': 'Goes into your deck', '비었다': 'Empty',
   '명경기 재현': 'Reenact the classic', '첫째': 'First', '둘째': 'Second', '셋째': 'Third', '상점 진열': 'Shop shelf', '금빛 적을 먹고 이긴다': 'Take a golden enemy and win', '기물 꾸러미': 'Piece Bundle', '기보 꾸러미': 'Tome Bundle', '각인 꾸러미': 'Engraving Bundle', '금빛 꾸러미': 'Golden Bundle',
   '기보': 'Tome', '각인': 'Engraving', '명경기 조각': 'Classic Fragment',
   '마스터의 상자': "Master's Chest", '한 칸': 'One cell', '세 칸': 'Three cells', '다섯 칸!': 'FIVE CELLS!',
@@ -272,8 +272,8 @@ export const EN = {
   '첫수': 'First Move',
   '마지막 수': 'Last Move',
 
-  '빈 주머니': 'Empty Bag',
-  '작은 주머니': 'Small Bag',
+  '빈 덱': 'Empty Deck',
+  '작은 덱': 'Small Deck',
   '증원 환영': 'Welcome Party',
   '그림자 읽기': 'Foresight',
   '상아탑': 'Ivory Tower',
@@ -305,7 +305,7 @@ export const EN = {
   '귀족': 'Nobility', '룩 · 퀸을 먹을 때마다 배수 +2': 'Each rook or queen taken: +2 Mult',
   '농부': 'Farmer', '폰을 먹을 때마다 값 +15': 'Each pawn taken: +15 Value',
   '대장장이': 'Smith', '각인 기물로 시작: 배수 ×1.5': 'Start with an engraved piece: ×1.5 Mult',
-  '혼 수집가': 'Soul Collector', '주머니의 혼 하나마다 배수 +2': '+2 Mult per soul in your bag',
+  '혼 수집가': 'Soul Collector', '덱의 혼 하나마다 배수 +2': '+2 Mult per soul in your deck',
   '주특기': 'Specialty', '기보 레벨이 가장 높은 모습으로 먹을 때마다 값 +25': 'Each take in your top tome form: +25 Value',
   '절약': 'Thrift', '대국을 이기면 남은 희생마다 상금 +1': 'Win a match: +$1 per sacrifice left',
   '금욕': 'Austerity', '격언 칸이 하나라도 비었으면: 배수 ×2': 'Any empty maxim slot: ×2 Mult',
@@ -327,9 +327,9 @@ export const EN = {
   '속기': 'Blitz', '수 +1 · 손 −1': '+1 Move · −1 Hand',
   '장고': 'Long Think', '수 −1 · 손 +2 · 희생 +1': '−1 Move · +2 Hand · +1 Sacrifice',
   '선수': 'First Strike', '대국 시작에 값이 가장 큰 적 하나가 판에서 빠진다': 'Each match starts with the highest-value enemy removed',
-  '포로': 'Captive', '대국 첫 사슬이 마지막에 먹은 적이 주머니에 들어온다': "The last enemy your match's first chain takes joins your bag", '주머니 열넷까지': 'Up to 14 pieces in your bag',
+  '포로': 'Captive', '대국 첫 사슬이 마지막에 먹은 적이 덱에 들어온다': "The last enemy your match's first chain takes joins your deck", '덱 열넷까지': 'Up to 14 pieces in your deck',
   // 혼
-  '계승': 'Heir', '사슬이 끝나면 이 기물이 마지막 모습이 된다': 'Chain ends: this piece becomes its last form', '주머니의 기물이 바뀐다 · 킹 모습은 빼고': 'The piece in your bag changes · never into a king',
+  '계승': 'Heir', '사슬이 끝나면 이 기물이 마지막 모습이 된다': 'Chain ends: this piece becomes its last form', '덱의 기물이 바뀐다 · 킹 모습은 빼고': 'The piece in your deck changes · never into a king',
   '계주': 'Relay', '더 먹을 적이 없으면 손의 다음 기물이 그 칸에서 이어 먹는다': 'When stuck: your next hand piece takes over', '대국마다 한 번 · 이어 먹은 기물도 쓴 것이 된다': 'Once per match · the relay piece is spent too',
   '역행': 'Backstep', '폰 모습이면 아래 대각으로도 먹는다': 'As a pawn: takes diagonally backward too',
   '결투': 'Duel', '같은 종류를 두 번 못 먹는다 · 배수 ×2': 'No taking the same kind twice · ×2 Mult', '킹은 빼고': 'Kings excepted',
@@ -338,7 +338,7 @@ export const EN = {
   // 혼 각성(CHM-17)
   '각성': 'Awakening', '깨우기': 'Awaken', '깨운다': 'Awaken', '혼이 깨어났다': 'The soul awakens', '금빛 적을 먹고 이겼다': 'Won after taking a golden enemy',
   '금이 간 혼 하나가 깨어난다': 'A cracked soul awakens', '혼 깃든 기물로 사슬을 다섯 번 이으면 금이 간다': 'Five chains with a soul piece crack its soul',
-  '금이 간 혼에 쓴다': 'Use on a cracked soul', '주머니에서 깨울 기물을 고른다': 'Choose a cracked piece', '각성이 사라진다': 'The awakening is lost', '금이 사라진다': 'The crack is lost',
+  '금이 간 혼에 쓴다': 'Use on a cracked soul', '덱에서 깨울 기물을 고른다': 'Choose a cracked piece', '각성이 사라진다': 'The awakening is lost', '금이 사라진다': 'The crack is lost',
   '혼에 금이 갔다. 금빛 적 · 마스터의 상자 · 깨우기로 깨어난다': "A soul cracked. A golden enemy, a Master's Chest or Awaken will wake it",
   '얻은 행마: 둘까지 쌓인다': 'Gained moves: keep up to two', '더 먹을 적이 없을 때: 두 번까지 돌아간다': 'When stuck: return up to twice',
   '아마존 모습으로 먹을 때마다: 배수 ×1.5': 'Each take as an amazon: ×1.5 Mult', '먹을 때마다: 값 +20씩 · 배수 +1씩 커진다': 'Each take: Value grows by 20 · Mult by 1',
@@ -444,7 +444,7 @@ export const EN = {
   '사슬마다 한 번': 'Once per chain',
   '마지막에 얻은 행마는 사슬 끝까지 남는다': 'The last move gained lasts to the end of the chain',
   '폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존': 'Pawn › knight › bishop › rook › queen › amazon',
-  '주머니가 여섯 이하면 떠나지 않는다': 'It stays if your bag has six or fewer',
+  '덱이 여섯 이하면 떠나지 않는다': 'It stays if your deck has six or fewer',
   // 격언
   '나이트로 시작: 배수 ×1.5': 'Start with a knight: ×1.5 Mult',
   '폰으로 시작: 값 +40': 'Start with a pawn: +40 Value',
@@ -464,8 +464,8 @@ export const EN = {
   '대국 마지막 수: 배수 ×3': 'Last move of a match: ×3 Mult',
   '희생 없는 대국: 배수 +4': 'No sacrifices this match: +4 Mult',
   '희생 +1 · 탁월수: 배수 ×2': '+1 Sacrifice · Brilliant: ×2 Mult',
-  '주머니에 남은 기물마다 배수 +1': '+1 Mult per piece left in your bag',
-  '주머니 기물 여덟 이하: 배수 ×1.5': '8 or fewer pieces in your bag: ×1.5 Mult',
+  '덱에 남은 기물마다 배수 +1': '+1 Mult per piece left in your deck',
+  '덱 기물 여덟 이하: 배수 ×1.5': 'Deck of 8 or fewer: ×1.5 Mult',
   '막 들어온 증원을 먹으면 값 +40': 'Take a fresh recruit: +40 Value',
   '증원을 두 수 앞까지 본다 · 증원 자리에 떨구면 배수 +4': 'See 2 waves · Drop on one: +4 Mult',
   '상아 각인 기물로 시작: 배수 +5': 'Start with an ivory piece: +5 Mult',
@@ -488,9 +488,9 @@ export const EN = {
   '대국마다 금빛 칸 셋 · 그 위 적을 먹으면 배수 ×2': 'Three gold squares each match · take on one: ×2 Mult',
   '대국마다 문 둘 · 문 위 적을 먹으면 다른 문으로 건너가 잇는다': 'Two gates each match · take on one to cross to the other',
   '끊길 때: 킹을 뺀 둘레의 적을 모두 먹는다': 'On a break: clear all around but kings',
-  '대국 첫 사슬: 배수 ×3 · 시작한 기물은 주머니에서 떠난다': "Match's first chain: ×3 Mult · its piece leaves your bag",
-  '주머니 기물이 모두 다른 종류: 목표 절반': 'Every piece in your bag different: half the Target',
-  '폰으로 시작해 프로모션하면: 주머니의 그 폰이 퀸이 된다': 'Pawn start that promotes: that pawn becomes a queen in your bag',
+  '대국 첫 사슬: 배수 ×3 · 시작한 기물은 덱에서 떠난다': "Match's first chain: ×3 Mult · its piece leaves your deck",
+  '덱 기물이 모두 다른 종류: 목표 절반': 'Every piece in your deck different: half the Target',
+  '폰으로 시작해 프로모션하면: 덱의 그 폰이 퀸이 된다': 'Pawn start that promotes: that pawn becomes a queen in your deck',
   '한 사슬이 한 줄에 다섯 칸을 밟으면 곧바로 이긴다': 'A chain that lands on five in a row wins at once',
   '가장 많이 모은 시너지는 1 · 3 · 5개에서 켜진다': 'Your biggest synergy switches on at 1, 3 and 5',
   // 혼
@@ -502,7 +502,7 @@ export const EN = {
   '지키는 적을 무시한다 · 배수 −1': 'Ignore guards · −1 Mult', '지켜진 킹은 먹을 수 없다': 'A guarded king still cannot be taken',
   // 적 특성 · 묘수 · 명인
   '사슬의 첫 먹기로는 못 먹는다': "Can't be a chain's first take", '먹으면 둘레의 적도 함께 먹는다': 'Taking it takes the enemies around it too',
-  '먹어도 모습이 안 바뀐다': 'Taking it keeps your form', '먹으면 대국 뒤 내 주머니에 들어온다': 'Take it and it joins your bag after the match',
+  '먹어도 모습이 안 바뀐다': 'Taking it keeps your form', '먹으면 대국 뒤 내 덱에 들어온다': 'Take it and it joins your deck after the match',
   '값이 가장 큰 적 셋: 이번 수엔 못 지킨다': 'Top three enemies by Value: no guarding this move',
   '이번 대국 수 +1': '+1 Move this match', '적 폰 넷이 빈칸에 나온다': 'Four enemy pawns step onto empty squares',
   '지켜진 적을 먹으면 곧바로 끊긴다': 'Taking a guarded enemy breaks the chain',
@@ -562,7 +562,7 @@ const KIND = { '연습 대국': 'Practice', '정식 대국': 'Rated', 마스터�
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
   // 하이라이트 카드(CHM-73)
-  [/^이 주머니로 (\d+)관$/, (m) => `This bag: Hall ${m[1]}`],
+  [/^이 덱으로 (\d+)관$/, (m) => `This deck: Hall ${m[1]}`],
   [/^사슬 (\d+)$/, (m) => `Chain ${m[1]}`],
   [/^(\d+)개$/, (m) => `${m[1]}`],
   // 복기(CHM-59) 갈림길 카드 · 다시 두기: 「 · 」로 쪼개기 전에
@@ -638,7 +638,7 @@ export const TEMPLATES = [
   [/^팔기 (\$\d+)$/, (m) => `Sell ${m[1]}`],
   [/^(.+)로 (\$\d+)$/, (m, tr) => `To ${tr(m[1])} ${m[2]}`],
   [/^격언 (\d+)\/(\d+)$/, (m) => `Maxims ${m[1]}/${m[2]}`],
-  [/^주머니 (\d+)$/, (m) => `Bag ${m[1]}`],
+  [/^덱 (\d+)$/, (m) => `Deck ${m[1]}`],
   [/^마스터 (.+)$/, (m, tr) => `Master ${tr(m[1])}`],
   [/^목표 ([\d,]+)$/, (m) => `Target ${m[1]}`],
   [/^점수 (.+) \/ 목표 (.+)$/, (m) => `Score ${m[1]} / Target ${m[2]}`],
@@ -657,7 +657,7 @@ export const TEMPLATES = [
   [/^(.+?)(?:으로|로) 올리기 \$(\d+)$/, (m, tr) => `Upgrade to ${tr(m[1])} $${m[2]}`],
   [/^유리 각인 (.+?)[이가] 깨졌다$/, (m, tr) => `Glass ${tr(m[1])} shattered`],
   [/^(.+?)[이가] 손으로 돌아왔다$/, (m, tr) => `${tr(m[1])} returned to your hand`],
-  [/^(.+) 포로가 주머니에 든다$/, (m, tr) => `A captive ${tr(m[1]).toLowerCase()} joins your bag`],
+  [/^(.+) 포로가 덱에 든다$/, (m, tr) => `A captive ${tr(m[1]).toLowerCase()} joins your deck`],
   [/^횃불 · (.+)$/, (m, tr) => `Torch · ${tr(m[1])}`],
   [/^횃불: (.+)$/, (m, tr) => `Torch: ${tr(m[1])}`],
   [/^(.+)에 (.+) 각인$/, (m, tr) => `${tr(m[2])} on ${tr(m[1])}`],

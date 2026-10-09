@@ -6,7 +6,7 @@ export const TRAITS = [
   { id: 'bomb', name: '폭약', col: '#df5a45', text: '먹으면 둘레의 적도 함께 먹는다' },
   { id: 'mirror', name: '허수아비', col: '#9fd3e0', text: '먹어도 모습이 안 바뀐다' },
   { id: 'fort', name: '파수꾼', col: '#c8902c', text: '둘레 여덟 칸을 모두 지킨다' },
-  { id: 'traitor', name: '배신자', col: '#8ec07c', text: '먹으면 대국 뒤 내 주머니에 들어온다' },
+  { id: 'traitor', name: '배신자', col: '#8ec07c', text: '먹으면 대국 뒤 내 덱에 들어온다' },
 ];
 export const TRAIT_BY_ID = Object.fromEntries(TRAITS.map((t) => [t.id, t]));
 // 적 하나에 특성이 붙을 확률: 4관 6% · 관마다 +4%p, 최대 26%

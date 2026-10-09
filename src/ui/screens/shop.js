@@ -1,5 +1,5 @@
 // 상점: 진열 2 + 꾸러미 2 + 다시 진열 + 다음 대국. 오른쪽 격언 칸(끌어서 순서 바꾸기 · 눌러 팔기), 두루마리 칸(눌러 쓰기),
-// 아래 주머니(눌러 승급 · 빼기).
+// 아래 덱(눌러 승급 · 빼기).
 import { sway } from '../sway.js';
 import { hint as coachHint } from '../coach.js';
 import { PAL, RARITY } from '../../render/palette.js';
@@ -29,10 +29,10 @@ import { L } from '../lang.js';
 
 const RX = RIGHT.x, RW = RIGHT.w;
 // 판 틀(docs/design-notes/layout.md 「상점」): 가운데 칸 위 띠에 「진열」 이름표 · 다시 진열 · 다음 대국, 그 아래로 진열 카드 줄(hug) →
-// 꾸러미 줄(hug) → 주머니(남는 높이). 오른쪽 칸은 격언 칸 → 두루마리(아래에서부터). 묶음 사이 GAP_GROUP
+// 꾸러미 줄(hug) → 덱(남는 높이). 오른쪽 칸은 격언 칸 → 두루마리(아래에서부터). 묶음 사이 GAP_GROUP
 const CARD_W = CARD.w, BAR_Y = 2, BAR_H = BTN_S, BOTTOM = 270 - 2, BAG_MIN = 28;
 
-// 주머니 줄: 작은 기물 카드들. pick(p)이 있으면 누를 수 있다.
+// 덱 줄: 작은 기물 카드들. pick(p)이 있으면 누를 수 있다.
 // flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝)
 // grow: { form, p, big, from, to, exact } 기보로 자라는 모습 — 그 모습(이형은 바탕 모습)의 기물마다 옛 톤 · 옛 수준에서 반짝이며 새 톤 · 새 수준으로,
 //   단계가 바뀌면(big) 빛 기둥까지. exact: 그 종류만(진화)
@@ -43,13 +43,13 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
   const cw = 20, ch = 28;
   let per = Math.max(1, Math.floor((w + 3) / (cw + 3)));
   let rows = Math.ceil(n / per), hstep = cw + 3;
-  // 줄을 쌓을 높이가 없으면(긴 진열 카드 아래 큰 주머니 — 용병단 땅의 배신자로 주머니가 열넷까지 는다) 한 줄에 옆으로 겹쳐 놓는다
+  // 줄을 쌓을 높이가 없으면(긴 진열 카드 아래 큰 덱 — 용병단 땅의 배신자로 덱이 열넷까지 는다) 한 줄에 옆으로 겹쳐 놓는다
   if (rows > 1 && bottom - y < ch + (rows - 1) * 8) { per = n; rows = 1; hstep = Math.max(4, Math.floor((w - cw) / Math.max(1, n - 1))); }
   const step = rows > 1 ? Math.max(4, Math.min(ch + 3, Math.floor((bottom - y - ch) / (rows - 1)))) : ch + 3;
-  // 줄 간격이 가장 좁아도 넘치면(주머니가 커진 긴 판 — 시계로 판이 길어졌다) 줄을 위로 올린다
+  // 줄 간격이 가장 좁아도 넘치면(덱이 커진 긴 판 — 시계로 판이 길어졌다) 줄을 위로 올린다
   if (rows > 1 && y + (rows - 1) * step + ch > bottom) y = bottom - ch - (rows - 1) * step;
   // 줄 자리를 기록기에 남긴다(글은 없다 — 화면 밖 · 다른 칸과 겹침만 잰다)
-  openBox('tile', x, y, w, (rows - 1) * step + ch, 0, { name: '주머니 줄' });
+  openBox('tile', x, y, w, (rows - 1) * step + ch, 0, { name: '덱 줄' });
   closeBox();
   run.deck.forEach((p, i) => {
     const col = i % per, row = Math.floor(i / per);
@@ -167,7 +167,7 @@ export const packCellH = (pk, w) => packCellLayout(pk, w).h;
 export const packShortName = (pk) => L(PACK_NAME[pk.kind].split(' ')[0]);
 export const packNameRoom = (w) => packCellLayout({}, w).tw;
 export const packRowNames = (packs, w) => packEnv(w) || packs.every((pk) => measure(packShortName(pk), true) <= packNameRoom(w));
-// 주머니의 기물을 골라 쓰는 두루마리(처음 안내 「두루마리를 누르고 주머니의 기물을 골라 쓴다」의 대상)
+// 덱의 기물을 골라 쓰는 두루마리(처음 안내 「두루마리를 누르고 덱의 기물을 골라 쓴다」의 대상)
 const SCROLL_ON_PIECE = ['engraving', 'soul', 'evolve', 'awaken'];
 export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' || c.kind === 'awaken' ? itemTip(c) : c.kind === 'chart' ? chartTip(c.form) : c.kind === 'soul' ? tipLines(`${SOUL_BY_ID[c.id].name}의 혼`, [SOUL_BY_ID[c.id].text, SOUL_BY_ID[c.id].more, '기물 하나에 깃든다'], 150, [rarityLine(SOUL_BY_ID[c.id].rarity)]) : tipLines(`${engravingInfo(c.id).name} 각인`, engravingInfo(c.id).text));
 
@@ -282,7 +282,7 @@ export class ShopScreen {
     return ev;
   }
 
-  // 가운데 칸 자리: 진열 줄 높이(두 카드 중 긴 것) · 꾸러미 줄 높이 · 주머니 윗변
+  // 가운데 칸 자리: 진열 줄 높이(두 카드 중 긴 것) · 꾸러미 줄 높이 · 덱 윗변
   centerLayout() {
     const run = this.run, shop = run.shop;
     const cardH = itemRowH(shop.display, CARD_W, { run, hold: true });
@@ -301,8 +301,8 @@ export class ShopScreen {
     const labelY = scrollY - GAP_IN - LINE;
     return { wide, ch, scrollY, labelY, room: labelY - GAP_GROUP - TOP };
   }
-  // 판 틀(docs/design-notes/layout.md): 왼쪽 칸(상점 · 시너지 · 정석 · 상금 · 주머니 수 — 설명 자리),
-  // 가운데(띠: 진열 · 다시 진열 · 다음 대국 / 진열 둘 · 꾸러미 둘 · 주머니), 오른쪽 칸(격언 · 두루마리)
+  // 판 틀(docs/design-notes/layout.md): 왼쪽 칸(상점 · 시너지 · 정석 · 상금 · 덱 수 — 설명 자리),
+  // 가운데(띠: 진열 · 다시 진열 · 다음 대국 / 진열 둘 · 꾸러미 둘 · 덱), 오른쪽 칸(격언 · 두루마리)
   draw(ctx, ui) {
     const app = this.app, run = this.run, shop = run.shop;
     runSide(ctx, ui, app, '상점');
@@ -313,7 +313,7 @@ export class ShopScreen {
     const leaveW = measure('다음 대국', true) + 12, rerollW = Math.max(80, measure(`다시 진열 $${rc}`, true) + 12);
     button(ctx, ui, 'shop:leave', CX + CENTER.w - leaveW, BAR_Y, leaveW, BAR_H, '다음 대국', { onClick: () => this.leave(), tone: 'gold' });
     button(ctx, ui, 'shop:reroll', CX + CENTER.w - leaveW - 4 - rerollW, BAR_Y, rerollW, BAR_H, `다시 진열 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
-    // 두루마리를 쓰는 중: 진열 · 꾸러미 자리에 미리 보기 판(고른 기물이 어떻게 되는지 보이고 확인을 받는다), 그 아래 주머니
+    // 두루마리를 쓰는 중: 진열 · 꾸러미 자리에 미리 보기 판(고른 기물이 어떻게 되는지 보이고 확인을 받는다), 그 아래 덱
     let bagY = lay.bagY;
     const target = this.target && run.consumables[this.target.index];
     if (target) {
@@ -360,8 +360,8 @@ export class ShopScreen {
         }, { hover: hov, press: hov && ui.press && ui.press.id === id, amt: 0.6 });
       });
     }
-    // 주머니(가운데 아래 — 남는 높이). 수는 왼쪽 칸 「주머니」.
-    // 진열 카드는 ≤ 160이라 주머니 한 줄(BAG_MIN)이 늘 남는다(test/layout.test.js). 그래도 모자라면 화면 안에 붙인다(연기 시험이 겹침으로 잡는다)
+    // 덱(가운데 아래 — 남는 높이). 수는 왼쪽 칸 「덱」.
+    // 진열 카드는 ≤ 160이라 덱 한 줄(BAG_MIN)이 늘 남는다(test/layout.test.js). 그래도 모자라면 화면 안에 붙인다(연기 시험이 겹침으로 잡는다)
     bagY = Math.min(bagY, BOTTOM - BAG_MIN);
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
     const fp = since(this.flash, 0.3), gp = since(this.grow, this.grow && !this.grow.big ? GROW_SMALL : GROW_BIG);

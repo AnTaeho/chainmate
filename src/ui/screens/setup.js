@@ -27,7 +27,7 @@ export class SetupScreen {
     this.app.saveRecords();
     this.app.newRun({ opening: this.opening, dan: this.dan });
   }
-  // 오프닝 카드 쌓기(PAD_CARD): 열린 카드는 이름(제목 줄) → 묶음 틈 → 주머니 모습(두 줄) → 묶음 틈 → 더하는 것,
+  // 오프닝 카드 쌓기(PAD_CARD): 열린 카드는 이름(제목 줄) → 묶음 틈 → 덱 모습(두 줄) → 묶음 틈 → 더하는 것,
   // 잠긴 카드는 「?」(세 배) → 묶음 틈 → 해금 과제 글. 다섯 카드는 가장 긴 카드의 높이
   cardLayout(id, w) {
     const open = this.app.records.unlocked.openings.includes(id);
@@ -78,7 +78,7 @@ export class SetupScreen {
         return;
       }
       for (const [l, ly] of lay.names) text(ctx, l, x + w / 2, y + ly, sel ? PAL.gold : PAL.ink, { align: 'center', bold: true });
-      // 주머니 모습: 작은 기물 여덟(두 줄)
+      // 덱 모습: 작은 기물 여덟(두 줄)
       op.bag.forEach((t, k) => sprite(ctx, t, 'w', x + PAD_CARD - 2 + (k % 4) * 19, y + lay.bag + Math.floor(k / 4) * 20));
       for (const [l, ly] of lay.extras) text(ctx, l, x + w / 2, y + ly, PAL.gold, { align: 'center' });
       closeBox();

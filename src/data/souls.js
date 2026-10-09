@@ -1,4 +1,4 @@
-// 혼(깊이 C): 주머니 기물 하나에 붙는 고유 규칙. 모습이 바뀌어도 그 사슬 내내 따라간다.
+// 혼(깊이 C): 덱 기물 하나에 붙는 고유 규칙. 모습이 바뀌어도 그 사슬 내내 따라간다.
 // 각인(숫자)과 따로: 한 기물이 각인 하나 + 혼 하나까지. 명세는 기물의 soul = id, 사슬에서는 chain.soul = { id }.
 // 버린 안: 쌍둥이(두 사슬을 차례로 — 한 수 연출 4초 안에 들지 않고 풀이기 가지가 제곱) · 방랑자(가로로 이어진 판 — 행마선이
 //   화면 끝을 넘어 1배에서 읽히지 않는다) · 전령(증원 그림자 먹기 — 그림자는 판에 없는 기물이라 응수 · 끊김 판정이 모호).
@@ -129,7 +129,7 @@ soul('shade', '잠행', '#8a5cc8', ['sacrifice', 'counter'], '지키는 적을 �
 // ── 밤샘 2: 여덟 더(docs/design-notes/content-expansion.md)
 soul('inherit', '계승', '#f2d6c4', ['change'], '사슬이 끝나면 이 기물이 마지막 모습이 된다', {
   rarity: 'rare',
-  more: '주머니의 기물이 바뀐다 · 킹 모습은 빼고',
+  more: '덱의 기물이 바뀐다 · 킹 모습은 빼고',
   awake: '대국마다 한 번: 마지막 모습의 기보 +1',
   onChainEnd(ctx) {
     const c = ctx.chain;
@@ -216,5 +216,5 @@ export const SOUL_BY_ID = Object.fromEntries(SOULS.map((s) => [s.id, s]));
 // 명세: 각성한 혼은 data.awake(명세 data는 탐색이 같이 쓰고 훅은 바꾸지 않는다 — scoring.js forkSpec)
 const AWAKE_DATA = Object.freeze({ awake: true });
 export const soulSpec = (id, awake = false) => (id && SOUL_BY_ID[id] ? (awake ? { id: `soul:${id}`, data: AWAKE_DATA } : { id: `soul:${id}` }) : null);
-// 기물(주머니 · 손)의 혼 명세
+// 기물(덱 · 손)의 혼 명세
 export const pieceSoul = (p) => (p ? soulSpec(p.soul, !!p.awake) : null);

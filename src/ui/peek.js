@@ -1,6 +1,6 @@
 // 판 보기(CHM-61, docs/design-notes/agency.md E · layout.md 17절): 관 선택 카드의 작은 판과 왼쪽 칸의 큰 판.
 // 그리는 것은 두기를 누르면 열릴 대국 상태(run.js previewBattle) 그대로 — 적 · 벽 · 보석 · 금빛 적 · 첫 증원 예고, 안개 칸은 안개.
-// 손 · 주머니는 그리지 않는다(대국을 열 때 섞는다).
+// 손 · 덱은 그리지 않는다(대국을 열 때 섞는다).
 import { PAL } from '../render/palette.js';
 import { rect, frame, dots, sprite } from '../render/gfx.js';
 import { isHidden, visibleIncoming } from '../sim/battle.js';

@@ -1,5 +1,5 @@
 // 각인(강화): 떨군 기물에 붙는다. 명세는 기물의 eng = { id }.
-// breakChance: 사슬을 푼 뒤 그 확률로 깨져 주머니에서 사라진다(판정은 battle.js의 endMove, 풀이기는 모른다).
+// breakChance: 사슬을 푼 뒤 그 확률로 깨져 덱에서 사라진다(판정은 battle.js의 endMove, 풀이기는 모른다).
 import { defineModifier } from '../sim/scoring.js';
 import { PIECES } from './pieces.js';
 

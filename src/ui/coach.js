@@ -17,7 +17,7 @@ import { openBox, closeBox } from '../render/layoutlog.js';
 export const HINTS = {
   shop: '산 격언은 오른쪽 칸에서 판 내내 힘을 낸다',
   pack: '셋 중 하나를 고른다. 넘겨도 된다',
-  scroll: '두루마리를 누르고 주머니의 기물을 골라 쓴다',
+  scroll: '두루마리를 누르고 덱의 기물을 골라 쓴다',
   draft: '레퍼토리는 판 끝까지 간다. 레퍼토리마다 시너지가 다르다',
   family: '같은 시너지를 2 · 4 · 6개 모으면 효과가 켜진다',
   master: '마스터는 규칙 하나를 비튼다',

@@ -1,4 +1,4 @@
-// 대국 하나: 손 · 주머니 · 수 · 바꾸기 · 증원 · 승패.
+// 대국 하나: 손 · 덱 · 수 · 바꾸기 · 증원 · 승패.
 // 상태는 순수 객체(JSON 왕복 안전). 바꾸는 길은 apply(b, cmd) 하나뿐.
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }  { type: 'reboard' }
 // 'discard'는 화면 낱말 「희생」(CHM-35)이다. 코드 id · discardsLeft · discardsUsed · discarded는 옛 저장과 맞추려고 그대로 둔다.
@@ -36,7 +36,7 @@ export const DEFAULT_RULES = {
   reboards: 1,      // 다시 놓기: 첫 수 전에 판을 새로 까는 횟수(대국마다)
 };
 
-// 희생(CHM-35): 바친 기물은 b.offered(이번 대국 동안 주머니로 돌아오지 않는다), 다음 수를 기다리는 희생은 b.offering.
+// 희생(CHM-35): 바친 기물은 b.offered(이번 대국 동안 덱으로 돌아오지 않는다), 다음 수를 기다리는 희생은 b.offering.
 // 탁월수(희생으로 새로 뽑은 기물로 시작한 바로 다음 사슬이 체크메이트)는 chain.js finish가 매긴다. 규칙 수치는 src/data/sacrifice.js
 export { SACRIFICE_WEIGHT, BRILLIANT, addOffering } from '../data/sacrifice.js';
 import { addOffering } from '../data/sacrifice.js';
@@ -127,15 +127,15 @@ function draw(b) {
   while (b.hand.length < b.rules.hand && b.bag.length) b.hand.push(b.bag.shift());
 }
 
-// 다음 수(CHM-60, docs/design-notes/agency.md A): 주머니 차례는 대국을 시작할 때 시드로 섞여 정해져 있고, 손은 늘 맨 앞부터 뽑는다.
-// 그래서 다음에 손에 들어올 기물은 주머니 맨 앞 그대로다 — 새 상태 없이 b.bag 차례를 보여 줄 뿐이다.
-// 차례가 바뀌는 곳: 수 · 희생(앞에서 뽑아 간다) · 손을 새로 쥠(주머니를 다시 섞는다). 다시 놓기는 판만 새로 깔아 차례가 그대로다.
+// 다음 수(CHM-60, docs/design-notes/agency.md A): 덱 차례는 대국을 시작할 때 시드로 섞여 정해져 있고, 손은 늘 맨 앞부터 뽑는다.
+// 그래서 다음에 손에 들어올 기물은 덱 맨 앞 그대로다 — 새 상태 없이 b.bag 차례를 보여 줄 뿐이다.
+// 차례가 바뀌는 곳: 수 · 희생(앞에서 뽑아 간다) · 손을 새로 쥠(덱을 다시 섞는다). 다시 놓기는 판만 새로 깔아 차례가 그대로다.
 // 화면 · 봇 모두 앞의 NEXT_DRAWS개만 안다(셋째부터는 가린다).
 export const NEXT_DRAWS = 2;
 export const nextDraws = (b, n = NEXT_DRAWS) => b.bag.slice(0, n);
 
 const normPiece = (p, i) => (typeof p === 'string' ? { t: p, id: i + 1, eng: null } : { t: p.t, id: p.id ?? i + 1, eng: p.eng ?? null, ...soulOf(p) });
-// 기물의 혼 · 금(사슬 수 links) · 각성(awake)을 옮긴다(판 주머니 → 대국)
+// 기물의 혼 · 금(사슬 수 links) · 각성(awake)을 옮긴다(판 덱 → 대국)
 export const soulOf = (p) => (p.soul ? { soul: p.soul, ...(p.links ? { links: p.links } : {}), ...(p.awake ? { awake: true } : {}) } : {});
 
 // 금빛 적: 대국 시작 판에서 킹이 아닌 적 하나가 이 확률로 금빛(HOOKS 「드문 것들의 사다리」 대국당 ~4%).
@@ -205,7 +205,7 @@ function newBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, t
     discarded: 0,      // 희생한 기물 수
     offering: null,    // 다음 수를 기다리는 희생 { weight, count, pieces }(옛 저장엔 없다 = 없음)
     offered: [],       // 바친 기물(이번 대국 동안 돌아오지 않는다)
-    shattered: [],     // 깨진 기물 id(각인 「유리」). 판(런)이 주머니에서 뺀다
+    shattered: [],     // 깨진 기물 id(각인 「유리」). 판(런)이 덱에서 뺀다
     regrip: false,     // 막혀서 손을 새로 쥐었나(대국마다 한 번)
     reboards: 0,       // 다시 놓기를 쓴 횟수
     filter,            // 판 후보 수(다시 놓기도 같은 거르기)
@@ -374,7 +374,7 @@ export function apply(b, cmd) {
     case 'discard': { // 희생
       if (b.status !== 'play') throw new Error('not expecting a discard');
       if (b.discardsLeft <= 0) throw new Error('no discards left');
-      // 주머니가 비면 희생은 손만 줄인다: legalCommands · 막힘 판정과 같이 막는다
+      // 덱이 비면 희생은 손만 줄인다: legalCommands · 막힘 판정과 같이 막는다
       if (b.bag.length === 0) throw new Error('bag is empty');
       const idx = [...new Set(cmd.handIndices)].sort((x, y) => y - x);
       if (!idx.length || idx.length > b.rules.maxDiscard || idx.some((i) => !b.hand[i])) throw new Error('bad discard');
@@ -421,7 +421,7 @@ function endMove(b, events) {
   b.money += c.money || 0;
   b.movesLeft--;
   b.movesUsed++;
-  // 각인 「유리」 꼴: 쓸 때마다 확률로 깨져 주머니에서 사라진다. 판정은 여기서만(풀이기가 난수를 건드리지 않게).
+  // 각인 「유리」 꼴: 쓸 때마다 확률로 깨져 덱에서 사라진다. 판정은 여기서만(풀이기가 난수를 건드리지 않게).
   const eng = b.chainPiece.eng && getModifier(b.chainPiece.eng.id);
   if (eng && eng.breakChance && next(b.rng.glass) < eng.breakChance) {
     b.shattered.push(b.chainPiece.id);
@@ -433,7 +433,7 @@ function endMove(b, events) {
     b.hand.push(b.chainPiece);
     events.push({ type: 'returnHome', piece: b.chainPiece.t, id: b.chainPiece.id });
   } else b.used.push(b.chainPiece);
-  // 혼의 금(CHM-17 각성 사다리): 혼이 깃든 기물로 먹은 사슬마다 한 칸. CRACK.links에 닿는 순간 금이 간다(판(런)이 대국 뒤 주머니에 옮긴다)
+  // 혼의 금(CHM-17 각성 사다리): 혼이 깃든 기물로 먹은 사슬마다 한 칸. CRACK.links에 닿는 순간 금이 간다(판(런)이 대국 뒤 덱에 옮긴다)
   const cp = b.chainPiece;
   if (cp.soul && !cp.awake && c.captures.length) {
     cp.links = (cp.links || 0) + 1;
@@ -448,9 +448,9 @@ function endMove(b, events) {
     const i = b.hand.findIndex((p) => p.id === c.relay.id);
     if (i >= 0) b.used.push(...b.hand.splice(i, 1));
   }
-  // 혼 「계승」: 대국 뒤 판(런)이 주머니의 그 기물을 마지막 모습으로 바꾼다
+  // 혼 「계승」: 대국 뒤 판(런)이 덱의 그 기물을 마지막 모습으로 바꾼다
   if (c.becomes) (b.becomes || (b.becomes = [])).push({ id: b.chainPiece.id, to: c.becomes });
-  // 정석 「결사」 · 「왕좌」: 판(런)이 대국 뒤 주머니에 옮긴다
+  // 정석 「결사」 · 「왕좌」: 판(런)이 대국 뒤 덱에 옮긴다
   if (c.pact) (b.exiled || (b.exiled = [])).push(b.chainPiece.id);
   if (c.throne) (b.crowned || (b.crowned = [])).push(b.chainPiece.id);
   if (c.traitors) (b.traitors || (b.traitors = [])).push(...c.traitors);
@@ -477,7 +477,7 @@ export function checkStuck(b, events) {
   if (b.status !== 'play') return;
   if (hasLegalDrop(b)) return;
   if (b.discardsLeft > 0 && b.bag.length > 0) return;
-  // 손을 새로 쥔다(대국마다 한 번): 떨굴 곳도 바꿀 것도 없으면 손과 쓴 기물을 주머니에 섞어 넣고 다시 뽑는다.
+  // 손을 새로 쥔다(대국마다 한 번): 떨굴 곳도 바꿀 것도 없으면 손과 쓴 기물을 덱에 섞어 넣고 다시 뽑는다.
   // 막힘 패배는 둘 수 없어 지는 것이라 아프기만 하다 — 명인 「안개」 · 「무거운 손」을 세게 하며 판의 13%가 막힘으로 끝나서 넣었다(밤샘 D-1).
   if (!b.regrip) {
     b.regrip = true;

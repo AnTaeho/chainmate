@@ -1,7 +1,7 @@
 // 정석(깊이 E): 1관 · 3관 · 5관의 첫 대국 전에 셋 중 하나를 고른다(건너뛸 수 없다). 판 끝까지 간다. 격언 칸을 쓰지 않는다.
 // 등급: silver 은 · gold 금 · rainbow 무지개(관이 오를수록 높은 등급이 섞인다). 가족 1~2개 → 첫 정석이 판의 가족 방향.
 // 필드: id · name · tier · families · text
-//   pick(run, events)    고르는 순간 판(런)을 바꾼다(주머니 기물을 이형으로 · …)
+//   pick(run, events)    고르는 순간 판(런)을 바꾼다(덱 기물을 이형으로 · …)
 //   조정자 훅           대국 안에서(defineModifier('joseki:<id>', { kind: 'joseki', … }))
 //   rules(battle, rng)  대국 규칙을 더한다(판 위 사물: 문 · 발판, 고속도로 줄) — 판을 짓기 전에
 import { defineModifier } from '../sim/scoring.js';
@@ -22,7 +22,7 @@ function joseki(id, name, tier, families, text, def = {}) {
   defineModifier(`joseki:${id}`, { kind: 'joseki', ...hooks });
 }
 
-// 주머니 기물을 바꾼다: from 종류 n개를 to로(없으면 to 하나를 더한다)
+// 덱 기물을 바꾼다: from 종류 n개를 to로(없으면 to 하나를 더한다)
 function evolve(run, from, to, n, events) {
   const list = run.deck.filter((p) => p.t === from).slice(0, n);
   if (!list.length) {
@@ -86,16 +86,16 @@ joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], MARTYR_TEXT, {
   more: MARTYR_MORE,
   onCut(ctx) { martyrBurst(ctx); },
 });
-joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬: 배수 ×3 · 시작한 기물은 주머니에서 떠난다', {
-  more: '주머니가 여섯 이하면 떠나지 않는다',
+joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬: 배수 ×3 · 시작한 기물은 덱에서 떠난다', {
+  more: '덱이 여섯 이하면 떠나지 않는다',
   onChainEnd(ctx) { if (!(ctx.t.movesUsed ?? 0)) { ctx.mulMult(3); ctx.chain.pact = true; } },
 });
 
 // ── 무지개: 판의 조건을 바꾼다
-joseki('highlander', '하이랜더', 'rainbow', ['hunt'], '주머니 기물이 모두 다른 종류: 목표 절반', {
+joseki('highlander', '하이랜더', 'rainbow', ['hunt'], '덱 기물이 모두 다른 종류: 목표 절반', {
   targetMult(run) { const seen = new Set(); for (const p of run.deck) { if (seen.has(p.t)) return 1; seen.add(p.t); } return 0.5; },
 });
-joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 시작해 프로모션하면: 주머니의 그 폰이 퀸이 된다', {
+joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 시작해 프로모션하면: 덱의 그 폰이 퀸이 된다', {
   onPromote(ctx) { if (ctx.chain.dropType === 'P') ctx.chain.throne = true; },
 });
 joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 사슬이 한 줄에 다섯 칸을 밟으면 곧바로 이긴다', {
@@ -152,8 +152,8 @@ joseki('long_think', '장고', 'gold', ['hunt'], '수 −1 · 손 +2 · 희생 +
 joseki('first_mover', '선수', 'rainbow', ['crown'], '대국 시작에 값이 가장 큰 적 하나가 판에서 빠진다', {
   onSetup(ctx) { const b = ctx.t.board; const sq = heavyFirst(b)[0]; if (sq != null) { b[sq] = null; ctx.emit({ type: 'firstMover', sq }); } },
 });
-joseki('captive', '포로', 'rainbow', ['change'], '대국 첫 사슬이 마지막에 먹은 적이 주머니에 들어온다', {
-  more: '주머니 열넷까지',
+joseki('captive', '포로', 'rainbow', ['change'], '대국 첫 사슬이 마지막에 먹은 적이 덱에 들어온다', {
+  more: '덱 열넷까지',
   onChainEnd(ctx) {
     const c = ctx.chain, last = c.captures.at(-1);
     if ((ctx.t.movesUsed ?? 0) || !last || last.piece === 'K' || (PIECES[last.piece] && PIECES[last.piece].thing)) return;

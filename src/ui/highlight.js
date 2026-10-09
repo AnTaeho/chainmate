@@ -1,4 +1,4 @@
-// 하이라이트 카드(CHM-73): 끝난 판의 주머니 기물과 격언을 그림 한 장으로. 400 × 225 칸에 그리고 3배(1200 × 675)로 내보낸다.
+// 하이라이트 카드(CHM-73): 끝난 판의 덱 기물과 격언을 그림 한 장으로. 400 × 225 칸에 그리고 3배(1200 × 675)로 내보낸다.
 // 칸 계산(highlightLayout)과 그리기(drawHighlight)가 같은 값을 쓴다 — 결과 화면 덮개(screens/highlight.js)와 내보낸 그림이 같은 그림이다.
 import { PAL } from '../render/palette.js';
 import { W, H, text, rect, frame, sprite, measure, short, fitNum } from '../render/gfx.js';
@@ -74,7 +74,7 @@ export function highlightLayout(run, ox = 0, oy = 0) {
   const grid = maximSpots(maxims, x, top + BAG_H + MID_GAP, w);
   // 아래 띠: 윗줄 = 꼬리표 · 「최고 한 수 · 사슬 N」, 아랫줄 = 큰 글 · 점수
   const tag = run.phase === 'won' ? { s: '여덟 관을 꺾었다', col: PAL.gold } : run.endless ? { s: '끝없는 대국', col: PAL.gold } : { s: '닿은 곳', col: PAL.dim };
-  const head = `이 주머니로 ${run.ante}관`, chain = chainOf(r), score = r.score || 0;
+  const head = `이 덱으로 ${run.ante}관`, chain = chainOf(r), score = r.score || 0;
   const note = chain > 0 ? `최고 한 수 · 사슬 ${chain}` : '최고 한 수';
   // 큰 글은 두 배, 짧은 꼴 점수와도 한 줄에 안 들어가면 한 배 굵게. 점수는 남은 폭에 1,234 꼴이 안 들어가면 짧은 꼴
   const big = measure(head, true) * 2 + BAND_GAP + measure(short(score), true) * 2 <= w;

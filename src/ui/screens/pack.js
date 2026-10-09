@@ -1,5 +1,5 @@
 // 꾸러미 열기: 카드가 차례로 뒤집히며 나오고 하나를 고른다(건너뛰기 가능). 금빛 꾸러미는 금빛.
-// 각인이면 고른 뒤 주머니에서 새길 기물을 누른다. 금빛 꾸러미의 격언을 칸이 찬 채로 고르면 격언 칸이 펼쳐지고,
+// 각인이면 고른 뒤 덱에서 새길 기물을 누른다. 금빛 꾸러미의 격언을 칸이 찬 채로 고르면 격언 칸이 펼쳐지고,
 // 옛 격언 하나를 골라 바꾼다(팔고 받는다). 격언 칸은 평소엔 위 띠의 이름표 「격언 5/5」 — 누르면 펼쳐 판다.
 import { sway } from '../sway.js';
 import { hint } from '../coach.js';
@@ -119,7 +119,7 @@ export class PackScreen {
       if (e.type === 'fragment') this.app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6);
       if (e.type === 'chart') this.app.toast(`${CHARTS[e.form].name} ${e.level}`, PAL.gold);
     }
-    // 상점으로 돌아가 주머니에서 자라는 · 새겨지는 모습을 보인다
+    // 상점으로 돌아가 덱에서 자라는 · 새겨지는 모습을 보인다
     this.app.shopFx = ev.filter((e) => e.type === 'chart' || e.type === 'engrave' || e.type === 'ensoul');
     if (legend) this.app.flow([['legend', { legend: legend.legend }]]);
     else if (this.run.phase !== 'pack') this.app.goPhase();
@@ -131,7 +131,7 @@ export class PackScreen {
     const gold = pack.kind === 'golden';
     runSide(ctx, ui, this.app, PACK_NAME[pack.kind]);
     pauseButton(ctx, ui, this.app);
-    // 새길 기물을 고르는 동안은 카드 줄 자리에 미리 보기 판(고른 각인 · 기물이 어떻게 되는지)과 주머니 — 「그만」이면 카드 줄로 돌아간다
+    // 새길 기물을 고르는 동안은 카드 줄 자리에 미리 보기 판(고른 각인 · 기물이 어떻게 되는지)과 덱 — 「그만」이면 카드 줄로 돌아간다
     if (this.engraveIndex != null) {
       const o = pack.options[this.engraveIndex];
       const p = this.engraveTarget != null ? run.deck.find((x) => x.id === this.engraveTarget) : null;

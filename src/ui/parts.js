@@ -421,7 +421,7 @@ export function itemTip(it) {
   }
   if (it.kind === 'chart') return chartTip(it.form);
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '기물 하나에 새긴다']); }
-  if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '주머니에 들어온다']);
+  if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '덱에 들어온다']);
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 깃든다'], 150, [rarityLine(s.rarity)]); }
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
   if (it.kind === 'awaken') return tipLines('깨우기', [AWAKEN_TEXT, AWAKEN_MORE]);
@@ -631,12 +631,12 @@ export const isSwap = (what, p) => { const held = heldOf(what, p); return !!held
 const markName = (kind, id) => (kind === 'engraving' ? engravingInfo(id).name : SOUL_BY_ID[id].name);
 function targetText(run, what, p, to) {
   if (what.kind === 'awaken') {
-    if (!p) return { title: '주머니에서 깨울 기물을 고른다', body: AWAKEN_TEXT };
+    if (!p) return { title: '덱에서 깨울 기물을 고른다', body: AWAKEN_TEXT };
     const s = SOUL_BY_ID[p.soul];
     return { title: `${s.name}의 혼이 깨어난다`, body: `각성 · ${L(s.awake)}`, after: { ...p, awake: true } };
   }
   const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
-  if (!p) return { title: what.kind === 'engraving' ? '주머니에서 새길 기물을 고른다' : what.kind === 'soul' ? '주머니에서 깃들 기물을 고른다' : '주머니에서 자랄 기물을 고른다', body: eff };
+  if (!p) return { title: what.kind === 'engraving' ? '덱에서 새길 기물을 고른다' : what.kind === 'soul' ? '덱에서 깃들 기물을 고른다' : '덱에서 자랄 기물을 고른다', body: eff };
   const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
   // 바꾸기: 옛 것 › 새 것(문양 둘과 이름 둘)
   const held = heldOf(what, p);

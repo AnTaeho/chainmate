@@ -1,4 +1,4 @@
-// 대국 화면(mockup 배치). 가운데 8×8 판, 왼쪽 판(관 · 목표 · 점수 · 값 × 배수 · 사슬 모습 줄 · 수 · 바꾸기 · 상금 · 주머니),
+// 대국 화면(mockup 배치). 가운데 8×8 판, 왼쪽 판(관 · 목표 · 점수 · 값 × 배수 · 사슬 모습 줄 · 수 · 바꾸기 · 상금 · 덱),
 // 오른쪽(격언 칸 · 손).
 // 규칙은 명령으로만 진행하고, 돌아온 사건을 차례로 연출(Seq)하는 동안 화면은 「보이는 판」(view)을 그린다.
 import { hint } from '../coach.js';
@@ -55,7 +55,7 @@ export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S
 // 게임 좌표 → 판 칸(판 밖이면 -1)
 export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
-// 다음 수(CHM-60, docs/design-notes/agency.md A): 손 카드 오른쪽 끝의 좁은 칸에 주머니 맨 앞 둘을 반 크기 기물로(위가 먼저, 흐리게).
+// 다음 수(CHM-60, docs/design-notes/agency.md A): 손 카드 오른쪽 끝의 좁은 칸에 덱 맨 앞 둘을 반 크기 기물로(위가 먼저, 흐리게).
 // 새 카드는 손 오른쪽 끝에 붙으니 들어오는 쪽에 둔다. 손 카드는 그만큼 좁아진다(넷이면 25 → 22).
 // 칸 둘은 손 높이(36)의 아래쪽에 — 넷째 카드의 「!?」 딱지(오른쪽 위 밖으로 2 · 위로 4)와 떨어지게.
 export const NEXT_COL = { w: 10, gap: 2, slotH: 15, slotGap: 2 };
@@ -72,7 +72,7 @@ export function discardButton() {
 }
 const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 · ×5 · ×10) = 넘친 층
 // 대국 왼쪽 칸(판 틀 공통 쌓기 — common.js sideStack): 머리 칸(관 · 대국 종류 · 목표 · 점수) → 값 × 배수 → 사슬 칸(남는 높이)
-// … 아래 칸(수 · 희생 · 상금 · 주머니). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
+// … 아래 칸(수 · 희생 · 상금 · 덱). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
 export const VAL_H = 22;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -211,7 +211,7 @@ const bagTip = (b) => {
   const counts = {};
   for (const p of b.bag) counts[p.t] = (counts[p.t] || 0) + 1;
   const parts = ['P', 'N', 'B', 'R', 'Q', ...FAIRIES].filter((t) => counts[t]).map((t) => `${PIECE_NAME[t]} ${counts[t]}`);
-  return tipLines('주머니', parts.length ? parts.join(' · ') : '비었다');
+  return tipLines('덱', parts.length ? parts.join(' · ') : '비었다');
 };
 
 // 대국이 어디서 오나: 판(런)의 대국(기본) · 첫 수업. 화면은 같은 규칙 · 같은 연출을 쓴다.
@@ -671,7 +671,7 @@ export class BattleScreen {
         }); break;
         case 'freeze': add(0.05, { begin: () => { for (const sq of e.squares) this.sparkle(sq, '#9fd3e0', 5); } }); break;
         case 'returnHome': add(0.05, { begin: () => { this.toast(`${josa(PIECE_NAME[e.piece], '이/가')} 손으로 돌아왔다`, PAL.gold); } }); break;
-        case 'captive': add(0.05, { begin: () => { this.toast(`${PIECE_NAME[e.piece]} 포로가 주머니에 든다`, PAL.gold); } }); break;
+        case 'captive': add(0.05, { begin: () => { this.toast(`${PIECE_NAME[e.piece]} 포로가 덱에 든다`, PAL.gold); } }); break;
         // 시계를 잃는다(밤샘 2 D1): 대국은 졌지만 판은 이어진다
         case 'clockLost': add(0.9, {
           begin: () => {
@@ -1273,7 +1273,7 @@ export class BattleScreen {
     if (sq >= 0) hint(app, 'things', `sq:${sq}`);
     const f = v.hand.findIndex((p) => PIECES[p.t] && PIECES[p.t].fairy);
     if (f >= 0) hint(app, 'fairy', `hand:${f}`);
-    // 다음 수(CHM-60): 주머니 맨 앞이 보일 때
+    // 다음 수(CHM-60): 덱 맨 앞이 보일 때
     if ((v.next || []).length) hint(app, 'next', 'next');
     const reg = (p) => app.ui.regions.find((r) => r.id.startsWith(p));
     if (reg('fam:')) hint(app, 'family', reg('fam:').id);
@@ -1872,7 +1872,7 @@ export class BattleScreen {
     }
     closeBox();
   }
-  // 아래 칸: 수 · 희생(구슬) → 상금 → 주머니
+  // 아래 칸: 수 · 희생(구슬) → 상금 → 덱
   drawFootRows(ctx, ui) {
     const app = this.app, v = this.view, run = this.run, P = PAD_BOX;
     const pipX = Math.max(52, Math.max(measure('수'), measure('희생')) + PAD_BOX + 6);
@@ -1888,7 +1888,7 @@ export class BattleScreen {
     ];
     if (hasClock(run)) rows.push(clockRow(app, run));
     if (run) rows.push({ money: run });
-    rows.push({ id: 'bag', label: '주머니', val: `${v.bag} / ${v.deckSize}`, tip: () => bagTip(this.b) });
+    rows.push({ id: 'bag', label: '덱', val: `${v.bag} / ${v.deckSize}`, tip: () => bagTip(this.b) });
     drawFoot(ctx, ui, rows);
   }
 
@@ -2016,7 +2016,7 @@ export class BattleScreen {
     this.drawNext(ctx, ui, lay);
   }
 
-  // 다음 수(CHM-60): 주머니 맨 앞 둘, 위가 먼저. 흐린 반 크기 기물(숫자 없음), 주머니가 비면 점선 빈칸
+  // 다음 수(CHM-60): 덱 맨 앞 둘, 위가 먼저. 흐린 반 크기 기물(숫자 없음), 덱이 비면 점선 빈칸
   drawNext(ctx, ui, lay) {
     const col = nextColumn(lay), next = this.view.next || [];
     ui.region('next', col.x, col.y, col.w, col.h, { tip: () => this.nextTip() });
@@ -2030,7 +2030,7 @@ export class BattleScreen {
   }
   nextTip() {
     const next = this.view.next || [];
-    return tipLines('다음에 들어올 기물', [next.length ? next.map((p) => PIECE_NAME[p.t]).join(' · ') : '주머니가 비었다']);
+    return tipLines('다음에 들어올 기물', [next.length ? next.map((p) => PIECE_NAME[p.t]).join(' · ') : '덱이 비었다']);
   }
 
   // 손 이름표 줄 오른쪽 단추(희생). 다시 두기(screens/review.js)는 「넘어가기」
