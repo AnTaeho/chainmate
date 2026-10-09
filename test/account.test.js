@@ -312,8 +312,8 @@ test('지우기: 비번을 요구한다 · 계정 · 플레이어 · 열쇠 · �
   assert.equal((await svc.accountSignup({ key: other.key, username: 'taeho_an', password: PW2 })).status, 200, '지운 아이디는 다시 쓸 수 있다');
 });
 
-test('열쇠 머리말: Authorization: Bearer가 이긴다 · 옛 길(본문 · 주소의 key)도 받는다 · CORS 허용 머리말 · 계정 길 본문 한도', async () => {
-  const { svc, player } = setup();
+test('열쇠 머리말: Authorization: Bearer만 받는다 · 옛 꼴(본문 · 주소의 key)은 버린다 · CORS 허용 머리말 · 계정 길 본문 한도', async () => {
+  const { svc, store, player } = setup();
   const fake = async () => svc;
   const a = await player(), b = await player();
   const req = (method, url, { key = null, body = null, headers = {} } = {}) => new Request(`http://x${url}`, { method, headers: { ...(body ? { 'content-type': 'application/json' } : {}), ...(key ? { authorization: `Bearer ${key}` } : {}), ...headers }, ...(body ? { body: JSON.stringify(body) } : {}) });
@@ -329,11 +329,21 @@ test('열쇠 머리말: Authorization: Bearer가 이긴다 · 옛 길(본문 · 
   const made = await signup.POST(req('POST', '/api/account/signup', { key: a.key, body: { username: 'taeho_an', password: PW } }));
   assert.deepEqual([made.status, await made.json()], [200, { username: 'taeho_an' }]);
   assert.deepEqual(await (await acct.GET(req('GET', '/api/account', { key: a.key }))).json(), { username: 'taeho_an', devices: 1 });
-  // 옛 길: 주소 · 본문의 key
-  assert.equal((await save.GET(req('GET', `/api/save?key=${a.key}`))).status, 200);
-  assert.equal((await board.GET(req('GET', `/api/daily/board?date=${DATE}&key=${a.key}`))).status, 200);
-  assert.deepEqual(await (await acct.GET(req('GET', `/api/account?key=${b.key}`))).json(), { username: null, devices: 1 });
-  // 둘 다 있으면 머리말
+  // 옛 꼴(주소 · 본문의 key)은 버린다: 열쇠가 드는 길은 400, 순위표는 구경, 플레이어 길은 새 플레이어
+  const old = await save.GET(req('GET', `/api/save?key=${a.key}`));
+  assert.deepEqual([old.status, await old.json()], [400, { error: 'bad_request' }]);
+  assert.equal((await acct.GET(req('GET', `/api/account?key=${b.key}`))).status, 400);
+  await store.putScore(store.keys.get(hashKey(a.key)), DATE, { ante: 3, blind: 1, won: false, score_total: 900, battles: 5, moves: 20, ignite: null }, 'b1', '[]');
+  assert.equal((await (await board.GET(req('GET', `/api/daily/board?date=${DATE}`, { key: a.key }))).json()).me.rank, 1);
+  const watch = await board.GET(req('GET', `/api/daily/board?date=${DATE}&key=${a.key}`));
+  assert.deepEqual([watch.status, (await watch.json()).me], [200, null]);
+  const oldSignup = await signup.POST(req('POST', '/api/account/signup', { body: { key: b.key, username: 'other_one', password: PW } }));
+  assert.equal(oldSignup.status, 400);
+  const playerRoute = route('POST', (s, body) => s.player(body), fake);
+  const fresh = await (await playerRoute.POST(req('POST', '/api/player', { body: { key: a.key } }))).json();
+  assert.notEqual(fresh.key, a.key, '본문의 key는 버려져 새 플레이어가 된다');
+  assert.equal((await (await playerRoute.POST(req('POST', '/api/player', { key: a.key, body: { key: b.key } }))).json()).key, a.key);
+  // 둘 다 있으면 머리말만 본다
   assert.deepEqual(await (await acct.GET(req('GET', `/api/account?key=${b.key}`, { key: a.key }))).json(), { username: 'taeho_an', devices: 1 });
   // 꼴이 틀린 머리말 · 없는 열쇠
   assert.equal((await acct.GET(req('GET', '/api/account', { headers: { authorization: 'Bearer nope' } }))).status, 400);

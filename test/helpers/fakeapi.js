@@ -19,10 +19,11 @@ export function fakeApi({ build = 'test-build', now = () => Date.now(), store = 
     let body = null;
     try { body = init.body ? JSON.parse(init.body) : null; } catch { body = undefined; }
     let query = Object.fromEntries(u.searchParams);
-    // 열쇠 머리말(api/_lib/http.js bearer와 같은 뜻): 머리말이 있으면 그것이 이긴다. calls에는 보낸 그대로(주소 · 본문) + auth(머리말의 열쇠)
+    // 열쇠 머리말(api/_lib/http.js route와 같은 뜻): 머리말의 열쇠만 받고 주소 · 본문의 key는 버린다. calls에는 보낸 그대로(주소 · 본문) + auth(머리말의 열쇠)
     const h = init.headers || {}, m = /^Bearer\s+(\S+)$/i.exec(h.Authorization || h.authorization || '');
     api.calls.push({ method, path: u.pathname, query, body, keepalive: !!init.keepalive, auth: m ? m[1] : null, url: String(url) });
-    if (m) { if (method === 'GET') query = { ...query, key: m[1] }; else if (body && typeof body === 'object') body = { ...body, key: m[1] }; else if (body === null) body = { key: m[1] }; }
+    const keyed = (o) => { const { key: _old, ...rest } = o; return m ? { ...rest, key: m[1] } : rest; };
+    if (method === 'GET') query = keyed(query); else if (body && typeof body === 'object' && !Array.isArray(body)) body = keyed(body); else if (body === null && m) body = { key: m[1] };
     if (api.mode === 'hang') return new Promise(() => {});
     if (api.mode === 'fail') throw new TypeError('Failed to fetch');
     const html = { ok: false, status: 404, json: async () => { throw new SyntaxError('Unexpected token <'); } };

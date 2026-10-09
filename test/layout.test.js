@@ -745,7 +745,7 @@ async function rankApp({ lang = 'ko', others = 24, mode = 'ok', me = null } = {}
   // 한 프레임 그리고 넘친 곳 · 상자 · 글을 돌려준다
   const frame = () => { LL.LOG.on = true; try { app.frame((app.last || 0) + 16); return { bad: LL.checkLayout().map((q) => q.msg), boxes: LL.LOG.boxes.slice(), texts: LL.LOG.texts.slice() }; } finally { LL.LOG.on = false; } };
   const has = (id) => app.ui.regions.some((r) => r.id === id);
-  const board = async (page = 1) => (await (await api.fetch(`/api/daily/board?date=${RANK_DAY}&page=${page}&key=${JSON.parse(d.window.localStorage.getItem('chainmate.player.v1')).key}`)).json());
+  const board = async (page = 1) => (await (await api.fetch(`/api/daily/board?date=${RANK_DAY}&page=${page}`, { headers: { Authorization: `Bearer ${JSON.parse(d.window.localStorage.getItem('chainmate.player.v1')).key}` } })).json());
   return { app, api, d, F, settle, frame, has, board, long };
 }
 const rowNums = (f) => f.boxes.filter((b) => /^순위 줄 /.test(b.name)).map((b) => Number(b.name.slice(5)));

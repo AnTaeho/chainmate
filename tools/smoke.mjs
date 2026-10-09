@@ -1231,7 +1231,7 @@ const rankSeen = { submit: 0, card: '', neighbours: 0, hint: 0, open: 0, pages: 
       const after = app.rank.player();
       rankSeen.renamed = after.name;
       if (after.name === before.name || after.rerolls !== before.rerolls - 1 || !drew(after.name) || JSON.parse(dom.store.get(PLAYER_KEY)).a !== after.a) bad('다시 지어도 이름이 바뀌지 않았다');
-      const mine = (await (await rankApi.fetch(`/api/daily/board?date=${DATE}&key=${JSON.parse(dom.store.get(PLAYER_KEY)).key}`)).json()).me;
+      const mine = (await (await rankApi.fetch(`/api/daily/board?date=${DATE}`, { headers: { Authorization: `Bearer ${JSON.parse(dom.store.get(PLAYER_KEY)).key}` } })).json()).me;
       if (!mine || mine.a !== after.a || mine.n !== after.n) bad('서버의 내 줄 이름이 바뀌지 않았다');
     }
     click('set:back'); pump(2);

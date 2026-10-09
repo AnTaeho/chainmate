@@ -38,7 +38,7 @@ function device({ api, clock }, opts = {}) {
 }
 const puts = (api) => api.named('/api/save').filter((c) => c.method === 'PUT');
 const gets = (api) => api.named('/api/save').filter((c) => c.method === 'GET');
-const saved = async (api, key) => (await (await api.fetch(`/api/save?key=${key}`)).json());
+const saved = async (api, key) => (await (await api.fetch('/api/save', { headers: { Authorization: `Bearer ${key}` } })).json());
 // 두 기기를 코드로 잇는다(B가 A의 코드를 넣는다)
 async function link(a, b) {
   const c = await a.rank.linkCode();
@@ -229,7 +229,7 @@ test('설정: 언어 · 처음 안내 · 복기만 옮긴다(늦게 바꾼 쪽) 
   assert.equal(JSON.parse(b.storage.getItem(KEYS.settings)).lang, 'en');
   // 받은 값이 이상하면 쓰지 않는다
   const st = (await saved(w.api, a.key()));
-  await w.api.fetch('/api/save', { method: 'PUT', body: JSON.stringify({ key: a.key(), baseRev: st.rev, blob: { ...st.blob, settings: { lang: 'xx', coach: 'no', replay: true }, setAt: w.clock.t + 99 } }) });
+  await w.api.fetch('/api/save', { method: 'PUT', headers: { Authorization: `Bearer ${a.key()}` }, body: JSON.stringify({ baseRev: st.rev, blob: { ...st.blob, settings: { lang: 'xx', coach: 'no', replay: true }, setAt: w.clock.t + 99 } }) });
   await b.cloud.pull();
   assert.deepEqual([b.app.settings.lang, b.app.settings.coach, b.app.settings.replay], ['en', true, true]);
   setLang('ko');

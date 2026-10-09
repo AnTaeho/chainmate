@@ -48,8 +48,7 @@ export async function readJson(request, limit = LIMITS.body) {
   return { body };
 }
 
-// 열쇠는 Authorization: Bearer <key> 머리말로 받는다(CHM-72 — 주소 · 접근 로그에 실리지 않게). 머리말이 있으면 그것이 이긴다.
-// 옛 클라이언트(본문 · 주소의 key)는 한동안 그대로 받는다 — 배포 사이에 열려 있는 탭이 있다
+// 열쇠는 Authorization: Bearer <key> 머리말로만 받는다(CHM-72 — 주소 · 접근 로그에 실리지 않게). 머리말이 없으면 null, 꼴이 틀리면 ''
 export function bearer(request) {
   const h = request.headers.get('authorization');
   if (!h) return null;
@@ -70,6 +69,8 @@ export function route(method, run, make = getService, { limit = LIMITS.body, all
         if (r.error) return json(r.error[0], { error: r.error[1] }, o.cors);
         input = r.body;
       } else input = Object.fromEntries(new URL(request.url, 'http://x').searchParams);
+      // 본문 · 주소에 실려 온 key는 버린다
+      delete input.key;
       const key = bearer(request);
       if (key != null) input.key = key;
       const out = await run(await make(), input);

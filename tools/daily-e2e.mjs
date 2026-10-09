@@ -3,7 +3,7 @@
 //   node tools/daily-e2e.mjs --cleanup                        시험 플레이어만 지운다
 // --vercel: 배포 보호가 걸린 미리 보기 배포는 `vercel curl`로 부른다(로그인한 CLI가 통과시켜 준다). 없으면 fetch.
 // 미리 보기 배포도 프로덕션과 같은 DB를 쓴다 — 만든 플레이어는 곧바로 test 표시를 하고(.env.local의 직접 연결), 끝나면(실패해도) 지운다.
-// 열쇠 · 비밀 값은 찍지 않는다.
+// 열쇠 · 비밀 값은 찍지 않는다. 열쇠는 Authorization 머리말로만 보낸다.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -30,10 +30,10 @@ if (!BASE) { console.error('주소를 준다: node tools/daily-e2e.mjs <주소> 
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'chm-e2e-'));
 let calls = 0;
-// 돌려주는 것: { status, body(JSON 또는 null) }
-async function call(method, p, body = null, headers = {}) {
+// key: Authorization 머리말로 보낸다. 돌려주는 것: { status, body(JSON 또는 null) }
+async function call(method, p, body = null, key = null, headers = {}) {
   calls++;
-  const h = { ...(body != null ? { 'Content-Type': 'application/json' } : {}), ...headers };
+  const h = { ...(body != null ? { 'Content-Type': 'application/json' } : {}), ...(key ? { Authorization: `Bearer ${key}` } : {}), ...headers };
   const data = body == null ? null : typeof body === 'string' ? body : JSON.stringify(body);
   if (!VERCEL) {
     const res = await fetch(BASE + p, { method, headers: h, body: data });
@@ -85,16 +85,16 @@ try {
 
   const me = await newPlayer();
   check('POST /api/player → 새 플레이어', /^[0-9a-f]{64}$/.test(me.key) && !!nameText(me.a, me.n), `${nm(me)} · 다시 짓기 ${me.rerolls}번 남음`);
-  const again = await call('POST', '/api/player', { key: me.key });
+  const again = await call('POST', '/api/player', {}, me.key);
   check('같은 열쇠로 물으면 같은 이름', again.status === 200 && again.body.a === me.a && again.body.n === me.n);
 
-  const s1 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: weak.cmds });
+  const s1 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: weak.cmds }, me.key);
   check(`제출(봇 ${weak.policy} 판, 명령 ${weak.cmds.length}개) → 서버 셈 = 봇 판`, s1.status === 200 && s1.body.ok && s1.body.improved === true && same(s1.body.best, weak.want), `${s1.status} ${s1.body && s1.body.best ? show(s1.body.best) : JSON.stringify(s1.body)} · ${s1.body && s1.body.rank}등/${s1.body && s1.body.total}명`);
-  const s2 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: strong.cmds });
+  const s2 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: strong.cmds }, me.key);
   check(`더 좋은 판(봇 ${strong.policy}, 명령 ${strong.cmds.length}개) → 갈아 끼움`, s2.status === 200 && s2.body.improved === true && same(s2.body.best, strong.want), `${s2.body && s2.body.best ? show(s2.body.best) : JSON.stringify(s2.body)}`);
-  const s3 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: strong.cmds });
+  const s3 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: strong.cmds }, me.key);
   check('같은 줄을 다시 제출 → improved: false', s3.status === 200 && s3.body.improved === false && same(s3.body.best, strong.want));
-  const s4 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: weak.cmds });
+  const s4 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: weak.cmds }, me.key);
   check('더 나쁜 판을 제출 → 그대로', s4.status === 200 && s4.body.improved === false && same(s4.body.best, strong.want));
   check(empty ? '순위 1등으로 보인다(빈 순위표였다)' : '순위가 매겨진다', empty ? s3.body.rank === 1 && s3.body.total === 1 : s3.body.rank >= 1, `${s3.body.rank}등/${s3.body.total}명`);
 
@@ -102,43 +102,43 @@ try {
   const forged = strong.cmds.map((c) => ({ ...c }));
   const di = forged.findIndex((c) => c.type === 'drop');
   forged[di].handIndex = 30; // 손에 없는 기물을 떨군다
-  const f1 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: forged });
+  const f1 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: forged }, me.key);
   check('조작한 줄(없는 기물 떨구기) → 422', f1.status === 422 && f1.body.error === 'bad_cmd' && f1.body.at === di, `${f1.status} ${JSON.stringify(f1.body)}`);
-  const f2 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: [...strong.cmds.slice(0, 3), { type: 'buy', slot: 0 }] });
+  const f2 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: [...strong.cmds.slice(0, 3), { type: 'buy', slot: 0 }] }, me.key);
   check('조작한 줄(상점 밖에서 사기) → 422', f2.status === 422 && f2.body.error === 'bad_cmd', JSON.stringify(f2.body));
-  const f3 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: strong.cmds.slice(0, 10) });
+  const f3 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: strong.cmds.slice(0, 10) }, me.key);
   check('진행 중인 줄 → 422 unfinished', f3.status === 422 && f3.body.error === 'unfinished', JSON.stringify(f3.body));
-  const f4 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: strong.cmds, score: 1e15, won: true });
+  const f4 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: strong.cmds, score: 1e15, won: true }, me.key);
   check('점수를 지어 보내도 서버 셈만 쓴다', f4.status === 200 && same(f4.body.best, strong.want));
-  const f5 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build: 'old-build', cmds: strong.cmds });
+  const f5 = await call('POST', '/api/daily/submit', { date: DATE, build: 'old-build', cmds: strong.cmds }, me.key);
   check('배포가 다르면 409 { stale: true }', f5.status === 409 && f5.body.stale === true, JSON.stringify(f5.body));
-  const f6 = await call('POST', '/api/daily/submit', { key: me.key, date: '2020-01-01', build, cmds: strong.cmds });
+  const f6 = await call('POST', '/api/daily/submit', { date: '2020-01-01', build, cmds: strong.cmds }, me.key);
   check('날짜가 ±1일 밖이면 422 bad_date', f6.status === 422 && f6.body.error === 'bad_date', JSON.stringify(f6.body));
-  const f7 = await call('POST', '/api/daily/submit', { key: 'f'.repeat(64), date: DATE, build, cmds: strong.cmds });
+  const f7 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: strong.cmds }, 'f'.repeat(64));
   check('모르는 열쇠 → 401', f7.status === 401 && f7.body.error === 'unknown_key', JSON.stringify(f7.body));
   const f8 = await call('POST', '/api/player', '{nope');
   check('깨진 JSON → 400', f8.status === 400 && f8.body.error === 'bad_json', JSON.stringify(f8.body));
-  const f9 = await call('POST', '/api/player', '{}', { 'Content-Type': 'text/plain' });
+  const f9 = await call('POST', '/api/player', '{}', null, { 'Content-Type': 'text/plain' });
   check('JSON이 아닌 본문 → 415', f9.status === 415, JSON.stringify(f9.body));
-  const f10 = await call('GET', '/api/hello', null, { Origin: 'https://evil.example' });
+  const f10 = await call('GET', '/api/hello', null, null, { Origin: 'https://evil.example' });
   check('다른 출처 → 403', f10.status === 403 && f10.body.error === 'bad_origin', JSON.stringify(f10.body));
-  const f11 = await call('POST', '/api/daily/submit', { key: me.key, date: DATE, build, cmds: [], pad: 'x'.repeat(LIMITS.body) });
+  const f11 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: [], pad: 'x'.repeat(LIMITS.body) }, me.key);
   check('본문 256KB 넘으면 413', f11.status === 413, `${f11.status} ${JSON.stringify(f11.body)}`);
 
   // 다시 짓기
-  const r1 = await call('POST', '/api/player', { key: me.key, reroll: true });
+  const r1 = await call('POST', '/api/player', { reroll: true }, me.key);
   check('다시 짓기 → 이름이 바뀐다', r1.status === 200 && (r1.body.a !== me.a || r1.body.n !== me.n) && r1.body.rerolls === me.rerolls - 1, `${nm(me)} → ${r1.body ? nm(r1.body) : ''} · ${r1.body && r1.body.rerolls}번 남음`);
 
   // 쪽 넘김: 열한 명이 더 낸다(약한 판) — 내가 그 위
   const others = [];
   for (let i = 0; i < LIMITS.page + 1; i++) {
     const p = await newPlayer();
-    const r = await call('POST', '/api/daily/submit', { key: p.key, date: DATE, build, cmds: weak.cmds });
+    const r = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: weak.cmds }, p.key);
     if (r.status !== 200) throw new Error(`제출 실패 ${r.status} ${JSON.stringify(r.body)}`);
     others.push({ ...p, rank: r.body.rank });
   }
   const total = before.body.total + 1 + others.length;
-  const b1 = await call('GET', `/api/daily/board?date=${DATE}&page=1&key=${me.key}`);
+  const b1 = await call('GET', `/api/daily/board?date=${DATE}&page=1`, null, me.key);
   check('순위표 1쪽: 10줄 · 쪽 수 · 내 줄 · 내 위아래', b1.status === 200 && b1.body.rows.length === LIMITS.page && b1.body.total === total && b1.body.pages === Math.ceil(total / LIMITS.page)
     && b1.body.me && b1.body.me.a === r1.body.a && b1.body.me.n === r1.body.n && b1.body.me.score === strong.want.score_total && b1.body.around.some((r) => r.rank === b1.body.me.rank),
     `${b1.body.total}명 · ${b1.body.pages}쪽 · 나 ${b1.body.me && b1.body.me.rank}등 · 위아래 ${b1.body.around.map((r) => r.rank).join(' ')}`);
@@ -148,10 +148,10 @@ try {
   const ranks = [...b1.body.rows, ...b2.body.rows].map((r) => r.rank);
   check('등수가 1부터 빠짐없이 이어진다', ranks.every((r, i) => r === i + 1), ranks.join(' '));
   const last = others.at(-1);
-  const b3 = await call('GET', `/api/daily/board?date=${DATE}&key=${last.key}`);
+  const b3 = await call('GET', `/api/daily/board?date=${DATE}`, null, last.key);
   check('같은 성적은 먼저 낸 사람이 위(마지막에 낸 사람이 맨 아래)', b3.body.me && b3.body.me.rank === Math.max(...others.map((o) => o.rank)) && b3.body.around.length >= 3, `${b3.body.me && b3.body.me.rank}등 · 위아래 ${b3.body.around.map((r) => r.rank).join(' ')}`);
   const y = utcDate(Date.now() - 86400000);
-  const b4 = await call('GET', `/api/daily/board?date=${y}&key=${me.key}`);
+  const b4 = await call('GET', `/api/daily/board?date=${y}`, null, me.key);
   check('어제 순위표도 준다(내 기록은 없다)', b4.status === 200 && b4.body.date === y && b4.body.me === null, `${y} · ${b4.body.total}명`);
   const b5 = await call('GET', '/api/daily/board?date=nope');
   check('틀린 날짜 → 400', b5.status === 400, JSON.stringify(b5.body));

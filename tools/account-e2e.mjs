@@ -1,8 +1,8 @@
 // 계정 끝에서 끝까지 확인(CHM-72): 로컬 vercel dev(또는 배포)에 실제 요청을 보내 진짜 DB의 SQL까지 본다.
 //   node tools/account-e2e.mjs <주소> [--keep]      예: vercel dev --listen 3210 뒤 node tools/account-e2e.mjs http://localhost:3210
-// 가입 · 규칙 · 중복 → 열쇠 머리말 길과 옛 주소 길 → 들어오기(새 열쇠 · 성적 합침) · 실패 · 아이디 잠금 · 전체 잠금 · 다른 계정 → 비번 바꾸기 두 길 → 나가기 → 지우기(모든 표에서 사라짐).
+// 가입 · 규칙 · 중복 → 열쇠 머리말 길(옛 꼴은 거절) → 들어오기(새 열쇠 · 성적 합침) · 실패 · 아이디 잠금 · 전체 잠금 · 다른 계정 → 비번 바꾸기 두 길 → 나가기 → 지우기(모든 표에서 사라짐).
 // 만든 플레이어는 곧바로 test 표시를 하고(.env.local의 직접 연결) 끝나면(실패해도) 지운다. 전체 한도 줄은 손댄 만큼 되돌리고, 아이디 한도 줄은 제 손으로 지운다.
-// 열쇠 · 비번은 찍지 않는다. 열쇠는 Authorization 머리말로만 보낸다(옛 길을 볼 때만 주소 · 본문에).
+// 열쇠 · 비번은 찍지 않는다. 열쇠는 Authorization 머리말로만 보낸다(옛 꼴이 거절되는지 볼 때만 주소 · 본문에).
 import { hashKey, LIMITS } from '../api/_lib/service.js';
 import { usernameId, SCRYPT } from '../api/_lib/auth.js';
 import { emptyRecords } from '../src/ui/records.js';
@@ -94,14 +94,18 @@ try {
   check('본문 한도 413', (await call('POST', '/api/account/signup', { username: U, password: 'x'.repeat(LIMITS.account) }, b.key)).status === 413);
   check('열쇠 없이 400 · 모르는 열쇠 401', (await call('POST', '/api/account/signup', { username: U, password: PW })).status === 400 && E(await call('GET', '/api/account', null, 'f'.repeat(64)), 401, 'unknown_key'));
 
-  // ── 열쇠 머리말 길 · 옛 주소 길
+  // ── 열쇠 머리말 길 · 옛 꼴(주소 · 본문의 key)은 열쇠 없는 요청으로 본다
   const p1 = await call('PUT', '/api/save', { baseRev: 0, blob: blob(7) }, a.key);
   check('머리말: PUT /api/save', p1.status === 200 && p1.body.rev === 1);
   const g1 = await call('GET', '/api/save', null, a.key), g2 = await call('GET', `/api/save?key=${a.key}`);
-  check('머리말: GET /api/save · 옛 길: GET /api/save?key=', g1.status === 200 && g1.body.rev === 1 && g2.status === 200 && g2.body.blob.records.runs === 7);
-  check('둘 다 있으면 머리말이 이긴다', (await call('GET', `/api/save?key=${a.key}`, null, b.key)).body.rev === 0);
-  const pl = await call('POST', '/api/player', {}, a.key), pl2 = await call('POST', '/api/player', { key: a.key });
-  check('머리말: POST /api/player(새로 만들지 않고 읽는다) · 옛 길: 본문의 key', pl.status === 200 && pl.body.key === a.key && pl.body.a === a.a && pl2.status === 200 && pl2.body.n === a.n);
+  check('머리말: GET /api/save · 옛 꼴 GET /api/save?key= 는 400', g1.status === 200 && g1.body.rev === 1 && g1.body.blob.records.runs === 7 && E(g2, 400, 'bad_request'));
+  check('주소의 key는 버리고 머리말만 본다', (await call('GET', `/api/save?key=${a.key}`, null, b.key)).body.rev === 0);
+  const pl = await call('POST', '/api/player', {}, a.key);
+  check('머리말: POST /api/player(새로 만들지 않고 읽는다)', pl.status === 200 && pl.body.key === a.key && pl.body.a === a.a);
+  const o1 = await call('PUT', '/api/save', { key: a.key, baseRev: 1, blob: blob(8) }), o2 = await call('POST', '/api/link/devices', { key: a.key }), o3 = await call('GET', `/api/account?key=${a.key}`);
+  check('옛 꼴(본문의 key) PUT /api/save · POST /api/link/devices · 주소의 key GET /api/account 는 400', E(o1, 400, 'bad_request') && E(o2, 400, 'bad_request') && E(o3, 400, 'bad_request') && (await call('GET', '/api/save', null, a.key)).body.rev === 1);
+  const o4 = await call('GET', `/api/daily/board?date=${DAY}&key=${a.key}`);
+  check('옛 꼴 GET /api/daily/board?key= 는 구경으로 답한다', o4.status === 200 && o4.body.me === null);
   const bd = await call('GET', `/api/daily/board?date=${DAY}`, null, a.key);
   check('머리말: GET /api/daily/board', bd.status === 200 && Array.isArray(bd.body.rows));
   const pre = await fetch(`${BASE}/api/account`, { method: 'OPTIONS' });
@@ -177,7 +181,7 @@ try {
   // 마지막 기기도 나간 뒤(열쇠 0) 다시 들어온다
   const out2 = await call('POST', '/api/account/logout', {}, a.key);
   await mark(out2.body.key);
-  check('마지막 기기가 나가도 계정은 남는다 · 옛 열쇠는 죽는다', out2.status === 200 && (await one('select count(*)::int as n from player_keys where player_id = $1::bigint', [aid])).n === 0 && E(await call('POST', '/api/player', {}, a.key), 401, 'unknown_key') && E(await call('POST', '/api/player', { key: a.key }), 401, 'unknown_key'));
+  check('마지막 기기가 나가도 계정은 남는다 · 옛 열쇠는 죽는다', out2.status === 200 && (await one('select count(*)::int as n from player_keys where player_id = $1::bigint', [aid])).n === 0 && E(await call('POST', '/api/player', {}, a.key), 401, 'unknown_key'));
   const back = await call('POST', '/api/account/login', { username: U, password: FINAL }, out2.body.key);
   check('다시 들어오면 같은 플레이어 · 같은 저장', back.status === 200 && (await idOf(back.body.key)) === aid && (await call('GET', '/api/save', null, back.body.key)).body.blob.records.runs === 7);
 
