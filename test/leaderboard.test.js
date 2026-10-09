@@ -220,6 +220,17 @@ test('출처: Origin이 없거나 같은 호스트면 받고, 다른 출처는 4
   assert.deepEqual(originOk(req('https://chainmate.papercut.kr/api/hello', { headers: { origin: 'tauri://localhost' } }), ['tauri://localhost']),
     { ok: true, cors: { 'Access-Control-Allow-Origin': 'tauri://localhost', Vary: 'Origin' } });
   const h = route('GET', (s) => s.hello(), fake);
+  // 앱(Tauri) 출처 둘은 받는다: 답과 사전 요청에 그 출처를 돌려주고, 열쇠 머리말을 허용한다. 닮은 출처는 막는다
+  for (const origin of ['tauri://localhost', 'http://tauri.localhost']) {
+    const got = await h.GET(req('https://chainmate.papercut.kr/api/hello', { headers: { origin } }));
+    assert.deepEqual([got.status, got.headers.get('access-control-allow-origin'), got.headers.get('vary')], [200, origin, 'Origin'], origin);
+    const pre = await h.OPTIONS(req('https://chainmate.papercut.kr/api/hello', { method: 'OPTIONS', headers: { origin } }));
+    assert.deepEqual([pre.status, pre.headers.get('access-control-allow-origin')], [204, origin], origin);
+    assert.match(pre.headers.get('access-control-allow-headers'), /Authorization/);
+  }
+  for (const origin of ['https://tauri.localhost', 'tauri://localhost.evil.example', 'http://tauri.localhost:8080', 'http://127.0.0.1:1430']) {
+    assert.equal(originOk(req('https://chainmate.papercut.kr/api/hello', { headers: { origin } })).ok, false, origin);
+  }
   const res = await h.GET(req('https://chainmate.papercut.kr/api/hello', { headers: { origin: 'https://evil.example' } }));
   assert.equal(res.status, 403);
   assert.deepEqual(await res.json(), { error: 'bad_origin' });

@@ -3,8 +3,8 @@
 import { createStore } from './store.js';
 import { createService, LIMITS } from './service.js';
 
-// 같은 출처 말고 받아 줄 출처(앱 Tauri 출처는 여기에 붙인다 — 예: 'tauri://localhost')
-export const ALLOWED_ORIGINS = [];
+// 같은 출처 말고 받아 줄 출처: 앱(Tauri 2)의 webview — 맥 · iOS는 tauri://localhost, 윈도 · 안드로이드는 http://tauri.localhost
+export const ALLOWED_ORIGINS = ['tauri://localhost', 'http://tauri.localhost'];
 
 // 배포 식별자: 클라이언트는 켤 때 받아 두었다가 제출에 싣는다. 다르면(그 사이 새로 배포) 409 stale — 규칙이 다른 판을 다시 두지 않는다
 export const BUILD = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA || 'dev';
