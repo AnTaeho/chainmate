@@ -328,7 +328,7 @@ export const soulRarity = (it) => (it.kind === 'soul' ? SOUL_BY_ID[it.id].rarity
 export const rarityLine = (rarity) => [RARITY_NAME[rarity], RARITY[rarity]];
 // 두루마리 「깨우기」(CHM-17): 금 간 구슬에서 금빛이 새어 나온다
 export const AWAKEN_TEXT = '금이 간 혼 하나가 깨어난다';
-export const AWAKEN_MORE = '혼이 붙은 기물로 사슬을 다섯 번 이으면 금이 간다';
+export const AWAKEN_MORE = '혼이 붙은 기물로 사슬을 다섯 번 만들면 금이 간다';
 // 카드에 적는 효과 한 줄(말풍선은 덧붙임만)
 export function itemEffect(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).text;
@@ -339,7 +339,7 @@ export function itemEffect(it) {
   if (it.kind === 'evolve') return '체스 기물 하나가 특수 기물로 진화한다';
   if (it.kind === 'awaken') return AWAKEN_TEXT;
   if (it.kind === 'tactic') return TACTIC_BY_ID[it.id].text;
-  if (it.kind === 'gamble') return it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로';
+  if (it.kind === 'gamble') return it.id === 'potion' ? '덱의 아무 기물 하나에 무작위 혼이나 각인이 붙는다' : '덱의 아무 기물 하나가 무작위 특수 기물로 바뀐다';
   // 명국 조각: 카드에는 한 줄(전설의 효과는 가리키면 — itemExtraTip)
   if (it.kind === 'fragment') return '조각 셋이면 전설';
   return '';
@@ -423,7 +423,7 @@ export function itemTip(it) {
   if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '기물 하나에 새겨요']); }
   if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '덱에 들어와요']);
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 붙어요'], 150, [rarityLine(s.rarity)]); }
-  if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
+  if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '덱의 아무 기물 하나에 무작위 혼이나 각인이 붙는다' : '덱의 아무 기물 하나가 무작위 특수 기물로 바뀐다');
   if (it.kind === 'awaken') return tipLines('깨우기', [AWAKEN_TEXT, AWAKEN_MORE]);
   if (it.kind === 'evolve') return tipLines('진화', ['체스 기물 하나가 특수 기물로 진화한다', '폰 › 궁수 · 화약병 · 나이트 › 낙타 · 광대 · 비숍 › 물수제비 · 까마귀 · 룩 › 포 · 유령 · 꺾쇠 · 퀸 › 아마존']);
   if (it.kind === 'tactic') { const x = TACTIC_BY_ID[it.id]; return tipLines(`전술 ${x.name}`, [x.text, '대국 중 놓기 전에 써요']); }
@@ -454,7 +454,7 @@ export function itemExtraTip(it) {
   // 덧말이 있으면 효과 글 전부 다음에(덧말만 홀로 뜨지 않게)
   else if (more) lines.push(itemEffect(it));
   if (more) lines.push(more);
-  if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보가 적용된다`);
+  if (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy) lines.push(`${PIECE_NAME[chartForm(it.t)]} 기보의 효과를 받는다`);
   if (it.kind === 'maxim') { const info = maximInfo(it.id); if (info.rarity === 'legendary' && info.story) lines.push(`${info.year ? info.year + ' · ' : ''}${L(info.story)}`); }
   if (it.kind === 'evolve') lines.push('폰 › 궁수 · 화약병 · 나이트 › 낙타 · 광대 · 비숍 › 물수제비 · 까마귀 · 룩 › 포 · 유령 · 꺾쇠 · 퀸 › 아마존');
   // 명국 조각(진열 · 꾸러미): 이 카드가 첫 조각이다 — 세 걸음 중 첫째가 다음 걸음

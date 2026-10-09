@@ -27,7 +27,7 @@ legend('immortal', {
 export const OPERA_REFILLS = 3;
 legend('opera', {
   name: '오페라 대국', year: 1858, story: '모피가 오페라 관람석에서 17수 만에 이겼다',
-  text: '지켜진 킹도 먹는다 · 체크메이트하면 적이 다시 차고 사슬이 이어진다', verb: '체크메이트',
+  text: '지켜진 킹도 먹는다 · 체크메이트하면 적이 다시 나타나고 사슬이 이어진다', verb: '체크메이트',
   feat: '대국 첫 수에 체크메이트', source: 'display',
   check: (h) => h.move === 0 && h.mates > 0,
 }, {
@@ -38,7 +38,7 @@ legend('opera', {
 
 legend('century', {
   name: '세기의 대국', year: 1956, story: '열세 살 피셔의 퀸 희생',
-  text: '퀸 모습으로 먹을 때마다: 사슬 끝 배수 ×1.5', verb: '갈아입기',
+  text: '퀸 모습으로 먹을 때마다: 사슬이 끝날 때 배수 ×1.5', verb: '갈아입기',
   feat: '퀸을 먹고 곧바로 퀸을 또 먹는다', source: 'chart',
   check: (h) => h.caps.includes('QQ'),
 }, {
@@ -50,8 +50,8 @@ legend('century', {
 
 legend('evergreen', {
   name: '상록의 대국', year: 1852, story: '끝없이 이어지는 공격',
-  text: '사슬이 멈추면 한 번, 그 모습으로 한 번 더 놓아 잇는다', verb: '놓기',
-  feat: '한 사슬에 여덟을 먹는다', source: 'engraving',
+  text: '사슬이 멈추면 한 번, 그 모습으로 한 번 더 놓아 이어 먹는다', verb: '놓기',
+  feat: '한 사슬에서 적 여덟을 먹는다', source: 'engraving',
   check: (h) => h.captures >= 8,
 }, {
   onChainStop(ctx) { ctx.redrop(); },

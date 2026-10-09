@@ -9,7 +9,7 @@ export const OPENING_ORDER = ['standard', 'london', 'sicilian', 'queens_gambit',
 export const UNLOCKS = [
   { id: 'london', text: '5관에 도달한다', have: (r) => r.bestAnte, need: 5 },
   { id: 'sicilian', text: '체크메이트로 다섯 번 이긴다', have: (r) => r.mates, need: 5 },
-  { id: 'queens_gambit', text: '한 사슬에 여덟을 먹는다', have: (r) => (r.grades['★★★'] || 0) + (r.grades['∞'] || 0), need: 1 },
+  { id: 'queens_gambit', text: '한 사슬에서 적 여덟을 먹는다', have: (r) => (r.grades['★★★'] || 0) + (r.grades['∞'] || 0), need: 1 },
   { id: 'rook_endgame', text: '불멸의 기보 하나를 완성한다', have: (r) => r.legends, need: 1 },
 ];
 export const MAX_DAN = 8;

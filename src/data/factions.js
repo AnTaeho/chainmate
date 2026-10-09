@@ -36,13 +36,13 @@ faction('peasants', {
 faction('cavalry', {
   name: '기병대', crest: 'horseshoe', hue: '#c07a3a',
   mix: { P: 0.9, N: 2.8, B: 0.6, R: 0.6, Q: 0.6 }, unique: { L: 1.6 },
-  habit: { text: '증원이 모두 나이트 무리로 온다', apply(r) { r.reinforceMix = { N: 4, L: 2 }; } },
+  habit: { text: '증원으로 나이트와 낙타만 온다', apply(r) { r.reinforceMix = { N: 4, L: 2 }; } },
   boss: 'mirror',
 });
 faction('abbey', {
   name: '수도원', crest: 'lantern', hue: '#d8c070',
   mix: { P: 0.8, N: 0.6, B: 3.5, R: 0.6, Q: 0.8 }, unique: { E: 1.5 },
-  habit: { text: '돌기둥 셋~다섯이 늘 선다', apply(r) { r.walls = [3, 5]; } },
+  habit: { text: '대국마다 돌기둥 셋~다섯이 길을 막는다', apply(r) { r.walls = [3, 5]; } },
   boss: 'silence',
 });
 faction('fortress', {
@@ -54,7 +54,7 @@ faction('fortress', {
 faction('hunters', {
   name: '숲 사냥꾼', crest: 'bow', hue: '#4f9a5a',
   mix: { P: 0.5, N: 1.2, B: 0.6, R: 0.5, Q: 0.5 }, unique: { S: 6, D: 1 },
-  habit: { text: '위 두 줄은 숲 · 내 기물이 갈 수 있으면 걷힌다', apply(r) { r.fog = Math.max(r.fog || 0, 2); } },
+  habit: { text: '위 두 줄은 숲이라 놓을 수 없다 · 갈 수 있는 칸만 보인다', apply(r) { r.fog = Math.max(r.fog || 0, 2); } },
   boss: 'fog',
 });
 faction('heralds', {
@@ -66,7 +66,7 @@ faction('heralds', {
 faction('mercs', {
   name: '용병단', crest: 'coin', hue: '#e0b040',
   mix: { P: 0.8, fairy: 2 }, unique: ANY_FAIRY,
-  habit: { text: '적 특성이 두 배로 붙는다', apply(r) { r.traitMult = 2; r.traitFrom = 2; } },
+  habit: { text: '적 특성이 두 배 자주 붙는다', apply(r) { r.traitMult = 2; r.traitFrom = 2; } },
   boss: 'grudge',
 });
 faction('royal', {

@@ -65,7 +65,7 @@ maxim('edge', '가장자리', '가장자리 칸에서 먹을 때마다 배수 +2
 maxim('center', '중앙 장악', '가운데 네 칸에서 먹을 때마다 배수 ×1.5', '먹기', 'uncommon', 5, {
   onCapture(ctx) { if (CENTER.includes(ctx.event.to)) ctx.mulMult(1.5); },
 });
-maxim('vault', '금고', '먹은 적 하나에 상금 +1 · 대국마다 5까지', '먹기', 'uncommon', 5, {
+maxim('vault', '금고', '먹은 적 하나마다 상금 +1 · 대국마다 5까지', '먹기', 'uncommon', 5, {
   onChainEnd(ctx) {
     const got = num(ctx.state.got);
     const n = Math.min(ctx.chain.captures.length, 5 - got);
@@ -101,7 +101,7 @@ maxim('mate_hunter', '메이트 사냥꾼', '킹을 지키는 적이 하나 적�
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.addMoney(6); },
 });
 maxim('kings_neck', '왕의 목', '킹을 지키는 적을 먹으면 배수 +2 · 체크메이트: 배수 ×3', '체크메이트', 'uncommon', 6, {
-  more: '지켜지지 않은 킹은 빛난다',
+  more: '지키는 적이 없는 킹은 빛난다',
   onCapture(ctx) {
     const { piece, to } = ctx.event;
     if (piece === 'K') return;
@@ -211,7 +211,7 @@ maxim('reinforce_hunt', '증원 사냥', '증원을 먹을 때마다 배수 +2',
 });
 
 // ── 깊이 G: 증강체스의 나머지 카드에서(뿌리의 동사를 비튼 셋)
-maxim('promotion_rush', '패스드 폰', '폰 모습으로 둘을 먹은 뒤: 어느 줄에서든 프로모션', '프로모션', 'uncommon', 5, {
+maxim('promotion_rush', '패스드 폰', '폰 모습으로 두 번 먹고 나면 어느 줄에서든 프로모션한다', '프로모션', 'uncommon', 5, {
   onCapture(ctx) {
     if (ctx.event.form !== 'P') return;
     ctx.flags.pawnTakes = (ctx.flags.pawnTakes || 0) + 1;
@@ -236,13 +236,13 @@ const around = (sq) => { const out = []; for (let df = -1; df <= 1; df++) for (l
 const foe = (c) => c && !c.mine && c.t !== 'X' && c.t !== 'J';
 const valueOf = (t) => (PIECES[t] ? PIECES[t].value : 0);
 
-maxim('cavalry_charge', '기마 돌격', '뛰어 먹은 다음 먹기: 배수 +3', '먹기', 'common', 4, {
+maxim('cavalry_charge', '기마 돌격', '뛰어 먹은 바로 다음에 먹으면 배수 +3', '먹기', 'common', 4, {
   onCapture(ctx) { const caps = ctx.chain.captures; const prev = caps.length >= 2 ? caps[caps.length - 2] : null; if (prev && leapOf(prev)) ctx.addMult(3); },
 });
 maxim('long_diagonal', '긴 대각', '대각선으로 세 칸 이상 가서 먹으면 값 +30', '먹기', 'common', 3, {
   onCapture(ctx) { if (diagOf(ctx.event) && ctx.event.dist >= 3) ctx.addValue(30); },
 });
-maxim('encircle', '포위', '둘레에 적이 셋 이상인 칸에서 먹으면 배수 +2', '먹기', 'common', 4, {
+maxim('encircle', '포위', '주변에 적이 셋 이상인 칸에서 먹으면 배수 +2', '먹기', 'common', 4, {
   onCapture(ctx) { const b = ctx.t.board; if (around(ctx.event.to).filter((s) => foe(b[s])).length >= 3) ctx.addMult(2); },
 });
 maxim('loner', '외톨이', '지키는 적이 없는 적을 먹을 때마다 값 +15', '지키는 적', 'common', 3, {
@@ -264,7 +264,7 @@ maxim('eldest', '맏이', '손에서 값이 가장 높은 기물로 시작: 값 
 maxim('second_wind', '두 번째 바람', '대국 둘째 수: 배수 ×2', '수', 'uncommon', 5, {
   onChainEnd(ctx) { if (num(ctx.t.movesUsed) === 1) ctx.mulMult(2); },
 });
-maxim('all_in', '승부수', '마지막 수에 목표의 절반 밑이면: 배수 ×3', '수', 'uncommon', 5, {
+maxim('all_in', '승부수', '마지막 수에 점수가 목표의 절반 아래면: 배수 ×3', '수', 'uncommon', 5, {
   onChainEnd(ctx) { const t = ctx.t; if (t.movesLeft === 1 && t.target != null && num(t.score) < t.target / 2) ctx.mulMult(3); },
 });
 maxim('combo', '연타', '같은 모습으로 잇달아 먹을 때마다 배수 +2', '먹기', 'common', 4, {
@@ -293,7 +293,7 @@ maxim('soul_collector', '혼 수집가', '덱의 혼 하나마다 배수 +2', '�
   onBuild(spec, build) { spec.data = { ...(spec.data || {}), souls: (build.deck || []).filter((p) => p.soul).length }; },
   onChainEnd(ctx) { ctx.addMult(2 * num(ctx.data.souls)); },
 });
-maxim('specialty', '주특기', '기보 레벨이 가장 높은 모습으로 먹을 때마다 값 +25', '기보', 'common', 4, {
+maxim('specialty', '주특기', '기보 단계가 가장 높은 모습으로 먹을 때마다 값 +25', '기보', 'common', 4, {
   onCapture(ctx) {
     const ch = (ctx.t.mods || []).find((m) => m.id === 'charts');
     const lv = (ch && ch.data && ch.data.levels) || {};
@@ -309,13 +309,13 @@ maxim('asceticism', '금욕', '격언 칸이 하나라도 비었으면: 배수 �
   onBuild(spec, build) { spec.data = { ...(spec.data || {}), free: build.maximFree ?? 1 }; },
   onChainEnd(ctx) { if (num(ctx.data.free) > 0) ctx.mulMult(2); },
 });
-maxim('gambler', '도박사', '사슬이 끝날 때 넷에 하나: 배수 ×3', '사슬', 'uncommon', 5, {
+maxim('gambler', '도박사', '사슬이 끝날 때 4번에 1번: 배수 ×3', '사슬', 'uncommon', 5, {
   onChainLuck(ctx) { if (ctx.roll() < 0.25) ctx.rescore(3); },
 });
-maxim('lucky_coin', '행운의 동전', '먹을 때마다 여섯에 하나: 상금 +1', '먹기', 'common', 3, {
+maxim('lucky_coin', '행운의 동전', '먹을 때마다 6번에 1번: 상금 +1', '먹기', 'common', 3, {
   onChainLuck(ctx) { let n = 0; for (let i = 0; i < ctx.chain.captures.length; i++) if (ctx.roll() < 1 / 6) n++; if (n) { ctx.t.money = num(ctx.t.money) + n; ctx.emit({ type: 'money', money: n }); } },
 });
-maxim('reversal', '역전', '끊긴 다음 수: 배수 ×2', '끊김', 'uncommon', 5, {
+maxim('reversal', '역전', '사슬이 끊긴 바로 다음 수: 배수 ×2', '끊김', 'uncommon', 5, {
   onChainEnd(ctx) { const h = ctx.t.history; if (h && h.length && h[h.length - 1].reason === 'cut') ctx.mulMult(2); },
 });
 maxim('pilgrimage', '순례', '판의 네 구역을 모두 밟은 사슬: 배수 ×4', '먹기', 'rare', 7, {
