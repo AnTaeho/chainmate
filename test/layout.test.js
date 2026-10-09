@@ -578,7 +578,7 @@ test('두 줄 이름: 머리 칸 화면 이름 · 레퍼토리 이름 · 수업 
   }
   // 영어 「Engraving Bundle」 · 「Stepping Stones」는 두 줄
   M.lang.setLang('en');
-  assert.deepEqual(parts.wrapName('각인 꾸러미', room).lines, ['Engraving', 'Bundle']);
+  assert.deepEqual(parts.wrapName('각인 팩', room).lines, ['Engraving', 'Bundle']);
   assert.deepEqual(parts.wrapName('발판', room).lines, ['Stepping', 'Stones']);
   M.lang.setLang('ko');
   // 두 줄 단추: 첫 줄 잉크 위 · 둘째 줄 잉크 아래가 테(32의 첫 · 끝 줄)와 2 이상, 빠지는 줄(2)은 테에 닿지 않는다

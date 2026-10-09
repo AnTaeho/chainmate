@@ -310,9 +310,9 @@ export class ShopScreen {
     const CX = CENTER.x, lay = this.centerLayout();
     text(ctx, '진열', CX, textY(BAR_Y, BAR_H), PAL.dim);
     const rc = rerollCost(run);
-    const leaveW = measure('다음 대국', true) + 12, rerollW = Math.max(80, measure(`다시 진열 $${rc}`, true) + 12);
+    const leaveW = measure('다음 대국', true) + 12, rerollW = Math.max(80, measure(`리롤 $${rc}`, true) + 12);
     button(ctx, ui, 'shop:leave', CX + CENTER.w - leaveW, BAR_Y, leaveW, BAR_H, '다음 대국', { onClick: () => this.leave(), tone: 'gold' });
-    button(ctx, ui, 'shop:reroll', CX + CENTER.w - leaveW - 4 - rerollW, BAR_Y, rerollW, BAR_H, `다시 진열 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
+    button(ctx, ui, 'shop:reroll', CX + CENTER.w - leaveW - 4 - rerollW, BAR_Y, rerollW, BAR_H, `리롤 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
     // 두루마리를 쓰는 중: 진열 · 꾸러미 자리에 미리 보기 판(고른 기물이 어떻게 되는지 보이고 확인을 받는다), 그 아래 덱
     let bagY = lay.bagY;
     const target = this.target && run.consumables[this.target.index];
@@ -419,7 +419,7 @@ export class ShopScreen {
   // 꾸러미 칸: 왼쪽 봉투, 오른쪽 이름 → 값(packCellLayout). 봉투 속은 가리키면(packTip)
   packCard(ctx, pk, x, y, w, h, hover, names = true) {
     const lay = packCellLayout(pk, w, { names });
-    openBox('card', x, y, w, h, PAD_CARD, { name: `꾸러미 ${pk.kind}` });
+    openBox('card', x, y, w, h, PAD_CARD, { name: `팩 ${pk.kind}` });
     box(ctx, x, y, w, h, PAL.feltDk, hover ? PAL.gold : PAL.frameDk);
     const P = PAD_CARD;
     // 연 꾸러미는 작은 봉투 칸이어도 봉투 없이 칸 가운데 「열었다」(봉투 오른쪽 34에 영어 「Opened」가 안 들어간다)

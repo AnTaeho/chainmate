@@ -3,7 +3,7 @@
 // 세계의 말: 판 Run · 관 Hall · 대국 Match · 마스터 Master · 마스터전 Master Match · 수 Move · 희생 Sacrifice · 손 Hand · 덱 Deck · 사슬 Chain
 // 값 Value · 배수 Mult · 목표 Target · 상금 Purse($) · 끊김 Break · 지키는 적 Guard · 증원 Recruit · 체크메이트 Checkmate(짧게 Mate) · 격언 Maxim
 // 기보 Tome · 각인 Engraving · 혼 Soul · 레퍼토리 Repertoire · 전술 Tactic · 프로모션 Promotion · 레이팅 Rating · 먹기 Take · 모습 Form
-// 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
+// 팩 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 // 효과 글: 「Condition: effect」, 수치는 +20 Value · ×2 Mult · +$2 · +1 Move. Value · Mult · Target은 늘 대문자, 다른 낱말과 기물 이름은 문장 안에서 소문자.
 export const EN = {
   // 하이라이트 카드(CHM-73): 결과 화면 단추 · 덮개 · 카드
@@ -208,19 +208,19 @@ export const EN = {
   '끝없는 대국': 'Endless',
   // 건너뛰기 패(CHM-58 ②): 관 선택 카드 · 건너뛴 뒤 알림
   '폰의 기보 한 장': 'One pawn tome', '나이트의 기보 한 장': 'One knight tome', '비숍의 기보 한 장': 'One bishop tome', '룩의 기보 한 장': 'One rook tome', '퀸의 기보 한 장': 'One queen tome',
-  '기물 꾸러미 하나 열기': 'One piece bundle', '기보 꾸러미 하나 열기': 'One tome bundle', '각인 꾸러미 하나 열기': 'One engraving bundle',
-  '다음 상점 꾸러미 칸 +1': '+1 bundle slot next visit', '다음 상점에서 다시 진열 2번': '2 rerolls at next shop',
+  '기물 팩 하나 열기': 'One piece bundle', '기보 팩 하나 열기': 'One tome bundle', '각인 팩 하나 열기': 'One engraving bundle',
+  '다음 상점 팩 칸 +1': '+1 bundle slot next visit', '다음 상점 리롤 2번 무료': '2 free rerolls at next shop',
   '가진 상금 두 배(최대 $10)': 'Double cash (max $10)', '판본 격언 셋 중 하나 고르기': 'Pick 1 of 3 edition maxims', '명경기 조각 하나': 'One classic fragment',
   '점수': 'Score', '이 판의': "This run's", '콤비네이션': 'Combination', '이 판의 콤비네이션': "This run's Combination", '먹은 수': 'Captures', '수': 'Moves', '상금': 'Purse', '덱': 'Deck', '손': 'Hand', '격언': 'Maxim',
   '대국 승리': 'Match Won', '체크메이트 승리': 'Won by Mate', '대국 기본': 'Base', '적립': 'Interest', '체크메이트': 'Checkmate', '메이트': 'Mate', '대국 중 번 상금': 'Earned in match', '합': 'Total',
-  '금빛 꾸러미가 상점에 나왔다': 'A golden bundle is in the shop',
+  '금빛 팩이 상점에 나왔어요': 'A golden bundle is in the shop',
   '프로모션': 'Promotion', '넘겼다': 'Survived', '적이 다시 찬다': 'Enemies refill', '다시 떨군다': 'Drop again', '목표 달성': 'Target reached',
   '떨굴 곳이 없다': 'Nowhere to drop', '수가 다했다': 'Out of moves', '수를 다 썼다': 'Out of moves',
-  '관 선택': 'Matches', '상점': 'Shop', '진열': 'For Sale', '꾸러미': 'Bundles', '두루마리': 'Scrolls', '다음 대국': 'Next Match', '구매함': 'Sold', '열림': 'Opened', '공짜': 'Free',
+  '관 선택': 'Matches', '상점': 'Shop', '진열': 'For Sale', '팩': 'Bundles', '두루마리': 'Scrolls', '다음 대국': 'Next Match', '구매함': 'Sold', '열림': 'Opened', '공짜': 'Free',
   '새길 기물': 'Choose a piece to engrave', '이번 상점에선 끝': 'Done for this shop', '지금은 할 수 없어요': "Can't do that", '격언 칸이 꽉 찼어요': 'Maxim slots full',
   '셋 중 하나를 고른다': 'Keep one of three',
   '덱에 들어와요': 'Goes into your deck', '비었어요': 'Empty',
-  '명경기 재현': 'Reenact the classic', '첫째': 'First', '둘째': 'Second', '셋째': 'Third', '상점 진열': 'Shop shelf', '금빛 적을 먹고 이긴다': 'Take a golden enemy and win', '기물 꾸러미': 'Piece Bundle', '기보 꾸러미': 'Tome Bundle', '각인 꾸러미': 'Engraving Bundle', '금빛 꾸러미': 'Golden Bundle',
+  '명경기 재현': 'Reenact the classic', '첫째': 'First', '둘째': 'Second', '셋째': 'Third', '상점 진열': 'Shop shelf', '금빛 적을 먹고 이긴다': 'Take a golden enemy and win', '기물 팩': 'Piece Bundle', '기보 팩': 'Tome Bundle', '각인 팩': 'Engraving Bundle', '금빛 팩': 'Golden Bundle',
   '기보': 'Tome', '각인': 'Engraving', '명경기 조각': 'Classic Fragment',
   '마스터의 상자': "Master's Chest", '한 칸': 'One cell', '세 칸': 'Three cells', '다섯 칸!': 'FIVE CELLS!',
   '조각 셋이면 전설': 'Three make a legend', '불멸의 기보': 'Immortal Games', '전설': 'Legend', '흔함': 'Common', '드묾': 'Uncommon', '귀함': 'Rare', '잠듦': 'Asleep', '잠김': 'Locked',
@@ -635,7 +635,7 @@ export const TEMPLATES = [
   [/^남은 수 (\d+)$/, (m) => `Moves left ${m[1]}`],
   [/^넘친 목표 ×(\d+)$/, (m) => `Overflow ×${m[1]}`],
   [/^목표 ×(\d+)$/, (m) => `Target ×${m[1]}`],
-  [/^다시 진열 (\$\d+)$/, (m) => `Reroll ${m[1]}`],
+  [/^리롤 (\$\d+)$/, (m) => `Reroll ${m[1]}`],
   [/^빼기 (\$\d+)$/, (m) => `Remove ${m[1]}`],
   [/^팔기 (\$\d+)$/, (m) => `Sell ${m[1]}`],
   [/^(.+)로 (\$\d+)$/, (m, tr) => `To ${tr(m[1])} ${m[2]}`],

@@ -80,7 +80,7 @@ export class RewardScreen {
       text(ctx, '합', x + P + 12, y + lay.total, PAL.ink, { bold: true });
       text(ctx, `$${this.total}`, x + w - P - 12, y + lay.total, PAL.gold, { align: 'right', bold: true });
       text(ctx, `상금 $${app.run.money}`, W / 2, y + lay.money, PAL.ink, { align: 'center' });
-      if (this.gold) text(ctx, '금빛 꾸러미가 상점에 나왔다', W / 2, y + lay.gold, PAL.gold, { align: 'center', bold: true });
+      if (this.gold) text(ctx, '금빛 팩이 상점에 나왔어요', W / 2, y + lay.gold, PAL.gold, { align: 'center', bold: true });
     }
     button(ctx, ui, 'next', W / 2 - 40, y + lay.btn, 80, 18, '계속', { onClick: () => this.next(), tone: 'gold' });
     closeBox();
