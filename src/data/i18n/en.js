@@ -495,7 +495,7 @@ export const EN = {
   '가장 많이 모은 시너지는 1 · 3 · 5개에서 켜진다': 'Your biggest synergy switches on at 1, 3 and 5',
   // 혼
   '처음 세 번은 모습이 안 바뀌고 먹은 적의 행마를 얻는다': 'First 3 takes: keep form · gain their moves',
-  '더 먹을 적이 없으면 한 번, 처음 모습이 되어 이어 먹는다': 'Once, when stuck: back to your first form',
+  '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 또 먹는다': 'Once, when stuck: back to your first form',
   '먹을 때마다 한 단계 위 기물이 된다': 'Each take: become the next piece up',
   '둘째 먹기 값 +10 · 셋째 +20 · 넷째 +30 …': '2nd take +10 Value · 3rd +20 · 4th +30 …',
   '폰 모습이면 여섯째 줄에서 아마존으로 프로모션한다': 'As a pawn: amazon promotion on the 6th rank',

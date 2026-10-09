@@ -62,7 +62,7 @@ soul('absorb', '흡수', '#d27fd6', ['change'], ABSORB_TEXT, {
   awake: '얻은 행마: 둘까지 쌓인다',
   onDrop(ctx) { ctx.flags.absorb = true; if (ctx.data.awake) ctx.flags.absorbKeep = 2; },
 });
-soul('echo', '메아리', '#9fb8ff', ['change'], '더 먹을 적이 없으면 한 번, 처음 모습이 되어 이어 먹는다', {
+soul('echo', '메아리', '#9fb8ff', ['change'], '더 먹을 적이 없으면 한 번, 처음 모습으로 돌아가 또 먹는다', {
   rarity: 'uncommon',
   awake: '더 먹을 적이 없을 때: 두 번까지 돌아간다',
   onBlocked(ctx) {
