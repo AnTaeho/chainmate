@@ -10,6 +10,7 @@ import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { maximInfo } from '../sim/run.js';
 import { maximCard, maximCellH, panel, chartLevel } from './parts.js';
 import { IGNITE_TITLE } from './ignite.js';
+import { rating } from './screens/setup.js';
 import { PAD_CARD } from './frame.js';
 
 export const CARD = { w: 400, h: 225, scale: 3 };
@@ -73,8 +74,10 @@ export function highlightLayout(run, ox = 0, oy = 0) {
   const bag = { x, y: top, w, h: BAG_H, ...bagSpots(run.deck.length, x + BAG_PAD, top, w - BAG_PAD * 2) };
   const grid = maximSpots(maxims, x, top + BAG_H + MID_GAP, w);
   // 아래 띠: 윗줄 = 꼬리표 · 「최고 한 수 · 사슬 N」, 아랫줄 = 큰 글 · 점수
-  const tag = run.phase === 'won' ? { s: '여덟 관을 꺾었다', col: PAL.gold } : run.endless ? { s: '끝없는 대국', col: PAL.gold } : { s: '닿은 곳', col: PAL.dim };
-  const head = `이 덱으로 ${run.ante}관`, chain = chainOf(r), score = r.score || 0;
+  // 꼬리표는 판의 종류, 큰 글은 어디까지 갔는지
+  const kind = run.endless ? '끝없는 대국' : run.daily ? '오늘의 대국' : `레이팅 ${rating(run.dan)}`;
+  const tag = { s: kind, col: run.phase === 'won' || run.endless ? PAL.gold : PAL.dim };
+  const head = run.phase === 'won' && !run.endless ? `${run.ante}관 돌파` : `${run.ante}관 도달`, chain = chainOf(r), score = r.score || 0;
   const note = chain > 0 ? `최고 한 수 · 사슬 ${chain}` : '최고 한 수';
   // 큰 글은 두 배, 짧은 꼴 점수와도 한 줄에 안 들어가면 한 배 굵게. 점수는 남은 폭에 1,234 꼴이 안 들어가면 짧은 꼴
   const big = measure(head, true) * 2 + BAND_GAP + measure(short(score), true) * 2 <= w;
