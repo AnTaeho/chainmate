@@ -1,5 +1,5 @@
 // 판 결과: 이김/짐, 도달 관, 최고 한 수(작은 판에 다시 둔다 — 대국 화면과 같은 길), 목표에 모자란 점수(아슬아슬), 모은 조각,
-// 새 도감 칸 · 해금 알림 · 다음 해금까지. 「다시」 / 「타이틀」. 오늘의 대국이면 순위 카드(CHM-70, screens/rank.js).
+// 새 도감 칸 · 해금 알림 · 다음 해금까지. 「다시」 / 「하이라이트」(CHM-73, 최고 한 수가 있는 판만) / 「타이틀」. 오늘의 대국이면 순위 카드(CHM-70, screens/rank.js).
 // quiet: 순위 화면에서 돌아올 때 — 소리를 다시 내지 않는다
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, sprite, num, short, fitNum, line, measure, fine } from '../../render/gfx.js';
@@ -15,10 +15,12 @@ import { PAD_BOX, LINE, GAP_GROUP, GAP_IN, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { replayState, routeAt } from '../fxroute.js';
 import { rankCard, drawRankCard, CARD_NEIGHBOURS } from './rank.js';
+import { hasHighlight } from '../highlight.js';
 
 const Q = 16, MX = 330, ROW_R = 300; // 다시 보기 판: 칸 16px. 윗변 MY는 결과 상자 자리에 따라(draw가 정한다). ROW_R: 기록 줄 수치의 오른끝
 let MY = 50;
 const STEP = 0.5;
+export const RESULT_BTN = { 2: [90, 20], 3: [90, 15], 4: [84, 8] }; // 단추 수 → [폭, 사이]
 
 export class ResultScreen {
   constructor(app, { quiet = false } = {}) {
@@ -176,14 +178,15 @@ export class ResultScreen {
     }
     if (card) drawRankCard(ctx, ui, app, card, x + P, y + L0.cardY, leftW);
     shown.forEach(([s2, c], i) => text(ctx, s2, W / 2, noteYs[i], c, { align: 'center' }));
-    if (this.won) {
-      button(ctx, ui, 'result:endless', W / 2 - 150, by, 90, 18, '계속 두기', { onClick: () => this.endless() });
-      button(ctx, ui, 'result:again', W / 2 - 45, by, 90, 18, '다시', { onClick: () => this.again(), tone: 'gold' });
-      button(ctx, ui, 'result:title', W / 2 + 60, by, 90, 18, '타이틀', { onClick: () => app.toTitle() });
-    } else {
-      button(ctx, ui, 'result:again', W / 2 - 100, by, 90, 18, '다시', { onClick: () => this.again(), tone: 'gold' });
-      button(ctx, ui, 'result:title', W / 2 + 10, by, 90, 18, '타이틀', { onClick: () => app.toTitle() });
-    }
+    // 단추 줄: (계속 두기) · 다시 · (하이라이트) · 타이틀 — 넷이면 폭 84 · 사이 8, 셋은 90 · 15, 둘은 90 · 20
+    const btns = [];
+    if (this.won) btns.push(['result:endless', '계속 두기', () => this.endless(), 'plain']);
+    btns.push(['result:again', '다시', () => this.again(), 'gold']);
+    if (hasHighlight(run)) btns.push(['result:highlight', '하이라이트', () => app.openOverlay('highlight'), 'plain']);
+    btns.push(['result:title', '타이틀', () => app.toTitle(), 'plain']);
+    const [bw, bg] = RESULT_BTN[btns.length];
+    const bx = W / 2 - Math.floor((btns.length * bw + (btns.length - 1) * bg) / 2);
+    btns.forEach(([id, label, onClick, tone], i) => button(ctx, ui, id, bx + i * (bw + bg), by, bw, 18, label, { onClick, tone }));
     closeBox();
   }
   again() { const r = this.app.run; this.app.newRun({ opening: r.opening, dan: r.dan, daily: !!r.daily }); }

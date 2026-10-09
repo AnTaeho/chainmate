@@ -146,26 +146,32 @@ export async function boot(env = {}) {
   const platform = win.__TAURI_INTERNALS__ ? 'app' : 'web';
   // 기록 내보내기(CHM-50 · CHM-54): 손가락 기기는 공유 시트(navigator.share, 파일 하나), 그 밖은 파일로 받기(Blob · <a download>), 둘 다 없으면 클립보드.
   // 공유 시트는 손가락 기기에서만 연다 — 데스크톱 크롬 · 사파리에도 share가 있지만 거기서는 받기가 낫다(CHM-50에서 확인한 길).
-  // share(name, text): 열 수 없으면 null, 열면 Promise<'shared' | 'cancel' | 'fail'>. 누른 그 순간 안에서 불러야 한다(앞에 await를 두지 않는다)
-  const share = (name, text) => {
+  // share(name, data, type, anywhere): 열 수 없으면 null, 열면 Promise<'shared' | 'cancel' | 'fail'>. 누른 그 순간 안에서 불러야 한다(앞에 await를 두지 않는다)
+  // data: 글 또는 Blob(하이라이트 그림, CHM-73). anywhere: 손가락 기기가 아니어도 연다(그림은 맥 사파리의 공유 시트도 쓸모가 있다)
+  const shareFiles = (name, data, type, anywhere) => {
     const nav = win.navigator;
-    if (!coarse() || !nav || typeof nav.share !== 'function' || typeof nav.canShare !== 'function' || typeof win.File !== 'function') return null;
-    let files;
+    if ((!anywhere && !coarse()) || !nav || typeof nav.share !== 'function' || typeof nav.canShare !== 'function' || typeof win.File !== 'function') return null;
     try {
-      files = [new win.File([text], name, { type: 'application/json' })];
-      if (!nav.canShare({ files })) return null;
+      const files = [new win.File([data], name, { type })];
+      return nav.canShare({ files }) ? files : null;
     } catch { return null; }
+  };
+  const share = (name, data, type = 'application/json', anywhere = false) => {
+    const files = shareFiles(name, data, type, anywhere);
+    if (!files) return null;
     try {
-      return Promise.resolve(nav.share({ files })).then(() => 'shared', (e) => (e && e.name === 'AbortError' ? 'cancel' : 'fail'));
+      return Promise.resolve(win.navigator.share({ files })).then(() => 'shared', (e) => (e && e.name === 'AbortError' ? 'cancel' : 'fail'));
     } catch { return Promise.resolve('fail'); }
   };
+  // 공유 시트를 열지 않고 열 수 있는지만 본다(「공유」 단추를 낼지)
+  share.can = (name, data, type = 'application/json', anywhere = false) => !!shareFiles(name, data, type, anywhere);
   // 가짜 DOM에는 body · URL이 없어 못 받는다. 손가락 기기의 앱(iOS WKWebView)은 <a download>를 눌러도 예외 없이 아무 일도 없다(CHM-53) — 받았다고 하지 않고 클립보드로 넘긴다
-  const download = (name, text) => {
+  const download = (name, data, type = 'application/json') => {
     if (platform === 'app' && coarse()) return false;
     try {
       const U = win.URL;
       if (!doc.body || !U || !U.createObjectURL || !win.Blob) return false;
-      const url = U.createObjectURL(new win.Blob([text], { type: 'application/json' }));
+      const url = U.createObjectURL(new win.Blob([data], { type }));
       const a = doc.createElement('a');
       a.href = url; a.download = name; a.style.display = 'none';
       doc.body.appendChild(a); a.click(); a.remove();

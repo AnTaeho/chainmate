@@ -36,7 +36,7 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 // track(name, props): 기록 보내기(CHM-63, src/ui/telemetry.js) — main.js가 넘긴다. 없으면 아무것도 보내지 않는다(Node 시험 · 도구)
 // rank: 순위(CHM-70, src/ui/rank.js createRank) — main.js가 넘긴다. 없으면 닿지 못하는 순위(한 번도 부르지 않는다)
 // cloud: 클라우드 저장(CHM-71, src/ui/cloud.js createCloud) — main.js가 넘긴다. 없으면 아무것도 맞추지 않는다
-// platform: 'web' | 'app'(Tauri). share(name, text) · download(name, text) · copyText(text): 기록 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
+// platform: 'web' | 'app'(Tauri). share(name, data, type, anywhere) · download(name, data, type) · copyText(text): 기록 · 그림 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
 export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, fields = null, openPage = null, today: dayNow = today }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
@@ -170,6 +170,10 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (download && download(name, body)) { app.toast(`판 ${n}개를 내보냈다`, PAL.gold); return 'file'; }
     return copy();
   };
+  // 하이라이트 그림(CHM-73): 미리 만든 PNG 덩이를 누른 그 순간 안에서 넘긴다. 공유는 손가락 기기가 아니어도 연다
+  app.canShareImage = (name, blob) => !!(share && share.can && share.can(name, blob, 'image/png', true));
+  app.shareImage = (name, blob) => (share && blob ? share(name, blob, 'image/png', true) : null);
+  app.saveImage = (name, blob) => !!(download && blob && download(name, blob, 'image/png'));
   app.noteMove = (score, steps) => {
     if (!app.run) return false;
     const best = noteMove(app.records, score, steps, app.run.ante);

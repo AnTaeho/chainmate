@@ -6,6 +6,9 @@
 // 꾸러미 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 // 효과 글: 「Condition: effect」, 수치는 +20 Value · ×2 Mult · +$2 · +1 Move. Value · Mult · Target은 늘 대문자, 다른 낱말과 기물 이름은 문장 안에서 소문자.
 export const EN = {
+  // 하이라이트 카드(CHM-73): 결과 화면 단추 · 덮개 · 카드
+  '하이라이트': 'Highlight', '그림 저장': 'Save image', '공유': 'Share', '닫기': 'Close',
+  '그림을 저장했다': 'Image saved', '저장하지 못했다': "Couldn't save it", '공유하지 못했다': "Couldn't share it",
   // 계정(CHM-72): 설정 단추 · 계정 화면
   '계정': 'Account', '아이디': 'Username', '비번': 'Password', '아이디로 들어오거나 다른 기기와 잇는다': 'Sign in or link another device',
   '아이디로 들어오기': 'Sign in with a username', '이 기기의 계정': "This device's account", '알아 둘 것': 'Good to know',
@@ -558,6 +561,9 @@ const KIND = { '연습 대국': 'Practice', '정식 대국': 'Rated', 마스터�
 // 틀: 숫자나 이름이 끼는 글. fn(m, tr) — tr로 끼인 말을 다시 옮긴다.
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
+  // 하이라이트 카드(CHM-73)
+  [/^이 주머니로 (\d+)관$/, (m) => `This bag: Hall ${m[1]}`],
+  [/^사슬 (\d+)$/, (m) => `Chain ${m[1]}`],
   [/^(\d+)개$/, (m) => `${m[1]}`],
   // 복기(CHM-59) 갈림길 카드 · 다시 두기: 「 · 」로 쪼개기 전에
   [/^(\d+)수째가 갈림길이었다$/, (m) => `Move ${m[1]} was the turning point`],
