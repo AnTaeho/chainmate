@@ -244,7 +244,7 @@ async function shots(browserType, name) {
         world.mode = 'fail';
         await c.type('pass', PW); await c.click('acct:login');
         const un = await c.done();
-        check(`${name} 닿지 못함: 한 줄 · 알림 없음`, un.msg === '닿지 못했다' && (await c.ev(() => window.__app.toasts.length)) === 0, un.msg);
+        check(`${name} 닿지 못함: 한 줄 · 알림 없음`, un.msg === '연결하지 못했어요' && (await c.ev(() => window.__app.toasts.length)) === 0, un.msg);
         await lay(c, '닿지 못함');
         await c.shot(`unreached${tag}`);
         world.mode = 'ok';

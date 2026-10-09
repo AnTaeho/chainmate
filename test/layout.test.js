@@ -799,7 +799,7 @@ test('순위 화면: 불러오는 중 · 줄 있음 · 안 둠 · 내 쪽(긴 �
     e.app.go('rank'); e.frame(); await e.settle();
     f = e.frame();
     assert.deepEqual(f.bad, [], tag('닿지 못함'));
-    assert.ok(drew(f, '순위에 닿지 못했다') && !e.has('rank:play') && !e.has('rank:mine') && e.app.toasts.length === 0, tag('닿지 못함'));
+    assert.ok(drew(f, '순위를 불러오지 못했어요') && !e.has('rank:play') && !e.has('rank:mine') && e.app.toasts.length === 0, tag('닿지 못함'));
   }
   M.lang.setLang('ko');
 });
@@ -850,7 +850,7 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
       for (const q of f.texts.filter((x) => x.box === card)) byY.set(q.y, [...(byY.get(q.y) || []), q]);
       for (const line of byY.values()) { line.sort((x, y) => x.x - y.x); for (let i = 1; i < line.length; i++) assert.ok(line[i - 1].x + line[i - 1].w + 4 <= line[i].x || line[i].s.startsWith(' / '), `${tag}: 「${line[i - 1].s}」 · 「${line[i].s}」`); }
       // 상태 넷: 확인 중 · 새 배포 · 닿지 못함 · 낸 것 없음(카드 없음 — 날짜 줄이 돌아온다)
-      for (const [phase, say] of [['pending', '확인 중'], ['stale', R.STALE_LINES[0]], ['unreached', '순위에 닿지 못했다'], ['none', null]]) {
+      for (const [phase, say] of [['pending', '확인 중'], ['stale', R.STALE_LINES[0]], ['unreached', '순위를 불러오지 못했어요'], ['none', null]]) {
         st = { date: RANK_DAY, phase };
         a.app.go('result', { quiet: true });
         const g = a.frame(), gb = g.boxes.find((q) => q.name === '결과'), gc = g.boxes.find((q) => q.name === '순위 카드');
@@ -1090,7 +1090,7 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
       if (gain) assert.ok(said(f, K.gainText(gain)), tag(K.gainText(gain)));
     }
     // 이 기기의 코드 쪽 상태: 시간 지남 · 닿지 못함 · 오늘은 다 받음 · 이어짐
-    for (const [phase, say, btn] of [['expired', '시간이 지났어요', true], ['unreached', '닿지 못했다', true], ['limit', '오늘은 더 받을 수 없어요', false], ['idle', null, true]]) {
+    for (const [phase, say, btn] of [['expired', '시간이 지났어요', true], ['unreached', '연결하지 못했어요', true], ['limit', '오늘은 더 받을 수 없어요', false], ['idle', null, true]]) {
       scr.mine = { phase };
       f = good(a.frame(), `내 코드 ${phase}`);
       if (say) assert.ok(said(f, say), tag(say));

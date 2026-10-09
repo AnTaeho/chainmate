@@ -43,7 +43,7 @@ export function gainText(g) {
   return null;
 }
 // account: 계정에 들어와 있는 기기는 남의 코드를 넣지 못한다(CHM-72 — 넣으면 제 계정이 지워진다). 이 기기에서 코드를 받아 저쪽에 넣는다
-export const REDEEM_FAIL = { bad: '숫자가 맞지 않는다', expired: '시간이 지난 숫자다', self: '이 기기의 숫자다', limit: '잠시 뒤에 다시 넣는다', unreached: '닿지 못했다', account: '이 기기에서 코드를 받는다' };
+export const REDEEM_FAIL = { bad: '숫자가 맞지 않는다', expired: '시간이 지난 숫자다', self: '이 기기의 숫자다', limit: '잠시 뒤에 다시 넣는다', unreached: '연결하지 못했어요', account: '이 기기에서 코드를 받는다' };
 export const CONFIRM_TEXT = '이 기기의 기록이 그 기기의 기록과 합쳐져요';
 export const UNLINK_TEXT = '이 기기만 따로 간다 · 기록은 양쪽에 남는다';
 
@@ -132,7 +132,7 @@ export class LinkScreen {
     this.unlinking = 'working';
     app.rank.unlink().then((r) => {
       this.unlinking = null;
-      if (!r.ok) { app.toast('닿지 못했다', PAL.ink); return; }
+      if (!r.ok) { app.toast('연결하지 못했어요', PAL.ink); return; }
       app.track('link_unlink', {}, { always: true });
       app.cloud.reset(); app.cloud.touch();
       this.devices = 1;
@@ -201,7 +201,7 @@ export class LinkScreen {
     else if (m.phase === 'limit') { say('오늘은 더 받을 수 없어요', y0 + 4); say('내일 다시 받을 수 있어요', y0 + 4 + LINE); }
     else {
       if (m.phase === 'expired') say('시간이 지났어요', y0 + 4);
-      if (m.phase === 'unreached') say('닿지 못했다', y0 + 4);
+      if (m.phase === 'unreached') say('연결하지 못했어요', y0 + 4);
       get(m.phase === 'idle' ? y0 + 2 : y0 + 4 + LINE + 8);
     }
     closeBox();

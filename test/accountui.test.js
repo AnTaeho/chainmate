@@ -344,7 +344,7 @@ test('잠김 · 이미 있는 아이디 · 닿지 못함 · 다른 계정: 상�
   assert.deepEqual(B.events.at(-1), ['account_login', { ok: false, reason: 'locked' }]);
   // 닿지 못함
   api.mode = 'fail';
-  assert.equal(await say('taeho_an', PW, 'acct:login'), '닿지 못했다');
+  assert.equal(await say('taeho_an', PW, 'acct:login'), '연결하지 못했어요');
   api.mode = 'ok';
   // 다른 계정으로 들어와 있는 기기
   assert.equal(await say('bobby', PW2, 'acct:signup'), '만들었다');

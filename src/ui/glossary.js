@@ -37,7 +37,7 @@ export const TERMS = [
   B('change', 'battle', '갈아입기', 'Change', /갈아입\S*/, /\bchanges? form\b/i, '적을 먹으면 그 적과 같은 기물이 된다', 'Take an enemy and become that piece'),
   T('threat', 'battle', '지키는 적', 'Guard', /지키는 적|지키던 적|지켜진 \S+/, /\bguard\w*/i, '방금 먹은 칸을 지키는 적. 다음엔 이 적을 먹어야 이어진다', 'An enemy guarding the square you just took. Take it next to keep going'),
   T('cut', 'battle', '끊김', 'Break', /끊[김긴기겨]\S*/, /\bbreaks?\b|\bbroken\b/i, '지키는 적을 못 먹으면 사슬이 끝난다. 그때까지 점수는 받는다', 'Miss a guard and the chain ends. You keep the score so far'),
-  T('promote', 'battle', '프로모션', 'Promotion', /프로모션\S*/, /\bpromot\w*/i, '폰 모습으로 여덟째 줄에 닿으면 퀸이 된다', 'A pawn that reaches the 8th rank becomes a queen'),
+  T('promote', 'battle', '프로모션', 'Promotion', /프로모션\S*/, /\bpromot\w*/i, '폰 모습으로 여덟째 줄에 가면 퀸이 된다', 'A pawn that reaches the 8th rank becomes a queen'),
   T('mate', 'battle', '체크메이트', 'Checkmate', /체크메이트|(?<!체인)메이트/, /\b(?:check)?mat(?:e|ing)\b/i, '지키는 적이 없는 킹을 먹으면 곧바로 이긴다', 'Take an unguarded king and win at once'),
   T('reinforce', 'battle', '증원', 'Recruit', /증원/, /\brecruits?\b/i, '수가 끝날 때 ▼ 그림자 자리로 들어오는 새 적', 'A new enemy that arrives on a ▼ shadow when the move ends'),
   B('move', 'battle', '수', 'Move', null, null, '기물 하나를 떨궈 사슬을 푸는 한 번. 대국마다 정해져 있다', 'One drop and its chain. Each match gives you a set number'),
@@ -49,7 +49,7 @@ export const TERMS = [
   // ── 판
   T('run', 'run', '판', 'Run', null, null, '1관부터 8관까지의 한 도전. 지면 처음부터', 'One attempt from Hall 1 to Hall 8. Lose it and start over'),
   T('hall', 'run', '관', 'Hall', null, null, '연습 대국 · 정식 대국 · 마스터전. 8관까지', 'A practice, a rated and a master match. Eight halls in all'),
-  T('match', 'run', '대국', 'Match', null, null, '목표 점수에 닿아야 이기는 한 번의 겨루기', 'One game you win by reaching the Target'),
+  T('match', 'run', '대국', 'Match', null, null, '목표 점수를 넘기면 이기는 한 번의 승부', 'One game you win by reaching the Target'),
   T('faction', 'run', '세력', 'Faction', null, null, '관 하나를 차지한 적. 세력마다 나오는 적 · 버릇 · 마스터가 다르다', 'The foe holding a hall. Each brings its own enemies, habit and master'),
   T('habit', 'run', '버릇', 'Habit', null, null, '세력이 그 관의 대국 셋에 모두 거는 약한 규칙', 'A light rule a faction sets on all three matches in its hall'),
   T('master', 'run', '마스터', 'Master', /마스터(?:전)?/, null, '세력의 우두머리. 관의 마지막 대국에서 규칙 하나를 비튼다', 'The faction\'s leader. Bends one rule in the hall\'s last match'),
@@ -72,7 +72,7 @@ export const TERMS = [
   T('fairy', 'item', '특수 기물', 'Special piece', /특수 기물/, /\bspecial pieces?\b/i, '체스에 없는 행마를 가진 기물', 'A piece with a move chess does not have'),
   // 특수 기물 다섯(CHM-55): 행마가 체스와 크게 달라 글 안에서 만나면 상자로 풀어 준다
   T('p_T', 'item', '꺾쇠', 'Bracket', /꺾쇠/, /\bbrackets?\b/i, '룩처럼 가다가 빈칸에서 직각으로 두 번까지 꺾을 수 있다', 'Slides like a rook and may turn up to twice at right angles on empty squares'),
-  T('p_E', 'item', '물수제비', 'Skipper', /물수제비/, /\bskippers?\b/i, '비숍처럼 가다가 판 끝에 닿으면 튕긴다. 두 번까지', 'Slides like a bishop and bounces off the board edge, up to twice'),
+  T('p_E', 'item', '물수제비', 'Skipper', /물수제비/, /\bskippers?\b/i, '비숍처럼 가다가 판 끝에서 튕긴다. 두 번까지', 'Slides like a bishop and bounces off the board edge, up to twice'),
   T('p_V', 'item', '까마귀', 'Crow', /까마귀/, /\bcrows?\b/i, '대각선으로 붙은 적을 넘어 먹고 그 너머 빈칸에 앉는다. 모습이 바뀌어도 넘기를 이어 간다', 'Jumps a diagonal neighbor to take it and lands beyond. Keeps jumping even after its form changes'),
   T('p_M', 'item', '광대', 'Jester', /광대/, /\bjesters?\b/i, '적을 그 적의 행마로 먹는다(룩은 룩처럼, 나이트는 나이트처럼)', "Takes each enemy with that enemy's own move (a rook like a rook, a knight like a knight)"),
   T('p_D', 'item', '화약병', 'Powder', /화약병/, /\bpowder\b/i, '둘레 한 칸을 먹으면 그 둘레의 적도 터진다. 사슬은 거기서 끝난다', 'Takes one square away and blows up the enemies around it. The chain ends there'),

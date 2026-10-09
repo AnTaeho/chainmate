@@ -49,12 +49,12 @@ export const LESSONS = [
   // ── 대국
   { id: 'target', group: 'battle', title: '목표와 수', target: 60, moves: 2, hand: ['N', 'B'], board: { e5: 'P', h8: 'R' },
     steps: [
-      { pick: 0, say: '판 위 막대가 목표. 닿으면 이긴다. 왼쪽 금빛 구슬이 남은 수다' },
+      { pick: 0, say: '판 위 막대가 목표예요. 다 채우면 이겨요. 왼쪽 금빛 구슬은 남은 수예요' },
       { drop: 'd3' },
       { cap: 'e5', say: '폰을 먹으면 첫 수가 끝나고 수 구슬 하나가 꺼져요' },
       { pick: 0, say: '남은 수로 목표를 채우세요. 비숍을 누르세요' },
       { drop: 'c3' },
-      { cap: 'h8', say: '룩을 먹으면 목표에 닿는다' },
+      { cap: 'h8', say: '룩을 먹으면 목표를 채워요' },
     ] },
   { id: 'redraw', group: 'battle', title: '손과 희생', target: 90, moves: 1, discards: 1, hand: ['P', 'P', 'P', 'P'], bag: ['N'], board: { h8: 'Q' },
     steps: [

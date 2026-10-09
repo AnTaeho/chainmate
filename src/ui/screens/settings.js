@@ -114,7 +114,7 @@ export class SettingsScreen {
     app.rank.reroll().then((r) => {
       this.rolling = false;
       if (r.ok) { app.track('name_reroll', {}, { always: true }); return; }
-      app.toast(r.why === 'limit' ? '오늘은 다 지었다' : '순위에 닿지 못했다', PAL.ink);
+      app.toast(r.why === 'limit' ? '오늘은 다 지었다' : '순위를 불러오지 못했어요', PAL.ink);
     }, () => { this.rolling = false; });
   }
   close() { if (this.back) this.app.openOverlay(this.back); else this.app.closeOverlay(); }

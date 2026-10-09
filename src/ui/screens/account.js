@@ -41,7 +41,7 @@ export function accountLayout() {
 export const ACCOUNT_FAIL = {
   bad: '아이디나 비번이 맞지 않는다', taken: '이미 쓰고 있는 아이디예요', username: '아이디는 영문 소문자 · 숫자 · _ 3~20자', weak: '비번은 8자 이상 · 흔한 것은 안 된다',
   other: '이 기기는 다른 계정으로 들어와 있다 · 먼저 나간다', has: '이 기기는 이미 계정에 들어와 있다', limit: '오늘은 더 할 수 없어요 · 내일 다시 해 주세요',
-  unreached: '닿지 못했다', empty: '아이디와 비번을 넣는다', hangul: '아이디는 영문으로 입력하세요', wrongpw: '비번이 맞지 않는다', nopw: '비번을 넣는다',
+  unreached: '연결하지 못했어요', empty: '아이디와 비번을 넣는다', hangul: '아이디는 영문으로 입력하세요', wrongpw: '비번이 맞지 않는다', nopw: '비번을 넣는다',
 };
 export const lockedText = (min) => `잠겼다 · ${min}분 뒤에 다시 들어온다`;
 export const ACCOUNT_OK = { made: '만들었다', in: '들어왔다', changed: '비번을 바꿨다', out: '나갔다', gone: '계정을 지웠다' };

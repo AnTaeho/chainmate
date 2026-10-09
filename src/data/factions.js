@@ -54,7 +54,7 @@ faction('fortress', {
 faction('hunters', {
   name: '숲 사냥꾼', crest: 'bow', hue: '#4f9a5a',
   mix: { P: 0.5, N: 1.2, B: 0.6, R: 0.5, Q: 0.5 }, unique: { S: 6, D: 1 },
-  habit: { text: '위 두 줄은 숲이다 · 닿으면 걷힌다', apply(r) { r.fog = Math.max(r.fog || 0, 2); } },
+  habit: { text: '위 두 줄은 숲 · 내 기물이 갈 수 있으면 걷힌다', apply(r) { r.fog = Math.max(r.fog || 0, 2); } },
   boss: 'fog',
 });
 faction('heralds', {

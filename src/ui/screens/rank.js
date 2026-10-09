@@ -89,7 +89,7 @@ export class RankScreen {
         closeBox();
       });
     } else if (d) say('아직 아무도 플레이하지 않았어요');
-    else say(v.phase === 'unreached' ? '순위에 닿지 못했다' : '순위표를 펴는 중');
+    else say(v.phase === 'unreached' ? '순위를 불러오지 못했어요' : '순위표를 펴는 중');
     // 붙박은 내 줄: 본 칸 아랫변. 오늘 아직 안 뒀으면 그 자리에 「오늘의 대국 두기」
     if (seen) {
       const my = BOARD.mineY, bw = COL.x1 - COL.x0, me = seen.me;
@@ -152,7 +152,7 @@ export function drawRankCard(ctx, ui, app, card, x, y, w) {
   const P = PAD_BOX, { st, phase, rows, h } = card;
   openBox('panel', x, y, w, h, P, { name: '순위 카드' });
   box(ctx, x, y, w, h, CARD_BG, phase === 'ok' ? PAL.gold : PAL.frameHi);
-  if (phase === 'unreached') { text(ctx, '순위에 닿지 못했다', x + P, textY(y + P), PAL.dim); closeBox(); return; }
+  if (phase === 'unreached') { text(ctx, '순위를 불러오지 못했어요', x + P, textY(y + P), PAL.dim); closeBox(); return; }
   if (phase === 'stale') { STALE_LINES.forEach((s, i) => text(ctx, s, x + P, textY(y + P + i * LINE), i ? PAL.dim : PAL.ink)); closeBox(); return; }
   const hy = inkY(y + P, BTN_S);
   if (phase === 'pending' || !st.rank) text(ctx, '확인 중', x + P, hy, PAL.dim, { bold: true });
