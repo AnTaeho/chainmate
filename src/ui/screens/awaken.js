@@ -14,7 +14,7 @@ import { openBox, closeBox } from '../../render/layoutlog.js';
 import { L } from '../lang.js';
 
 const BURST = 0.55, DONE = 1.3;
-export const AWAKEN_FROM = { golden: '금빛 적을 먹고 이겼다', chest: '마스터의 상자', scroll: '깨우기' };
+export const AWAKEN_FROM = { golden: '금빛 적을 먹고 이겼어요', chest: '마스터의 상자', scroll: '깨우기' };
 
 export class AwakenScreen {
   constructor(app, { awaken }) {

@@ -88,7 +88,7 @@ export class RankScreen {
         rowLine(ctx, r, app.rank.nameOf(r), top, { mine });
         closeBox();
       });
-    } else if (d) say('아직 아무도 두지 않았다');
+    } else if (d) say('아직 아무도 플레이하지 않았어요');
     else say(v.phase === 'unreached' ? '순위에 닿지 못했다' : '순위표를 펴는 중');
     // 붙박은 내 줄: 본 칸 아랫변. 오늘 아직 안 뒀으면 그 자리에 「오늘의 대국 두기」
     if (seen) {
@@ -99,10 +99,10 @@ export class RankScreen {
         ui.region('rank:mine', COL.x0, my, bw, BOARD.mineH, { onClick: () => this.go(Math.floor((me.rank - 1) / PER)) });
         rowLine(ctx, me, app.rank.nameOf(me), my + PAD_BOX, { mine: true, total: seen.total });
       } else if (this.tab === 'today') {
-        text(ctx, '오늘은 아직 두지 않았다', COL.rank, textY(my + PAD_BOX), PAL.dim);
+        text(ctx, '오늘은 아직 플레이하지 않았어요', COL.rank, textY(my + PAD_BOX), PAL.dim);
         const pw = measure('오늘의 대국 두기', true) + 20;
         button(ctx, ui, 'rank:play', COL.x1 - 6 - pw, my + 6, pw, BTN_S, '오늘의 대국 두기', { tone: 'gold', onClick: () => app.newRun({ daily: true }) });
-      } else text(ctx, '어제는 두지 않았다', COL.rank, textY(my + PAD_BOX), PAL.dim);
+      } else text(ctx, '어제는 플레이하지 않았어요', COL.rank, textY(my + PAD_BOX), PAL.dim);
       closeBox();
     }
     if (pages > 1) pager(ctx, ui, this.page, pages, (p) => this.go(p));
@@ -120,7 +120,7 @@ export class RankScreen {
 //   pending  「확인 중」 + 빈 줄 셋            ok  머리(「오늘 14등 / 312명」) + 내 위아래 이웃(n줄까지)
 //   stale    두 줄 글(새로 고치면 다음 판부터)   unreached  한 줄 글          none  카드 없음(null)
 export const CARD_NEIGHBOURS = [5, 3, 1, 0]; // 결과 화면이 자리에 맞는 가장 큰 것을 고른다
-export const STALE_LINES = ['게임이 새로 나왔다', '새로 고치면 다음 판부터 순위에 오른다'];
+export const STALE_LINES = ['게임이 업데이트됐어요', '새로 고침하면 다음 판부터 순위에 올라가요'];
 // n: 보일 줄 수(내 줄 포함 — 5 · 3 · 1 · 0). 돌려주는 것: { phase, rows, h } | null
 export function rankCard(app, run, n = 5) {
   if (!run || !run.daily) return null;

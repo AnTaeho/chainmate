@@ -126,7 +126,7 @@ export function clockPips(ctx, run, x2, ty, time = 0, fx = null) {
     if (breaking && fx.t > 0.5) { rect(ctx, x + 2, y + 2, 1, 1, PAL.red); rect(ctx, x + 3, y + 3, 1, 1, PAL.red); rect(ctx, x + 5, y + 5, 1, 1, PAL.red); rect(ctx, x + 6, y + 6, 1, 1, PAL.red); }
   }
 }
-export const clockTip = (run) => tipLines('시계', [`${run.clock} / ${run.clockMax || run.clock}`, '대국을 지면 한 칸을 잃고 다음 대국으로 간다', '다 잃으면 판이 끝난다']);
+export const clockTip = (run) => tipLines('시계', [`${run.clock} / ${run.clockMax || run.clock}`, '대국을 지면 한 칸을 잃고 다음 대국으로 가요', '다 잃으면 판이 끝나요']);
 // 아래 칸의 시계 줄(대국 · 판 틀 왼쪽 칸 공통)
 export const clockRow = (app, run) => ({ id: 'clock', label: '시계', tip: () => clockTip(run), draw: (ctx2, ty) => { text(ctx2, '시계', LEFT.x + PAD_BOX, ty, PAL.dim); clockPips(ctx2, run, LEFT.x + LEFT.w - PAD_BOX, ty, app.time, app.clockFx); } });
 export const hasClock = (run) => !!run && !run.scratch && (run.clockMax || 0) > 0;

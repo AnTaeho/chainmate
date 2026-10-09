@@ -169,7 +169,7 @@ async function shots(browserType, name) {
         await a.key('Meta+A'); await a.key('Backspace');
         await a.page.keyboard.insertText('ㅅㅁ도ㅐ');
         await a.settle(200);
-        check(`${name} 한글 자판으로 친 아이디: 칸이 비고 「아이디는 영문으로 친다」`, (await a.input('user').inputValue()) === '' && (await a.scr()).msg === '아이디는 영문으로 친다', `칸 「${await a.input('user').inputValue()}」 · ${(await a.scr()).msg}`);
+        check(`${name} 한글 자판으로 친 아이디: 칸이 비고 「아이디는 영문으로 친다」`, (await a.input('user').inputValue()) === '' && (await a.scr()).msg === '아이디는 영문으로 입력하세요', `칸 「${await a.input('user').inputValue()}」 · ${(await a.scr()).msg}`);
         await lay(a, '한글 자판');
         await a.shot(`hangul${tag}`);
         // 입력 중: 아이디를 치고 비번 칸에 초점(가려진 글자)
@@ -252,7 +252,7 @@ async function shots(browserType, name) {
         world.store.limits.clear();
         await c.type('user', USER); await c.type('pass', PW2); await c.click('acct:signup');
         const tk = await c.done();
-        check(`${name} 이미 있는 아이디`, tk.msg === '이미 있는 아이디다', tk.msg);
+        check(`${name} 이미 있는 아이디`, tk.msg === '이미 쓰고 있는 아이디예요', tk.msg);
         await lay(c, '이미 있는 아이디');
         await c.shot(`taken${tag}`);
         // 화면을 떠나면 입력 칸이 남지 않는다: 탭 · 돌아가기

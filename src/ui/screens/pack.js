@@ -89,7 +89,7 @@ export class PackScreen {
     if (o.kind === 'engraving') { this.engraveIndex = this.engraveIndex === i ? null : i; this.engraveTarget = null; return; }
     if (o.kind === 'maxim' && !hasMaximRoom(this.run, o.edition)) {
       // 칸이 찼으면 격언 칸을 펼쳐 옛 격언 하나와 바꾼다(팔 수 있는 격언이 없으면 그대로 막는다)
-      if (!this.run.maxims.some(canSell)) { this.app.toast('격언 칸이 찼다', PAL.red); return; }
+      if (!this.run.maxims.some(canSell)) { this.app.toast('격언 칸이 꽉 찼어요', PAL.red); return; }
       this.panel = { pick: i };
       this.sellMenu = null;
       return;
@@ -104,15 +104,15 @@ export class PackScreen {
   swap(k) {
     const i = this.panel.pick;
     this.panel = null; this.sellMenu = null;
-    try { this.app.cmd({ type: 'sell', index: k }); } catch { this.app.toast('할 수 없다', PAL.red); return; }
+    try { this.app.cmd({ type: 'sell', index: k }); } catch { this.app.toast('지금은 할 수 없어요', PAL.red); return; }
     this.app.sfx('coin');
-    if (!hasMaximRoom(this.run, this.run.pack.options[i].edition)) { this.app.toast('격언 칸이 찼다', PAL.red); return; }
+    if (!hasMaximRoom(this.run, this.run.pack.options[i].edition)) { this.app.toast('격언 칸이 꽉 찼어요', PAL.red); return; }
     this.finish({ type: 'pick', index: i });
   }
   finish(cmd) {
     let ev;
     this.app.shopFamBefore = familyCounts(this.run);
-    try { ev = this.app.cmd(cmd); } catch { this.app.toast('할 수 없다', PAL.red); return; }
+    try { ev = this.app.cmd(cmd); } catch { this.app.toast('지금은 할 수 없어요', PAL.red); return; }
     this.app.sfx('pick');
     const legend = ev.find((e) => e.type === 'legend');
     for (const e of ev) {

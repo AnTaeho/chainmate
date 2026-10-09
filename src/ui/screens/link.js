@@ -37,14 +37,14 @@ export const agoText = (ms) => { const m = Math.floor(ms / 60000); return m < 1 
 // 합쳐서 늘어난 것 한 줄(mergeGain) — 가장 눈에 띄는 것 하나. 늘어난 것이 없으면 null
 export function gainText(g) {
   if (!g) return null;
-  if (g.codex) return `도감 ${g.codex}칸이 새로 채워졌다`;
-  if (g.openings) return `레퍼토리 ${g.openings}개가 새로 열렸다`;
-  if (g.runs) return `판 ${g.runs}개가 더해졌다`;
+  if (g.codex) return `도감 ${g.codex}칸이 새로 채워졌어요`;
+  if (g.openings) return `레퍼토리 ${g.openings}개가 새로 열렸어요`;
+  if (g.runs) return `판 ${g.runs}개가 더해졌어요`;
   return null;
 }
 // account: 계정에 들어와 있는 기기는 남의 코드를 넣지 못한다(CHM-72 — 넣으면 제 계정이 지워진다). 이 기기에서 코드를 받아 저쪽에 넣는다
 export const REDEEM_FAIL = { bad: '숫자가 맞지 않는다', expired: '시간이 지난 숫자다', self: '이 기기의 숫자다', limit: '잠시 뒤에 다시 넣는다', unreached: '닿지 못했다', account: '이 기기에서 코드를 받는다' };
-export const CONFIRM_TEXT = '이 기기의 기록이 그 기기의 기록과 합쳐진다';
+export const CONFIRM_TEXT = '이 기기의 기록이 그 기기의 기록과 합쳐져요';
 export const UNLINK_TEXT = '이 기기만 따로 간다 · 기록은 양쪽에 남는다';
 
 export class LinkScreen {
@@ -198,9 +198,9 @@ export class LinkScreen {
       const g = gainText(m.gain);
       if (g) say(g, y0 + 4 + LINE + 6, PAL.ink);
     } else if (m.phase === 'loading') say('숫자를 받는 중', y0 + 4);
-    else if (m.phase === 'limit') { say('오늘은 다 받았다', y0 + 4); say('내일 다시 받을 수 있다', y0 + 4 + LINE); }
+    else if (m.phase === 'limit') { say('오늘은 더 받을 수 없어요', y0 + 4); say('내일 다시 받을 수 있어요', y0 + 4 + LINE); }
     else {
-      if (m.phase === 'expired') say('시간이 지났다', y0 + 4);
+      if (m.phase === 'expired') say('시간이 지났어요', y0 + 4);
       if (m.phase === 'unreached') say('닿지 못했다', y0 + 4);
       get(m.phase === 'idle' ? y0 + 2 : y0 + 4 + LINE + 8);
     }

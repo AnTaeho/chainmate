@@ -153,21 +153,21 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   // 돌려주는 값: 'none' | 'file' | 'copy' | 'fail', 공유 시트 · 복사는 Promise('share' | 'cancel' | 'copy' | 'fail'). 공유를 그만두면 알림 없이 'cancel'
   app.exportRuns = () => {
     const { n, name, text: body } = exportText(store, { app: app.appInfo });
-    if (!n) { app.toast('아직 끝낸 판이 없다', PAL.ink); return 'none'; }
-    const failed = () => { app.toast('내보내지 못했다', PAL.red); return 'fail'; };
+    if (!n) { app.toast('아직 끝낸 판이 없어요', PAL.ink); return 'none'; }
+    const failed = () => { app.toast('내보내지 못했어요', PAL.red); return 'fail'; };
     const copy = () => {
       if (!copyText) return failed();
-      return copyText(body).then((ok) => { if (!ok) return failed(); app.toast(`판 ${n}개를 복사했다`, PAL.gold); return 'copy'; });
+      return copyText(body).then((ok) => { if (!ok) return failed(); app.toast(`판 ${n}개를 복사했어요`, PAL.gold); return 'copy'; });
     };
     const sent = share ? share(name, body) : null;
     if (sent) {
       return sent.then((r) => {
-        if (r === 'shared') { app.toast(`판 ${n}개를 내보냈다`, PAL.gold); return 'share'; }
+        if (r === 'shared') { app.toast(`판 ${n}개를 내보냈어요`, PAL.gold); return 'share'; }
         if (r === 'cancel') return 'cancel';
         return copy();
       });
     }
-    if (download && download(name, body)) { app.toast(`판 ${n}개를 내보냈다`, PAL.gold); return 'file'; }
+    if (download && download(name, body)) { app.toast(`판 ${n}개를 내보냈어요`, PAL.gold); return 'file'; }
     return copy();
   };
   // 하이라이트 그림(CHM-73): 미리 만든 PNG 덩이를 누른 그 순간 안에서 넘긴다. 공유는 손가락 기기가 아니어도 연다

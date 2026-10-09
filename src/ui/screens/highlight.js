@@ -30,13 +30,13 @@ export class HighlightScreen {
   }
   save() {
     const app = this.app, ok = app.saveImage(HIGHLIGHT_FILE, this.blob);
-    if (ok) { app.toast('그림을 저장했다', PAL.gold); app.track('highlight_save', {}); } else app.toast('저장하지 못했다', PAL.red);
+    if (ok) { app.toast('그림을 저장했어요', PAL.gold); app.track('highlight_save', {}); } else app.toast('저장하지 못했어요', PAL.red);
   }
   // 누른 그 순간 안에서 공유 시트를 연다(앞에 await를 두지 않는다). 그만두면 알림 없이
   share() {
     const app = this.app, sent = app.shareImage(HIGHLIGHT_FILE, this.blob);
-    if (!sent) { app.toast('공유하지 못했다', PAL.red); app.track('highlight_share', { ok: false }); return; }
-    sent.then((r) => { if (r === 'fail') app.toast('공유하지 못했다', PAL.red); app.track('highlight_share', { ok: r === 'shared' }); });
+    if (!sent) { app.toast('공유하지 못했어요', PAL.red); app.track('highlight_share', { ok: false }); return; }
+    sent.then((r) => { if (r === 'fail') app.toast('공유하지 못했어요', PAL.red); app.track('highlight_share', { ok: r === 'shared' }); });
   }
   // 카드와 단추 밖을 누르면 닫힌다
   pointerDown(x, y) {

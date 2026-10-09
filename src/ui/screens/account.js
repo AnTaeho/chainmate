@@ -39,14 +39,14 @@ export function accountLayout() {
 
 // 상태 한 줄(붉은 것 · 금빛 것)
 export const ACCOUNT_FAIL = {
-  bad: '아이디나 비번이 맞지 않는다', taken: '이미 있는 아이디다', username: '아이디는 영문 소문자 · 숫자 · _ 3~20자', weak: '비번은 8자 이상 · 흔한 것은 안 된다',
-  other: '이 기기는 다른 계정으로 들어와 있다 · 먼저 나간다', has: '이 기기는 이미 계정에 들어와 있다', limit: '오늘은 더 할 수 없다 · 내일 다시 한다',
-  unreached: '닿지 못했다', empty: '아이디와 비번을 넣는다', hangul: '아이디는 영문으로 친다', wrongpw: '비번이 맞지 않는다', nopw: '비번을 넣는다',
+  bad: '아이디나 비번이 맞지 않는다', taken: '이미 쓰고 있는 아이디예요', username: '아이디는 영문 소문자 · 숫자 · _ 3~20자', weak: '비번은 8자 이상 · 흔한 것은 안 된다',
+  other: '이 기기는 다른 계정으로 들어와 있다 · 먼저 나간다', has: '이 기기는 이미 계정에 들어와 있다', limit: '오늘은 더 할 수 없어요 · 내일 다시 해 주세요',
+  unreached: '닿지 못했다', empty: '아이디와 비번을 넣는다', hangul: '아이디는 영문으로 입력하세요', wrongpw: '비번이 맞지 않는다', nopw: '비번을 넣는다',
 };
 export const lockedText = (min) => `잠겼다 · ${min}분 뒤에 다시 들어온다`;
 export const ACCOUNT_OK = { made: '만들었다', in: '들어왔다', changed: '비번을 바꿨다', out: '나갔다', gone: '계정을 지웠다' };
-export const ACCOUNT_INFO = ['어느 기기에서든 들어오면 기록과 순위 이름이 따라온다', '비번을 잊으면 들어와 있는 기기에서만 새로 정할 수 있다', '아이디는 남에게 보이지 않는다'];
-export const LOGOUT_TEXT = '이 기기의 기록이 지워진다 · 계정에는 남아 있다';
+export const ACCOUNT_INFO = ['어느 기기에서든 들어오면 기록과 순위 이름이 따라온다', '비번을 잊으면 들어와 있는 기기에서만 새로 정할 수 있다', '아이디는 남에게 보이지 않아요'];
+export const LOGOUT_TEXT = '이 기기의 기록이 지워져요 · 계정에는 남아 있어요';
 export const DELETE_TEXT = '계정과 기록 · 순위 성적이 모두 지워진다 · 되돌릴 수 없다';
 export const DELETE_TEXT2 = '비번을 넣으면 지워진다';
 export const FORGOT_TEXT = '지금 비번 없이 새로 정한다';
@@ -242,7 +242,7 @@ export class AccountScreen {
     } else {
       let y = lay.titleY + LINE + 6;
       for (const s of ACCOUNT_INFO) y = para(s, y) + 6;
-      this.row(ctx, ui, x, lay.privacyY, [['acct:privacy', '개인정보 처리방침', { enabled: true, onClick: () => { if (!app.openPage(PRIVACY_URL)) app.toast('열지 못했다', PAL.ink); } }]]);
+      this.row(ctx, ui, x, lay.privacyY, [['acct:privacy', '개인정보 처리방침', { enabled: true, onClick: () => { if (!app.openPage(PRIVACY_URL)) app.toast('열지 못했어요', PAL.ink); } }]]);
     }
     closeBox();
   }

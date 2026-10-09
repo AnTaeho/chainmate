@@ -74,17 +74,17 @@ test('손가락 기기 + share: 누른 손가락을 떼는 그 순간(touchend �
   assert.equal(got.kind, 'chainmate-runs');
   assert.equal(got.runs.length, 2);
   assert.equal(calls.clicked.length, 0, '받기 길로 가지 않는다');
-  assert.notEqual(lastMsg(app), '판 2개를 내보냈다', '공유를 마치기 전에 알리지 않는다');
+  assert.notEqual(lastMsg(app), '판 2개를 내보냈어요', '공유를 마치기 전에 알리지 않는다');
   done();
   await new Promise((ok) => setImmediate(ok));
-  assert.equal(lastMsg(app), '판 2개를 내보냈다');
+  assert.equal(lastMsg(app), '판 2개를 내보냈어요');
 });
 
 test('손가락 기기 + share: 단추가 돌려주는 값은 Promise "share"', async () => {
   const { calls, app, btn } = await open({ touch: true, share: () => Promise.resolve() });
   assert.equal(await btn.onClick(), 'share');
   assert.equal(calls.share.length, 1);
-  assert.equal(lastMsg(app), '판 2개를 내보냈다');
+  assert.equal(lastMsg(app), '판 2개를 내보냈어요');
 });
 
 test('공유를 그만두면(AbortError) 알림 없이 "cancel" — 성공 · 실패 어느 쪽도 말하지 않는다', async () => {
@@ -101,10 +101,10 @@ test('공유가 다른 까닭으로 실패하면 클립보드로 — 복사도 �
   const deny = () => Promise.reject(Object.assign(new Error('no'), { name: 'NotAllowedError' }));
   let a = await open({ touch: true, share: deny, clipboard: () => Promise.resolve() });
   assert.equal(await a.btn.onClick(), 'copy');
-  assert.equal(lastMsg(a.app), '판 2개를 복사했다');
+  assert.equal(lastMsg(a.app), '판 2개를 복사했어요');
   a = await open({ touch: true, share: deny });
   assert.equal(await a.btn.onClick(), 'fail');
-  assert.equal(lastMsg(a.app), '내보내지 못했다');
+  assert.equal(lastMsg(a.app), '내보내지 못했어요');
 });
 
 test('share가 없으면 받기 길: 손가락 웹(옛 브라우저)도 데스크톱 웹도 <a download>', async () => {
@@ -113,7 +113,7 @@ test('share가 없으면 받기 길: 손가락 웹(옛 브라우저)도 데스�
     assert.equal(btn.onClick(), 'file', `touch ${touch}`);
     assert.equal(calls.clicked.length, 1);
     assert.match(calls.clicked[0], /^chainmate-runs-.*\.json$/);
-    assert.equal(lastMsg(app), '판 2개를 내보냈다');
+    assert.equal(lastMsg(app), '판 2개를 내보냈어요');
   }
 });
 
@@ -130,8 +130,8 @@ test('손가락 기기의 앱(iOS WKWebView)에 share가 없으면 받았다고 
   let o = await open({ touch: true, app: true, clipboard: () => Promise.resolve() });
   assert.equal(await o.btn.onClick(), 'copy');
   assert.equal(o.calls.clicked.length, 0, '<a download>를 누르지 않는다');
-  assert.equal(lastMsg(o.app), '판 2개를 복사했다');
+  assert.equal(lastMsg(o.app), '판 2개를 복사했어요');
   o = await open({ touch: true, app: true });
   assert.equal(await o.btn.onClick(), 'fail');
-  assert.equal(lastMsg(o.app), '내보내지 못했다');
+  assert.equal(lastMsg(o.app), '내보내지 못했어요');
 });

@@ -219,8 +219,8 @@ test('앱: 설정 「기록 내보내기」 — 판이 없으면 알림만, 받�
   const btn = app.ui.regions.find((r) => r.id === 'set:export');
   assert.ok(btn, '단추가 있다');
   assert.equal(btn.onClick(), 'none');
-  assert.equal(app.toasts.at(-1).msg, '아직 끝낸 판이 없다');
+  assert.equal(app.toasts.at(-1).msg, '아직 끝낸 판이 없어요');
   keepRow(app.store, { id: 'a', seed: 1 });
   assert.equal(await btn.onClick(), 'fail'); // 가짜 DOM: 파일 · 클립보드가 없다
-  assert.equal(app.toasts.at(-1).msg, '내보내지 못했다');
+  assert.equal(app.toasts.at(-1).msg, '내보내지 못했어요');
 });

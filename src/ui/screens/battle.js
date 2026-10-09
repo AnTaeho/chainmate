@@ -211,7 +211,7 @@ const bagTip = (b) => {
   const counts = {};
   for (const p of b.bag) counts[p.t] = (counts[p.t] || 0) + 1;
   const parts = ['P', 'N', 'B', 'R', 'Q', ...FAIRIES].filter((t) => counts[t]).map((t) => `${PIECE_NAME[t]} ${counts[t]}`);
-  return tipLines('덱', parts.length ? parts.join(' · ') : '비었다');
+  return tipLines('덱', parts.length ? parts.join(' · ') : '비었어요');
 };
 
 // 대국이 어디서 오나: 판(런)의 대국(기본) · 첫 수업. 화면은 같은 규칙 · 같은 연출을 쓴다.
@@ -670,8 +670,8 @@ export class BattleScreen {
           done: () => { v.score = e.score; },
         }); break;
         case 'freeze': add(0.05, { begin: () => { for (const sq of e.squares) this.sparkle(sq, '#9fd3e0', 5); } }); break;
-        case 'returnHome': add(0.05, { begin: () => { this.toast(`${josa(PIECE_NAME[e.piece], '이/가')} 손으로 돌아왔다`, PAL.gold); } }); break;
-        case 'captive': add(0.05, { begin: () => { this.toast(`${PIECE_NAME[e.piece]} 포로가 덱에 든다`, PAL.gold); } }); break;
+        case 'returnHome': add(0.05, { begin: () => { this.toast(`${josa(PIECE_NAME[e.piece], '이/가')} 손으로 돌아왔어요`, PAL.gold); } }); break;
+        case 'captive': add(0.05, { begin: () => { this.toast(`${PIECE_NAME[e.piece]} 포로가 덱에 들어와요`, PAL.gold); } }); break;
         // 시계를 잃는다(밤샘 2 D1): 대국은 졌지만 판은 이어진다
         case 'clockLost': add(0.9, {
           begin: () => {
@@ -683,11 +683,11 @@ export class BattleScreen {
         case 'crack': add(0.25, {
           begin: () => {
             const s = SOUL_BY_ID[e.soul];
-            this.toast(`${s.name}의 혼에 금이 갔다`, s.col, 2.4);
+            this.toast(`${s.name}의 혼에 금이 갔어요`, s.col, 2.4);
             this.snd('crack');
           },
         }); this.runEvents.push(e); break;
-        case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${josa(PIECE_NAME[e.piece], '이/가')} 깨졌다`, PAL.sky); this.snd('glass'); } }); break;
+        case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${josa(PIECE_NAME[e.piece], '이/가')} 깨졌어요`, PAL.sky); this.snd('glass'); } }); break;
         // 증원은 위에서 떨어져 들어온다. 떨어지는 시간은 한 수 연출 길이에 넣지 않는다(update가 따로 센다)
         case 'reinforce': add(0.1, {
           begin: () => {
@@ -1401,14 +1401,14 @@ export class BattleScreen {
       }
       const id = `sq:${sq}`;
       const g = ghosts.get(sq);
-      let tip = g ? [`증원 · ${PIECE_NAME[g.t]}`, [g.k ? '두 수 뒤에 들어온다' : '이번 수 뒤에 들어온다']] : null;
-      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['지키는 적', [t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어진다' : '지금 모습으로는 닿지 않는다']];
+      let tip = g ? [`증원 · ${PIECE_NAME[g.t]}`, [g.k ? '두 수 뒤에 들어와요' : '이번 수 뒤에 들어와요']] : null;
+      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['지키는 적', [t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어져요' : '지금 모습으로는 닿지 않는다']];
       const cell = v.board[sq];
       // 적 기물: 특성 · 특수 기물은 늘, 체스 기물은 지금 누를 칸이 아닐 때만(누를 칸은 먹기 미리 보기가 말한다). 행마 그림을 곁들인다
       let diag = null;
       if (!tip && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tip = [`${tr.name} · ${PIECE_NAME[cell.t]}`, [tr.text, PIECE_MOVE[cell.t] || '']]; diag = cell.t; }
       if (!tip && cell && !cell.mine && (FAIRY_MOVE(cell.t) || (PIECE_MOVE[cell.t] && !tset.has(sq))) && !isHidden(b, sq)) { tip = [PIECE_NAME[cell.t], [PIECE_MOVE[cell.t]]]; diag = cell.t; }
-      if (cell && !cell.mine && cell.muted && !isHidden(b, sq)) tip = tip ? [tip[0], [...tip[1], `횃불: ${L('아무것도 지키지 못한다')}`]] : [`횃불 · ${PIECE_NAME[cell.t]}`, ['아무것도 지키지 못한다']];
+      if (cell && !cell.mine && cell.muted && !isHidden(b, sq)) tip = tip ? [tip[0], [...tip[1], `횃불: ${L('아무것도 지키지 못해요')}`]] : [`횃불 · ${PIECE_NAME[cell.t]}`, ['아무것도 지키지 못해요']];
       // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
       if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
@@ -1571,7 +1571,7 @@ export class BattleScreen {
   }
   useTactic(i) {
     let ev;
-    try { ev = this.app.cmd({ type: 'tactic', index: i }); } catch { this.toast('할 수 없다', PAL.red); return; }
+    try { ev = this.app.cmd({ type: 'tactic', index: i }); } catch { this.toast('지금은 할 수 없어요', PAL.red); return; }
     this.sync();
     for (const e of ev) {
       if (e.type === 'freeze') { for (const sq of e.squares) this.sparkle(sq, '#9fd3e0', 8); this.word('빙결', '#9fd3e0', 1.2, 1); this.snd('glass'); }
@@ -2030,7 +2030,7 @@ export class BattleScreen {
   }
   nextTip() {
     const next = this.view.next || [];
-    return tipLines('다음에 들어올 기물', [next.length ? next.map((p) => PIECE_NAME[p.t]).join(' · ') : '덱이 비었다']);
+    return tipLines('다음에 들어올 기물', [next.length ? next.map((p) => PIECE_NAME[p.t]).join(' · ') : '덱이 비었어요']);
   }
 
   // 손 이름표 줄 오른쪽 단추(희생). 다시 두기(screens/review.js)는 「넘어가기」

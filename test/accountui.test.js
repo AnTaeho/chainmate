@@ -332,7 +332,7 @@ test('잠김 · 이미 있는 아이디 · 닿지 못함 · 다른 계정: 상�
   // B: 이미 있는 아이디 · 약한 비번 · 짧은 아이디
   B.open();
   const say = async (user, pass, btn) => { B.d.type('user', user); B.d.type('pass', pass); B.click(btn); await settle(); B.frame(2); return B.app.screen.msg && B.app.screen.msg.text; };
-  assert.equal(await say('taeho_an', PW, 'acct:signup'), '이미 있는 아이디다');
+  assert.equal(await say('taeho_an', PW, 'acct:signup'), '이미 쓰고 있는 아이디예요');
   assert.equal(await say('bobby', 'password', 'acct:signup'), '비번은 8자 이상 · 흔한 것은 안 된다');
   assert.equal(await say('ab', PW, 'acct:signup'), '아이디는 영문 소문자 · 숫자 · _ 3~20자');
   B.d.type('user', ''); B.d.type('pass', '');

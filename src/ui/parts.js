@@ -364,11 +364,11 @@ export function effectHead(s) {
 }
 // 어떻게 쓰나(카드 아래 흐린 한 줄)
 export function itemUse(it) {
-  if (it.kind === 'engraving') return '기물에 새긴다';
+  if (it.kind === 'engraving') return '기물에 새겨요';
   if (it.kind === 'soul') return '기물에 깃든다';
   if (it.kind === 'evolve') return '기물이 자란다';
-  if (it.kind === 'awaken') return '금이 간 혼에 쓴다';
-  if (it.kind === 'tactic') return '대국 중에 쓴다';
+  if (it.kind === 'awaken') return '금이 간 혼에 써요';
+  if (it.kind === 'tactic') return '대국 중에 써요';
   return '';
 }
 
@@ -420,8 +420,8 @@ export function itemTip(it) {
     return t;
   }
   if (it.kind === 'chart') return chartTip(it.form);
-  if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '기물 하나에 새긴다']); }
-  if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '덱에 들어온다']);
+  if (it.kind === 'engraving') { const e = engravingInfo(it.id); return tipLines(`${e.name} 각인`, [e.text, '기물 하나에 새겨요']); }
+  if (it.kind === 'piece') return moveTip(PIECE_NAME[it.t], it.t, [PIECE_MOVE[it.t], it.soul ? `${SOUL_BY_ID[it.soul].name}의 혼 · ${L(SOUL_BY_ID[it.soul].text)}` : '', '덱에 들어와요']);
   if (it.kind === 'soul') { const s = SOUL_BY_ID[it.id]; return tipLines(`${s.name}의 혼`, [L(s.text), '기물 하나에 깃든다'], 150, [rarityLine(s.rarity)]); }
   if (it.kind === 'gamble') return tipLines(it.id === 'potion' ? '수상한 물약' : '룰렛', it.id === 'potion' ? '아무 기물에 무작위 혼이나 각인' : '아무 기물이 무작위 특수 기물로');
   if (it.kind === 'awaken') return tipLines('깨우기', [AWAKEN_TEXT, AWAKEN_MORE]);
@@ -508,7 +508,7 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   if (it.kind === 'maxim' && it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + h - 28, PAL.goldDk, { align: 'center' });
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
-    text(ctx, '샀다', cx, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
+    text(ctx, '구매함', cx, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
   } else if (price && it.price != null) {
     text(ctx, `$${it.price}`, cx, y + h - 15, PAL.goldDk, { align: 'center', bold: true });
   }
@@ -613,7 +613,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (lay.fams.length) familyChips(ctx, lay.fams, x + P, y + lay.chips + (h - lay.h), lay.IW, CARD_CHIP_ROWS);
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
-    text(ctx, '샀다', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
+    text(ctx, '구매함', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
   }
   closeBox();
 }
@@ -631,17 +631,17 @@ export const isSwap = (what, p) => { const held = heldOf(what, p); return !!held
 const markName = (kind, id) => (kind === 'engraving' ? engravingInfo(id).name : SOUL_BY_ID[id].name);
 function targetText(run, what, p, to) {
   if (what.kind === 'awaken') {
-    if (!p) return { title: '덱에서 깨울 기물을 고른다', body: AWAKEN_TEXT };
+    if (!p) return { title: '깨울 기물을 고르세요', body: AWAKEN_TEXT };
     const s = SOUL_BY_ID[p.soul];
     return { title: `${s.name}의 혼이 깨어난다`, body: `각성 · ${L(s.awake)}`, after: { ...p, awake: true } };
   }
   const eff = what.kind === 'engraving' ? `${engravingInfo(what.id).name}: ${L(engravingInfo(what.id).text)}` : what.kind === 'soul' ? `${SOUL_BY_ID[what.id].name}의 혼: ${L(SOUL_BY_ID[what.id].text)}` : '체스 기물이 특수 기물로 자란다';
-  if (!p) return { title: what.kind === 'engraving' ? '덱에서 새길 기물을 고른다' : what.kind === 'soul' ? '덱에서 깃들 기물을 고른다' : '덱에서 자랄 기물을 고른다', body: eff };
+  if (!p) return { title: what.kind === 'engraving' ? '각인할 기물을 고르세요' : what.kind === 'soul' ? '덱에서 깃들 기물을 고른다' : '덱에서 자랄 기물을 고른다', body: eff };
   const after = what.kind === 'engraving' ? { ...p, eng: { id: what.id } } : what.kind === 'soul' ? { ...p, soul: what.id } : { ...p, t: to || p.t };
   // 바꾸기: 옛 것 › 새 것(문양 둘과 이름 둘)
   const held = heldOf(what, p);
   // 금이 갔거나 깨어난 혼을 바꾸면 그 사다리도 사라진다(run.js setSoul)
-  const lose = what.kind === 'soul' && (p.awake ? '각성이 사라진다' : isCracked(p) ? '금이 사라진다' : null);
+  const lose = what.kind === 'soul' && (p.awake ? '각성이 사라져요' : isCracked(p) ? '금이 사라져요' : null);
   if (isSwap(what, p)) return { title: `${markName(what.kind, held)} › ${markName(what.kind, what.id)}`, body: lose ? [eff, lose] : eff, after, swap: held };
   const title = what.kind === 'evolve' ? `${PIECE_NAME[p.t]} › ${PIECE_NAME[after.t]}` : `${PIECE_NAME[p.t]}에 ${what.kind === 'engraving' ? `${engravingInfo(what.id).name} 각인` : `${SOUL_BY_ID[what.id].name}의 혼`}`;
   return { title, body: what.kind === 'evolve' ? (PIECE_MOVE[after.t] || '') : eff, after };

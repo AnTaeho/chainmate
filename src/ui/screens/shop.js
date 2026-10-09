@@ -259,7 +259,7 @@ export class ShopScreen {
   act(cmd, sound = 'click') {
     let ev;
     const before = familyCounts(this.run);
-    try { ev = this.app.cmd(cmd); } catch (e) { this.app.toast('할 수 없다', PAL.red); return null; }
+    try { ev = this.app.cmd(cmd); } catch (e) { this.app.toast('지금은 할 수 없어요', PAL.red); return null; }
     this.noteFamilies(before);
     this.app.sfx(sound);
     for (const e of ev) {
@@ -427,7 +427,7 @@ export class ShopScreen {
     if (pk.sold) {
       ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
       // 봉투가 있으면 글 칸(봉투 오른쪽) 가운데 — 영어 「Opened」가 봉투에 걸치지 않게
-      text(ctx, '열었다', lay.small ? x + Math.floor(w / 2) : x + lay.tx + Math.floor(lay.tw / 2), inkY(y, h), PAL.dim, { align: 'center', bold: true });
+      text(ctx, '열림', lay.small ? x + Math.floor(w / 2) : x + lay.tx + Math.floor(lay.tw / 2), inkY(y, h), PAL.dim, { align: 'center', bold: true });
       closeBox();
       return;
     }
@@ -491,7 +491,7 @@ export class ShopScreen {
     if (!c) return;
     this.menu = null;
     if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve' || c.kind === 'awaken') { this.target = this.target && this.target.index === i ? null : { index: i }; return; }
-    if (c.kind === 'tactic') { this.app.toast('대국 중에 쓴다', PAL.dim); return; }
+    if (c.kind === 'tactic') { this.app.toast('대국 중에 써요', PAL.dim); return; }
     this.act({ type: 'use', index: i }, 'chart');
   }
 

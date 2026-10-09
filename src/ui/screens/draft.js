@@ -50,7 +50,7 @@ export class DraftScreen {
     const id = this.run.draft.options[i];
     const ev = this.app.cmd({ type: 'joseki', index: i });
     this.app.sfx(JOSEKI_BY_ID[id].tier === 'rainbow' ? 'fanfare' : 'sparkle');
-    for (const e of ev) if (e.type === 'evolve' || e.type === 'piece') this.app.toast('덱이 바뀌었다', PAL.gold);
+    for (const e of ev) if (e.type === 'evolve' || e.type === 'piece') this.app.toast('덱이 바뀌었어요', PAL.gold);
     this.chosen = { i, id, t: this.t };
   }
   // 판 틀: 왼쪽 칸(정석 · 가진 정석 · 시너지 · 상금 — 설명 자리) + 본 칸(카드 셋)

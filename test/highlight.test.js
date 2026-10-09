@@ -257,9 +257,9 @@ test('그림 저장 · 공유: 누른 그 순간 안에서 미리 만든 그림�
   ui.list[0].onClick();
   assert.deepEqual(a.calls.at(-1), ['save', 'chainmate-highlight.png', a.s.blob]);
   assert.deepEqual(a.events.at(-1), ['highlight_save', {}]);
-  assert.deepEqual(a.toasts, ['그림을 저장했다']);
+  assert.deepEqual(a.toasts, ['그림을 저장했어요']);
   // 그만둠: 알림 없이 ok false · 실패: 알림
-  for (const [shared, toast] of [['cancel', []], ['fail', ['공유하지 못했다']], [null, ['공유하지 못했다']]]) {
+  for (const [shared, toast] of [['cancel', []], ['fail', ['공유하지 못했어요']], [null, ['공유하지 못했어요']]]) {
     const b = make({ shared }); await tick(); b.draw();
     ui.list[1].onClick(); await tick();
     assert.deepEqual(b.events.at(-1), ['highlight_share', { ok: false }], String(shared));
@@ -269,7 +269,7 @@ test('그림 저장 · 공유: 누른 그 순간 안에서 미리 만든 그림�
   const c = make({ can: false, save: false }); await tick();
   assert.deepEqual(c.draw(), ['hl:save', 'hl:close']);
   ui.list[0].onClick();
-  assert.deepEqual(c.toasts, ['저장하지 못했다']);
+  assert.deepEqual(c.toasts, ['저장하지 못했어요']);
   assert.deepEqual(c.events, [['highlight_open', {}]]);
   // 사건 속성에는 ok만
   for (const [, props] of [...a.events, ...c.events]) assert.ok(Object.keys(props).every((k) => k === 'ok'));

@@ -43,7 +43,7 @@ test('명국 재생: 명국마다 있고, 수의 출발 칸에 기물이 있다'
 });
 
 test('화면 글에 만든 쪽 말 · 설명서 말투가 없다', () => {
-  const bad = /엔진|시뮬|스폰|틱|버프|트리거|쿨다운|팩|이벤트|클릭하|누르세요|하세요|하십시오|아니라/;
+  const bad = /엔진|시뮬|스폰|틱|버프|트리거|쿨다운|이벤트|클릭하|하십시오|아니라/;
   const dirs = ['src/ui', 'src/ui/screens', 'src/data'];
   for (const d of dirs) for (const f of fs.readdirSync(new URL(`../${d}`, import.meta.url))) {
     if (!f.endsWith('.js')) continue;

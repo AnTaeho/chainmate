@@ -1208,7 +1208,7 @@ const rankSeen = { submit: 0, card: '', neighbours: 0, hint: 0, open: 0, pages: 
       if (app.screen.page === Math.floor((st.rank - 1) / 10) && rowsDrawn().includes(st.rank)) rankSeen.mine = 1; else bad('내 줄을 눌러도 내 쪽으로 가지 않았다');
       click('rank:tab:yesterday'); pump(1); await netSettle(); pump(3);
       const y = app.rank.board(shiftDate(DATE, -1), 1).data;
-      if (y && y.total === 13 && y.me === null && rowsDrawn().length === 10 && drew('어제는 두지 않았다') && !region('rank:play')) rankSeen.yesterday = 1; else bad('어제 탭이 어긋났다');
+      if (y && y.total === 13 && y.me === null && rowsDrawn().length === 10 && drew('어제는 플레이하지 않았어요') && !region('rank:play')) rankSeen.yesterday = 1; else bad('어제 탭이 어긋났다');
       click('rank:next'); pump(1); await netSettle(); pump(3);
       click('rank:tab:today'); pump(1); await netSettle(); pump(3);
       click('rank:back'); pump(2);
@@ -1581,7 +1581,7 @@ const awakeSeen = { crack: 0, toast: 0, hint: 0, skip: 0, preview: 0, screen: 0,
     app.toast = toast0;
     measureSeq(s);
     if ((r.cracked || []).length) awakeSeen.crack++; else bad('금이 가지 않았다');
-    if (toasts.some((m) => /금이 갔다|cracked/.test(L(m)))) awakeSeen.toast++; else bad('금 글이 뜨지 않았다');
+    if (toasts.some((m) => /금이 갔어요|cracked/.test(L(m)))) awakeSeen.toast++; else bad('금 글이 뜨지 않았다');
   }
   for (let k = 0; k < 20 && screen() !== 'shop'; k++) { pump(30); if (['reward', 'chest', 'legend', 'awaken'].includes(screen())) { click('next'); pump(1); if (region('next')) click('next'); } }
   if (screen() !== 'shop') bad(`상점으로 오지 않았다(${screen()})`);
@@ -2003,7 +2003,7 @@ const telNote = { shown: 0, gone: 0, again: 0, off: 0 };
   const drew = (ko) => LL.LOG.texts.some((q) => q.s === L(ko));
   await freshBoot(); pump(2);
   click('title:rank'); pump(2); await netSettle(); pump(3);
-  if (screen() === 'rank' && region('rank:play') && drew('오늘은 아직 두지 않았다') && !region('rank:mine')) rankSeen.unplayed = 1; else rankSeen.bad.push('오늘 안 둔 사람의 순위 화면이 어긋났다');
+  if (screen() === 'rank' && region('rank:play') && drew('오늘은 아직 플레이하지 않았어요') && !region('rank:mine')) rankSeen.unplayed = 1; else rankSeen.bad.push('오늘 안 둔 사람의 순위 화면이 어긋났다');
   click('rank:play'); pump(2);
   if (app.run && app.run.daily === DATE && Array.isArray(app.run.cmds)) rankSeen.play = 1; else rankSeen.bad.push('「오늘의 대국 두기」가 오늘의 대국을 열지 않았다');
   app.toTitle(); pump(1);

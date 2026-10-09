@@ -764,13 +764,13 @@ test('순위 화면: 불러오는 중 · 줄 있음 · 안 둠 · 내 쪽(긴 �
     f = a.frame();
     assert.deepEqual(f.bad, [], tag('첫 쪽'));
     assert.deepEqual(rowNums(f), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], tag('열 줄'));
-    assert.ok(a.has('rank:play') && !a.has('rank:mine') && drew(f, '오늘은 아직 두지 않았다'), tag('안 둠 → 두기 단추'));
+    assert.ok(a.has('rank:play') && !a.has('rank:mine') && drew(f, '오늘은 아직 플레이하지 않았어요'), tag('안 둠 → 두기 단추'));
     assert.ok(a.has('rank:next') && a.has('rank:prev'), tag('쪽 단추'));
     // 어제(아무도 안 둠)
     a.app.screen.setTab('yesterday'); a.frame(); await a.settle();
     f = a.frame();
     assert.deepEqual(f.bad, [], tag('어제'));
-    assert.ok(drew(f, '아직 아무도 두지 않았다') && drew(f, '어제는 두지 않았다') && !a.has('rank:play') && !a.has('rank:next'), tag('어제 빈 순위표'));
+    assert.ok(drew(f, '아직 아무도 플레이하지 않았어요') && drew(f, '어제는 플레이하지 않았어요') && !a.has('rank:play') && !a.has('rank:next'), tag('어제 빈 순위표'));
     // 내 줄: 가장 넓은 이름 · 네 자리 인원(맨 아래 등수 — 「1,204 / 1,204」) · 맨 위에는 큰 점수
     const b = await rankApp({ lang, others: 1203, me: { ante: 1, blind: 0, score: 7 } });
     b.app.go('rank'); b.frame(); await b.settle();
@@ -793,7 +793,7 @@ test('순위 화면: 불러오는 중 · 줄 있음 · 안 둠 · 내 쪽(긴 �
     c.app.go('rank'); c.frame(); await c.settle();
     f = c.frame();
     assert.deepEqual(f.bad, [], tag('빈 순위표'));
-    assert.ok(drew(f, '아직 아무도 두지 않았다') && c.has('rank:play') && !c.has('rank:next'), tag('빈 순위표'));
+    assert.ok(drew(f, '아직 아무도 플레이하지 않았어요') && c.has('rank:play') && !c.has('rank:next'), tag('빈 순위표'));
     // 닿지 못함: 한 줄뿐, 알림 없음
     const e = await rankApp({ lang, mode: 'fail' });
     e.app.go('rank'); e.frame(); await e.settle();
@@ -1011,7 +1011,7 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
   assert.equal(K.codeText('48271593'), '4827 1593');
   assert.deepEqual([0, 59999, 60000, 3599999, 3600000, 86400000 * 3].map(K.agoText), ['방금', '방금', '1분 전', '59분 전', '1시간 전', '3일 전']);
   assert.deepEqual([K.gainText({ codex: 12, openings: 1, runs: 3, ante: 5 }), K.gainText({ codex: 0, openings: 2, runs: 3, ante: 0 }), K.gainText({ codex: 0, openings: 0, runs: 3, ante: 0 }), K.gainText({ codex: 0, openings: 0, runs: 0, ante: 0 }), K.gainText(null)],
-    ['도감 12칸이 새로 채워졌다', '레퍼토리 2개가 새로 열렸다', '판 3개가 더해졌다', null, null]);
+    ['도감 12칸이 새로 채워졌어요', '레퍼토리 2개가 새로 열렸어요', '판 3개가 더해졌어요', null, null]);
 
   for (const lang of LANGS) {
     const a = await rankApp({ lang, others: 0 });
@@ -1090,7 +1090,7 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
       if (gain) assert.ok(said(f, K.gainText(gain)), tag(K.gainText(gain)));
     }
     // 이 기기의 코드 쪽 상태: 시간 지남 · 닿지 못함 · 오늘은 다 받음 · 이어짐
-    for (const [phase, say, btn] of [['expired', '시간이 지났다', true], ['unreached', '닿지 못했다', true], ['limit', '오늘은 다 받았다', false], ['idle', null, true]]) {
+    for (const [phase, say, btn] of [['expired', '시간이 지났어요', true], ['unreached', '닿지 못했다', true], ['limit', '오늘은 더 받을 수 없어요', false], ['idle', null, true]]) {
       scr.mine = { phase };
       f = good(a.frame(), `내 코드 ${phase}`);
       if (say) assert.ok(said(f, say), tag(say));
@@ -1098,7 +1098,7 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
     }
     scr.mine = { phase: 'linked', gain: { codex: 128, openings: 0, runs: 0, ante: 0 }, tries: K.JOIN_TRIES };
     f = good(a.frame(), '내 코드 이어짐');
-    assert.ok(said(f, '도감 128칸이 새로 채워졌다'));
+    assert.ok(said(f, '도감 128칸이 새로 채워졌어요'));
     // 시간이 다 되면 코드를 거둔다
     scr.mine = { phase: 'code', code: '48271593', ttl: 600000, until: a.app.cloud.now() - 1, base: 1 };
     a.frame();
@@ -1189,7 +1189,7 @@ test('계정 화면: 입력 칸 · 단추가 칸 안에서 서로 닿지 않고,
       scr.acct = { username, devices: 2 };
       scr.msg = { text: K.ACCOUNT_OK.in, tone: 'gold', gain: { codex: 12, openings: 0, runs: 0 } };
       f = good(a.frame(), `들어와 있음 ${username}`);
-      assert.ok(f.texts.some((q) => q.s === username) && said(f, '기기 2대') && said(f, '들어왔다') && said(f, '도감 12칸이 새로 채워졌다'), tag(username));
+      assert.ok(f.texts.some((q) => q.s === username) && said(f, '기기 2대') && said(f, '들어왔다') && said(f, '도감 12칸이 새로 채워졌어요'), tag(username));
       assert.deepEqual(a.app.fields.ids(), [], '들어와 있으면 입력 칸이 없다');
     }
     apart(['acct:password', 'acct:logout', 'acct:delete'], '들어와 있음');
