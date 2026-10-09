@@ -7,7 +7,7 @@ import { renameOldPieces } from '../sim/oldsave.js';
 export const OPENING_ORDER = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 // 해금 과제(내가 정한 것): 판마다 하나씩 보이는 「다음 해금까지」
 export const UNLOCKS = [
-  { id: 'london', text: '5관에 닿는다', have: (r) => r.bestAnte, need: 5 },
+  { id: 'london', text: '5관에 도달한다', have: (r) => r.bestAnte, need: 5 },
   { id: 'sicilian', text: '체크메이트로 다섯 번 이긴다', have: (r) => r.mates, need: 5 },
   { id: 'queens_gambit', text: '한 사슬에 여덟을 먹는다', have: (r) => (r.grades['★★★'] || 0) + (r.grades['∞'] || 0), need: 1 },
   { id: 'rook_endgame', text: '불멸의 기보 하나를 완성한다', have: (r) => r.legends, need: 1 },
@@ -25,7 +25,7 @@ export function emptyRecords() {
     codex: { maxims: {}, masters: {}, factions: {}, legends: {}, legendsDone: {}, openings: { standard: true }, editions: {}, souls: {}, awake: {} },
     unlocked: { openings: ['standard'], dan: 0 },
     danWins: {},
-    bestEndless: 0,            // 끝없는 대국에서 닿은 가장 깊은 관
+    bestEndless: 0,            // 끝없는 대국에서 도달한 가장 깊은 관
     daily: null,               // { date, ante, blind, won, score, runs }
     lessonsDone: false,        // 첫 수업을 끝까지 두었나(건너뛰어도)
     lessonsSeen: {},           // { [수업 id]: true } 끝낸 수업(목록의 표)
@@ -123,7 +123,7 @@ export function finishRun(rec, run, { daily = null } = {}) {
   return out;
 }
 
-// 끝없는 대국이 끝났을 때(이긴 판은 이미 세었다): 닿은 관만 남긴다
+// 끝없는 대국이 끝났을 때(이긴 판은 이미 세었다): 도달한 관만 남긴다
 export function finishEndless(rec, run) {
   if (!run.endless) return false;
   const deeper = run.ante > (rec.bestEndless || 0);

@@ -93,7 +93,7 @@ export function mergeInto(local, remote) {
   return out;
 }
 
-// 합쳐서 늘어난 것(기기 잇기 화면의 한 줄): 도감 칸 · 열린 레퍼토리 · 판 수 · 닿은 관
+// 합쳐서 늘어난 것(기기 잇기 화면의 한 줄): 도감 칸 · 열린 레퍼토리 · 판 수 · 도달한 관
 const cells = (r) => Object.values(r.codex || {}).reduce((n, kind) => n + Object.values(kind || {}).filter(Boolean).length, 0);
 export function mergeGain(before, after) {
   const a = normRecords(before), b = normRecords(after);

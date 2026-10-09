@@ -694,13 +694,13 @@ test('순위 줄: 가장 긴 이름 · 큰 점수(3,482,150) · 네 자리 인�
     const long = nameText(...Object.values(lang === 'ko' ? LONG_KO : LONG_EN), lang);
     assert.ok(measure(long) >= widest - 1 && measure(long) <= (lang === 'ko' ? 130 : 173), `${lang} ${long} ${measure(long)} / ${widest}`);
     const reaches = [{ ante: 8, blind: 2, won: true }, { ante: 8, blind: 0, won: false }, { ante: 8, blind: 1, won: false }, { ante: 8, blind: 2, won: false }].map(R.reachText);
-    assert.ok(reaches.every((s) => !/[가-힣]/.test(M.lang.L(s)) || lang === 'ko'), `${lang} 닿은 곳이 옮겨지지 않았다`);
+    assert.ok(reaches.every((s) => !/[가-힣]/.test(M.lang.L(s)) || lang === 'ko'), `${lang} 도달이 옮겨지지 않았다`);
     for (const reach of reaches) for (const [label, mine, full] of [['9,999', false, true], ['14 / 1,204', true, true], ['1,204 / 1,204', true, true], ['9,999 / 9,999', true, false]]) {
       const at = R.colsFor(label, long, reach, mine), tag = `${lang} 「${label}」 ${long} · ${reach}`;
       assert.ok(at.rank + measure(label, true) + COL.gap <= at.name, `${tag}: 등수가 이름에 닿는다`);
-      assert.ok(at.name + measure(long, mine) + COL.gap <= at.reach, `${tag}: 이름이 닿은 곳에 닿는다`);
+      assert.ok(at.name + measure(long, mine) + COL.gap <= at.reach, `${tag}: 이름이 도달에 닿는다`);
       const score = fitNum(3482150, at.scoreRoom);
-      assert.ok(at.reach + measure(reach) + COL.gap <= at.score - measure(score, true), `${tag}: 닿은 곳이 점수에 닿는다`);
+      assert.ok(at.reach + measure(reach) + COL.gap <= at.score - measure(score, true), `${tag}: 도달이 점수에 닿는다`);
       assert.ok(at.score <= COL.x1 - 2 && at.rank >= COL.x0 + 2);
       // 두 자리 등수 / 네 자리 인원까지는 점수를 줄이지 않고 다 적는다
       if (full) assert.equal(score, '3,482,150', tag);
@@ -816,7 +816,7 @@ async function endDaily(app, { won = false, frags = 0 } = {}) {
   return run;
 }
 
-test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 한 줄이 남고(이웃은 자리에 맞춰 둘씩 · 하나씩), 긴 이름이 닿은 곳 · 점수에 닿지 않는다(한국어 · 영어)', async () => {
+test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 한 줄이 남고(이웃은 자리에 맞춰 둘씩 · 하나씩), 긴 이름이 도달 · 점수에 닿지 않는다(한국어 · 영어)', async () => {
   const R = await import('../src/ui/screens/rank.js');
   const { measure } = await import('../src/render/gfx.js');
   for (const lang of LANGS) {
@@ -845,7 +845,7 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
       if (rows != null) assert.equal(names.length, rows, `${tag}: 줄 수`); // 나는 둘째라 둘씩이어도 위는 하나(네 줄)
       else assert.ok(names.length <= 3, `${tag}: 줄 수 ${names.length}`);
       if (wantNote) assert.ok(note(f, card), `${tag}: 판 밖 알림 줄이 빠졌다`);
-      // 카드 줄의 글끼리 4 이상 떨어져 있다(이름 · 닿은 곳 · 점수)
+      // 카드 줄의 글끼리 4 이상 떨어져 있다(이름 · 도달 · 점수)
       const byY = new Map();
       for (const q of f.texts.filter((x) => x.box === card)) byY.set(q.y, [...(byY.get(q.y) || []), q]);
       for (const line of byY.values()) { line.sort((x, y) => x.x - y.x); for (let i = 1; i < line.length; i++) assert.ok(line[i - 1].x + line[i - 1].w + 4 <= line[i].x || line[i].s.startsWith(' / '), `${tag}: 「${line[i - 1].s}」 · 「${line[i].s}」`); }
@@ -862,10 +862,10 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
         if (phase === 'stale') for (const s of R.STALE_LINES) assert.ok(measure(s) <= gc.w - 16, `${tag}: 「${s}」`);
       }
     }
-    // 카드 줄의 칸: 가장 넓은 이름 + 열 자리 점수면 닿은 곳을 짧은 꼴(관만)로 — 가장 넓은 영어 이름이면 칸을 줄 전체에서 뺀다. 어느 쪽이든 이름과 다음 글 사이 6 이상
+    // 카드 줄의 칸: 가장 넓은 이름 + 열 자리 점수면 도달을 짧은 꼴(관만)로 — 가장 넓은 영어 이름이면 칸을 줄 전체에서 뺀다. 어느 쪽이든 이름과 다음 글 사이 6 이상
     const names = data.around.map((r) => a.app.rank.nameOf(r)), at = R.cardCols(data.around, names, 20, 298);
-    assert.equal(at.reachOf, lang === 'en' ? null : R.reachShort, `${lang}: 닿은 곳 칸`);
-    assert.equal(at.reach == null, lang === 'en', `${lang}: 닿은 곳 칸`);
+    assert.equal(at.reachOf, lang === 'en' ? null : R.reachShort, `${lang}: 도달 칸`);
+    assert.equal(at.reach == null, lang === 'en', `${lang}: 도달 칸`);
     const { fitNum } = await import('../src/render/gfx.js');
     // 보통 이름 + 일곱 자리 점수(영어는 「Hall 8 Practice」가 넓어 여섯 자리까지): 순위 화면과 같은 글(관 + 대국)이 다 들어간다 — 대국 셋 · 이김 모두
     const kinds = [{ ante: 8, blind: 0, won: false }, { ante: 8, blind: 1, won: false }, { ante: 8, blind: 2, won: false }, { ante: 8, blind: 2, won: true }];
@@ -874,8 +874,8 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
     assert.equal(pt.reachOf, R.reachText, `${lang}: 보통 이름이면 관 + 대국을 다 적는다(이름 ${measure(plainNames[0], true)})`);
     plain.forEach((r, i) => {
       assert.equal(pt.reachOf(r), R.reachText(r), `${lang}: 순위 화면과 같은 글`);
-      assert.ok(pt.name + measure(plainNames[i], true) + 6 <= pt.reach - measure(R.reachText(r)), `${lang}: 이름이 닿은 곳에 닿는다(${R.reachText(r)})`);
-      assert.ok(pt.reach + 6 <= pt.score - measure(fitNum(r.score, pt.scoreRoom(i)), true), `${lang}: 닿은 곳이 점수에 닿는다`);
+      assert.ok(pt.name + measure(plainNames[i], true) + 6 <= pt.reach - measure(R.reachText(r)), `${lang}: 이름이 도달에 닿는다(${R.reachText(r)})`);
+      assert.ok(pt.reach + 6 <= pt.score - measure(fitNum(r.score, pt.scoreRoom(i)), true), `${lang}: 도달이 점수에 닿는다`);
     });
     data.around.forEach((r, i) => {
       // 점수는 이름 옆에 남는 폭에 맞춘다(가장 넓은 영어 이름 + 열 자리 점수면 짧은 꼴)

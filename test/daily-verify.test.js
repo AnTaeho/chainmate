@@ -205,7 +205,7 @@ test('다시 두기는 명령 5000개(한도)에도 30초 안에 끝난다', () 
   assert.ok(ms < 30000, `${Math.round(ms)}ms`);
 });
 
-test('줄 세우기 열쇠: 닿은 관 → 대국 → 이겼는지 → 점수 합', () => {
+test('줄 세우기 열쇠: 도달한 관 → 대국 → 이겼는지 → 점수 합', () => {
   const r = (ante, blind, won, score_total) => ({ ante, blind, won, score_total });
   assert.deepEqual(rankKey(r(8, 2, true, 10)), [8, 2, 1, 10]);
   const list = [r(3, 1, false, 999999), r(8, 2, false, 5), r(8, 2, true, 1), r(4, 0, false, 1), r(8, 2, true, 7), r(3, 2, false, 0), r(3, 1, false, 5)];

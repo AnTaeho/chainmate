@@ -1,7 +1,7 @@
 // 순위(CHM-70, docs/design-notes/leaderboard.md 「화면」 · layout.md 「순위」): 오늘의 대국 순위표(판 밖 틀)와 결과 화면의 순위 카드.
 // 자료는 src/ui/rank.js가 아는 것만 읽는다(app.rank.board · status) — 화면은 서버를 직접 부르지 않는다.
 //   순위 화면: 머리줄(제목 · 「오늘 · 어제」 탭 · 날짜와 사람 수) → 머릿줄 → 열 줄 → 붙박은 내 줄(금빛) 또는 「오늘의 대국 두기」 → 단추 줄(쪽 넘김)
-//   결과 카드: 「오늘 14등 / 312명」 · 「순위 보기」 → 내 위아래 이웃(자리가 되는 만큼 둘씩 · 하나씩 · 내 줄만), 줄마다 등수 · 이름 · 닿은 곳(순위 화면과 같은 글) · 점수
+//   결과 카드: 「오늘 14등 / 312명」 · 「순위 보기」 → 내 위아래 이웃(자리가 되는 만큼 둘씩 · 하나씩 · 내 줄만), 줄마다 등수 · 이름 · 도달(순위 화면과 같은 글) · 점수
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, measure, num, fitNum } from '../../render/gfx.js';
 import { button } from '../ui.js';
@@ -13,19 +13,19 @@ import { shiftDate, PAGE as PER } from '../rank.js';
 
 const en = () => getLang() === 'en';
 const MINE_BG = '#3a3014', CARD_BG = '#0e1814';
-// 닿은 곳: 이겼으면 「8관 이김」, 아니면 「7관 마스터전」. 영어는 줄 폭에 맞춘 짧은 꼴(Hall 7 Master — 결과 화면의 「Master Match」보다 짧다)
+// 도달: 이겼으면 「8관 이김」, 아니면 「7관 마스터전」. 영어는 줄 폭에 맞춘 짧은 꼴(Hall 7 Master — 결과 화면의 「Master Match」보다 짧다)
 const KIND = { ko: ['연습 대국', '정식 대국', '마스터전'], en: ['Practice', 'Rated', 'Master'] };
 export const reachText = (r) => (en()
   ? `Hall ${r.ante} ${r.won ? 'Won' : KIND.en[r.blind] || ''}`
   : `${r.ante}관 ${r.won ? '이김' : KIND.ko[r.blind] || ''}`);
-// 결과 카드의 닿은 곳이 이름에 닿을 때만 쓰는 짧은 꼴: 관만(이겼으면 「이김」)
+// 결과 카드의 도달이 이름에 닿을 때만 쓰는 짧은 꼴: 관만(이겼으면 「이김」)
 export const reachShort = (r) => (r.won ? '이김' : `${r.ante}관`);
 export const dayText = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}월 ${d}일`; };
 export const peopleText = (n) => `${num(n)}명`;
 
 // ── 순위 표의 칸(판 밖 틀 본 칸). 가장 긴 이름(한국어 130 · 영어 173) · 큰 점수(「3,482,150」 63) · 네 자리 인원(「14 / 1,204」)이 들어간다:
-//   등수 20 ~ 57(「9,999」) · 이름 76 ~ 249 · 닿은 곳 268 ~ 362(「Hall 8 Practice」 94) · 점수 397 ~ 460.
-//   내 줄의 「14 / 1,204」가 이름 칸을 넘으면 그 줄만 이름 · 닿은 곳을 오른쪽으로 민다(colsFor)
+//   등수 20 ~ 57(「9,999」) · 이름 76 ~ 249 · 도달 268 ~ 362(「Hall 8 Practice」 94) · 점수 397 ~ 460.
+//   내 줄의 「14 / 1,204」가 이름 칸을 넘으면 그 줄만 이름 · 도달을 오른쪽으로 민다(colsFor)
 export const COL = { x0: 12, x1: W - 12, rank: 20, name: 76, reach: 268, score: W - 20, gap: 8 };
 export const BOARD = { get headY() { return PAGE.bodyY; }, get rowsY() { return PAGE.bodyY + LINE + 4; }, get mineH() { return PAD_BOX * 2 + LINE; }, get mineY() { return PAGE.btnY - GAP_GROUP - (PAD_BOX * 2 + LINE); } };
 // 한 줄의 글 자리: { rank, name, reach, score(오른끝), scoreRoom }. 재는 쪽(test/layout.test.js)과 그리는 쪽이 같이 쓴다
@@ -76,7 +76,7 @@ export class RankScreen {
     const pages = seen ? seen.pages : 1;
     if (this.page > pages - 1) this.page = pages - 1;
     // 머릿줄
-    [['이름', COL.name, 'left'], ['닿은 곳', COL.reach, 'left'], ['점수', COL.score, 'right']].forEach(([s, x, align]) => text(ctx, s, x, textY(BOARD.headY), PAL.dimDk, { align }));
+    [['이름', COL.name, 'left'], ['도달', COL.reach, 'left'], ['점수', COL.score, 'right']].forEach(([s, x, align]) => text(ctx, s, x, textY(BOARD.headY), PAL.dimDk, { align }));
     rect(ctx, COL.x0, BOARD.headY + LINE + 1, COL.x1 - COL.x0, 1, PAL.feltHi);
     const say = (s) => text(ctx, s, W / 2, textY(BOARD.rowsY + 4 * LINE), PAL.dim, { align: 'center' });
     if (d && d.rows.length) {
@@ -137,8 +137,8 @@ export function rankCard(app, run, n = 5) {
   const count = st.phase === 'pending' ? Math.min(n, 3) : rows.length;
   return { st, phase: st.phase, rows, count, h: P * 2 + BTN_S + (count ? GAP_IN + count * LINE : 0) };
 }
-// 카드 줄의 글 자리(재는 쪽과 그리는 쪽이 같이 쓴다): 등수 · 이름 · [닿은 곳] · 점수. 닿은 곳은 순위 화면과 같은 글(reachText — 관 + 대국).
-// 한 줄이라도 이름이 닿은 곳에 닿으면 줄 전체를 짧은 꼴(관만)로, 그래도 닿으면 닿은 곳 칸을 뺀다. reachOf: 줄 → 닿은 곳 글(칸이 없으면 null)
+// 카드 줄의 글 자리(재는 쪽과 그리는 쪽이 같이 쓴다): 등수 · 이름 · [도달] · 점수. 도달은 순위 화면과 같은 글(reachText — 관 + 대국).
+// 한 줄이라도 이름이 도달에 닿으면 줄 전체를 짧은 꼴(관만)로, 그래도 닿으면 도달 칸을 뺀다. reachOf: 줄 → 도달 글(칸이 없으면 null)
 export function cardCols(rows, names, x, w) {
   const P = PAD_BOX, rankW = Math.max(0, ...rows.map((r) => measure(num(r.rank), true)));
   const nameX = x + P + 4 + rankW + 6, scoreR = x + w - P - 2;
