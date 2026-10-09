@@ -21,8 +21,8 @@ export class RecordsScreen {
       ['체크메이트', `${r.mates}`], ['탁월수 !!', `${r.brilliants || 0}`], ['전설 완성', `${r.legends}`], ['신의 한 수(★★★)', `${(r.grades['★★★'] || 0) + (r.grades['∞'] || 0)}`],
       ['열린 레이팅', danName(r.unlocked.dan)],
       ['끝없는 대국', r.bestEndless ? `${r.bestEndless}관` : '-'],
-      ['오늘의 대국', d ? `${d.won ? '이김' : `${d.ante}관`} · ${d.runs}판` : '아직'],
-      ['첫 수업', r.lessonsDone ? '끝' : '아직'],
+      ['오늘의 대국', d ? `${d.won ? '승리' : `${d.ante}관`} · ${d.runs}판` : '아직'],
+      ['튜토리얼', r.lessonsDone ? '끝' : '아직'],
     ];
     // 목록 줄은 본문 줄(LINE), 본 칸 윗변부터
     rows.forEach(([a, b], i) => {

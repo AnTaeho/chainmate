@@ -181,9 +181,9 @@ export class ResultScreen {
     // 단추 줄: (계속 두기) · 다시 · (하이라이트) · 타이틀 — 넷이면 폭 84 · 사이 8, 셋은 90 · 15, 둘은 90 · 20
     const btns = [];
     if (this.won) btns.push(['result:endless', '계속 두기', () => this.endless(), 'plain']);
-    btns.push(['result:again', '다시', () => this.again(), 'gold']);
+    btns.push(['result:again', '새 판', () => this.again(), 'gold']);
     if (hasHighlight(run)) btns.push(['result:highlight', '하이라이트', () => app.openOverlay('highlight'), 'plain']);
-    btns.push(['result:title', '타이틀', () => app.toTitle(), 'plain']);
+    btns.push(['result:title', '메인 화면', () => app.toTitle(), 'plain']);
     const [bw, bg] = RESULT_BTN[btns.length];
     const bx = W / 2 - Math.floor((btns.length * bw + (btns.length - 1) * bg) / 2);
     btns.forEach(([id, label, onClick, tone], i) => button(ctx, ui, id, bx + i * (bw + bg), by, bw, 18, label, { onClick, tone }));

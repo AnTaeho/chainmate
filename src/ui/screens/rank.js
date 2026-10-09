@@ -17,9 +17,9 @@ const MINE_BG = '#3a3014', CARD_BG = '#0e1814';
 const KIND = { ko: ['연습 대국', '정식 대국', '마스터전'], en: ['Practice', 'Rated', 'Master'] };
 export const reachText = (r) => (en()
   ? `Hall ${r.ante} ${r.won ? 'Won' : KIND.en[r.blind] || ''}`
-  : `${r.ante}관 ${r.won ? '이김' : KIND.ko[r.blind] || ''}`);
+  : `${r.ante}관 ${r.won ? '승리' : KIND.ko[r.blind] || ''}`);
 // 결과 카드의 도달이 이름에 닿을 때만 쓰는 짧은 꼴: 관만(이겼으면 「이김」)
-export const reachShort = (r) => (r.won ? '이김' : `${r.ante}관`);
+export const reachShort = (r) => (r.won ? '승리' : `${r.ante}관`);
 export const dayText = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}월 ${d}일`; };
 export const peopleText = (n) => `${num(n)}명`;
 
@@ -89,7 +89,7 @@ export class RankScreen {
         closeBox();
       });
     } else if (d) say('아직 아무도 플레이하지 않았어요');
-    else say(v.phase === 'unreached' ? '순위를 불러오지 못했어요' : '순위표를 펴는 중');
+    else say(v.phase === 'unreached' ? '순위를 불러오지 못했어요' : '순위 불러오는 중');
     // 붙박은 내 줄: 본 칸 아랫변. 오늘 아직 안 뒀으면 그 자리에 「오늘의 대국 두기」
     if (seen) {
       const my = BOARD.mineY, bw = COL.x1 - COL.x0, me = seen.me;
@@ -100,8 +100,8 @@ export class RankScreen {
         rowLine(ctx, me, app.rank.nameOf(me), my + PAD_BOX, { mine: true, total: seen.total });
       } else if (this.tab === 'today') {
         text(ctx, '오늘은 아직 플레이하지 않았어요', COL.rank, textY(my + PAD_BOX), PAL.dim);
-        const pw = measure('오늘의 대국 두기', true) + 20;
-        button(ctx, ui, 'rank:play', COL.x1 - 6 - pw, my + 6, pw, BTN_S, '오늘의 대국 두기', { tone: 'gold', onClick: () => app.newRun({ daily: true }) });
+        const pw = measure('오늘의 대국 시작', true) + 20;
+        button(ctx, ui, 'rank:play', COL.x1 - 6 - pw, my + 6, pw, BTN_S, '오늘의 대국 시작', { tone: 'gold', onClick: () => app.newRun({ daily: true }) });
       } else text(ctx, '어제는 플레이하지 않았어요', COL.rank, textY(my + PAD_BOX), PAL.dim);
       closeBox();
     }

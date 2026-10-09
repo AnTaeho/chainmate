@@ -182,7 +182,7 @@ test('격언 셋: 뽑은 대로 · 미련 없이 · 절약', () => {
 });
 
 test('마스터 모래시계 글: 수 2 · 희생 1', () => {
-  assert.equal(MASTER_BY_ID.hourglass.text, '수 2 · 희생 1뿐');
+  assert.equal(MASTER_BY_ID.hourglass.text, '수 2번 · 희생 1번만 가능');
 });
 
 test('레이팅 계단: 6단(레이팅 2000)부터 희생 −1', () => {

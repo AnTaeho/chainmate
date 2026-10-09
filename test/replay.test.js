@@ -184,17 +184,17 @@ test('갈림길 카드 글: 떨구기 · 희생 · 다시 놓기 · 같은 떨�
   const R = M.review;
   const base = { move: 3, mine: { kind: 'drop', t: 'P', sq: 12, cmds: [] }, scores: { mine: 120, best: 2340, target: 150 }, split: null, mate: false };
   const drop = { ...base, best: [{ kind: 'drop', t: 'N', sq: 18, cmds: [] }] };
-  assert.equal(R.forkTitle(drop), '3수째가 갈림길이었다');
+  assert.equal(R.forkTitle(drop), '3번째 수가 승부처였어요');
   assert.equal(R.forkLine(drop, []), '나이트를 c3에 떨궜다면 이겼다');
   assert.equal(R.forkLine({ ...base, best: [{ kind: 'drop', t: 'R', sq: 0 }] }, []), '룩을 a1에 떨궜다면 이겼다');
   assert.equal(R.forkLine({ ...base, best: [{ kind: 'discard', t: 'P' }] }, []), '폰을 희생했다면 이겼어요');
-  assert.equal(R.forkLine({ ...base, best: [{ kind: 'reboard' }] }, []), '판을 다시 놓았다면 이겼다');
-  assert.equal(R.forkScores(drop), '네 수 120 · 이길 길 2,340 / 목표 150');
-  assert.equal(R.forkScores({ ...drop, mate: true }), '네 수 120 · 이길 길 메이트 / 목표 150');
+  assert.equal(R.forkLine({ ...base, best: [{ kind: 'reboard' }] }, []), '판을 다시 놓았다면 이겼어요');
+  assert.equal(R.forkScores(drop), '내가 둔 수 120 · 이기는 수 2,340 / 목표 150');
+  assert.equal(R.forkScores({ ...drop, mate: true }), '내가 둔 수 120 · 이기는 수 메이트 / 목표 150');
   assert.deepEqual(R.forkMarks(drop), { mine: 12, best: 18, ghost: 'N' });
   const board = []; board[36] = { t: 'B', id: 5 };
   const split = { ...drop, split: { mine: { type: 'capture', sq: 35 }, best: { type: 'capture', sq: 36 } } };
-  assert.equal(R.forkLine(split, board), 'e5의 비숍을 먹었다면 이겼다');
+  assert.equal(R.forkLine(split, board), 'e5의 비숍을 먹었다면 이겼어요');
   assert.deepEqual(R.forkMarks(split), { mine: 35, best: 36, ghost: null });
   assert.deepEqual(R.forkMarks({ ...base, mine: { kind: 'discard', t: 'P' }, best: [{ kind: 'reboard' }] }), { mine: null, best: null, ghost: null });
   M.lang.setLang('en');
@@ -206,7 +206,7 @@ test('갈림길 카드 글: 떨구기 · 희생 · 다시 놓기 · 같은 떨�
   assert.equal(L(R.forkScores(drop)), 'You 120 · Winning line 2,340 / Target 150');
   assert.equal(L('복기 · 2/4수'), 'Review · 2/4');
   assert.deepEqual(R.forkScoreLines(drop).map(L), ['You 120 · Winning line 2,340', 'Target 150']);
-  for (const s of [R.NO_PATH, R.THINKING, '다시 두기', '넘어가기', '판을 다시 놓았다면 이겼다', '복기']) assert.ok(!/[가-힣]/.test(L(s)), s);
+  for (const s of [R.NO_PATH, R.THINKING, '다시 두기', '건너뛰기', '판을 다시 놓았다면 이겼어요', '복기']) assert.ok(!/[가-힣]/.test(L(s)), s);
   M.lang.setLang('ko');
 });
 

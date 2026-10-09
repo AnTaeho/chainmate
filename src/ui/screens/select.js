@@ -291,11 +291,11 @@ export class SelectScreen {
       const by = y + h - P - BTN_H;
       if (past) {
         const lost = log && !log.skipped && log.won === false;
-        text(ctx, log && log.skipped ? '건너뜀' : lost ? '짐 · 시계 −1' : '이김', x + w / 2, by + 3, lost ? PAL.red : PAL.dim, { align: 'center', bold: true });
+        text(ctx, log && log.skipped ? '건너뜀' : lost ? '패배 · 시계 −1' : '승리', x + w / 2, by + 3, lost ? PAL.red : PAL.dim, { align: 'center', bold: true });
       } else if (cur) {
-        if (master) { button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '두기', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
+        if (master) { button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '시작', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
         else {
-          button(ctx, ui, 'select:play', x + P, by, 38, BTN_H, '두기', { onClick: () => this.play(), tone: 'gold' });
+          button(ctx, ui, 'select:play', x + P, by, 38, BTN_H, '시작', { onClick: () => this.play(), tone: 'gold' });
           button(ctx, ui, 'select:skip', x + P + 42, by, w - P * 2 - 42, BTN_H, '건너뛰기', { onClick: () => this.skip() });
         }
       }

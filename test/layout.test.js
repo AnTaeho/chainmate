@@ -759,7 +759,7 @@ test('순위 화면: 불러오는 중 · 줄 있음 · 안 둠 · 내 쪽(긴 �
     a.app.go('rank');
     let f = a.frame();
     assert.deepEqual(f.bad, [], tag('불러오는 중'));
-    assert.ok(drew(f, '순위표를 펴는 중'), tag('불러오는 중'));
+    assert.ok(drew(f, '순위 불러오는 중'), tag('불러오는 중'));
     await a.settle();
     f = a.frame();
     assert.deepEqual(f.bad, [], tag('첫 쪽'));

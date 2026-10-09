@@ -12,12 +12,12 @@ export class RewardScreen {
     const r = reward;
     const last = app.run.last || {};
     this.last = last;
-    this.lines = [['대국 기본', r.base]];
+    this.lines = [['기본 보상', r.base]];
     if (r.moves) this.lines.push([`남은 수 ${r.moves}`, r.moves]);
-    if (r.interest) this.lines.push(['적립', r.interest]);
+    if (r.interest) this.lines.push(['이자', r.interest]);
     if (r.mate) this.lines.push(['체크메이트', r.mate]);
-    if (r.overflow) this.lines.push([`넘친 목표 ×${last.overflow}`, r.overflow]);
-    if (r.earned) this.lines.push(['대국 중 번 상금', r.earned]);
+    if (r.overflow) this.lines.push([`목표 초과 ×${last.overflow}`, r.overflow]);
+    if (r.earned) this.lines.push(['대국 중 얻은 상금', r.earned]);
     this.total = r.total;
     this.gold = events.some((e) => e.type === 'goldenPack');
     this.shown = 0;

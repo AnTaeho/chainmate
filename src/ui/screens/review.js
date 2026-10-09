@@ -88,7 +88,7 @@ export class ReviewScreen extends BattleScreen {
     button(ctx, ui, 'btn:forward', RX + 23, y, 20, BTN_S, '', { enabled: live && this.i < this.n, onClick: () => this.forward(), icon: triangle(1), tone: this.i < this.n && !this.playing ? 'gold' : 'plain', tip: () => tipLines('다음 수', []) });
   }
   actionButton(ctx, ui, x, y, db) {
-    button(ctx, ui, 'btn:moveon', x, y, db.w, BTN_S, '넘어가기', { onClick: () => this.moveOn(), tone: this.i >= this.n && !this.playing ? 'gold' : 'plain' });
+    button(ctx, ui, 'btn:moveon', x, y, db.w, BTN_S, '건너뛰기', { onClick: () => this.moveOn(), tone: this.i >= this.n && !this.playing ? 'gold' : 'plain' });
   }
 
   // 왼쪽 칸 사슬 자리: 이 수의 내 수(「?」) / 이길 길(「!」). 둔 뒤에는 방금 둔 수, 두기 전에는 다음 수.
@@ -97,7 +97,7 @@ export class ReviewScreen extends BattleScreen {
     const cy = lay.chain.y, ch = lay.chain.h, PX = PAD_BOX;
     const P = Math.max(1, Math.min(PAD_BOX, Math.floor((ch - LINE * 2) / 2)));
     const idx = this.playing ? this.i : Math.max(0, Math.min(this.n - 1, this.i - (this.i > 0 ? 1 : 0)));
-    const rows = [['?', ANNOT.red, stepLabel(this.res.mines[idx]), '네 수'], ['!', ANNOT.teal, stepLabel(this.res.best[idx]), '이길 길']];
+    const rows = [['?', ANNOT.red, stepLabel(this.res.mines[idx]), '내가 둔 수'], ['!', ANNOT.teal, stepLabel(this.res.best[idx]), '이기는 수']];
     openBox('panel', LX, cy, LW, ch, P, { name: '견주기' });
     panel(ctx, LX, cy, LW, ch);
     ui.sideItem(LX, cy, LW, ch);

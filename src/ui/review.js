@@ -8,25 +8,25 @@ import { num } from '../render/gfx.js';
 export const reviewOn = (app, src, b) => app.settings.replay !== false && !!src && src.kind === 'run' && !!app.run && !app.run.scratch && !!b && !b.script;
 
 // 카드 첫 줄 · 둘째 줄 · 점수 줄. r = review() 결과(kind 'path'), board = 갈림길 상태의 판(사슬이 갈린 칸의 적 이름)
-export const forkTitle = (r) => `${r.move}수째가 갈림길이었다`;
+export const forkTitle = (r) => `${r.move}번째 수가 승부처였어요`;
 export function forkLine(r, board) {
   const b0 = r.best[0];
   const s = r.split && r.split.best;
   if (s && s.type === 'capture') {
     const c = board && board[s.sq];
-    return c && !c.mine && PIECE_NAME[c.t] ? `${sqName(s.sq)}의 ${josa(PIECE_NAME[c.t], '을/를')} 먹었다면 이겼다` : `${sqName(s.sq)}의 적을 먹었다면 이겼다`;
+    return c && !c.mine && PIECE_NAME[c.t] ? `${sqName(s.sq)}의 ${josa(PIECE_NAME[c.t], '을/를')} 먹었다면 이겼어요` : `${sqName(s.sq)}의 적을 먹었다면 이겼어요`;
   }
   if (s && s.type === 'redrop') return `${sqName(s.sq)}에 다시 떨궜다면 이겼다`;
   if (b0.kind === 'drop') return `${josa(PIECE_NAME[b0.t], '을/를')} ${sqName(b0.sq)}에 떨궜다면 이겼다`;
   if (b0.kind === 'discard') return `${josa(PIECE_NAME[b0.t], '을/를')} 희생했다면 이겼어요`;
-  return '판을 다시 놓았다면 이겼다';
+  return '판을 다시 놓았다면 이겼어요';
 }
-export const forkScores = (r) => `네 수 ${num(r.scores.mine)} · 이길 길 ${r.mate ? '메이트' : num(r.scores.best)} / 목표 ${num(r.scores.target)}`;
+export const forkScores = (r) => `내가 둔 수 ${num(r.scores.mine)} · 이기는 수 ${r.mate ? '메이트' : num(r.scores.best)} / 목표 ${num(r.scores.target)}`;
 // 한 줄에 안 들어가면 두 줄로(목표를 줄 가운데서 끊지 않게)
-export const forkScoreLines = (r) => [`네 수 ${num(r.scores.mine)} · 이길 길 ${r.mate ? '메이트' : num(r.scores.best)}`, `목표 ${num(r.scores.target)}`];
+export const forkScoreLines = (r) => [`내가 둔 수 ${num(r.scores.mine)} · 이기는 수 ${r.mate ? '메이트' : num(r.scores.best)}`, `목표 ${num(r.scores.target)}`];
 // 두 줄 첫 줄도 안 들어가면(영어 · 큰 수) 세 줄로 — 「네 수」 · 「이길 길」 · 「목표」를 줄 가운데서 끊지 않게
-export const forkScoreRows = (r) => [`네 수 ${num(r.scores.mine)}`, `이길 길 ${r.mate ? '메이트' : num(r.scores.best)}`, `목표 ${num(r.scores.target)}`];
-export const NO_PATH = '이 판은 길이 없었다';
+export const forkScoreRows = (r) => [`내가 둔 수 ${num(r.scores.mine)}`, `이기는 수 ${r.mate ? '메이트' : num(r.scores.best)}`, `목표 ${num(r.scores.target)}`];
+export const NO_PATH = '이번 대국은 이길 방법이 없었어요';
 export const THINKING = '복기 중…';
 
 // 갈림길 표시 칸: 「?」 내 수(붉음) · 「!」 이길 수(청록). 같은 떨구기면 사슬이 처음 갈린 칸에.

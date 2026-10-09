@@ -22,7 +22,7 @@ export function lessonPanelLayout(say, demo) {
   const ty = f.line();
   f.gap(GAP_IN);
   const lines = wrap(say, RW - P * 2).map((l) => [l, f.line()]);
-  const taps = demo ? wrap('누르면 내 차례', RW - P * 2).map((l, k) => [l, (k ? f : f.gap(GAP_GROUP)).line()]) : [];
+  const taps = demo ? wrap('화면을 누르면 직접 해 볼 수 있어요', RW - P * 2).map((l, k) => [l, (k ? f : f.gap(GAP_GROUP)).line()]) : [];
   return { ty, lines, taps, h: f.y + P - TOP };
 }
 
@@ -188,8 +188,8 @@ export class LessonScreen extends BattleScreen {
     super.draw(ctx, ui);
     const g = LESSON_GROUPS.find((x) => x.id === this.L.group);
     // 판 위 한 줄: 판 폭에 안 들어가면(영어) 수업 번호만 — 제목은 왼쪽 머리 칸에 있다
-    const full = `첫 수업 ${this.index + 1}/${LESSONS.length} · ${this.L.title}`;
-    const t = measure(full, true) <= S * 8 ? full : `첫 수업 ${this.index + 1}/${LESSONS.length}`;
+    const full = `튜토리얼 ${this.index + 1}/${LESSONS.length} · ${this.L.title}`;
+    const t = measure(full, true) <= S * 8 ? full : `튜토리얼 ${this.index + 1}/${LESSONS.length}`;
     text(ctx, t, BX + S * 4, 1, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
     if (this.phase === 'demo' && this.demo && !this.demo.done) this.drawFinger(ctx);
   }
@@ -217,7 +217,7 @@ export class LessonScreen extends BattleScreen {
       if (r) { ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); frame(ctx, r.x - 2, r.y - 2 + (st.pick != null ? 4 : 0), r.w + 4, st.pick != null ? 40 : r.h + 4, PAL.goldHi, 1); ctx.globalAlpha = 1; }
     }
     // 수업 건너뛰기(처음 켠 사람도 곧바로 판으로 갈 수 있게): 오른쪽 칸 위 이름표 줄(수업에는 격언이 없다), 멈춤 단추 왼쪽
-    button(ctx, ui, 'lesson:skip', RX, 2, PAUSE.x - 6 - RX, BTN_S, '수업 건너뛰기', { onClick: () => this.skipAll() });
+    button(ctx, ui, 'lesson:skip', RX, 2, PAUSE.x - 6 - RX, BTN_S, '튜토리얼 건너뛰기', { onClick: () => this.skipAll() });
   }
   // 머리 칸: 대국 제목 대신 수업 묶음과 지금 수업(제목은 두 줄까지), 목표는 점수나 외통
   headSpec() {

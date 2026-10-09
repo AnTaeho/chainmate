@@ -51,7 +51,7 @@ function bakeLogo() {
   return { s, letters, w: textWidth(s, true) * sc + 4, h: 16 * sc + 4 };
 }
 export const LOGO_Y = 34, SUB_Y = 82;
-export const TELEMETRY_NOTE = '판 결과를 이름 없이 모은다 · 설정에서 끌 수 있다';
+export const TELEMETRY_NOTE = '판 결과를 익명으로 수집해요 · 설정에서 끌 수 있어요';
 export const NOTE_Y = 4, NOTE_H = 16;
 // 알림 줄 오른쪽의 「처리방침」: 누르면 개인정보 처리방침 쪽을 새 탭으로 연다(CHM-72). 알림은 그대로 둔다
 export const NOTE_LINK = '처리방침', NOTE_URL = 'privacy.html';
@@ -84,7 +84,7 @@ export class TitleScreen {
     // 처음 켰으면(또는 설정 「킹과 다시 두기」) 새 판은 곧바로 킹과 두는 첫 대국부터
     const fresh = ['title:new', '새 판', () => (app.wantsScript() ? app.newRun({ script: true }) : app.go('setup'))];
     const rest = [
-      ['title:lesson', '수업', () => app.go('lessons')],
+      ['title:lesson', '튜토리얼', () => app.go('lessons')],
       ['title:daily', '오늘의 대국', () => app.newRun({ daily: true })],
       ['title:rank', '순위', () => app.go('rank')],
       ['title:codex', '도감', () => app.go('codex')],

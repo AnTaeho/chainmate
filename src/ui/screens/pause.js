@@ -13,7 +13,7 @@ export class PauseScreen {
     const app = this.app;
     // 막간 상자(hug): 제목(제목 줄) → 묶음 틈 → 단추 셋(사이 묶음 틈)
     const f = flow(PAD_BOX), ty = f.line(true);
-    const ids = [['pause:resume', '계속', () => app.closeOverlay(), 'gold'], ['pause:settings', '설정', () => app.openOverlay('settings', { back: 'pause' }), 'plain'], ['pause:title', '타이틀로', () => app.toTitle(), 'plain']];
+    const ids = [['pause:resume', '계속', () => app.closeOverlay(), 'gold'], ['pause:settings', '설정', () => app.openOverlay('settings', { back: 'pause' }), 'plain'], ['pause:title', '메인 화면으로', () => app.toTitle(), 'plain']];
     const ys = ids.map(() => f.gap(GAP_GROUP).space(18));
     const w = 140, h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
     openBox('panel', x, y, w, h, PAD_BOX, { name: '멈춤' });

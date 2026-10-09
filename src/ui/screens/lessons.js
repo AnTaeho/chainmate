@@ -95,7 +95,7 @@ export class LessonsScreen {
   draw(ctx, ui) {
     const app = this.app, seen = seenOf(app);
     if (this.terms) return this.drawTerms(ctx, ui);
-    pageHead(ctx, '첫 수업');
+    pageHead(ctx, '튜토리얼');
     const colW = 140, x0 = Math.floor((W - colW * 3 - 16) / 2);
     // 묶음 칸 쌓기: 묶음 이름(제목 줄) → 묶음 틈 → 수업 단추들(사이 GAP_GROUP) — 세 칸은 가장 긴 칸의 높이
     const groups = LESSON_GROUPS.map((g) => LESSONS.map((L, i) => ({ L, i })).filter((o) => o.L.group === g.id));
@@ -124,12 +124,12 @@ export class LessonsScreen {
       closeBox();
     });
     button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => app.toTitle() });
-    button(ctx, ui, 'lessons:terms', W - PAGE.titleX - 100, PAGE.btnY, 100, PAGE.btnH, '낱말 풀이', { onClick: () => { this.terms = true; } });
+    button(ctx, ui, 'lessons:terms', W - PAGE.titleX - 100, PAGE.btnY, 100, PAGE.btnH, '용어 사전', { onClick: () => { this.terms = true; } });
   }
   // 낱말 풀이: 카드 옆 낱말 상자와 같은 표(glossary.js TERMS)를 묶음 탭(대국 · 판 · 물건 · 모음)과 쪽으로
   drawTerms(ctx, ui) {
     // 판 밖 틀: 머리줄(제목 · 탭) + 본 칸 + 맨 아래 단추 줄(돌아가기 왼쪽 · 쪽 넘기기 오른쪽)
-    pageHead(ctx, '낱말 풀이');
+    pageHead(ctx, '용어 사전');
     const tab = this.termTab || 'battle';
     const tw = 62;
     TERM_GROUPS.forEach(([id, name], k) => {
@@ -139,7 +139,7 @@ export class LessonsScreen {
     const page = Math.min(this.termPage || 0, pages.length - 1);
     const pg = pages[page];
     const bh = pg.h;
-    openBox('panel', TERM_BOX.x, PAGE.bodyY, W - TERM_BOX.x * 2, bh, PAD_BOX, { name: '낱말 풀이' });
+    openBox('panel', TERM_BOX.x, PAGE.bodyY, W - TERM_BOX.x * 2, bh, PAD_BOX, { name: '용어 사전' });
     box(ctx, TERM_BOX.x, PAGE.bodyY, W - TERM_BOX.x * 2, bh, PAL.feltDk, PAL.frameDk);
     for (const row of pg.rows) {
       text(ctx, termWord(row.id), TERM_BOX.x + PAD_BOX, textY(row.y), PAL.gold, { bold: true });

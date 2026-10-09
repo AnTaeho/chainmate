@@ -635,7 +635,7 @@ export class BattleScreen {
           add(0.3, { tick: (p) => { v.cut.p = p; } });
           break;
         case 'mate': mateSq = e.sq; add(0.5, {
-          begin: () => { this.topple(e.sq); this.word('메이트', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
+          begin: () => { this.topple(e.sq); this.word('체크메이트', PAL.gold, 1.6, 4); this.snd('mate'); this.hitstop(0.25); this.shake(3, 0.3); },
         }); break;
         // 탁월수 !!: 메이트 연출에 겹쳐 돈다(걸음 길이 0 — 한 수 연출 시간을 늘리지 않는다). 칸의 「!!」 · 빛살은 fx, 배수 칸 「×N」은 v.brill
         case 'brilliant': { const sq = mateSq; add(0, { begin: () => this.brilliantFx(sq, e) }); break; }
@@ -886,9 +886,9 @@ export class BattleScreen {
       const bw = Math.floor((tw - 8) / 2);
       if (path) {
         button(ctx, ui, 'btn:replay', x + P, y + by, bw, BTN_S, '다시 두기', { onClick: () => this.retryReview(), tone: 'gold' });
-        button(ctx, ui, 'btn:moveon', x + w - P - bw, y + by, bw, BTN_S, '넘어가기', { onClick: () => this.endReview() });
+        button(ctx, ui, 'btn:moveon', x + w - P - bw, y + by, bw, BTN_S, '건너뛰기', { onClick: () => this.endReview() });
         hint(app, 'replay', 'btn:replay');
-      } else button(ctx, ui, 'btn:moveon', x + Math.floor((w - bw) / 2), y + by, bw, BTN_S, '넘어가기', { onClick: () => this.endReview() });
+      } else button(ctx, ui, 'btn:moveon', x + Math.floor((w - bw) / 2), y + by, bw, BTN_S, '건너뛰기', { onClick: () => this.endReview() });
     }
     closeBox();
   }
@@ -2030,7 +2030,7 @@ export class BattleScreen {
   }
   nextTip() {
     const next = this.view.next || [];
-    return tipLines('다음에 들어올 기물', [next.length ? next.map((p) => PIECE_NAME[p.t]).join(' · ') : '덱이 비었어요']);
+    return tipLines('다음에 뽑을 기물', [next.length ? next.map((p) => PIECE_NAME[p.t]).join(' · ') : '덱이 비었어요']);
   }
 
   // 손 이름표 줄 오른쪽 단추(희생). 다시 두기(screens/review.js)는 「넘어가기」

@@ -11,7 +11,7 @@ import { PAD_BOX, GAP_GROUP, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { diceIcon } from '../../render/dice.js';
 
-export const TELEMETRY_TIP = '이름 없이 판 결과만 보낸다 · 화면은 보지 않는다';
+export const TELEMETRY_TIP = '익명으로 판 결과만 보내요 · 화면은 수집하지 않아요';
 // 다시 짓기를 가리키면 제목 자리에 뜨는 한 줄(오늘 남은 횟수 — 서버가 알려 준 뒤에만)
 export const rerollTip = (left) => (left == null ? '순위에 오르는 이름을 바꿔요' : left > 0 ? `오늘 ${left}번 더 바꿀 수 있어요` : '오늘은 더 바꿀 수 없어요 · 내일 다시 바꿀 수 있어요');
 // 이름 줄의 자리(재는 쪽 test/layout.test.js와 같이 쓴다): 이름은 오른끝 맞춤, 「이름」 이름표는 이름 왼쪽에 들어갈 때만
@@ -37,7 +37,7 @@ export class SettingsScreen {
     const rowTops = Array.from({ length: 8 }, () => f.gap(GAP_GROUP).space(RH));
     const btnTop = f.gap(GAP_GROUP).space(18);
     // 맨 아래 단추 넷(글에 맞춘 폭, 글과 테 사이 2 이상 — 영어 「Replay with the King」 · 「Export runs」)
-    const lw = Math.max(64, measure('수업', true) + 8), kw = Math.max(96, measure('킹과 다시 두기', true) + 8), ew = Math.max(72, measure('기록 내보내기', true) + 8), bw = 72;
+    const lw = Math.max(64, measure('튜토리얼', true) + 8), kw = Math.max(96, measure('첫 대국 다시', true) + 8), ew = Math.max(72, measure('기록 내보내기', true) + 8), bw = 72;
     const w = Math.max(240, lw + kw + ew + bw + 8 * 3 + PAD_BOX * 2), h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
     openBox('panel', x, y, w, h, PAD_BOX, { name: '설정' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
@@ -86,21 +86,21 @@ export class SettingsScreen {
       const lkw = linkW();
       button(ctx, ui, 'set:link', linkR - lkw, y + rowTops[5], lkw, RH, LINK_LABEL, { onClick: () => { app.closeOverlay(); app.go('account'); }, grow: G });
     }
-    yy = row(6, '처음 안내');
+    yy = row(6, '도움말 팁');
     button(ctx, ui, 'set:coach', x + 120, yy, 30, 18, s.coach === false ? '끔' : '켬', { onClick: () => set('coach', s.coach === false), tone: s.coach === false ? 'plain' : 'gold', grow: G });
     // 글에 맞춘 폭(글과 테 사이 2 — 영어 「Show again」 · 「First Lessons」)
     const rw = Math.max(78, measure('다시 보기', true) + 6);
-    button(ctx, ui, 'set:coachReset', x + w - PAD_BOX - rw, yy, rw, 18, '다시 보기', { onClick: () => { app.records.coachSeen = {}; app.saveRecords(); set('coach', true); app.toast('처음 안내를 다시 보인다', PAL.gold); }, grow: G });
+    button(ctx, ui, 'set:coachReset', x + w - PAD_BOX - rw, yy, rw, 18, '다시 보기', { onClick: () => { app.records.coachSeen = {}; app.saveRecords(); set('coach', true); app.toast('도움말 팁을 처음부터 다시 봐요', PAL.gold); }, grow: G });
     yy = row(7, '움직임 줄이기');
     button(ctx, ui, 'set:calm', x + 120, yy, 64, 18, s.calm ? '켬' : '끔', { onClick: () => set('calm', !s.calm), tone: s.calm ? 'gold' : 'plain', grow: G });
     // 기록 보내기(CHM-63): 줄을 더하면 상자가 화면(270)을 넘어 움직임 줄이기 줄 오른쪽에 둔다(복기와 같은 꼴)
     const tel = s.telemetry !== false;
-    text(ctx, '기록 보내기', x + w - PAD_BOX - rbw - 6, textY(yy, RH), PAL.ink, { align: 'right' });
+    text(ctx, '플레이 기록 전송', x + w - PAD_BOX - rbw - 6, textY(yy, RH), PAL.ink, { align: 'right' });
     button(ctx, ui, 'set:telemetry', x + w - PAD_BOX - rbw, yy, rbw, 18, tel ? '켬' : '끔', { onClick: () => app.setTelemetry(!tel), tone: tel ? 'gold' : 'plain', grow: G });
     const bx0 = Math.floor(W / 2 - (lw + kw + ew + bw + 24) / 2), by = y + btnTop;
-    button(ctx, ui, 'set:lessons', bx0, by, lw, 18, '수업', { onClick: () => { app.closeOverlay(); app.guide = null; if (app.run && app.run.scratch) app.run = null; app.fx.clear(); app.go('lessons'); }, grow: G });
+    button(ctx, ui, 'set:lessons', bx0, by, lw, 18, '튜토리얼', { onClick: () => { app.closeOverlay(); app.guide = null; if (app.run && app.run.scratch) app.run = null; app.fx.clear(); app.go('lessons'); }, grow: G });
     const again = !!app.records.kingAgain;
-    button(ctx, ui, 'set:king', bx0 + lw + 8, by, kw, 18, '킹과 다시 두기', { tone: again ? 'gold' : 'plain', onClick: () => { app.records.kingAgain = !again; app.saveRecords(); if (!again) app.toast('다음 새 판은 킹과 둔다', PAL.gold); }, grow: G });
+    button(ctx, ui, 'set:king', bx0 + lw + 8, by, kw, 18, '첫 대국 다시', { tone: again ? 'gold' : 'plain', onClick: () => { app.records.kingAgain = !again; app.saveRecords(); if (!again) app.toast('다음 새 판을 킹과 함께 시작해요', PAL.gold); }, grow: G });
     button(ctx, ui, 'set:export', bx0 + lw + kw + 16, by, ew, 18, '기록 내보내기', { onClick: () => app.exportRuns(), grow: G });
     button(ctx, ui, 'set:back', bx0 + lw + kw + ew + 24, by, bw, 18, '뒤로', { onClick: () => this.close(), grow: G });
     closeBox();
