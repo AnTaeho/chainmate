@@ -92,6 +92,8 @@ const I = {
   menu_records: ['............', '............', 'y....yy....y', 'yy...yy...yy', 'yyy.yyyy.yyy', 'yyyyyyyyyyyy', 'yyyyyyyyyyyy', 'yyyyyyyyyyyy', '.yyyyyyyyyy.', '............', '.yyyyyyyyyy.', '............'],
   menu_settings: ['....yyyy....', '.yy.yyyy.yy.', '.yyyyyyyyyy.', '..yyy..yyy..', 'yyyy....yyyy', 'yyy......yyy', 'yyy......yyy', 'yyyy....yyyy', '..yyy..yyy..', '.yyyyyyyyyy.', '.yy.yyyy.yy.', '....yyyy....'],
   menu_rank: ['..yyyyyyyy..', 'yyyyyyyyyyyy', 'y.yyyggyyy.y', 'y.yyggggyy.y', '.yyyyggyyyy.', '..yyyyyyyy..', '...yyyyyy...', '....yyyy....', '.....yy.....', '.....yy.....', '...yyyyyy...', '..yyyyyyyy..'],
+  // 자물쇠(CHM-73): 도감의 잠긴 칸
+  lock: ['............', '....ssss....', '...s....s...', '...s....s...', '...s....s...', '.ssssssssss.', '.ssssssssss.', '.ssss..ssss.', '.ssss..ssss.', '.ssssssssss.', '.ssssssssss.', '............'],
 };
 
 const CACHE = new Map();

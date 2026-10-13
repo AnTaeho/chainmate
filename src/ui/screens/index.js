@@ -23,6 +23,7 @@ import { RankScreen } from './rank.js';
 import { LinkScreen } from './link.js';
 import { AccountScreen } from './account.js';
 import { HighlightScreen } from './highlight.js';
+import { UnlocksScreen } from './unlocks.js';
 
 // 대국: 판의 대국이 대본 대국이면(첫 판 1관 연습, CHM-22) 대본 화면으로 — 화면 이름은 같은 battle
 class BattleEntry {
@@ -54,4 +55,5 @@ export const SCREENS = {
   link: LinkScreen,
   account: AccountScreen,
   highlight: HighlightScreen,
+  unlocks: UnlocksScreen,
 };

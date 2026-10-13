@@ -22,6 +22,7 @@ test('종류 딱지: 진열 · 꾸러미 · 두루마리에 나오는 모든 종
     ...Object.keys(P.ITEM_KIND),                // 카드 머릿말이 이름을 붙이는 종류
     ...S.SHOP.kindWeights.map(([k]) => k),      // 진열 칸 무게
     'awaken', 'fragment',                       // 금 간 혼이 있을 때 · 명경기 조각
+    'joseki',                                   // 레퍼토리(해금 화면의 카드 · 뒷면, CHM-73)
   ]);
   for (const k of shown) {
     const e = K.KIND[k];

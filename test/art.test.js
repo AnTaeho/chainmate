@@ -90,8 +90,8 @@ test('두루마리 칸(18×22)에도 서는 그림: 각인 · 전술 · 혼 · �
   }
 });
 
-test('종류 문양: 열 종류 모두 잉크 10×10 안', () => {
-  assert.equal(Object.keys(kinds.KIND).length, 10);
+test('종류 문양: 열한 종류(레퍼토리 깃발까지, CHM-73) 모두 잉크 10×10 안', () => {
+  assert.equal(Object.keys(kinds.KIND).length, 11);
   for (const [k, v] of Object.entries(kinds.KIND)) {
     const b = inkBox(v.g);
     assert.ok(b.w <= GLYPH && b.h <= GLYPH, `${k} ${b.w}×${b.h}`);

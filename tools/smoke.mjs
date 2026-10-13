@@ -419,6 +419,8 @@ const HINT_SUBJECT = {
   preview: (id, run) => scrName() === 'select' && id === `select:board:${run.blind}`,
   // 순위(CHM-70): 순위에 이름이 생긴 뒤의 첫 화면 설정 칸(이름은 설정에서 다시 짓는다)
   rankName: (id) => scrName() === 'title' && id === 'title:settings:tip' && !!app.rank.player(),
+  // 해금(CHM-73): 해금 길의 지금 자리 마디
+  unlocks: (id) => scrName() === 'unlocks' && id === 'unlocks:here',
   brilliant: (id, run) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')], off = run.battle && run.battle.offering; return !!(p && off && (off.drawn || []).includes(p.id)); },
 };
 function hintSubject() {
@@ -428,7 +430,7 @@ function hintSubject() {
   const r = region(h.regionId), run = app.run;
   let ok = !!r && r.x >= 0 && r.y >= 0 && r.x + r.w <= 480 && r.y + r.h <= 270;
   if (ok && h.id.startsWith('faction_')) ok = scrName() === 'select' && h.regionId === 'faction' && !!run && factionFor(run, run.ante) === h.id.slice(8);
-  else if (ok) ok = !!HINT_SUBJECT[h.id] && (h.id === 'bigText' || h.id === 'rankName' || !!run) && HINT_SUBJECT[h.id](h.regionId, run);
+  else if (ok) ok = !!HINT_SUBJECT[h.id] && (h.id === 'bigText' || h.id === 'rankName' || h.id === 'unlocks' || !!run) && HINT_SUBJECT[h.id](h.regionId, run);
   if (!subj.ids.has(key)) { subj.ids.add(key); subj.n++; }
   if (!ok && subj.bad.length < 20 && !subj.bad.includes(key)) subj.bad.push(key);
   // 같은 안내 두 번: 본 것으로 적힌 뒤 또 떴다

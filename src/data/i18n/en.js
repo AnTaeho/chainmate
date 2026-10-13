@@ -50,6 +50,11 @@ export const EN = {
   '게임이 업데이트됐어요': 'A new version is out', '새로 고침하면 다음 판부터 순위에 올라가요': 'Refresh to rank from your next run',
   '순위에 오르는 이름을 바꿔요': 'Rerolls your name on the ranks', '오늘은 더 바꿀 수 없어요': 'No rerolls left today', '내일 다시 바꿀 수 있어요': 'More tomorrow',
   '이름은 설정에서 바꿀 수 있어': 'You can reroll your name in Settings',
+  // 해금(CHM-73)
+  '칸을 누르면 그 묶음에 든 것을 볼 수 있어': 'Tap a column to see what is in it',
+  '해금': 'Unlocks', '돌파한 관': 'Halls cleared', '최근에 연 것': 'Latest', '처음부터': 'From the start', '다음': 'Next',
+  '모두 열었어요': 'Everything is unlocked', '다음 판이 끝나면 열려요': 'Opens after your next run', '다음 판에 열려요': 'Opens next run',
+  '앞의 묶음부터 한 판에 하나씩 열려요': 'Earlier sets open first, one per run',
   // 찜(CHM-58 F)
   '찜': 'Hold', '찜함': 'Held',
   '다음 상점까지 남겨 둬요': 'Keep it for the next shop',
@@ -601,6 +606,11 @@ export const PRE = [
 ];
 
 export const TEMPLATES = [
+  // 해금(CHM-73)
+  [/^관 (\d+)개 더$/, (m) => `${m[1]} more ${m[1] === '1' ? 'hall' : 'halls'}`],
+  [/^다음 해금까지 관 (\d+)개$/, (m) => `Next unlock in ${m[1]} ${m[1] === '1' ? 'hall' : 'halls'}`],
+  [/^관을 (\d+)개 더 돌파하면 열려요$/, (m) => `Clear ${m[1]} more ${m[1] === '1' ? 'hall' : 'halls'} to open`],
+  [/^(\d+)개 열렸어요$/, (m) => `${m[1]} unlocked`],
   // 기기 잇기(CHM-71)
   [/^기기 (\d+)대 연결됨$/, (m) => `${m[1]} devices linked`],
   // 계정(CHM-72)

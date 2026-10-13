@@ -21,6 +21,9 @@ before(async () => {
     lessons: await import('../src/ui/lessons.js'),
     moves: await import('../src/ui/screens/moves.js'),
     codex: await import('../src/ui/screens/codex.js'),
+    unlocks: await import('../src/ui/screens/unlocks.js'),
+    unlockview: await import('../src/ui/unlockview.js'),
+    unlockData: await import('../src/data/unlocks.js'),
   };
 });
 after(async () => { const { setCanvasFactory } = await import('../src/render/surface.js'); setCanvasFactory(null); M.lang.setLang('ko'); });
@@ -1248,4 +1251,42 @@ test('계정 화면: 입력 칸 · 단추가 칸 안에서 서로 닿지 않고,
     assert.equal(a.app.screen.noteOn(), false);
   }
   M.lang.setLang('ko');
+});
+
+// CHM-73 해금 길: 스물한 칸이 화면 폭 안, 묶음마다 카드가 본 칸 안(한국어 · 영어), 다섯이면 쪽을 고르게, 뒷면 다섯이 한 줄에
+test('해금 화면: 길 21칸 · 모든 묶음의 카드 높이 · 쪽 나누기 · 뒷면 한 줄 · 아래 칸 글', () => {
+  const { PATH, CARDS, bundlePages, bundleRowH } = M.unlocks;
+  const V = M.unlockview, { MAX_TIER, UNLOCK_GATES } = M.unlockData, { PAGE, GAP_GROUP, PAD_BOX } = M.frame;
+  assert.equal(MAX_TIER, 20);
+  assert.ok(PATH.x >= 8 && PATH.x + MAX_TIER * PATH.pitch + PATH.cw <= 480 - 8, '길이 화면 폭 안');
+  assert.ok(PATH.colY + PATH.rows * PATH.row + 6 + 14 <= 190, '그림 줄 · 남은 관 줄이 아래 칸 위');
+  assert.ok(190 + PAD_BOX * 2 + 28 <= PAGE.btnY - 2, '아래 칸이 단추 줄 위');
+  assert.deepEqual([1, 4, 5, 8, 41].map((n) => { const { pages, per } = bundlePages(n); return [pages, per]; }), [[1, 1], [1, 4], [2, 3], [2, 4], [11, 4]]);
+  assert.ok(CARDS.per * CARDS.w + (CARDS.per - 1) * CARDS.gap <= 480 - 16, '카드 넷이 한 줄에');
+  assert.ok(5 * V.BACK_W + 4 * CARDS.gap <= 480 - 16, '뒷면 다섯이 한 줄에');
+  assert.equal(CARDS.maxH, PAGE.btnY - GAP_GROUP - CARDS.y);
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (let t = 0; t <= MAX_TIER; t++) {
+      const items = V.bundle(t);
+      assert.equal(items.length, V.bundleSize(t));
+      if (t) assert.ok(items.length >= 4 && items.length <= 5, `묶음 ${t}: ${items.length}개`);
+      assert.ok(bundleRowH(items) <= CARDS.maxH, `${lang} 묶음 ${t} 카드 높이 ${bundleRowH(items)} > ${CARDS.maxH}`);
+      // 뒷면의 종류 이름 · 아래 칸의 종류 글이 자리에 들어간다
+      for (const b of items) assert.ok(M.text.textWidth(V.KIND_LABEL[b.kind]) <= V.BACK_W - 12, `${lang} ${b.kind} 뒷면 이름`);
+      assert.ok(M.text.textWidth(V.bundleKinds(t), true) <= 480 - 16 - PAD_BOX * 2 - 90, `${lang} 묶음 ${t} 종류 글`);
+    }
+    // 남은 관 글: 다음 칸 아래 한 줄 · 잠긴 묶음 한 줄이 화면 폭 안
+    for (const st of [{ gates: 0, left: 2, next: 1 }, { gates: 0, left: 116, next: 20 }, { gates: 9, left: 0, next: 4 }]) {
+      assert.ok(M.text.textWidth(V.nextLine(st)) <= 200, `${lang} ${V.nextLine(st)}`);
+      for (const t of [st.next, 20]) assert.ok(M.text.textWidth(V.lockLine(st, t)) <= 480 - 24, `${lang} ${V.lockLine(st, t)}`);
+    }
+  }
+  M.lang.setLang('ko');
+  // 잠긴 묶음의 한 줄: 남은 관 · 문턱을 넘었으면 다음 판 · 그 뒤 묶음은 차례
+  assert.equal(V.lockLine({ gates: 3, next: 2 }, 2), '관을 2개 더 돌파하면 열려요');
+  assert.equal(V.lockLine({ gates: 8, next: 2 }, 2), '다음 판이 끝나면 열려요');
+  assert.equal(V.lockLine({ gates: 8, next: 2 }, 3), '앞의 묶음부터 한 판에 하나씩 열려요');
+  assert.equal(V.lockLine({ gates: 8, next: 2 }, 4), `관을 ${UNLOCK_GATES[4] - 8}개 더 돌파하면 열려요`);
+  assert.equal(V.nextLine({ left: 0 }), '다음 판이 끝나면 열려요');
 });

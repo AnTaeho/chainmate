@@ -45,10 +45,14 @@ export function codexLayout(tab, list) {
   return { cols, cw, pages };
 }
 
+const UNLOCK_BTN = 80; // 맨 아래 「해금」 단추 폭
 const TABS = [['maxims', '격언'], ['pieces', '기물'], ['souls', '혼'], ['factions', '세력'], ['legends', '명경기'], ['openings', '오프닝'], ['editions', '판본']];
 
 export class CodexScreen {
-  constructor(app) { this.app = app; this.tab = 'maxims'; this.page = 0; }
+  // tab · page: 해금 화면에서 돌아올 때 보던 자리로
+  constructor(app, { tab = 'maxims', page = 0 } = {}) { this.app = app; this.tab = TABS.some(([id]) => id === tab) ? tab : 'maxims'; this.page = page; }
+  // 해금 화면으로(tier: 펼칠 묶음). 돌아오면 이 탭 · 이 쪽
+  toUnlocks(tier = null) { this.app.go('unlocks', { open: tier, from: 'codex', back: { tab: this.tab, page: this.page || 0 } }); }
   entries() {
     const c = this.app.records.codex;
     if (this.tab === 'maxims') return MAXIMS.map((m) => ({ id: m.id, seen: !!c.maxims[m.id], name: m.name, tip: () => tipLines(m.name, [m.text, `${m.verb} · $${m.price}`]), col: RARITY[m.rarity] }));
@@ -78,7 +82,7 @@ export class CodexScreen {
     // 모은 수: 머리줄 오른쪽. 탭이 거기까지 차면(영어 — 탭 일곱) 맨 아래 「돌아가기」 오른쪽으로
     const count = `${seen} / ${list.length}`;
     if (tabEnd + 8 + measure(count) <= W - PAGE.titleX) text(ctx, count, W - PAGE.titleX, PAGE.titleY, PAL.dim, { align: 'right' });
-    else text(ctx, count, PAGE.titleX + 80 + 8, PAGE.btnY + 3, PAL.dim);
+    else text(ctx, count, PAGE.titleX + 80 + 8 + UNLOCK_BTN + 8, PAGE.btnY + 3, PAL.dim);
     // 칸 이름은 두 줄까지(낱말 단위). 한 줄(row)의 높이는 그 줄에서 가장 긴 이름에 맞추고, 쪽은 본 칸(머리줄 아래 ~ 단추 줄 위 묶음 틈)에 들어가는 줄까지
     const lay = codexLayout(this.tab, list);
     const pages = lay.pages.length;
@@ -111,6 +115,8 @@ export class CodexScreen {
       closeBox();
     }
     button(ctx, ui, 'codex:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.app.go('title') });
+    // 해금 길로 들어가는 길: 첫 화면 아이콘 줄은 여덟 칸이면 좁아(칸 59) 도감 옆에 둔다
+    button(ctx, ui, 'codex:unlocks', PAGE.titleX + 80 + 8, PAGE.btnY, UNLOCK_BTN, PAGE.btnH, '해금', { tone: 'gold', onClick: () => this.toUnlocks() });
     if (pages > 1) pageButtons(ctx, ui, 'codex', page, pages, (p) => { this.page = p; });
   }
   key(k) {

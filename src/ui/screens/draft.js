@@ -15,7 +15,7 @@ import { openBox, closeBox } from '../../render/layoutlog.js';
 const TIER_NAME = { silver: '은', gold: '금', rainbow: '무지개' };
 const CW = CARD.w;
 // 정석 카드 쌓기(재기와 그리기가 같이 쓴다 — PAD_CARD): 등급(머릿말) → 묶음 안 틈 → 이름(제목 줄) → 묶음 틈(가운데 가로줄) → 효과 글 → 묶음 틈 → 시너지 칩
-function josekiLayout(j, w = CW) {
+export function josekiLayout(j, w = CW) {
   const P = PAD_CARD, IW = w - P * 2, f = flow(P);
   const tier = f.line();
   f.gap(GAP_IN);
