@@ -32,6 +32,8 @@ import { JOSEKIS, JOSEKI_BY_ID, DRAFT_ANTES, DRAFT_TIERS } from '../data/josekis
 import { useTactic, evolveTo } from '../data/tactics.js';
 import { TRAIT_CHANCE } from '../data/traits.js';
 import { FAIRIES } from '../data/pieces.js';
+import { unlockedAt } from '../data/unlocks.js';
+import { openPool } from './unlock.js';
 
 // ── 수치
 // 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. tools/run.mjs(smart 봇)로 맞춤:
@@ -207,7 +209,8 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
 // draft: false면 정석 드래프트 없이(깊이 E 이전 규칙 — 시험 · 하네스 비교용)
 // script: 첫 대국(1관 연습)을 대본 대국으로(CHM-22, 기본 오프닝 · 단 0만). 레퍼토리 고르기는 그 대국 뒤로 미룬다 —
 //   레퍼토리가 판 위 사물 · 목표 · 덱을 바꾸면 정해 둔 판이 어긋나서
-export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true, script = false } = {}) {
+// unlockTier: 해금 단계(src/data/unlocks.js). 주지 않으면 잠금 없이 전부 열린 판
+export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true, script = false, unlockTier = null } = {}) {
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
   const conf = { ...RUN_DEFAULTS, ...op.run };
@@ -249,6 +252,8 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
     last: null,               // 마지막 대국 결과와 보상 내역(화면용)
     log: [],                  // 대국마다 한 줄(하네스 · 결과 화면용)
   };
+  // 해금: 열린 목록을 판에 싣고(저장 · 재생에 그대로), 대국에는 규칙 깃발 rules.pieces로 넘긴다
+  if (unlockTier != null) { run.unlocked = unlockedAt(unlockTier); run.rules.pieces = [...run.unlocked.pieces]; }
   if (!draft) run.noDraft = true;
   if (script && opening === DEFAULT_OPENING && !dan) { run.script = SCRIPT.id; run.draftLate = run.ante; }
   openDraft(run);
@@ -262,7 +267,7 @@ function openDraft(run) {
   // 대본 대국 뒤로 미룬 레퍼토리 고르기(draftLate)는 그 관의 다음 대국 앞에서
   if (run.blind !== 0 && run.draftLate !== run.ante) return;
   const r = fork(root(run), `draft:${run.ante}`);
-  const pool = JOSEKIS.filter((j) => !run.josekis.includes(j.id));
+  const pool = openPool(run, 'josekis', JOSEKIS).filter((j) => !run.josekis.includes(j.id));
   const options = [];
   for (let i = 0; i < 3 && pool.length; i++) {
     const tier = weighted(r, DRAFT_TIERS[run.ante]);
@@ -661,11 +666,14 @@ function chestItem(run, r, prev) {
     const pool = run.deck.filter((p) => !p.eng && !prev.some((x) => x.pieceId === p.id));
     if (pool.length) {
       const p = pool[int(r, pool.length)];
-      const ids = Object.keys(ENGRAVING_BY_ID);
+      const ids = openPool(run, 'engravings', Object.keys(ENGRAVING_BY_ID));
       return { kind: 'engrave', pieceId: p.id, piece: p.t, eng: ids[int(r, ids.length)] };
     }
   }
-  if (kind === 'fairy') return { kind: 'piece', t: weighted(r, SHOP.fairyWeights) };
+  if (kind === 'fairy') {
+    const fw = openPool(run, 'pieces', SHOP.fairyWeights);
+    if (fw.length) return { kind: 'piece', t: weighted(r, fw) };
+  }
   if (kind === 'money') return { kind: 'money', money: CHEST.money };
   return { kind: 'chart', form: CHART_FORMS[int(r, CHART_FORMS.length)] };
 }
@@ -758,10 +766,12 @@ function gamble(run, id, slot, events) {
   const r = fork(root(run), `gamble:${run.ante}:${run.blind}:${run.shop.rerolls}:${slot}`);
   const p = run.deck[int(r, run.deck.length)];
   if (id === 'potion') {
-    if (next(r) < 0.5) { const s = rollSoul(r); setSoul(p, s); events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, soul: s }); }
-    else { const ids = Object.keys(ENGRAVING_BY_ID); const e = ids[int(r, ids.length)]; p.eng = { id: e }; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, eng: e }); }
+    if (next(r) < 0.5) { const s = rollSoul(r, null, run); setSoul(p, s); events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, soul: s }); }
+    else { const ids = openPool(run, 'engravings', Object.keys(ENGRAVING_BY_ID)); const e = ids[int(r, ids.length)]; p.eng = { id: e }; events.push({ type: 'gamble', id, pieceId: p.id, piece: p.t, eng: e }); }
   } else {
-    const to = FAIRIES[int(r, FAIRIES.length)];
+    const pool = openPool(run, 'pieces', FAIRIES);
+    if (!pool.length) throw new Error('no piece to turn into');
+    const to = pool[int(r, pool.length)];
     events.push({ type: 'gamble', id, pieceId: p.id, from: p.t, to });
     p.t = to;
   }
@@ -1008,7 +1018,7 @@ export function applyRun(run, cmd) {
       else if (c.kind === 'soul') ensoul(run, cmd.target, c.id, events);
       else if (c.kind === 'evolve') {
         const p = run.deck.find((x) => x.id === cmd.target);
-        const to = p && evolveTo(run.seed, p);
+        const to = p && evolveTo(run.seed, p, run);
         if (!to) throw new Error('cannot evolve');
         events.push({ type: 'evolve', pieceId: p.id, from: p.t, to });
         p.t = to;
@@ -1107,7 +1117,7 @@ export function legalRunCommands(run) {
   // select · shop 공통
   run.consumables.forEach((c, index) => {
     if (c.kind === 'engraving' || c.kind === 'soul') for (const p of run.deck) out.push({ type: 'use', index, target: p.id });
-    else if (c.kind === 'evolve') { for (const p of run.deck) if (evolveTo(run.seed, p)) out.push({ type: 'use', index, target: p.id }); }
+    else if (c.kind === 'evolve') { for (const p of run.deck) if (evolveTo(run.seed, p, run)) out.push({ type: 'use', index, target: p.id }); }
     else if (c.kind === 'awaken') { for (const p of crackedPieces(run)) out.push({ type: 'use', index, target: p.id }); }
     else if (c.kind !== 'tactic') out.push({ type: 'use', index });
   });

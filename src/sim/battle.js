@@ -8,6 +8,7 @@ import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, cha
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { bestMove } from './solver.js';
 import { generateBoard, randomEmpty, rollType, rollFrom, reinforceCount } from './setup.js';
+import { openTypes } from './unlock.js';
 import { pieceSoul, CRACK } from '../data/souls.js';
 import { PIECES } from '../data/pieces.js';
 import { thaw } from '../data/tactics.js';
@@ -56,8 +57,8 @@ function rollIncoming(b, taken) {
     const sq = randomEmpty(b.rng.reinf, b.board, 3, [...taken, ...out.map((x) => x.sq)]);
     if (sq < 0) break;
     // 세력 깃발 rules.reinforceMix { 종류: 무게 }: 증원은 이 표에서만(기병대 「나이트 무리」)
-    const mix = b.rules.reinforceMix;
-    out.push({ sq, t: mix ? rollFrom(b.rng.reinf, Object.entries(mix)) : rollType(b.rng.reinf, b.ante, b.rules) });
+    const mix = b.rules.reinforceMix && openTypes(b.rules, Object.entries(b.rules.reinforceMix));
+    out.push({ sq, t: mix && mix.length ? rollFrom(b.rng.reinf, mix) : rollType(b.rng.reinf, b.ante, b.rules) });
   }
   return out;
 }

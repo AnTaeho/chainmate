@@ -2,6 +2,7 @@
 import { int, next } from './rng.js';
 import { at, attackers, guardSquares, emptyBoard, fileOf, rankOf } from './board.js';
 import { TRAITS, traitChance } from '../data/traits.js';
+import { openTypes } from './unlock.js';
 
 // 판 생성 수치(하네스로 맞춤, step 2a):
 //   적 수 8 + 관(최소 10) — 7 + 관이면 1~3관에서 판이 빨리 비어 폰이 떨굴 곳을 잃고 막힘 패배가 잦았다.
@@ -33,7 +34,7 @@ export function enemyWeights(ante, rules = null) {
     const k = FAIRY_ENEMY.step * (ante - FAIRY_ENEMY.from + 1);
     for (const [t, x] of Object.entries(FAIRY_ENEMY_W)) w.push([t, k * x]);
   }
-  if (!rules || (!rules.mix && !rules.unique)) return w;
+  if (!rules || (!rules.mix && !rules.unique)) return openTypes(rules, w);
   const mix = rules.mix || {};
   const out = w.map(([t, x]) => [t, x * (mix[t] ?? (FAIRY_ENEMY_W[t] != null ? mix.fairy ?? 1 : 1))]);
   const u = UNIQUE.base * (1 + UNIQUE.step * (ante - 1));
@@ -41,7 +42,8 @@ export function enemyWeights(ante, rules = null) {
     const row = out.find((r) => r[0] === t);
     if (row) row[1] += u * x; else out.push([t, u * x]);
   }
-  return out;
+  // rules.pieces(해금): 열린 특수 기물만 적으로 선다
+  return openTypes(rules, out);
 }
 // 무게 표 하나에서 종류 하나를 굴린다
 export function rollFrom(rng, w) {

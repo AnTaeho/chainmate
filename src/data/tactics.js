@@ -3,6 +3,7 @@
 //   오셀로 · 조커(규칙 설명이 두 줄을 넘는다) · 저격(비숍 · 퀸 행마를 바꾸는 규칙이 이미 이형 · 고속도로에 있다).
 import { PIECES } from './pieces.js';
 import { createRng, fork, int } from '../sim/rng.js';
+import { openPool } from '../sim/unlock.js';
 
 export const TACTICS = [
   { id: 'freeze', name: '빙결', text: '값이 가장 큰 적 셋: 이번 수엔 못 지킨다', families: ['sacrifice'] },
@@ -47,4 +48,5 @@ export function thaw(b) { for (let i = 0; i < 64; i++) if (b.board[i] && b.board
 // 진화(깊이 F): 두루마리 「진화」 — 덱 기물 하나를 그 종류의 이형으로(여럿이면 판 시드 · 기물 번호로 정해진다)
 export const EVOLVE = { P: ['S', 'D'], N: ['L', 'M'], B: ['E', 'V'], R: ['O', 'W', 'T'], Q: ['Z'] }; // CHM-55 갈래(docs/design-notes/fairies.md)
 export const EVOLVE_PRICE = 4;
-export const evolveTo = (seed, piece) => { const l = EVOLVE[piece.t]; return l ? l[(seed + piece.id) % l.length] : null; };
+// run: 해금을 읽을 판(잠긴 갈래는 뺀다 — 남는 갈래가 없으면 진화할 수 없다)
+export const evolveTo = (seed, piece, run = null) => { const l = EVOLVE[piece.t] && openPool(run, 'pieces', EVOLVE[piece.t]); return l && l.length ? l[(seed + piece.id) % l.length] : null; };
