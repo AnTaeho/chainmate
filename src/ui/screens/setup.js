@@ -51,9 +51,9 @@ export class SetupScreen {
   }
   draw(ctx, ui) {
     const rec = this.app.records;
-    // 다음 해금은 머리줄 오른쪽 보조 글
+    // 다음 오프닝(해금 과제)은 머리줄 오른쪽 보조 글
     const nu = nextUnlock(rec);
-    pageHead(ctx, '새 판', nu ? `다음 해금 ${OPENINGS[nu.id].name}: ${nu.text} (${nu.have}/${nu.need})` : null);
+    pageHead(ctx, '새 판', nu ? `다음 오프닝 ${OPENINGS[nu.id].name}: ${nu.text} (${nu.have}/${nu.need})` : null);
     const f = flow(PAGE.bodyY);
     text(ctx, '오프닝', 12, f.line(), PAL.dim);
     f.gap(GAP_IN);
