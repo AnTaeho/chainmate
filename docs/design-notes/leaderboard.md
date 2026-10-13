@@ -197,6 +197,7 @@ Hobby 요금제는 배포 하나에 함수 12개까지라 길을 `[action].js`�
 | `runs` · `wins` · `mates` · `legends` · `brilliants` · `reviews` · `reviewReplays` | 큰 쪽(더하지 않는다 — 같은 판을 두 번 세지 않는다) |
 | `grades`(별마다) · `danWins`(단마다) | 열쇠마다 큰 쪽 |
 | `bestAnte` · `bestEndless` | 큰 쪽 |
+| `gates` · `unlockTier`(해금 — 돌파한 관의 누적 수 · 단계, CHM-73) | 저마다 큰 쪽(관 수도 더하지 않는다). 옛 기록에는 칸이 없어 0 |
 | `bestMove` · `bestBrilliant` | 점수가 큰 쪽(같으면 JSON 글이 큰 쪽 — 어느 쪽을 먼저 주어도 같게) |
 | `codex`(격언 · 마스터 · 세력 · 판본 · 혼 · 각성 · 레퍼토리 · 완성한 명경기) | 합집합. `codex.legends`(모은 조각 수)는 큰 쪽 |
 | `unlocked.openings` | 합집합(레퍼토리 차례) |

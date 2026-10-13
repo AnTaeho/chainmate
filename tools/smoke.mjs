@@ -341,7 +341,8 @@ function checkStack(id) {
   const stack = { x: rs[0].x, y: top, w: rs[0].w, h: total };
   if (cross(stack, a)) placeBad('self', id);
   const inA = (r) => r.x >= a.x && r.y >= a.y && r.x + r.w <= a.x + a.w && r.y + r.h <= a.y + a.h;
-  for (const r of app.ui.regions) if (r.onClick && r.enabled && r.id !== id && !inA(r) && cross(stack, r)) { placeBad('cover', id, r.id); break; }
+  // 눌리는 격자 칸(cell — 도감의 자물쇠 칸, CHM-73)은 다른 칸과 같은 격자 칸이다(덮은 글 검사의 도감 예외와 같은 까닭 — 격자가 본 칸을 다 채운다)
+  for (const r of app.ui.regions) if (r.onClick && r.enabled && !r.cell && r.id !== id && !inA(r) && cross(stack, r)) { placeBad('cover', id, r.id); break; }
   return true;
 }
 // 지금 화면에서 가리킬 수 있는 것을 모두(같은 종류가 많으면 고루 몇 개만)
@@ -1106,8 +1107,59 @@ lessons();
 }
 const results = [];
 for (let k = 0; k < RUNS; k++) results.push(await playOne(SEED + k));
+// 해금(CHM-73): 결과 화면의 「N개 열렸어요」 → 해금 화면이 그 묶음을 펼친 채 → 뒤로(접기) → 뒤로(결과, 단추가 남는다)
+const unlockSeen = { result: 0, open: 0, bundles: 0, locked: 0, pages: 0, lockCell: 0, tier: 0, gates: 0, bad: [] };
+{
+  const u = unlockSeen;
+  u.tier = app.records.unlockTier; u.gates = app.records.gates;
+  if (screen() !== 'result' || !region('result:unlocks')) u.bad.push(`결과 화면에 「열렸어요」 단추가 없다(${screen()} · 단계 ${u.tier} · 관 ${u.gates})`);
+  else {
+    const t = app.screen.opened;
+    click('result:unlocks'); pump(2);
+    if (screen() !== 'unlocks' || app.screen.sel !== t || t !== u.tier) u.bad.push(`결과 단추가 연 묶음 ${app.screen.sel} ≠ 열린 묶음 ${t}`);
+    click('unlocks:back'); pump(1);
+    if (screen() !== 'unlocks' || app.screen.sel != null) u.bad.push('뒤로가 펼친 묶음을 접지 않았다');
+    click('unlocks:back'); pump(1);
+    if (screen() !== 'result' || !region('result:unlocks') || app.records.unlockTier !== u.tier || app.records.gates !== u.gates) u.bad.push('해금 화면에서 결과로 돌아오지 못했다');
+    else u.result++;
+  }
+}
 // 판 밖: 도감 · 기록 화면, 오프닝과 단을 모두 연 뒤 시실리안 3단 판, 오늘의 대국
 click('result:title');
+// 해금 길: 도감 「해금」 → 길 보기 → 스물한 칸을 차례로 펼쳐 쪽을 끝까지(연 묶음은 카드, 잠긴 묶음은 뒷면) → 뒤로 두 번이면 도감.
+// 도감의 자물쇠 칸 → 그 묶음. 단계 0 · 3 · 20으로 본다. 그리는 동안 글 넘침 · 자리 규칙 · 처음 안내는 pump가 잰다
+{
+  const u = unlockSeen, keep = [app.records.unlockTier, app.records.gates];
+  for (const [tier, gates] of [[0, 0], [3, 10], [20, 140]]) {
+    app.records.unlockTier = tier; app.records.gates = gates;
+    click('title:codex'); click('codex:unlocks'); pump(2);
+    if (screen() !== 'unlocks') { u.bad.push(`도감 「해금」이 해금 화면을 열지 않았다(${screen()})`); app.toTitle(); pump(1); continue; }
+    u.open++;
+    for (let t = 0; t <= 20; t++) {
+      click(`unlocks:${t}`); pump(2);
+      if (app.screen.sel !== t) { u.bad.push(`칸 ${t}을 눌러도 펼쳐지지 않았다`); continue; }
+      u.bundles++;
+      const backs = LL.LOG.boxes.filter((q) => /^뒷면/.test(q.name || '')).length;
+      if ((backs > 0) !== (t > tier)) u.bad.push(`단계 ${tier} 묶음 ${t}: 뒷면 ${backs}`);
+      if (t > tier) u.locked++;
+      for (let n = 0; n < 12 && region('unlocks:next') && region('unlocks:next').enabled; n++) { click('unlocks:next'); pump(2); u.pages++; }
+    }
+    click('unlocks:back'); pump(1);
+    if (screen() !== 'unlocks' || app.screen.sel != null) u.bad.push('뒤로가 펼친 묶음을 접지 않았다');
+    click('unlocks:back'); pump(1);
+    if (screen() !== 'codex') { u.bad.push(`해금 화면에서 도감으로 돌아오지 못했다(${screen()})`); app.toTitle(); pump(1); continue; }
+    const cell = app.ui.regions.find((r) => r.cell);
+    if (tier === 20) { if (cell) u.bad.push('다 열었는데 자물쇠 칸이 있다'); }
+    else if (!cell) u.bad.push(`단계 ${tier}: 도감에 자물쇠 칸이 없다`);
+    else {
+      click(cell.id); pump(2);
+      if (screen() !== 'unlocks' || !(app.screen.sel > tier)) u.bad.push(`자물쇠 칸 ${cell.id}이 잠긴 묶음을 열지 않았다`); else u.lockCell++;
+      click('unlocks:back'); click('unlocks:back'); pump(1);
+    }
+    click('codex:back');
+  }
+  [app.records.unlockTier, app.records.gates] = keep;
+}
 click('title:codex');
 for (const t of ['factions', 'legends', 'openings', 'editions', 'pieces', 'souls', 'maxims']) { click(`codex:tab:${t}`); notesCheck(); if (region('codex:next') && region('codex:next').enabled) { click('codex:next'); notesCheck(); click('codex:prev'); } }
 click('codex:back');
@@ -2212,7 +2264,7 @@ const acctSeen = { made: 0, fields: 0, keys: 0, name: '', same: 0, records: '', 
 }
 
 seen();
-const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank', 'link', 'account', 'highlight'];
+const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank', 'link', 'account', 'highlight', 'unlocks'];
 const missing = need.filter((n) => !visited.has(n));
 const ms = app.stats.drawMs.slice().sort((a, b) => a - b);
 const pct = (p) => ms[Math.min(ms.length - 1, Math.floor(ms.length * p))] || 0;
@@ -2380,6 +2432,11 @@ if (telSent.n) { console.log('연기 시험 중에 기록이 밖으로 나갔다
   const r = hlSeen, yes = (v) => (v ? '확인' : '못 함');
   console.log(`하이라이트: 단추 ${yes(r.button)} · 열기 ${yes(r.open)} · 그림 1200 × 675 ${yes(r.image)} · Esc ${yes(r.esc)} · 바깥 누르기 ${yes(r.outside)} · 닫기 ${yes(r.close)}${r.bad.length ? ` · 어긋남: ${r.bad.join(' | ')}` : ''}`);
   if (r.bad.length || !r.button || !r.open || !r.image || !r.esc || !r.outside || !r.close) { console.log('하이라이트 카드(결과 화면 단추 → 열기 → 그림 → 닫기)가 어긋났다'); fail = true; }
+}
+{
+  const u = unlockSeen;
+  console.log(`해금: 결과 단추 → 묶음 → 결과 ${u.result}(단계 ${u.tier} · 돌파한 관 ${u.gates}) · 해금 화면 ${u.open}번(단계 0 · 3 · 20) · 펼친 묶음 ${u.bundles}(잠긴 것 ${u.locked}) · 넘긴 쪽 ${u.pages} · 도감 자물쇠 칸 → 묶음 ${u.lockCell}${u.bad.length ? ` · 어긋남: ${u.bad.slice(0, 8).join(' | ')}` : ''}`);
+  if (u.bad.length || u.result !== 1 || u.open !== 3 || u.bundles !== 63 || u.locked !== 37 || u.lockCell !== 2) { console.log('해금 흐름(결과 단추 → 해금 화면 → 칸 펼치기 → 쪽 → 뒤로 · 도감 자물쇠 칸)이 어긋났다'); fail = true; }
 }
 console.log(fail ? 'SMOKE FAIL' : 'SMOKE OK');
 process.exit(fail ? 1 : 0);

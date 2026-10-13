@@ -1,4 +1,4 @@
-// 기록: 판 수 · 이긴 판 · 최고 도달 · 최고 한 수(점수와 사슬 모습 줄) · 외통 · 탁월수 · 전설 완성 · 단 · 오늘의 대국.
+// 기록: 판 수 · 이긴 판 · 최고 도달 · 최고 한 수(점수와 사슬 모습 줄) · 외통 · 탁월수 · 전설 완성 · 단 · 돌파한 관(해금의 잣대, CHM-73) · 오늘의 대국.
 // 오른쪽: 최고 한 수 · 가장 큰 탁월수(점수 · 바친 기물 · 곱한 배수, CHM-43).
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, sprite, fitNum, measure } from '../../render/gfx.js';
@@ -20,6 +20,7 @@ export class RecordsScreen {
       ['판', `${r.runs}`], ['이긴 판', `${r.wins}`], ['최고 도달', r.bestAnte ? `${r.bestAnte}관` : '-'],
       ['체크메이트', `${r.mates}`], ['탁월수 !!', `${r.brilliants || 0}`], ['전설 완성', `${r.legends}`], ['신의 한 수(★★★)', `${(r.grades['★★★'] || 0) + (r.grades['∞'] || 0)}`],
       ['열린 레이팅', danName(r.unlocked.dan)],
+      ['돌파한 관', `${r.gates || 0}`],
       ['끝없는 대국', r.bestEndless ? `${r.bestEndless}관` : '-'],
       ['오늘의 대국', d ? `${d.won ? '승리' : `${d.ante}관`} · ${d.runs}판` : '아직'],
       ['튜토리얼', r.lessonsDone ? '끝' : '아직'],

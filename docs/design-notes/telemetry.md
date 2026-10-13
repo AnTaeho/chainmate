@@ -16,7 +16,7 @@
 | 설정 「기록 보내기」 켬(`settings.telemetry`, 기본 켬) | `enabled()` |
 | 수업 · 대본 대국 · scratch 판이 아님(판 기록과 같은 기준) | `app.track`(scratch) · `commandEvents`(대본 대국) |
 
-- 예외로 늘 나가는 것(조건 위 셋은 그대로): 튜토리얼 진행(`tutorial_*` · `lesson_done`) · `setting_change` · `rank_submit` · `name_reroll` · 기기 잇기(`link_code` · `link_redeem` · `link_unlink` · `save_sync`) · 계정(`account_*`) · 오류.
+- 예외로 늘 나가는 것(조건 위 셋은 그대로): 튜토리얼 진행(`tutorial_*` · `lesson_done`) · `setting_change` · `rank_submit` · `name_reroll` · 기기 잇기(`link_code` · `link_redeem` · `link_unlink` · `save_sync`) · 계정(`account_*`) · 해금(`unlock_tier` · `unlocks_open`) · 오류.
 - localhost(8123 포함) · Vercel 미리 보기 주소 · smoke · Playwright 도구에서는 0건이다. smoke는 가짜 `fetch` · `sendBeacon` 셈을 「기록 보내기: 0건」으로 찍고, `tools/shots-telemetry.mjs`가 크로미움 · 웹킷에서 로컬 0건과 배포 주소인 척(가로챔) 묶음이 나가는 것을 본다.
 
 ## 익명 방침
@@ -65,6 +65,8 @@
 | `highlight_open` ★ | — | 결과 화면에서 하이라이트 카드를 여는 사람 수(CHM-73) |
 | `highlight_save` ★ | — | 그림을 받은 수(받기가 된 때만) |
 | `highlight_share` ★ | `ok`(공유 시트에서 끝까지 보냈나 — 그만두거나 실패하면 false) | 공유 시트를 연 수와 끝까지 가는 비율. 그림 · 이름 · 판의 내용은 싣지 않는다 |
+| `unlock_tier` | `tier`(열린 단계 1 ~ 20) · `gates`(돌파한 관의 누적 수) | 묶음이 열리는 빠르기 — 판이 끝나 단계가 오를 때마다 한 번(한 판에 하나, CHM-73). `app.js` `finishRun`(`telemetry.js` `unlockTierProps`). 오늘의 대국 · 끝없는 대국의 끝에서도 나간다 |
+| `unlocks_open` ★ | `from`(codex · result) · `tier`(지금 단계) | 해금 화면을 여는 사람 수 · 어디서 들어오나(결과 화면의 「N개 열렸어요」 · 도감의 「해금」 단추와 자물쇠 칸) |
 | `account_signup` | `ok` · `reason`(`taken` · `username` · `weak` · `has` · `limit` · `unreached`, 만들었으면 null) | 계정을 만드는 사람 수와 막히는 까닭(CHM-72). 아이디 · 비번 · 열쇠는 싣지 않는다 |
 | `account_login` | `ok` · `reason`(`bad` · `locked` · `other` · `unreached`) | 다른 기기에서 들어오는 수 · 틀리는 수 |
 | `account_logout` | — | 나간 수 |
