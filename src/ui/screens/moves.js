@@ -1,5 +1,5 @@
 // 행마 보기(덮개, CHM-22 · 탭 CHM-26): 대국 오른쪽 위 「행마」 단추.
-// 탭 셋: 「이 판」(지금 판과 손에 있는 기물, 처음 열 때) · 「기본 기물」(체스 여섯) · 「특수 기물」(아홉 전부, 아직 만나지 않은 것도).
+// 탭 셋: 「이 판」(지금 판과 손에 있는 기물, 처음 열 때) · 「기본 기물」(체스 여섯) · 「특수 기물」(지금까지 연 것 + 지금 판 · 손에 있는 것, 하나도 없으면 탭을 뺀다).
 // 카드마다 행마 그림 · 기물 · 이름 · 행마 글. 처음 보는 특수 기물은 「새로」(본 것은 records.movesSeen), 판에 있는 기물은 금빛 테(「이 판」).
 // 네 장이 넘으면 쪽을 넘긴다(쪽마다 고르게 — 아홉은 3 · 3 · 3).
 import { PAL } from '../../render/palette.js';
@@ -14,6 +14,7 @@ import { isHidden } from '../../sim/battle.js';
 import { PAD_BOX, PAD_CARD, GAP_GROUP, LINE, BTN_S, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { tabRow } from './common.js';
+import { unlockedAt } from '../../data/unlocks.js';
 
 const BASIC = ['P', 'N', 'B', 'R', 'Q', 'K'];
 const ORDER = [...BASIC, ...FAIRIES];
@@ -40,11 +41,18 @@ export function movesList(b, seen = {}) {
   return all.sort((a, c) => rank(a) - rank(c) || ORDER.indexOf(a.t) - ORDER.indexOf(c.t));
 }
 
-// 탭마다 보일 기물. 「기본 기물」 · 「특수 기물」은 늘 전부(내 쪽 모습), 「새로」는 「이 판」과 같다
-export function movesTab(tab, list) {
+// 탭마다 보일 기물(내 쪽 모습). 「기본 기물」은 늘 여섯, 「특수 기물」은 연 것(open — 없으면 전부) + 지금 판 · 손에 있는 것. 「새로」는 「이 판」과 같다
+export function movesTab(tab, list, open = null) {
   if (tab === 'board') return list;
   const fresh = new Set(list.filter((x) => x.fresh).map((x) => x.t));
-  return (tab === 'basic' ? BASIC : FAIRIES).map((t) => ({ t, board: false, hand: true, fairy: !!PIECES[t].fairy, fresh: fresh.has(t) }));
+  const here = new Set(list.map((x) => x.t));
+  const types = tab === 'basic' ? BASIC : FAIRIES.filter((t) => !open || open.includes(t) || here.has(t));
+  return types.map((t) => ({ t, board: false, hand: true, fairy: !!PIECES[t].fairy, fresh: fresh.has(t) }));
+}
+// 연 특수 기물: 기록의 해금 단계까지 + 지금 판에 실린 목록
+export function openFairies(app) {
+  const r = app.run;
+  return [...new Set([...unlockedAt(app.records.unlockTier || 0).pieces, ...((r && r.unlocked && r.unlocked.pieces) || [])])];
 }
 
 // 쪽 나누기: 네 장이 넘으면 쪽마다 고르게
@@ -59,6 +67,9 @@ export class MovesScreen {
     const b = battle ? battle.live() || battle.b : app.run && app.run.battle;
     const rec = app.records;
     this.list = movesList(b, rec.movesSeen || {});
+    this.open = openFairies(app);
+    // 보일 특수 기물이 없으면 그 탭은 없다(처음에는 체스 기물만)
+    this.tabs = MOVE_TABS.filter(([id]) => id !== 'fairy' || movesTab('fairy', this.list, this.open).length);
     this.tab = 'board';
     this.page = 0;
     // 본 것으로 적는다(다음에 열면 맨 앞에 서지 않는다)
@@ -68,12 +79,12 @@ export class MovesScreen {
   setTab(id) { if (id !== this.tab) { this.tab = id; this.page = 0; this.app.sfx('pick'); } }
   draw(ctx, ui) {
     const app = this.app;
-    const items = movesTab(this.tab, this.list);
+    const items = movesTab(this.tab, this.list, this.open);
     const { pages, per } = movesPages(items.length);
     const page = Math.min(this.page, pages - 1);
     const shown = items.slice(page * per, page * per + per);
     const CW = cardW(), CH = cardH();
-    // 상자 크기는 탭을 바꿔도 그대로(탭이 제자리에 있게): 카드 두 줄 + 쪽 줄(「특수 기물」은 늘 쪽이 넘어간다)
+    // 상자 크기는 탭을 바꿔도 그대로(탭이 제자리에 있게): 카드 두 줄 + 쪽 줄
     // 막간 상자(hug): 머리 줄(제목 · 탭 왼쪽 · 돌아가기 오른쪽, 단추 높이) → 묶음 틈 → 카드 줄들 → 묶음 틈 → 쪽 줄
     // 돌아가기 · 탭을 머리 줄에 둔다: 카드에는 말풍선이 없고, 누를 것은 모두 카드 밖에 있다
     const f = flow(PAD_BOX), by = f.space(BTN_S), ty = textY(by, BTN_S) - 1;
@@ -84,7 +95,7 @@ export class MovesScreen {
     openBox('panel', x, y, w, h, PAD_BOX, { name: '행마 보기' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
     text(ctx, '행마', x + PAD_BOX, y + ty, PAL.gold, { bold: true });
-    tabRow(ctx, ui, 'moves', MOVE_TABS, this.tab, x + PAD_BOX + measure('행마', true) + 8, y + by, BTN_S, (id) => this.setTab(id));
+    tabRow(ctx, ui, 'moves', this.tabs, this.tab, x + PAD_BOX + measure('행마', true) + 8, y + by, BTN_S, (id) => this.setTab(id));
     const x0 = x + PAD_BOX;
     shown.forEach((it, i) => this.card(ctx, it, x0 + (i % COLS) * (CW + GAP), y + top + Math.floor(i / COLS) * (CH + GAP), CW, CH));
     if (pages > 1) {
@@ -116,8 +127,8 @@ export class MovesScreen {
   }
   key(k) {
     if (k === 'Escape' || k === 'Enter') { this.app.closeOverlay(); return; }
-    const i = MOVE_TABS.findIndex(([id]) => id === this.tab);
-    if (k === 'ArrowRight') this.setTab(MOVE_TABS[(i + 1) % MOVE_TABS.length][0]);
-    if (k === 'ArrowLeft') this.setTab(MOVE_TABS[(i + MOVE_TABS.length - 1) % MOVE_TABS.length][0]);
+    const T = this.tabs, i = T.findIndex(([id]) => id === this.tab);
+    if (k === 'ArrowRight') this.setTab(T[(i + 1) % T.length][0]);
+    if (k === 'ArrowLeft') this.setTab(T[(i + T.length - 1) % T.length][0]);
   }
 }

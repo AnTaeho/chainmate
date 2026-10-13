@@ -27,7 +27,7 @@ export const TUTORIAL_STEPS = [
   { move: 1, cap: 'c3', say: '지키던 비숍이 없으니까 사슬이 이어져' },
   // ③ 증원 그림자 · 행마 보기
   { move: 2, ok: true, sq: 'd6', say: '▼ 그림자는 증원이야. 이 수가 끝나면 그 칸에 적이 들어와' },
-  { move: 2, moves: true, say: '처음 보는 기물이 있네. 「행마」를 눌러 봐' },
+  { move: 2, moves: true, say: '기물이 가는 길은 「행마」에서 볼 수 있어. 눌러 봐' },
   { move: 2, pick: 'R', say: '이제 룩을 골라 봐' },
   { move: 2, drop: 'h1', say: '놓아 봐. 곧게 가면 나이트가 있어' },
   { move: 2, cap: 'h2', say: '나이트를 먹고' },

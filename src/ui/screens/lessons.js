@@ -1,5 +1,5 @@
 // 첫 수업 목록: 기초 · 대국 · 판 세 묶음, 끝낸 수업에 표. 누르면 그 수업부터.
-// 수업 흐름(처음 켬 → 수업 → 첫 판)과 수업 ⑩ 「상점과 가족」(연습용 판 위에서 따라 하는 길)도 여기서.
+// 수업 흐름(처음 켬 → 수업 → 첫 판)과 수업 ⑩ 「상점과 시너지」(연습용 판 위에서 따라 하는 길)도 여기서.
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect } from '../../render/gfx.js';
 import { button } from '../ui.js';
@@ -60,15 +60,16 @@ finishLessons.mark = (app, id) => {
   app.saveRecords();
 };
 
-// 수업 ⑩ 상점과 가족: 연습용 판(남기지 않는다)의 상점에서 격언 사기 → 꾸러미 열기 → 낙타 고르기 → 가족 띠
+// 수업 ⑩ 상점과 시너지: 연습용 판(남기지 않는다)의 상점에서 격언 사기 → 팩 열기 → 나이트 고르기 → 격언 하나 더 → 시너지 띠.
+// 처음부터 열려 있는 격언 · 체스 기물만 쓴다(해금 단계 0)
 export function startLessonShop(app, i) {
-  const run = createRun({ seed: 3, draft: false });
+  const run = createRun({ seed: 3, draft: false, unlockTier: 0 });
   run.scratch = true;
-  run.money = 10;
+  run.money = 14;
   run.phase = 'shop';
   run.shop = {
     rng: fork(createRng(3), 'lesson-shop'),
-    display: [{ kind: 'maxim', id: 'chivalry', price: 5, sold: false }, { kind: 'piece', t: 'R', price: 4, sold: false }],
+    display: [{ kind: 'maxim', id: 'chivalry', price: 5, sold: false }, { kind: 'maxim', id: 'first_move', price: 4, sold: false }],
     packs: [{ kind: 'piece', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }],
     rerolls: 0, promoted: false, removed: false,
   };
@@ -76,17 +77,19 @@ export function startLessonShop(app, i) {
   app.fx.clear();
   app.go('shop');
   const on = (name) => app.screen && app.screen.name === name;
+  const knights = run.deck.filter((p) => p.t === 'N').length;
   startGuide(app, [
     { screen: 'shop', target: 'shop:buy:0', say: '진열의 격언 「기사도」를 사 봐. 격언은 판이 끝날 때까지 효과가 있어', done: () => run.maxims.length > 0 },
     { screen: 'shop', target: 'maxim:0', say: '산 격언은 오른쪽 칸에 들어가. 효과는 카드에 적혀 있어', ok: true },
     { screen: 'shop', target: 'shop:pack:0', say: '기물 팩을 열어 봐. 셋 중 하나를 고르면 돼',
       done: () => {
         if (run.phase !== 'pack' || !on('pack')) return false;
-        run.pack.options = [{ kind: 'piece', t: 'L' }, { kind: 'piece', t: 'O' }, { kind: 'piece', t: 'B' }];
+        run.pack.options = [{ kind: 'piece', t: 'N' }, { kind: 'piece', t: 'R' }, { kind: 'piece', t: 'B' }];
         return true;
       } },
-    { screen: 'pack', target: 'pack:pick:0', say: '낙타를 골라 봐. 나이트처럼 뛰는 특수 기물이야', done: () => run.phase === 'shop' && on('shop') && run.deck.some((p) => p.t === 'L') },
-    { screen: 'shop', target: 'fam:leap', say: '기사도와 낙타로 기사 시너지가 2개야. 첫 효과가 켜졌고, 4개 · 6개면 더 켜져', ok: true },
+    { screen: 'pack', target: 'pack:pick:0', say: '나이트를 골라 봐. 기사도는 나이트로 시작할 때 효과를 내', done: () => run.phase === 'shop' && on('shop') && run.deck.filter((p) => p.t === 'N').length > knights },
+    { screen: 'shop', target: 'shop:buy:1', say: '격언 「첫수」도 사 봐. 기사도와 같은 기사 시너지야', done: () => run.maxims.length > 1 },
+    { screen: 'shop', target: 'fam:leap', say: '격언 둘로 기사 시너지가 2개야. 첫 효과가 켜졌고, 4개 · 6개면 더 켜져', ok: true },
   ], () => lessonDone(app, i));
 }
 

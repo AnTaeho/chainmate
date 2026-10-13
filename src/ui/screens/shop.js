@@ -319,7 +319,7 @@ export class ShopScreen {
     if (target) {
       const p = this.target.pieceId != null ? run.deck.find((x) => x.id === this.target.pieceId) : null;
       const th = targetPanel(ctx, ui, run, target, p, CX, TOP, CENTER.w, {
-        to: p && target.kind === 'evolve' ? evolveTo(run.seed, p) : null,
+        to: p && target.kind === 'evolve' ? evolveTo(run.seed, p, run) : null,
         onConfirm: () => { const i = this.target.index, id = this.target.pieceId; this.target = null; this.act({ type: 'use', index: i, target: id }, 'engrave'); },
         onCancel: () => { this.target = null; },
         onBack: () => { this.target = { index: this.target.index }; },
@@ -479,7 +479,7 @@ export class ShopScreen {
       // 고르면 미리 보기, 확인 단추로 쓴다
       const c = this.run.consumables[this.target.index];
       if (c && !targetOk(c, p)) return;
-      if (c && c.kind === 'evolve' && !evolveTo(this.run.seed, p)) { this.app.toast('이 기물은 진화할 수 없어요', PAL.dim); return; }
+      if (c && c.kind === 'evolve' && !evolveTo(this.run.seed, p, this.run)) { this.app.toast('이 기물은 진화할 수 없어요', PAL.dim); return; }
       this.target = { ...this.target, pieceId: this.target.pieceId === p.id ? null : p.id };
       return;
     }

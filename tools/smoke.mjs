@@ -784,7 +784,7 @@ function shopStep() {
       click('cons:0');
       if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve') {
         // 같은 각인 · 혼이 이미 있는 기물은 흐리고 눌리지 않는다(docs/tasks/backlog.md 6): 고를 수 있는 기물로
-        const piece = c.kind === 'evolve' ? run.deck.find((x) => evolveTo(run.seed, x)) : run.deck.find((x) => targetOk(c, x));
+        const piece = c.kind === 'evolve' ? run.deck.find((x) => evolveTo(run.seed, x, run)) : run.deck.find((x) => targetOk(c, x));
         if (!piece) { click('target:cancel'); break; }
         const n = run.consumables.length;
         click(`deck:${piece.id}`);
@@ -1829,6 +1829,12 @@ const mainApp = app;
   if (screen() !== 'moves') throw new Error('moves overlay did not open in a plain battle');
   // 탭 셋(CHM-26): 이 판 → 기본 기물 → 특수 기물, 쪽이 있으면 끝까지 넘긴다. 그리는 동안 글 넘침 · 테를 잰다(pump)
   if (app.overlay.tab !== 'board') throw new Error('moves overlay did not open on the board tab');
+  // 처음에는 체스 기물만(CHM-73): 연 특수 기물이 없으면 「특수 기물」 탭이 없다 — 다 연 기록으로 다시 열어 셋을 넘긴다
+  const tier0 = app.records.unlockTier;
+  { const want = (await import('../src/data/unlocks.js')).unlockedAt(tier0).pieces.length + app.overlay.list.filter((x) => x.fairy).length > 0; if (!!region('moves:tab:fairy') !== want) throw new Error(`fairy tab ${want ? 'missing' : 'shown with nothing unlocked'}`); }
+  click('moves:back');
+  app.records.unlockTier = 20;
+  click('btn:moves');
   for (const tab of ['board', 'basic', 'fairy']) {
     click(`moves:tab:${tab}`); pump(3);
     const cards = LL.LOG.boxes.filter((b) => /^행마 [A-Z]$/.test(b.name || '')).length;
@@ -1838,6 +1844,7 @@ const mainApp = app;
     movesTabs.push(`${tab} ${cards}장 · 쪽 ${pages}`);
   }
   click('moves:back');
+  app.records.unlockTier = tier0;
   skipOk = true;
   log('  대본 대국 건너뛰기 · 안내 끄기 확인');
   seen();

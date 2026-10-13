@@ -507,6 +507,13 @@ test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) �
   const fairy = moves.movesTab('fairy', list);
   assert.equal(fairy.length, 10);
   assert.deepEqual(fairy.filter((x) => x.fresh).map((x) => x.t), ['V']);
+  // 특수 기물 탭(CHM-73): 연 것 + 지금 판 · 손에 있는 것만, 차례는 그대로
+  assert.deepEqual(moves.movesTab('fairy', list, []).map((x) => x.t), ['V']);
+  assert.deepEqual(moves.movesTab('fairy', list, ['S', 'L']).map((x) => x.t).sort(), ['L', 'S', 'V']);
+  assert.deepEqual(moves.movesTab('fairy', [], []), []);
+  const app0 = { records: { unlockTier: 0 }, run: null }, app3 = { records: { unlockTier: 3 }, run: { unlocked: { pieces: ['S', 'L', 'E'] } } };
+  assert.deepEqual(moves.openFairies(app0), []);
+  assert.deepEqual(moves.openFairies(app3).sort(), ['E', 'L', 'S']);
 });
 
 // CHM-46: 도감 격자 칸 이름은 낱말 단위로 두 줄까지 — 한 줄(row)은 가장 긴 이름의 높이, 두 줄로도 안 되는 이름이 있는 탭만 열을 줄인다
