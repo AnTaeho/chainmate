@@ -51,6 +51,20 @@ for (const L of LESSONS.filter((x) => !x.shop)) {
   });
 }
 
+test('수업 fairy: 궁수는 사이가 막혀도 제자리에서 룩을 먹고 룩이 된다', () => {
+  const L = LESSONS.find((x) => x.id === 'fairy');
+  assert.deepEqual(L.hand, ['S']);
+  const drop = L.steps.find((st) => 'drop' in st).drop;
+  const b = walk(L, L.steps.slice(0, 3));
+  assert.equal(b.status, 'chain');
+  assert.equal(b.chain.sq, lessonSq(drop), '먹은 뒤에도 놓은 칸');
+  assert.equal(b.chain.form, 'R');
+  assert.ok(b.board[lessonSq('d4')] && !b.board[lessonSq('d4')].mine, '사이의 폰은 그대로');
+  assert.ok(!b.board[lessonSq('d5')], '룩은 먹혔다');
+  // 사슬 하나로 목표를 꼭 채운다
+  assert.equal(walk(L, L.steps).score, L.target);
+});
+
 test('떨굴 칸을 열어 둔 걸음은 빛나는 칸 어디서든 이긴다', () => {
   for (const L of LESSONS.filter((x) => !x.shop)) {
     L.steps.forEach((st, k) => {

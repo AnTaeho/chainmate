@@ -99,7 +99,7 @@ test('영어: 안내 · 알림 글(처음 안내 · 킹의 말 · 수업 · 계�
   const V = await import('../src/ui/review.js');
   const fork = { move: 3, mate: true, scores: { mine: 120, best: 2340, target: 150 }, best: [{ kind: 'reboard' }], mines: [] };
   const all = [
-    ...Object.values(HINTS), ...TUTORIAL_STEPS.flatMap((s) => [s.say, s.okLabel]), ...LESSONS.flatMap((l) => [l.title, ...[...(l.steps || []), ...(l.demo || [])].map((s) => s.say)]),
+    ...Object.values(HINTS), ...TUTORIAL_STEPS.flatMap((s) => [s.say, s.okLabel]), ...LESSONS.flatMap((l) => [l.title, l.after, ...[...(l.steps || []), ...(l.demo || [])].map((s) => s.say)]),
     ...Object.values(A.ACCOUNT_FAIL), ...Object.values(A.ACCOUNT_OK), ...A.ACCOUNT_INFO, A.LOGOUT_TEXT, A.DELETE_TEXT, A.DELETE_TEXT2, A.FORGOT_TEXT, A.lockedText(15),
     ...Object.values(K.REDEEM_FAIL), K.CONFIRM_TEXT, K.UNLINK_TEXT, K.agoText(0), K.agoText(180000), ...[{ codex: 2 }, { openings: 1 }, { runs: 3 }].map(K.gainText),
     ...R.STALE_LINES, S.TELEMETRY_TIP, S.LINK_TIP, S.rerollTip(null), S.rerollTip(2), S.rerollTip(0), T.TELEMETRY_NOTE,

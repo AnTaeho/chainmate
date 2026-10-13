@@ -26,6 +26,8 @@ export function lessonPanelLayout(say, demo) {
   return { ty, lines, taps, h: f.y + P - TOP };
 }
 
+const AFTER_SEC = 3; // 끝맺는 한 줄이 떠 있는 시간
+
 export class LessonScreen extends BattleScreen {
   constructor(app, { index = 0, phase = 'demo' } = {}) {
     const L = LESSONS[index];
@@ -169,6 +171,8 @@ export class LessonScreen extends BattleScreen {
       this.word(won ? '좋은 수' : '다시', won ? PAL.gold : PAL.red, 1.2, 2);
       if (won) { this.snd('win'); const last = [...this.steps].reverse().find((s) => s.cap); if (last) this.burst(lessonSq(last.cap), PAL.gold, 24); }
       this.wait = 1.4;
+      // 끝맺는 한 줄(after)은 알림으로, 다 읽을 때까지 머문다
+      if (won && this.L.after) { this.toast(this.L.after, PAL.gold, AFTER_SEC); this.wait = AFTER_SEC; }
     }
   }
   update(dt) {

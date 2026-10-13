@@ -5,6 +5,7 @@
 //   steps   걸음: { pick: 손 칸 } 손에서 들기 · { drop: 칸 } 떨구기 · { cap: 칸 } 먹기 · { discard: true } 희생 단추
 //           say  그 걸음에서 보일 한 줄(할 일). 걸음마다 없으면 앞 걸음의 한 줄이 이어진다
 //   preview 먹기 전 미리 보기(수업 2부터) · bigFlip 첫 갈아입기를 크게 · shop 수업용 상점(판 수업 ②)
+//   after   이기면 판 아래 알림으로 뜨는 한 줄
 import { createBattle } from '../sim/battle.js';
 import { boardFrom, parseSq } from '../sim/board.js';
 
@@ -81,12 +82,13 @@ export const LESSONS = [
       { cap: 'e7', say: '지키는 적이 없는 킹을 먹으면 체크메이트. 점수와 상관없이 이겨요' },
     ] },
   // ── 판
-  { id: 'fairy', group: 'run', title: '체스 밖의 행마', target: 80, hand: ['O'], board: { d4: 'P', d7: 'R', h7: 'B' }, preview: true,
+  { id: 'fairy', group: 'run', title: '체스 밖의 행마', target: 160, hand: ['S'], board: { d4: 'P', d5: 'R', h3: 'B' }, preview: true,
+    after: '특수 기물은 관을 돌파하면 하나씩 열려요',
     steps: [
-      { pick: 0, say: '포는 특수 기물이에요. 기물 하나를 뛰어넘어 그 뒤의 적을 먹어요' },
-      { drop: 'd1', say: '폰 뒤의 룩을 먹을 수 있는 칸에 놓으세요' },
-      { cap: 'd7', say: '폰을 뛰어넘어 룩을 먹으세요' },
-      { cap: 'h7', say: '룩이 됐으니 곧게 미끄러져 비숍까지 먹으세요' },
+      { pick: 0, say: '궁수는 특수 기물이에요. 딱 두 칸 떨어진 적을 제자리에서 먹어요' },
+      { drop: 'd3', say: '룩에서 두 칸 떨어진 칸에 놓으세요' },
+      { cap: 'd5', say: '움직이지 않고 룩을 먹으세요' },
+      { cap: 'h3', say: '룩이 됐으니 곧게 미끄러져 비숍까지 먹으세요' },
     ] },
   { id: 'shop', group: 'run', title: '상점과 시너지', shop: true },
 ];
