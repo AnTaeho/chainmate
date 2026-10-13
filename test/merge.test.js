@@ -11,7 +11,7 @@ const IDS = ['a', 'b', 'c', 'd', 'e', 'f'];
 function randomRecords(seed) {
   const r = rng(seed), n = (k) => Math.floor(r() * k), some = () => Object.fromEntries(IDS.filter(() => r() < 0.5).map((id) => [id, true]));
   const rec = emptyRecords();
-  Object.assign(rec, { runs: n(40), wins: n(10), mates: n(9), legends: n(3), brilliants: n(5), bestAnte: n(9), bestEndless: n(14), reviews: n(6), reviewReplays: n(4) });
+  Object.assign(rec, { runs: n(40), wins: n(10), mates: n(9), legends: n(3), brilliants: n(5), bestAnte: n(9), bestEndless: n(14), reviews: n(6), reviewReplays: n(4), gates: n(130), unlockTier: n(21) });
   if (r() < 0.7) rec.bestMove = { score: n(4) * 1000, steps: ['P', 'N', 'Q'].slice(0, 1 + n(3)), ante: 1 + n(8) };
   if (r() < 0.5) rec.bestBrilliant = { score: n(4) * 500, weight: n(9), pieces: ['R'], ante: 1 + n(8) };
   for (const g of ['★', '★★', '★★★', '∞']) if (r() < 0.6) rec.grades[g] = n(20);
@@ -54,13 +54,13 @@ test('합치기: 빈 기록은 아무것도 바꾸지 않는다 · 켜서 읽은
 });
 
 test('합치기: 칸마다 규칙', () => {
-  const a = { ...emptyRecords(), runs: 10, wins: 2, mates: 7, legends: 0, brilliants: 4, reviews: 1, reviewReplays: 5, bestAnte: 6, bestEndless: 0,
+  const a = { ...emptyRecords(), runs: 10, wins: 2, mates: 7, legends: 0, brilliants: 4, reviews: 1, reviewReplays: 5, bestAnte: 6, bestEndless: 0, gates: 31, unlockTier: 4,
     bestMove: { score: 900, steps: ['P'], ante: 3 }, bestBrilliant: null, grades: { '★': 4, '∞': 1 },
     codex: { ...emptyRecords().codex, maxims: { m1: true }, legends: { immortal: 1 }, souls: { s1: true } },
     unlocked: { openings: ['standard', 'sicilian'], dan: 2 }, danWins: { 0: 3, 1: 1 },
     daily: { date: '2026-10-07', ante: 8, blind: 2, won: true, score: 182, runs: 5 },
     lessonsDone: false, lessonsSeen: { l1: true }, coachSeen: { c1: true } };
-  const b = { ...emptyRecords(), runs: 4, wins: 3, mates: 1, legends: 2, brilliants: 0, reviews: 6, reviewReplays: 0, bestAnte: 5, bestEndless: 11,
+  const b = { ...emptyRecords(), runs: 4, wins: 3, mates: 1, legends: 2, brilliants: 0, reviews: 6, reviewReplays: 0, bestAnte: 5, bestEndless: 11, gates: 12, unlockTier: 6,
     bestMove: { score: 1200, steps: ['Q', 'N'], ante: 5 }, bestBrilliant: { score: 50, weight: 1, pieces: ['P'], ante: 2 }, grades: { '★': 9, '★★': 2 },
     codex: { ...emptyRecords().codex, maxims: { m2: true }, legends: { immortal: 3, evergreen: 1 }, awake: { s1: true } },
     unlocked: { openings: ['standard', 'london'], dan: 5 }, danWins: { 1: 4, 5: 1 },
@@ -72,6 +72,8 @@ test('합치기: 칸마다 규칙', () => {
   assert.deepEqual(m.grades, { '★': 9, '★★': 2, '∞': 1 });
   // 최고 기록은 더 좋은 쪽
   assert.deepEqual([m.bestAnte, m.bestEndless], [6, 11]);
+  // 해금: 돌파한 관 · 단계는 저마다 큰 쪽(옛 기록에는 칸이 없어 0에서 시작)
+  assert.deepEqual([m.gates, m.unlockTier], [31, 6]);
   assert.deepEqual(m.bestMove, b.bestMove);
   assert.deepEqual(m.bestBrilliant, b.bestBrilliant);
   // 도감 · 해금 · 본 안내는 합집합(명경기 조각 수는 큰 쪽)
@@ -100,6 +102,7 @@ test('합치기: 옛 꼴 기록(없는 칸 · 옛 평가 열쇠 · 망가진 값
   assert.deepEqual(Object.keys(emptyRecords()).filter((k) => !(k in m)), [], '없는 칸이 채워진다');
   assert.deepEqual(m.grades, { '★': 3, '★★': 1 });
   assert.deepEqual([m.runs, m.bestAnte, m.unlocked.dan, m.codex.maxims, m.codex.souls], [7, 4, 0, { m1: true }, {}]);
+  assert.deepEqual([m.gates, m.unlockTier], [0, 0], '옛 기록은 해금을 처음부터');
   for (const junk of [null, undefined, 7, 'x', [], { runs: 'many', codex: 3, unlocked: null, grades: [], daily: 'x', bestMove: 5 }]) {
     const j = mergeRecords(junk, now);
     assert.deepEqual(j, mergeRecords(now, junk));

@@ -146,6 +146,7 @@ const finishBattle = (app) => { for (let i = 0; i < 400 && app.run.phase === 'ba
 test('앱: 판이 끝나면(짐) 한 줄, 판 시간과 앱 판이 함께', async () => {
   const app = await fresh();
   app.records.kingDone = true; app.records.runs = 1;
+  app.records.unlockTier = 20; // 하네스 판은 전부 열린 판이다 — 다 연 기록의 새 판이 그것과 한 수도 다르지 않다
   app.newRun({ seed: dump.seed });
   for (let i = 0; i < 30; i++) app.frame((app.last || 0) + 50); // 1.5초쯤
   const act = (cmd) => app.cmd(cmd);

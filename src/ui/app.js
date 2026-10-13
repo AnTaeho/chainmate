@@ -22,7 +22,7 @@ import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, emptyRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
-import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps } from './telemetry.js';
+import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps, unlockTierProps } from './telemetry.js';
 import { createRank } from './rank.js';
 import { createCloud } from './cloud.js';
 import { createFields } from './textfield.js';
@@ -185,15 +185,19 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const run = app.run;
     if (run && run.endless && run.phase === 'lost' && !run.endlessRecorded) {
       run.endlessRecorded = true;
-      const deeper = finishEndless(app.records, run);
+      const end = finishEndless(app.records, run);
       app.saveRecords();
-      return { ...(run.recordedOut || { unlocked: [], dan: null }), fresh: app.fresh.length, endless: run.ante, deeper };
+      if (end.tier != null) app.track('unlock_tier', unlockTierProps(app.records, end.tier), { always: true });
+      // 이긴 순간에 연 묶음은 그때 알렸다 — 여기서는 끝없는 대국에서 새로 연 것만
+      run.recordedOut = { ...(run.recordedOut || { unlocked: [], dan: null }), tier: end.tier, fresh: app.fresh.length, endless: run.ante, deeper: end.deeper };
+      return run.recordedOut;
     }
     if (!run || run.recorded) return run && run.recordedOut;
     const out = finishRun(app.records, run, { daily: run.daily || null });
     out.fresh = app.fresh.length;
     run.recorded = true;
     run.recordedOut = out;
+    if (out.tier != null) app.track('unlock_tier', unlockTierProps(app.records, out.tier), { always: true });
     app.saveRecords();
     app.cloud.touch(); // 판 수 · 해금까지 적힌 뒤의 기록을 올린다
     return out;
@@ -232,7 +236,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (old && old.track && !old.scratch && old.phase !== 'won' && old.phase !== 'lost') app.keepRun(old, old.endless ? 'endless' : 'quit');
     const script = !!opts.script && !daily;
     // 오늘의 대국 판은 서버와 같은 함수로 만든다(src/sim/daily.js — 넣은 명령을 run.cmds에 남겨 순위에 낸다, CHM-70)
-    app.run = daily ? createDailyRun(daily) : createRun({ seed, opening: opts.opening, dan: opts.dan || 0, script });
+    // 새 판은 지금까지 연 묶음만 나온다(끝없는 대국은 그 판의 것 그대로). 오늘의 대국은 모두가 같은 판이라 전부 열린 채
+    app.run = daily ? createDailyRun(daily) : createRun({ seed, opening: opts.opening, dan: opts.dan || 0, script, unlockTier: app.records.unlockTier || 0 });
     if (script) { app.records.kingDone = true; app.records.kingAgain = false; app.saveRecords(); }
     app.run.track = newTrack({ startedAt: Date.now(), app: app.appInfo });
     app.fresh = [];

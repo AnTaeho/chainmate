@@ -1154,6 +1154,18 @@ if (app.records.runs < RUNS) throw new Error('records did not count runs');
 app.records.unlocked.openings = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 app.records.unlocked.dan = 8;
 results.push(await playOne(SEED + 50, { opening: 'sicilian', dan: 3 }));
+// 오늘의 대국은 전부 열린 판이라, 해금이 낮은 기록에서는 처음 보는 격언 · 혼 · 명경기 조각으로 도감 알림이 뜨고 순위 카드가 그 줄에 자리를 내준다.
+// 아래 순위 흐름은 카드의 내 줄을 재므로 도감을 채워 두고 둔다
+{
+  const c = app.records.codex;
+  const { MAXIMS } = await import('../src/data/maxims.js');
+  const { SOULS } = await import('../src/data/souls.js');
+  const { EDITIONS } = await import('../src/data/editions.js');
+  for (const m of MAXIMS) c.maxims[m.id] = true;
+  for (const q of SOULS) c.souls[q.id] = true;
+  for (const e of EDITIONS) c.editions[e.id] = true;
+  for (const l of LEGENDS) c.legends[l.id] = 3;
+}
 results.push(await playOne(0, { daily: true }));
 if (app.run.daily !== DATE || !app.records.daily || app.records.daily.date !== DATE) throw new Error('daily not recorded');
 // 순위(CHM-70): 화면이 둔 오늘의 대국 판이 남긴 명령 줄(run.cmds)을 서버의 다시 두기(api/_lib/verify.js)에 넣어 같은 성적이 나오는지 잰다

@@ -55,6 +55,7 @@ export const RULES = {
   v: () => 1,
   runs: max, wins: max, mates: max, legends: max, brilliants: max, reviews: max, reviewReplays: max,
   bestAnte: max, bestEndless: max,
+  gates: max, unlockTier: max,
   bestMove: best, bestBrilliant: best,
   grades: (a, b) => union(gradeKeys(a), gradeKeys(b)),
   codex: (a, b) => { const out = {}; for (const k of new Set([...Object.keys(a || {}), ...Object.keys(b || {})])) out[k] = union((a || {})[k], (b || {})[k]); return out; },

@@ -1,7 +1,9 @@
 // 해금 사다리(src/data/unlocks.js)와 솔기(src/sim/unlock.js): 자료 정합성 · 잠긴 것이 어디에도 안 나오는지 · 잠금 없는 판은 그대로
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { UNLOCK_TIERS, UNLOCK_KINDS, MAX_TIER, unlockedAt, tierOf } from '../src/data/unlocks.js';
+import { UNLOCK_TIERS, UNLOCK_KINDS, MAX_TIER, unlockedAt, tierOf, UNLOCK_GATES, tierForGates, gatesOfRun, advanceUnlock, unlockProgress } from '../src/data/unlocks.js';
+import { emptyRecords, loadRecords, finishRun, finishEndless } from '../src/ui/records.js';
+import { makeStore } from '../src/ui/save.js';
 import { openPool, openTypes } from '../src/sim/unlock.js';
 import { MAXIMS } from '../src/data/maxims.js';
 import { SOULS, UP } from '../src/data/souls.js';
@@ -221,4 +223,69 @@ test('해금 목록은 판 상태에 실려 JSON 왕복 뒤에도 같은 판을 
   assert.deepEqual(b.trace, a.trace);
   assert.deepEqual(clone(copy), clone(run));
   within(a.seen, unlockedAt(4), '왕복 뒤');
+});
+
+// ── 판 밖 진행: 돌파한 관의 누적 수 → 단계(한 판에 한 묶음)
+test('문턱: 스무 단계, 늘 오르기만 하고 사이가 줄지 않는다', () => {
+  assert.equal(UNLOCK_GATES.length, MAX_TIER + 1);
+  assert.deepEqual(UNLOCK_GATES, [0, 2, 5, 8, 12, 16, 20, 25, 30, 35, 41, 47, 53, 60, 67, 74, 82, 90, 98, 107, 116]);
+  for (let t = 2; t <= MAX_TIER; t++) assert.ok(UNLOCK_GATES[t] - UNLOCK_GATES[t - 1] >= UNLOCK_GATES[t - 1] - UNLOCK_GATES[t - 2], `단계 ${t}`);
+  assert.deepEqual([0, 1, 2, 4, 5, 8, 115, 116, 9999].map(tierForGates), [0, 0, 1, 1, 2, 3, 19, 20, 20]);
+});
+
+test('판에서 돌파한 관: 이기면 여덟, 지면 도달한 관 앞까지, 끝없는 대국은 여덟을 넘겨 실제로 돌파한 관', () => {
+  assert.equal(gatesOfRun({ phase: 'won', ante: 8 }), 8);
+  assert.equal(gatesOfRun({ phase: 'lost', ante: 1 }), 0);
+  assert.equal(gatesOfRun({ phase: 'lost', ante: 5 }), 4);
+  assert.equal(gatesOfRun({ phase: 'lost', ante: 11, endless: true }), 10);
+  assert.equal(gatesOfRun({ phase: 'lost', ante: 9, endless: true }), 8);
+});
+
+test('한 판에 한 묶음: 이긴 판(+8) 뒤 단계 1, 다음 판은 진 판(+0)이라도 2, 그다음 3', () => {
+  assert.deepEqual(advanceUnlock(0, 0, 8), { tier: 1, gates: 8, opened: 1 });
+  assert.deepEqual(advanceUnlock(1, 8, 0), { tier: 2, gates: 8, opened: 2 });
+  assert.deepEqual(advanceUnlock(2, 8, 0), { tier: 3, gates: 8, opened: 3 });
+  assert.deepEqual(advanceUnlock(3, 8, 0), { tier: 3, gates: 8, opened: null }, '문턱 12 앞에서 멈춘다');
+  assert.deepEqual(advanceUnlock(20, 500, 8), { tier: 20, gates: 508, opened: null });
+  assert.deepEqual(advanceUnlock(0, 0, 8, false), { tier: 0, gates: 8, opened: null }, '이 판이 이미 하나 열었으면 관만 쌓인다');
+  // 기록으로: 판마다 finishRun
+  const rec = emptyRecords();
+  assert.deepEqual([rec.gates, rec.unlockTier], [0, 0]);
+  const run = (phase, ante) => { const r = createRun({ seed: 1, draft: false, unlockTier: rec.unlockTier }); r.phase = phase; r.ante = ante; return r; };
+  const won = run('won', 8);
+  assert.equal(finishRun(rec, won).tier, 1);
+  assert.deepEqual([rec.gates, rec.unlockTier], [8, 1]);
+  assert.equal(finishRun(rec, run('lost', 1)).tier, 2);
+  assert.deepEqual([rec.gates, rec.unlockTier], [8, 2]);
+  assert.equal(finishRun(rec, run('lost', 1)).tier, 3);
+  assert.equal(finishRun(rec, run('lost', 1)).tier, null);
+  assert.deepEqual([rec.gates, rec.unlockTier], [8, 3]);
+  // 다음 판은 그때까지 연 묶음으로 열린다
+  assert.deepEqual(run('lost', 1).unlocked, unlockedAt(3));
+  // 끝없는 대국: 이긴 순간 여덟을 세었고, 끝나면 넘긴 관만 더한다 — 그 판이 이미 하나 열었으면 단계는 그대로
+  won.endless = true; won.phase = 'lost'; won.ante = 13;
+  assert.deepEqual(finishEndless(rec, won), { deeper: true, tier: null });
+  assert.deepEqual([rec.gates, rec.unlockTier], [12, 3]);
+  assert.equal(finishRun(rec, run('lost', 1)).tier, 4);
+  // 이긴 순간에 못 열었던 판은 끝없는 대국이 끝날 때 하나 연다
+  const full = emptyRecords(); full.gates = 8; full.unlockTier = 3;
+  const w2 = createRun({ seed: 2, draft: false }); w2.phase = 'won'; w2.ante = 8;
+  assert.equal(finishRun(full, w2).tier, 4);
+  const cap = emptyRecords(); cap.gates = 0; cap.unlockTier = 0;
+  const w3 = createRun({ seed: 2, draft: false }); w3.phase = 'lost'; w3.ante = 1; w3.endless = true;
+  assert.equal(finishEndless(cap, w3).tier, 1, '옛 저장의 끝없는 대국(센 적 없음)도 한 번에 하나');
+  assert.deepEqual([cap.gates, cap.unlockTier], [8, 1]);
+});
+
+test('지금 자리: 다음 묶음까지 남은 관 · 온 몫, 문턱을 이미 넘었으면 남은 관 0, 다 열면 다음이 없다', () => {
+  assert.deepEqual(unlockProgress(0, 0), { tier: 0, gates: 0, next: 1, left: 2, p: 0 });
+  assert.deepEqual(unlockProgress(3, 10), { tier: 3, gates: 10, next: 4, left: 2, p: 0.5 });
+  assert.deepEqual(unlockProgress(1, 8), { tier: 1, gates: 8, next: 2, left: 0, p: 1 });
+  assert.deepEqual(unlockProgress(MAX_TIER, 300), { tier: MAX_TIER, gates: 300, next: null, left: 0, p: 1 });
+});
+
+test('옛 기록은 옮기지 않는다: 칸이 없으면 누적 0 · 단계 0', () => {
+  const store = makeStore({ getItem: () => JSON.stringify({ v: 1, runs: 40, wins: 9, bestAnte: 8, codex: { maxims: { memory: true } } }), setItem() {}, removeItem() {} });
+  const rec = loadRecords(store);
+  assert.deepEqual([rec.gates, rec.unlockTier, rec.runs], [0, 0, 40]);
 });

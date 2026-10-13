@@ -377,7 +377,10 @@ test('앱: 켜면 app_open, 판을 끝까지 두면 run_start … run_end 한 �
   assert.equal(names[0], 'app_open');
   assert.equal(names[1], 'run_start');
   assert.equal(names.filter((n) => n === 'run_end').length, 1);
-  assert.equal(names.at(-1), 'run_end');
+  // 결과 화면이 판을 세면서 묶음이 열리면 unlock_tier가 그 뒤에 한 번 온다(CHM-73)
+  assert.equal(names.filter((n) => n !== 'unlock_tier').at(-1), 'run_end');
+  assert.equal(names.filter((n) => n === 'unlock_tier').length, app.records.unlockTier);
+  if (app.records.unlockTier) assert.deepEqual(evs.find((e) => e.event === 'unlock_tier').properties.tier, 1);
   assert.ok(names.indexOf('battle_end') > 0 && names.lastIndexOf('battle_end') < names.indexOf('run_end'));
   const end = evs.find((e) => e.event === 'run_end').properties;
   assert.equal(kept.length, 1);

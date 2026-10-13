@@ -293,6 +293,11 @@ export function runEndProps(row) {
   };
 }
 
+// ── 해금(CHM-73): 화면이 app.track으로 부르는 사건 둘
+//   unlock_tier { tier, gates }   판이 끝나 묶음 하나가 열렸다(tier: 열린 단계 · gates: 돌파한 관의 누적 수)
+//   unlocks_open { from, tier }   해금 화면을 열었다(from: 'codex' | 'result' · tier: 지금 단계)
+export const unlockTierProps = (rec, tier) => ({ tier, gates: rec.gates || 0 });
+
 // ── 순위(CHM-70, src/ui/rank.js): 화면이 app.track으로 부르는 사건 셋. 이름(번호) · 열쇠는 싣지 않는다.
 //   rank_open { tab: 'today' | 'yesterday' }   순위 화면을 열거나 탭을 바꿨다
 //   rank_submit { ok, improved, rank, total, stale }   오늘의 대국 판을 냈다(ok: 순위에 올랐나 · stale: 새 배포라 내지 못함)

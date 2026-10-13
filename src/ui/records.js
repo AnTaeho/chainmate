@@ -3,6 +3,7 @@
 import { KEYS } from './save.js';
 import { OLD_GRADE_MARK } from '../sim/chain.js';
 import { renameOldPieces } from '../sim/oldsave.js';
+import { advanceUnlock, gatesOfRun } from '../data/unlocks.js';
 
 export const OPENING_ORDER = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 // 해금 과제(내가 정한 것): 판마다 하나씩 보이는 「다음 해금까지」
@@ -32,6 +33,8 @@ export function emptyRecords() {
     coachSeen: {},             // { [안내 id]: true } 본 처음 안내
     reviews: 0,                // 복기 갈림길 카드를 본 수(길 있음 · 길 없음, CHM-59)
     reviewReplays: 0,          // 갈림길 카드에서 「다시 두기」를 누른 수
+    gates: 0,                  // 돌파한 관의 누적 수(해금 사다리의 잣대, CHM-73)
+    unlockTier: 0,             // 해금 단계 0 ~ 20(src/data/unlocks.js) — 한 판에 하나씩만 오른다
   };
   // 칸을 더하면 기기 사이 합치는 규칙도 넣는다(src/ui/merge.js RULES, CHM-71)
 }
@@ -97,7 +100,7 @@ export function noteMove(rec, score, steps, ante) {
   return false;
 }
 
-// 판이 끝났을 때: 판 수 · 이긴 판 · 단 해금 · 오프닝 해금. 돌려주는 값 { unlocked: [오프닝 id], dan: 새로 연 단 | null }
+// 판이 끝났을 때: 판 수 · 이긴 판 · 단 해금 · 오프닝 해금 · 해금 단계. 돌려주는 값 { unlocked: [오프닝 id], dan: 새로 연 단 | null, tier: 이번에 열린 단계 | null }
 export function finishRun(rec, run, { daily = null } = {}) {
   const won = run.phase === 'won' || run.endless;
   rec.runs++;
@@ -113,6 +116,7 @@ export function finishRun(rec, run, { daily = null } = {}) {
     if (rec.unlocked.openings.includes(u.id)) continue;
     if (u.have(rec) >= u.need) { rec.unlocked.openings.push(u.id); out.unlocked.push(u.id); }
   }
+  out.tier = addGates(rec, run);
   if (daily) {
     const score = run.ante * 10 + (run.blind || 0) + (won ? 100 : 0);
     const d = rec.daily && rec.daily.date === daily ? rec.daily : { date: daily, score: -1, runs: 0 };
@@ -123,12 +127,23 @@ export function finishRun(rec, run, { daily = null } = {}) {
   return out;
 }
 
-// 끝없는 대국이 끝났을 때(이긴 판은 이미 세었다): 도달한 관만 남긴다
+// 해금: 이 판이 아직 안 센 관을 누적에 더하고, 이 판이 아직 하나도 안 열었으면 단계를 하나 올린다. 센 것은 판(run.gatesDone · run.tierOpened)에 적는다
+function addGates(rec, run) {
+  const add = Math.max(0, gatesOfRun(run) - (run.gatesDone || 0));
+  const st = advanceUnlock(rec.unlockTier, rec.gates, add, !run.tierOpened);
+  run.gatesDone = (run.gatesDone || 0) + add;
+  rec.gates = st.gates; rec.unlockTier = st.tier;
+  if (st.opened != null) run.tierOpened = st.opened;
+  return st.opened;
+}
+
+// 끝없는 대국이 끝났을 때(이긴 판은 이미 세었다): 도달한 관을 남기고, 여덟을 넘겨 돌파한 관을 해금에 더한다
+// 돌려주는 값 { deeper, tier: 이번에 열린 단계 | null }
 export function finishEndless(rec, run) {
-  if (!run.endless) return false;
+  if (!run.endless) return { deeper: false, tier: null };
   const deeper = run.ante > (rec.bestEndless || 0);
   rec.bestEndless = Math.max(rec.bestEndless || 0, run.ante);
-  return deeper;
+  return { deeper, tier: addGates(rec, run) };
 }
 
 // 다음 해금 하나(결과 화면 · 판 준비 화면에 보인다)

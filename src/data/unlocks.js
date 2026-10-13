@@ -1,4 +1,4 @@
-// 해금 사다리: 단계 0은 처음부터 열린 것, 그 뒤는 단계마다 새로 열리는 id. 판 밖 진행이 단계를 올린다(화면 · 기록 연결은 아직 없다).
+// 해금 사다리: 단계 0은 처음부터 열린 것, 그 뒤는 단계마다 새로 열리는 id. 돌파한 관의 누적 수가 단계를 올린다(기록은 src/ui/records.js).
 // 의존: 특수 기물 · 각인을 가리키거나 만들어 내는 것은 그 대상과 같은 단계거나 뒤(test/unlocks.test.js가 잰다).
 export const UNLOCK_KINDS = ['maxims', 'pieces', 'souls', 'engravings', 'josekis'];
 
@@ -48,4 +48,32 @@ export function unlockedAt(tier) {
 // 그 id가 열리는 단계(사다리에 없으면 -1)
 export function tierOf(kind, id) {
   return UNLOCK_TIERS.findIndex((t) => t[kind].includes(id));
+}
+
+// 단계 n이 열리는 누적 돌파 관 수(UNLOCK_GATES[0] = 0)
+export const UNLOCK_GATES = [0, 2, 5, 8, 12, 16, 20, 25, 30, 35, 41, 47, 53, 60, 67, 74, 82, 90, 98, 107, 116];
+// 누적 관 수로 갈 수 있는 가장 높은 단계
+export function tierForGates(gates) {
+  let t = 0;
+  while (t < MAX_TIER && gates >= UNLOCK_GATES[t + 1]) t++;
+  return t;
+}
+// 판에서 돌파한 관 수: 이기면 여덟(끝없는 대국은 실제 돌파한 관), 지면 도달한 관 앞까지
+export function gatesOfRun(run) {
+  const past = Math.max(0, (run.ante || 1) - 1);
+  return run.phase === 'won' ? 8 : run.endless ? Math.max(8, past) : past;
+}
+// 판이 끝날 때: 관 수는 그대로 쌓고, 단계는 문턱을 넘었어도 한 판에 하나만(canOpen이 거짓이면 이 판은 이미 하나 열었다)
+export function advanceUnlock(tier, gates, add, canOpen = true) {
+  const total = Math.max(0, Math.floor(gates || 0)) + Math.max(0, Math.floor(add || 0));
+  const from = clampTier(tier);
+  const opened = canOpen && from < tierForGates(total) ? from + 1 : null;
+  return { tier: opened ?? from, gates: total, opened };
+}
+// 지금 자리: next(다음 단계 | null) · left(다음까지 남은 관, 0이면 다음 판이 끝날 때 열린다) · p(다음 칸까지 온 몫 0 ~ 1)
+export function unlockProgress(tier, gates) {
+  const t = clampTier(tier), g = Math.max(0, Math.floor(gates || 0));
+  if (t >= MAX_TIER) return { tier: t, gates: g, next: null, left: 0, p: 1 };
+  const a = UNLOCK_GATES[t], b = UNLOCK_GATES[t + 1];
+  return { tier: t, gates: g, next: t + 1, left: Math.max(0, b - g), p: Math.max(0, Math.min(1, (g - a) / (b - a))) };
 }
