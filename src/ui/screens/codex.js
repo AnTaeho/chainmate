@@ -1,4 +1,5 @@
 // 도감: 격언 · 기물 · 혼 · 세력(우두머리 명인 포함) · 명국 · 오프닝 · 판본. 본 것만 채워지고 나머지는 「?」. 명국은 모은 조각 수까지.
+// 아직 안 연 묶음의 격언 · 특수 기물 · 혼은 「?」 대신 자물쇠 칸 — 누르면 해금 화면이 그 묶음을 펼친다(CHM-73). 본 적이 있으면(오늘의 대국 등) 잠겨 있어도 채워진다.
 import { PAL, RARITY, EDITION_TINT } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, sprite, measure } from '../../render/gfx.js';
 import { PIECES } from '../../data/pieces.js';
@@ -17,6 +18,7 @@ import { OPENING_ORDER, UNLOCKS } from '../records.js';
 import { pageHead, pageButtons, tabRow } from './common.js';
 import { PAGE, PAD_CARD, LIST_GAP, GAP_GROUP, LINE, textY, rowBoxH, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
+import { lockTier, lockIcon } from '../unlockview.js';
 
 // 도감 격자(CHM-46): 칸 이름은 낱말 단위로 두 줄까지 — 굵게 → 보통 굵기. 두 줄로도 안 되는 이름이 탭에 하나라도 있으면 그 탭만 열 수를 하나 줄인다.
 // 줄 높이 · 열 수는 본 것 · 안 본 것을 가리지 않고 탭의 모든 이름으로 잰다(도감이 차도 쪽이 바뀌지 않는다)
@@ -78,6 +80,12 @@ export class CodexScreen {
     // 탭 폭은 이름마다 글에 맞춘다(common.js tabRow — 영어 「Masters」 · 「Opening」이 테에 붙지 않고 오른쪽 모은 수에 닿지 않게)
     const tabEnd = tabRow(ctx, ui, 'codex', TABS, this.tab, tx0, 5, BTN_S, (id) => { this.tab = id; this.page = 0; this.app.sfx('pick'); });
     const list = this.entries();
+    // 잠긴 칸: 아직 안 연 묶음의 것이고 본 적도 없다(특수 기물은 행마 보기에서 만난 적이 없다)
+    const tier = this.app.records.unlockTier || 0, met = this.app.records.movesSeen || {};
+    for (const e of list) {
+      const t = lockTier(this.tab, e.id);
+      if (t > tier && !(this.tab === 'pieces' ? met[e.id] : e.seen)) { e.lock = t; e.seen = false; }
+    }
     const seen = list.filter((e) => e.seen).length;
     // 모은 수: 머리줄 오른쪽. 탭이 거기까지 차면(영어 — 탭 일곱) 맨 아래 「돌아가기」 오른쪽으로
     const count = `${seen} / ${list.length}`;
@@ -91,8 +99,16 @@ export class CodexScreen {
     for (const c of lay.pages[page]) {
       const e = list[c.i], x = c.x, y = c.y, ch = c.h;
       const id = `codex:${e.id}`;
-      ui.region(id, x, y, cw, ch, { tip: e.seen ? e.tip : null });
+      // 자물쇠 칸은 눌린다 — 설명 자리 규칙에서는 다른 칸과 같은 격자 칸으로 본다(cell — app.js planNotes)
+      if (e.lock) ui.region(id, x, y, cw, ch, { cell: true, onClick: () => this.toUnlocks(e.lock) });
+      else ui.region(id, x, y, cw, ch, { tip: e.seen ? e.tip : null });
       openBox('card', x, y, cw, ch, P, { name: `도감 ${e.id}` });
+      if (e.lock) {
+        box(ctx, x, y, cw, ch, PAL.feltDk, ui.isHover(id) ? PAL.gold : PAL.frameDk);
+        lockIcon(ctx, x + Math.floor((cw - 12) / 2), y + Math.floor((ch - 12) / 2), ui.isHover(id) ? 1 : 0.7);
+        closeBox();
+        continue;
+      }
       if (!e.seen) {
         box(ctx, x, y, cw, ch, PAL.feltDk, PAL.frameDk);
         text(ctx, '?', x + cw / 2, y + textY((ch - LINE) >> 1), PAL.dimDk, { align: 'center', bold: true });

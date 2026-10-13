@@ -526,11 +526,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const mode = noteMode(app.overlay || app.screen);
     const w = noteWidth(mode);
     const hs = [...(tip ? [tipHeight(tip, w)] : []), ...ids.map((id) => keyHeight(id, w))];
-    // 덮으면 안 되는 것: 누를 수 있는 다른 구역(가리킨 것 · 그 안의 것은 빼고)
     const inAnchor = (r) => r.x >= anchor.x && r.y >= anchor.y && r.x + r.w <= anchor.x + anchor.w && r.y + r.h <= anchor.y + anchor.h;
-    const avoid = ui.regions.filter((r) => r !== h && r.onClick && r.enabled && !inAnchor(r));
+    // 덮으면 안 되는 것: 누를 수 있는 다른 구역(가리킨 것 · 그 안의 것은 빼고). 눌리는 격자 칸(cell — 도감의 자물쇠 칸)은 다른 칸처럼 덜 덮을 것으로 본다
+    const avoid = ui.regions.filter((r) => r !== h && r.onClick && r.enabled && !r.cell && !inAnchor(r));
     // 덮지 않으면 좋은 것(판 밖 틀): 다른 카드 · 칸(말풍선이 뜨는 구역) · 꺼진 단추
-    const soft = mode === 'below' ? ui.regions.filter((r) => r !== h && (r.tip || r.keys || (r.onClick && !r.enabled)) && !inAnchor(r)) : [];
+    const soft = mode === 'below' ? ui.regions.filter((r) => r !== h && (r.tip || r.keys || r.cell || (r.onClick && !r.enabled)) && !inAnchor(r)) : [];
     let lay = placeNotes(mode, anchor, hs, { W, H, avoid, soft });
     if (!lay) return null;
     // 말풍선 하나도 그 자리에 다 안 들어가면 자리의 높이로 자른다(「…」로 마친다) — 잘린 높이로 다시 놓는다

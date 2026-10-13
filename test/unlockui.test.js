@@ -170,3 +170,47 @@ test('새 판은 지금까지 연 묶음으로, 오늘의 대국은 전부 열�
   assert.deepEqual(a.app.run.unlocked, M.data.unlockedAt(0));
   a.app.toTitle();
 });
+
+test('도감: 아직 안 연 묶음의 격언 · 특수 기물 · 혼은 자물쇠 칸 — 누르면 해금 화면이 그 묶음을 펼친다, 본 것은 잠겨 있어도 채워지고 분모는 전체', async () => {
+  const { MAXIMS } = await import('../src/data/maxims.js');
+  for (const lang of LANGS) {
+    const a = await bootApp(lang);
+    a.at(3, 10);
+    // memory는 단계 19 — 오늘의 대국에서 본 적이 있다
+    a.app.records.codex.maxims = { chivalry: true, memory: true };
+    a.app.go('codex');
+    let f = a.frame();
+    assert.deepEqual(f.bad, [], `${lang} 격언 탭`);
+    assert.ok(f.texts.some((q) => q.s === `2 / ${MAXIMS.length}`), `${lang}: 모은 수의 분모는 전체`);
+    const cell = (id) => a.reg(`codex:${id}`);
+    assert.ok(cell('chivalry').tip && !cell('chivalry').onClick, '본 격언은 말풍선');
+    assert.ok(!cell('pawn_march').tip && !cell('pawn_march').onClick, '연 묶음의 안 본 격언은 「?」');
+    const locked = a.app.ui.regions.filter((r) => r.cell);
+    assert.ok(locked.length > 0 && locked.every((r) => r.onClick && !r.tip), '자물쇠 칸은 눌린다');
+    for (const r of locked) assert.ok(M.data.tierOf('maxims', r.id.slice(6)) > 3, `${r.id}는 아직 안 연 묶음`);
+    assert.ok(!locked.some((r) => r.id === 'codex:memory'), '본 것은 잠겨 있어도 채워진다');
+    // 모든 쪽에서 글 넘침 0
+    while (a.has('codex:next') && a.reg('codex:next').enabled) { f = a.press('codex:next'); assert.deepEqual(f.bad, [], `${lang} 격언 ${a.app.screen.page + 1}쪽`); }
+    const id = a.app.ui.regions.find((r) => r.cell).id.slice(6), page = a.app.screen.page;
+    a.press(`codex:${id}`);
+    assert.deepEqual([a.app.screen.name, a.app.screen.sel, a.app.screen.from], ['unlocks', M.data.tierOf('maxims', id), 'codex']);
+    a.press('unlocks:back'); a.press('unlocks:back');
+    assert.deepEqual([a.app.screen.name, a.app.screen.tab, a.app.screen.page], ['codex', 'maxims', page]);
+    // 기물 탭: 연 특수 기물(궁수 · 낙타)과 체스 기물은 그대로, 나머지는 자물쇠 — 행마 보기에서 만난 것은 채워진다
+    a.app.records.movesSeen = { Z: true };
+    f = a.press('codex:tab:pieces');
+    assert.deepEqual(f.bad, [], `${lang} 기물 탭`);
+    assert.deepEqual(a.app.ui.regions.filter((r) => r.cell).map((r) => r.id.slice(6)).sort(), ['D', 'E', 'M', 'O', 'T', 'V', 'W']);
+    for (const t of ['P', 'K', 'S', 'L', 'Z']) assert.ok(cell(t).tip, `${t} 칸`);
+    f = a.press('codex:tab:souls');
+    assert.deepEqual(f.bad, [], `${lang} 혼 탭`);
+    assert.ok(a.app.ui.regions.some((r) => r.cell));
+    // 해금과 상관없는 탭에는 자물쇠가 없다
+    for (const tab of ['factions', 'legends', 'openings', 'editions']) { f = a.press(`codex:tab:${tab}`); assert.deepEqual(f.bad, [], `${lang} ${tab}`); assert.ok(!a.app.ui.regions.some((r) => r.cell), `${tab} 자물쇠 없음`); assert.ok(a.has('codex:unlocks')); }
+    // 다 열면 자물쇠가 없다
+    a.at(20, 200);
+    a.press('codex:tab:maxims');
+    assert.ok(!a.app.ui.regions.some((r) => r.cell));
+  }
+  M.lang.setLang('ko');
+});
