@@ -1,5 +1,6 @@
 // 판(런) 하네스: 판을 N개 끝까지 돌려 곡선을 잰다.
 //   node tools/run.mjs --runs 1000 --policy smart|hunt|random|none|nosac --seed 1 [--workers 10] [--k 6]
+//   --unlock <단계>: 해금 단계(src/data/unlocks.js, 0 = 처음)까지만 열린 판. 주지 않으면 잠금 없음
 //   nosac: smart 상점 + 막혔을 때만 바치는 대국 봇(CHM-35 비교용). --tune '{"brilliant":1}': 탁월수 세기(src/data/sacrifice.js BRILLIANT.per)
 // 대국 안은 풀이기 봇(tools/bot.mjs), 상점은 tools/shopbot.mjs의 정책.
 // 찍는 것: 판 승률, 관 도달 분포, 관별 대국 점수/목표, 종류별 통과율, 외통 · 첫수외통 · 막힘 비율,
@@ -43,6 +44,7 @@ function parseArgs(argv) {
     else if (k === '--tune') a.tune = JSON.parse(argv[++i]);
     else if (k === '--opening') a.opening = argv[++i];                  // 오프닝(판 밖 해금)
     else if (k === '--dan') a.dan = Number(argv[++i]);                   // 단(난이도) 0~8
+    else if (k === '--unlock') a.unlock = Number(argv[++i]);             // 해금 단계 0~MAX_TIER(주지 않으면 전부 열림)
     else if (k === '--give') a.give = argv[++i].split(',');
     else if (k === '--nodraft') a.nodraft = true;
     else if (k === '--limit') a.limit = Number(argv[++i]);             // 판 하나 시간 상한(초)
@@ -67,9 +69,9 @@ function parseArgs(argv) {
   return a;
 }
 
-function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = false) {
+function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = false, unlock = null) {
   const t0 = performance.now();
-  const run = createRun({ seed, opening, dan, draft: !nodraft });
+  const run = createRun({ seed, opening, dan, draft: !nodraft, unlockTier: unlock });
   for (const id of give || []) run.maxims.push({ uid: run.nextUid++, id, data: {}, edition: null, paid: 0 });
   if (BEATS.on) BEATS.log = beatLog(run);
   if (BUILD.on) BUILD.log = buildLog(run);
@@ -96,7 +98,7 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats, build } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, unlock, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats, build } = workerData;
   if (beats) BEATS.on = true;
   if (build) BUILD.on = true;
   if (replay) REPLAY.on = true;
@@ -125,14 +127,14 @@ if (!isMainThread) {
   if (b) b.forEach((x, i) => { B[i] = x; });
   if (shop) Object.assign(SHOP, shop);
   const out = [];
-  for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft));
+  for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft, unlock ?? null));
   parentPort.postMessage(out);
 } else {
   const args = parseArgs(process.argv.slice(2));
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + i * 7919) >>> 0);
   const t0 = performance.now();
   // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
-  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, build: args.build };
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, unlock: args.unlock, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, build: args.build };
   const results = [], timeouts = [];
   let next = 0, done = 0;
   await new Promise((finish) => {

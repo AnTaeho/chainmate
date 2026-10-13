@@ -221,7 +221,7 @@ function bestEvolveTarget(run, build, ctx) {
   let best = null;
   const seen = new Set();
   for (const p of build.deck) {
-    const to = evolveTo(run.seed, p);
+    const to = evolveTo(run.seed, p, run);
     if (!to || seen.has(p.t + to)) continue;
     seen.add(p.t + to);
     const v = { ...build, deck: build.deck.map((q) => (q.id === p.id ? { ...q, t: to } : q)) };
