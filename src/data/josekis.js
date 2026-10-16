@@ -58,10 +58,10 @@ joseki('mitre', '주교관', 'silver', ['diag'], '비숍 하나가 물수제비�
 joseki('archery', '활터', 'silver', ['hunt', 'march'], '폰 둘이 궁수가 된다', {
   pick(run, events) { evolve(run, 'P', 'S', 2, events); },
 });
-joseki('highway', '고속도로', 'silver', ['line'], 'b · g 세로줄에 서면 어느 모습이든 세로로 미끄러져 먹는다', {
+joseki('highway', '고속도로', 'silver', ['line'], 'b · g 세로줄에 서면 어느 모습이든 세로로 곧게 가서 잡는다', {
   rules(b) { b.rules.highways = [1, 6]; },
 });
-joseki('stepping', '발판', 'silver', ['hunt'], '대국마다 금빛 칸이 셋 생긴다 · 그 칸의 적을 먹으면 배수 ×2', {
+joseki('stepping', '발판', 'silver', ['hunt'], '대국마다 금빛 칸이 셋 생긴다 · 그 칸의 적을 잡으면 배수 ×2', {
   rules(b, rng) {
     const free = [];
     for (let sq = 16; sq < 56; sq++) free.push(sq);
@@ -73,7 +73,7 @@ joseki('stepping', '발판', 'silver', ['hunt'], '대국마다 금빛 칸이 셋
 // ── 금: 뿌리의 동사를 크게 비튼다
 // 버린 안: 흡수의 비전(대국마다 첫 사슬은 행마가 더해진다) — 센 떨군 모습이 판을 쓸어, 하네스 30판의 첫 수 외통(3관부터 20~50%)이
 //   모두 이 정석에서 나왔다. 처음 세 먹기로 줄여도 같았다. 한 기물에 붙는 혼 「흡수」만 남긴다.
-joseki('gates', '판의 문', 'gold', ['leap', 'change'], '대국마다 문이 둘 생긴다 · 문에 있는 적을 먹으면 다른 문으로 옮겨 가 이어 먹는다', {
+joseki('gates', '판의 문', 'gold', ['leap', 'change'], '대국마다 문이 둘 생긴다 · 문에 있는 적을 잡으면 다른 문으로 옮겨 가 이어 잡는다', {
   rules(b, rng) {
     const free = [];
     for (let sq = 16; sq < 64; sq++) free.push(sq);
@@ -86,7 +86,7 @@ joseki('martyr_vow', '순교의 맹세', 'gold', ['sacrifice'], MARTYR_TEXT, {
   more: MARTYR_MORE,
   onCut(ctx) { martyrBurst(ctx); },
 });
-joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 사슬: 배수 ×3 · 시작한 기물은 덱에서 사라진다', {
+joseki('pact', '결사', 'gold', ['sacrifice'], '대국 첫 콤보: 배수 ×3 · 시작한 기물은 덱에서 사라진다', {
   more: '덱 기물이 여섯 이하면 사라지지 않는다',
   onChainEnd(ctx) { if (!(ctx.t.movesUsed ?? 0)) { ctx.mulMult(3); ctx.chain.pact = true; } },
 });
@@ -98,7 +98,7 @@ joseki('highlander', '하이랜더', 'rainbow', ['hunt'], '덱 기물이 모두 
 joseki('throne', '왕좌', 'rainbow', ['crown', 'march'], '폰으로 시작해 프로모션하면: 덱의 그 폰이 퀸이 된다', {
   onPromote(ctx) { if (ctx.chain.dropType === 'P') ctx.chain.throne = true; },
 });
-joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 사슬이 한 줄에 다섯 칸을 밟으면 곧바로 이긴다', {
+joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 콤보가 한 줄에 다섯 칸을 밟으면 곧바로 이긴다', {
   onCapture(ctx) {
     const c = ctx.chain;
     const sqs = [c.dropSq, ...c.captures.filter((x) => !x.stay).map((x) => x.at ?? x.to)];
@@ -124,7 +124,7 @@ joseki('battery', '포대', 'silver', ['line'], '룩 하나가 포가 된다', {
 joseki('gloom', '그늘', 'silver', ['diag'], '비숍 하나가 유령이 된다', {
   pick(run, events) { evolve(run, 'B', 'W', 1, events); },
 });
-joseki('river', '강', 'silver', ['line'], '강을 건너서 먹을 때마다 배수 +1', {
+joseki('river', '강', 'silver', ['line'], '강을 건너서 잡을 때마다 배수 +1', {
   more: '넷째 줄과 다섯째 줄 사이가 강',
   rules(b) { b.rules.river = true; },
   onCapture(ctx) { const a = ctx.event.from >> 3, b = ctx.event.to >> 3; if ((a <= 3 && b >= 4) || (a >= 4 && b <= 3)) ctx.addMult(1); },
@@ -152,7 +152,7 @@ joseki('long_think', '장고', 'gold', ['hunt'], '수 −1 · 손 +2 · 희생 +
 joseki('first_mover', '선수', 'rainbow', ['crown'], '대국이 시작되면 값이 가장 큰 적 하나가 사라진다', {
   onSetup(ctx) { const b = ctx.t.board; const sq = heavyFirst(b)[0]; if (sq != null) { b[sq] = null; ctx.emit({ type: 'firstMover', sq }); } },
 });
-joseki('captive', '포로', 'rainbow', ['change'], '대국 첫 사슬에서 마지막에 먹은 적이 내 덱에 들어온다', {
+joseki('captive', '포로', 'rainbow', ['change'], '대국 첫 콤보에서 마지막에 잡은 적이 내 덱에 들어온다', {
   more: '덱 열넷까지',
   onChainEnd(ctx) {
     const c = ctx.chain, last = c.captures.at(-1);

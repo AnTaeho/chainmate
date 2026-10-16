@@ -11,14 +11,14 @@ function master(id, rule, text, def) {
 
 // 명인마다 뿌리의 동사 하나를 확실히 비튼다(밤샘 D-1: 2a · 2b에서 1~7관 명인 통과 90~97%로 너무 약했다 — 보고서 docs/reports/night-D.md).
 // 철벽 = 응수, 안개 = 떨구기, 거울 = 갈아입기, 모래시계 = 수, 무거운 손 = 손, 침묵 = 격언, 앙갚음 = 끊김, 대가 = 외통.
-master('iron_wall', '철벽', '지켜진 적을 먹으면 곧바로 끊긴다', {
+master('iron_wall', '철벽', '지켜진 적을 잡으면 곧바로 끊긴다', {
   onBattleStart(ctx) { ctx.rules.noReply = true; },
 });
 master('fog', '안개', '위 다섯 줄은 안개라 놓을 수 없다 · 내 기물이 갈 수 있는 칸만 안개가 걷힌다', {
   onBattleStart(ctx) { ctx.rules.fog = 5; },
 });
 // 한 사슬에서 같은 종류의 적을 두 번 먹지 못한다(킹은 하나뿐이라 뺀다)
-master('mirror', '거울', '한 사슬에서 같은 종류를 두 번 먹지 못한다', {
+master('mirror', '거울', '한 콤보에서 같은 종류를 두 번 잡지 못한다', {
   allowCapture(ctx) {
     const { piece } = ctx.event;
     if (piece === 'K') return true;
@@ -41,10 +41,10 @@ master('silence', '침묵', '맨 위 격언 둘이 효과를 내지 않는다', 
     }
   },
 });
-master('grudge', '앙갚음', '끊긴 사슬은 점수가 4분의 1', {
+master('grudge', '앙갚음', '끊긴 콤보는 점수가 4분의 1', {
   onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.chain.scoreMul *= 0.25; },
 });
-master('grandmaster', '대가', '킹이 둘 · 둘 다 먹어야 체크메이트', {
+master('grandmaster', '대가', '킹이 둘 · 둘 다 잡아야 체크메이트', {
   onBattleStart(ctx) { ctx.rules.kings = 2; },
 });
 

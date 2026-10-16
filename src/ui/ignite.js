@@ -24,7 +24,7 @@ export function drawEmber(ctx, x, y) {
 }
 // 가리키면 뜨는 짧은 말풍선: 「이 판의 콤비네이션」 + 「N 먹음 · 점수」(제목 줄과 한 줄 — 좁은 왼쪽 칸에서 「N 먹음」이 끊기지 않게)
 export const IGNITE_TITLE = '이 판의 콤비네이션';
-export const igniteLine = (ig) => `${ig.captures} 먹음 · ${num(ig.score)}`;
+export const igniteLine = (ig) => `${ig.captures} 잡음 · ${num(ig.score)}`;
 // 글 줄(ty = text y) 왼쪽 x에 불씨를 그리고 가리킬 구역을 둔다. 돌려주는 값: 차지한 폭(틈 포함)
 export function emberMark(ctx, ui, ig, x, ty, id = 'ignite:mark') {
   if (!ig) return 0;
@@ -119,7 +119,7 @@ export function drawCombo(ctx, g, { BX, BY, S, sqXY }) {
     ig.steps.slice(0, L.nShow).forEach((tp, i) => sprite(ctx, tp, 'w', cx + L.P + i * 18, cy + L.row, {}));
     if (L.more > 0) text(ctx, `+${L.more}`, cx + L.P + L.nShow * 18 + 1, cy + L.row + 5, PAL.cardDim, { bold: true });
     rect(ctx, cx + L.P, cy + L.rule, L.CW - L.P * 2, 1, PAL.cardDim);
-    text(ctx, '먹은 수', cx + L.P, cy + L.caps, PAL.cardDim);
+    text(ctx, '잡은 수', cx + L.P, cy + L.caps, PAL.cardDim);
     text(ctx, String(ig.captures), R, cy + L.caps, PAL.cardInk, { align: 'right', bold: true });
     text(ctx, L.vm, cx + L.P, cy + L.vmY, PAL.cardDim);
     text(ctx, L.sc, R, cy + L.scY, PAL.goldDk, { align: 'right', bold: true });

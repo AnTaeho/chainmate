@@ -32,10 +32,10 @@ maxim('pawn_march', '폰의 행진', '폰으로 시작: 값 +40', '놓기', 'com
 maxim('quick_change', '빠른 갈아입기', '모습이 바뀔 때마다 배수 +2', '갈아입기', 'common', 4, {
   onTransform(ctx) { ctx.addMult(2); },
 });
-maxim('whim', '변덕', '모습을 넷 이상 거친 사슬: 배수 ×2', '갈아입기', 'rare', 7, {
+maxim('whim', '변덕', '모습을 넷 이상 거친 콤보: 배수 ×2', '갈아입기', 'rare', 7, {
   onChainEnd(ctx) { if (ctx.chain.forms.length >= 4) ctx.mulMult(2); },
 });
-maxim('steadfast', '한결같음', '모습이 안 바뀐 사슬: 배수 ×3', '갈아입기', 'uncommon', 6, {
+maxim('steadfast', '한결같음', '모습이 안 바뀐 콤보: 배수 ×3', '갈아입기', 'uncommon', 6, {
   onChainEnd(ctx) { if (ctx.chain.transforms === 0 && ctx.chain.promotions === 0) ctx.mulMult(3); },
 });
 maxim('coronation', '대관식', '퀸 모습이 될 때마다 값 +50', '갈아입기', 'common', 4, {
@@ -44,28 +44,28 @@ maxim('coronation', '대관식', '퀸 모습이 될 때마다 값 +50', '갈아�
 });
 
 // ── 먹기
-maxim('low_stance', '낮은 자세', '폰 모습으로 먹을 때마다 배수 +3', '먹기', 'common', 4, {
+maxim('low_stance', '낮은 자세', '폰 모습으로 잡을 때마다 배수 +3', '잡기', 'common', 4, {
   onCapture(ctx) { if (ctx.event.form === 'P') ctx.addMult(3); },
 });
-maxim('diagonal', '대각의 길', '비숍 모습으로 먹을 때마다 값 +25', '먹기', 'common', 3, {
+maxim('diagonal', '대각의 길', '비숍 모습으로 잡을 때마다 값 +25', '잡기', 'common', 3, {
   onCapture(ctx) { if (ctx.event.form === 'B') ctx.addValue(25); },
 });
-maxim('wall_breaker', '성벽 허물기', '룩을 먹을 때마다 배수 +4', '먹기', 'common', 4, {
+maxim('wall_breaker', '성벽 허물기', '룩을 잡을 때마다 배수 +4', '잡기', 'common', 4, {
   onCapture(ctx) { if (ctx.event.piece === 'R') ctx.addMult(4); },
 });
-maxim('long_chain', '긴 사슬', '다섯째부터 먹을 때마다 배수 ×1.2', '먹기', 'rare', 7, {
+maxim('long_chain', '긴 콤보', '다섯째부터 잡을 때마다 배수 ×1.2', '잡기', 'rare', 7, {
   onCapture(ctx) { if (ctx.event.index >= 4) ctx.mulMult(1.2); },
 });
-maxim('long_road', '먼 길', '세 칸 이상 떨어진 적을 먹을 때마다 값 +20', '먹기', 'common', 3, {
+maxim('long_road', '먼 길', '세 칸 이상 떨어진 적을 잡을 때마다 값 +20', '잡기', 'common', 3, {
   onCapture(ctx) { if (ctx.event.dist >= 3) ctx.addValue(20); },
 });
-maxim('edge', '가장자리', '가장자리 칸에서 먹을 때마다 배수 +2', '먹기', 'common', 4, {
+maxim('edge', '가장자리', '가장자리 칸에서 잡을 때마다 배수 +2', '잡기', 'common', 4, {
   onCapture(ctx) { if (EDGE(ctx.event.to)) ctx.addMult(2); },
 });
-maxim('center', '중앙 장악', '가운데 네 칸에서 먹을 때마다 배수 ×1.5', '먹기', 'uncommon', 5, {
+maxim('center', '중앙 장악', '가운데 네 칸에서 잡을 때마다 배수 ×1.5', '잡기', 'uncommon', 5, {
   onCapture(ctx) { if (CENTER.includes(ctx.event.to)) ctx.mulMult(1.5); },
 });
-maxim('vault', '금고', '먹은 적 하나마다 상금 +1 · 대국마다 5까지', '먹기', 'uncommon', 5, {
+maxim('vault', '금고', '잡은 적 하나마다 상금 +1 · 대국마다 5까지', '잡기', 'uncommon', 5, {
   onChainEnd(ctx) {
     const got = num(ctx.state.got);
     const n = Math.min(ctx.chain.captures.length, 5 - got);
@@ -74,7 +74,7 @@ maxim('vault', '금고', '먹은 적 하나마다 상금 +1 · 대국마다 5까
 });
 
 // ── 승급
-maxim('back_rank_dream', '끝줄의 꿈', '프로모션한 사슬은 한 번 끊겨도 이어진다', '프로모션', 'uncommon', 6, {
+maxim('back_rank_dream', '끝줄의 꿈', '프로모션한 콤보는 한 번 끊겨도 이어진다', '프로모션', 'uncommon', 6, {
   onCut(ctx) {
     if (ctx.chain.promotions > 0 && !ctx.flags.backRankDream) { ctx.flags.backRankDream = true; ctx.cancelCut(); }
   },
@@ -84,13 +84,13 @@ maxim('promotion_feast', '퀸의 잔치', '프로모션할 때마다 배수 ×2'
 });
 
 // ── 끊김
-maxim('sacrifice', '오뚝이', '대국마다 한 번, 끊겨도 사슬이 이어진다', '끊김', 'uncommon', 5, {
+maxim('sacrifice', '오뚝이', '대국마다 한 번, 끊겨도 콤보가 이어진다', '끊김', 'uncommon', 5, {
   onCut(ctx) { if (!ctx.state.used) { ctx.state.used = true; ctx.cancelCut(); } },
 });
-maxim('payback', '되갚음', '끊긴 사슬: 배수 +8', '끊김', 'common', 4, {
+maxim('payback', '되갚음', '끊긴 콤보: 배수 +8', '끊김', 'common', 4, {
   onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.addMult(8); },
 });
-maxim('close_call', '아슬아슬', '끊기지 않은 사슬: 값 +30', '끊김', 'common', 3, {
+maxim('close_call', '아슬아슬', '끊기지 않은 콤보: 값 +30', '끊김', 'common', 3, {
   onChainEnd(ctx) { if (ctx.event.reason !== 'cut') ctx.addValue(30); },
 });
 
@@ -100,7 +100,7 @@ maxim('mate_hunter', '메이트 사냥꾼', '킹을 지키는 적이 하나 적�
   onBattleStart(ctx) { ctx.rules.guards = Math.max(1, (ctx.rules.guards ?? kingGuards(ctx.t.ante ?? 1)) - 1); },
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.addMoney(6); },
 });
-maxim('kings_neck', '왕의 목', '킹을 지키는 적을 먹으면 배수 +2 · 체크메이트: 배수 ×3', '체크메이트', 'uncommon', 6, {
+maxim('kings_neck', '왕의 목', '킹을 지키는 적을 잡으면 배수 +2 · 체크메이트: 배수 ×3', '체크메이트', 'uncommon', 6, {
   more: '지키는 적이 없는 킹은 빛난다',
   onCapture(ctx) {
     const { piece, to } = ctx.event;
@@ -156,7 +156,7 @@ maxim('small_bag', '작은 덱', '덱 기물 여덟 이하: 배수 ×1.5', '덱'
 });
 
 // ── 증원
-maxim('welcome', '증원 환영', '막 들어온 증원을 먹으면 값 +40', '증원', 'common', 3, {
+maxim('welcome', '증원 환영', '막 들어온 증원을 잡으면 값 +40', '증원', 'common', 3, {
   onCapture(ctx) { if (ctx.event.born >= 0 && ctx.event.born === num(ctx.t.movesUsed)) ctx.addValue(40); },
 });
 maxim('shadow_reading', '그림자 읽기', '증원을 두 수 앞까지 본다 · 증원 자리에 놓으면 배수 +4', '증원', 'common', 3, {
@@ -186,13 +186,13 @@ maxim('collector', '기보 수집가', '이번 판에 쓴 기보마다 배수 +1
 maxim('light_step', '가벼운 발', '폰이나 나이트로 시작: 배수 +3', '놓기', 'common', 4, {
   onChainEnd(ctx) { if (ctx.chain.dropType === 'P' || ctx.chain.dropType === 'N') ctx.addMult(3); },
 });
-maxim('queen_hunt', '퀸 사냥', '퀸을 먹을 때마다 값 +60', '먹기', 'common', 4, {
+maxim('queen_hunt', '퀸 사냥', '퀸을 잡을 때마다 값 +60', '잡기', 'common', 4, {
   onCapture(ctx) { if (ctx.event.piece === 'Q') ctx.addValue(60); },
 });
-maxim('bare_board', '빈 판', '판에 적이 여덟 이하: 배수 ×1.5', '먹기', 'uncommon', 6, {
+maxim('bare_board', '빈 판', '판에 적이 여덟 이하: 배수 ×1.5', '잡기', 'uncommon', 6, {
   onChainEnd(ctx) { if (ctx.t.board.filter((c) => c && !c.mine).length <= 8) ctx.mulMult(1.5); },
 });
-maxim('homecoming', '되돌이', '처음 모습으로 돌아오면 배수 ×2 · 사슬마다 한 번', '갈아입기', 'uncommon', 5, {
+maxim('homecoming', '되돌이', '처음 모습으로 돌아오면 배수 ×2 · 콤보마다 한 번', '갈아입기', 'uncommon', 5, {
   onTransform(ctx) {
     if (ctx.event.to === ctx.chain.dropType && !ctx.flags.homecoming) { ctx.flags.homecoming = true; ctx.mulMult(2); }
   },
@@ -200,30 +200,30 @@ maxim('homecoming', '되돌이', '처음 모습으로 돌아오면 배수 ×2 ·
 maxim('collector_forms', '모습 모으기', '새 모습이 될 때마다 값 +20', '갈아입기', 'common', 4, {
   onTransform(ctx) { if (!ctx.chain.forms.includes(ctx.event.to)) ctx.addValue(20); },
 });
-maxim('reply_master', '되받아치기', '지키는 적을 먹을 때마다 배수 +2', '지키는 적', 'common', 4, {
+maxim('reply_master', '되받아치기', '지키는 적을 잡을 때마다 배수 +2', '지키는 적', 'common', 4, {
   onCapture(ctx) { if (ctx.event.forced) ctx.addMult(2); },
 });
 maxim('promotion_road', '퀸으로 가는 길', '프로모션할 때마다 값 +80', '프로모션', 'common', 4, {
   onPromote(ctx) { ctx.addValue(80); },
 });
-maxim('reinforce_hunt', '증원 사냥', '증원을 먹을 때마다 배수 +2', '증원', 'common', 3, {
+maxim('reinforce_hunt', '증원 사냥', '증원을 잡을 때마다 배수 +2', '증원', 'common', 3, {
   onCapture(ctx) { if (ctx.event.born >= 0) ctx.addMult(2); },
 });
 
 // ── 깊이 G: 증강체스의 나머지 카드에서(뿌리의 동사를 비튼 셋)
-maxim('promotion_rush', '패스드 폰', '폰 모습으로 두 번 먹고 나면 어느 줄에서든 프로모션한다', '프로모션', 'uncommon', 5, {
+maxim('promotion_rush', '패스드 폰', '폰 모습으로 두 번 잡고 나면 어느 줄에서든 프로모션한다', '프로모션', 'uncommon', 5, {
   onCapture(ctx) {
     if (ctx.event.form !== 'P') return;
     ctx.flags.pawnTakes = (ctx.flags.pawnTakes || 0) + 1;
     if (ctx.flags.pawnTakes >= 2) ctx.flags.promoteFrom = 0;
   },
 });
-maxim('mad_horse', '광마', '가장자리에서 나이트 모습으로 먹으면: 지키는 적을 무시한다', '지키는 적', 'common', 4, {
-  more: '사슬마다 한 번',
+maxim('mad_horse', '광마', '가장자리에서 나이트 모습으로 잡으면: 지키는 적을 무시한다', '지키는 적', 'common', 4, {
+  more: '콤보마다 한 번',
   onCapture(ctx) { if (ctx.event.form === 'N' && EDGE(ctx.event.to) && !ctx.flags.madHorseUsed) ctx.flags.madHorse = true; },
   onThreat(ctx) { if (ctx.flags.madHorse) { ctx.flags.madHorse = false; ctx.flags.madHorseUsed = true; ctx.ignoreThreat(); } },
 });
-maxim('rook_lift', '룩 리프트', '룩 모습으로 구석에서 먹을 때마다 배수 ×2', '먹기', 'common', 4, {
+maxim('rook_lift', '룩 리프트', '룩 모습으로 구석에서 잡을 때마다 배수 ×2', '잡기', 'common', 4, {
   onCapture(ctx) { const s = ctx.event.to; if (ctx.event.form === 'R' && (s === 0 || s === 7 || s === 56 || s === 63)) ctx.mulMult(2); },
 });
 
@@ -236,16 +236,16 @@ const around = (sq) => { const out = []; for (let df = -1; df <= 1; df++) for (l
 const foe = (c) => c && !c.mine && c.t !== 'X' && c.t !== 'J';
 const valueOf = (t) => (PIECES[t] ? PIECES[t].value : 0);
 
-maxim('cavalry_charge', '기마 돌격', '뛰어 먹은 바로 다음에 먹으면 배수 +3', '먹기', 'common', 4, {
+maxim('cavalry_charge', '기마 돌격', '뛰어 잡은 바로 다음에 잡으면 배수 +3', '잡기', 'common', 4, {
   onCapture(ctx) { const caps = ctx.chain.captures; const prev = caps.length >= 2 ? caps[caps.length - 2] : null; if (prev && leapOf(prev)) ctx.addMult(3); },
 });
-maxim('long_diagonal', '긴 대각', '대각선으로 세 칸 이상 가서 먹으면 값 +30', '먹기', 'common', 3, {
+maxim('long_diagonal', '긴 대각', '대각선으로 세 칸 이상 가서 잡으면 값 +30', '잡기', 'common', 3, {
   onCapture(ctx) { if (diagOf(ctx.event) && ctx.event.dist >= 3) ctx.addValue(30); },
 });
-maxim('encircle', '포위', '주변에 적이 셋 이상인 칸에서 먹으면 배수 +2', '먹기', 'common', 4, {
+maxim('encircle', '포위', '주변에 적이 셋 이상인 칸에서 잡으면 배수 +2', '잡기', 'common', 4, {
   onCapture(ctx) { const b = ctx.t.board; if (around(ctx.event.to).filter((s) => foe(b[s])).length >= 3) ctx.addMult(2); },
 });
-maxim('loner', '외톨이', '지키는 적이 없는 적을 먹을 때마다 값 +15', '지키는 적', 'common', 3, {
+maxim('loner', '외톨이', '지키는 적이 없는 적을 잡을 때마다 값 +15', '지키는 적', 'common', 3, {
   onCapture(ctx) { if (ctx.event.piece !== 'K' && ctx.attackers(ctx.event.to).length === 0) ctx.addValue(15); },
 });
 maxim('full_board', '가득 찬 판', '판에 적이 열여섯 이상: 배수 ×1.5', '증원', 'common', 4, {
@@ -267,23 +267,23 @@ maxim('second_wind', '두 번째 바람', '대국 둘째 수: 배수 ×2', '수'
 maxim('all_in', '승부수', '마지막 수에 점수가 목표의 절반 아래면: 배수 ×3', '수', 'uncommon', 5, {
   onChainEnd(ctx) { const t = ctx.t; if (t.movesLeft === 1 && t.target != null && num(t.score) < t.target / 2) ctx.mulMult(3); },
 });
-maxim('combo', '연타', '같은 모습으로 잇달아 먹을 때마다 배수 +2', '먹기', 'common', 4, {
+maxim('combo', '연타', '같은 모습으로 잇달아 잡을 때마다 배수 +2', '잡기', 'common', 4, {
   onCapture(ctx) { const caps = ctx.chain.captures; const prev = caps.length >= 2 ? caps[caps.length - 2] : null; if (prev && prev.form === ctx.event.form) ctx.addMult(2); },
 });
-maxim('disguise', '변장', '특수 기물 모습으로 먹을 때마다 값 +30', '갈아입기', 'uncommon', 5, {
+maxim('disguise', '변장', '특수 기물 모습으로 잡을 때마다 값 +30', '갈아입기', 'uncommon', 5, {
   onCapture(ctx) { if (PIECES[ctx.event.form] && PIECES[ctx.event.form].fairy) ctx.addValue(30); },
 });
-maxim('checkerboard', '체스판', '밝은 칸에서 먹으면 값 +10 · 어두운 칸이면 배수 +1', '먹기', 'common', 3, {
+maxim('checkerboard', '체스판', '밝은 칸에서 잡으면 값 +10 · 어두운 칸이면 배수 +1', '잡기', 'common', 3, {
   onCapture(ctx) { const s = ctx.event.to; if (((s & 7) + (s >> 3)) % 2 === 1) ctx.addValue(10); else ctx.addMult(1); },
 });
-maxim('last_square', '마지막 한 칸', '사슬의 마지막 먹기: 값 ×2', '먹기', 'uncommon', 5, {
-  more: '마지막에 먹은 적의 값을 한 번 더 받는다',
+maxim('last_square', '마지막 한 칸', '콤보의 마지막 잡기: 값 ×2', '잡기', 'uncommon', 5, {
+  more: '마지막에 잡은 적의 값을 한 번 더 받는다',
   onChainEnd(ctx) { const last = ctx.chain.captures.at(-1); if (last) ctx.addValue(valueOf(last.piece)); },
 });
-maxim('nobility', '귀족', '룩 · 퀸을 먹을 때마다 배수 +2', '먹기', 'common', 4, {
+maxim('nobility', '귀족', '룩 · 퀸을 잡을 때마다 배수 +2', '잡기', 'common', 4, {
   onCapture(ctx) { if (ctx.event.piece === 'R' || ctx.event.piece === 'Q') ctx.addMult(2); },
 });
-maxim('farmer', '농부', '폰을 먹을 때마다 값 +15', '먹기', 'common', 3, {
+maxim('farmer', '농부', '폰을 잡을 때마다 값 +15', '잡기', 'common', 3, {
   onCapture(ctx) { if (ctx.event.piece === 'P') ctx.addValue(15); },
 });
 maxim('blacksmith', '대장장이', '각인 기물로 시작: 배수 ×1.5', '각인', 'uncommon', 6, {
@@ -293,7 +293,7 @@ maxim('soul_collector', '혼 수집가', '덱의 혼 하나마다 배수 +2', '�
   onBuild(spec, build) { spec.data = { ...(spec.data || {}), souls: (build.deck || []).filter((p) => p.soul).length }; },
   onChainEnd(ctx) { ctx.addMult(2 * num(ctx.data.souls)); },
 });
-maxim('specialty', '주특기', '기보 단계가 가장 높은 모습으로 먹을 때마다 값 +25', '기보', 'common', 4, {
+maxim('specialty', '주특기', '기보 단계가 가장 높은 모습으로 잡을 때마다 값 +25', '기보', 'common', 4, {
   onCapture(ctx) {
     const ch = (ctx.t.mods || []).find((m) => m.id === 'charts');
     const lv = (ch && ch.data && ch.data.levels) || {};
@@ -309,16 +309,16 @@ maxim('asceticism', '금욕', '격언 칸이 하나라도 비었으면: 배수 �
   onBuild(spec, build) { spec.data = { ...(spec.data || {}), free: build.maximFree ?? 1 }; },
   onChainEnd(ctx) { if (num(ctx.data.free) > 0) ctx.mulMult(2); },
 });
-maxim('gambler', '도박사', '사슬이 끝날 때 4번에 1번: 배수 ×3', '사슬', 'uncommon', 5, {
+maxim('gambler', '도박사', '콤보가 끝날 때 4번에 1번: 배수 ×3', '콤보', 'uncommon', 5, {
   onChainLuck(ctx) { if (ctx.roll() < 0.25) ctx.rescore(3); },
 });
-maxim('lucky_coin', '행운의 동전', '먹을 때마다 6번에 1번: 상금 +1', '먹기', 'common', 3, {
+maxim('lucky_coin', '행운의 동전', '잡을 때마다 6번에 1번: 상금 +1', '잡기', 'common', 3, {
   onChainLuck(ctx) { let n = 0; for (let i = 0; i < ctx.chain.captures.length; i++) if (ctx.roll() < 1 / 6) n++; if (n) { ctx.t.money = num(ctx.t.money) + n; ctx.emit({ type: 'money', money: n }); } },
 });
-maxim('reversal', '역전', '사슬이 끊긴 바로 다음 수: 배수 ×2', '끊김', 'uncommon', 5, {
+maxim('reversal', '역전', '콤보가 끊긴 바로 다음 수: 배수 ×2', '끊김', 'uncommon', 5, {
   onChainEnd(ctx) { const h = ctx.t.history; if (h && h.length && h[h.length - 1].reason === 'cut') ctx.mulMult(2); },
 });
-maxim('pilgrimage', '순례', '판의 네 구역을 모두 밟은 사슬: 배수 ×4', '먹기', 'rare', 7, {
+maxim('pilgrimage', '순례', '판의 네 구역을 모두 밟은 콤보: 배수 ×4', '잡기', 'rare', 7, {
   more: '판을 가로 · 세로 반으로 나눈 네 구역',
   onChainEnd(ctx) {
     const c = ctx.chain, q = new Set();
@@ -326,14 +326,14 @@ maxim('pilgrimage', '순례', '판의 네 구역을 모두 밟은 사슬: 배수
     if (q.size === 4) ctx.mulMult(4);
   },
 });
-maxim('kings_step', '왕의 발자국', '킹 옆 칸에서 먹을 때마다 배수 +3', '체크메이트', 'uncommon', 5, {
+maxim('kings_step', '왕의 발자국', '킹 옆 칸에서 잡을 때마다 배수 +3', '체크메이트', 'uncommon', 5, {
   onCapture(ctx) { const b = ctx.t.board; if (ctx.event.piece !== 'K' && around(ctx.event.to).some((s) => b[s] && !b[s].mine && b[s].t === 'K')) ctx.addMult(3); },
 });
 maxim('ambusher', '매복병', '증원 자리에 놓으면 값 +40', '증원', 'common', 3, {
   onDrop(ctx) { if ((ctx.t.incoming || []).some((r) => r.sq === ctx.event.sq)) ctx.flags.ambushDrop = true; },
   onChainEnd(ctx) { if (ctx.flags.ambushDrop) ctx.addValue(40); },
 });
-maxim('counter_book', '반격의 서', '지키는 적을 두 번 먹은 사슬: 배수 ×2', '지키는 적', 'common', 4, {
+maxim('counter_book', '반격의 서', '지키는 적을 두 번 잡은 콤보: 배수 ×2', '지키는 적', 'common', 4, {
   onChainEnd(ctx) { if (num(ctx.chain.forcedReplies) >= 2) ctx.mulMult(2); },
 });
 

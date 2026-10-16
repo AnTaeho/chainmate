@@ -328,7 +328,7 @@ export const soulRarity = (it) => (it.kind === 'soul' ? SOUL_BY_ID[it.id].rarity
 export const rarityLine = (rarity) => [RARITY_NAME[rarity], RARITY[rarity]];
 // 두루마리 「깨우기」(CHM-17): 금 간 구슬에서 금빛이 새어 나온다
 export const AWAKEN_TEXT = '금이 간 혼 하나가 깨어난다';
-export const AWAKEN_MORE = '혼이 붙은 기물로 사슬을 다섯 번 만들면 금이 간다';
+export const AWAKEN_MORE = '혼이 붙은 기물로 콤보를 다섯 번 만들면 금이 간다';
 // 카드에 적는 효과 한 줄(말풍선은 덧붙임만)
 export function itemEffect(it) {
   if (it.kind === 'maxim') return maximInfo(it.id).text;
@@ -707,7 +707,7 @@ export function miniShard(ctx, x, y, col = PAL.gold) {
 // 재현 조건은 첫 조각을 가진 뒤에만 드러난다(HOOKS 「불멸의 기보」) — 첫 조각이 없으면 「명국 재현」(낱말 상자가 풀어 준다)
 export function fragmentSteps(l, f) {
   const feat = !f || f.first ? l.feat : '명경기 재현';
-  const steps = [['first', `첫째: ${FRAG_SOURCE[l.source]}`], ['feat', `둘째: ${feat}`], ['gold', '셋째: 금빛 적을 먹고 이긴다']];
+  const steps = [['first', `첫째: ${FRAG_SOURCE[l.source]}`], ['feat', `둘째: ${feat}`], ['gold', '셋째: 금빛 적을 잡고 이긴다']];
   const next = f ? steps.findIndex(([k]) => !f[k]) : -1;
   return steps.map(([k, s], i) => ({ step: !f ? 'step' : f[k] ? 'done' : i === next ? 'next' : 'todo', s }));
 }

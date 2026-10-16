@@ -194,7 +194,7 @@ test('갈림길 카드 글: 떨구기 · 희생 · 다시 놓기 · 같은 떨�
   assert.deepEqual(R.forkMarks(drop), { mine: 12, best: 18, ghost: 'N' });
   const board = []; board[36] = { t: 'B', id: 5 };
   const split = { ...drop, split: { mine: { type: 'capture', sq: 35 }, best: { type: 'capture', sq: 36 } } };
-  assert.equal(R.forkLine(split, board), 'e5의 비숍을 먹었다면 이겼어요');
+  assert.equal(R.forkLine(split, board), 'e5의 비숍을 잡았다면 이겼어요');
   assert.deepEqual(R.forkMarks(split), { mine: 35, best: 36, ghost: null });
   assert.deepEqual(R.forkMarks({ ...base, mine: { kind: 'discard', t: 'P' }, best: [{ kind: 'reboard' }] }), { mine: null, best: null, ghost: null });
   M.lang.setLang('en');

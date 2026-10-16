@@ -16,8 +16,8 @@ function legend(id, fields, def) {
 
 legend('immortal', {
   name: '불멸의 대국', year: 1851, story: '앤더슨이 룩 둘 · 비숍 · 퀸을 희생하고 이겼다',
-  text: '끊겨도 사슬이 이어진다 · 끊길 때마다 배수 ×2', verb: '끊김',
-  feat: '한 사슬에서 끊기지 않고 룩 둘을 먹는다', source: 'display',
+  text: '끊겨도 콤보가 이어진다 · 끊길 때마다 배수 ×2', verb: '끊김',
+  feat: '한 콤보에서 끊기지 않고 룩 둘을 잡는다', source: 'display',
   check: (h) => h.cuts === 0 && count(h.caps, 'R') >= 2,
 }, {
   onCut(ctx) { ctx.cancelCut(); ctx.mulMult(2); },
@@ -27,7 +27,7 @@ legend('immortal', {
 export const OPERA_REFILLS = 3;
 legend('opera', {
   name: '오페라 대국', year: 1858, story: '모피가 오페라 관람석에서 17수 만에 이겼다',
-  text: '지켜진 킹도 먹는다 · 체크메이트하면 적이 다시 나타나고 사슬이 이어진다', verb: '체크메이트',
+  text: '지켜진 킹도 잡는다 · 체크메이트하면 적이 다시 나타나고 콤보가 이어진다', verb: '체크메이트',
   feat: '대국 첫 수에 체크메이트', source: 'display',
   check: (h) => h.move === 0 && h.mates > 0,
 }, {
@@ -38,8 +38,8 @@ legend('opera', {
 
 legend('century', {
   name: '세기의 대국', year: 1956, story: '열세 살 피셔의 퀸 희생',
-  text: '퀸 모습으로 먹을 때마다: 사슬이 끝날 때 배수 ×1.5', verb: '갈아입기',
-  feat: '퀸을 먹고 곧바로 퀸을 또 먹는다', source: 'chart',
+  text: '퀸 모습으로 잡을 때마다: 콤보가 끝날 때 배수 ×1.5', verb: '갈아입기',
+  feat: '퀸을 잡고 곧바로 퀸을 또 잡는다', source: 'chart',
   check: (h) => h.caps.includes('QQ'),
 }, {
   onChainEnd(ctx) {
@@ -50,8 +50,8 @@ legend('century', {
 
 legend('evergreen', {
   name: '상록의 대국', year: 1852, story: '끝없이 이어지는 공격',
-  text: '사슬이 멈추면 한 번, 그 모습으로 한 번 더 놓아 이어 먹는다', verb: '놓기',
-  feat: '한 사슬에서 적 여덟을 먹는다', source: 'engraving',
+  text: '콤보가 멈추면 한 번, 그 모습으로 한 번 더 놓아 이어 잡는다', verb: '놓기',
+  feat: '한 콤보에서 적 여덟을 잡는다', source: 'engraving',
   check: (h) => h.captures >= 8,
 }, {
   onChainStop(ctx) { ctx.redrop(); },
@@ -60,7 +60,7 @@ legend('evergreen', {
 legend('eight_pawns', {
   name: '폰 여덟의 행진', year: null, story: '여덟 폰이 모두 프로모션한 전설',
   text: '폰으로 시작: 여섯째 줄에서 프로모션 · 프로모션마다 배수 ×3', verb: '프로모션',
-  feat: '한 사슬에서 두 번 프로모션한다', source: 'piece',
+  feat: '한 콤보에서 두 번 프로모션한다', source: 'piece',
   check: (h) => h.promotions >= 2,
 }, {
   onDrop(ctx) { if (ctx.chain.dropType === 'P') ctx.flags.promoteFrom = 5; },

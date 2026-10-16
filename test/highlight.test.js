@@ -135,7 +135,7 @@ test('옛 저장: 최고 한 수에 사슬 길이가 없으면 먹기 줄을 세
   const old = finishedRun({ old: true, chain: 9 });
   assert.equal(old.bestReplay.captures, undefined);
   assert.equal(chainOf(old.bestReplay), 9);
-  assert.equal(highlightLayout(old).note, '최고 한 수 · 사슬 9');
+  assert.equal(highlightLayout(old).note, '최고 한 수 · 콤보 9');
   assert.deepEqual(drawn(old).bad, []);
   // 사슬 길이가 적혀 있으면 그 수(터져 함께 먹힌 적은 먹기 줄에 없다)
   assert.equal(chainOf({ ...old.bestReplay, captures: 11 }), 11);

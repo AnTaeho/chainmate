@@ -1311,7 +1311,7 @@ export class BattleScreen {
     // 막대 위 얻을 몫(+N, 상자 밖 글)을 알림이 덮으면 「글이 상자 밖」으로 잡는다(CHM-48). 수업 제목 줄(y 1)은 막대 상자 밖이다
     openBox('tile', X - 1, Y - 1, Wd + 2, Hh + 2, 0, { name: '목표 막대' });
     closeBox();
-    this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '사슬이 끝났을 때 점수가 목표를 넘으면 이겨요. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어나요') });
+    this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '콤보가 끝났을 때 점수가 목표를 넘으면 이겨요. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어나요') });
     // 목표를 넘긴 막대 뒤 빛(막대 칸 뒤 층)
     if (score >= tgt) glow(ctx, X, Y, Math.round(Wd * Math.min(1, score / maxV)), Hh, PAL.gold, 0.3 * flicker(time, 4), 5);
     box(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, PAL.feltDk, PAL.frameDk);
@@ -1402,7 +1402,7 @@ export class BattleScreen {
       const id = `sq:${sq}`;
       const g = ghosts.get(sq);
       let tip = g ? [`증원 · ${PIECE_NAME[g.t]}`, [g.k ? '두 수 뒤에 들어와요' : '이번 수 뒤에 들어와요']] : null;
-      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['지키는 적', [t.kind === 'capture' && tset.has(sq) ? '이 적을 먹어야 사슬이 이어져요' : '지금 모습으로는 먹을 수 없어요']];
+      if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['지키는 적', [t.kind === 'capture' && tset.has(sq) ? '이 적을 잡아야 콤보가 이어져요' : '지금 모습으로는 잡을 수 없어요']];
       const cell = v.board[sq];
       // 적 기물: 특성 · 특수 기물은 늘, 체스 기물은 지금 누를 칸이 아닐 때만(누를 칸은 먹기 미리 보기가 말한다). 행마 그림을 곁들인다
       let diag = null;
@@ -1673,7 +1673,7 @@ export class BattleScreen {
     openBox('panel', RX, TOP, RW, h1, P, { overlay: true, name: '먹으면' });
     panel(ctx, RX, TOP, RW, h1);
     text(ctx, '지금', RX + 21, labY, PAL.dim, { align: 'center' });
-    text(ctx, '먹으면', RX + 77, labY, PAL.dim, { align: 'center' });
+    text(ctx, '잡으면', RX + 77, labY, PAL.dim, { align: 'center' });
     box(ctx, RX + 8, artY, 26, 34, PAL.light, PAL.frameDk);
     sprite(ctx, v.chain.form, 'w', RX + 13, artY + 6, this.look(v.chain.form));
     text(ctx, '›', RX + 49, artY + 9, PAL.gold, { align: 'center', bold: true, scale: 2 });
@@ -1686,9 +1686,9 @@ export class BattleScreen {
     openBox('panel', RX, y2, RW, h2, P, { overlay: true, name: '그다음' });
     panel(ctx, RX, y2, RW, h2);
     const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['체크메이트', PAL.gold] : pv.redrop ? ['한 번 더 놓기', PAL.gold]
-      : pv.done ? ['사슬이 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red]
+      : pv.done ? ['콤보가 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red]
       // 먹을 적이 두 자리면(넓은 행마의 새 특수 기물, CHM-55) 폭에 맞춰 짧은 말로
-      : [measure(L(`다음에 먹을 적 ${pv.next.length}`), true) <= RW - P * 2 ? `다음에 먹을 적 ${pv.next.length}` : `먹을 적 ${pv.next.length}`, PAL.gold];
+      : [measure(L(`다음에 잡을 적 ${pv.next.length}`), true) <= RW - P * 2 ? `다음에 잡을 적 ${pv.next.length}` : `잡을 적 ${pv.next.length}`, PAL.gold];
     fitText(ctx, msg, RX + P, y2 + textY(P), RW - P * 2, col);
     closeBox();
   }

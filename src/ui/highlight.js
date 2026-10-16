@@ -78,7 +78,7 @@ export function highlightLayout(run, ox = 0, oy = 0) {
   const kind = run.endless ? '끝없는 대국' : run.daily ? '오늘의 대국' : `레이팅 ${rating(run.dan)}`;
   const tag = { s: kind, col: run.phase === 'won' || run.endless ? PAL.gold : PAL.dim };
   const head = run.phase === 'won' && !run.endless ? `${run.ante}관 돌파` : `${run.ante}관 도달`, chain = chainOf(r), score = r.score || 0;
-  const note = chain > 0 ? `최고 한 수 · 사슬 ${chain}` : '최고 한 수';
+  const note = chain > 0 ? `최고 한 수 · 콤보 ${chain}` : '최고 한 수';
   // 큰 글은 두 배, 짧은 꼴 점수와도 한 줄에 안 들어가면 한 배 굵게. 점수는 남은 폭에 1,234 꼴이 안 들어가면 짧은 꼴
   const big = measure(head, true) * 2 + BAND_GAP + measure(short(score), true) * 2 <= w;
   const headW = measure(head, true) * (big ? 2 : 1);

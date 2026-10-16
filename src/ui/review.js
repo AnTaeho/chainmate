@@ -14,7 +14,7 @@ export function forkLine(r, board) {
   const s = r.split && r.split.best;
   if (s && s.type === 'capture') {
     const c = board && board[s.sq];
-    return c && !c.mine && PIECE_NAME[c.t] ? `${sqName(s.sq)}의 ${josa(PIECE_NAME[c.t], '을/를')} 먹었다면 이겼어요` : `${sqName(s.sq)}의 적을 먹었다면 이겼어요`;
+    return c && !c.mine && PIECE_NAME[c.t] ? `${sqName(s.sq)}의 ${josa(PIECE_NAME[c.t], '을/를')} 잡았다면 이겼어요` : `${sqName(s.sq)}의 적을 잡았다면 이겼어요`;
   }
   if (s && s.type === 'redrop') return `${sqName(s.sq)}에 한 번 더 놓았다면 이겼어요`;
   if (b0.kind === 'drop') return `${josa(PIECE_NAME[b0.t], '을/를')} ${sqName(b0.sq)}에 놓았다면 이겼어요`;

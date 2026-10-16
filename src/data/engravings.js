@@ -9,7 +9,7 @@ function engraving(id, name, text, rarity, def) {
   defineModifier(id, { kind: 'engraving', ...def });
 }
 
-engraving('gold', '금', '사슬이 끝나면 상금 +2', 'common', {
+engraving('gold', '금', '콤보가 끝나면 상금 +2', 'common', {
   onChainEnd(ctx) { ctx.addMoney(2); },
 });
 engraving('ivory', '상아', '값 +30', 'common', {
@@ -22,7 +22,7 @@ engraving('glass', '유리', '배수 ×2 · 4번에 1번 깨진다', 'common', {
   breakChance: 0.25,
   onChainEnd(ctx) { ctx.mulMult(2); },
 });
-engraving('silver', '은', '첫 먹기에선 끊기지 않는다', 'uncommon', {
+engraving('silver', '은', '첫 잡기에선 끊기지 않는다', 'uncommon', {
   onCut(ctx) { if (ctx.chain.captures.length === 1) ctx.cancelCut(); },
 });
 engraving('feather', '깃', '지켜진 칸에도 놓을 수 있다', 'common', {
@@ -31,22 +31,22 @@ engraving('feather', '깃', '지켜진 칸에도 놓을 수 있다', 'common', {
 
 
 // 밤샘 2: 여섯 더
-engraving('bronze', '청동', '먹을 때마다 값 +5', 'common', {
+engraving('bronze', '청동', '잡을 때마다 값 +5', 'common', {
   onCapture(ctx) { ctx.addValue(5); },
 });
 engraving('iron', '철', '끊길 때: 배수 +3', 'common', {
   onCut(ctx) { ctx.addMult(3); },
 });
-engraving('amber', '호박', '첫 먹기의 값 ×2', 'common', {
+engraving('amber', '호박', '첫 잡기의 값 ×2', 'common', {
   onCapture(ctx) { if (ctx.event.index === 0) ctx.addValue(PIECES[ctx.event.piece] ? PIECES[ctx.event.piece].value : 0); },
 });
-engraving('jade', '비취', '대국 첫 사슬: 배수 ×2', 'uncommon', {
+engraving('jade', '비취', '대국 첫 콤보: 배수 ×2', 'uncommon', {
   onChainEnd(ctx) { if (!(ctx.t.movesUsed ?? 0)) ctx.mulMult(2); },
 });
-engraving('coral', '산호', '증원을 먹으면 상금 +1', 'common', {
+engraving('coral', '산호', '증원을 잡으면 상금 +1', 'common', {
   onCapture(ctx) { if (ctx.event.born >= 0) ctx.addMoney(1); },
 });
-engraving('marble', '대리석', '모습이 안 바뀐 먹기마다 배수 +2', 'uncommon', {
+engraving('marble', '대리석', '모습이 안 바뀐 잡기마다 배수 +2', 'uncommon', {
   onCapture(ctx) { if (ctx.event.piece === ctx.event.form) ctx.addMult(2); },
 });
 
