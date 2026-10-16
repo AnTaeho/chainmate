@@ -144,6 +144,9 @@ test('낱말 상자: 기본 낱말은 글에서 찾아도 상자를 띄우지 �
   assert.equal(keyList(['fam_leap', 'fairy', 'threat', 'links']).length, 2);
   // 밀려난 배수 상자도 그 낱말을 가리키면 뜬다
   assert.deepEqual(keyList(['fam_leap', 'threat', 'links'], 'links'), ['fam_leap', 'links']);
+  // 값 · 배수와 그 수는 한 줄에 같이 선다(카드의 색 칸이 둘로 갈리지 않게)
+  const { wrap } = await import('../src/render/text.js');
+  for (let w = 80; w <= 160; w += 2) for (const l of wrap('다섯째부터 잡을 때마다 배수 ×1.2 · 끊긴 콤보: 값 +30', w)) assert.ok(!/(?:^|\s)(?:값|배수)$/.test(l) && !/^[+×−][\d.]/.test(l), `${w}: ${l}`);
   // 가리킨 낱말은 둘 안에 꼭 든다
   assert.deepEqual(keyList(['fam_leap', 'fairy', 'threat'], 'threat'), ['fam_leap', 'threat']);
   setCanvasFactory(null);

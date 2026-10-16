@@ -108,6 +108,7 @@ export const termWord = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enWord : TE
 export const termSay = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enSay : TERM_BY_ID[id].say);
 export const termTip = (id) => ({ title: termWord(id), body: [], extra: [[termSay(id), PAL.cardInk]], w: 170 });
 
+const VM_CHIP = { value: [PAL.val, PAL.valInk], links: [PAL.link, PAL.linkInk] };
 // 낱말을 두드러지게 한 줄. ui가 있으면 낱말 자리를 적어 둔다(ui.termSpans) — 가리키면 그 낱말 상자가 금빛 테로 켜진다.
 // 기본 낱말(놓기 · 콤보 · 모습 …)은 빛깔도 자리도 받지 않는다(글이 알록달록해지지 않게).
 // 낱말 자리는 누르기 · 가리키기를 가로채지 않는다(밑의 카드가 그대로 받는다). under는 옛 호출과 맞추려고 남겼다.
@@ -117,7 +118,13 @@ export function richText(ctx, s, x, y, col, { termCol = PAL.goldDk, ui = null, u
   for (const [part, id] of splitTerms(s)) {
     const w = measure(part, bold);
     const lit = id && !TERM_BY_ID[id].basic;
-    text(ctx, part, xx, y, lit ? termCol : col, { bold });
+    const chip = id && VM_CHIP[id];
+    if (chip) {
+      // 대국의 흰 칸 · 금빛 칸과 같은 빛깔의 작은 칸(테 1 · 안쪽 여백 1, 띄어쓰기 3 안에 든다)
+      rect(ctx, xx - 2, y - 1, w + 4, 13, PAL.frameDk);
+      rect(ctx, xx - 1, y, w + 2, 11, chip[0]);
+      text(ctx, part, xx, y, chip[1], { bold });
+    } else text(ctx, part, xx, y, lit ? termCol : col, { bold });
     if (lit && ui && ui.termSpans) ui.termSpans.push({ id, x: xx, y, w, h: 12 });
     xx += w;
   }

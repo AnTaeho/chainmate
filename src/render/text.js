@@ -106,6 +106,17 @@ export function textImage(s, col, bold = false) {
 // 문장부호(마침표 · 쉼표 · 가운뎃점 · 닫는 괄호 …)는 줄 머리에 두지 않는다 — 글자 단위로 끊을 때 앞 글자와 함께 내린다
 const noDot = (l) => (l.endsWith(' ·') ? l.slice(0, -2) : l);
 export const CLOSE_PUNCT = /^[.,·:;!?…)\]}」』》〉’”%]/;
+// 값 · 배수와 그 수(「배수 ×1.5」 · 「+20 Value」)는 한 덩이로 줄을 바꾼다(카드에 색 칸 하나로 그린다 — glossary.js richText)
+const vmPair = (a, b) => (/^(?:값|배수)$/.test(a) && /^[+×−][\d.,]+/.test(b)) || (/^[+×−][\d.,]+$/.test(a) && /^(?:Value|Mult)\b/.test(b));
+function glueVM(words, w, bold) {
+  const out = [];
+  for (const word of words) {
+    const prev = out[out.length - 1];
+    if (prev != null && vmPair(prev.split(' ').pop(), word) && textWidth(`${prev} ${word}`, bold) <= w && !prev.includes(' ')) out[out.length - 1] = `${prev} ${word}`;
+    else out.push(word);
+  }
+  return out;
+}
 // 낱말 안 줄 바꿈 자리: 붙임표 뒤(앞뒤가 글자일 때), 숫자 사이 쉼표 뒤. 나눈 조각을 이으면 원래 낱말이다
 export function breakPieces(word) {
   const out = [];
@@ -124,7 +135,7 @@ export function wrap(s, w, bold = false) {
   const out = [];
   for (const para of String(s).split('\n')) {
     let line = '';
-    for (const word of para.split(' ')) {
+    for (const word of glueVM(para.split(' '), w, bold)) {
       const tryLine = line ? `${line} ${word}` : word;
       if (textWidth(tryLine, bold) <= w) { line = tryLine; continue; }
       if (line) out.push(noDot(line));
@@ -159,9 +170,11 @@ export function wrap(s, w, bold = false) {
     // 외톨이 끝말(숫자 하나 같은 짧은 낱말)이 홀로 다음 줄로 떨어지지 않게 앞 줄의 끝 낱말을 함께 내린다
     const n = out.length;
     if (n >= 2 && out[n - 1].length <= 2 && !out[n - 1].includes(' ') && out[n - 2].includes(' ')) {
-      const prev = out[n - 2], cut = prev.lastIndexOf(' ');
+      const prev = out[n - 2];
+      let cut = prev.lastIndexOf(' ');
+      if (cut > 0 && vmPair(prev.slice(0, cut).split(' ').pop(), prev.slice(cut + 1))) cut = prev.lastIndexOf(' ', cut - 1);
       const moved = `${prev.slice(cut + 1)} ${out[n - 1]}`;
-      if (textWidth(moved, bold) <= w) { out[n - 2] = noDot(prev.slice(0, cut)); out[n - 1] = moved; }
+      if (cut > 0 && textWidth(moved, bold) <= w) { out[n - 2] = noDot(prev.slice(0, cut)); out[n - 1] = moved; }
     }
   }
   return out;
