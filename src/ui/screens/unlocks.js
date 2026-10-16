@@ -125,7 +125,7 @@ export class UnlocksScreen {
     const x0 = Math.round((W - (n * w + (n - 1) * CARDS.gap)) / 2);
     shown.forEach((b, i) => {
       const x = x0 + i * (w + CARDS.gap);
-      if (open) bundleCard(ctx, b, x, CARDS.y, w, h, this.app.time);
+      if (open) bundleCard(ctx, b, x, CARDS.y, w, h, this.app.time, ui);
       else backCard(ctx, b.kind, x, CARDS.y, w, h, { next: t === st.next });
     });
     if (!open) text(ctx, lockLine(st, t), W / 2, CARDS.y + h + GAP_GROUP + 1, t === st.next ? PAL.gold : PAL.dim, { align: 'center' });

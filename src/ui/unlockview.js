@@ -82,9 +82,9 @@ function josekiCard(ctx, id, x, y, w, h) {
   closeBox();
 }
 // 연 묶음의 카드 한 장: 효과 글이 든 실제 카드
-export function bundleCard(ctx, b, x, y, w, h, t = 0) {
+export function bundleCard(ctx, b, x, y, w, h, t = 0, ui = null) {
   if (b.kind === 'joseki') return josekiCard(ctx, b.id, x, y, w, h);
-  itemCard(ctx, itemOf(b), x, y, w, h, { price: false, t });
+  itemCard(ctx, itemOf(b), x, y, w, h, { price: false, t, ui });
 }
 // 뒷면 카드: 어두운 카드에 종류 그림과 종류 이름만(이름 · 효과는 가린다). next면 금빛 테
 export const BACK_W = 84, BACK_H = 96;
