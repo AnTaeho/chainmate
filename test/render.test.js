@@ -125,19 +125,25 @@ test('낱말 풀이: 낱말마다 한국어 · 영어 이름과 풀이가 있고
   assert.deepEqual(splitTerms('기사도 · 야간기사').filter(([, id]) => id), []);
 });
 
-test('낱말 상자: 기본 낱말은 글에서 찾아도 상자를 띄우지 않고, 카드 하나에 둘까지', async () => {
+test('낱말 상자: 기본 낱말은 글에서 찾아도 상자를 띄우지 않고, 값 · 배수는 수가 붙은 꼴만 · 뒤에, 카드 하나에 둘까지', async () => {
   const { termsIn, keyList, TERM_BY_ID } = await import('../src/ui/glossary.js');
   // 상자 높이는 글 너비로 잰다: 연기 시험의 가짜 캔버스(글자 너비만 흉내)를 꽂는다
   const { makeFakeDom } = await import('../tools/fakedom.mjs');
   const { setCanvasFactory } = await import('../src/render/surface.js');
   const dom = makeFakeDom();
   setCanvasFactory(() => dom.document.createElement('canvas'));
-  assert.deepEqual(termsIn(['나이트로 시작: 배수 ×1.5']), []);
-  assert.deepEqual(termsIn(['끊긴 사슬: 배수 +8']), ['cut']);
-  // 그 낱말 자체를 가리킨 것({ id })은 기본 낱말이어도 남는다(값 · 배수 칸)
-  assert.deepEqual(termsIn([{ id: 'links' }]), ['links']);
-  for (const id of ['drop', 'chain', 'value', 'links', 'form', 'hand', 'bag', 'move', 'goal', 'money']) assert.ok(TERM_BY_ID[id].basic, id);
-  assert.equal(keyList(['fam_leap', 'fairy', 'threat', 'cut']).length, 2);
+  // 값 · 배수는 수가 붙은 꼴만 찾고(「상점 값 +1」은 값이 아니다), 다른 낱말 상자 뒤에 선다. 끊김은 낱말 상자가 없다
+  assert.deepEqual(termsIn(['나이트로 시작: 배수 ×1.5']), ['links']);
+  assert.deepEqual(termsIn(['끊긴 콤보: 배수 +8']), ['links']);
+  assert.deepEqual(termsIn(['값이 가장 큰 적 · 배수가 오른다 · 상점 값 +1']), []);
+  assert.deepEqual(termsIn(['잡을 때마다 값 +5 · 배수 −1 · 지키는 적을 무시한다']), ['threat', 'value', 'links']);
+  assert.equal(TERM_BY_ID.cut, undefined);
+  assert.deepEqual(termsIn([{ id: 'value' }, { id: 'links' }]), ['value', 'links']);
+  for (const id of ['drop', 'chain', 'form', 'hand', 'bag', 'move', 'goal', 'money']) assert.ok(TERM_BY_ID[id].basic, id);
+  for (const id of ['value', 'links']) assert.ok(!TERM_BY_ID[id].basic, id);
+  assert.equal(keyList(['fam_leap', 'fairy', 'threat', 'links']).length, 2);
+  // 밀려난 배수 상자도 그 낱말을 가리키면 뜬다
+  assert.deepEqual(keyList(['fam_leap', 'threat', 'links'], 'links'), ['fam_leap', 'links']);
   // 가리킨 낱말은 둘 안에 꼭 든다
   assert.deepEqual(keyList(['fam_leap', 'fairy', 'threat'], 'threat'), ['fam_leap', 'threat']);
   setCanvasFactory(null);

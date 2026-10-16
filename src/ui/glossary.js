@@ -2,7 +2,7 @@
 // 글 안에서 빛깔로 두드러지는 낱말 · 카드 옆 낱말 상자 · 낱말 풀이 화면 · 대국 상자 말풍선이 같은 표를 쓴다.
 //   re / en   글 안에서 찾는 꼴(한국어 · 영어). null이면 글 안에서 찾지 않고, 구역이 이름으로 넘길 때만(수 · 손 · 판처럼 흔한 말)
 //   group     낱말 풀이 화면의 탭: battle 대국 · run 판 · item 물건 · set 시너지
-//   풀이(say · enSay)는 낱말 상자(너비 170)에 세 줄 안으로 들어가게 짧게.
+//   풀이(say · enSay)는 낱말 상자(너비 170)에 세 줄 안으로 들어가게 짧게(값 · 배수만 네 줄 — 칸을 처음 읽는 풀이라).
 // 시너지 이름(「불굴 시너지」)은 같은 자리에서 시작하는 짧은 낱말(시너지)보다 먼저 둔다(splitTerms는 앞의 것을 고른다).
 import { wrap } from '../render/text.js';
 import { PAL } from '../render/palette.js';
@@ -13,30 +13,30 @@ import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 
 const T = (id, group, word, enWord, re, en, say, enSay, basic = false) => ({ id, group, word, enWord, re, en, say, enSay, basic });
 // 기본 낱말(basic): 첫 수업이 가르치는 말. 글 안에서 빛깔을 받지 않고 카드 옆 상자도 띄우지 않는다(docs/design-notes/voice.md).
-//   값 · 배수 칸처럼 그 낱말 자체를 가리킬 때({ id } 꼴로 넘길 때)만 상자가 뜬다.
+//   그 낱말 자체를 가리킬 때({ id } 꼴로 넘길 때)만 상자가 뜬다.
 const B = (...a) => T(...a, true);
 export const TERMS = [
   // ── 시너지(옛 모음 · 가족): 이름은 명사 하나. 글 안에서는 「기사 시너지」 꼴만 찾는다(「기사도」 · 「야간기사」에 걸리지 않게)
-  T('fam_leap', 'set', '기사 시너지', 'Rider', /기사 시너지/, /\bRider synergy\b/i, '나이트처럼 뛰어서 잡을수록 점수가 커진다', 'Grows with every take that leaps like a knight'),
+  T('fam_leap', 'set', '기사 시너지', 'Rider', /기사 시너지/, /\bRider synergy\b/i, '나이트처럼 뛰어 잡을수록 점수가 커진다', 'Grows with every take that leaps like a knight'),
   T('fam_line', 'set', '성채 시너지', 'Fortress', /성채 시너지/, /\bFortress synergy\b/i, '가로 · 세로로 멀리 가서 잡을수록 점수가 커진다', 'Grows as you slide far in straight lines'),
-  T('fam_diag', 'set', '사제 시너지', 'Cleric', /사제 시너지/, /\bCleric synergy\b/i, '대각선으로 잡을 때 값 · 배수가 붙는다', 'Diagonal takes earn Value and Mult'),
+  T('fam_diag', 'set', '사제 시너지', 'Cleric', /사제 시너지/, /\bCleric synergy\b/i, '대각선으로 잡을수록 점수가 커진다', 'Diagonal takes earn Value and Mult'),
   T('fam_change', 'set', '변신 시너지', 'Shift', /변신 시너지/, /\bShift synergy\b/i, '모습이 자주 바뀔수록 점수가 커진다', 'Grows as your form keeps changing'),
-  T('fam_sacrifice', 'set', '불굴 시너지', 'Resolve', /불굴 시너지/, /\bResolve synergy\b/i, '콤보가 끊겨도 점수가 커진다', 'Broken chains still score big'),
-  T('fam_crown', 'set', '왕관 시너지', 'Crown', /왕관 시너지/, /\bCrown synergy\b/i, '프로모션 · 퀸 · 체크메이트에 점수가 붙는다', 'Promotions, queens and checkmates score more'),
-  T('fam_march', 'set', '행진 시너지', 'March', /행진 시너지/, /\bMarch synergy\b/i, '폰으로 시작한 콤보가 커진다', 'Chains started by a pawn grow bigger'),
-  T('fam_hunt', 'set', '사냥 시너지', 'Hunt', /사냥 시너지/, /\bHunt synergy\b/i, '같은 종류의 적을 잇달아 잡으면 점수가 커진다', 'Grows as you take the same kind in a row'),
+  T('fam_sacrifice', 'set', '불굴 시너지', 'Resolve', /불굴 시너지/, /\bResolve synergy\b/i, '콤보가 끊길수록 점수가 커진다', 'Broken chains still score big'),
+  T('fam_crown', 'set', '왕관 시너지', 'Crown', /왕관 시너지/, /\bCrown synergy\b/i, '프로모션 · 퀸 · 체크메이트로 점수가 커진다', 'Promotions, queens and checkmates score more'),
+  T('fam_march', 'set', '행진 시너지', 'March', /행진 시너지/, /\bMarch synergy\b/i, '폰으로 시작한 콤보일수록 점수가 커진다', 'Chains started by a pawn grow bigger'),
+  T('fam_hunt', 'set', '사냥 시너지', 'Hunt', /사냥 시너지/, /\bHunt synergy\b/i, '같은 종류의 적을 잇달아 잡을수록 점수가 커진다', 'Grows as you take the same kind in a row'),
   T('fam_counter', 'set', '역습 시너지', 'Counter', /역습 시너지/, /\bCounter synergy\b/i, '지키는 적을 잡을수록 점수가 커진다', 'Grows as you take guards'),
   T('fam_ambush', 'set', '매복 시너지', 'Ambush', /매복 시너지/, /\bAmbush synergy\b/i, '증원을 잡고 증원 자리에 놓을수록 점수가 커진다', 'Grows as you take recruits and drop where they arrive'),
   T('set', 'set', '시너지', 'Synergy', /시너지/, /\bsynerg(?:y|ies)\b/i, '같은 시너지를 2 · 4 · 6개 모으면 효과가 하나씩 켜진다', 'Collect 2, 4 and 6 of one synergy to switch on its effects'),
   // ── 대국
   B('drop', 'battle', '놓기', 'Drop', /놓[기는을으아았]\S*/, /\bdrop\w*/i, '적을 잡을 수 있는 안전한 빈칸에 손의 기물을 놓는다', 'Place a piece from your hand on a safe empty square with prey in reach'),
   B('chain', 'battle', '콤보', 'Chain', /콤보/, /\bchains?\b/i, '놓은 기물이 한 수 동안 적을 잇달아 잡는 것', 'Every take one dropped piece makes in a move'),
-  B('value', 'battle', '값', 'Value', /값/, /\bvalue\b/i, '잡은 적의 값을 더한 수. 폰 10 · 나이트 30 · 룩 50 · 퀸 90', 'What the chain took, added up. Pawn 10 · knight 30 · rook 50 · queen 90'),
-  B('links', 'battle', '배수', 'Mult', /배수/, /\bmult\b/i, '잡을 때마다 +1. 점수 = 값 × 배수', '+1 with every take. Score = Value × Mult'),
+  // 값 · 배수: 글 안에서는 수가 붙은 꼴(「값 +20」 · 「배수 ×1.5」 — 카드에 색 칸으로 그린다)만 찾는다. 상자는 다른 낱말 뒤에(LATE)
+  T('value', 'battle', '값', 'Value', /(?<!상점 )값 [+×−][\d.]+/, /[+×−][\d.,]+ Value\b/, '점수의 바탕. 적을 잡을 때마다 그 적의 값이 흰 칸에 더해진다. 폰 10 · 나이트 30 · 룩 50 · 퀸 90', 'What the chain took, added up. Pawn 10 · knight 30 · rook 50 · queen 90'),
+  T('links', 'battle', '배수', 'Mult', /배수 [+×−][\d.]+/, /[+×−][\d.,]+ Mult\b/, '점수 = 값 × 배수. 잡을 때마다 1씩 오른다. 배수 +3은 금빛 칸에 3을 더하고, ×1.5는 금빛 칸을 1.5배로 만든다', '+1 with every take. Score = Value × Mult'),
   B('form', 'battle', '모습', 'Form', /모습/, /\bforms?\b/i, '내 기물이 지금 어떤 기물인지. 그 기물의 행마로 잡는다', 'What your piece is now. It takes with that move'),
   B('change', 'battle', '갈아입기', 'Change', /갈아입\S*/, /\bchanges? form\b/i, '적을 잡으면 그 적과 같은 기물이 된다', 'Take an enemy and become that piece'),
   T('threat', 'battle', '지키는 적', 'Guard', /지키는 적|지키던 적|지켜진 \S+/, /\bguard\w*/i, '방금 잡은 칸을 지키는 적. 다음엔 이 적을 잡아야 이어진다', 'An enemy guarding the square you just took. Take it next to keep going'),
-  T('cut', 'battle', '끊김', 'Break', /끊[김긴기겨]\S*/, /\bbreaks?\b|\bbroken\b/i, '지키는 적을 못 잡으면 콤보가 끝난다. 그때까지 점수는 받는다', 'Miss a guard and the chain ends. You keep the score so far'),
   T('promote', 'battle', '프로모션', 'Promotion', /프로모션\S*/, /\bpromot\w*/i, '폰 모습으로 여덟째 줄에 가면 퀸이 된다', 'A pawn that reaches the 8th rank becomes a queen'),
   T('mate', 'battle', '체크메이트', 'Checkmate', /체크메이트|(?<!체인)메이트/, /\b(?:check)?mat(?:e|ing)\b/i, '지키는 적이 없는 킹을 잡으면 곧바로 이긴다', 'Take an unguarded king and win at once'),
   T('reinforce', 'battle', '증원', 'Recruit', /증원/, /\brecruits?\b/i, '수가 끝날 때 ▼ 그림자 자리로 들어오는 새 적', 'A new enemy that arrives on a ▼ shadow when the move ends'),
@@ -109,7 +109,7 @@ export const termSay = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enSay : TERM
 export const termTip = (id) => ({ title: termWord(id), body: [], extra: [[termSay(id), PAL.cardInk]], w: 170 });
 
 // 낱말을 두드러지게 한 줄. ui가 있으면 낱말 자리를 적어 둔다(ui.termSpans) — 가리키면 그 낱말 상자가 금빛 테로 켜진다.
-// 기본 낱말(떨구기 · 사슬 · 값 · 배수 …)은 빛깔도 자리도 받지 않는다(글이 알록달록해지지 않게).
+// 기본 낱말(놓기 · 콤보 · 모습 …)은 빛깔도 자리도 받지 않는다(글이 알록달록해지지 않게).
 // 낱말 자리는 누르기 · 가리키기를 가로채지 않는다(밑의 카드가 그대로 받는다). under는 옛 호출과 맞추려고 남겼다.
 export function richText(ctx, s, x, y, col, { termCol = PAL.goldDk, ui = null, under = null, bold = false } = {}) {
   s = L(String(s));
@@ -137,8 +137,10 @@ export function termsIn(list) {
     if (typeof s === 'object') { push(s.id); continue; }
     for (const [, id] of splitTerms(L(String(s)))) if (id && !TERM_BY_ID[id].basic) push(id);
   }
-  return out;
+  return [...out.filter((id) => !LATE.has(id)), ...out.filter((id) => LATE.has(id))];
 }
+// 값 · 배수 상자는 다른 낱말 상자 뒤에 둔다(늘 보이는 칸의 낱말이라 KEY_MAX에 밀려도 가리키면 뜬다 — keyList hot)
+const LATE = new Set(['value', 'links']);
 export const KEY_MAX = 2; // 카드 하나에 상자 둘까지
 const keyLines = (id, w) => wrap(termSay(id), w - PAD_BOX * 2);
 // 낱말 상자 자리: 낱말(제목 줄) → 묶음 틈 → 풀이 줄들. 재기와 그리기가 같이 쓴다
