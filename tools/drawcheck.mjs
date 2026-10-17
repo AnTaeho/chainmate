@@ -38,7 +38,8 @@ await new Promise((ok) => srv.listen(PORT, '127.0.0.1', 1024, ok));
 // ── 페이지 안: 루프를 잡고, 프레임마다 화소를 견준다
 const INIT = () => {
   window.requestAnimationFrame = (cb) => { window.__raf = cb; return 1; };
-  const dc = (window.__dc = { T: 0, prev: null, viol: [], frames: 0, skips: 0, scene: '' });
+  window.__rng = () => ({ s: 77 }); // 상점 굴림 씨앗(src/sim/rng.js createRng 꼴)
+  const dc = (window.__dc = { T: 0, prev: null, viol: [], frames: 0, skips: 0, scene: '', seen: new Set(), hints: 0 });
   window.__dcStep = (n = 1) => {
     const a = window.__app;
     for (let i = 0; i < n; i++) {
@@ -46,6 +47,8 @@ const INIT = () => {
       const cb = window.__raf; window.__raf = null;
       if (!cb) continue;
       cb(dc.T);
+      dc.seen.add(a.overlay ? `${a.screen && a.screen.name}+${a.overlay.name}` : a.screen && a.screen.name);
+      if (a.hintShown) dc.hints++;
       // 화면 캔버스에서 바로 읽으면 크로미움이 그 캔버스를 CPU 그리기로 바꿔(자주 읽는 캔버스) 다음 그림의 화소가 달라진다 — 따로 둔 캔버스에 옮겨 읽는다
       const c = a.canvas;
       if (!dc.copy) dc.copy = document.createElement('canvas');
@@ -69,7 +72,7 @@ const INIT = () => {
     }
   };
   // 한 장면을 다시 셈한다(지난 프레임은 남긴다 — 장면 사이 바뀜도 견준다)
-  window.__dcScene = (name) => { dc.scene = name; const s = { frames: dc.frames, skips: dc.skips, viol: dc.viol.length }; return s; };
+  window.__dcScene = (name) => { dc.scene = name; dc.seen = new Set(); dc.hints = 0; const s = { frames: dc.frames, skips: dc.skips, viol: dc.viol.length }; return s; };
 };
 
 const { chromium } = await loadPlaywright();
@@ -107,8 +110,8 @@ async function scene(page, name, body) {
   if (ONLY && !ONLY.split(',').some((k) => name.startsWith(k))) return;
   const s0 = await page.evaluate((n) => window.__dcScene(n), name);
   await body();
-  const s1 = await page.evaluate(() => ({ frames: window.__dc.frames, skips: window.__dc.skips, viol: window.__dc.viol.length }));
-  results.push({ name, frames: s1.frames - s0.frames, skips: s1.skips - s0.skips, viol: s1.viol - s0.viol });
+  const s1 = await page.evaluate(() => ({ frames: window.__dc.frames, skips: window.__dc.skips, viol: window.__dc.viol.length, seen: [...window.__dc.seen], hints: window.__dc.hints }));
+  results.push({ name, frames: s1.frames - s0.frames, skips: s1.skips - s0.skips, viol: s1.viol - s0.viol, seen: s1.seen, hints: s1.hints });
 }
 
 function helpers(page) {
@@ -134,7 +137,7 @@ const SHOP = () => {
   r.consumableSlots = 4; r.consumables = [{ kind: 'engraving', id: 'glass' }, { kind: 'soul', id: 'echo' }, { kind: 'evolve' }, { kind: 'tactic', id: 'freeze' }];
   if (r.deck[0]) r.deck[0].soul = 'echo';
   r.money = 60; r.phase = 'shop';
-  r.shop = { rng: null, display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'N', price: 6, sold: false, edition: 'pearl' }, { kind: 'soul', id: 'echo', price: 4, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
+  r.shop = { rng: window.__rng(), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'N', price: 6, sold: false, edition: 'pearl' }, { kind: 'soul', id: 'echo', price: 4, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
   a.go('shop');
 };
 // 움직이는 그림(판본 · 혼)이 없는 상점: 가만히 있으면 흐르는 배경만 바뀐다
@@ -144,7 +147,7 @@ const SHOP_PLAIN = () => {
   const r = a.run;
   for (const id of ['chivalry', 'quick_change', 'first_move']) r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: null, paid: 5 });
   r.money = 60; r.phase = 'shop';
-  r.shop = { rng: null, display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'N', price: 6, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
+  r.shop = { rng: window.__rng(), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'N', price: 6, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
   a.go('shop');
 };
 const BATTLE = () => {
@@ -212,7 +215,7 @@ const BATTLE = () => {
     await h.ev(() => window.__app.toast('알림 확인', '#ffffff')); await h.step(200);
   });
   await scene(page, 'pack open', async () => {
-    if (await h.press(/^shop:pack:0$/, 120)) { await h.hoverAll(/^pack:/, 8); await h.step(60); await h.press(/^pack:/, 120); await h.step(120); }
+    if (await h.press(/^shop:pack:0$/, 120)) { await h.hoverAll(/^pack:pick/, 8); await h.step(60); await h.press(/^pack:pick:0$/, 120); await h.step(120); }
   });
   await scene(page, 'settings toggles (calm · lang)', async () => {
     await h.ev(SHOP); await h.step(20);
@@ -323,7 +326,7 @@ console.log(`# drawcheck ${VW}x${VH} — 프레임마다 그리고, 그리기 �
 for (const r of results) {
   if (r.errors) { if (r.errors.length) console.log(`${r.name}: ${r.errors.join(' | ')}`); continue; }
   total += r.viol; frames += r.frames; skips += r.skips;
-  console.log(`${r.name.padEnd(40)} 프레임 ${String(r.frames).padStart(5)} · 건너뜀 ${String(r.skips).padStart(5)} (${r.frames ? Math.round((100 * r.skips) / r.frames) : 0}%) · 어김 ${r.viol}`);
+  console.log(`${r.name.padEnd(40)} 프레임 ${String(r.frames).padStart(5)} · 건너뜀 ${String(r.skips).padStart(5)} (${r.frames ? Math.round((100 * r.skips) / r.frames) : 0}%) · 어김 ${r.viol} · 화면 ${r.seen.join(',')}${r.hints ? ` · 팁 ${r.hints}프레임` : ''}`);
 }
 for (const v of details.slice(0, 40)) console.log('  어김', JSON.stringify(v));
 console.log(`합계: 프레임 ${frames} · 건너뜀 ${skips} (${frames ? Math.round((100 * skips) / frames) : 0}%) · 어김 ${total}`);
