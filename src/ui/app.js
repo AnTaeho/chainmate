@@ -19,7 +19,7 @@ import { placeNotes, noteMode, noteWidth, NOTE_GAP } from './placement.js';
 import { familyCounts, THRESHOLDS, levelOf } from '../data/families.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
-import { loadRecords, emptyRecords, observe, finishRun, finishEndless, noteMove, dailySeed, today } from './records.js';
+import { loadRecords, emptyRecords, observe, finishRun, finishEndless, quitEndless, noteMove, dailySeed, today } from './records.js';
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
 import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps, unlockTierProps } from './telemetry.js';
@@ -234,6 +234,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     // 끝나지 않은 판을 새 판으로 덮어쓴다: 「그만둠」으로 남긴다(이긴 뒤 끝없는 대국이면 그 판 줄을 갈아 끼운다)
     const old = app.run && !app.run.scratch ? app.run : store.get(KEYS.run);
     if (old && old.track && !old.scratch && old.phase !== 'won' && old.phase !== 'lost') app.keepRun(old, old.endless ? 'endless' : 'quit');
+    if (old && !old.scratch && old.phase !== 'won' && old.phase !== 'lost' && quitEndless(app.records, old)) app.saveRecords();
     const script = !!opts.script && !daily;
     // 오늘의 대국 판은 서버와 같은 함수로 만든다(src/sim/daily.js — 넣은 명령을 run.cmds에 남겨 순위에 낸다, CHM-70)
     // 새 판은 지금까지 연 묶음만 나온다(끝없는 대국은 그 판의 것 그대로). 오늘의 대국은 모두가 같은 판이라 전부 열린 채

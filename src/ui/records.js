@@ -148,6 +148,14 @@ export function finishEndless(rec, run) {
   return { deeper, tier: addGates(rec, run) };
 }
 
+// 끝없는 대국을 새 판으로 덮어써 그만뒀을 때: 도달한 관만 남긴다(그만둔 판의 관은 해금에 세지 않는다 — DESIGN.md 「해금 사다리」)
+export function quitEndless(rec, run) {
+  if (!run || !run.endless) return false;
+  const deeper = run.ante > (rec.bestEndless || 0);
+  if (deeper) rec.bestEndless = run.ante;
+  return deeper;
+}
+
 // 다음 해금 하나(결과 화면 · 판 준비 화면에 보인다)
 export function nextUnlock(rec) {
   const u = UNLOCKS.find((x) => !rec.unlocked.openings.includes(x.id));
