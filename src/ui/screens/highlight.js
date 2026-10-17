@@ -14,10 +14,11 @@ export class HighlightScreen {
     this.run = app.run;
     this.blob = null;
     this.canShare = false;
-    highlightBlob(this.run).then((b) => { this.blob = b; this.canShare = !!b && app.canShareImage(HIGHLIGHT_FILE, b); });
+    highlightBlob(this.run).then((b) => { this.blob = b; this.canShare = !!b && app.canShareImage(HIGHLIGHT_FILE, b); app.invalidate(); });
     app.track('highlight_open', {});
   }
   update() {}
+  animating() { return false; }
   draw(ctx, ui) {
     // 밑의 결과 화면 단추가 카드 아래 단추 뒤로 비치지 않게 한 겹 더 어둡게
     ctx.globalAlpha = 0.6; rect(ctx, 0, 0, W, H, PAL.shadow); ctx.globalAlpha = 1;

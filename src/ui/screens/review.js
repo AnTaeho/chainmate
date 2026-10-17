@@ -71,6 +71,8 @@ export class ReviewScreen extends BattleScreen {
     app.flow(this.args.list || []);
   }
 
+  // 이번 수에 남은 먹기를 update가 둔다
+  animating() { return super.animating() || this.queue.length > 0; }
   update(dt) {
     super.update(dt);
     if (this.queue.length) this.pump();

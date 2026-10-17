@@ -23,6 +23,8 @@ export class RewardScreen {
     this.shown = 0;
     this.step = 0.32;
   }
+  // 줄이 하나씩 쌓이는 동안(동전 소리는 그림이 아니다)
+  animating() { return this.shown <= this.lines.length; }
   update(dt) {
     this.t += dt * this.app.speed();
     const n = Math.min(this.lines.length + 1, Math.floor(this.t / this.step));

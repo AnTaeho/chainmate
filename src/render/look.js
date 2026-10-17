@@ -6,8 +6,14 @@ export const LOOK = { n: 1, calm: false, flow: 1.6, shadow: 0.45, glow: 1, sway:
 if (typeof globalThis !== 'undefined' && globalThis.__look) Object.assign(LOOK, globalThis.__look);
 
 // 그릴 때만 그린다(layout.md 「빛과 움직임」): 시간 따라 모습이 바뀌는 것을 그리면 live()를 부른다 — 다음 프레임도 그린다
-export const MOTION = { live: false };
+// beat(t, rate, phase): 초당 rate번 계단처럼 바뀌는 것 — floor(t × rate + phase)를 돌려주고, 그 값이 바뀌는 프레임에 그리게 한다(t는 app.time)
+export const MOTION = { live: false, beats: new Map() };
 export const live = () => { MOTION.live = true; };
+export const beat = (t, rate, phase = 0) => {
+  const k = Math.floor(t * rate + phase);
+  MOTION.beats.set(`${rate}:${phase}`, [rate, phase, k]);
+  return k;
+};
 
 // 1/N 칸에 맞춘다(N = 1이면 정수 칸)
 export const snap = (v) => Math.round(v * LOOK.n) / LOOK.n;

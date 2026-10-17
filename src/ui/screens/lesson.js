@@ -13,6 +13,7 @@ import { panel } from '../parts.js';
 import { button } from '../ui.js';
 import { LESSONS, LESSON_GROUPS, lessonBattle, lessonSq } from '../lessons.js';
 import { lerp } from '../anim.js';
+import { live as motion, beat } from '../../render/look.js';
 import { finishLessons, lessonDone } from './lessons.js';
 
 // 할 일 판넬 쌓기(오른쪽 칸 위, PAD_BOX): 이름표 「보기」 · 「할 일」(왼쪽 칸 「시너지」 · 「정석」과 같은 이름표 줄) → 묶음 안 틈 → 글
@@ -175,6 +176,8 @@ export class LessonScreen extends BattleScreen {
       if (won && this.L.after) { this.toast(this.L.after, PAL.gold, AFTER_SEC); this.wait = AFTER_SEC; }
     }
   }
+  // 보기(손가락이 혼자 둔다)는 내내 움직인다
+  animating() { return super.animating() || this.phase === 'demo'; }
   update(dt) {
     super.update(dt);
     if (this.demo && this.phase === 'demo') { this.updateDemo(dt); if (this.demo.press > 0) this.demo.press -= dt; }
@@ -200,7 +203,7 @@ export class LessonScreen extends BattleScreen {
   drawBoard(ctx, ui) {
     super.drawBoard(ctx, ui);
     const t = this.clickable();
-    const pulse = Math.floor(this.app.time * 4) % 2;
+    const pulse = t.kind === 'capture' && t.list.length ? beat(this.app.time, 4) % 2 : 0;
     if (t.kind === 'capture') for (const sq of t.list) { const { x, y } = sqXY(sq); frame(ctx, x + pulse, y + pulse, S - pulse * 2, S - pulse * 2, PAL.goldHi, 2); }
   }
   drawRight(ctx, ui) {
@@ -218,7 +221,7 @@ export class LessonScreen extends BattleScreen {
     if (this.phase === 'play' && st && !this.busy) {
       const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : null;
       const r = id && ui.regions.find((x) => x.id === id);
-      if (r) { ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); frame(ctx, r.x - 2, r.y - 2 + (st.pick != null ? 4 : 0), r.w + 4, st.pick != null ? 40 : r.h + 4, PAL.goldHi, 1); ctx.globalAlpha = 1; }
+      if (r) { motion(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); frame(ctx, r.x - 2, r.y - 2 + (st.pick != null ? 4 : 0), r.w + 4, st.pick != null ? 40 : r.h + 4, PAL.goldHi, 1); ctx.globalAlpha = 1; }
     }
     // 수업 건너뛰기(처음 켠 사람도 곧바로 판으로 갈 수 있게): 오른쪽 칸 위 이름표 줄(수업에는 격언이 없다), 멈춤 단추 왼쪽
     button(ctx, ui, 'lesson:skip', RX, 2, PAUSE.x - 6 - RX, BTN_S, '모두 건너뛰기', { onClick: () => this.skipAll() });

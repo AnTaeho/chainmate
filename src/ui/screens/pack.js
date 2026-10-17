@@ -76,6 +76,8 @@ export class PackScreen {
     app.sfx('pack');
   }
   get run() { return this.app.run; }
+  // 봉투가 열리고 카드가 뒤집히는 동안 · 도움말 팁이 뜰 때(1.2초)까지 움직인다
+  animating() { const n = this.run.pack ? this.run.pack.options.length : 0; return this.t <= Math.max(1.25, OPEN + 0.3, flipAt(n) + 0.35); }
   update(dt) {
     const before = this.t;
     this.t += dt * this.app.speed();

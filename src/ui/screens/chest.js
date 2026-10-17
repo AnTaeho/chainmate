@@ -40,6 +40,8 @@ export class ChestScreen {
     app.sfx('chestOpen');
   }
   stopAt(i) { return 0.9 + i * 0.42; }
+  // 릴이 도는 동안 · 번쩍이는 동안
+  animating() { return this.stopped < this.chest.cells.length || this.flash > 0; }
   update(dt) {
     this.t += dt * this.app.speed();
     const n = this.chest.cells.length;

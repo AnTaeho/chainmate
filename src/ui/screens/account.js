@@ -60,8 +60,10 @@ export class AccountScreen {
     this.msg = null;                  // { text, tone: 'red' | 'gold', gain }
     this.busy = false;
     this.unreached = false;
-    app.rank.accountLoad().then((a) => { if (a) this.acct = a; else this.unreached = true; }, () => { this.unreached = true; });
+    app.rank.accountLoad().then((a) => { if (a) this.acct = a; else this.unreached = true; }, () => { this.unreached = true; }).finally(() => app.invalidate());
   }
+  // 입력 · 답(invalidate)이 올 때만 바뀐다
+  animating() { return false; }
   in() { return !!(this.acct && this.acct.username); }
   fail(why, r = null) { this.msg = { text: why === 'locked' ? lockedText((r && r.wait) || 15) : ACCOUNT_FAIL[why] || ACCOUNT_FAIL.unreached, tone: 'red' }; }
   good(id) { this.msg = { text: ACCOUNT_OK[id], tone: 'gold', gain: null }; this.app.sfx('buy'); }
@@ -74,7 +76,7 @@ export class AccountScreen {
   run(p, done) {
     this.busy = true; this.msg = null;
     this.app.fields.blur();
-    return p.then((r) => { this.busy = false; done(r); }, () => { this.busy = false; this.fail('unreached'); });
+    return p.then((r) => { this.busy = false; done(r); }, () => { this.busy = false; this.fail('unreached'); }).finally(() => this.app.invalidate());
   }
 
   signup() {

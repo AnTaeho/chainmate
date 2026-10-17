@@ -33,6 +33,9 @@ export function linkLayout() {
 }
 // 「4827 1593」
 export const codeText = (code) => `${code.slice(0, 4)} ${code.slice(4)}`;
+// 코드 칸 폭 · 남은 시간 몫(0 ~ 1)
+const CODE_BAR = 196;
+const codeLeft = (m, t) => Math.max(0, Math.min(1, (m.until - t) / m.ttl));
 export const agoText = (ms) => { const m = Math.floor(ms / 60000); return m < 1 ? '방금' : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.floor(m / 60)}시간 전` : `${Math.floor(m / 1440)}일 전`; };
 // 합쳐서 늘어난 것 한 줄(mergeGain) — 가장 눈에 띄는 것 하나. 늘어난 것이 없으면 null
 export function gainText(g) {
@@ -57,7 +60,14 @@ export class LinkScreen {
     this.poll = 0;
     this.ask();
   }
-  ask() { return this.app.rank.devices().then((n) => { if (n != null) this.devices = n; return n; }, () => null); }
+  ask() { return this.app.rank.devices().then((n) => { if (n != null) this.devices = n; return n; }, () => null).finally(() => this.app.invalidate()); }
+  // 그릴 때만 그린다: 벽시계로 바뀌는 것(코드의 남은 시간 막대 · 「N분 전」)과 update가 바꾸는 단계가 지난 그림과 다를 때. 망 답은 invalidate
+  clockKey() {
+    const app = this.app, m = this.mine, at = app.cloud.status().at;
+    const k = m.phase === 'code' ? codeLeft(m, app.cloud.now()) : 0;
+    return `${m.phase}|${Math.round(CODE_BAR * k)}|${k < 0.2}|${at ? agoText(Math.max(0, app.cloud.now() - at)) : ''}`;
+  }
+  animating() { return this.clockKey() !== this.drawnKey; }
 
   // ── 이 기기의 코드
   getCode() {
@@ -73,7 +83,7 @@ export class LinkScreen {
       app.track('link_code', {}, { always: true });
       // 코드를 받는 사이 플레이어가 생겼을 수 있다 — 기기 수를 맞춰 둔다
       this.ask().then((n) => { if (this.mine.phase === 'code' && this.mine.base == null) this.mine.base = n; });
-    }, () => { this.mine = { phase: 'unreached' }; });
+    }, () => { this.mine = { phase: 'unreached' }; }).finally(() => app.invalidate());
   }
   // 코드를 띄운 동안: 시간이 지나면 거두고, 몇 초마다 이어졌는지 묻는다
   update(dt) {
@@ -100,7 +110,7 @@ export class LinkScreen {
   joinMine(m) {
     const app = this.app;
     this.poll = 0; m.tries++; m.busy = true;
-    app.cloud.join().then(() => { m.busy = false; m.gain = mergeGain(m.before, app.records); if (gainText(m.gain)) m.tries = JOIN_TRIES; }, () => { m.busy = false; });
+    app.cloud.join().then(() => { m.busy = false; m.gain = mergeGain(m.before, app.records); if (gainText(m.gain)) m.tries = JOIN_TRIES; }, () => { m.busy = false; }).finally(() => app.invalidate());
   }
 
   // ── 다른 기기의 코드 넣기
@@ -125,7 +135,7 @@ export class LinkScreen {
       app.sfx('buy');
       const got = await app.cloud.join();
       if (got.ok) this.entry.gain = got.gain;
-    }, () => { this.entry = { phase: 'type', digits: '', fail: 'unreached' }; });
+    }, () => { this.entry = { phase: 'type', digits: '', fail: 'unreached' }; }).finally(() => app.invalidate());
   }
   unlink() {
     const app = this.app;
@@ -139,11 +149,12 @@ export class LinkScreen {
       if (this.mine.phase === 'linked') this.mine = { phase: 'idle' };
       if (this.entry.phase === 'done') this.entry = { phase: 'type', digits: '', fail: null };
       app.toast('연결을 끊었어요', PAL.gold);
-    }, () => { this.unlinking = null; });
+    }, () => { this.unlinking = null; }).finally(() => app.invalidate());
   }
   leave() { this.app.toTitle(); }
 
   draw(ctx, ui) {
+    this.drawnKey = this.clockKey();
     const app = this.app, lay = linkLayout(), P = PAD_BOX;
     // 계정(CHM-72)과 한 머리줄: 탭 「아이디」 · 「기기 잇기」
     pageHead(ctx, '계정');
@@ -186,10 +197,10 @@ export class LinkScreen {
     const y0 = lay.cells[0].y;
     if (m.phase === 'code') {
       // 큰 숫자(두 배) + 남은 시간 막대
-      const dw = 196, dh = 34, dx = cx - (dw >> 1);
+      const dw = CODE_BAR, dh = 34, dx = cx - (dw >> 1);
       box(ctx, dx, y0, dw, dh, CARD_BG, PAL.gold);
       text(ctx, codeText(m.code), cx, y0 + 6, PAL.goldHi, { align: 'center', bold: true, scale: 2 });
-      const k = Math.max(0, Math.min(1, (m.until - app.cloud.now()) / m.ttl)), by = y0 + dh + 6;
+      const k = codeLeft(m, app.cloud.now()), by = y0 + dh + 6;
       rect(ctx, dx, by, dw, 3, PAL.feltHi);
       rect(ctx, dx, by, Math.round(dw * k), 3, k < 0.2 ? PAL.red : PAL.gold);
       say('다른 기기에서 이 코드를 입력하세요', by + 3 + 8, PAL.ink);

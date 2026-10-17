@@ -62,6 +62,8 @@ export class RankScreen {
     app.rank.retry();
     app.track('rank_open', { tab: this.tab });
   }
+  // 입력 · 받은 순위(main.js가 fetch 답마다 invalidate)일 때만 바뀐다
+  animating() { return false; }
   date() { const t = this.app.today(); return this.tab === 'today' ? t : shiftDate(t, -1); }
   setTab(id) { if (id === this.tab) return; this.tab = id; this.page = 0; this.seen = null; this.app.rank.forget(); this.app.sfx('pick'); this.app.track('rank_open', { tab: id }); }
   go(p) { this.page = p; this.app.sfx('pick'); }

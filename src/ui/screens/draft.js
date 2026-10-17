@@ -1,5 +1,6 @@
 // 정석 고르기(깊이 E): 1 · 3 · 5관의 첫 대국 앞. 카드 셋이 차례로 뒤집히며 나오고(등급 빛: 은 · 금 · 무지개) 하나를 고른다.
 import { sway } from '../sway.js';
+import { live as motion } from '../../render/look.js';
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
@@ -33,6 +34,8 @@ const at = (i) => 0.2 + i * 0.22;
 export class DraftScreen {
   constructor(app) { this.app = app; this.t = 0; this.chosen = null; this.notes = 'side'; app.sfx('pack'); }
   get run() { return this.app.run; }
+  // 뒤집히는 동안 · 고른 뒤 넘어가기까지 · 도움말 팁이 뜰 때(1.2초)까지 움직인다
+  animating() { return !!this.chosen || this.t <= 1.25; }
   update(dt) {
     const before = this.t;
     this.t += dt * this.app.speed();
@@ -76,6 +79,7 @@ export class DraftScreen {
       const hov = ui.isHover(uid) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
       if (p < 0.5) { box(ctx, xx, y, nw, CH, '#2a3a33', PAL.frameDk); if (nw > 30) rect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, TIER_COL[j.tier]); return; }
+      if (j.tier === 'rainbow') motion();
       const col = j.tier === 'rainbow' ? `hsl(${Math.floor(time * 120 + i * 60) % 360},70%,70%)` : TIER_COL[j.tier];
       const picked = this.chosen && this.chosen.i === i;
       const faded = this.chosen && !picked;

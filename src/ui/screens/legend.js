@@ -46,6 +46,8 @@ export class LegendScreen {
     app.sfx('legend');
     app.hitstop(0.2);
   }
+  // 멈춤 · 다시 두기 · 격언이 떨어져 빛살이 퍼질 때까지
+  animating() { return this.t < this.tDrop + 1.3; }
   update(dt) {
     const before = this.t;
     this.t += dt * this.app.speed();

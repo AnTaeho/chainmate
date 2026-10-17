@@ -582,10 +582,12 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (p) foldSide(ctx, ui.side, { x: p.lay.x, y: p.lay.y, w: p.lay.w, h: p.total }, p.anchor, ground);
   }
 
-  // 그릴까: 바뀐 것(need) · 지난 그림에 움직이는 것(live) · 이어지는 연출 · 화면이 움직인다고 함(animating — 없으면 움직인다고 본다) · 흐르는 배경의 한 칸(초당 12번)
-  let wasLive = true, lastSig = null;
+  // 그릴까: 바뀐 것(need) · 지난 그림에 움직이는 것(live) · 계단이 바뀌는 때(beat) · 이어지는 연출 · 화면이 움직인다고 함(animating — 없으면 움직인다고 본다) · 흐르는 배경의 한 칸(초당 12번)
+  let wasLive = true, lastSig = null, beats = [];
   const moving = (s) => !!s && (typeof s.animating === 'function' ? !!s.animating() : true);
   const drawSig = () => `${LOOK.flow > 0 ? flowTime(app.time) : 0}|${app.tint()}|${LOOK.flow}|${LOOK.calm}|${LOOK.n}|${textGen()}|${getLang()}|${app.pixelScale}|${app.coarse}|${app.touch}`;
+  // 지난 그림의 계단(beat) 가운데 지금 시각에서 값이 바뀐 것이 있나 — 그리기와 같은 셈
+  const stepped = () => beats.some(([r, p, k]) => Math.floor(app.time * r + p) !== k);
   const busy = () => app.fx.list.length > 0 || app.toasts.length > 0 || app.hitstopT > 0 || app.shakeT > 0 || app.shakeAmt > 0
     || !!app.clockFx || !!app.guide || !!app.hintShown || moving(app.screen) || moving(app.overlay);
   app.frame = (t) => {
@@ -596,20 +598,25 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       app.update(dt);
       // 그릴 것이 없으면 캔버스를 그대로 둔다(브라우저가 지난 그림을 보인다). 시험 · 도구 · 레이아웃 기록 중에는 늘 그리되 판단은 남긴다(tools/drawcheck.mjs)
       const going = busy();
-      const want = need || wasLive || going || drawSig() !== lastSig;
+      const want = need || wasLive || going || stepped() || drawSig() !== lastSig;
       app.lastWant = want;
       if (want || app.alwaysDraw || LOG.on) {
         const asked = need, hov = app.ui.hover ? app.ui.hover.id : null;
         need = false;
-        MOTION.live = false;
+        MOTION.live = false; MOTION.beats.clear();
         swayBegin(app.time);
         app.draw();
         // 움직이던 것이 멈춘 뒤 · 바뀐 것을 그린 뒤 한 번 더 그린다(사라진 알림을 지우고, 이번 그림이 고른 가리킴 · 자리를 보인다)
         wasLive = MOTION.live || going || asked;
         if ((app.ui.hover ? app.ui.hover.id : null) !== hov) need = true;
         lastSig = drawSig();
+        beats = [...MOTION.beats.values()];
         app.stats.drawn = (app.stats.drawn || 0) + 1;
-      } else swaySettle(app.time);
+      } else {
+        // 건너뛴 프레임: 그렸다면 옮겼을 시각만 옮긴다(카드 들림 · 화면이 그리기 안에서 따라가는 값)
+        swaySettle(app.time);
+        for (const s of [app.screen, app.overlay]) if (s && s.settle) s.settle(app.time);
+      }
     } catch (e) {
       need = true;
       app.stats.errors++;

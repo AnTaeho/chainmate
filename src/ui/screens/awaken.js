@@ -26,6 +26,8 @@ export class AwakenScreen {
     this.t = 0;
     app.sfx('crack');
   }
+  // 금이 번지고 터져 끝 장면이 될 때까지(그 뒤 금테 카드의 반짝임은 그리는 함수가 live를 부른다)
+  animating() { return this.t < DONE; }
   update(dt) {
     const before = this.t;
     this.t += dt * this.app.speed();
