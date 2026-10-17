@@ -1,5 +1,6 @@
 // 깊이 층의 화면 조각: 시너지(옛 가족) 문양 · 칩 · 띠(켜진 시너지와 다음 문턱) · 문턱을 넘는 순간.
 import { PAL } from '../render/palette.js';
+import { live } from '../render/look.js';
 import { rect, text, box, frame, measure } from '../render/gfx.js';
 import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf, setName } from '../data/families.js';
 import { tipLines, optLine } from './parts.js';
@@ -150,6 +151,7 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
     ui.region(id, cx, cy, cw, FAM_H, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
     const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
+    if (since < 1.2) live();
     openBox('edge', cx, cy, cw, FAM_H, 1, { name: `띠 ${f.id}` });
     box(ctx, cx, cy, cw, FAM_H, lv ? '#132019' : PAL.feltDk, lv ? f.col : PAL.frameDk);
     if (glow > 0) {
@@ -183,6 +185,7 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
     ui.region(id, x, yy, w, FAM_H, { tip: () => familyTip(f.id, n[f.id]), noKeys: true });
     const since = fx && fx[f.id] != null ? time - fx[f.id] : 99;
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
+    if (since < 1.2) live();
     openBox('edge', x, yy, w, FAM_H, 1, { name: `시너지 줄 ${f.id}` });
     box(ctx, x, yy, w, FAM_H, lv ? '#132019' : PAL.feltDk, ui.isHover(id) ? PAL.gold : lv ? f.col : PAL.frameDk);
     if (glow > 0) { ctx.globalAlpha = glow * 0.6; rect(ctx, x - 2, yy - 2, w + 4, FAM_H + 4, f.col); ctx.globalAlpha = 1; }

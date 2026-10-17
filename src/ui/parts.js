@@ -17,6 +17,7 @@ import { PIECE_NAME, PIECE_MOVE, FRAG_SOURCE } from './words.js';
 import { wrap, textGen } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { shade, glow, flicker } from '../render/light.js';
+import { live } from '../render/look.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox, logClip, LOG } from '../render/layoutlog.js';
@@ -130,6 +131,7 @@ export function chartTip(form, level = null) {
 // 카드를 그린 뒤 그 위에 얹는다. t = 화면 시간(초)
 export function editionShine(ctx, edition, x, y, w, h, t) {
   if (!edition) return;
+  if (t) live();
   if (edition === 'foil' || edition === 'obsidian') {
     const span = w + h + 20;
     const p = ((t * 55) % (span + 40)) - 20;
@@ -177,6 +179,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   rect(ctx, x + 1, y + 1, w - 2, 1, legendary ? PAL.goldHi : obsidian ? '#4a3a5c' : PAL.cardHi);
   rect(ctx, x + 1, y + 2, 2, h - 3, RARITY[info.rarity] || PAL.dim);
   if (legendary) {
+    if (t) live();
     const k = Math.floor(t * 8) % 20;
     if (k < 4) rect(ctx, x + 10 + k * 22, y + 2 + (k % 2) * 3, 1, 1, PAL.white);
   }
@@ -294,6 +297,7 @@ export function soulMark(ctx, p, x, y, w, h, time = null, dim = false) {
   const s = SOUL_BY_ID[p.soul];
   if (!s) return;
   const t = time == null ? 0 : time;
+  if (time != null) live();
   if (dim) ctx.globalAlpha *= 0.6;
   if (p.awake) {
     frame(ctx, x + 1, y + 1, w - 2, h - 2, PAL.gold);

@@ -49,6 +49,8 @@ export class SetupScreen {
     const extras = ex.length ? wrap(ex.join(' · '), IW).map((l, k) => [l, (k ? f : f.gap(GAP_GROUP)).line()]) : [];
     return { open, names, bag, extras, h: f.y + P };
   }
+  // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
+  animating() { return false; }
   draw(ctx, ui) {
     const rec = this.app.records;
     // 다음 오프닝(해금 과제)은 머리줄 오른쪽 보조 글

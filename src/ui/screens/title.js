@@ -97,12 +97,13 @@ export class TitleScreen {
     const app = this.app, calm = app.reducedMotion;
     const st = calm ? calmScene() : skyScene(this.T);
     const shake = calm || !app.settings.shake ? [0, 0] : skyShake(this.T, st.shake);
-    return { st, shake, flash: calm ? 0 : st.flashAll, nt: calm ? 0 : this.T, tw: app.time, calm };
+    // 별 반짝임: 움직임 줄이기면 여백 판과 같은 초당 12번으로
+    return { st, shake, flash: calm ? 0 : st.flashAll, nt: calm ? 0 : this.T, tw: calm ? Math.floor(app.time * 12) / 12 : app.time, calm };
   }
   // 여백 판이 창 전체로 이어 칠하는 장면(main.js · src/render/backdrop.js): 멈춘 바탕 + 움직이는 층(별 · 실루엣, 흔들림을 따라) + 가장자리 어둡기
   surroundScene() {
     const f = this.snap || this.sky();
-    const tw = Math.floor(f.tw * 12) / 12;
+    const tw = f.calm ? f.tw : Math.floor(f.tw * 12) / 12;
     return {
       ...TITLE_SCENE,
       live: {

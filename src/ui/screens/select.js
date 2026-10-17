@@ -5,6 +5,7 @@ import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, fitNum, frame, measure } from '../../render/gfx.js';
+import { live } from '../../render/look.js';
 import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
 import { CHARTS } from '../../data/charts.js';
@@ -43,6 +44,7 @@ export function antePath(ctx, ui, run, cx, y, time) {
   const px = x0 + lw + 10, py = y + 2;
   rect(ctx, px + 4, py + 4, (ANTES - 1) * step, 1, PAL.feltHi);
   const pulse = 0.5 + 0.5 * Math.sin(time * 5);
+  live();
   for (let i = 0; i < ANTES; i++) {
     const a = i + 1, x = px + i * step;
     const done = a < run.ante, cur = a === run.ante;
@@ -220,6 +222,8 @@ export class SelectScreen {
   }
   // 판 틀: 왼쪽 칸(관 선택 · 시너지 · 정석 · 상금 — 설명 자리) + 본 칸(대국 카드 셋 — 가장 긴 카드에 맞춘 높이 · 판의 길 ·
   // 떠나온 상점이 있으면 판의 길 띠 왼쪽에 「상점」)
+  // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
+  animating() { return false; }
   draw(ctx, ui) {
     const app = this.app, run = app.run;
     const fid = blindInfo(run).faction, fa = FACTION_BY_ID[fid];

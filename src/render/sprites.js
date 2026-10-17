@@ -4,7 +4,7 @@
 import { makeCanvas, context } from './surface.js';
 import { FAIRY_SPR } from './fairy-sprites.js';
 import { SPR_HI } from './sprites-hi.js';
-import { LOOK } from './look.js';
+import { LOOK, live } from './look.js';
 
 export const SW = 16, SH = 22;
 const BASE = ['...##########...', '..############..', '..dddddddddddd..', '..############..', '................'];
@@ -215,6 +215,7 @@ const STAR_HI = ['..a...', '..a...', 'aaCaa.', '..a...', '..a...', '......'];
 const DOT_HI = ['......', '......', '..C...', '......', '......', '......'];
 export function tierSparkle(ctx, x, y, t = null, hi = hiFor(ctx)) {
   const a0 = ctx.globalAlpha;
+  if (t != null) live();
   AURA.forEach(([i, j], k) => {
     const on = t == null ? 1 : 0.5 + 0.5 * Math.sin(t * 2.2 + k * 1.7);
     if (on < 0.25) return;

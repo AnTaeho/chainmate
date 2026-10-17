@@ -45,6 +45,8 @@ export class ResultScreen {
     this.opened = this.out.tier ?? null; // 이번 판에 열린 묶음(단계)
   }
   update(dt) { this.t += dt; }
+  // 최고 한 수 다시 보기는 늘 돈다
+  animating() { return !!this.replay; }
 
   xy(sq) { return { x: MX + (sq & 7) * Q, y: MY + (7 - (sq >> 3)) * Q }; }
   // 다시 보기(CHM-57): 대국 화면과 같은 길 — 꺾쇠 · 물수제비는 꺾은 칸을 거치고, 넘기는 넘은 칸 너머로 작은 포물선,

@@ -3,7 +3,7 @@
 // 빛은 글자 뒤 층에만 깐다: 글자 · 도트 그림은 늘 그 위에 네모 도트로 다시 그려져 번지지 않는다.
 import { makeCanvas, context } from './surface.js';
 import { rgb, PAL } from './palette.js';
-import { LOOK, snap } from './look.js';
+import { LOOK, snap, live } from './look.js';
 
 // ── 빛 번짐: 가운데가 밝고 가장자리로 스러지는 둥근 빛(32×32, 빛깔마다 한 번). 네모 뒤에 아홉 조각으로 늘려 깐다
 //   (네모 안은 고르게 밝고, 네모 밖 spread 폭에서 스러진다 — 길쭉한 글 줄에도 둥글게 번진다)
@@ -62,7 +62,7 @@ export function glow(ctx, x, y, w, h, col, a = 0.5, spread = 6) {
 }
 
 // 빛 떨림: 움직임 줄이기면 멈춘 값
-export const flicker = (time, speed = 3, amt = 0.12) => (LOOK.calm ? 1 : 1 - amt + amt * Math.sin(time * speed));
+export const flicker = (time, speed = 3, amt = 0.12) => { if (LOOK.calm) return 1; if (time) live(); return 1 - amt + amt * Math.sin(time * speed); };
 
 // ── 판넬 · 카드 · 격언 칸 그림자: 아래로 d 도트, 오른쪽으로 1 도트 비켜 어둡게(테 검사에 안 걸리게 rect만)
 // 들리는 카드(sway.js)는 바닥 자리에 제 그림자를 깔고, 그 안에서 그리는 카드 바탕은 그림자를 건너뛴다(unshaded)

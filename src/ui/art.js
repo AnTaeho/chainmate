@@ -3,6 +3,7 @@
 // 화면 배율 2 이상(hiFor): 칸을 반 칸 캔버스(두 배)에 구워 정수 칸에 놓는다 — 반 칸 자리에 따로 그리면 N = 3에서 번진다.
 // 1배 화면: 옛 1배 그림을 잉크 가운데로(물약 · 룰렛은 옛 그림이 글자였어서 16×16 원본).
 import { PAL } from '../render/palette.js';
+import { live } from '../render/look.js';
 import { rect, frame, sprite, place, soulSpark, artOf } from '../render/gfx.js';
 import { makeCanvas, context } from '../render/surface.js';
 import { baked, hiFor, tierOf, spriteCanvas, spritePixels, spritePixelsHi, tierSparkle } from '../render/sprites.js';
@@ -45,6 +46,7 @@ export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
 // 혼 그림(1배 화면): 기물 없이 혼의 빛깔로 도는 기운(혼도 덱의 어느 기물에나 깃든다)
 export function soulEmblem(ctx, id, x, y, t = 0, { sq = true } = {}) {
   const s = SOUL_BY_ID[id];
+  if (t) live();
   if (sq) rect(ctx, x, y, 22, 26, CELL.bg);
   const cx = x + 11, cy = y + 13;
   for (let r = 8; r >= 2; r -= 2) { ctx.globalAlpha = 0.18 + (8 - r) * 0.06; for (let a = 0; a < 24; a++) { const q = (a / 24) * Math.PI * 2; rect(ctx, Math.round(cx + Math.cos(q) * r), Math.round(cy + Math.sin(q) * r), 1, 1, s.col); } }
@@ -75,6 +77,7 @@ export const SOUL_GLYPH = {
 };
 
 export function awakenArt(ctx, x, y, t = 0, { sq = true } = {}) {
+  if (t) live();
   if (sq) rect(ctx, x, y, 22, 26, CELL.bg);
   const cx = x + 11, cy = y + 13;
   for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) { const d = i * i + j * j; if (d <= 25) rect(ctx, cx + i, cy + j, 1, 1, d > 16 ? PAL.goldDk : i + j < -3 ? PAL.goldHi : PAL.gold); }
@@ -113,7 +116,7 @@ export const MAXIM_COL = { '#': '#fff1b8', d: '#b79c68', k: '#2a1c10', g: '#d9a2
 const SHARD_COL = { c: PAL.gold, h: PAL.goldHi, d: PAL.goldDk };
 const AWAKEN_COL = { D: PAL.goldDk, g: PAL.gold, h: PAL.goldHi, k: CELL.bg };
 // 도박의 도는 빛깔: 한 바퀴를 스물넷으로 끊는다(구운 칸을 그만큼만 둔다)
-const gambleHue = (t) => (Math.floor((t * 200) / 15) * 15) % 360;
+const gambleHue = (t) => { if (t) live(); return (Math.floor((t * 200) / 15) * 15) % 360; };
 const gambleCols = (id, hue) => (id === 'roulette'
   ? { R: '#efbd55', A: `hsl(${hue},70%,62%)`, B: '#0f1a17', H: '#fff1b8', n: '#fff8e8' }
   : { c: '#b07a44', o: '#bfe0e6', h: '#ffffff', l: `hsl(${hue},70%,62%)` });
@@ -225,6 +228,7 @@ export function itemArt(ctx, it, x, y, t = 0, run = null, { w = artW(it), h = AR
   }
   // 움직이는 것은 정수 칸에: 혼의 도는 점 셋 · 깨우기의 귀 반짝임(구슬 상자 안쪽)
   const cx = x + w / 2, cy = y + h / 2;
+  if ((it.kind === 'soul' || it.kind === 'awaken') && hi && t) live();
   if (it.kind === 'soul' && hi) for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 5.25 - 1), Math.round(cy + Math.sin(q) * 5.25 - 1), 2, 2, PAL.white); }
   if (it.kind === 'awaken' && hi) { const k = Math.floor(t * 4) % 2; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (!(((sx + sy) / 2 + k) & 1)) rect(ctx, cx + (sx > 0 ? 7 : -8), cy + (sy > 0 ? 7 : -8), 1, 1, PAL.goldHi); }
   return w;

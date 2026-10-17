@@ -1,19 +1,20 @@
 // 앱: 화면 전환 · 판 상태 · 저장 · 입력 · 프레임. DOM을 모른다(main.js가 캔버스와 입력을 넘긴다).
-import { logBegin, layerUp, openBox, closeBox } from '../render/layoutlog.js';
+import { LOG, logBegin, layerUp, openBox, closeBox } from '../render/layoutlog.js';
 import { feltCanvas } from '../render/texture.js';
-import { LOOK } from '../render/look.js';
-import { flowLayer } from '../render/light.js';
+import { LOOK, MOTION } from '../render/look.js';
+import { flowLayer, flowTime } from '../render/light.js';
+import { swayBegin, swaySettle } from './sway.js';
 import { factionFor } from '../sim/run.js';
 import { FACTION_BY_ID } from '../data/factions.js';
 import { createRun, applyRun, migrateRun } from '../sim/run.js';
 import { createDailyRun } from '../sim/daily.js';
 import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, lift, fine, measure } from '../render/gfx.js';
-import { wrap } from '../render/text.js';
+import { wrap, textGen } from '../render/text.js';
 import { LINE, BTN_S, LIST_GAP, inkY } from './frame.js';
 import { UI, tooltip, bigTooltip, tipHeight, tipTexts, fingerDots } from './ui.js';
 import { miniShard } from './parts.js';
-import { setLang } from './lang.js';
+import { setLang, getLang } from './lang.js';
 import { termsIn, keyList, keyHeight, drawKeyBox } from './glossary.js';
 import { placeNotes, noteMode, noteWidth, NOTE_GAP } from './placement.js';
 import { familyCounts, THRESHOLDS, levelOf } from '../data/families.js';
@@ -36,8 +37,9 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 // track(name, props): 기록 보내기(CHM-63, src/ui/telemetry.js) — main.js가 넘긴다. 없으면 아무것도 보내지 않는다(Node 시험 · 도구)
 // rank: 순위(CHM-70, src/ui/rank.js createRank) — main.js가 넘긴다. 없으면 닿지 못하는 순위(한 번도 부르지 않는다)
 // cloud: 클라우드 저장(CHM-71, src/ui/cloud.js createCloud) — main.js가 넘긴다. 없으면 아무것도 맞추지 않는다
+// alwaysDraw: 프레임마다 그린다(시험 · 도구). 끄면 바뀐 것이 있을 때만 그린다(main.js — layout.md 「그릴 때만 그린다」)
 // platform: 'web' | 'app'(Tauri). share(name, data, type, anywhere) · download(name, data, type) · copyText(text): 기록 · 그림 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, fields = null, openPage = null, today: dayNow = today }) {
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, fields = null, openPage = null, today: dayNow = today, alwaysDraw = true }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -60,6 +62,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     nextSeed: seed,
   };
 
+  // 그릴 때만 그린다(layout.md 「빛과 움직임」): 입력 · 화면 바뀜 · 명령 · 알림 · 배율 · 설정이 다음 프레임을 그리게 한다
+  let need = true;
+  app.invalidate = () => { need = true; };
+  app.alwaysDraw = !!alwaysDraw;
+
   // 움직임 줄이기: 기기 설정(OS) 또는 게임 설정 「움직임 줄이기」(settings.calm)
   Object.defineProperty(app, 'reducedMotion', { get: () => !!reducedMotion || !!app.settings.calm, enumerable: true });
   LOOK.calm = app.reducedMotion;
@@ -70,6 +77,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.scale = n; LOOK.n = n;
     if (canvas.width !== W * n) canvas.width = W * n;
     if (canvas.height !== H * n) canvas.height = H * n;
+    app.invalidate(); // 캔버스 크기를 바꾸면 그림이 지워진다 · 손가락 구역도 다시 잰다
   };
   // 흐르는 배경에 섞을 세력 빛깔(판이 없으면 없음)
   let tintKey = null, tintCol = null;
@@ -91,7 +99,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.records = loadRecords(store);
   setLang(app.settings.lang);
   app.fresh = [];   // 이번 판에 새로 채운 도감 칸
-  app.saveRecords = () => { const ok = store.set(KEYS.records, app.records); if (app.cloud) app.cloud.mark(); return ok; };
+  app.saveRecords = () => { const ok = store.set(KEYS.records, app.records); if (app.cloud) app.cloud.mark(); app.invalidate(); return ok; };
   // 사람 판 기록(CHM-50): 판마다 run.track에 세고, 판이 끝나면 한 줄을 KEYS.runs에 남긴다. 수업 · 대본 대국 · scratch 판은 남기지 않는다
   app.appInfo = { version: VERSION, commit: COMMIT, platform };
   // 기록 보내기(CHM-63): scratch 판 위에서는 always(수업 진행 · 설정)만 나간다. 판 사건은 app.cmd가 표(commandEvents)로 옮긴다
@@ -218,13 +226,15 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.ui.press = null;
     app.ui.drag = null;
     app.ui.previewId = null; // 손가락으로 한 번 누른 카드는 화면을 옮기면 잊는다(다음 화면의 같은 구역이 곧바로 눌리지 않게)
+    app.invalidate();
   };
   app.openOverlay = (name, args = {}) => {
     app.overlay = new SCREENS[name](app, args);
     app.overlay.name = name;
     app.visited.add(name);
+    app.invalidate();
   };
-  app.closeOverlay = () => { app.overlay = null; };
+  app.closeOverlay = () => { app.overlay = null; app.invalidate(); };
   // 오늘 날짜(YYYY-MM-DD): 오늘의 대국 시드 · 기록 화면의 오늘 줄이 이것을 쓴다. 게임은 진짜 달력, 연기 시험은 고정 날짜를 넣는다
   app.today = () => dayNow();
 
@@ -271,10 +281,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (r.phase === 'lost' || r.phase === 'won') { if (store.get(KEYS.run)) app.cloud.noteRunEnd(); store.del(KEYS.run); }
     else { r.updatedAt = app.cloud.now(); store.set(KEYS.run, r); app.cloud.mark(); }
   };
-  app.saveSettings = () => { const ok = store.set(KEYS.settings, app.settings); app.cloud.noteSettings(); return ok; };
+  app.saveSettings = () => { const ok = store.set(KEYS.settings, app.settings); app.cloud.noteSettings(); app.invalidate(); return ok; };
   // 명령 하나(봇과 같은 명령). 이벤트를 돌려준다.
   app.cmd = (cmd) => {
     const run = app.run;
+    app.invalidate();
     // 사람 판 기록: 옛 저장에서 이어 둔 판은 여기서 세기 시작한다
     if (!run.scratch && !run.track) run.track = newTrack({ startedAt: null, app: app.appInfo });
     const prev = run.scratch ? null : trackBefore(run);
@@ -349,6 +360,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     });
   };
   app.toast = (msg, col = PAL.ink, dur = 2.2) => {
+    app.invalidate();
     app.toasts.push({ msg, col, t: 0, life: dur });
     if (app.toasts.length > 3) app.toasts.shift();
   };
@@ -357,6 +369,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   // ── 입력(게임 좌표)
   app.pointer = (type, x, y, button = 0) => {
     if (app.audio) app.audio.unlock();
+    app.invalidate();
     const t0 = now();
     if (type === 'move') app.ui.move(x, y);
     else if (type === 'down') {
@@ -380,6 +393,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
   app.key = (k) => {
     if (app.audio) app.audio.unlock();
+    app.invalidate();
     // 따라 하는 길(대본 대국 · 수업 ⑩) 중에도 Esc는 늘 멈춤을 연다 — 화면의 Esc(고른 손 내려놓기 · 꾸러미 넘기기)는 길을 어긋나게 하니 거치지 않는다.
     // 멈춤을 닫으면 길은 그 걸음에서 이어진다. 다른 키는 길 중에 받지 않는다(덮개 — 멈춤 · 설정 · 행마 보기 — 는 받는다)
     if (app.guide && !app.overlay) { if (k === 'Escape') app.openOverlay('pause'); return; }
@@ -568,14 +582,36 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (p) foldSide(ctx, ui.side, { x: p.lay.x, y: p.lay.y, w: p.lay.w, h: p.total }, p.anchor, ground);
   }
 
+  // 그릴까: 바뀐 것(need) · 지난 그림에 움직이는 것(live) · 이어지는 연출 · 화면이 움직인다고 함(animating — 없으면 움직인다고 본다) · 흐르는 배경의 한 칸(초당 12번)
+  let wasLive = true, lastSig = null;
+  const moving = (s) => !!s && (typeof s.animating === 'function' ? !!s.animating() : true);
+  const drawSig = () => `${LOOK.flow > 0 ? flowTime(app.time) : 0}|${app.tint()}|${LOOK.flow}|${LOOK.calm}|${LOOK.n}|${textGen()}|${getLang()}|${app.pixelScale}|${app.coarse}|${app.touch}`;
+  const busy = () => app.fx.list.length > 0 || app.toasts.length > 0 || app.hitstopT > 0 || app.shakeT > 0 || app.shakeAmt > 0
+    || !!app.clockFx || !!app.guide || !!app.hintShown || moving(app.screen) || moving(app.overlay);
   app.frame = (t) => {
     const dt = app.last == null ? 1 / 60 : (t - app.last) / 1000;
     app.last = t;
     const t0 = now();
     try {
       app.update(dt);
-      app.draw();
+      // 그릴 것이 없으면 캔버스를 그대로 둔다(브라우저가 지난 그림을 보인다). 시험 · 도구 · 레이아웃 기록 중에는 늘 그리되 판단은 남긴다(tools/drawcheck.mjs)
+      const going = busy();
+      const want = need || wasLive || going || drawSig() !== lastSig;
+      app.lastWant = want;
+      if (want || app.alwaysDraw || LOG.on) {
+        const asked = need, hov = app.ui.hover ? app.ui.hover.id : null;
+        need = false;
+        MOTION.live = false;
+        swayBegin(app.time);
+        app.draw();
+        // 움직이던 것이 멈춘 뒤 · 바뀐 것을 그린 뒤 한 번 더 그린다(사라진 알림을 지우고, 이번 그림이 고른 가리킴 · 자리를 보인다)
+        wasLive = MOTION.live || going || asked;
+        if ((app.ui.hover ? app.ui.hover.id : null) !== hov) need = true;
+        lastSig = drawSig();
+        app.stats.drawn = (app.stats.drawn || 0) + 1;
+      } else swaySettle(app.time);
     } catch (e) {
+      need = true;
       app.stats.errors++;
       if (app.onError) app.onError(e);
       else throw e;

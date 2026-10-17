@@ -74,6 +74,7 @@ export function createCloud({ rank, now = () => Date.now(), setTimer = (fn, ms) 
       s.setAt = remote.setAt; s.snap = JSON.stringify(pick());
     }
     if (remote.run === null || isObj(remote.run)) takeRun(remote.run, remote.runAt || 0);
+    if (app.invalidate) app.invalidate(); // 받은 기록 · 말을 다음 프레임에 그린다
   }
 
   // 당겨 와 합친다. 돌려주는 것: { ok, gain(합쳐서 늘어난 것) } — 서버에 저장이 없어도 ok

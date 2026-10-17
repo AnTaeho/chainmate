@@ -5,5 +5,9 @@
 export const LOOK = { n: 1, calm: false, flow: 1.6, shadow: 0.45, glow: 1, sway: 1 };
 if (typeof globalThis !== 'undefined' && globalThis.__look) Object.assign(LOOK, globalThis.__look);
 
+// 그릴 때만 그린다(layout.md 「빛과 움직임」): 시간 따라 모습이 바뀌는 것을 그리면 live()를 부른다 — 다음 프레임도 그린다
+export const MOTION = { live: false };
+export const live = () => { MOTION.live = true; };
+
 // 1/N 칸에 맞춘다(N = 1이면 정수 칸)
 export const snap = (v) => Math.round(v * LOOK.n) / LOOK.n;

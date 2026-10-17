@@ -6,7 +6,7 @@
 import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, frame, lift, sprite, measure } from '../render/gfx.js';
 import { SPR, SW } from '../render/sprites.js';
-import { LOOK } from '../render/look.js';
+import { LOOK, live } from '../render/look.js';
 import { wrap } from '../render/text.js';
 import { L } from './lang.js';
 import { placeBubble, noteMode, noteWidth } from './placement.js';
@@ -209,6 +209,7 @@ export function drawKing(ctx, app, x, y, { joy = false } = {}) {
   });
 }
 export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip = null, joy = false } = {}) {
+  live(); // 테가 깜박이고 킹이 들썩인다
   if (say !== talkSay) { talkSay = say; talkT0 = app.time; }
   const okText = ok ? okLabel || '알겠어' : null, skipText = skip ? '건너뛰기' : null;
   const p = bubbleRect(app, r, say, { ok, okLabel, skip });

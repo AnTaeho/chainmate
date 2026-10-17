@@ -77,6 +77,8 @@ export class MovesScreen {
     app.saveRecords();
   }
   setTab(id) { if (id !== this.tab) { this.tab = id; this.page = 0; this.app.sfx('pick'); } }
+  // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
+  animating() { return false; }
   draw(ctx, ui) {
     const app = this.app;
     const items = movesTab(this.tab, this.list, this.open);

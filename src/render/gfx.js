@@ -6,7 +6,7 @@ import { chartForm } from '../data/pieces.js';
 import { L } from '../ui/lang.js';
 import { LOG, logText, logFrame } from './layoutlog.js';
 import { SOUL_BY_ID } from '../data/souls.js';
-import { snap } from './look.js';
+import { snap, live } from './look.js';
 
 // 소수점 자리(빛과 움직임): fine(fn) 안에서 그린 rect · text · sprite는 정수 칸 대신 1/N 칸에 선다(N = 화면 배율).
 // 움직이는 것(미끄러지는 기물 · 날아가는 카드 · 흐르는 점수)만 감싼다 — 멈춘 화면은 늘 정수 칸이라 도트가 어긋나지 않는다.
@@ -20,6 +20,7 @@ export const place = R;
 // hi(두 배 도트): 같은 3×3 자리에 반 도트로 구운 둥근 빛(sprites.js soulOrb)
 export function soulSpark(ctx, x, y, col, t = null, hi = false) {
   const k = t == null ? 0 : t;
+  if (t != null) live();
   const bob = Math.round(Math.sin(k * 2.5));
   const a = t == null ? 1 : 0.65 + 0.35 * Math.sin(k * 3.1);
   ctx.globalAlpha *= a;

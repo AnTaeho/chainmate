@@ -73,6 +73,8 @@ export class CodexScreen {
     return EDITIONS.map((e) => ({ id: e.id, seen: !!c.editions[e.id], name: e.name, tip: () => tipLines(e.name, e.text), col: EDITION_TINT[e.id] }));
   }
   // 판 밖 틀: 머리줄(제목 · 탭 · 모은 수) + 격자(다섯 칸, 이름이 두 줄로도 안 들어가면 넷 — 넘치면 쪽) + 맨 아래 단추 줄. 칸 말풍선은 칸 바로 아래(마지막 줄은 위)
+  // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
+  animating() { return false; }
   draw(ctx, ui) {
     pageHead(ctx, '도감');
     // 탭은 제목 오른쪽부터(영어 제목이 길어도 겹치지 않게)

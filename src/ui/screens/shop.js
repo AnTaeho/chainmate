@@ -5,6 +5,7 @@ import { hint as coachHint } from '../coach.js';
 import { PAL, RARITY } from '../../render/palette.js';
 import { wrap } from '../../render/text.js';
 import { W, text, box, rect, frame, measure } from '../../render/gfx.js';
+import { live } from '../../render/look.js';
 import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } from '../../sim/run.js';
 import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
@@ -70,7 +71,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     }
     pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick && ok ? 1 : 0, selected: selectedId === p.id, hover: hov && ok, dim: !ok, tier: tierOf(level), level, glow: gl, time: ui.time + i, flash: fl });
     if (growing) { if (grow.big || grow.from == null) growPillar(ctx, px, py, cw, ch, grow.p); else growSparks(ctx, px, py, cw, ch, grow.p); }
-    if (glow && pick && ok) { const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; frame(ctx, px - 1, py - 1, cw + 2, ch + 2, PAL.gold); ctx.globalAlpha = 1; }
+    if (glow && pick && ok) { live(); const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; frame(ctx, px - 1, py - 1, cw + 2, ch + 2, PAL.gold); ctx.globalAlpha = 1; }
   });
 }
 
@@ -303,6 +304,8 @@ export class ShopScreen {
   }
   // 판 틀(docs/design-notes/layout.md): 왼쪽 칸(상점 · 시너지 · 정석 · 상금 · 덱 수 — 설명 자리),
   // 가운데(띠: 진열 · 다시 진열 · 다음 대국 / 진열 둘 · 꾸러미 둘 · 덱), 오른쪽 칸(격언 · 두루마리)
+  // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
+  animating() { return false; }
   draw(ctx, ui) {
     const app = this.app, run = this.run, shop = run.shop;
     runSide(ctx, ui, app, '상점');
@@ -365,6 +368,7 @@ export class ShopScreen {
     bagY = Math.min(bagY, BOTTOM - BAG_MIN);
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
     const fp = since(this.flash, 0.3), gp = since(this.grow, this.grow && !this.grow.big ? GROW_SMALL : GROW_BIG);
+    if (fp != null || gp != null) live();
     bagRow(ctx, ui, run, CX, bagY, CENTER.w, {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : this.target ? this.target.pieceId : null,
       flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { ...this.grow, p: gp } : null, bottom: BOTTOM,

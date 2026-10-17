@@ -127,7 +127,7 @@ export async function boot(env = {}) {
   win.addEventListener('resize', () => later());
   win.addEventListener('orientationchange', () => { fields.blur(); refit(true); later(350); });
   // 초점이 풀리면 올린 틀을 내리고 그사이 바뀐 창에 다시 맞춘다
-  fields.onFocus = (id) => { if (id) { liftStage(); return; } if (lifted) { lifted = 0; if (stage) stage.style.top = ''; } later(60); };
+  fields.onFocus = (id) => { if (app) app.invalidate(); if (id) { liftStage(); return; } if (lifted) { lifted = 0; if (stage) stage.style.top = ''; } later(60); };
   if (win.visualViewport && win.visualViewport.addEventListener) win.visualViewport.addEventListener('scroll', () => { if (fields.focused()) liftStage(); });
   // 홈 화면 앱으로 돌아오거나 뒤로 가기로 다시 보일 때(주소창 · 창 크기가 그사이 바뀌었을 수 있다)
   win.addEventListener('pageshow', () => later(60));
@@ -199,10 +199,17 @@ export async function boot(env = {}) {
   });
   const track = (name, props) => tel.track(name, props);
   track.off = () => tel.off();
+  // 순위 · 저장의 답이 오면(본문까지 읽으면) 다음 프레임을 그린다 — 그릴 때만 그리는 화면도 받은 것을 곧바로 보인다
+  const poke = () => { if (app) app.invalidate(); };
+  const seenFetch = (url, init) => win.fetch(url, init).then((res) => {
+    poke();
+    for (const k of ['json', 'text']) { const f = res && res[k]; if (typeof f === 'function') res[k] = () => f.call(res).finally(poke); }
+    return res;
+  }, (e) => { poke(); throw e; });
   // 순위(CHM-70, src/ui/rank.js): 배포 주소 · 앱에서만, 자동화 브라우저가 아닐 때만 /api를 부른다(설정 「기록 보내기」와는 상관없다).
   // env.rankBase: 도구(연기 시험 · 스크린샷 · 실제 서버 확인)가 boot()에 주소 머리를 넘길 때만 — 게임은 주지 않는다
   const rank = createRank({
-    fetch: typeof win.fetch === 'function' ? (url, init) => win.fetch(url, init) : null,
+    fetch: typeof win.fetch === 'function' ? seenFetch : null,
     storage, host: (win.location && win.location.hostname) || '', platform, webdriver: !!nav.webdriver,
     today: env.today, lang: () => (app ? app.settings.lang : 'ko'), base: env.rankBase ?? null,
   });
@@ -213,12 +220,17 @@ export async function boot(env = {}) {
   });
   // 새 탭으로 열기(개인정보 처리방침). 누른 그 순간 안에서 부른다
   const openPage = (url) => { try { if (typeof win.open === 'function') { win.open(url, '_blank', 'noopener'); return true; } } catch { /* 막혔다 */ } return false; };
-  app = createApp({ canvas, storage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, fields, openPage, today: env.today });
+  // 바뀐 것이 있을 때만 그린다(layout.md 「그릴 때만 그린다」). 자동화 브라우저(스크린샷 · 영상 도구)는 늘 그린다 — env.alwaysDraw로 바꾼다
+  const alwaysDraw = env.alwaysDraw ?? !!(win.navigator && win.navigator.webdriver);
+  app = createApp({ canvas, storage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, fields, openPage, today: env.today, alwaysDraw });
   win.addEventListener('error', (e) => tel.error((e && e.error) || (e && e.message) || 'error'));
   win.addEventListener('unhandledrejection', (e) => tel.error((e && e.reason) || 'unhandledrejection'));
   // 화면이 숨거나 떠날 때 남은 것을 보낸다
   win.addEventListener('pagehide', () => { tel.flushNow(); cloud.hidden(); });
-  if (doc.addEventListener) doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'hidden') { tel.flushNow(); cloud.hidden(); } });
+  // 다시 보이면 한 번 그린다
+  if (doc.addEventListener) doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'hidden') { tel.flushNow(); cloud.hidden(); } else app.invalidate(); });
+  // GPU가 캔버스를 잃었다 되찾으면 빈 캔버스다
+  if (canvas.addEventListener) canvas.addEventListener('contextrestored', () => app.invalidate());
   app.setScale(pendingScale);
   refit();
   tel.open();

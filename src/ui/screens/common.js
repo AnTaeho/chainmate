@@ -1,6 +1,7 @@
 // 틀 조각(docs/design-notes/layout.md 「틀 셋」): 멈춤 단추 · 판 밖 머리줄 · 판 틀의 왼쪽 칸.
 import { PAL } from '../../render/palette.js';
 import { W, text, rect, measure } from '../../render/gfx.js';
+import { live } from '../../render/look.js';
 import { ANTES } from '../../sim/run.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { panel, tipLines, optLine, fragmentStrip, wrapName, drawName } from '../parts.js';
@@ -114,6 +115,7 @@ export function clockPips(ctx, run, x2, ty, time = 0, fx = null) {
     const x = x2 - (max - i) * step + 2, y = ty + 1;
     const alive = i < run.clock;
     const breaking = fx && fx.idx === i && fx.t < 2.0;
+    if (breaking) live();
     const blink = breaking && Math.floor(fx.t * 10) % 2;
     const rim = blink ? PAL.red : alive ? PAL.goldDk : PAL.frame;
     const face = blink ? PAL.redDk : alive ? PAL.ink : PAL.feltDk;

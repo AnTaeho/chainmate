@@ -95,6 +95,8 @@ export function startLessonShop(app, i) {
 
 export class LessonsScreen {
   constructor(app) { this.app = app; }
+  // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
+  animating() { return false; }
   draw(ctx, ui) {
     const app = this.app, seen = seenOf(app);
     if (this.terms) return this.drawTerms(ctx, ui);
