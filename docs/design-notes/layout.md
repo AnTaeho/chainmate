@@ -73,6 +73,8 @@ x   8 ─ 120 │ 128 ────────────── 352 │ 360 ─
 ## 3. 글자 크기 단계
 글꼴은 Galmuri11 12px 하나(도트라 줄일 수 없다). 단계는 크기(1배 · 2배) × 굵기 × 빛깔로만 나눈다.
 
+글꼴 파일은 쓰는 글자만 남긴 것이다(CHM-75): KS X 1001 한글 2,350 + 출력 ASCII + `src/**/*.js` · `index.html` · `privacy.html` · `style.css` · `manifest.webmanifest`의 모든 글자 — 보통 505 KB → 45 KB, 굵게 167 KB → 41 KB. 원본(Galmuri 2.403, SIL OFL 1.1)은 `tools/fonts/`(배포 · 앱에 안 든다). 화면에 처음 쓰는 글자(KS X 1001 밖 한글 · 기호)를 넣으면 `test/fonts.test.js`가 실패한다 — fonttools · brotli가 든 파이썬으로 `python tools/fonts.py`를 돌리면 이름에 내용 해시를 붙인 새 파일과 `style.css` · `tools/fonts/glyphs.json`이 바뀐다(이어서 `node tools/preload.mjs`). 굵기마다 파일 하나로 둔다 — `unicode-range`로 쪼개면 `src/render/text.js`의 `document.fonts.check`가 한글 조각이 오기 전에 준비됐다고 답해 대체 글꼴 그림이 캐시에 남는다. 화면에 그리는 바깥 글은 아이디(a-z0-9_)와 목록에서 뽑는 순위 이름뿐이라 이 글자 안에 든다.
+
 | 단계 | 모양 | 쓰는 곳 |
 |---|---|---|
 | 큰 제목 | 2배 굵게 금빛 | 막간 제목(대국 승리 · 명인의 상자 · 전설 이름) |
