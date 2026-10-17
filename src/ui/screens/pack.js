@@ -84,7 +84,8 @@ export class PackScreen {
     for (let i = 0; i < n; i++) { const at = flipAt(i) + 0.12; if (before < at && this.t >= at) this.app.sfx('flip'); }
   }
   pick(i) {
-    const o = this.run.pack.options[i];
+    const o = this.run.pack && this.run.pack.options[i];
+    if (!o) return; // 없는 칸(셋짜리 팩에서 「4」 키)
     if (this.t < flipAt(i) + 0.2) { this.t = 10; return; }
     if (o.kind === 'engraving') { this.engraveIndex = this.engraveIndex === i ? null : i; this.engraveTarget = null; return; }
     if (o.kind === 'maxim' && !hasMaximRoom(this.run, o.edition)) {
