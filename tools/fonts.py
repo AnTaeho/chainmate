@@ -1,7 +1,7 @@
 # 글꼴 줄이기(CHM-75): 원본 Galmuri11(tools/fonts/, 배포 · 앱에 안 든다)에서 쓰는 글자만 남긴 woff2를 assets/fonts/에 쓴다.
 # 남기는 글자: KS X 1001 한글 2,350 + 출력 ASCII + src/**/*.js · index.html · privacy.html · style.css · manifest.webmanifest의 모든 글자.
 # 파일 이름에 내용 해시를 붙이고(오래 캐시해도 되게) style.css @font-face를 고친다. 덮은 글자표는 tools/fonts/glyphs.json(test/fonts.test.js가 읽는다).
-# 돌리기: fonttools · brotli가 든 파이썬으로 — python3 -m venv .venv && .venv/bin/pip install fonttools brotli && .venv/bin/python tools/fonts.py
+# 돌리기: fonttools · brotli가 든 파이썬으로(저장소 밖 venv — 예: python3 -m venv ~/.venvs/fonts && ~/.venvs/fonts/bin/pip install fonttools brotli) ~/.venvs/fonts/bin/python tools/fonts.py
 # 그 뒤 node tools/preload.mjs(index.html의 미리 받기 줄)도 다시 돌린다.
 import hashlib
 import json
