@@ -227,8 +227,11 @@ export async function boot(env = {}) {
   win.addEventListener('unhandledrejection', (e) => tel.error((e && e.reason) || 'unhandledrejection'));
   // 화면이 숨거나 떠날 때 남은 것을 보낸다
   win.addEventListener('pagehide', () => { tel.flushNow(); cloud.hidden(); });
-  // 다시 보이면 한 번 그린다
-  if (doc.addEventListener) doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'hidden') { tel.flushNow(); cloud.hidden(); } else app.invalidate(); });
+  // 숨으면 소리를 쉬고(돌던 때만), 다시 보이면 잇고 한 번 그린다
+  if (doc.addEventListener) doc.addEventListener('visibilitychange', () => {
+    if (doc.visibilityState === 'hidden') { tel.flushNow(); cloud.hidden(); if (audio && audio.suspend) audio.suspend(); }
+    else { if (audio && audio.resume) audio.resume(); app.invalidate(); }
+  });
   // GPU가 캔버스를 잃었다 되찾으면 빈 캔버스다
   if (canvas.addEventListener) canvas.addEventListener('contextrestored', () => app.invalidate());
   app.setScale(pendingScale);

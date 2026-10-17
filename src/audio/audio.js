@@ -14,6 +14,7 @@ export const captureNote = (n) => { const k = Math.max(0, n - 1); return 72 + MA
 // opts.context: 이미 만든 컨텍스트(OfflineAudioContext로 곡을 파일로 뽑을 때 · 시험). opts.strict: 음악 예약의 예외를 삼키지 않는다(시험).
 export function createAudio(win = globalThis, opts = {}) {
   const AC = win && (win.AudioContext || win.webkitAudioContext);
+  let paused = false; // 화면이 숨어 쉬게 했다(suspend)
   let ctx = null, master = null, sfxBus = null, musBus = null, musDuck = null, noiseBuf = null, epLfo = null, vibLfo = null;
   const conf = { volume: 0.6, music: 0.5 };
   const mus = { track: null, pos: 0, next: 0, layers: 0 };
@@ -463,6 +464,17 @@ export function createAudio(win = globalThis, opts = {}) {
     unlock() {
       if (!ensure()) return;
       if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+    },
+    // 화면이 숨으면 쉬고(돌던 때만 — 첫 누름 전이면 그대로), 다시 보이면 잇는다
+    suspend() {
+      if (!ctx || ctx.state !== 'running' || !ctx.suspend) return;
+      paused = true;
+      try { const p = ctx.suspend(); if (p && p.catch) p.catch(() => {}); } catch { /* 그대로 */ }
+    },
+    resume() {
+      if (!ctx || !paused || !ctx.resume) return;
+      paused = false;
+      try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch { /* 그대로 */ }
     },
     apply(settings) { conf.volume = settings.volume ?? conf.volume; conf.music = settings.music ?? conf.music; applyGains(); },
     play(name, arg) {
