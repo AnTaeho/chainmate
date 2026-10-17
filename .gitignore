@@ -8,3 +8,4 @@ desktop/src-tauri/gen/schemas
 .env*
 .agents/
 skills-lock.json
+/dist
