@@ -229,7 +229,7 @@ test('그림 저장 · 공유: 누른 그 순간 안에서 미리 만든 그림�
   const make = ({ can = true, save = true, shared = 'shared' } = {}) => {
     const calls = [], toasts = [], events = [];
     const app = {
-      run: finishedRun(), ui, closeOverlay() { calls.push(['close']); },
+      run: finishedRun(), ui, closeOverlay() { calls.push(['close']); }, invalidate() {},
       track: (name, props) => events.push([name, props]), toast: (s) => toasts.push(s),
       canShareImage: (name, blob) => can && !!blob, saveImage: (name, blob) => { calls.push(['save', name, blob]); return save; },
       shareImage: (name, blob) => { calls.push(['share', name, blob]); return shared ? Promise.resolve(shared) : null; },

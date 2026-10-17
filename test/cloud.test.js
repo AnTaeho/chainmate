@@ -395,7 +395,8 @@ async function liveApp({ api, storage = null }) {
   w.fetch = (url, init) => { if (String(url).startsWith('/api/')) return api.fetch(url, init); tel.push(...JSON.parse(init.body).batch); return Promise.resolve({ ok: true, status: 200 }); };
   w.navigator = { sendBeacon: (url, body) => { tel.push(...JSON.parse(body).batch); return true; }, webdriver: false, userAgent: 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36' };
   w.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; }; w.clearTimeout = (id) => { timers[id - 1] = null; };
-  const app = await boot({ window: w, document: d.document, today: () => DATE });
+  // 구역의 onClick을 곧바로 부르니(입력 길의 invalidate를 거치지 않는다) 프레임마다 그린다
+  const app = await boot({ window: w, document: d.document, today: () => DATE, alwaysDraw: true });
   app.records.kingDone = true; app.records.runs = 1;
   tick(app);
   await settle();

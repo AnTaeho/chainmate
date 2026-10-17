@@ -82,3 +82,39 @@ test('움직이는 그림을 그린 프레임 다음은 그린다(live) · 카�
   sway.sway(ctx, app.time, 'test:card', 0, 0, 10, 10, () => {}, { hover: true, shadow: false });
   assert.ok(ctx.lift < 0 && ctx.lift > -1, `한 프레임만큼(${ctx.lift})`);
 });
+
+test('계단처럼 바뀌는 그림(beat)은 바뀌는 때만 그린다', async () => {
+  const { beat } = await import('../src/render/look.js');
+  const app = makeApp();
+  app.go('codex'); app.tick(5);
+  const seen = [];
+  const draw = app.screen.draw.bind(app.screen);
+  app.screen.draw = (ctx, ui) => { draw(ctx, ui); seen.push(beat(app.time, 3)); };
+  app.invalidate();
+  const n = app.tick(120);
+  assert.equal(n, 2 + 6, `바뀐 뒤 둘 + 2초에 초당 3번 계단(${n}번)`);
+  for (let i = 1; i < seen.length; i++) assert.ok(seen[i] - seen[i - 1] <= 1, '계단을 건너뛰지 않는다');
+});
+
+test('대국(움직임 줄이기): 쉬면 건너뛰고, 손 들썩임이 켜지는 프레임은 그린다 · 막대 시각은 건너뛴 프레임에도 옮긴다', () => {
+  const app = makeApp();
+  app.nextSeed = 11; app.newRun();
+  if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
+  app.run.ante = 3; app.run.blind = 0;
+  app.cmd({ type: 'play' });
+  app.run.battle.incoming = []; // 증원 그림자(초당 3번 들썩임)를 치워 멈춘 판으로
+  app.records.coachSeen = new Proxy({}, { get: () => true, has: () => true });
+  app.go('battle', { events: [] });
+  const s = app.screen;
+  app.tick(10);
+  s.idleT = -1e9;
+  assert.equal(app.tick(60), 0, '멈춘 판은 그리지 않는다');
+  s.idleT = 2.5 - 1 / 120;
+  app.tick(1);
+  assert.equal(app.lastWant, true, '들썩임이 켜지는 프레임');
+  assert.ok(app.tick(60) <= 4, '들썩임은 초당 3번 계단');
+  s.idleT = -1e9; app.tick(5);
+  s.bar = { v: 1, t: 0, tgt: s.view.target };
+  app.tick(30);
+  assert.ok(Math.abs(s.bar.t - app.time) < 1e-9, '건너뛴 프레임에도 막대 시각이 따라온다');
+});

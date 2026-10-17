@@ -2,9 +2,11 @@
 // 프레임마다 그리되(alwaysDraw) 그리기 판단(app.lastWant)은 그대로 셈한다. 판단이 「안 그려도 된다」였는데 캔버스가 지난 프레임과 달라진 프레임이 어김이다.
 //   node tools/drawcheck.mjs [--scale 1440x810] [--only title,shop,...]
 // 게임 루프(requestAnimationFrame)를 도구가 잡아 1/60초씩 돌리고, 프레임마다 캔버스 화소를 지난 프레임과 견준다.
-// 장면: 첫 화면(움직임 줄이기 포함) · 첫 판 대본 대국 · 실제 대국(놓기 · 잡기 · 콤보 · 가리킴) · 상점(가리킴 · 끌기 · 사기 · 리롤) · 팩 열기 ·
-//   도감(가리킴 · 탭 · 쪽 넘김) · 해금 · 설정 바꾸기(움직임 줄이기 · 말) · 결과 · 알림 · 도움말 팁 · 하이라이트 · 계정 입력 칸 · 창 크기 바꾸기.
-// 정적 파일은 도구가 스스로 띄운 서버(127.0.0.1:8793)로 연다. Playwright는 저장소 의존성에 넣지 않는다 — PLAYWRIGHT(index.mjs 경로) · 'playwright' · 전역 순.
+// 장면: 첫 화면(움직임 줄이기 포함) · 첫 판 대본 대국(끝까지) · 실제 대국(쉼 6초 · 손 들썩임 · 가리킴 · 놓기 · 잡기 · 긴 콤보 · 희생 · 평가 도장 ·
+//   강 · 문 · 안개 · 금빛 적 · 횃불 · 시계 깜빡임 · 움직임 줄이기) · 복기 갈림길 · 다시 두기 · 튜토리얼 수업 · 상점(가리킴 · 끌기 · 사기 · 리롤) · 팩 열기 ·
+//   레퍼토리 · 보상 · 마스터의 상자 · 각성 · 전설 · 도감 · 해금 · 설정 바꾸기 · 결과 · 알림 · 도움말 팁 · 하이라이트 · 계정 · 기기 잇기 · 순위(가짜 서버) · 창 크기.
+// 정적 파일과 /api(가짜 서버 test/helpers/fakeapi.js)는 도구가 스스로 띄운 서버(127.0.0.1:--port, 기본 8793)로 연다.
+// Playwright는 저장소 의존성에 넣지 않는다 — PLAYWRIGHT(index.mjs 경로) · 'playwright' · 전역 순.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,7 +18,7 @@ const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const [VW, VH] = opt('--scale', '1440x810').split('x').map(Number);
 const ONLY = opt('--only', null);
-const PORT = 8793;
+const PORT = Number(opt('--port', 8793));
 
 async function loadPlaywright() {
   if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
@@ -26,7 +28,22 @@ async function loadPlaywright() {
 
 // ── 정적 서버(여러 모듈을 한꺼번에 받아도 끊기지 않게 Node로)
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
-const srv = http.createServer((req, res) => {
+// 순위 · 기기 잇기 · 계정 장면의 가짜 서버(boot({ rankBase: '' })로 켠 페이지만 부른다)
+const { fakeApi, seedBoard, demoRows } = await import('../test/helpers/fakeapi.js');
+const TODAY = '2026-10-08';
+const api = fakeApi({ build: 'drawcheck', now: () => Date.parse(`${TODAY}T12:00:00Z`), rand: (() => { let r = 7; return () => ((r = (r * 1103515245 + 12345) & 0x7fffffff) / 0x80000000); })() });
+await seedBoard(api, TODAY, demoRows(24));
+const srv = http.createServer(async (req, res) => {
+  if (req.url.startsWith('/api/')) {
+    const chunks = [];
+    for await (const c of req) chunks.push(c);
+    const r = await api.fetch(req.url, { method: req.method, headers: req.headers.authorization ? { Authorization: req.headers.authorization } : {}, body: chunks.length ? Buffer.concat(chunks).toString('utf8') : undefined });
+    let body = '';
+    try { body = JSON.stringify(await r.json()); } catch { res.writeHead(404); res.end(); return; }
+    res.writeHead(r.status, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(body);
+    return;
+  }
   const u = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   const p = path.join(ROOT, u === '/' ? 'index.html' : u);
   if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
@@ -80,17 +97,19 @@ const browser = await chromium.launch({ channel: 'chromium' });
 const results = [];
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
-async function openPage({ reducedMotion = 'no-preference', lang = 'ko', fresh = false } = {}) {
+async function openPage({ reducedMotion = 'no-preference', lang = 'ko', fresh = false, rank = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, reducedMotion });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.addInitScript(INIT);
-  await page.addInitScript(({ lang }) => {
+  await page.addInitScript(({ lang, rank }) => {
+    if (rank) window.__CHAINMATE_NO_BOOT__ = true;
     localStorage.clear();
     localStorage.setItem('chainmate.settings.v1', JSON.stringify({ volume: 0, music: 0, lang, telemetry: false }));
-  }, { lang });
+  }, { lang, rank });
   await page.goto(`http://127.0.0.1:${PORT}/index.html`);
+  if (rank) await page.evaluate(async (today) => { const m = await import('/src/main.js'); m.boot({ rankBase: '', today: () => today }); }, TODAY);
   await page.waitForFunction(() => window.__app && window.__raf);
   await page.evaluate((fresh) => {
     const a = window.__app;
@@ -158,31 +177,123 @@ const BATTLE = () => {
   r.ante = 3; r.blind = 0; a.cmd({ type: 'play' }); a.go('battle', { events: [] });
 };
 
+// 대국 하나를 꾸민다: 판 사물(강 · 문 · 고속도로) · 안개 · 금빛 적 · 횃불 · 특성 · 열린 킹 · 띠(대국 시작 사건)
+const BATTLE_OPT = (opt) => {
+  const a = window.__app; a.overlay = null; a.nextSeed = opt.seed ?? 11; a.newRun();
+  if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
+  const r = a.run;
+  for (const id of ['chivalry', 'quick_change', 'first_move', 'whim', 'sacrifice']) r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: null, paid: 5 });
+  r.ante = opt.ante ?? 3; r.blind = 0;
+  const ev = a.cmd({ type: 'play' });
+  const b = r.battle;
+  if (opt.rules) Object.assign(b.rules, opt.rules);
+  if (opt.fog) { b.rules.fog = opt.fog; b.revealed = []; }
+  if (opt.marks) {
+    let n = 0;
+    b.board.forEach((c) => { if (c && !c.mine && c.t !== 'K' && c.t !== 'X' && c.t !== 'J') { if (n === 0) c.gold = true; if (n === 1) c.muted = true; if (n === 2) c.trait = 'shield'; n++; } });
+    b.hints = { ...(b.hints || {}), openKings: b.board.map((c, i) => (c && c.t === 'K' ? i : -1)).filter((i) => i >= 0) };
+  }
+  a.go('battle', { events: opt.banner ? ev : [] });
+};
+// 다음 수: 둔 뒤 먹을 수가 가장 많은 것(긴 콤보). sac면 희생을 먼저
+const PLAY = async ({ k, sac = false }) => {
+  const a = window.__app; const { legalCommands, apply } = await import('/src/sim/battle.js'); const { cloneBattle } = await import('/src/sim/replay.js');
+  const b = a.screen && a.screen.live && a.screen.live();
+  if (!b || b.status === 'won' || b.status === 'lost' || !['battle', 'lesson', 'review'].includes(a.screen.name)) return 'end';
+  const cmds = legalCommands(b).filter((c) => c.type !== 'reboard' && (sac ? c.type === 'discard' : c.type !== 'discard'));
+  if (!cmds.length) return sac ? 'nosac' : 'none';
+  const score = (c) => { try { const t = cloneBattle(b); apply(t, c); return t.status === 'chain' ? legalCommands(t).filter((x) => x.type === 'capture').length : -1; } catch { return -2; } };
+  const sc = cmds.map((c, i) => [score(c), i, c]).sort((x, y) => y[0] - x[0] || x[1] - y[1]);
+  const top = sc.filter((x) => x[0] === sc[0][0]);
+  const c = top[k % top.length][2];
+  if (c.type === 'discard') a.screen.sel = [c.index ?? 0];
+  a.screen.send(c); return c.type;
+};
+
 // ── 1. 첫 화면 · 결과 · 상점 · 도감 · 해금 · 설정 · 알림 · 창 크기
 {
   const page = await openPage();
   const h = helpers(page);
   await scene(page, 'title idle 8s', async () => { await h.step(480); await h.hoverAll(/^title:/, 8); await h.move(1, 1, 30); });
-  await scene(page, 'battle drops/captures/combo + hover', async () => {
+  await scene(page, 'battle idle 6s (hand nudge at 2.5s)', async () => {
+    await h.ev(BATTLE); await h.move(1, 1, 1); await h.step(360);
+  });
+  await scene(page, 'battle banner + idle', async () => { await h.ev(BATTLE_OPT, { banner: true }); await h.move(1, 1, 1); await h.step(300); });
+  await scene(page, 'battle hover board/hand/maxims', async () => {
+    await h.ev(BATTLE); await h.step(20);
+    await h.hoverAll(/^(hand:|maxim|fam:|joseki|next$|goal$|box:|pips:|clock|bag$|btn:moves|btn:reboard|faction|sq:)/, 3, 90);
+    await h.move(1, 1, 60);
+  });
+  await scene(page, 'battle select + aim drop squares', async () => {
+    await h.ev(BATTLE); await h.step(20);
+    await h.press(/^hand:0$/, 30);
+    await h.hoverAll(/^sq:/, 2, 64); await h.step(40);
+    await h.ev(() => window.__app.key('Escape')); await h.step(30);
+    await h.press(/^hand:1$/, 120); await h.move(1, 1, 120);
+  });
+  await scene(page, 'battle drops/captures/long combo/sacrifice + hover', async () => {
     await h.ev(BATTLE); await h.step(30);
-    for (let k = 0; k < 10; k++) {
+    for (let k = 0; k < 16; k++) {
       await h.settle();
-      await h.hoverAll(/^hand:/, 5, 6);
-      await h.hoverAll(/^sq:/, 2, 8);
-      const done = await page.evaluate(async (k) => {
-        const a = window.__app; const { legalCommands } = await import('/src/sim/battle.js');
-        const b = a.run.battle; if (!b || b.status === 'won' || b.status === 'lost' || a.screen.name !== 'battle') return true;
-        const cmds = legalCommands(b).filter((c) => c.type !== 'reboard');
-        const drops = cmds.filter((c) => c.type === 'drop');
-        const c = (drops.length ? drops : cmds)[(k * 7) % (drops.length || cmds.length)];
-        if (!c) return true;
-        a.screen.send(c); return false;
-      }, k);
-      if (done) break;
-      await h.settle();
+      if (k % 3 === 0) { await h.hoverAll(/^hand:/, 3, 5); await h.hoverAll(/^sq:/, 2, 10); }
+      const r = await h.ev(PLAY, { k, sac: k === 2 });
+      if (r === 'end') break;
+      await h.step(k % 2 ? 2 : 90); // 연출 도중에 가리키기도, 끝까지 보기도
     }
+    await h.settle();
     await h.move(240, 200, 1); await h.step(240); // 손이 들썩이는 쉼(2.5초 뒤)
   });
+  await scene(page, 'battle grade stamp · glow · ring', async () => {
+    await h.ev(BATTLE); await h.step(10);
+    for (const mark of ['★', '★★★', '∞']) { await h.ev((mark) => window.__app.screen.gradeStamp({ mark }), mark); await h.step(80); }
+    await h.ev(() => { const s = window.__app.screen; if (s.glow) s.glow.fading = true; }); await h.step(80);
+  });
+  await scene(page, 'battle river · gates · highways', async () => { await h.ev(BATTLE_OPT, { rules: { river: true, gates: [27, 36], highways: [2, 5] } }); await h.move(1, 1, 1); await h.step(200); await h.hoverAll(/^sq:/, 2, 20); });
+  await scene(page, 'battle gold · torch · trait · open kings', async () => { await h.ev(BATTLE_OPT, { marks: true }); await h.move(1, 1, 1); await h.step(200); await h.hoverAll(/^sq:/, 2, 20); });
+  await scene(page, 'battle fog', async () => { await h.ev(BATTLE_OPT, { fog: 3 }); await h.move(1, 1, 1); await h.step(120); });
+  await scene(page, 'battle clock blink', async () => {
+    await h.ev(BATTLE); await h.step(10);
+    await h.ev(() => { const a = window.__app; a.clockFx = { idx: Math.max(0, (a.run.clock || 1) - 1), t: 0 }; }); await h.step(200);
+  });
+  await scene(page, 'battle lost → review card → replay screen', async () => {
+    await h.ev(BATTLE_OPT, { ante: 8, seed: 3 }); await h.step(10);
+    for (let k = 0; k < 30; k++) { await h.settle(); const r = await h.ev(PLAY, { k }); if (r === 'end' || r === 'none') break; await h.step(3); }
+    await h.settle();
+    await h.ev(async () => { const a = window.__app; for (let i = 0; i < 600 && a.screen.name === 'battle' && a.screen.rv && a.screen.rv.phase === 'think'; i++) window.__dcStep(1); });
+    await h.step(60); await h.hoverAll(/^btn:/, 6);
+    if (await h.press(/^btn:replay$/, 60)) {
+      for (let i = 0; i < 6; i++) { await h.press(/^btn:forward$/, 4); await h.ev(async () => { const a = window.__app, s = a.screen; for (let j = 0; j < 900 && s.name === 'review' && (s.busy || s.playing); j++) window.__dcStep(1); }); await h.step(30); }
+      await h.press(/^btn:back$/, 30); await h.hoverAll(/^review:/, 6); await h.step(200);
+    }
+  });
+  await scene(page, 'lesson demo + play', async () => {
+    await h.ev(() => window.__app.go('lesson', { index: 0, phase: 'demo' })); await h.step(600);
+    await h.ev(() => window.__app.go('lesson', { index: 0, phase: 'play' })); await h.step(60);
+    for (let k = 0; k < 8; k++) {
+      await h.settle();
+      const tgt = await h.ev(() => { const s = window.__app.screen; if (s.name !== 'lesson') return null; const st = s.step; if (!st) return null; const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : null; if (id) return id; const t = s.clickable(); return t.list.length ? `sq:${t.list[0]}` : null; });
+      if (!tgt) break;
+      await h.press(new RegExp(`^${tgt}$`), 30);
+    }
+    await h.step(200);
+  });
+  await scene(page, 'draft', async () => {
+    await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 21; a.newRun(); if (a.run.phase === 'draft') a.go('draft'); }); await h.step(100);
+    await h.hoverAll(/^draft:/, 8); await h.move(1, 1, 30); await h.press(/^draft:1$/, 90);
+  });
+  await scene(page, 'reward', async () => {
+    await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 11; a.newRun(); if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); a.run.last = { score: 5200, target: 3000, overflow: 1 }; a.go('reward', { reward: { base: 3, moves: 2, interest: 1, mate: 2, overflow: 0, earned: 1, total: 9 }, events: [{ type: 'goldenPack' }] }); });
+    await h.step(200); await h.hoverAll(/^next$/, 10); await h.move(1, 1, 60);
+  });
+  await scene(page, 'master chest', async () => {
+    await h.ev(() => window.__app.go('chest', { chest: { count: 5, cells: [{ lit: true, item: { kind: 'money', money: 2 } }, { lit: true, item: { kind: 'chart', form: 'N' } }, { lit: true, item: { kind: 'piece', t: 'R' } }, { lit: true, item: { kind: 'engrave', piece: 'P', eng: 'gold' } }, { lit: true, item: { kind: 'awaken', soul: 'echo' } }] } }));
+    await h.step(300); await h.hoverAll(/^chest:/, 6); await h.move(1, 1, 60);
+  });
+  await scene(page, 'awaken', async () => {
+    await h.ev(() => { const a = window.__app; const p = a.run.deck[0]; p.soul = 'echo'; a.go('awaken', { awaken: { soul: 'echo', piece: p.t, pieceId: p.id, src: 'golden' } }); });
+    await h.step(150); await h.move(1, 1, 60);
+  });
+  await scene(page, 'legend', async () => { await h.ev(() => window.__app.go('legend', { legend: 'immortal' })); await h.step(420); await h.hoverAll(/^legend:/, 6); await h.move(1, 1, 60); });
   await scene(page, 'result', async () => {
     await h.ev(() => { const a = window.__app; const r = a.run; if (!r) return; r.log.push({ ante: 3, blind: 0, kind: 'practice', score: 1200, target: 3000, best: 800 }); r.phase = 'lost'; a.go('result'); });
     await h.step(200); await h.hoverAll(/^result:/, 10);
@@ -281,9 +392,11 @@ const BATTLE = () => {
   });
   await scene(page, 'tutorial script battle', async () => {
     await h.ev(() => { const a = window.__app; a.toTitle(); a.records.kingDone = false; a.records.runs = 0; a.records.lessonsDone = 0; a.newRun({ script: true }); });
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 80; i++) {
       await h.step(40);
       await h.settle();
+      // 「행마」 걸음이 연 행마 보기는 둘러보고 닫는다(길은 그 뒤 걸음에서 이어진다)
+      if (await page.evaluate(() => !!window.__app.overlay)) { await h.hoverAll(/^moves:/, 4, 6); await h.ev(() => window.__app.key('Escape')); await h.step(20); continue; }
       const tgt = await page.evaluate(() => {
         const a = window.__app, g = a.guide; if (!g) return null;
         const ok = a.ui.regions.find((q) => q.id === 'guide:ok'); if (ok) return [ok.x + ok.w / 2, ok.y + ok.h / 2];
@@ -295,7 +408,8 @@ const BATTLE = () => {
       if (!tgt) { if (!(await page.evaluate(() => !!window.__app.guide))) break; continue; }
       await h.click(Math.floor(tgt[0]), Math.floor(tgt[1]), 4);
     }
-    await h.step(120);
+    await h.step(240);
+    results.push({ name: '(tutorial end)', errors: [await page.evaluate(() => `대본 끝: guide ${!!window.__app.guide} · 화면 ${window.__app.screen.name} · 판 ${window.__app.run && window.__app.run.phase}`)] });
   });
   results.push({ name: '(errors fresh)', errors: page.errors.slice(0, 5) });
   await done(page);
@@ -307,7 +421,41 @@ const BATTLE = () => {
   const h = helpers(page);
   await scene(page, 'title idle 8s (reduced motion)', async () => { await h.step(480); });
   await scene(page, 'shop (reduced motion)', async () => { await h.ev(SHOP); await h.step(60); await h.hoverAll(/^(shop:buy|deck:)/, 8); await h.step(60); });
+  await scene(page, 'battle (reduced motion)', async () => {
+    await h.ev(BATTLE_OPT, { banner: true, marks: true }); await h.move(1, 1, 1); await h.step(240);
+    for (let k = 0; k < 10; k++) { await h.settle(); const r = await h.ev(PLAY, { k, sac: k === 1 }); if (r === 'end') break; await h.step(k % 2 ? 3 : 60); }
+    await h.settle(); await h.move(1, 1, 1); await h.step(240);
+  });
   results.push({ name: '(errors calm)', errors: page.errors.slice(0, 5) });
+  await done(page);
+}
+// ── 4. 순위 · 기기 잇기 · 계정(가짜 서버 — 망 답이 오면 invalidate로 그린다)
+{
+  const page = await openPage({ rank: true });
+  const h = helpers(page);
+  await scene(page, 'rank (fake api)', async () => {
+    await h.ev(() => { const a = window.__app; a.toTitle(); a.go('rank'); });
+    for (let i = 0; i < 20; i++) { await sleep(50); await h.step(3); }
+    await h.press(/^rank:tab:yesterday$/, 6); for (let i = 0; i < 20; i++) { await sleep(50); await h.step(3); }
+    await h.press(/^rank:tab:today$/, 6); for (let i = 0; i < 10; i++) { await sleep(50); await h.step(3); }
+    await h.hoverAll(/^rank:/, 4); await h.step(60);
+  });
+  await scene(page, 'link (fake api)', async () => {
+    await h.ev(() => { const a = window.__app; a.go('link'); });
+    for (let i = 0; i < 10; i++) { await sleep(50); await h.step(3); }
+    await h.press(/^link:code$/, 6); for (let i = 0; i < 30; i++) { await sleep(50); await h.step(3); }
+    for (const d of ['1', '2', '3']) await h.press(new RegExp(`^link:key:${d}$`), 4);
+    await h.hoverAll(/^link:/, 4); await h.step(120);
+  });
+  await scene(page, 'account (fake api)', async () => {
+    await h.ev(() => { const a = window.__app; a.go('account'); });
+    for (let i = 0; i < 10; i++) { await sleep(50); await h.step(3); }
+    const f = await page.$('input');
+    if (f) { await f.click(); await h.step(4); await page.keyboard.type('drawchk1', { delay: 5 }); await page.keyboard.press('Tab'); await page.keyboard.type('pass1234', { delay: 5 }); await h.step(10); }
+    await h.press(/^acct:signup$|^account:signup$/, 4); for (let i = 0; i < 30; i++) { await sleep(50); await h.step(3); }
+    await h.hoverAll(/^acct|^account/, 4); await h.step(60);
+  });
+  results.push({ name: '(errors rank)', errors: page.errors.slice(0, 5) });
   await done(page);
 }
 {

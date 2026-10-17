@@ -27,7 +27,8 @@ async function device(api, { lang = 'ko', width = 1280, height = 720 } = {}) {
   const d = makeFakeDom({ width, height });
   if (lang !== 'ko') d.window.localStorage.setItem(KEYS.settings, JSON.stringify({ lang }));
   d.window.fetch = (url, init) => (String(url).startsWith('/api/') ? api.fetch(url, init) : Promise.resolve({ ok: true, status: 200 }));
-  const app = await boot({ window: d.window, document: d.document, today: () => DATE, rankBase: '' });
+  // 구역의 onClick을 곧바로 부르니(입력 길의 invalidate를 거치지 않는다) 프레임마다 그린다
+  const app = await boot({ window: d.window, document: d.document, today: () => DATE, rankBase: '', alwaysDraw: true });
   app.records.kingDone = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
   const events = [];
   const track = app.track;
