@@ -169,14 +169,24 @@ export function digits(ctx, n, x, y, col) {
 }
 
 // 1,234 꼴
-export function num(n) {
+// 숫자 글은 프레임마다 같은 값을 다시 만든다 — 값마다 한 번만(가득 차면 비운다)
+const NUMS = new Map(), SHORTS = new Map();
+const memo = (map, fn) => (n) => {
+  if (typeof n !== 'number' || Object.is(n, -0)) return fn(n);
+  let s = map.get(n);
+  if (s === undefined) { s = fn(n); if (map.size > 2000) map.clear(); map.set(n, s); }
+  return s;
+};
+export const num = memo(NUMS, numRaw);
+function numRaw(n) {
   if (!isFinite(n)) return '∞';
   const v = Math.floor(n);
   if (Math.abs(v) >= 1e15) return v.toExponential(2).replace('+', '');
   return v.toLocaleString('en-US');
 }
 // 좁은 칸에 들어가는 짧은 숫자(1.7T 꼴)
-export function short(n) {
+export const short = memo(SHORTS, shortRaw);
+function shortRaw(n) {
   if (!isFinite(n)) return '∞';
   const a = Math.abs(n);
   if (a < 10 && n % 1) return n.toFixed(1);

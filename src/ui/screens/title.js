@@ -7,7 +7,7 @@ import { inkY } from '../frame.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, rect, frame, measure } from '../../render/gfx.js';
 import { makeCanvas, context } from '../../render/surface.js';
-import { textImage, textWidth, wrap } from '../../render/text.js';
+import { textImage, textWidth, wrap, textGen } from '../../render/text.js';
 import { drawIcon } from '../../render/icons.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { paintNight, drawNightLive, drawVignette, drawSky, skyScale, silShift } from '../../render/night.js';
@@ -48,7 +48,7 @@ function bakeLogo() {
   const s = L('체인메이트'), sc = 3, chars = [...s];
   const letters = [];
   chars.forEach((ch, i) => { if (ch !== ' ') letters.push({ c: bakeLetter(ch, sc), x: textWidth(chars.slice(0, i).join(''), true) * sc, i }); });
-  return { s, letters, w: textWidth(s, true) * sc + 4, h: 16 * sc + 4 };
+  return { s, gen: textGen(), letters, w: textWidth(s, true) * sc + 4, h: 16 * sc + 4 };
 }
 export const LOGO_Y = 34, SUB_Y = 82;
 export const TELEMETRY_NOTE = '판 결과를 익명으로 수집해요 · 설정에서 끌 수 있어요';
@@ -72,7 +72,6 @@ export class TitleScreen {
     this.sel = 0;     // 0 = 주인공 단추, 1… = 아이콘 줄
     this.row = 1;     // 아이콘 줄에서 마지막으로 고른 칸(위아래로 오갈 때)
     this.T = 0;       // 하늘의 사슬 시계
-    logo = null;
     this.snap = null;
   }
   update(dt) { this.T += dt; }
@@ -164,7 +163,8 @@ export class TitleScreen {
     closeBox();
   }
   drawLogo(ctx, calm) {
-    if (!logo || logo.s !== L('체인메이트')) logo = bakeLogo();
+    // 말이 바뀌거나 글꼴이 다시 오면(글자 캐시를 비우면) 다시 굽는다
+    if (!logo || logo.s !== L('체인메이트') || logo.gen !== textGen()) logo = bakeLogo();
     const lx = Math.round(W / 2 - logo.w / 2), t = this.app.time;
     for (const { c, x, i } of logo.letters) {
       const bob = calm ? 0 : Math.round(Math.sin(t * 2.2 + i * 0.8) * 2);

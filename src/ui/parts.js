@@ -14,12 +14,12 @@ import { maximInfo, engravingInfo, maximCapacity, maximCount } from '../sim/run.
 import { EDITION_BY_ID } from '../data/editions.js';
 import { CHARTS, chartText } from '../data/charts.js';
 import { PIECE_NAME, PIECE_MOVE, FRAG_SOURCE } from './words.js';
-import { wrap } from '../render/text.js';
+import { wrap, textGen } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { shade, glow, flicker } from '../render/light.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
-import { openBox, closeBox, logClip } from '../render/layoutlog.js';
+import { openBox, closeBox, logClip, LOG } from '../render/layoutlog.js';
 import { kindTab, TAB, TAB_GAP } from './kinds.js';
 import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
@@ -52,8 +52,19 @@ export function fitText(ctx, s, x, y, w, col, { bold = true, align = 'left' } = 
 
 // 이름 두 줄(CHM-46): 낱말 단위로 max줄까지 — 굵게(bold면) → 보통 굵기. 한 낱말이라도 폭을 넘거나 줄이 넘치면 null(그때는 fitText).
 // 칸 높이는 돌려준 줄 수로 hug 한다. thin이면 보통 굵기로 줄인 것(「잘린 글」 검사의 줄임 — 그리는 쪽이 logClip('thin'))
+// 같은 이름 · 폭이면 같은 줄(글자 캐시를 비우면 같이 비운다)
+const NAMES = new Map();
+let namesGen = -1;
 export function wrapName(s, w, { bold = true, max = 2 } = {}) {
   s = L(String(s));
+  if (LOG.on) return wrapNameRaw(s, w, bold, max);
+  if (namesGen !== textGen() || NAMES.size > 2000) { NAMES.clear(); namesGen = textGen(); }
+  const key = `${bold ? 1 : 0}|${max}|${w}|${getLang()}|${s}`;
+  let hit = NAMES.get(key);
+  if (hit === undefined) { hit = wrapNameRaw(s, w, bold, max); if (namesGen !== textGen()) return hit; NAMES.set(key, hit); }
+  return hit && { lines: hit.lines.slice(), thin: hit.thin };
+}
+function wrapNameRaw(s, w, bold, max) {
   for (const b of bold ? [true, false] : [false]) {
     if (s.split(' ').some((word) => measure(word, b) > w)) continue;
     const lines = wrap(s, w, b);

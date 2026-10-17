@@ -21,7 +21,7 @@ export const untranslated = new Set();
 export function L(s) {
   if (lang === 'ko' || typeof s !== 'string' || !HANGUL.test(s)) return s;
   let r = cache.get(s);
-  if (r === undefined) { r = tr(s); cache.set(s, r); if (HANGUL.test(r)) untranslated.add(s); }
+  if (r === undefined) { r = tr(s); if (cache.size > 5000) cache.clear(); cache.set(s, r); if (HANGUL.test(r)) untranslated.add(s); }
   return r;
 }
 

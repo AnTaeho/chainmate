@@ -4,8 +4,8 @@
 // (같은 글꼴로 Safari는 크로미움보다 2px 아래에 그린다). 굵기마다 한 번 기준 글자의 잉크 윗줄을 재어 그 차이만큼 올려 그린다.
 import { makeCanvas, context } from './surface.js';
 import { rgb } from './palette.js';
-import { L } from '../ui/lang.js';
-import { logClip } from './layoutlog.js';
+import { L, getLang } from '../ui/lang.js';
+import { LOG, logClip } from './layoutlog.js';
 
 export const FONT_PX = 12;
 const H = 16;
@@ -19,10 +19,23 @@ function measureCtx() {
   return measurer;
 }
 
+// 잰 폭 · 줄 바꿈 캐시: 글꼴이 오거나(clearTextCache) 차면 비운다. 옮긴 글로 열쇠를 삼아 말이 바뀌어도 맞다
+const WIDTHS = new Map();
+const WRAPS = new Map();
+const LIMIT = 4000;
 export function textWidth(s, bold = false) {
+  const t = L(String(s));
+  const key = bold ? `1${t}` : `0${t}`;
+  let v = WIDTHS.get(key);
+  if (v !== undefined) return v;
   const ctx = measureCtx();
   ctx.font = fontOf(bold);
-  return Math.ceil(ctx.measureText(L(String(s))).width);
+  v = Math.ceil(ctx.measureText(t).width);
+  // 글꼴이 오기 전의 폭은 적어 두지 않는다
+  if (!fontReady(bold)) { unready = true; return v; }
+  if (WIDTHS.size > LIMIT) WIDTHS.clear();
+  WIDTHS.set(key, v);
+  return v;
 }
 
 // 기준 글자 「가A」의 잉크 윗줄이 설 자리(글자 그림의 0번째 줄 — 크로미움에서 fillText y = 1일 때의 자리). 줄 높이 11(0 ~ 10줄)
@@ -63,7 +76,14 @@ function shiftOf(bold) {
   return v;
 }
 
-export function clearTextCache() { CACHE.clear(); SHIFT.clear(); unready = false; }
+// 글자 캐시를 비운 횟수(글꼴이 온 뒤 다시 구울 것 — 첫 화면 로고 · 그리기 판단이 본다)
+let gen = 0;
+export const textGen = () => gen;
+export function clearTextCache() { CACHE.clear(); SHIFT.clear(); WIDTHS.clear(); WRAPS.clear(); unready = false; gen++; }
+// 글꼴 조각이 늦게 와도(unicode-range) 다시 잰다
+if (typeof document !== 'undefined' && document.fonts && typeof document.fonts.addEventListener === 'function') {
+  try { document.fonts.addEventListener('loadingdone', () => clearTextCache()); } catch { /* 그대로 */ }
+}
 
 // 글자 그림(textImage 결과)의 잉크 상자: 첫 줄 top · 끝 줄 bottom · 높이 h(1배 화소). 그림 칸 안에 글자를 가운데 놓을 때 쓴다.
 // 잉크를 못 재는 곳은 대문자 · 한글 · 숫자의 자리(0 ~ 10줄)
@@ -132,6 +152,20 @@ export function breakPieces(word) {
 }
 export function wrap(s, w, bold = false) {
   s = L(String(s));
+  if (unready && fontReady(false) && fontReady(true)) clearTextCache();
+  // 레이아웃 기록 중(연기 시험)에는 끊긴 낱말을 적어야 하니 캐시를 거치지 않는다
+  if (LOG.on) return wrapRaw(s, w, bold);
+  const key = `${bold ? 1 : 0}|${w}|${getLang()}|${s}`;
+  let hit = WRAPS.get(key);
+  if (!hit) {
+    hit = wrapRaw(s, w, bold);
+    if (unready) return hit;
+    if (WRAPS.size > LIMIT) WRAPS.clear();
+    WRAPS.set(key, hit);
+  }
+  return hit.slice();
+}
+function wrapRaw(s, w, bold) {
   const out = [];
   for (const para of String(s).split('\n')) {
     let line = '';

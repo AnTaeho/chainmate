@@ -413,6 +413,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
 
   app.draw = () => {
     const ui = app.ui;
+    planFold = null;
     ui.begin();
     ui.finger = fingerDots(app);
     logBegin();
@@ -489,7 +490,10 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.tipRect = null;
     app.noteStack = null;
     if (app.settings.big) { const h = ui.hover, tip = h && h.tip && !ui.drag && !(app.guide && !app.overlay) ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null; if (tip) app.tipRect = bigTooltip(ctx, tip); return; }
-    const plan = planNotes();
+    // 접기(foldUnder)가 잰 묶음을 그대로 쓴다 — 그 뒤 구역 · 낱말 자리 · 가리킴이 바뀌었으면 다시 잰다
+    const pf = planFold;
+    planFold = null;
+    const plan = pf && pf.n === ui.regions.length && pf.s === ui.termSpans.length && pf.h === ui.hover ? pf.plan : planNotes();
     if (!plan) return;
     const { lay, hs, tip, ids, hot, clip, mode, anchor, h } = plan;
     let y = lay.y, k = 0;
@@ -509,6 +513,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.noteStack = { mode, anchor, id: h ? h.id : null, rects, side: lay.side, cut: rects.some((r) => r.cut), lean: !!(app.tipRect && app.tipRect.lean), full: plan.full, clip, dropped: hs.length - lay.n };
   };
 
+  let planFold = null;
   // 설명 묶음의 자리(그리기 전에 잰다): 가리킨 것 · 말풍선 · 낱말 상자 · placement.js 자리. 띄울 것이 없으면 null.
   // 화면을 그린 바로 뒤(접기 — fold.js)와 맨 위(그리기)에서 같은 셈을 쓴다
   function planNotes() {
@@ -559,6 +564,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (c && c.rect) foldSide(ctx, ui.side, c.rect, c.r, ground);
     if (app.settings.big) return;
     const p = planNotes();
+    planFold = { plan: p, n: ui.regions.length, s: ui.termSpans.length, h: ui.hover };
     if (p) foldSide(ctx, ui.side, { x: p.lay.x, y: p.lay.y, w: p.lay.w, h: p.total }, p.anchor, ground);
   }
 
