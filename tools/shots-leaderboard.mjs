@@ -1,7 +1,7 @@
 // CHM-70 순위 화면 쪽: 브라우저(Playwright 크로미움 · 웹킷)로 찍고 확인한다.
 //   node tools/shots-leaderboard.mjs [--out docs/shots/leaderboard] [--scale 3] [--only chromium|webkit]
 //     가짜 서버(진짜 요청 → 응답 로직 api/_lib/service.js + 기억 저장소 — test/helpers/fakeapi.js)를 로컬에 띄워 화면 상태를 모두 찍는다(after-*).
-//     끝에 python3 -m http.server(빈 포트 — /api 없음)로 그대로 열어, 오늘의 대국을 끝내고 순위 화면을 열어도 /api 요청 · 알림이 0인지 본다.
+//     끝에 python3 tools/serve.py(빈 포트 — /api 없음)로 그대로 열어, 오늘의 대국을 끝내고 순위 화면을 열어도 /api 요청 · 알림이 0인지 본다.
 //   node tools/shots-leaderboard.mjs --live http://localhost:3210
 //     진짜 서버(vercel dev — 로컬 코드 + 실제 DB)로: 봇이 둔 오늘의 대국을 화면에 그대로 넣어 끝내고 → 순위에 오르는지 → 순위 화면 → 다시 짓기(live-*).
 //     만든 플레이어는 곧바로 test 표시를 하고(.env.local의 직접 연결) 끝나면 지운다(tools/daily-e2e.mjs --cleanup과 같은 길). 열쇠는 찍지 않는다.
@@ -329,10 +329,10 @@ async function shots(browserType, name) {
   }
 }
 
-// ── /api가 없는 로컬 서버(python3 -m http.server): 게임을 그대로 열어 오늘의 대국을 끝내고 순위 화면 · 설정을 열어도 /api로 0건, 알림 0
+// ── /api가 없는 로컬 서버(python3 tools/serve.py): 게임을 그대로 열어 오늘의 대국을 끝내고 순위 화면 · 설정을 열어도 /api로 0건, 알림 0
 async function plain(browserType, name) {
   const free = await new Promise((ok) => { const t = http.createServer(); t.listen(0, () => { const p = t.address().port; t.close(() => ok(p)); }); });
-  const py = spawn('python3', ['-m', 'http.server', String(free), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
+  const py = spawn('python3', ['tools/serve.py', String(free)], { cwd: ROOT, stdio: 'ignore' });
   const base = `http://localhost:${free}`;
   const browser = await browserType.launch();
   try {
@@ -351,7 +351,7 @@ async function plain(browserType, name) {
     await s.click('rank:back'); await s.click('title:settings'); await s.settle(300);
     toasts.push(await s.ev(() => window.__app.toasts.length));
     const stored = await s.ev((k) => [localStorage.getItem(k), localStorage.getItem('chainmate.rankq.v1'), !!window.__app.ui.regions.find((r) => r.id === 'set:name')], PLAYER_KEY);
-    check(`[${name}] python3 -m http.server(${free}): 오늘의 대국을 끝냈다`, st.screen === 'result', `${date} · ${st.phase} ${st.ante}관`);
+    check(`[${name}] python3 tools/serve.py(${free}): 오늘의 대국을 끝냈다`, st.screen === 'result', `${date} · ${st.phase} ${st.ante}관`);
     check(`[${name}] /api로 나간 요청 0건`, s.seen.api.length === 0, `${s.seen.api.length}건`);
     check(`[${name}] 알림(오류 팝업) 0`, toasts.every((n) => n === 0), toasts.join(' · '));
     check(`[${name}] 열쇠 · 대기열을 저장에 쓰지 않았다 · 설정에 이름 줄 없음`, stored[0] == null && stored[1] == null && !stored[2]);
