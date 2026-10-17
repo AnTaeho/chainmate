@@ -1,5 +1,6 @@
 docs/
-tools/
+tools/*
+!tools/stamp.mjs
 test/
 CLAUDE.md
 README.md
@@ -11,3 +12,4 @@ desktop
 .agents
 skills-lock.json
 db/
+dist

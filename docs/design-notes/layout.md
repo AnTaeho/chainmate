@@ -75,6 +75,8 @@ x   8 ─ 120 │ 128 ────────────── 352 │ 360 ─
 
 글꼴 파일은 쓰는 글자만 남긴 것이다(CHM-75): KS X 1001 한글 2,350 + 출력 ASCII + `src/**/*.js` · `index.html` · `privacy.html` · `style.css` · `manifest.webmanifest`의 모든 글자 — 보통 505 KB → 45 KB, 굵게 167 KB → 41 KB. 원본(Galmuri 2.403, SIL OFL 1.1)은 `tools/fonts/`(배포 · 앱에 안 든다). 화면에 처음 쓰는 글자(KS X 1001 밖 한글 · 기호)를 넣으면 `test/fonts.test.js`가 실패한다 — fonttools · brotli가 든 파이썬으로 `python tools/fonts.py`를 돌리면 이름에 내용 해시를 붙인 새 파일과 `style.css` · `tools/fonts/glyphs.json`이 바뀐다(이어서 `node tools/preload.mjs`). 굵기마다 파일 하나로 둔다 — `unicode-range`로 쪼개면 `src/render/text.js`의 `document.fonts.check`가 한글 조각이 오기 전에 준비됐다고 답해 대체 글꼴 그림이 캐시에 남는다. 화면에 그리는 바깥 글은 아이디(a-z0-9_)와 목록에서 뽑는 순위 이름뿐이라 이 글자 안에 든다.
 
+배포에서는 `tools/stamp.mjs`(Vercel 빌드 명령)가 `style.css` · `src/…` 주소에 `v/<판본>/`을 붙여 1년 immutable로 내보낸다 — 다시 온 사람은 index.html 하나만 확인한다. 판본 style.css의 글꼴 주소는 `/assets/fonts/…`로 바꿔 preload와 같은 URL을 받게 한다(글꼴은 이름의 해시로 따로 오래 둔다). 로컬에서는 빌드가 없다. 판본을 가리지 않고 `/v/<아무 판본>/`을 지금 배포의 파일로 돌리므로, 배포 전에 연 탭이 뒤늦게 부르는 모듈은 새 코드다 — 늦게 부르는 것은 켤 때 `import()`하는 `src/audio/audio.js`(기대는 모듈 없음) 하나라 받아들인다. `import()`를 새로 늘리면 이 점을 본다.
+
 | 단계 | 모양 | 쓰는 곳 |
 |---|---|---|
 | 큰 제목 | 2배 굵게 금빛 | 막간 제목(대국 승리 · 명인의 상자 · 전설 이름) |
