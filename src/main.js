@@ -11,6 +11,9 @@ import { VERSION } from './version.js';
 
 export async function boot(env = {}) {
   const win = env.window || globalThis.window;
+  // 저장소를 읽기만 해도 던지는 곳(쿠키 막음 · 샌드박스 iframe): 한 번만 읽고, 못 읽으면 저장 없이 돈다
+  let storage = null;
+  try { storage = win.localStorage || null; } catch { storage = null; }
   const doc = env.document || globalThis.document;
   const canvas = doc.getElementById('screen');
   // 가짜 DOM의 getElementById는 무엇을 물어도 게임 캔버스를 준다 — 다른 것이면 쓰지 않는다
@@ -187,7 +190,7 @@ export async function boot(env = {}) {
   const tel = createTelemetry({
     fetch: typeof win.fetch === 'function' ? (url, init) => win.fetch(url, init) : null,
     beacon: typeof nav.sendBeacon === 'function' ? (url, body) => nav.sendBeacon(url, body) : null,
-    storage: win.localStorage, host: (win.location && win.location.hostname) || '',
+    storage, host: (win.location && win.location.hostname) || '',
     platform: platform === 'app' ? (coarse() ? 'ios' : 'desktop') : 'web',
     webdriver: !!nav.webdriver, ua: nav.userAgent || '', version: VERSION,
     ...(typeof win.setTimeout === 'function' && typeof win.clearTimeout === 'function' ? { setTimer: (fn, ms) => win.setTimeout(fn, ms), clearTimer: (t) => win.clearTimeout(t) } : {}),
@@ -200,7 +203,7 @@ export async function boot(env = {}) {
   // env.rankBase: 도구(연기 시험 · 스크린샷 · 실제 서버 확인)가 boot()에 주소 머리를 넘길 때만 — 게임은 주지 않는다
   const rank = createRank({
     fetch: typeof win.fetch === 'function' ? (url, init) => win.fetch(url, init) : null,
-    storage: win.localStorage, host: (win.location && win.location.hostname) || '', platform, webdriver: !!nav.webdriver,
+    storage, host: (win.location && win.location.hostname) || '', platform, webdriver: !!nav.webdriver,
     today: env.today, lang: () => (app ? app.settings.lang : 'ko'), base: env.rankBase ?? null,
   });
   // 클라우드 저장(CHM-71, src/ui/cloud.js): 순위와 같은 조건에서만 돈다 — 켤 때 당겨 합치고, 판의 마디마다 · 화면이 가려질 때 올린다
@@ -210,7 +213,7 @@ export async function boot(env = {}) {
   });
   // 새 탭으로 열기(개인정보 처리방침). 누른 그 순간 안에서 부른다
   const openPage = (url) => { try { if (typeof win.open === 'function') { win.open(url, '_blank', 'noopener'); return true; } } catch { /* 막혔다 */ } return false; };
-  app = createApp({ canvas, storage: win.localStorage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, fields, openPage, today: env.today });
+  app = createApp({ canvas, storage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, fields, openPage, today: env.today });
   win.addEventListener('error', (e) => tel.error((e && e.error) || (e && e.message) || 'error'));
   win.addEventListener('unhandledrejection', (e) => tel.error((e && e.reason) || 'unhandledrejection'));
   // 화면이 숨거나 떠날 때 남은 것을 보낸다
