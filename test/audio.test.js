@@ -61,3 +61,21 @@ test('음악을 끄면 예약하지 않고, 효과음은 그대로 난다', () =
   audio.play('capture', 3);
   assert.ok(dom.audioCalls.nodes > n);
 });
+
+test('화면이 숨으면 돌던 소리만 쉬고, 다시 보이면 그것만 잇는다(첫 누름 전이면 그대로)', () => {
+  const dom = makeFakeDom();
+  const calls = [];
+  const AC = dom.window.AudioContext;
+  AC.prototype.suspend = function () { calls.push('suspend'); this.state = 'suspended'; return Promise.resolve(); };
+  const resume0 = AC.prototype.resume;
+  AC.prototype.resume = function () { calls.push('resume'); return resume0.call(this); };
+  const audio = createAudio(dom.window, { strict: true });
+  audio.suspend(); audio.resume();
+  assert.deepEqual(calls, [], '첫 누름 전에는 컨텍스트가 없다');
+  audio.unlock();
+  calls.length = 0;
+  audio.suspend(); audio.suspend();
+  assert.deepEqual(calls, ['suspend']);
+  audio.resume(); audio.resume();
+  assert.deepEqual(calls, ['suspend', 'resume']);
+});
