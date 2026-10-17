@@ -180,26 +180,30 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (best) app.saveRecords();
     return best;
   };
-  // 판이 끝나면 한 번: 기록 · 해금. 결과 화면이 부른다.
+  // 판이 끝나면 한 번: 기록 · 해금. 끝난 그 명령(app.cmd)이 부르고, 결과 화면은 적어 둔 결과를 다시 받는다(두 번 부르면 같은 것)
   app.finishRun = () => {
     const run = app.run;
-    if (run && run.endless && run.phase === 'lost' && !run.endlessRecorded) {
-      run.endlessRecorded = true;
-      const end = finishEndless(app.records, run);
-      app.saveRecords();
-      if (end.tier != null) app.track('unlock_tier', unlockTierProps(app.records, end.tier), { always: true });
-      // 이긴 순간에 연 묶음은 그때 알렸다 — 여기서는 끝없는 대국에서 새로 연 것만
-      run.recordedOut = { ...(run.recordedOut || { unlocked: [], dan: null }), tier: end.tier, fresh: app.fresh.length, endless: run.ante, deeper: end.deeper };
+    if (!run || run.scratch) return null;
+    if (run.endless && run.phase === 'lost') {
+      if (!run.endlessRecorded) {
+        run.endlessRecorded = true;
+        const end = finishEndless(app.records, run);
+        app.saveRecords();
+        if (end.tier != null) app.track('unlock_tier', unlockTierProps(app.records, end.tier), { always: true });
+        // 이긴 순간에 연 묶음은 그때 알렸다 — 여기서는 끝없는 대국에서 새로 연 것만
+        run.recordedOut = { ...(run.recordedOut || { unlocked: [], dan: null }), tier: end.tier, fresh: app.fresh.length, endless: run.ante, deeper: end.deeper };
+      }
+      run.recordedOut.fresh = app.fresh.length;
       return run.recordedOut;
     }
-    if (!run || run.recorded) return run && run.recordedOut;
+    if (run.recorded) { if (run.recordedOut) run.recordedOut.fresh = app.fresh.length; return run.recordedOut; }
+    if (run.phase !== 'won' && run.phase !== 'lost') return null;
     const out = finishRun(app.records, run, { daily: run.daily || null });
     out.fresh = app.fresh.length;
     run.recorded = true;
     run.recordedOut = out;
     if (out.tier != null) app.track('unlock_tier', unlockTierProps(app.records, out.tier), { always: true });
     app.saveRecords();
-    app.cloud.touch(); // 판 수 · 해금까지 적힌 뒤의 기록을 올린다
     return out;
   };
 
@@ -286,12 +290,15 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       }
     }
     app.save();
-    // 맞추는 때(CHM-71): 판이 끝남 · 상점을 떠남 · 관 선택에 섬
-    if (prev && (prev.phase !== run.phase) && (run.phase === 'won' || run.phase === 'lost' || run.phase === 'select' || prev.phase === 'shop')) app.cloud.touch();
     if (run.scratch) { if (app.onCommand) app.onCommand(cmd, ev); return ev; }
     const before = app.fresh.length;
     observe(app.records, app.run, ev, app.fresh);
     if (app.fresh.length !== before || ev.some((e) => e.type === 'win' || e.type === 'grade' || e.type === 'legend')) app.saveRecords();
+    // 판이 끝난 그 명령에서 기록 · 해금을 적는다 — 판 저장은 위 save()가 이미 지웠으니 결과 화면 전에 닫혀도 잃지 않게
+    const ended = prev && prev.phase !== run.phase && (run.phase === 'won' || run.phase === 'lost');
+    if (ended) app.finishRun();
+    // 맞추는 때(CHM-71): 판이 끝남(기록을 적은 뒤) · 상점을 떠남 · 관 선택에 섬
+    if (prev && (prev.phase !== run.phase) && (ended || run.phase === 'select' || prev.phase === 'shop')) app.cloud.touch();
     if (app.onCommand) app.onCommand(cmd, ev);
     return ev;
   };

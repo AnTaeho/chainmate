@@ -379,7 +379,8 @@ test('앱: 관 선택에 설 때 · 상점을 떠날 때 · 판이 끝날 때 �
   assert.deepEqual(api.calls.map((c) => c.path), ['/api/hello'], '켤 때는 배포 식별자만(열쇠가 아직 없다)');
   let touched = 0;
   const touch = app.cloud.touch;
-  app.cloud.touch = () => { touched++; touch(); };
+  const runsAt = []; // 올릴 때마다 그때의 판 수
+  app.cloud.touch = () => { touched++; runsAt.push(app.records.runs); touch(); };
   const t0 = Date.now();
   app.newRun({ seed: 1000003 });
   assert.equal(touched, 0);
@@ -404,12 +405,15 @@ test('앱: 관 선택에 설 때 · 상점을 떠날 때 · 판이 끝날 때 �
   const m = touched;
   app.cmd({ type: 'leave' });
   assert.ok(touched > m, '상점을 떠났다');
+  const runs0 = app.records.runs;
   playUntil(app, () => false);
-  const end = touched;
   assert.equal(w.localStorage.getItem(KEYS.run), null);
+  assert.equal(runsAt.at(-1), runs0 + 1, '판이 끝난 명령에서 기록(판 수)을 적은 뒤에 올린다');
+  const end = touched;
   app.goPhase(); tick(app, 3);
   assert.equal(app.screen.name, 'result');
-  assert.ok(touched > end, '기록(판 수)이 적힌 뒤 한 번 더');
+  assert.equal(app.records.runs, runs0 + 1, '결과 화면은 두 번 세지 않는다');
+  assert.equal(touched, end);
   w.setTimeout.now = true;
   await new Promise((r) => setTimeout(r, 5));
   app.cloud.touch = touch;
