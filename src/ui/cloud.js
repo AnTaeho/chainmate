@@ -22,6 +22,7 @@ export function createCloud({ rank, now = () => Date.now(), setTimer = (fn, ms) 
   const stats = { pulled: 0, pushed: 0, conflict: 0, skipped: 0 };
   const cloud = { on, stats, now };
   let app = null, state = null, timer = null, dirty = false, busy = null, sent = null, lastPush = -Infinity, parked = null;
+  let follow = null, followOpts = null, gen = 0; // 올리는 중에 또 부르면: 끝난 뒤 그때의 것으로 한 번 더(follow)
 
   const st = () => (state ||= { rev: 0, runAt: 0, setAt: 0, snap: null, at: 0, sum: null, ...(app.store.get(CLOUD_KEY, null) || {}) });
   const keep = () => { if (on) app.store.set(CLOUD_KEY, st()); };
@@ -113,9 +114,22 @@ export function createCloud({ rank, now = () => Date.now(), setTimer = (fn, ms) 
     dirty = true;
     return false;
   }
-  cloud.push = (opts) => {
+  // 올리는 중에 부르면 그 올리기가 끝난 뒤 한 번만 더 올리고, 부른 쪽은 그 답을 받는다(나가기가 마지막 것까지 올라간 뒤에 기기를 비우게)
+  cloud.push = (opts = {}) => {
     if (!on || !app) return Promise.resolve(false);
-    if (busy) { dirty = true; return busy; }
+    if (busy) {
+      dirty = true;
+      followOpts = followOpts ? { keepalive: !!(followOpts.keepalive || opts.keepalive), make: followOpts.make !== false || opts.make !== false } : { ...opts };
+      if (!follow) {
+        const g = gen;
+        follow = busy.then(() => {
+          const o = followOpts;
+          follow = null; followOpts = null;
+          return g === gen ? cloud.push(o) : false;
+        });
+      }
+      return follow;
+    }
     busy = send(opts).catch(() => false).finally(() => { busy = null; });
     return busy;
   };
@@ -159,6 +173,7 @@ export function createCloud({ rank, now = () => Date.now(), setTimer = (fn, ms) 
   cloud.wipe = () => {
     if (timer != null) { clearTimer(timer); timer = null; }
     sent = null; parked = null; dirty = false; lastPush = -Infinity;
+    gen++; follow = null; followOpts = null; // 걸어 둔 한 번 더도 거둔다
     if (!on || !app) return;
     const s = st();
     state = { rev: 0, runAt: 0, setAt: s.setAt || 0, snap: s.snap, at: 0, sum: s.sum };

@@ -273,6 +273,47 @@ test('실패는 조용히: 닿지 못하면 다음 때 다시 올린다 · 화�
   assert.deepEqual([puts(w.api).length, d.cloud.stats.skipped], [n, 1]);
 });
 
+test('올리는 중에 또 부르면: 끝난 뒤 그때의 것으로 한 번 더 올리고 그 답을 준다 — 실패가 이어져도 한 번까지, 기기를 비우면 거둔다', async () => {
+  const w = world(), d = device(w);
+  const real = d.rank.savePut.bind(d.rank), gates = [];
+  d.rank.savePut = (...a) => new Promise((res) => gates.push(() => res(real(...a))));
+  const open = async () => { await settle(); const g = gates.shift(); assert.ok(g, '올리기가 걸려 있다'); g(); await settle(); };
+  d.app.records.runs = 1;
+  const first = d.cloud.push();
+  d.app.records.runs = 2;
+  const second = d.cloud.push();
+  const third = d.cloud.push();
+  assert.equal(second, third, '기다리는 쪽은 한 번 더 올리기 하나를 함께 기다린다');
+  await open();
+  assert.equal(await first, true);
+  await open();
+  assert.equal(await second, true);
+  assert.equal(gates.length, 0, '한 번 더는 한 번만');
+  assert.equal(puts(w.api).length, 2);
+  assert.equal((await saved(w.api, d.key())).blob.records.runs, 2, '두 번째 올리기는 그때의 기록');
+  // 실패가 이어져도 한 번 더는 한 번까지
+  let fails = 0;
+  d.rank.savePut = () => new Promise((res) => gates.push(() => { fails++; res({ status: 500 }); }));
+  d.app.records.runs = 3;
+  const a = d.cloud.push();
+  d.app.records.runs = 4;
+  const b = d.cloud.push();
+  await open(); await open();
+  assert.deepEqual([await a, await b, fails, gates.length], [false, false, 2, 0]);
+  await settle();
+  assert.equal(gates.length, 0, '실패 뒤에 저절로 다시 올리지 않는다');
+  // 기기를 비우면 걸어 둔 한 번 더도 거둔다
+  d.app.records.runs = 5;
+  const c = d.cloud.push();
+  const e = d.cloud.push();
+  d.cloud.wipe();
+  await open();
+  assert.equal(await e, false);
+  await c;
+  await settle();
+  assert.deepEqual([fails, gates.length], [3, 0]);
+});
+
 test('이 기기 떼기: 열쇠는 그대로 새 플레이어가 되고, 그 뒤 올린 것은 남은 기기에 가지 않는다', async () => {
   const w = world(), a = device(w), b = device(w);
   a.app.records.runs = 4; a.cloud.touch(); await a.ring();
