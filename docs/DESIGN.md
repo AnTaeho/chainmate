@@ -297,7 +297,7 @@
 
 ## 구조
 
-바닐라 JS ES 모듈, 빌드 없음. `python3 -m http.server`로 연다. 잿길(`~/workspace/projects/ashway`)의 구조를 따른다.
+바닐라 JS ES 모듈, 빌드 없음. `python3 tools/serve.py`(`npm run serve` — `python3 -m http.server`에 연결 대기열만 늘린 것)로 연다. 잿길(`~/workspace/projects/ashway`)의 구조를 따른다.
 
 ```
 index.html  style.css
