@@ -12,7 +12,7 @@
 - 판을 부수는 드문 보상은 한 번에 주지 않고, 중간~낮은 확률의 조각을 이어 모아야 얻게 한다(HOOKS.md 「불멸의 기보」).
 
 ## 구조 규칙
-- 게임(`src/` · `index.html`)은 바닐라 JS ES 모듈, 빌드·npm 의존성 없음. `python3 -m http.server`로 연다. npm 패키지는 순위 서버 함수(`api/`, Vercel Functions — CHM-70)만 쓴다. `src/`의 게임 코드는 npm 패키지를 import하지 않고, `api/`는 `tools/` · `test/`에 기대지 않는다(배포에서 빠진다).
+- 게임(`src/` · `index.html`)은 바닐라 JS ES 모듈, 빌드·npm 의존성 없음. `npm run serve`(`python3 tools/serve.py [포트]` — `python3 -m http.server`는 연결 대기열 5라 모듈 125개를 받다 끊겨 안 뜰 때가 있다)로 연다. npm 패키지는 순위 서버 함수(`api/`, Vercel Functions — CHM-70)만 쓴다. `src/`의 게임 코드는 npm 패키지를 import하지 않고, `api/`는 `tools/` · `test/`에 기대지 않는다(배포에서 빠진다).
 - 데스크톱 포장(Tauri 2)은 `desktop/` 안에만 둔다. 게임 파일은 고치지 않고 `desktop/collect.sh`가 모아 쓴다(`desktop/README.md`).
 - `src/sim/`·`src/data/`는 DOM·canvas 접근 금지(Node에서 돈다). 모든 무작위는 시드 rng. 상태는 JSON 왕복 안전.
 - 상태 변경은 명령 객체로만(`apply`, `applyRun`). 봇과 화면이 같은 명령을 쓴다.
