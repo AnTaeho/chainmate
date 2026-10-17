@@ -13,6 +13,6 @@ class Server(http.server.ThreadingHTTPServer):
 port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 root = pathlib.Path(__file__).resolve().parent.parent
 handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root))
-with Server(('127.0.0.1', port), handler) as srv:
+with Server(('', port), handler) as srv:  # http.server처럼 모든 주소에서 받는다(같은 망의 폰으로 열기)
     print(f'http://127.0.0.1:{port}/')
     srv.serve_forever()
