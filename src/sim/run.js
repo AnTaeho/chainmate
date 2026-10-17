@@ -1057,6 +1057,9 @@ export function applyRun(run, cmd) {
       need('shop', 'select');
       const { from, to } = cmd;
       if (!run.maxims[from] || to < 0 || to >= run.maxims.length) throw new Error('bad move');
+      // 전설은 늘 오른쪽 끝에 남는다(addMaxim이 그 앞에 끼운다) — 전설을 옮기거나 전설 자리로 넘기지 않는다
+      const legendAt = run.maxims.findIndex((x) => x.legendary);
+      if (run.maxims[from].legendary || (legendAt >= 0 && to >= legendAt)) throw new Error('legend stays last');
       const [m] = run.maxims.splice(from, 1);
       run.maxims.splice(to, 0, m);
       break;
@@ -1122,7 +1125,8 @@ export function legalRunCommands(run) {
     else if (c.kind !== 'tactic') out.push({ type: 'use', index });
   });
   run.maxims.forEach((m, index) => { if (canSell(m)) out.push({ type: 'sell', index }); });
-  for (let i = 0; i + 1 < run.maxims.length; i++) out.push({ type: 'moveMaxim', from: i, to: i + 1 });
+  const legendAt = run.maxims.findIndex((m) => m.legendary);
+  for (let i = 0; i + 1 < (legendAt >= 0 ? legendAt : run.maxims.length); i++) out.push({ type: 'moveMaxim', from: i, to: i + 1 });
   if (ph === 'select') {
     out.push({ type: 'play' });
     if (run.blind < 2) out.push({ type: 'skip' });

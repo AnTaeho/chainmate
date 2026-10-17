@@ -235,6 +235,17 @@ test('격언 자리 바꾸기(침묵이 가장 왼쪽을 끈다)', () => {
   assert.deepEqual(run.maxims.map((m) => m.uid), [2, 1]);
 });
 
+test('격언 자리 바꾸기: 전설은 오른쪽 끝에 남는다 — 전설을 옮기거나 전설 자리로 넘기는 명령은 막고, 봇에게도 내놓지 않는다', () => {
+  const run = createRun({ draft: false, seed: 1 });
+  run.phase = 'select';
+  run.maxims = [{ uid: 1, id: 'edge', data: {} }, { uid: 2, id: 'center', data: {} }, { uid: 3, id: 'immortal', data: {}, legendary: true }];
+  assert.throws(() => applyRun(run, { type: 'moveMaxim', from: 0, to: 2 }), /legend/);
+  assert.throws(() => applyRun(run, { type: 'moveMaxim', from: 2, to: 0 }), /legend/);
+  assert.deepEqual(legalRunCommands(run).filter((c) => c.type === 'moveMaxim'), [{ type: 'moveMaxim', from: 0, to: 1 }]);
+  applyRun(run, { type: 'moveMaxim', from: 0, to: 1 });
+  assert.deepEqual(run.maxims.map((m) => m.uid), [2, 1, 3]);
+});
+
 test('결정성: 같은 시드 + 같은 명령 = 같은 JSON', () => {
   const a = createRun({ draft: false, seed: 11 });
   const cmds = botCommands(a);
