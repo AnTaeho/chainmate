@@ -6,7 +6,9 @@ import { rerollCost, rollDisplay, rollPacks, rollItem } from '../src/sim/shop.js
 import { OPENINGS } from '../src/data/openings.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { stepBattle } from '../tools/bot.mjs';
-import { emptyRecords, observe, finishRun, nextUnlock, noteMove, dailySeed, UNLOCKS, MAX_DAN } from '../src/ui/records.js';
+import { emptyRecords, loadRecords, observe, finishRun, nextUnlock, noteMove, dailySeed, UNLOCKS, MAX_DAN } from '../src/ui/records.js';
+import { mergeRecords } from '../src/ui/merge.js';
+import { makeStore, KEYS } from '../src/ui/save.js';
 
 const count = (arr) => arr.reduce((o, t) => ((o[t] = (o[t] || 0) + 1), o), {});
 
@@ -180,4 +182,17 @@ test('세기의 대국 첫 조각은 기보 꾸러미에서 4%로 나오고 고�
   const ev = applyRun(run, { type: 'pick', index: 1 });
   assert.ok(ev.some((e) => e.type === 'fragment' && e.legend === 'century' && e.part === 'first'));
   assert.ok(run.fragments.century.first);
+});
+
+test('최고 도달은 8관까지: 끝없는 대국의 명령 · 예전에 8을 넘겨 적힌 기록 · 다른 기기에서 온 기록 모두', () => {
+  const rec = emptyRecords();
+  const run = createRun({ draft: false, seed: 4 });
+  run.endless = true; run.ante = 11;
+  observe(rec, run, []);
+  assert.equal(rec.bestAnte, 8);
+  const mem = new Map([[KEYS.records, JSON.stringify({ v: 1, runs: 2, bestAnte: 12 })]]);
+  const store = makeStore({ getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) });
+  assert.equal(loadRecords(store).bestAnte, 8);
+  assert.equal(mergeRecords({ ...emptyRecords(), bestAnte: 11 }, { ...emptyRecords(), bestAnte: 5 }).bestAnte, 8);
+  assert.equal(mergeRecords({ ...emptyRecords(), bestAnte: 3 }, { ...emptyRecords(), bestAnte: 5 }).bestAnte, 5);
 });

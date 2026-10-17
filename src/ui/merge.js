@@ -1,6 +1,7 @@
 // 기록 합치기(CHM-71, docs/design-notes/leaderboard.md 「기기 잇기 · 클라우드 저장」): 두 기기의 기록 덩이를 하나로.
 // 순수 함수 — 교환 · 결합 법칙이 서고 merge(a, a) = a(고른 꼴 norm(a) 기준). 새 기록 칸을 더하면 RULES에도 규칙을 넣는다(test/merge.test.js가 잡는다).
 import { emptyRecords, gradeKeys, OPENING_ORDER } from './records.js';
+import { ANTES } from '../sim/run.js';
 
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
@@ -54,7 +55,7 @@ const loose = (a, b) => {
 export const RULES = {
   v: () => 1,
   runs: max, wins: max, mates: max, legends: max, brilliants: max, reviews: max, reviewReplays: max,
-  bestAnte: max, bestEndless: max,
+  bestAnte: (a, b) => Math.min(ANTES, max(a, b)), bestEndless: max, // 최고 도달은 8관까지(옛 기기가 8을 넘겨 올린 것도)
   gates: max, unlockTier: max,
   bestMove: best, bestBrilliant: best,
   grades: (a, b) => union(gradeKeys(a), gradeKeys(b)),

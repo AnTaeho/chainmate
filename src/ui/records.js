@@ -4,6 +4,7 @@ import { KEYS } from './save.js';
 import { OLD_GRADE_MARK } from '../sim/chain.js';
 import { renameOldPieces } from '../sim/oldsave.js';
 import { advanceUnlock, gatesOfRun } from '../data/unlocks.js';
+import { ANTES } from '../sim/run.js';
 
 export const OPENING_ORDER = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 // 해금 과제(내가 정한 것): 판마다 하나씩 보이는 「다음 해금까지」
@@ -43,7 +44,8 @@ export function loadRecords(store) {
   const r = renameOldPieces(store.get(KEYS.records, null)); // 뺀 기물(CHM-55)이 남은 가장 큰 한 수 · 탁월수
   const base = emptyRecords();
   if (!r || r.v !== 1) return base;
-  return { ...base, ...r, codex: { ...base.codex, ...(r.codex || {}) }, unlocked: { ...base.unlocked, ...(r.unlocked || {}) }, grades: gradeKeys(r.grades) };
+  // 최고 도달은 8관까지(끝없는 대국의 깊이는 bestEndless) — 예전에 8을 넘겨 적힌 기록도 읽을 때 맞춘다
+  return { ...base, ...r, bestAnte: Math.min(ANTES, r.bestAnte || 0), codex: { ...base.codex, ...(r.codex || {}) }, unlocked: { ...base.unlocked, ...(r.unlocked || {}) }, grades: gradeKeys(r.grades) };
 }
 
 // 사슬 평가 열쇠: 옛 기록의 「!」 · 「!!」 · 「!!!」를 별로 옮긴다(둘 다 있으면 더한다, CHM-47)
@@ -90,7 +92,7 @@ export function observe(rec, run, events, fresh = []) {
     // 세력: 그 세력과 대국을 두면 도감 세력 탭이 채워진다
     if (typeof s.id === 'string' && s.id.startsWith('faction:')) mark(rec, 'factions', s.id.slice(8), fresh);
   }
-  rec.bestAnte = Math.max(rec.bestAnte, run.ante);
+  rec.bestAnte = Math.max(rec.bestAnte, Math.min(run.ante, ANTES)); // 끝없는 대국의 깊이는 bestEndless에
   return fresh;
 }
 const MASTER_IDS = new Set(['iron_wall', 'fog', 'mirror', 'hourglass', 'heavy_hand', 'silence', 'grudge', 'grandmaster']);
@@ -105,7 +107,7 @@ export function finishRun(rec, run, { daily = null } = {}) {
   const won = run.phase === 'won' || run.endless;
   rec.runs++;
   if (won) rec.wins++;
-  rec.bestAnte = Math.max(rec.bestAnte, Math.min(run.ante, 8));
+  rec.bestAnte = Math.max(rec.bestAnte, Math.min(run.ante, ANTES));
   const out = { unlocked: [], dan: null };
   const dan = run.dan || 0;
   if (won) {
