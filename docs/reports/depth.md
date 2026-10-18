@@ -1,6 +1,6 @@
 # 깊이 — 이형 · 가족 · 정석 · 혼 · 진화 · 묘수 · 판 위 사물 · 적 특성
 
-브랜치 `claude/gracious-wright-t7qg1y`(환경이 이 이름만 푸시를 허락해 `next/1` 대신). 진행 기록 `docs/tasks/next-progress.md`, 층마다 먼저 쓴 재미 노트 `docs/design-notes/fun.md`, 규칙 · 수치 전체는 `docs/DESIGN.md` 「깊이」.
+브랜치 `claude/gracious-wright-t7qg1y`(환경이 이 이름만 푸시를 허락해 `next/1` 대신). 층마다 먼저 쓴 재미 노트 `docs/design-notes/fun.md`, 규칙 · 수치 전체는 `docs/DESIGN.md` 「깊이」.
 
 ## 이 게임은 이제 왜 재미있나
 

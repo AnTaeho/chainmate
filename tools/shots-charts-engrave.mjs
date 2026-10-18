@@ -1,4 +1,4 @@
-// 기보가 보이는 곳 · 각인 덮어쓰기 확인 스크린샷(docs/tasks/backlog.md 5 · 6). 1배(<이름>.png)와 3배(<이름>@3x.png).
+// 기보가 보이는 곳 · 각인 덮어쓰기 확인 스크린샷. 1배(<이름>.png)와 3배(<이름>@3x.png).
 //   node tools/shots-charts-engrave.mjs [--prefix before|after] [--lang ko|en] [--out docs/shots/charts-engrave]
 // 찍는 것:
 //   <prefix>-<lang>-1-hand-tiers   기보 단계가 다른 손(폰 1 · 나이트 2 · 비숍 3 · 룩 5)이 있는 대국

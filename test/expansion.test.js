@@ -1,4 +1,4 @@
-// 밤샘 2 가짓수 늘리기(docs/design-notes/content-expansion.md): 새것마다 규칙 시험 하나 이상 · 이름 겹침
+// 밤샘 2 가짓수 늘리기: 새것마다 규칙 시험 하나 이상 · 이름 겹침
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { boardFrom, parseSq as S, attackers } from '../src/sim/board.js';

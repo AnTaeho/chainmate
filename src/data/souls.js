@@ -126,7 +126,7 @@ soul('shade', '잠행', '#8a5cc8', ['sacrifice', 'counter'], '지키는 적을 �
 });
 
 
-// ── 밤샘 2: 여덟 더(docs/design-notes/content-expansion.md)
+// ── 밤샘 2: 여덟 더
 soul('inherit', '계승', '#f2d6c4', ['change'], '콤보가 끝나면 이 기물이 마지막 모습이 된다', {
   rarity: 'rare',
   more: '덱의 기물이 바뀐다 · 킹 모습은 빼고',

@@ -1,4 +1,4 @@
-// 처음 보는 사람의 길을 순서대로 찍는다(친절 손질 · docs/design-notes/ux-audit.md).
+// 처음 보는 사람의 길을 순서대로 찍는다(친절 손질).
 //   node tools/shots-ux.mjs [--prefix before|after] [--out docs/shots/ux]
 // 첫 실행(기록 없음) → 첫 수업 → 1관 첫 대국 → 첫 상점 · 꾸러미 → 3관 정석 · 명인 → 4관 이후의 새 것들.
 // 같은 이름 짝으로 before-… · after-…를 남겨 고치기 전 · 뒤를 견준다. Playwright는 저장소 의존성이 아니다.

@@ -108,7 +108,7 @@ joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 콤보가 한 줄�
 joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 시너지는 1 · 3 · 5개에서 켜진다');
 
 
-// ── 밤샘 2: 열하나 더(docs/design-notes/content-expansion.md)
+// ── 밤샘 2: 열하나 더
 const foeAt = (c) => c && !c.mine && c.t !== 'K' && c.t !== 'X' && c.t !== 'J';
 // 값이 큰 적 차례(같으면 칸 번호)
 const heavyFirst = (board) => board.map((c, sq) => (foeAt(c) ? sq : -1)).filter((sq) => sq >= 0).sort((x, y) => PIECES[board[y].t].value - PIECES[board[x].t].value || x - y);

@@ -1,6 +1,6 @@
 # 밤샘 2 — 판 운이 치명적이지 않게 · 가짓수 늘리기 · 다시 맞추기
 
-지시서 `docs/tasks/night2.md`. 진행 기록 `docs/tasks/night2-progress.md`. 브랜치 `claude/eloquent-hawking-9fw4w7`(지시서의 `night2/1` 대신 — 이 세션은 정해진 브랜치에만 올릴 수 있다). 원문 수치는 모두 `docs/reports/raw/night2-*`(판 하네스 `.txt` · `.json`, 판 운 하네스 `luck-*.txt` · `.json`). 환경은 4코어라 판 하네스는 일꾼 4, 판 하나 상한 `--limit 400`(최종) · 120(D4)이다. seed는 모두 1.
+브랜치 `claude/eloquent-hawking-9fw4w7`(지시서의 `night2/1` 대신 — 이 세션은 정해진 브랜치에만 올릴 수 있다). 원문 수치는 모두 `docs/reports/raw/night2-*`(판 하네스 `.txt` · `.json`, 판 운 하네스 `luck-*.txt` · `.json`). 환경은 4코어라 판 하네스는 일꾼 4, 판 하나 상한 `--limit 400`(최종) · 120(D4)이다. seed는 모두 1.
 
 ## 한눈에
 

@@ -1,4 +1,4 @@
-// 관 선택 ↔ 상점 · 사슬 도중 목표를 넘기는 장면 스크린샷 + 잰 값(docs/tasks/shop-chain.md A · B).
+// 관 선택 ↔ 상점 · 사슬 도중 목표를 넘기는 장면 스크린샷 + 잰 값(docs/reports/shop-chain.md).
 //   node tools/shots-shop-chain.mjs [--prefix before|after] [--out docs/shots/shop-chain] [--seed 3] [--only select|chain]
 // A: <prefix>-0-select-shop(첫 대국을 이기고 상점을 떠난 관 선택) · <prefix>-0-shop-back(「상점」을 눌러 돌아간 상점)
 // 판을 하나 열어 봇(solver)의 가장 긴 사슬을 고른 뒤, 첫 먹기 뒤 이 사슬 몫이 목표를 넘도록 목표를 낮춘다.

@@ -18,7 +18,7 @@
 - 검증: `npm test` · `npm run smoke` · 그리기를 바꿨으면 `node tools/drawcheck.mjs`(어김 0). 대국 하네스 `node tools/sim.mjs --battles 300 --seed 1`, 판 하네스 `node tools/run.mjs --runs 300 --policy smart|random|none --seed 1 --workers 10 --limit 400`(전후 비교는 둘 다 `--dump`, 걸리는 시간은 `docs/reports/perf.md`).
 
 ## 화면 글
-- 낱말 · 목소리 기준은 `docs/design-notes/voice.md`와 `src/ui/glossary.js` `TERMS`(옛 `terms.md`와 다르면 voice.md). 말끝: 안내 · 알림 「~해요」, 킹 말풍선 반말, 효과 글 · 정의 「~다」, 단추 · 이름표 명사형.
+- 낱말 · 목소리 기준은 `docs/design-notes/voice.md`와 `src/ui/glossary.js` `TERMS`. 말끝: 안내 · 알림 「~해요」, 킹 말풍선 반말, 효과 글 · 정의 「~다」, 단추 · 이름표 명사형.
 - 효과는 카드에 늘 적는다. 「조건: 효과」 한 줄, 시너지 · 특수 기물 · 드문 낱말만 카드 옆 낱말 상자로 풀고, 시너지 상자 풀이는 「~할수록 점수가 커진다」 한 줄. 값 · 배수는 대국 칸 빛깔의 작은 칸으로 「값 +20」 · 「배수 ×1.5」(`glossary.js` richText).
 - 낱말: 잡다(먹다 ×) · 콤보(사슬 ×, 코드 이름 `chain`은 그대로) · 곧게 가다(미끄러지다 ×). 체스 개념은 체스 말(`docs/design-notes/chess-terms.md`). 만든 쪽 용어(엔진 · 시뮬 · 스폰 · 틱 · 버프 · 트리거) · 「단계」 · 「티어」는 화면에 쓰지 않는다. 「팩」 · 「리롤」은 화면 낱말이다.
 - 흐름 중간 설명은 처음 만나는 순간 한 줄(`src/ui/coach.js` `hint`)로만. 말하는 것이 그 순간 화면에 있을 때만 부른다.
@@ -50,7 +50,7 @@
 - 진짜 DB를 건드리는 도구의 시험 자료는 `cleanupTests`(`tools/db-migrate.mjs`)로 지운다. 옛 칸 `players.key_hash`는 사용자가 `node tools/db-migrate.mjs --drop-old-key`를 돌리면 끝난다(leaderboard.md).
 
 ## 다음
-1. 사람 판으로 한 번: 처음 10분 · 미리 보기 · 소리 · 마스터 세기(`docs/reports/ux.md` 「남은 헷갈림」, `onboarding.md` 「알려진 문제」, `night.md` 「남은 목록」).
+1. 사람 판으로 한 번: 처음 10분 · 미리 보기 · 소리 · 마스터 세기(`docs/history.md` 「남은 것」).
 2. 깊이 조정(`depth.md` 「다음 세션이 할 것」): 체크메이트가 대국의 11%로 흔하다.
 3. 마스터 통과율과 판 승률 맞추기.
 4. 영어 글 다듬기.

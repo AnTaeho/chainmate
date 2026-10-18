@@ -422,7 +422,7 @@ export const EN = {
   '목표 ×1.25': 'Target ×1.25', '증원 +1': '+1 recruit', '상점 값 +1': 'Prices +$1',
   '수 −1': '−1 Move',
   '시계 −1': 'Clock −1', '상자 5칸 확률 절반 · 첫 조각 확률 절반': 'Rarer chests', '상자 5칸 확률 절반': 'Fewer big chests', '첫 조각 확률 절반': 'Fewer fragments',
-  // 낱말 손질(docs/design-notes/terms.md)
+  // 낱말 손질
   '빠른 갈아입기': 'Quick Change',
   '되받아치기': 'Riposte',
   '대각선': 'Diagonal',

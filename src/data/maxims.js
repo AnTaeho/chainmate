@@ -228,7 +228,7 @@ maxim('rook_lift', '룩 리프트', '룩 모습으로 구석에서 잡을 때마
 });
 
 
-// ── 밤샘 2(가짓수 늘리기, docs/design-notes/content-expansion.md): 스물일곱 더. 시너지 칩은 families.js MAXIM_FAMILIES
+// ── 밤샘 2(가짓수 늘리기): 스물일곱 더. 시너지 칩은 families.js MAXIM_FAMILIES
 // 길 갈래는 board.js capWay 한 곳에서(꺾쇠 · 물수제비 · 까마귀 · 광대도 같은 판정)
 const leapOf = (e) => capWay(e).leap;
 const diagOf = (e) => capWay(e).diag;

@@ -31,6 +31,6 @@ node tools/run.mjs --runs 300 --policy smart|hunt|random|none --seed 1 --workers
 - [docs/DESIGN.md](docs/DESIGN.md) — 규칙·수치·구조
 - [docs/HOOKS.md](docs/HOOKS.md) — 도파민 설계
 - [CLAUDE.md](CLAUDE.md) — 작업 규칙
-- [docs/reports/night.md](docs/reports/night.md) — 밤샘(화면 · 연출 · 판 밖 · 다듬기) 요약
+- [docs/history.md](docs/history.md) — 지금까지 한 일 · 남은 것
 - [docs/shots/](docs/shots/) — 화면별 스크린샷과 정한 안
-- [docs/PACKAGING.md](docs/PACKAGING.md) — 데스크톱 포장 준비
+- [desktop/README.md](desktop/README.md) — 데스크톱 포장

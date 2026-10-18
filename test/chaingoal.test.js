@@ -1,4 +1,4 @@
-// 사슬 중간에 목표를 넘겨도 사슬은 끝까지(docs/tasks/shop-chain.md B): 승리 판정 · 넘친 덤은 사슬이 끝난 뒤의 점수로.
+// 사슬 중간에 목표를 넘겨도 사슬은 끝까지(docs/reports/shop-chain.md): 승리 판정 · 넘친 덤은 사슬이 끝난 뒤의 점수로.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBattle, apply, overflowTier } from '../src/sim/battle.js';

@@ -1,4 +1,4 @@
-// 관 선택 ↔ 상점 오가기(docs/tasks/shop-chain.md A): 떠나온 상점으로 돌아가도 새로 얻는 것이 없다.
+// 관 선택 ↔ 상점 오가기(docs/reports/shop-chain.md): 떠나온 상점으로 돌아가도 새로 얻는 것이 없다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { skipBlind } from './helpers/run.js';

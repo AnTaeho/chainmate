@@ -9,7 +9,7 @@ function master(id, rule, text, def) {
   defineModifier(id, { kind: 'master', ...def });
 }
 
-// 명인마다 뿌리의 동사 하나를 확실히 비튼다(밤샘 D-1: 2a · 2b에서 1~7관 명인 통과 90~97%로 너무 약했다 — 보고서 docs/reports/night-D.md).
+// 명인마다 뿌리의 동사 하나를 확실히 비튼다(밤샘 D-1: 2a · 2b에서 1~7관 명인 통과 90~97%로 너무 약했다).
 // 철벽 = 응수, 안개 = 떨구기, 거울 = 갈아입기, 모래시계 = 수, 무거운 손 = 손, 침묵 = 격언, 앙갚음 = 끊김, 대가 = 외통.
 master('iron_wall', '철벽', '지켜진 적을 잡으면 곧바로 끊긴다', {
   onBattleStart(ctx) { ctx.rules.noReply = true; },

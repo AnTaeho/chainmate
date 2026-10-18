@@ -786,7 +786,7 @@ function shopStep() {
       const c = run.consumables[0];
       click('cons:0');
       if (c.kind === 'engraving' || c.kind === 'soul' || c.kind === 'evolve') {
-        // 같은 각인 · 혼이 이미 있는 기물은 흐리고 눌리지 않는다(docs/tasks/backlog.md 6): 고를 수 있는 기물로
+        // 같은 각인 · 혼이 이미 있는 기물은 흐리고 눌리지 않는다: 고를 수 있는 기물로
         const piece = c.kind === 'evolve' ? run.deck.find((x) => evolveTo(run.seed, x, run)) : run.deck.find((x) => targetOk(c, x));
         if (!piece) { click('target:cancel'); break; }
         const n = run.consumables.length;
@@ -1534,7 +1534,7 @@ const bigSeen = { battle: 0, select: 0, result: 0, records: 0, reward: 0, overla
   app.toTitle(); pump(1);
 }
 
-// 기보가 보이는 곳(docs/tasks/backlog.md 5): 기보가 붙은 모습으로 먹으면 청록 몫이 뜬다 · 기보를 쓰면 그 모습의 기물이 자란다(단계가 바뀌면 크게)
+// 기보가 보이는 곳: 기보가 붙은 모습으로 먹으면 청록 몫이 뜬다 · 기보를 쓰면 그 모습의 기물이 자란다(단계가 바뀌면 크게)
 const chartSeen = { run: 0, scene: 0, grow: 0, tick: 0, growBad: 0 };
 {
   chartSeen.run = app.stats.chartPops || 0;
@@ -1561,7 +1561,7 @@ const chartSeen = { run: 0, scene: 0, grow: 0, tick: 0, growBad: 0 };
   app.toTitle(); pump(1);
 }
 
-// 각인 · 혼 덮어쓰기(docs/tasks/backlog.md 6): 이미 같은 종류가 있는 기물을 고르면 옛 것 › 새 것 확인(target:swap).
+// 각인 · 혼 덮어쓰기: 이미 같은 종류가 있는 기물을 고르면 옛 것 › 새 것 확인(target:swap).
 // 「그만」이면 대상 고르기로(두루마리 · 꾸러미 · 기물 그대로), 「바꾸기」면 새 것으로. 같은 것이 새겨진 기물은 고를 수 없다
 const swapSeen = { same: 0, shopBack: 0, shopEsc: 0, shopSwap: 0, soulSwap: 0, packBack: 0, packEsc: 0, packSwap: 0, bad: [] };
 {

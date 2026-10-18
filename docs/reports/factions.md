@@ -1,6 +1,6 @@
 # 세력 — 관마다 다른 적
 
-지시서 `docs/tasks/factions.md`, 설계서 `docs/design-notes/factions.md`, 진행 기록 `docs/tasks/factions-progress.md`. 브랜치 `claude/factions-task-667oiv`(지시서의 `factions/1` 대신 — 이 세션은 정해진 브랜치에만 올릴 수 있다). main `eb002fe`에서 시작. 원문 수치는 `docs/reports/raw/factions-*`(판 하네스 `.txt` · `.json`, 판 운 `factions-luck.*`, 검증 `factions-test.txt` · `factions-smoke*.txt`), 아티팩트용 모음은 `factions-summary.json`(최종 수치 · 세력 표 · 관별 입은 모습 · 맞추기 이력). 4코어라 판 하네스는 일꾼 4 · `--limit 400`, seed는 모두 1.
+설계서 `docs/design-notes/factions.md`, 브랜치 `claude/factions-task-667oiv`(지시서의 `factions/1` 대신 — 이 세션은 정해진 브랜치에만 올릴 수 있다). main `eb002fe`에서 시작. 원문 수치는 `docs/reports/raw/factions-*`(판 하네스 `.txt` · `.json`, 판 운 `factions-luck.*`, 검증 `factions-test.txt` · `factions-smoke*.txt`), 아티팩트용 모음은 `factions-summary.json`(최종 수치 · 세력 표 · 관별 입은 모습 · 맞추기 이력). 4코어라 판 하네스는 일꾼 4 · `--limit 400`, seed는 모두 1.
 
 사람이 한 말(2026-09-29): 「1관 연습대국부터 8관 명인 대국까지 컨텐츠는 똑같고, 달라지는 건 내 덱 파워뿐이라 결국 숫자놀이 하는 것 같다.」
 

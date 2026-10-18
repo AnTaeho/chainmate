@@ -1,6 +1,6 @@
 # 혼 등급 · 각성 보고서 (CHM-17)
 
-지시서 `docs/tasks/souls.md`, 진행 기록 `docs/tasks/souls-progress.md`. 브랜치 `claude/upbeat-einstein-8lor9h`(지시서의 `souls/1` 대신 — 이 세션은 정해진 브랜치에만 올릴 수 있다). main `a779cab`에서 시작.
+브랜치 `claude/upbeat-einstein-8lor9h`(지시서의 `souls/1` 대신 — 이 세션은 정해진 브랜치에만 올릴 수 있다). main `a779cab`에서 시작.
 
 사람: 「너프시키는 게 아니라 확률을 조절하는 방식으로」. 혼의 **세기는 하나도 깎지 않았다.** 센 혼은 드물고 비싸게(1단계), 한 단계 더 센 힘은 조각을 이어 모아야 얻게(2단계) 했다.
 
