@@ -82,7 +82,8 @@ test('합치기: 칸마다 규칙', () => {
   assert.deepEqual([m.codex.souls, m.codex.awake, m.codex.openings], [{ s1: true }, { s1: true }, { standard: true }]);
   assert.deepEqual(m.unlocked, { openings: ['standard', 'london', 'sicilian'], dan: 5 });
   assert.deepEqual(m.danWins, { 0: 3, 1: 4, 5: 1 });
-  assert.deepEqual([m.lessonsDone, m.lessonsSeen, m.coachSeen], [true, { l1: true, l2: true }, { c1: true }]);
+  // lessonsDone은 합친 lessonsSeen에서 다시 센다(지금 수업을 다 덮지 않으면 한쪽이 참이어도 거짓)
+  assert.deepEqual([m.lessonsDone, m.lessonsSeen, m.coachSeen], [false, { l1: true, l2: true }, { c1: true }]);
   // 오늘의 대국: 날짜가 늦은 쪽(성적이 나빠도)
   assert.deepEqual(m.daily, b.daily);
   // 같은 날이면 더 좋은 판 · 둔 판 수는 큰 쪽
@@ -135,4 +136,27 @@ test('합쳐서 늘어난 것: 도감 칸 · 열린 레퍼토리 · 판 수 · �
   const b = { ...emptyRecords(), runs: 8, bestAnte: 6, codex: { ...emptyRecords().codex, maxims: { m1: true, m2: true }, souls: { s: true }, legends: { x: 2, y: 0 } }, unlocked: { openings: ['standard', 'london'], dan: 0 } };
   assert.deepEqual(mergeGain(a, mergeRecords(a, b)), { codex: 3, openings: 1, runs: 5, ante: 6 });
   assert.deepEqual(mergeGain(b, mergeRecords(a, b)), { codex: 0, openings: 0, runs: 0, ante: 0 });
+});
+
+test('기록: 옛 lessonsDone(첫 수업만 끝내도 참)은 읽을 때 · 합칠 때 lessonsSeen으로 다시 세고, 옛 칸 kingDone · kingAgain은 버린다', async () => {
+  const { LESSONS } = await import('../src/ui/lessons.js');
+  const all = Object.fromEntries(LESSONS.map((L) => [L.id, true]));
+  const old = { v: 1, runs: 2, lessonsDone: true, lessonsSeen: { [LESSONS[0].id]: true }, kingDone: true, kingAgain: 3 };
+  const store = makeStore({ getItem: () => JSON.stringify(old), setItem() {}, removeItem() {} });
+  const loaded = loadRecords(store);
+  assert.equal(loaded.lessonsDone, false, '첫 수업만 끝낸 옛 참은 거짓으로');
+  assert.ok(!('kingDone' in loaded) && !('kingAgain' in loaded), '읽은 기록에 옛 칸이 없다');
+  assert.ok(!('kingDone' in cloudRecords(loaded)), '클라우드로 올리지 않는다');
+  const n = normRecords(old);
+  assert.equal(n.lessonsDone, false);
+  assert.ok(!('kingDone' in n) && !('kingAgain' in n));
+  // 옛 참이 합치기(or)로 번지지 않는다: 두 기기 모두 다 끝내지 않았으면 거짓, 합쳐서 다 덮으면 참
+  const half = Math.ceil(LESSONS.length / 2);
+  const a = { ...emptyRecords(), lessonsDone: true, lessonsSeen: Object.fromEntries(LESSONS.slice(0, half).map((L) => [L.id, true])) };
+  const b = { ...emptyRecords(), lessonsDone: false, lessonsSeen: { [LESSONS[0].id]: true } };
+  assert.equal(mergeRecords(a, b).lessonsDone, false);
+  assert.equal(mergeInto(a, { ...b, kingDone: true }).kingDone, undefined);
+  const c = { ...emptyRecords(), lessonsSeen: Object.fromEntries(LESSONS.slice(half).map((L) => [L.id, true])) };
+  assert.equal(mergeRecords(a, c).lessonsDone, true, '합쳐서 모든 수업을 덮으면 참');
+  assert.equal(normRecords({ lessonsSeen: all }).lessonsDone, true);
 });

@@ -136,7 +136,15 @@ const seen = () => { for (const v of app.visited) visited.add(v); };
 const hintsShown = new Set();
 const previewSeen = { scroll: 0, pack: 0 };
 const goldSeen = { swap: 0, sell: 0, bad: [] };
-function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); hintSubject(); } if (app) { hintCover(); igniteWatch(); } } }
+// 멈칫(hit-stop)은 한 수 연출(Seq) 밖의 시간이라 따로 센다: 이 프레임에 멈칫이 먹은 시간을 ×1로 환산(measureSeq가 더한다)
+const stopFrame = (dt) => {
+  const sc = app && app.screen;
+  if (!sc || !sc.seq || !(app.hitstopT > 0)) return;
+  const d = Math.min(dt / 1000, app.hitstopT) * app.speed(), l = sc.seq.cur ? sc.seq.cur.label : '-';
+  sc.seq.stops = (sc.seq.stops || 0) + d;
+  (sc.seq.stopBy || (sc.seq.stopBy = {}))[l] = ((sc.seq.stopBy || {})[l] || 0) + d;
+};
+function pump(n = 1, dt = 1000 / 60) { for (let i = 0; i < n; i++) { t += dt; stopFrame(dt); dom.frame(t); flowCheck(); if (app && app.hintShown) { hintsShown.add(app.hintShown.id); hintCheck(); hintSubject(); } if (app) { hintCover(); igniteWatch(); } } }
 
 // ── 점화 막간(CHM-67): 판에서 처음 사슬 8 · 넘침 ×10 뒤에 열리고(판 · 대국 화면만, scratch 판은 없음) 닫히는가, 판당 한 번인가,
 // 떠 있는 동안 화면의 다른 구역이 눌리지 않는가. 첫 막간은 손 카드(없으면 판 칸)를 실제로 눌러 닫고(눌러도 고르기 · 규칙이 그대로),
@@ -471,15 +479,20 @@ function idle(max = 3000) {
 // ── 한 수 연출 시간(×1): 사건 순서가 만든 연출 길이의 합
 const moveTimes = [];
 let worst = null;
+// 한 수 = 사건 연출(Seq) + 그 수의 멈칫 합(stops). 4초 예산은 둘을 더해 잰다
 function measureSeq(s) {
-  moveTimes.push(s.seq.total);
-  if (!worst || s.seq.total > worst.total) {
+  const stops = s.seq.stops || 0, total = s.seq.total + stops;
+  moveTimes.push(total);
+  if (!worst || total > worst.total) {
     const by = {};
     for (const [l, d] of s.seq.trace || []) by[l] = (by[l] || 0) + d;
-    worst = { total: s.seq.total, by };
+    worst = { total, seq: s.seq.total, stops, by, stopBy: s.seq.stopBy || {} };
   }
+  stopTimes.push(stops);
   s.seq.trace = [];
+  s.seq.stops = 0; s.seq.stopBy = {};
 }
+const stopTimes = [];
 
 // ── 다음 수(CHM-60): 결정마다 「보이던 둘」(화면 view.next = 규칙 nextDraws)이 실제로 그 차례로 손에 들어왔나.
 // 손을 새로 쥔 결정은 주머니를 다시 섞으니 들어온 것 대신 새 차례가 화면에 곧바로 보이는지만 잰다.
@@ -605,13 +618,13 @@ function battleStep() {
   }
   if (d.discard) {
     for (const i of d.discard) click(`hand:${i}`);
-    s.seq.total = 0;
+    s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {};
     click('btn:discard');
     idle();
     nextAfter(pre);
     return;
   }
-  s.seq.total = 0;
+  s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {};
   s.seq.trace = [];
   // 증원 그림자 위에 올리면 말풍선
   // 판 위 사물(발판 · 문 · 고속도로 줄 · 벽 · 보석) 칸에 올리면 말풍선
@@ -1617,7 +1630,7 @@ const awakeSeen = { crack: 0, toast: 0, hint: 0, skip: 0, preview: 0, screen: 0,
     const b = app.run.battle, s = app.screen;
     b.target = 1; s.sync();
     const d = decideBattle(b);
-    s.seq.total = 0; s.seq.trace = [];
+    s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {}; s.seq.trace = [];
     // 뜬 알림을 모은다: 목표 1이라 이 사슬이 점화(넘침 ×10, CHM-67)해 막간이 3초 떠 있는 동안 알림(2.4초)은 스러진다
     const toasts = [], toast0 = app.toast;
     app.toast = (msg, ...rest) => { toasts.push(msg); return toast0(msg, ...rest); };
@@ -1724,7 +1737,7 @@ const brillSeen = { sac: 0, deal: 0, tag: 0, hint: 0, row: 0, gone: 0, fx: 0, fl
     const K = 63, sq = dropSquaresFor(b, b.hand[i]).find((q) => previewDrop(b, i, q).next.includes(K));
     if (sq == null) bad('킹에 닿는 떨굴 칸이 없다');
     else {
-      s.seq.total = 0; s.seq.trace = [];
+      s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {}; s.seq.trace = [];
       click(`sq:${sq}`); idle();
       if (!s.view.drawn.length) brillSeen.gone++; else bad('수를 둔 뒤에도 「!?」가 남았다');
       const fx0 = (app.stats && app.stats.brilliantFx) || 0;
@@ -1769,7 +1782,7 @@ const fairySeen = { land: 0, path: 0, gone: 0, blast: 0, board: 0, hops: 0, bend
     const watch = () => { const m = s.view.mover; if (m && m !== lastMover) { lastMover = m; if (m.route && m.route.kind === 'hop') fairySeen.hops++; } };
     s.sync(); pump(2);
     click('hand:0'); pump(1);
-    s.seq.total = 0; s.seq.trace = [];
+    s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {}; s.seq.trace = [];
     click(`sq:${at('d4')}`); idle();
     click(`sq:${at('e5')}`);
     let landed = false;
@@ -1794,7 +1807,7 @@ const fairySeen = { land: 0, path: 0, gone: 0, blast: 0, board: 0, hops: 0, bend
       s.sync(); pump(2);
       const i = b.hand.findIndex((p) => p.t === 'D');
       click(`hand:${i}`); pump(1);
-      s.seq.total = 0; s.seq.trace = [];
+      s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {}; s.seq.trace = [];
       click(`sq:${at('d5')}`); idle();
       click(`sq:${at('c6')}`);
       for (let n = 0; n < 600 && app.screen === s && s.busy; n++) pump(1);
@@ -1813,7 +1826,7 @@ const fairySeen = { land: 0, path: 0, gone: 0, blast: 0, board: 0, hops: 0, bend
       const i = b.hand.findIndex((p) => p.t === t);
       if (i < 0) { bad(`손에 ${t}가 없다`); break; }
       click(`hand:${i}`); pump(1);
-      s.seq.total = 0; s.seq.trace = [];
+      s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {}; s.seq.trace = [];
       click(`sq:${at(drop)}`); idle();
       click(`sq:${at(target)}`);
       let corners = 0, trail = false;
@@ -2223,7 +2236,7 @@ const avg = ms.reduce((a, x) => a + x, 0) / Math.max(1, ms.length);
 const mt = moveTimes.slice().sort((a, b) => a - b);
 console.log(`연기 시험 seed ${SEED}: 판 ${results.length} (${results.map((r) => `${r.phase} ${r.ante}관`).join(' · ')})`);
 console.log(`프레임 ${ms.length} · 그리기 평균 ${avg.toFixed(2)}ms · p99 ${pct(0.99).toFixed(2)}ms · 최대 ${ms[ms.length - 1].toFixed(2)}ms · 그리기 호출 ${dom.counter.calls} · 화면 배율 ${app.scale}(캔버스 ${dom.screen.width}×${dom.screen.height})`);
-console.log(`한 수 연출(×1) 평균 ${(mt.reduce((a, x) => a + x, 0) / Math.max(1, mt.length)).toFixed(2)}s · 최대 ${(mt[mt.length - 1] || 0).toFixed(2)}s (${mt.length}수)`);
+console.log(`한 수 연출(×1, 멈칫 포함) 평균 ${(mt.reduce((a, x) => a + x, 0) / Math.max(1, mt.length)).toFixed(2)}s · 최대 ${(mt[mt.length - 1] || 0).toFixed(2)}s (${mt.length}수) · 멈칫 한 수 최대 ${Math.max(0, ...stopTimes).toFixed(2)}s · 가장 긴 수 연출 ${worst ? worst.seq.toFixed(2) : 0}s + 멈칫 ${worst ? worst.stops.toFixed(2) : 0}s`);
 if (VERBOSE && worst) console.log('가장 긴 수', JSON.stringify(worst));
 const ims = [];
 for (const a of apps) ims.push(...(a.stats.inputMs || []));

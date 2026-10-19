@@ -102,7 +102,27 @@ test('「바로 시작」은 평범한 첫 판, Esc는 덮개만 닫는다(이�
   // 판 기록이 있거나 이미 권했으면 뜨지 않는다
   assert.equal((await fresh({ runs: 2 })).overlay, null);
   assert.equal((await fresh({ tutorialAsked: true })).overlay, null);
-  assert.equal((await fresh({ lessonsDone: true })).overlay, null);
+  // 튜토리얼을 다 끝냈으면 뜨지 않는다(lessonsDone은 lessonsSeen이 모든 수업을 덮을 때만 참)
+  const { LESSONS } = await import('../src/ui/lessons.js');
+  assert.equal((await fresh({ lessonsSeen: Object.fromEntries(LESSONS.map((L) => [L.id, true])) })).overlay, null);
+  assert.equal((await fresh({ lessonsDone: true, lessonsSeen: { [LESSONS[0].id]: true } })).overlay.name, 'welcome', '첫 수업만 끝낸 옛 참은 다 끝낸 것이 아니다');
+});
+
+test('덮개 오른쪽 위 「×」는 Esc와 같다: 덮개만 닫고(튜토리얼을 권한 것으로 적지 않는다) 다음에 켜면 다시 권한다', async () => {
+  let app = await fresh();
+  const close = app.ui.regions.find((r) => r.id === 'welcome:close');
+  assert.ok(close, '닫기 단추가 있다');
+  // 덮개 상자 오른쪽 위 구석 안
+  const lesson = app.ui.regions.find((r) => r.id === 'welcome:lesson');
+  assert.ok(close.x + close.w === lesson.x + lesson.w && close.y < lesson.y, '오른쪽 위');
+  close.onClick();
+  tick(app);
+  assert.equal(app.overlay, null);
+  assert.equal(app.welcomeShut, true);
+  assert.equal(app.records.tutorialAsked, false);
+  assert.equal(app.screen.name, 'title');
+  app = await fresh();
+  assert.equal(app.overlay && app.overlay.name, 'welcome', '다시 켜면 또 권한다');
 });
 
 test('튜토리얼 목록: 「이어서」는 안 끝낸 첫 수업부터, 마지막 수업을 끝내면 끝 카드 → 「새 판」', async () => {
