@@ -210,7 +210,6 @@ export function telBefore(run) {
   const s = run.phase === 'shop' ? run.shop : null;
   return {
     phase: run.phase, ante: run.ante, blind: run.blind, logLen: run.log.length,
-    scripted: !!(run.battle && run.battle.script),
     draft: run.draft ? [...run.draft.options] : null,
     pack: run.pack ? { kind: run.pack.kind, offered: run.pack.options.map(shown) } : null,
     shop: s ? {
@@ -250,15 +249,10 @@ export function battleEndProps(b) {
   };
 }
 
-// 명령 하나가 끝난 뒤: 보낼 사건 [이름, 속성] 차례. 대본 대국 중의 명령은 튜토리얼 사건만 낸다
+// 명령 하나가 끝난 뒤: 보낼 사건 [이름, 속성] 차례
 export function commandEvents(run, cmd, events, before) {
   const out = [];
   const c = { run, cmd, before };
-  if (cmd.type === 'unscript') return [['tutorial_skip', {}]];
-  if (before.scripted) {
-    if (run.log.length > before.logLen) out.push(['tutorial_done', { won: !!run.log[run.log.length - 1].won }]);
-    return out;
-  }
   for (const e of events) { const m = EVENT_MAP[e.type] && EVENT_MAP[e.type](e, c); if (m) out.push(m); }
   for (let i = before.logLen; i < run.log.length; i++) if (!run.log[i].skipped) out.push(['battle_end', battleEndProps(run.log[i])]);
   if ((cmd.type === 'pick' || cmd.type === 'skipPack') && before.pack) {
@@ -273,8 +267,8 @@ export function commandEvents(run, cmd, events, before) {
   return out;
 }
 
-export function runStartProps(run, { script = false } = {}) {
-  return { dan: run.dan || 0, opening: run.opening ?? null, daily: !!run.daily, script: !!script };
+export function runStartProps(run) {
+  return { dan: run.dan || 0, opening: run.opening ?? null, daily: !!run.daily };
 }
 
 // 판 끝: runRow 한 줄을 통째로(row) + 대시보드에서 바로 쓸 납작한 속성

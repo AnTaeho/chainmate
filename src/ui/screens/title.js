@@ -74,14 +74,18 @@ export class TitleScreen {
     this.T = 0;       // 하늘의 사슬 시계
     this.snap = null;
   }
-  update(dt) { this.T += dt; }
+  update(dt) {
+    this.T += dt;
+    // 처음 켠 사람(판 · 수업 기록이 없다): 킹이 튜토리얼을 권하는 덮개(screens/welcome.js). Esc로 닫으면 이번 실행 동안은 다시 안 뜬다
+    const app = this.app;
+    if (!app.overlay && !app.welcomeShut && app.screen === this && app.wantsTutorial()) app.openOverlay('welcome');
+  }
   // 메뉴: [주인공, …아이콘 줄]. 항목 · 동작은 예전과 같다. 저장이 있으면 「이어 하기」가 주인공, 「새 판」은 줄 첫 칸
   items() {
     const app = this.app;
     const has = app.hasSave();
     const cont = ['title:continue', '이어 하기', () => app.continueRun()];
-    // 처음 켰으면(또는 설정 「킹과 다시 두기」) 새 판은 곧바로 킹과 두는 첫 대국부터
-    const fresh = ['title:new', '새 판', () => (app.wantsScript() ? app.newRun({ script: true }) : app.go('setup'))];
+    const fresh = ['title:new', '새 판', () => app.go('setup')];
     const rest = [
       ['title:lesson', '튜토리얼', () => app.go('lessons')],
       ['title:daily', '오늘의 대국', () => app.newRun({ daily: true })],

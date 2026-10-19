@@ -63,14 +63,14 @@ export const RULES = {
   unlocked: (a, b) => ({ ...loose(a, b), openings: openings((a || {}).openings, (b || {}).openings), dan: max((a || {}).dan, (b || {}).dan) }),
   danWins: union,
   daily,
-  lessonsDone: or, kingDone: or,
+  lessonsDone: or, tutorialAsked: or,
   lessonsSeen: union, coachSeen: union, movesSeen: union,
   runNew,
   // 이 기기의 취향(다음 새 판 · 마지막에 고른 것): 덩이에 싣지 않는다(LOCAL_ONLY). 규칙은 법칙을 지키려고만 둔다
-  kingAgain: or, lastOpening: loose, lastDan: loose,
+  lastOpening: loose, lastDan: loose,
 };
 // 서버에 올리지 않고, 받은 것으로 덮지도 않는 칸
-export const LOCAL_ONLY = ['kingAgain', 'lastOpening', 'lastDan'];
+export const LOCAL_ONLY = ['lastOpening', 'lastDan'];
 
 // 고른 꼴: 없는 칸을 채우고(옛 기록) 해금 차례 · 평가 열쇠를 맞춘다
 export function normRecords(r) {

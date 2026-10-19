@@ -76,7 +76,7 @@ test('앱: 로컬 서버 · 자동화 브라우저 · 설정 끔에서는 판을
   };
   for (const [why, wire, settings] of [['localhost', { host: 'localhost' }], ['127.0.0.1', { host: '127.0.0.1' }], ['webdriver', { webdriver: true }], ['끔', {}, { telemetry: false }]]) {
     const { app, net, d } = await play(wire, settings);
-    app.records.kingDone = true; app.records.runs = 1;
+    app.records.tutorialAsked = true; app.records.runs = 1;
     app.newRun({ seed: 7 });
     app.cmd({ type: 'joseki', index: 0 }); app.cmd({ type: 'play' });
     d.emit('error', { error: new Error('boom') });
@@ -320,19 +320,9 @@ test('명령 길: 레퍼토리 · 대국 끝 · 상점 사기 · 떠나기 · �
   }
 });
 
-test('대본 대국 중의 명령은 튜토리얼 사건만 낸다', async () => {
-  const run = createRun({ seed: 5, script: true });
-  assert.deepEqual(runStartProps(run, { script: true }), { dan: 0, opening: run.opening ?? null, daily: false, script: true });
-  applyRun(run, { type: 'play' });
-  assert.ok(run.battle.script);
-  const sent = [];
-  const act = (cmd) => { const tb = telBefore(run); const ev = applyRun(run, cmd); sent.push(...commandEvents(run, cmd, ev, tb)); return ev; };
-  while (run.phase === 'battle') stepBattle(run.battle, act, {});
-  assert.deepEqual(sent.map(([n]) => n), ['tutorial_done']);
-  const r2 = createRun({ seed: 5, script: true });
-  applyRun(r2, { type: 'play' });
-  const tb = telBefore(r2);
-  assert.deepEqual(commandEvents(r2, { type: 'unscript' }, applyRun(r2, { type: 'unscript' }), tb), [['tutorial_skip', {}]]);
+test('run_start 속성: 단 · 오프닝 · 오늘의 대국', () => {
+  const run = createRun({ seed: 5 });
+  assert.deepEqual(runStartProps(run), { dan: 0, opening: run.opening ?? null, daily: false });
 });
 
 // ── 앱에 걸린 길(main.js boot 그대로, 배포 주소인 척)
@@ -342,11 +332,13 @@ before(async () => {
   ({ boot } = await import('../src/main.js'));
 });
 after(() => { delete globalThis.document; delete globalThis.window; });
-async function liveApp(settings = null) {
+// welcome: 처음 켬 덮개(튜토리얼 권하기)를 띄운다 — 다른 시험은 권한 뒤의 기기로
+async function liveApp(settings = null, { welcome = false } = {}) {
   const { makeFakeDom } = await import('../tools/fakedom.mjs');
   const d = makeFakeDom();
   const net = wireDom(d);
   if (settings) d.window.localStorage.setItem(KEYS.settings, JSON.stringify(settings));
+  if (!welcome) d.window.localStorage.setItem(KEYS.records, JSON.stringify({ v: 1, tutorialAsked: true }));
   const app = await boot({ window: d.window, document: d.document });
   tick(app);
   return { app, net, d };
@@ -365,7 +357,7 @@ function playOut(app) {
 
 test('앱: 켜면 app_open, 판을 끝까지 두면 run_start … run_end 한 번 — row는 기기에 남긴 줄과 같다', async () => {
   const { app, net } = await liveApp();
-  app.records.kingDone = true; app.records.runs = 1;
+  app.records.tutorialAsked = true; app.records.runs = 1;
   app.newRun({ seed: 1000003 });
   playOut(app);
   const kept = loadRuns(app.store);
@@ -400,21 +392,23 @@ test('앱: 켜면 app_open, 판을 끝까지 두면 run_start … run_end 한 �
   assert.equal(new Set(evs.map((e) => e.properties.$session_id)).size, 1);
 });
 
-test('앱: 처음 켠 사람의 대본 대국은 걸음 · 끝만 나가고, 그 대국의 battle_end는 안 나간다 · 건너뛰면 tutorial_skip', async () => {
-  const { app, net } = await liveApp();
-  app.screen.items().find(([id]) => id === 'title:new')[2]();
-  tick(app, 4);
-  assert.equal(app.run.battle.script, 'king');
-  finishBattle(app);
+test('앱: 처음 켬 덮개의 고름은 tutorial_offer, 수업은 lesson_start · lesson_done — 수업 대국의 battle_end는 안 나간다', async () => {
+  const { app, net } = await liveApp(null, { welcome: true });
+  assert.equal(app.overlay && app.overlay.name, 'welcome');
+  app.ui.regions.find((r) => r.id === 'welcome:lesson').onClick();
   tick(app, 2);
-  const names = net.flush().map((e) => e.event);
-  assert.deepEqual(names.filter((n) => n !== 'tutorial_step'), ['app_open', 'run_start', 'tutorial_done']);
-  assert.ok(names.includes('tutorial_step'));
-  const b = await liveApp();
-  b.app.screen.items().find(([id]) => id === 'title:new')[2]();
+  const { lessonDone } = await import('../src/ui/screens/lessons.js');
+  lessonDone(app, app.screen.index);
+  tick(app, 2);
+  const evs = net.flush();
+  assert.deepEqual(evs.map((e) => e.event), ['app_open', 'tutorial_offer', 'lesson_start', 'lesson_done', 'lesson_start']);
+  assert.deepEqual(evs[1].properties.pick, 'lesson');
+  assert.equal(evs[2].properties.id, evs[3].properties.id);
+  const b = await liveApp(null, { welcome: true });
+  b.app.ui.regions.find((r) => r.id === 'welcome:play').onClick();
   tick(b.app, 2);
-  b.app.screen.skip();
-  assert.ok(b.net.flush().some((e) => e.event === 'tutorial_skip'));
+  const names = b.net.flush().map((e) => e.event);
+  assert.deepEqual(names, ['app_open', 'tutorial_offer', 'run_start']);
 });
 
 test('앱: 설정을 바꾸면 setting_change, 기록 보내기를 끄면 telemetry_off 뒤로 조용하고 저장에 남는다', async () => {
@@ -430,7 +424,7 @@ test('앱: 설정을 바꾸면 setting_change, 기록 보내기를 끄면 teleme
   assert.deepEqual(off, ['app_open', 'setting_change', 'telemetry_off']);
   assert.deepEqual(net.named('setting_change')[0].properties.key, 'shake');
   press('set:shake'); press('set:calm');
-  app.records.kingDone = true; app.records.runs = 1;
+  app.records.tutorialAsked = true; app.records.runs = 1;
   app.newRun({ seed: 7 });
   app.cmd({ type: 'joseki', index: 0 }); app.cmd({ type: 'play' });
   d.emit('error', { error: new Error('boom') });
@@ -458,7 +452,7 @@ test('앱: 창의 오류 · 거절된 약속이 $exception으로, 같은 것은 
 // ── 사람을 가리킬 것
 test('속성에 이름 · 시드 · 주소 · UA가 없다(판 줄 row 안의 판 시드만 예외) · 사람 프로필과 IP는 끈다', async () => {
   const { app, net, d } = await liveApp();
-  app.records.kingDone = true; app.records.runs = 1;
+  app.records.tutorialAsked = true; app.records.runs = 1;
   app.newRun({ seed: 1000003 });
   playOut(app);
   d.emit('error', { error: new Error('x') });

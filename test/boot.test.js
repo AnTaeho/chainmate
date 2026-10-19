@@ -14,7 +14,7 @@ test('window.localStorage를 읽으면 던져도 켜지고, 저장 없이 판을
   tick(app);
   assert.ok(app.screen, '첫 화면이 섰다');
   assert.equal(app.hasSave(), false);
-  app.records.kingDone = true; app.records.lessonsDone = true;
+  app.records.tutorialAsked = true; app.records.lessonsDone = true;
   assert.doesNotThrow(() => { app.newRun({ seed: 3 }); tick(app); });
   assert.ok(app.run);
 });

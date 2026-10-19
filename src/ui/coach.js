@@ -1,7 +1,8 @@
 // 처음 안내: 무언가를 처음 만나는 순간에 그 자리를 가리키는 한 줄(말풍선 + 화살표).
 //   hint  — 화면이 그리는 중에 app.hint(id, 구역 id)로 부른다. 처음 한 번만, 누르면 사라지고 본 것으로 적는다.
 //           설정 「처음 안내」로 끄고, 「안내 다시 보기」로 본 기록을 지운다.
-//   guide — 수업(상점과 가족) · 첫 판 대본 대국처럼 차례로 따라 하는 길. 지금 가리키는 구역만 누를 수 있다.
+//   guide — 수업 「상점과 시너지」처럼 차례로 따라 하는 길. 지금 가리키는 구역만 누를 수 있다.
+//   TAUGHT — 튜토리얼 수업이 가르친 안내. 그 수업을 끝낸 사람에게는 판 안에서 다시 말하지 않는다(records.lessonsSeen).
 //   말하는 이는 내 편 킹(bubble): 상아 몸 · 금관 킹이 말풍선 머리에서 말하고, 말할 때 살짝 들썩이며 기쁠 때 금관이 반짝인다.
 import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, frame, lift, sprite, measure } from '../render/gfx.js';
@@ -50,7 +51,13 @@ export const HINTS = {
   faction_royal: '왕궁 근위 땅이야. 킹을 지키는 적이 하나 더 있어',
 };
 
-const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id]);
+// 안내 id → 그것을 가르치는 튜토리얼 수업 id(src/ui/lessons.js). 여기 없는 안내는 튜토리얼에 없는 것이라 처음 한 번 뜬다
+export const TAUGHT = {
+  incoming: 'reinforce', brilliant: 'redraw', fairy: 'fairy',
+  shop: 'shop', pack: 'shop', family: 'shop',
+};
+export const taught = (app, id) => !!(TAUGHT[id] && app.records.lessonsSeen && app.records.lessonsSeen[TAUGHT[id]]);
+const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id]) || taught(app, id);
 
 // 화면이 그리는 중에 부른다: 이번 프레임에 보일 수 있는 안내 후보(부른 차례대로).
 // 화면은 말하는 것이 그 순간 화면에 있을 때만 부른다(격언 안내는 진열에 격언이 있을 때 — CHM-36).
@@ -260,5 +267,33 @@ export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip =
       bx -= 4;
     }
   });
+  closeBox();
+}
+
+// 수업의 킹 말(오른쪽 칸에 고정): 말풍선과 같은 얼굴 · 꼴에 화살표만 없다. foot은 글 아래 흐린 줄(보기 때 「누르면 직접」)
+export function kingNoteLayout(say, w, foot = null) {
+  const f = flow(PAD_BOX);
+  const headTop = f.space(KING_HEAD);
+  f.gap(GAP_IN);
+  const lines = wrap(say, w - PAD_BOX * 2);
+  const ys = lines.map(() => f.line());
+  const feet = foot ? wrap(foot, w - PAD_BOX * 2) : [];
+  const fys = feet.map((_, k) => (k ? f : f.gap(GAP_GROUP)).line());
+  return { headTop, lines, ys, feet, fys, h: f.y + PAD_BOX };
+}
+// line(글, x, y): 글 줄을 그리는 곳(수업은 값 · 배수 칸을 richText로). 없으면 짙은 글. inner(): 상자 안에 더 그릴 것(단추 줄)
+export function kingNote(ctx, app, x, y, w, say, lay, { joy = false, line = null, name = '킹 말', inner = null } = {}) {
+  if (say !== talkSay) { talkSay = say; talkT0 = app.time; }
+  if (!LOOK.calm && (joy || app.time - talkT0 < 1)) live(); // 말이 바뀐 뒤 들썩이는 동안 · 금관이 반짝이는 동안
+  openBox('panel', x, y, w, lay.h, PAD_BOX, { name });
+  box(ctx, x, y, w, lay.h, PAL.card, PAL.gold);
+  const P = PAD_BOX;
+  drawKing(ctx, app, x + P - 2, y + lay.headTop - 6, { joy });
+  const nw = measure(KING_NAME, true);
+  text(ctx, KING_NAME, x + P + 18, textY(y + lay.headTop, KING_HEAD), PAL.goldDk, { bold: true });
+  rect(ctx, x + P + 22 + nw, y + lay.headTop + 9, w - P * 2 - 22 - nw, 1, PAL.cardDim);
+  lay.lines.forEach((l, k) => (line ? line(l, x + P, y + lay.ys[k]) : text(ctx, l, x + P, y + lay.ys[k], PAL.cardInk)));
+  lay.feet.forEach((l, k) => text(ctx, l, x + w - P, y + lay.fys[k], PAL.goldDk, { align: 'right' }));
+  if (inner) inner();
   closeBox();
 }

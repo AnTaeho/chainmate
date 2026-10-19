@@ -397,7 +397,7 @@ async function liveApp({ api, storage = null }) {
   w.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length; }; w.clearTimeout = (id) => { timers[id - 1] = null; };
   // 구역의 onClick을 곧바로 부르니(입력 길의 invalidate를 거치지 않는다) 프레임마다 그린다
   const app = await boot({ window: w, document: d.document, today: () => DATE, alwaysDraw: true });
-  app.records.kingDone = true; app.records.runs = 1;
+  app.records.tutorialAsked = true; app.records.runs = 1;
   tick(app);
   await settle();
   // 올리기 타이머(15초 안쪽)만 울린다 — 기록 보내기 타이머는 그대로 둔다
@@ -465,7 +465,7 @@ test('앱: 관 선택에 설 때 · 상점을 떠날 때 · 판이 끝날 때 �
   assert.equal(s2.blob.run, null);
   assert.ok(s2.blob.runAt >= s1.blob.runAt);
   assert.equal(s2.blob.records.runs, app.records.runs);
-  assert.ok(!('kingAgain' in s2.blob.records) && !('lastOpening' in s2.blob.records));
+  assert.ok(!('lastOpening' in s2.blob.records));
   assert.equal(app.toasts.length, 0, '맞추는 것은 화면에 드러나지 않는다');
   assert.equal(app.stats.errors, 0);
 });

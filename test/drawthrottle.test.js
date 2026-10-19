@@ -16,7 +16,7 @@ after(() => { delete globalThis.document; delete globalThis.window; });
 
 function makeApp({ calm = true } = {}) {
   for (const k of [...dom.store.keys()]) dom.store.delete(k);
-  dom.store.set(KEYS.records, JSON.stringify({ v: 1, lessonsDone: true, kingDone: true, coachSeen: { bigText: true, telemetry: true, rankName: true } }));
+  dom.store.set(KEYS.records, JSON.stringify({ v: 1, lessonsDone: true, tutorialAsked: true, coachSeen: { bigText: true, telemetry: true, rankName: true } }));
   dom.store.set(KEYS.settings, JSON.stringify({ volume: 0, music: 0, calm, telemetry: false }));
   const app = createApp({ canvas: dom.document.createElement('canvas'), storage: dom.window.localStorage, alwaysDraw: false });
   let t = 0;

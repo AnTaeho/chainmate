@@ -56,7 +56,7 @@ async function session(sc, lang, calm = false) {
   await ev((SEEN) => {
     const a = window.__app;
     a.settings.coach = false;
-    a.records.kingDone = true;
+    a.records.tutorialAsked = true;
     const factions = ['peasants', 'cavalry', 'abbey', 'fortress', 'hunters', 'heralds', 'mercs', 'royal'];
     a.records.coachSeen = Object.fromEntries([...SEEN, ...factions.map((f) => `faction_${f}`)].map((k) => [k, true]));
     // 정한 순간에 그리기를 멈춘다(window.__want가 참이 되는 프레임)

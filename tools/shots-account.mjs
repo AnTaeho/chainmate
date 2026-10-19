@@ -94,7 +94,7 @@ async function open(browser, { lang = 'ko', base = `http://localhost:${port}`, t
   const boot = async () => {
     await page.evaluate(async (today) => { const m = await import('/src/main.js'); await m.boot({ rankBase: '', ...(today ? { today: () => today } : {}) }); }, today);
     await page.waitForFunction(() => window.__app && window.__app.screen);
-    await page.evaluate((records) => { const a = window.__app; a.records.kingDone = true; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true }; if (records) Object.assign(a.records, records); a.saveRecords(); }, records);
+    await page.evaluate((records) => { const a = window.__app; a.records.tutorialAsked = true; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true }; if (records) Object.assign(a.records, records); a.saveRecords(); }, records);
     await page.waitForFunction(() => window.__app.ui.regions.length > 0 && window.__app.stats.frames > 2);
   };
   await page.goto(`${base}/index.html`);

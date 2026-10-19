@@ -144,9 +144,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   // 서버가 새 열쇠를 준 뒤에만 부른다 — 먼저 비우면 비운 기록이 계정 쪽 저장에 올라갈 수 있다
   app.wipeDevice = () => {
     store.del(KEYS.run); store.del(KEYS.runs);
-    const { coachSeen, kingDone, lessonsDone } = app.records;
+    const { coachSeen, tutorialAsked, lessonsDone, lessonsSeen } = app.records;
     for (const k of Object.keys(app.records)) delete app.records[k];
-    Object.assign(app.records, emptyRecords(), { coachSeen, kingDone, lessonsDone });
+    Object.assign(app.records, emptyRecords(), { coachSeen, tutorialAsked, lessonsDone, lessonsSeen });
     store.set(KEYS.records, app.records);
     app.run = null; app.fresh = []; app.guide = null;
     app.cloud.wipe();
@@ -247,7 +247,6 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
 
   // ── 판
   app.hasSave = () => !!store.get(KEYS.run);
-  // opts.script: 첫 대국을 킹과 두는 대본 대국으로(CHM-22) — 관 선택을 건너뛰고 곧바로 대국
   app.newRun = (opts = {}) => {
     const daily = opts.daily ? app.today() : null;
     const seed = daily ? dailySeed(daily) : opts.seed ?? app.nextSeed ?? ((Math.floor(now() * 7919) ^ Date.now()) >>> 0) % 2147483647;
@@ -256,24 +255,20 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const old = app.run && !app.run.scratch ? app.run : store.get(KEYS.run);
     if (old && old.track && !old.scratch && old.phase !== 'won' && old.phase !== 'lost') app.keepRun(old, old.endless ? 'endless' : 'quit');
     if (old && !old.scratch && old.phase !== 'won' && old.phase !== 'lost' && quitEndless(app.records, old)) app.saveRecords();
-    const script = !!opts.script && !daily;
     // 오늘의 대국 판은 서버와 같은 함수로 만든다(src/sim/daily.js — 넣은 명령을 run.cmds에 남겨 순위에 낸다, CHM-70)
     // 새 판은 지금까지 연 묶음만 나온다(끝없는 대국은 그 판의 것 그대로). 오늘의 대국은 모두가 같은 판이라 전부 열린 채
-    app.run = daily ? createDailyRun(daily) : createRun({ seed, opening: opts.opening, dan: opts.dan || 0, script, unlockTier: app.records.unlockTier || 0 });
-    if (script) { app.records.kingDone = true; app.records.kingAgain = false; app.saveRecords(); }
+    app.run = daily ? createDailyRun(daily) : createRun({ seed, opening: opts.opening, dan: opts.dan || 0, unlockTier: app.records.unlockTier || 0 });
     app.run.track = newTrack({ startedAt: Date.now(), app: app.appInfo });
     app.fresh = [];
-    app.tutStep = -1;
-    app.track('run_start', runStartProps(app.run, { script }));
+    app.track('run_start', runStartProps(app.run));
     observe(app.records, app.run, [], app.fresh);
     // 스크린샷 · 영상 도구(window.__autoDraft): 정석 첫째를 곧바로 골라 예전 흐름으로
     if (globalThis.__autoDraft && app.run.phase === 'draft') applyRun(app.run, { type: 'joseki', index: 0 });
     app.save();
-    if (app.run.script && app.run.phase === 'select') { const ev = app.cmd({ type: 'play' }); app.go('battle', { events: ev }); return; }
     app.goPhase();
   };
-  // 다음 새 판을 킹과 두나: 처음 켠 사람(판 · 수업 기록이 없다) · 설정 「킹과 다시 두기」
-  app.wantsScript = () => !!app.records.kingAgain || (!app.records.kingDone && !app.records.runs && !app.records.lessonsDone);
+  // 처음 켠 사람에게 튜토리얼을 권하나: 판 · 수업 기록이 없고 아직 권하지 않았다(저장된 판도 없다)
+  app.wantsTutorial = () => !app.records.tutorialAsked && !app.records.runs && !app.records.lessonsDone && !app.hasSave();
   app.continueRun = () => {
     const run = store.get(KEYS.run);
     if (!run) return false;
@@ -427,8 +422,6 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (app.overlay && app.overlay.update) app.overlay.update(dt);
     else if (app.screen && app.screen.update) app.screen.update(dt);
     updateGuide(app, dt);
-    // 첫 판 대본 대국의 걸음(기록 보내기): 새로 닿은 걸음마다 한 번
-    { const g = app.guide, r = app.run; if (g && r && !r.scratch && r.battle && r.battle.script && g.i > (app.tutStep ?? -1)) { app.tutStep = g.i; app.track('tutorial_step', { step: g.i }); } }
     if (app.audio) app.audio.update(dt, app);
   };
 

@@ -191,7 +191,7 @@ const SCROLLS = { display: [{ kind: 'tactic', id: 'reload', price: 4 }, { kind: 
 async function openShop(page, s) {
   await page.evaluate(({ s, SEEN }) => {
     const a = window.__app;
-    a.settings.coach = false; a.records.kingDone = true;
+    a.settings.coach = false; a.records.tutorialAsked = true;
     a.records.coachSeen = Object.fromEntries(SEEN.map((k) => [k, true]));
     localStorage.removeItem('chainmate.run.v1'); a.closeOverlay(); a.newRun({ seed: 11 });
     const r = a.run;

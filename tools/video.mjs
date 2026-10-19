@@ -1,7 +1,7 @@
 // 소개 영상 녹화(CHM-31): 실제 게임을 브라우저(Playwright chromium)로 열어 정해진 각본을 둔다(약 75초, 1440×810 · 30fps · 소리).
 //   node tools/video.mjs [--out docs/media] [--ffmpeg 경로] [--frames docs/media/frames] [--silent]
 // 결과: <out>/chainmate-play.mp4(H.264 · yuv420p · AAC), 장면 시각 <out>/chapters.md, 장면마다 1배 프레임 <frames>/NN-이름.png.
-//   --first: 「처음 켠 사람의 첫 몇 분」은 tools/video-first.mjs로 넘긴다(벽시계 녹화, 960×540).
+//   --first: 「처음 켠 사람의 첫 몇 분」(튜토리얼 권하기 → 바로 시작)은 tools/video-first.mjs로 넘긴다(벽시계 녹화, 960×540).
 // 녹화 방식: 게임 루프(requestAnimationFrame → app.frame(t))를 도구가 잡고 1/30초씩 손으로 돌리며 화면을 한 장씩 찍는다.
 //   벽시계와 상관없이 결정적이다(같은 시드 · 같은 걸음이면 같은 영상). 뷰포트 1440×810에서 게임이 뒷면 3배(N = 3)로 그린다 — 두 배 도트가 보이는 배율.
 //   소리: 녹화하는 동안 app.audio 자리에 받아 적기만 하는 대역을 두고(효과음 이름 · 인수, 프레임마다 곡을 고르는 화면 상태),
@@ -67,7 +67,7 @@ await page.goto(`${BASE}/index.html`);
 await page.evaluate(() => {
   localStorage.clear();
   localStorage.setItem('chainmate.settings.v1', JSON.stringify({ speed: 1 }));
-  localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, kingDone: true, runs: 3 }));
+  localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, tutorialAsked: true, runs: 3 }));
 });
 await page.reload();
 await page.waitForFunction(() => window.__app && window.__app.screen && window.__raf);

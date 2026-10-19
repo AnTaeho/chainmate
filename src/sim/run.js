@@ -5,7 +5,7 @@
 // 국면(run.phase)과 명령
 //   draft   1 · 3 · 5관의 첫 대국 앞(깊이 E). joseki(셋 중 하나, 건너뛸 수 없다)
 //   select  다음 대국 앞.   play | skip(연습 · 정식만) | use | moveMaxim | shop(떠나온 상점으로 돌아가기)
-//   battle  대국 중.        drop | capture | discard | unscript(대본 대국을 건너뛰어 평범한 대국으로)
+//   battle  대국 중.        drop | capture | discard
 //   shop    대국을 이긴 뒤(진 뒤에도 시계가 남으면 — 보상 없이). buy | buyPack | reroll | hold | sell | use | promote | remove | moveMaxim | leave
 //   pack    꾸러미를 연 뒤. pick | skipPack
 //   won     8관 명인을 이김. endless
@@ -14,7 +14,6 @@ import { renameOldPieces } from './oldsave.js';
 import { createRng, fork, int, next, shuffle } from './rng.js';
 import { boardFilter } from './tuning.js';
 import { parseSq } from './board.js';
-import { SCRIPT } from '../data/tutorial.js';
 import { createBattle, battleLayout, battleRules, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
 import { isCracked } from '../data/souls.js';
 import { getModifier } from './scoring.js';
@@ -172,6 +171,7 @@ export function factionOrder(seed) {
 export function migrateRun(run) {
   if (!run) return run;
   run = renameOldPieces(run);
+  dropOldScript(run);
   if (run.factions) { syncBoards(run); return run; }
   run.factions = Array.isArray(run.masters) && run.masters.length === ANTES && run.masters.every((id) => FACTION_OF_BOSS[id])
     ? run.masters.map((id) => FACTION_OF_BOSS[id])
@@ -179,6 +179,18 @@ export function migrateRun(run) {
   delete run.masters;
   syncBoards(run);
   return run;
+}
+
+// 옛 저장: 없앤 첫 판 대본 대국(킹과 두던 1관 연습) 도중이면 그 대국을 접고 평범한 판의 1관 첫머리(레퍼토리 고르기)로 돌린다
+function dropOldScript(run) {
+  if (!run.script && !(run.battle && run.battle.script)) return;
+  const mid = run.ante === 1 && run.blind === 0 && (run.phase === 'select' || (run.phase === 'battle' && run.battle && run.battle.script));
+  delete run.script;
+  if (!mid) return;
+  delete run.draftLate;
+  run.battle = null;
+  run.phase = 'select';
+  openDraft(run);
 }
 
 function tagFor(run, ante, blind) {
@@ -207,10 +219,8 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
 }
 
 // draft: false면 정석 드래프트 없이(깊이 E 이전 규칙 — 시험 · 하네스 비교용)
-// script: 첫 대국(1관 연습)을 대본 대국으로(CHM-22, 기본 오프닝 · 단 0만). 레퍼토리 고르기는 그 대국 뒤로 미룬다 —
-//   레퍼토리가 판 위 사물 · 목표 · 덱을 바꾸면 정해 둔 판이 어긋나서
 // unlockTier: 해금 단계(src/data/unlocks.js). 주지 않으면 잠금 없이 전부 열린 판
-export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true, script = false, unlockTier = null } = {}) {
+export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true, unlockTier = null } = {}) {
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
   const conf = { ...RUN_DEFAULTS, ...op.run };
@@ -255,7 +265,6 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
   // 해금: 열린 목록을 판에 싣고(저장 · 재생에 그대로), 대국에는 규칙 깃발 rules.pieces로 넘긴다
   if (unlockTier != null) { run.unlocked = unlockedAt(unlockTier); run.rules.pieces = [...run.unlocked.pieces]; }
   if (!draft) run.noDraft = true;
-  if (script && opening === DEFAULT_OPENING && !dan) { run.script = SCRIPT.id; run.draftLate = run.ante; }
   openDraft(run);
   syncBoards(run);
   return run;
@@ -263,8 +272,8 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
 
 // ── 정석 드래프트(깊이 E): 1 · 3 · 5관의 첫 대국 앞에 셋 중 하나
 function openDraft(run) {
-  if (run.noDraft || run.endless || run.script || !DRAFT_ANTES.includes(run.ante) || (run.drafted || []).includes(run.ante)) return;
-  // 대본 대국 뒤로 미룬 레퍼토리 고르기(draftLate)는 그 관의 다음 대국 앞에서
+  if (run.noDraft || run.endless || !DRAFT_ANTES.includes(run.ante) || (run.drafted || []).includes(run.ante)) return;
+  // 옛 저장: 없앤 첫 판 대본 대국 뒤로 미룬 레퍼토리 고르기(draftLate)는 그 관의 다음 대국 앞에서
   if (run.blind !== 0 && run.draftLate !== run.ante) return;
   const r = fork(root(run), `draft:${run.ante}`);
   const pool = openPool(run, 'josekis', JOSEKIS).filter((j) => !run.josekis.includes(j.id));
@@ -318,29 +327,25 @@ export function battleMods(build, master = null, faction = null) {
 // 대국 시드: 8관 명인을 시계를 써서 다시 둘 때는 몇째 다시 두기인지를 붙인다
 export const battleSeed = (run, ante = run.ante, blind = run.blind) =>
   fork(root(run), `battle:${ante}:${blind}${run.retry ? `:${run.retry}` : ''}`).s;
-// 대국 하나를 여는 재료(판(런)의 지금 상태에서). 판 보기 · 두기 · 대본 건너뛰기가 같은 것을 쓴다
+// 대국 하나를 여는 재료(판(런)의 지금 상태에서). 판 보기 · 두기가 같은 것을 쓴다
 export function battleOpts(run, blind = run.blind) {
   const info = blindInfo(run, run.ante, blind);
-  // 대본 대국: 1관 연습 하나만. 판 조정(거르기 · 다시 놓기)은 끄고 정해 둔 판을 깐다(세력 버릇 · 기보는 평소대로 켜진다)
-  const scripted = !!run.script && run.ante === 1 && blind === 0 && info.kind === 'practice';
   return {
-    scripted,
     opts: {
       seed: battleSeed(run, run.ante, blind), ante: run.ante, kind: info.kind, target: info.target,
       bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...soulOf(p) })),
-      rules: scripted ? { ...run.rules, reboards: 0 } : run.rules, mods: battleMods(run, info.master, info.faction),
+      rules: run.rules, mods: battleMods(run, info.master, info.faction),
       goldenChance: pityChance(awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance, 'golden', pityOf(run, 'golden')), // 연줄(CHM-68)
-      golden: scripted ? false : null,
-      filter: run.scratch || scripted ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
+      golden: null,
+      filter: run.scratch ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
     },
   };
 }
 function startBattle(run) {
-  const { scripted, opts } = battleOpts(run);
-  run.battle = createBattle({ ...opts, layout: scripted ? null : layoutFor(run, run.blind) });
-  if (scripted) layScript(run.battle, SCRIPT);
-  // 연줄(CHM-68): 금빛 적이 선 대국이면 처음으로, 없으면 하나 더(대본 대국 · 수업 판은 세지 않는다)
-  if (!scripted && !run.scratch) {
+  const { opts } = battleOpts(run);
+  run.battle = createBattle({ ...opts, layout: layoutFor(run, run.blind) });
+  // 연줄(CHM-68): 금빛 적이 선 대국이면 처음으로, 없으면 하나 더(수업 판은 세지 않는다)
+  if (!run.scratch) {
     if (run.battle.board.some((c) => c && c.gold)) pityHit(run, 'golden');
     else pityMiss(run, 'golden');
   }
@@ -379,36 +384,14 @@ export function syncBoards(run) {
   for (let i = 0; i < KINDS.length; i++) {
     const lay = run.boards && run.boards[i];
     if (i < run.blind) { out.push(null); continue; }
-    if (run.script && run.ante === 1 && i === 0) { out.push(null); continue; } // 대본 대국은 정해 둔 판
     out.push(layoutOk(run, i, lay) ? lay : freshLayout(run, i));
   }
   run.boards = out;
 }
 // 관 선택에 보일 대국: 두기를 누르면 열릴 대국과 같은 것(손 · 덱은 화면이 쓰지 않는다)
 export function previewBattle(run, blind = run.blind) {
-  const { scripted, opts } = battleOpts(run, blind);
-  if (scripted) return null;
+  const { opts } = battleOpts(run, blind);
   return createBattle({ ...opts, layout: layoutFor(run, blind) });
-}
-
-// 대본 판을 깐다: 적 · 손 · 덱(판의 덱에서 종류로 골라 같은 id) · 수마다 증원 · 목표
-export function layScript(b, sc) {
-  let id = 1;
-  b.board = new Array(64).fill(null);
-  for (const [name, t] of Object.entries(sc.board)) b.board[parseSq(name)] = { t, id: id++, born: -1 };
-  b.nextId = Math.max(b.nextId, id);
-  const pool = [...b.hand, ...b.bag];
-  const take = (t) => { const i = pool.findIndex((p) => p.t === t); if (i < 0) throw new Error(`script needs ${t}`); return pool.splice(i, 1)[0]; };
-  b.hand = sc.hand.map(take);
-  b.bag = [...sc.bag.map(take), ...pool];
-  b.target = sc.target;
-  b.script = sc.id;
-  b.plan = sc.plan.map((list) => list.map((r) => ({ sq: parseSq(r.sq), t: r.t })));
-  // 대국이 판을 바꿀 때마다 부르는 차례와 같게: 증원 예고 → 이형 적 표시 → 화면용 표시
-  b.incoming = b.plan.shift() || [];
-  b.incomingNext = b.plan[0] || [];
-  markFairy(b);
-  refreshHints(b);
 }
 
 function runEvent(run, ev) {
@@ -427,7 +410,6 @@ function endBattle(run, events) {
   const info = blindInfo(run);
   const best = b.history.reduce((a, h) => Math.max(a, h.score), 0);
   const won = b.status === 'won';
-  if (b.script) run.script = null; // 대본 대국은 한 번(뒤로 미룬 레퍼토리 고르기가 다음 대국 앞에 열린다)
   // 깨진 기물(유리)은 덱에서 빠진다
   if (b.shattered.length) run.deck = run.deck.filter((p) => !b.shattered.includes(p.id));
   // 정석 「결사」: 첫 사슬을 푼 기물은 판에서 사라진다(덱 여섯은 남긴다) · 「왕좌」: 승급한 폰은 퀸으로
@@ -591,7 +573,7 @@ export function brilliantFragment(run, events) {
 // 첫 대국에 몰렸다(smart 20판 점화 19번 중 9번이 1관 ×10). 사슬 8 계기는 관과 상관없이 센다
 export const IGNITE = { chain: 8, overflow: 10, overflowFrom: 3 };
 function checkIgnite(run, c, out, events) {
-  if (run.ignite || run.scratch || run.battle.script || !c) return;
+  if (run.ignite || run.scratch || !c) return;
   const h = run.battle.history[run.battle.history.length - 1];
   const chain = h.captures >= IGNITE.chain, over = run.ante >= IGNITE.overflowFrom && out.some((e) => e.type === 'overflow' && e.tier === IGNITE.overflow);
   if (!chain && !over) return;
@@ -888,15 +870,6 @@ export function applyRun(run, cmd) {
       if (!c || c.kind !== 'tactic') throw new Error('no tactic');
       events.push(...useTactic(run.battle, c.id));
       run.consumables.splice(cmd.index, 1);
-      break;
-    }
-    // 대본 대국 건너뛰기(첫 수 뒤에도): 대본을 지우고 같은 대국 자리에 평범한 1관 연습을 새로 깐다
-    case 'unscript': {
-      need('battle');
-      if (!run.battle || !run.battle.script) throw new Error('not a scripted battle');
-      run.script = null;
-      startBattle(run);
-      events.push({ type: 'battleStart', ...blindInfo(run) });
       break;
     }
     case 'drop': case 'capture': case 'redrop': case 'discard': case 'reboard': {

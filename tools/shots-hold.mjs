@@ -42,7 +42,7 @@ async function session(sc, lang, { coach = false } = {}) {
   await ev(({ SEEN, coach }) => {
     const a = window.__app;
     a.settings.coach = coach;
-    a.records.kingDone = true;
+    a.records.tutorialAsked = true;
     const factions = ['peasants', 'cavalry', 'abbey', 'fortress', 'hunters', 'heralds', 'mercs', 'royal'];
     a.records.coachSeen = Object.fromEntries([...SEEN, ...factions.map((f) => `faction_${f}`)].map((k) => [k, true]));
   }, { SEEN, coach });

@@ -12,7 +12,7 @@ after(() => { delete globalThis.document; delete globalThis.window; });
 
 function makeApp(records = {}) {
   for (const k of [...dom.store.keys()]) dom.store.delete(k);
-  dom.store.set(KEYS.records, JSON.stringify({ v: 1, lessonsDone: true, kingDone: true, ...records }));
+  dom.store.set(KEYS.records, JSON.stringify({ v: 1, lessonsDone: true, tutorialAsked: true, ...records }));
   const tracked = [];
   const app = createApp({ canvas: dom.document.createElement('canvas'), storage: dom.window.localStorage, track: (name, props) => tracked.push([name, props]) });
   app.tracked = tracked;

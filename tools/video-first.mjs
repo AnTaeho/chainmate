@@ -1,5 +1,5 @@
-// 「처음 켠 사람의 첫 몇 분」 영상(CHM-25): 빈 저장소로 켜서 타이틀 → 「새 판」 → 킹과 두는 대본 대국 → 보상 → 첫 상점 → 레퍼토리 →
-// 1관 정식 관 선택, 처음 안내를 읽으며 3분 안쪽까지(960×540). Playwright recordVideo로 벽시계대로 녹화한다.
+// 「처음 켠 사람의 첫 몇 분」 영상(CHM-25): 빈 저장소로 켜서 타이틀 → 킹이 튜토리얼을 권하는 덮개 → 「바로 시작」 → 레퍼토리 →
+// 1관 연습 → 보상 → 첫 상점 → 1관 정식 관 선택, 처음 안내를 읽으며 3분 안쪽까지(960×540). 튜토리얼 수업은 docs/shots/tut/. Playwright recordVideo로 벽시계대로 녹화한다.
 //   node tools/video.mjs --first [--out docs/media] [--ffmpeg 경로]   (tools/video.mjs가 이 파일로 넘긴다)
 // 결과 <out>/first-play.mp4 · <out>/first-play.md
 // Playwright는 저장소 의존성에 넣지 않는다(전역 설치나 NPM_CONFIG_PREFIX). ffmpeg는 PATH · --ffmpeg · FFMPEG 순으로 찾는다.
@@ -69,30 +69,18 @@ async function hover(id, ms = 300) { const r = await region(id); if (!r) return 
 async function click(id, ms = 250) { if (!(await hover(id, ms))) throw new Error('no region ' + id); await page.mouse.down(); await page.mouse.up(); await wait(80); }
 async function park() { const [x, y] = await toXY(470, 262); await page.mouse.move(x, y, { steps: 8 }); }
 
-// 처음 켠 사람의 첫 몇 분(CHM-25, 새 흐름): 타이틀 → 「새 판」 → 킹과 두는 대본 대국 → 보상 → 첫 상점(처음 안내) →
-// 레퍼토리 고르기 → 1관 정식 관 선택(농민군 안내) → 정식 · 마스터전을 이어 둔다. 사람 손 빠르기로(글을 읽는 틈을 두고), 3분 안.
+// 처음 켠 사람의 첫 몇 분: 타이틀 → 튜토리얼 권하기 덮개 → 「바로 시작」 → 레퍼토리 → 1관 연습 관 선택(농민군 안내) → 대국 → 보상 →
+// 첫 상점(처음 안내) → 정식 · 마스터전을 이어 둔다. 사람 손 빠르기로(글을 읽는 틈을 두고), 3분 안.
 async function firstTen() {
   const LIMIT = 2.9 * 60 * 1000;
   const late = () => Date.now() - t0 > LIMIT;
   const scr = () => ev(() => window.__app.screen.name);
-  const ready = () => page.waitForFunction(() => { const a = window.__app, g = a.guide; return !g || (!a.overlay && !(g.hold && g.hold(a)) && a.hintRect); }, null, { timeout: 60000 });
-  mark('처음 켬 — 타이틀');
+  mark('처음 켬 — 타이틀 · 튜토리얼 권하기');
   await park();
-  await wait(2600);
-  await click('title:new', 700);
-  mark('새 판 — 킹과 두는 첫 대국(대본)');
-  for (let guard = 0; guard < 80; guard++) {
-    await ready();
-    const st = await ev(() => { const a = window.__app, g = a.guide; if (!g) return null; const st = g.steps[g.i], s = a.screen; return { ok: !!st.ok, target: typeof st.target === 'function' ? st.target(a) : st.target, moves: !!(s.step && s.step.moves), end: !!(s.step && s.step.end), long: st.say.length }; });
-    if (!st) break;
-    // 킹의 말을 읽을 틈: 알았다 걸음은 길게, 누르는 걸음은 짧게
-    await wait(st.ok ? 700 + st.long * 30 : 350 + st.long * 10);
-    if (st.ok) { await click('guide:ok', 300); if (st.end) break; continue; }
-    await click(st.target, 300);
-    if (st.moves) { mark('행마 보기'); await wait(2200); await click('moves:back', 350); }
-  }
-  // 대본 뒤: 처음 안내(킹 말풍선)를 읽고 누른다
-  const FIRST_MARK = { reward: '대본 대국 끝 — 보상', shop: '첫 상점 — 처음 안내(킹 말풍선)', draft: '레퍼토리 고르기(대본 대국 뒤)', select: '1관 정식 관 선택 — 농민군 처음 안내', pack: '첫 꾸러미' };
+  await wait(3000);
+  await click('welcome:play', 900);
+  // 처음 안내(킹 말풍선)를 읽고 누른다
+  const FIRST_MARK = { draft: '바로 시작 — 레퍼토리 고르기', select: '1관 연습 관 선택 — 농민군 처음 안내', battle: '첫 대국', reward: '첫 대국 끝 — 보상', shop: '첫 상점 — 처음 안내(킹 말풍선)', pack: '첫 꾸러미' };
   const firstSeen = new Set();
   for (let g = 0; g < 400 && !late(); g++) {
     const name = await scr();

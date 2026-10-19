@@ -16,7 +16,7 @@ import { RecordsScreen } from './records.js';
 import { LessonScreen } from './lesson.js';
 import { DraftScreen } from './draft.js';
 import { LessonsScreen } from './lessons.js';
-import { ScriptScreen } from './script.js';
+import { WelcomeScreen } from './welcome.js';
 import { MovesScreen } from './moves.js';
 import { ReviewScreen } from './review.js';
 import { RankScreen } from './rank.js';
@@ -25,15 +25,10 @@ import { AccountScreen } from './account.js';
 import { HighlightScreen } from './highlight.js';
 import { UnlocksScreen } from './unlocks.js';
 
-// 대국: 판의 대국이 대본 대국이면(첫 판 1관 연습, CHM-22) 대본 화면으로 — 화면 이름은 같은 battle
-class BattleEntry {
-  constructor(app, args) { return app.run && app.run.battle && app.run.battle.script ? new ScriptScreen(app, args) : new BattleScreen(app, args); }
-}
-
 export const SCREENS = {
   title: TitleScreen,
   select: SelectScreen,
-  battle: BattleEntry,
+  battle: BattleScreen,
   reward: RewardScreen,
   chest: ChestScreen,
   legend: LegendScreen,
@@ -49,6 +44,7 @@ export const SCREENS = {
   lesson: LessonScreen,
   draft: DraftScreen,
   lessons: LessonsScreen,
+  welcome: WelcomeScreen,
   moves: MovesScreen,
   review: ReviewScreen,
   rank: RankScreen,

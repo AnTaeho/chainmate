@@ -99,12 +99,7 @@ test('판당 한 번: 다음 대국의 사슬 8은 남긴 점화를 바꾸지 �
   assert.deepEqual(run.ignite, first);
 });
 
-test('대본 대국 · scratch 판 · 수업(대국 규칙만)에서는 점화가 없다', () => {
-  const scripted = chainRun({ script: true });
-  assert.ok(scripted.run.battle.script, '대본 대국');
-  assert.equal(ignites(feed(scripted.run, scripted.cmds)).length, 0);
-  assert.equal(scripted.run.ignite, undefined);
-
+test('scratch 판 · 수업(대국 규칙만)에서는 점화가 없다', () => {
   const run = createRun({ seed: 1, draft: false });
   run.scratch = true;
   applyRun(run, { type: 'play' });

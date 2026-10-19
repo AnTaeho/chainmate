@@ -145,7 +145,7 @@ const finishBattle = (app) => { for (let i = 0; i < 400 && app.run.phase === 'ba
 
 test('앱: 판이 끝나면(짐) 한 줄, 판 시간과 앱 판이 함께', async () => {
   const app = await fresh();
-  app.records.kingDone = true; app.records.runs = 1;
+  app.records.tutorialAsked = true; app.records.runs = 1;
   app.records.unlockTier = 20; // 하네스 판은 전부 열린 판이다 — 다 연 기록의 새 판이 그것과 한 수도 다르지 않다
   app.newRun({ seed: dump.seed });
   for (let i = 0; i < 30; i++) app.frame((app.last || 0) + 50); // 1.5초쯤
@@ -171,14 +171,21 @@ test('앱: 판이 끝나면(짐) 한 줄, 판 시간과 앱 판이 함께', asyn
   assert.equal(rows(app).length, 1);
 });
 
-test('앱: 새 판으로 덮어쓴 판은 「그만둠」 · 대본 대국 줄은 빠진다', async () => {
+test('앱: 새 판으로 덮어쓴 판은 「그만둠」 · 옛 기록의 대본 대국 줄은 빠진다', async () => {
   const app = await fresh();
-  app.screen.items().find(([id]) => id === 'title:new')[2](); // 처음 켬: 킹과 두는 대본 대국
-  tick(app);
-  assert.equal(app.run.battle.script, 'king');
+  app.records.tutorialAsked = true;
+  app.newRun({ seed: 4 });
+  const toBattle = () => { for (let g = 0; g < 50 && app.run.phase !== 'battle'; g++) {
+    const ph = app.run.phase;
+    if (ph === 'draft') app.cmd({ type: 'joseki', index: 0 });
+    else if (ph === 'select') app.cmd({ type: 'play' });
+    else if (ph === 'shop') app.cmd({ type: 'leave' });
+    else if (ph === 'pack') app.cmd({ type: 'skipPack' });
+  } };
+  toBattle();
   finishBattle(app);
   assert.equal(app.run.log.length, 1);
-  assert.deepEqual(app.run.track.script, [0]);
+  app.run.track.script = [0]; // 배포 전 판: 없앤 첫 판 대본 대국이 둔 log 자리
   // 이어서 다음 대국 하나를 둔다
   for (let g = 0; g < 50 && app.run.phase !== 'battle'; g++) {
     const ph = app.run.phase;

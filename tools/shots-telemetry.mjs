@@ -40,7 +40,7 @@ const errors = [];
 // 판을 조금 둔다: 새 판 → 레퍼토리 → 두기 → 명령 몇 개 → 화면을 떠나는 사건
 const PLAY = () => {
   const app = window.__app;
-  app.records.kingDone = true; app.records.runs = 1;
+  app.records.tutorialAsked = true; app.records.runs = 1;
   app.newRun({ seed: 7 });
   if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
   app.cmd({ type: 'play' });

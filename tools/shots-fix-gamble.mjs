@@ -51,7 +51,7 @@ for (const name of BROWSERS) {
   await page.evaluate(({ SEEN }) => {
     const a = window.__app;
     a.settings.coach = false;
-    a.records.kingDone = true;
+    a.records.tutorialAsked = true;
     a.records.coachSeen = Object.fromEntries(SEEN.map((k) => [k, true]));
     localStorage.removeItem('chainmate.run.v1'); a.closeOverlay(); a.newRun({ seed: 11 });
     const r = a.run;

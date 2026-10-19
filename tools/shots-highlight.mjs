@@ -85,7 +85,7 @@ async function shots(type, name) {
         const tag = `${name} ${lang} ${scene}`;
         await ev(async (o) => {
           const a = window.__app, { finishedRun } = await import('/test/helpers/hlrun.js');
-          a.records.kingDone = true; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
+          a.records.tutorialAsked = true; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
           a.overlay = null; a.toasts = []; a.run = finishedRun(o); a.go('result', { quiet: true });
         }, o);
         await settle(400);

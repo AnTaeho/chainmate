@@ -5,7 +5,7 @@ import { sqName } from '../sim/board.js';
 import { num } from '../render/gfx.js';
 
 // 복기를 켜는 대국: 판(런)의 대국(오늘의 대국 · 끝없는 대국 포함). 수업 · 킹 대본 · 연습 판(scratch) · 타이틀 하늘은 끈다. 설정 「복기」로 끈다.
-export const reviewOn = (app, src, b) => app.settings.replay !== false && !!src && src.kind === 'run' && !!app.run && !app.run.scratch && !!b && !b.script;
+export const reviewOn = (app, src, b) => app.settings.replay !== false && !!src && src.kind === 'run' && !!app.run && !app.run.scratch && !!b;
 
 // 카드 첫 줄 · 둘째 줄 · 점수 줄. r = review() 결과(kind 'path'), board = 갈림길 상태의 판(사슬이 갈린 칸의 적 이름)
 export const forkTitle = (r) => `${r.move}번째 수가 승부처였어요`;

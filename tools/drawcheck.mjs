@@ -114,7 +114,7 @@ async function openPage({ reducedMotion = 'no-preference', lang = 'ko', fresh = 
   await page.evaluate((fresh) => {
     const a = window.__app;
     a.alwaysDraw = true; // 늘 그리되 판단은 셈한다
-    if (!fresh) a.records.coachSeen = new Proxy({}, { get: () => true, has: () => true });
+    if (!fresh) { a.records.coachSeen = new Proxy({}, { get: () => true, has: () => true }); a.records.tutorialAsked = true; if (a.overlay && a.overlay.name === 'welcome') a.closeOverlay(); }
   }, fresh);
   page.errors = errors;
   return page;
@@ -271,11 +271,24 @@ const PLAY = async ({ k, sac = false }) => {
     await h.ev(() => window.__app.go('lesson', { index: 0, phase: 'play' })); await h.step(60);
     for (let k = 0; k < 8; k++) {
       await h.settle();
-      const tgt = await h.ev(() => { const s = window.__app.screen; if (s.name !== 'lesson') return null; const st = s.step; if (!st) return null; const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : null; if (id) return id; const t = s.clickable(); return t.list.length ? `sq:${t.list[0]}` : null; });
+      const tgt = await h.ev(() => { const s = window.__app.screen; if (s.name !== 'lesson') return null; const st = s.step; if (!st) return null; const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : st.moves ? 'btn:moves' : null; if (id) return id; const t = s.clickable(); return t.list.length ? `sq:${t.list[0]}` : null; });
       if (!tgt) break;
       await h.press(new RegExp(`^${tgt}$`), 30);
+      if (tgt === 'btn:moves') { await h.hoverAll(/^moves:/, 4, 6); await h.ev(() => window.__app.key('Escape')); await h.step(20); }
     }
     await h.step(200);
+  });
+  // 「행마」 걸음이 있는 수업(체스 밖의 행마): 행마 단추 숨 쉬는 테 → 행마 보기 → 닫고 이어 두기
+  await scene(page, 'lesson moves step', async () => {
+    await h.ev(async () => { const { LESSONS } = await import('/src/ui/lessons.js'); window.__app.go('lesson', { index: LESSONS.findIndex((L) => L.id === 'fairy'), phase: 'play' }); }); await h.step(90);
+    for (let k = 0; k < 8; k++) {
+      await h.settle();
+      const tgt = await h.ev(() => { const s = window.__app.screen; if (s.name !== 'lesson') return null; const st = s.step; if (!st) return null; const id = st.pick != null ? `hand:${st.pick}` : st.moves ? 'btn:moves' : null; if (id) return id; const t = s.clickable(); return t.list.length ? `sq:${t.list[0]}` : null; });
+      if (!tgt) break;
+      await h.press(new RegExp(`^${tgt}$`), 30);
+      if (tgt === 'btn:moves') { await h.step(40); await h.hoverAll(/^moves:/, 4, 6); await h.ev(() => window.__app.key('Escape')); await h.step(30); }
+    }
+    await h.step(240);
   });
   await scene(page, 'draft', async () => {
     await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 21; a.newRun(); if (a.run.phase === 'draft') a.go('draft'); }); await h.step(100);
@@ -393,7 +406,7 @@ const PLAY = async ({ k, sac = false }) => {
   await done(page);
 }
 
-// ── 2. 도움말 팁(처음 본 사람) · 첫 판 대본 대국
+// ── 2. 도움말 팁(처음 본 사람) · 처음 켬 덮개 · 튜토리얼 목록
 {
   const page = await openPage({ fresh: true });
   const h = helpers(page);
@@ -401,26 +414,21 @@ const PLAY = async ({ k, sac = false }) => {
     await h.ev(SHOP); await h.step(120);
     for (let i = 0; i < 4; i++) { await h.click(1, 1, 60); await h.step(60); }
   });
-  await scene(page, 'tutorial script battle', async () => {
-    await h.ev(() => { const a = window.__app; a.toTitle(); a.records.kingDone = false; a.records.runs = 0; a.records.lessonsDone = 0; a.newRun({ script: true }); });
-    for (let i = 0; i < 80; i++) {
-      await h.step(40);
-      await h.settle();
-      // 「행마」 걸음이 연 행마 보기는 둘러보고 닫는다(길은 그 뒤 걸음에서 이어진다)
-      if (await page.evaluate(() => !!window.__app.overlay)) { await h.hoverAll(/^moves:/, 4, 6); await h.ev(() => window.__app.key('Escape')); await h.step(20); continue; }
-      const tgt = await page.evaluate(() => {
-        const a = window.__app, g = a.guide; if (!g) return null;
-        const ok = a.ui.regions.find((q) => q.id === 'guide:ok'); if (ok) return [ok.x + ok.w / 2, ok.y + ok.h / 2];
-        const st = g.steps[g.i]; if (!st) return null;
-        const id = typeof st.target === 'function' ? st.target(a) : st.target;
-        const q = id && a.ui.regions.find((x) => x.id === id);
-        return q ? [q.x + q.w / 2, q.y + q.h / 2] : null;
-      });
-      if (!tgt) { if (!(await page.evaluate(() => !!window.__app.guide))) break; continue; }
-      await h.click(Math.floor(tgt[0]), Math.floor(tgt[1]), 4);
-    }
-    await h.step(240);
-    results.push({ name: '(tutorial end)', errors: [await page.evaluate(() => `대본 끝: guide ${!!window.__app.guide} · 화면 ${window.__app.screen.name} · 판 ${window.__app.run && window.__app.run.phase}`)] });
+  // 처음 켬 덮개(킹이 튜토리얼을 권한다): 킹 들썩임 뒤 쉰다 → 단추를 가리킨다 → 「튜토리얼부터」 → 첫 수업 시범
+  await scene(page, 'first-run welcome', async () => {
+    await h.ev(() => { const a = window.__app; localStorage.removeItem('chainmate.run.v1'); a.toTitle(); a.welcomeShut = false; a.records.tutorialAsked = false; a.records.runs = 0; a.records.lessonsDone = false; a.records.lessonsSeen = {}; a.records.coachSeen = { telemetry: true }; });
+    await h.step(120);
+    await h.hoverAll(/^welcome:/, 10); await h.move(1, 1, 60);
+    await h.press(/^welcome:lesson$/, 240);
+    results.push({ name: '(welcome)', errors: [await page.evaluate(() => `덮개 뒤 화면 ${window.__app.screen.name} · 수업 ${window.__app.screen.index}`)] });
+  });
+  // 튜토리얼 목록: 반쯤 끝낸 기록 → 칸 · 「이어서」를 가리킨다 → 다 끝낸 끝 카드(금관 반짝임)
+  await scene(page, 'tutorial list + end card', async () => {
+    await h.ev(async () => { const a = window.__app; const { LESSONS } = await import('/src/ui/lessons.js'); a.toTitle(); a.records.tutorialAsked = true; a.records.lessonsSeen = Object.fromEntries(LESSONS.slice(0, 3).map((L) => [L.id, true])); a.go('lessons'); });
+    await h.step(40); await h.hoverAll(/^lessons:/, 6); await h.move(1, 1, 60);
+    await h.ev(async () => { const a = window.__app; const { LESSONS } = await import('/src/ui/lessons.js'); a.records.lessonsSeen = Object.fromEntries(LESSONS.map((L) => [L.id, true])); a.go('lessons', { end: true }); });
+    await h.step(120); await h.hoverAll(/^lessons:(play|list)$/, 10); await h.move(1, 1, 30);
+    await h.press(/^lessons:list$/, 60);
   });
   results.push({ name: '(errors fresh)', errors: page.errors.slice(0, 5) });
   await done(page);

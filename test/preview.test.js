@@ -140,13 +140,6 @@ test('판 보기: 판(런) 흐름 그대로 — 관 선택에 설 때마다 남�
   assert.equal(run.battle.board[60].t, 'X');
 });
 
-test('판 보기: 대본 대국 1관 연습은 미리 보기가 없고 정해 둔 판', () => {
-  const run = createRun({ seed: 3, script: true });
-  assert.equal(run.boards[0], null);
-  assert.equal(previewBattle(run, 0), null);
-  assert.ok(run.boards[1]);
-});
-
 test('판 보기: 미리 지은 판에서도 시작 손이 떨굴 곳을 갖는다(여러 판)', () => {
   let n = 0, stuck = 0;
   for (let seed = 1; seed <= 30; seed++) {

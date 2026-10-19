@@ -90,7 +90,7 @@ export const POWER = { n: 4, nodes: NODE_BUDGET };
 export const powerSeed = (ante, i) => fork(createRng(0xb11d), `build:${ante}:${i}`).s;
 export function measurePower(run, ante, { n = POWER.n, nodes = POWER.nodes } = {}) {
   const copy = JSON.parse(JSON.stringify(run));
-  Object.assign(copy, { ante, blind: 0, phase: 'select', retry: 0, script: null, battle: null, draft: null });
+  Object.assign(copy, { ante, blind: 0, phase: 'select', retry: 0, battle: null, draft: null });
   const { opts } = battleOpts(copy, 0);
   const scores = [];
   for (let i = 0; i < n; i++) {

@@ -43,7 +43,7 @@ async function session(sc, lang) {
   await ev((SEEN) => {
     const a = window.__app;
     a.settings.coach = false;
-    a.records.kingDone = true; // 첫 판 대본 대국 없이
+    a.records.tutorialAsked = true; // 첫 판 대본 대국 없이
     const factions = ['peasants', 'cavalry', 'abbey', 'fortress', 'hunters', 'heralds', 'mercs', 'royal'];
     a.records.coachSeen = Object.fromEntries([...SEEN, ...factions.map((f) => `faction_${f}`)].map((k) => [k, true]));
   }, SEEN);

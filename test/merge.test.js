@@ -21,7 +21,7 @@ function randomRecords(seed) {
   for (let d = 0; d < 9; d++) if (r() < 0.3) rec.danWins[d] = 1 + n(5);
   if (r() < 0.7) { const ante = 1 + n(8), blind = n(3), won = r() < 0.2; rec.daily = { date: `2026-10-0${6 + n(3)}`, ante, blind, won, score: ante * 10 + blind + (won ? 100 : 0), runs: 1 + n(4) }; }
   rec.lessonsDone = r() < 0.5; rec.lessonsSeen = some(); rec.coachSeen = some();
-  if (r() < 0.5) rec.kingDone = r() < 0.5;
+  if (r() < 0.5) rec.tutorialAsked = r() < 0.5;
   if (r() < 0.5) rec.movesSeen = some();
   if (r() < 0.5) rec.runNew = { seed: n(3), keys: IDS.filter(() => r() < 0.4) };
   if (r() < 0.3) rec.someday = { n: n(5), on: r() < 0.5, word: IDS[n(6)] }; // 규칙이 없는 칸
@@ -112,21 +112,21 @@ test('합치기: 옛 꼴 기록(없는 칸 · 옛 평가 열쇠 · 망가진 값
 });
 
 test('합치기: 기록의 모든 칸에 규칙이 있다 — 새 칸을 더하면 RULES에도 넣는다', () => {
-  const known = [...Object.keys(emptyRecords()), 'kingDone', 'kingAgain', 'lastOpening', 'lastDan', 'movesSeen', 'runNew'];
+  const known = [...Object.keys(emptyRecords()), 'lastOpening', 'lastDan', 'movesSeen', 'runNew'];
   assert.deepEqual(known.filter((k) => typeof RULES[k] !== 'function'), [], 'src/ui/merge.js RULES에 규칙이 없는 칸');
   // 규칙이 없는 칸도 법칙은 지킨다(수는 큰 쪽 · 참거짓은 켜진 쪽)
   const m = mergeRecords({ ...emptyRecords(), later: { n: 2, on: false } }, { ...emptyRecords(), later: { n: 5, on: true, extra: 'x' } });
   assert.deepEqual(m.later, { n: 5, on: true, extra: 'x' });
 });
 
-test('이 기기의 취향(킹과 다시 두기 · 마지막에 고른 것)은 올리지 않고 받은 것으로 덮지 않는다', () => {
-  const local = { ...emptyRecords(), runs: 1, kingAgain: false, lastOpening: 'london', lastDan: 2 };
-  const remote = { ...emptyRecords(), runs: 9, kingAgain: true, lastOpening: 'sicilian', lastDan: 7, codex: { ...emptyRecords().codex, maxims: { m: true } } };
+test('이 기기의 취향(마지막에 고른 것)은 올리지 않고 받은 것으로 덮지 않는다', () => {
+  const local = { ...emptyRecords(), runs: 1, lastOpening: 'london', lastDan: 2 };
+  const remote = { ...emptyRecords(), runs: 9, lastOpening: 'sicilian', lastDan: 7, codex: { ...emptyRecords().codex, maxims: { m: true } } };
   const up = cloudRecords(local);
   for (const k of LOCAL_ONLY) assert.ok(!(k in up), k);
   assert.equal(up.runs, 1);
   const m = mergeInto(local, remote);
-  assert.deepEqual([m.runs, m.kingAgain, m.lastOpening, m.lastDan, m.codex.maxims], [9, false, 'london', 2, { m: true }]);
+  assert.deepEqual([m.runs, m.lastOpening, m.lastDan, m.codex.maxims], [9, 'london', 2, { m: true }]);
   assert.deepEqual(mergeInto(local, null).runs, 1);
 });
 

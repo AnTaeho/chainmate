@@ -1,4 +1,4 @@
-// 첫 수업: 걸음마다 실제 규칙으로 둘 수 있고, 끝까지 가면 이긴다
+// 튜토리얼 수업: 걸음마다 실제 규칙으로 둘 수 있고, 끝까지 가면 이긴다
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { apply, dropSquaresFor } from '../src/sim/battle.js';
@@ -12,6 +12,7 @@ export function walk(L, steps) {
   let sel = null;
   steps.forEach((st, k) => {
     const where = `${L.id} 걸음 ${k}`;
+    if (st.moves) return; // 「행마」 단추는 판을 바꾸지 않는다
     if (st.pick != null) { assert.equal(b.status, 'play', where); assert.ok(b.hand[st.pick], where); sel = st.pick; return; }
     if (st.discard) { assert.equal(b.status, 'play', where); apply(b, { type: 'discard', handIndices: [sel] }); sel = null; return; }
     if ('drop' in st) {
@@ -35,9 +36,15 @@ export function walk(L, steps) {
   return b;
 }
 
-test('수업은 열, 묶음 셋', () => {
-  assert.equal(LESSONS.length, 10);
+test('수업은 여덟, 묶음 셋 · 수업마다 걸음 3~6 · 킹의 말은 반말', () => {
+  assert.equal(LESSONS.length, 8);
   for (const L of LESSONS) assert.ok(LESSON_GROUPS.some((g) => g.id === L.group), L.id);
+  for (const L of LESSONS.filter((x) => !x.shop)) {
+    assert.ok(L.steps.length >= 3 && L.steps.length <= 6, `${L.id} 걸음 ${L.steps.length}`);
+    for (const st of [...L.steps, ...(L.demo || [])]) if (st.say) assert.ok(!/(세요|해요|예요|이에요|어요|아요|돼요|워요)$/.test(st.say), `${L.id}: ${st.say}`);
+  }
+  // 「행마」 단추 걸음이 하나 있다(대국 오른쪽 위 「행마」로 기물 길 보기)
+  assert.equal(LESSONS.flatMap((L) => L.steps || []).filter((st) => st.moves).length, 1);
 });
 
 for (const L of LESSONS.filter((x) => !x.shop)) {
@@ -55,7 +62,7 @@ test('수업 fairy: 궁수는 사이가 막혀도 제자리에서 룩을 먹고 
   const L = LESSONS.find((x) => x.id === 'fairy');
   assert.deepEqual(L.hand, ['S']);
   const drop = L.steps.find((st) => 'drop' in st).drop;
-  const b = walk(L, L.steps.slice(0, 3));
+  const b = walk(L, L.steps.filter((st) => !st.moves).slice(0, 3));
   assert.equal(b.status, 'chain');
   assert.equal(b.chain.sq, lessonSq(drop), '먹은 뒤에도 놓은 칸');
   assert.equal(b.chain.form, 'R');

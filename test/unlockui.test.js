@@ -25,7 +25,7 @@ async function bootApp(lang = 'ko') {
   if (lang !== 'ko') d.window.localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang }));
   const sent = [];
   const app = await boot({ window: d.window, document: d.document, today: () => '2026-10-09', rankBase: '' });
-  app.records.kingDone = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true, unlocks: true };
+  app.records.tutorialAsked = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true, unlocks: true };
   const real = app.track; app.track = (name, props, o) => { sent.push([name, props]); return real(name, props, o); };
   const frame = () => { const { LOG, checkLayout } = M.log; LOG.on = true; try { app.frame((app.last || 0) + 16); return { bad: checkLayout().map((q) => q.msg), boxes: LOG.boxes.slice(), texts: LOG.texts.slice() }; } finally { LOG.on = false; } };
   const has = (id) => app.ui.regions.some((r) => r.id === id);
@@ -163,10 +163,9 @@ test('새 판은 지금까지 연 묶음으로, 오늘의 대국은 전부 열�
   a.app.run.log.push({ ante: 4, blind: 0, kind: 'practice', score: 10, target: 100, best: 10, won: false });
   a.app.go('result', { quiet: true }); a.frame();
   assert.deepEqual([a.app.records.gates, a.app.records.unlockTier], [16, 5]);
-  // 킹과 두는 첫 대국도 새 판이다(처음 켠 사람은 단계 0)
-  a.at(0, 0); a.app.records.kingAgain = true;
-  a.app.newRun({ script: true });
-  assert.ok(a.app.run.battle && a.app.run.battle.script, '대본 대국');
+  // 처음 켠 사람의 첫 판도 단계 0
+  a.at(0, 0);
+  a.app.newRun();
   assert.deepEqual(a.app.run.unlocked, M.data.unlockedAt(0));
   a.app.toTitle();
 });

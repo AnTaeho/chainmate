@@ -15,14 +15,13 @@ const emptyHolds = () => ({ carried: 0, bought: 0, kinds: {} });
 
 // 판을 시작할 때 하나. app = { version, commit, platform }. startedAt: 시작 시각(ms, 옛 저장에서 이어 붙인 판은 null)
 export function newTrack({ startedAt = null, app = null } = {}) {
-  return { v: 1, startedAt, sec: 0, bought: [], editions: [], legendAt: null, seen: emptySeen(), holds: emptyHolds(), buys: [], script: [], app };
+  return { v: 1, startedAt, sec: 0, bought: [], editions: [], legendAt: null, seen: emptySeen(), holds: emptyHolds(), buys: [], app };
 }
 
 // 명령 바로 앞의 판 모습(trackCommand가 견줄 것)
 export function trackBefore(run) {
   return {
     phase: run.phase, logLen: run.log.length,
-    scripted: !!(run.battle && run.battle.script),
     uids: run.maxims.map((m) => m.uid),
     pack: run.pack ? clone(run.pack.options) : null,
   };
@@ -45,8 +44,6 @@ const itemId = (it) => it.id ?? it.form ?? it.t ?? it.legend ?? null;
 
 // 명령 하나가 끝난 뒤: before = trackBefore(명령 앞의 run). track을 고친다.
 export function trackCommand(track, run, cmd, events, before) {
-  // 대본 대국(킹과 두는 첫 대국)의 줄은 기록에서 뺀다 — 그 대국이 끝나며 늘어난 log 자리를 적어 둔다
-  if (before.scripted && run.log.length > before.logLen) for (let i = before.logLen; i < run.log.length; i++) track.script.push(i);
   if (run.phase === 'shop' && run.shop && cmd.type !== 'shop' && before.phase !== 'shop' && before.phase !== 'pack') {
     noteDisplay(track.seen, run);
     const h = track.holds || (track.holds = emptyHolds());
@@ -76,7 +73,7 @@ export function trackCommand(track, run, cmd, events, before) {
 // won은 결과 화면과 같이 「8관을 꺾었나」(끝없는 대국에서 져도 이긴 판). 하네스 판에는 끝없는 대국이 없다.
 export function runRow(run, track, { end = null, endedAt = null, id = null } = {}) {
   const tr = track || newTrack();
-  const skip = new Set(tr.script || []);
+  const skip = new Set(tr.script || []); // 옛 기록: 없앤 첫 판 대본 대국의 log 자리(그 대국은 요약에서 뺀다)
   const log = clone(run.log.filter((_, i) => !skip.has(i)));
   const played = log.filter((x) => !x.skipped);
   const won = run.phase === 'won' || !!run.endless;

@@ -737,7 +737,7 @@ async function rankApp({ lang = 'ko', others = 24, mode = 'ok', me = null } = {}
   if (lang !== 'ko') d.window.localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang }));
   d.window.fetch = (url, init) => (String(url).startsWith('/api/') ? api.fetch(url, init) : Promise.resolve({ ok: true, status: 200 }));
   const app = await boot({ window: d.window, document: d.document, today: () => RANK_DAY, rankBase: '' });
-  app.records.kingDone = true; app.records.runs = 3; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
+  app.records.tutorialAsked = true; app.records.runs = 3; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
   const settle = async () => { for (let i = 0; i < 12; i++) await new Promise((r) => setImmediate(r)); };
   await settle();
   const long = lang === 'ko' ? F.LONG_KO : F.LONG_EN;

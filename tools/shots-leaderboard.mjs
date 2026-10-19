@@ -106,7 +106,7 @@ async function open(browser, { lang = 'ko', base = `http://localhost:${port}`, r
   if (rank) await page.evaluate(async (today) => { const m = await import('/src/main.js'); await m.boot({ rankBase: '', ...(today ? { today: () => today } : {}) }); }, today);
   await page.waitForFunction(() => window.__app && window.__app.screen);
   // 첫 판 대본 · 기록 알림 · 처음 안내는 치운다
-  await page.evaluate((save) => { const a = window.__app; a.records.kingDone = true; a.records.runs = 3; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true }; a.saveRecords(); if (save) { a.newRun({ seed: 7 }); a.go('title'); } }, save);
+  await page.evaluate((save) => { const a = window.__app; a.records.tutorialAsked = true; a.records.runs = 3; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true }; a.saveRecords(); if (save) { a.newRun({ seed: 7 }); a.go('title'); } }, save);
   await page.waitForFunction(() => window.__app.ui.regions.length > 0 && window.__app.stats.frames > 2);
   const settle = (ms = 250) => page.waitForTimeout(ms);
   const ev = (fn, arg) => page.evaluate(fn, arg);

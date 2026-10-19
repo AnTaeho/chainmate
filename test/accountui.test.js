@@ -29,7 +29,7 @@ async function device(api, { lang = 'ko', width = 1280, height = 720 } = {}) {
   d.window.fetch = (url, init) => (String(url).startsWith('/api/') ? api.fetch(url, init) : Promise.resolve({ ok: true, status: 200 }));
   // 구역의 onClick을 곧바로 부르니(입력 길의 invalidate를 거치지 않는다) 프레임마다 그린다
   const app = await boot({ window: d.window, document: d.document, today: () => DATE, rankBase: '', alwaysDraw: true });
-  app.records.kingDone = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
+  app.records.tutorialAsked = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
   const events = [];
   const track = app.track;
   app.track = (name, props, o) => { events.push([name, props]); return track(name, props, o); };
@@ -280,7 +280,7 @@ test('계정 흐름: A 만들기 → B 들어오기(같은 이름 · 기록을 �
     B.click('acct:yes'); await settle(); B.frame(2);
     assert.deepEqual([B.app.screen.in(), B.app.screen.msg.text], [false, '로그아웃했어요']);
     assert.notEqual(B.key(), keyIn);
-    assert.deepEqual([B.app.records.runs, B.app.records.bestAnte, B.app.records.codex.maxims, B.app.records.kingDone], [0, 0, {}, true], '기기의 기록이 비었고 본 안내는 남았다');
+    assert.deepEqual([B.app.records.runs, B.app.records.bestAnte, B.app.records.codex.maxims, B.app.records.tutorialAsked], [0, 0, {}, true], '기기의 기록이 비었고 본 안내는 남았다');
     assert.deepEqual([B.store.get(KEYS.run), B.store.get(KEYS.runs), JSON.parse(B.store.get(KEYS.records)).runs, JSON.parse(B.store.get(CLOUD_KEY)).rev], [undefined, undefined, 0, 0]);
     assert.notEqual(B.app.rank.player().name, undefined);
     assert.deepEqual(B.app.rank.account(), { username: null, devices: 1 });

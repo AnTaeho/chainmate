@@ -334,7 +334,7 @@ async function liveApp({ host = HOST, webdriver = false, storage = null } = {}) 
   w.navigator = { sendBeacon: (url, body) => { tel.push(...JSON.parse(body).batch); return true; }, webdriver, userAgent: 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36' };
   w.setTimeout = () => 0; w.clearTimeout = () => {};
   const app = await boot({ window: w, document: d.document, today: () => DATE });
-  app.records.kingDone = true; app.records.runs = 1;
+  app.records.tutorialAsked = true; app.records.runs = 1;
   tick(app);
   const events = () => { d.emit('pagehide'); return tel; };
   return { app, api, d, events };

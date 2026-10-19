@@ -6,7 +6,7 @@
 import { PAL } from '../../render/palette.js';
 import { W, text, box, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
-import { setLang } from '../lang.js';
+import { setLang, getLang } from '../lang.js';
 import { PAD_BOX, GAP_GROUP, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { diceIcon } from '../../render/dice.js';
@@ -29,6 +29,9 @@ export const linkShown = (app) => !!app.rank.allowed && !app.run;
 export const LINK_LABEL = '계정';
 export const linkW = () => measure(LINK_LABEL, true) + 16;
 
+// 설정 상자의 가장 작은 폭(말마다): 큰 글자 · 언어 줄 오른쪽 반의 이름 + 다시 짓기, 움직임 줄이기 줄 오른쪽의 기록 보내기가 든다
+export const SET_W = { ko: 353, en: 400 };
+
 export class SettingsScreen {
   constructor(app, { back = null } = {}) { this.app = app; this.back = back; }
   // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
@@ -39,9 +42,9 @@ export class SettingsScreen {
     const RH = 18, f = flow(PAD_BOX), ty = f.line(true);
     const rowTops = Array.from({ length: 8 }, () => f.gap(GAP_GROUP).space(RH));
     const btnTop = f.gap(GAP_GROUP).space(18);
-    // 맨 아래 단추 넷(글에 맞춘 폭, 글과 테 사이 2 이상 — 영어 「Replay with the King」 · 「Export runs」)
-    const lw = Math.max(64, measure('튜토리얼', true) + 8), kw = Math.max(96, measure('첫 대국 다시', true) + 8), ew = Math.max(72, measure('기록 내보내기', true) + 8), bw = 72;
-    const w = Math.max(240, lw + kw + ew + bw + 8 * 3 + PAD_BOX * 2), h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
+    // 맨 아래 단추 셋(글에 맞춘 폭, 글과 테 사이 2 이상 — 영어 「Export runs」). 상자 폭은 이름 줄 · 기록 보내기 줄이 쓰는 폭(SET_W) 이상
+    const lw = Math.max(64, measure('튜토리얼', true) + 8), ew = Math.max(72, measure('기록 내보내기', true) + 8), bw = 72;
+    const w = Math.max(SET_W[getLang()], lw + ew + bw + 8 * 2 + PAD_BOX * 2), h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
     openBox('panel', x, y, w, h, PAD_BOX, { name: '설정' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
     // 기록 보내기를 가리키면 제목 자리에 무엇을 보내는지 한 줄(상자가 화면에 꽉 차 말풍선을 띄울 자리가 없다)
@@ -105,12 +108,10 @@ export class SettingsScreen {
     const tel = s.telemetry !== false;
     text(ctx, '플레이 기록 전송', x + w - PAD_BOX - rbw - 6, textY(yy, RH), PAL.ink, { align: 'right' });
     button(ctx, ui, 'set:telemetry', x + w - PAD_BOX - rbw, yy, rbw, 18, tel ? '켬' : '끔', { onClick: () => app.setTelemetry(!tel), tone: tel ? 'gold' : 'plain', grow: G });
-    const bx0 = Math.floor(W / 2 - (lw + kw + ew + bw + 24) / 2), by = y + btnTop;
+    const bx0 = Math.floor(W / 2 - (lw + ew + bw + 16) / 2), by = y + btnTop;
     button(ctx, ui, 'set:lessons', bx0, by, lw, 18, '튜토리얼', { onClick: () => { app.closeOverlay(); app.guide = null; if (app.run && app.run.scratch) app.run = null; app.fx.clear(); app.go('lessons'); }, grow: G });
-    const again = !!app.records.kingAgain;
-    button(ctx, ui, 'set:king', bx0 + lw + 8, by, kw, 18, '첫 대국 다시', { tone: again ? 'gold' : 'plain', onClick: () => { app.records.kingAgain = !again; app.saveRecords(); if (!again) app.toast('다음 새 판을 킹과 함께 시작해요', PAL.gold); }, grow: G });
-    button(ctx, ui, 'set:export', bx0 + lw + kw + 16, by, ew, 18, '기록 내보내기', { onClick: () => app.exportRuns(), grow: G });
-    button(ctx, ui, 'set:back', bx0 + lw + kw + ew + 24, by, bw, 18, '뒤로', { onClick: () => this.close(), grow: G });
+    button(ctx, ui, 'set:export', bx0 + lw + 8, by, ew, 18, '기록 내보내기', { onClick: () => app.exportRuns(), grow: G });
+    button(ctx, ui, 'set:back', bx0 + lw + ew + 16, by, bw, 18, '뒤로', { onClick: () => this.close(), grow: G });
     closeBox();
   }
   // 이름 다시 짓기: 서버가 새 이름을 뽑는다. 닿지 못하면 한 줄 알림

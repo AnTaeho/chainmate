@@ -154,7 +154,7 @@ async function bootApp(lang = 'ko') {
   const d = makeFakeDom();
   if (lang !== 'ko') d.window.localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang }));
   const app = await boot({ window: d.window, document: d.document, today: () => '2026-10-09', rankBase: '' });
-  app.records.kingDone = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
+  app.records.tutorialAsked = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
   const settle = async () => { for (let i = 0; i < 6; i++) await new Promise((r) => setImmediate(r)); };
   const frame = () => { const { LOG, checkLayout } = M.log; LOG.on = true; try { app.frame((app.last || 0) + 16); return { bad: checkLayout().map((q) => q.msg), boxes: LOG.boxes.slice() }; } finally { LOG.on = false; } };
   const has = (id) => app.ui.regions.some((r) => r.id === id);
