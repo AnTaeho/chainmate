@@ -15,7 +15,7 @@ import { SOUL_BY_ID } from '../data/souls.js';
 import { chartForm } from '../data/pieces.js';
 
 // 그림 칸 바탕과 윗줄 한 줄 빛
-export const CELL = { bg: '#1b2b27', top: '#2a3a33' };
+export const CELL = { bg: PAL.felt, top: PAL.fogHi };
 // 기보 = 「이 모습일 때」: 네 귀 꺾쇠
 export const CHART_TICK = '#8fd3c6';
 
@@ -54,13 +54,13 @@ export function soulEmblem(ctx, id, x, y, t = 0, { sq = true } = {}) {
   for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 6), Math.round(cy + Math.sin(q) * 6), 2, 2, s.col); }
   // 가운데 문양(5×5): 혼이 열여섯이 되어 빛깔만으로는 갈리지 않는다(밤샘 2)
   const g = SOUL_GLYPH[id];
-  if (g) { rect(ctx, cx - 3, cy - 3, 7, 7, '#1b2b27'); g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, cx - 2 + i, cy - 2 + j, 1, 1, PAL.white); }); }
+  if (g) { rect(ctx, cx - 3, cy - 3, 7, 7, PAL.felt); g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, cx - 2 + i, cy - 2 + j, 1, 1, PAL.white); }); }
   else rect(ctx, cx - 1, cy - 1, 3, 3, PAL.white);
 }
 // 작은 혼 표(9×9): 혼 빛깔 바탕에 가운데 문양(도감 칸처럼 좁은 곳)
 export function soulGlyph(ctx, id, x, y) {
   const s = SOUL_BY_ID[id];
-  rect(ctx, x, y, 9, 9, '#1b2b27');
+  rect(ctx, x, y, 9, 9, PAL.felt);
   frame(ctx, x, y, 9, 9, s.col);
   const g = SOUL_GLYPH[id];
   if (g) g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, x + 2 + i, y + 2 + j, 1, 1, PAL.white); });
@@ -118,7 +118,7 @@ const AWAKEN_COL = { D: PAL.goldDk, g: PAL.gold, h: PAL.goldHi, k: CELL.bg };
 // 도박의 도는 빛깔: 한 바퀴를 스물넷으로 끊는다(구운 칸을 그만큼만 둔다)
 const gambleHue = (t) => { if (t) live(); return (Math.floor((t * 200) / 15) * 15) % 360; };
 const gambleCols = (id, hue) => (id === 'roulette'
-  ? { R: '#efbd55', A: `hsl(${hue},70%,62%)`, B: '#0f1a17', H: '#fff1b8', n: '#fff8e8' }
+  ? { R: '#efbd55', A: `hsl(${hue},70%,62%)`, B: PAL.deep, H: '#fff1b8', n: '#fff8e8' }
   : { c: '#b07a44', o: '#bfe0e6', h: '#ffffff', l: `hsl(${hue},70%,62%)` });
 // 혼: 굵은 고리(지름 16) + 안쪽 흐린 기운 + 가운데 문양(14×14 반 칸). R 고리 · a b 기운 · k 칸 바탕 · # 문양
 const SOUL_ROWS = new Map();

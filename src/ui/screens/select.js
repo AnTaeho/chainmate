@@ -259,7 +259,7 @@ export class SelectScreen {
       const edge = cur ? (master ? PAL.red : PAL.gold) : PAL.frameDk;
       if (cur) frame(ctx, x - 1, y - 1, w + 2, h + 2, edge);
       openBox('card', x, y, w, h, PAD_CARD, { name: `대국 카드 ${i}` });
-      box(ctx, x, y, w, h, cur ? PAL.feltDk : PAL.felt, edge);
+      box(ctx, x, y, w, h, cur ? PAL.feltDk : PAL.well, edge);
       const ink = cur ? PAL.ink : PAL.dim;
       const P = PAD_CARD;
       fitText(ctx, KIND_NAME[info.kind], x + P, y + lay.kind, w - P * 2, master ? PAL.red : cur ? PAL.gold : PAL.dim);
@@ -281,7 +281,7 @@ export class SelectScreen {
       if (master) {
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)
         if (!pv) ui.region(`select:card:${i}`, x, y, w, h, { keys: [lay.m.text] });
-        box(ctx, x + P, y + lay.portrait, PORTRAIT, PORTRAIT, PAL.felt, cur ? PAL.red : PAL.frameDk);
+        box(ctx, x + P, y + lay.portrait, PORTRAIT, PORTRAIT, PAL.well, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + P + 2, y + lay.portrait + 2, 1, cur ? 1 : 0.6);
         for (const [l, ly] of lay.names) text(ctx, l, x + P + lay.nameX, y + ly, PAL.red, { bold: lay.nameBold });
         for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, ink, { termCol: PAL.gold });

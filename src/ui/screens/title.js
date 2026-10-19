@@ -158,7 +158,7 @@ export class TitleScreen {
     if (!this.noteOn()) return;
     const { x, w, textX, link } = noteLayout();
     openBox('edge', x, NOTE_Y, w, NOTE_H, 0, { name: '기록 알림' });
-    ctx.globalAlpha = 0.7; rect(ctx, x, NOTE_Y, w, NOTE_H, '#081012'); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.7; rect(ctx, x, NOTE_Y, w, NOTE_H, PAL.deep); ctx.globalAlpha = 1;
     text(ctx, TELEMETRY_NOTE, textX, inkY(NOTE_Y, NOTE_H), PAL.ink);
     text(ctx, NOTE_LINK, link.x + 4, inkY(NOTE_Y, NOTE_H), PAL.gold, { bold: true });
     closeBox();
@@ -183,13 +183,14 @@ export class TitleScreen {
     const hx = W / 2 - HERO.w / 2, up = Math.round(Math.max(0, Math.sin(app.time * 3))) - pressed(hid);
     const hy = HERO.y - up;
     ui.region(hid, hx - 4, HERO.y - 5, HERO.w + 8, ROW.y - (HERO.y - 5), { onClick: hfn });
-    rect(ctx, hx + 2, HERO.y + 3, HERO.w, HERO.h, 'rgba(0,0,0,0.45)');
-    if (this.sel === 0) frame(ctx, hx - 2, hy - 2, HERO.w + 4, HERO.h + 4, PAL.goldHi);
+    // 틀 문법(layout.md 27절): 금빛 바탕 + 짙은 테 2 + 단색 그림자(숨 쉬어도 그림자는 바닥에), 고르면 바깥 크림 테
+    rect(ctx, hx + 3, HERO.y + 3, HERO.w, HERO.h, PAL.drop);
+    if (this.sel === 0) frame(ctx, hx - 2, hy - 2, HERO.w + 4, HERO.h + 4, PAL.edge);
     openBox('edge', hx, hy, HERO.w, HERO.h, 0, { name: '첫 화면 단추' });
-    rect(ctx, hx, hy, HERO.w, HERO.h, PAL.gold);
-    rect(ctx, hx, hy, HERO.w, 2, PAL.goldHi);
-    rect(ctx, hx, hy + HERO.h - 3, HERO.w, 3, '#6b4410');
-    text(ctx, hlabel, W / 2, hy + 6, PAL.linkInk, { align: 'center', bold: true });
+    rect(ctx, hx, hy, HERO.w, HERO.h, PAL.frameDk);
+    rect(ctx, hx + 2, hy + 2, HERO.w - 4, HERO.h - 4, PAL.gold);
+    rect(ctx, hx + 2, hy + 2, HERO.w - 4, 1, PAL.goldHi);
+    text(ctx, hlabel, W / 2, inkY(hy, HERO.h), PAL.linkInk, { align: 'center', bold: true });
     closeBox();
     // 아이콘 줄: 같은 폭 칸, 칸마다 어두운 상자 + 도트 아이콘 + 이름(넘치면 낱말 단위 두 줄). 고른 칸은 한 칸 들리고 금빛 테
     const row = items.slice(1), n = row.length, CW = rowCw(n), x0 = Math.round(W / 2 - (n * CW) / 2);
@@ -201,10 +202,11 @@ export class TitleScreen {
       openBox('tile', rx, ROW.y, rw, rh, 0, { name: id });
       const lift = (on ? 1 : 0) - pressed(id);
       const bx = cx - ROW.box / 2, by = ROW.y + 2 - lift;
-      ctx.globalAlpha = 0.85; rect(ctx, bx, by, ROW.box, ROW.boxH, '#081012'); ctx.globalAlpha = 1;
-      if (on) frame(ctx, bx - 1, by - 1, ROW.box + 2, ROW.boxH + 2, PAL.gold);
-      // 기록 알림이 떠 있는 동안 설정 칸에 금빛 테가 깜박인다
-      else if (id === 'title:settings' && this.noteOn() && (app.reducedMotion || Math.floor(app.time * 2) % 2 === 0)) frame(ctx, bx - 1, by - 1, ROW.box + 2, ROW.boxH + 2, PAL.goldHi);
+      // 아이콘 칸: 상자 면 + 테 1(고르면 금빛) + 그림자 2. 기록 알림이 떠 있는 동안 설정 칸에 금빛 테가 깜박인다
+      const blink = id === 'title:settings' && this.noteOn() && (app.reducedMotion || Math.floor(app.time * 2) % 2 === 0);
+      rect(ctx, bx + 1, by + 1, ROW.box, ROW.boxH, PAL.drop);
+      rect(ctx, bx - 1, by - 1, ROW.box + 2, ROW.boxH + 2, on ? PAL.gold : blink ? PAL.goldHi : PAL.edge);
+      rect(ctx, bx, by, ROW.box, ROW.boxH, PAL.feltDk);
       drawIcon(ctx, ICON[id], cx - 6, by + 2);
       // 일곱 칸(폭 68)은 구역 폭을 다 쓴다 — 「오늘의 대국」(63)이 한 줄에 들어간다
       const lines = wrap(label, n > 6 ? rw : rw - 2);

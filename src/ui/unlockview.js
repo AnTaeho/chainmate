@@ -56,7 +56,7 @@ export const nextLine = (st) => (st.left > 0 ? `다음 해금까지 관 ${st.lef
 export const BAR_H = 4;
 export function progressBar(ctx, x, y, w, p) {
   frame(ctx, x - 1, y - 1, w + 2, BAR_H + 2, PAL.frameDk);
-  rect(ctx, x, y, w, BAR_H, '#0f1a17');
+  rect(ctx, x, y, w, BAR_H, PAL.deep);
   const fw = Math.max(0, Math.min(w, Math.round(w * p)));
   if (fw) { rect(ctx, x, y, fw, BAR_H, PAL.gold); rect(ctx, x, y, fw, 1, PAL.goldHi); }
 }
@@ -90,15 +90,15 @@ export function bundleCard(ctx, b, x, y, w, h, t = 0, ui = null) {
 export const BACK_W = 84, BACK_H = 96;
 export function backCard(ctx, kind, x, y, w, h, { next = false } = {}) {
   openBox('card', x, y, w, h, PAD_CARD, { name: `뒷면 ${kind}` });
-  box(ctx, x, y, w, h, '#22332e', next ? PAL.gold : PAL.frameDk);
-  frame(ctx, x + 2, y + 2, w - 4, h - 4, next ? PAL.goldDk : '#2f443d');
-  for (let j = y + 6; j < y + h - 6; j += 6) for (let i = x + 6 + ((j - y) % 12 ? 3 : 0); i < x + w - 6; i += 6) rect(ctx, i, j, 1, 1, '#2f443d');
+  box(ctx, x, y, w, h, PAL.well, next ? PAL.gold : PAL.frameDk);
+  frame(ctx, x + 2, y + 2, w - 4, h - 4, next ? PAL.goldDk : PAL.fogHi);
+  for (let j = y + 6; j < y + h - 6; j += 6) for (let i = x + 6 + ((j - y) % 12 ? 3 : 0); i < x + w - 6; i += 6) rect(ctx, i, j, 1, 1, PAL.fogHi);
   const gy = y + Math.floor((h - TAB - GAP_IN - LINE) / 2), gx = x + Math.floor((w - TAB) / 2);
-  rect(ctx, gx - 3, gy - 3, TAB + 6, TAB + GAP_IN + LINE + 6, '#22332e');
+  rect(ctx, gx - 3, gy - 3, TAB + 6, TAB + GAP_IN + LINE + 6, PAL.well);
   rect(ctx, gx, gy, TAB, TAB, KIND[kind].bg);
   kindGlyph(ctx, kind, gx, gy, TAB, TAB);
   const lw = measure(KIND_LABEL[kind]);
-  rect(ctx, x + Math.floor((w - lw) / 2) - 3, gy + TAB, lw + 6, GAP_IN + LINE + 3, '#22332e');
+  rect(ctx, x + Math.floor((w - lw) / 2) - 3, gy + TAB, lw + 6, GAP_IN + LINE + 3, PAL.well);
   text(ctx, KIND_LABEL[kind], x + Math.floor(w / 2), gy + TAB + GAP_IN + 1, PAL.dim, { align: 'center' });
   closeBox();
 }
@@ -108,7 +108,7 @@ export const MINI = { w: 20, h: 22 };
 // 열렸으면 그 물건의 그림, 잠겼으면 흐린 종류 그림
 export function miniArt(ctx, b, x, y, open) {
   if (!open) {
-    rect(ctx, x, y, MINI.w, MINI.h, '#16221f'); frame(ctx, x, y, MINI.w, MINI.h, '#26362f');
+    rect(ctx, x, y, MINI.w, MINI.h, PAL.well); frame(ctx, x, y, MINI.w, MINI.h, PAL.fogHi);
     kindGlyph(ctx, b.kind, x, y, MINI.w, MINI.h, '#5f7168');
     return;
   }

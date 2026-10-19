@@ -1,5 +1,5 @@
 // 세력 여덟(docs/design-notes/factions.md): 관 하나가 한 세력의 땅이다. 그 관의 세 대국(연습 · 정식 · 명인)이 모두 그 세력과 둔다.
-// 세력마다 네 가지가 다르다.
+// 세력마다 네 가지가 다르다(그리고 모습 look: 상자 면 · 판 어두운 칸 · 흐르는 얼룩 두 빛깔 — 판 안 화면이 이 빛깔로 바뀐다, layout.md 27절).
 //   주력 적  mix     관별 적 무게(setup.js enemyWeights)에 곱하는 수. fairy 키는 이형 전부에 곱한다
 //   고유 적  unique  1관부터 조금씩 섞이는 이형(무게는 관마다 는다, setup.js UNIQUE)
 //   버릇     habit   그 관의 모든 대국에 붙는 규칙 하나. 조정자 `faction:<id>`(kind faction)가 대국 규칙 깃발을 세운다
@@ -29,48 +29,56 @@ const ANY_FAIRY = { Z: 0.08, L: 0.3, O: 0.3, S: 0.3, W: 0.15, T: 0.3, E: 0.45, V
 
 faction('peasants', {
   name: '농민군', crest: 'sickle', hue: '#8fae4a',
+  look: { face: '#244c2e', dark: '#7ba385', flow: ['#297a3d', '#26644c'] },
   mix: { P: 1.3, N: 1.1, B: 0.5, R: 0.4, Q: 0.4 }, unique: { S: 1 },
   habit: { text: '적 폰이 옆 칸도 지킨다', apply(r) { r.pawnSides = true; } },
   boss: 'heavy_hand',
 });
 faction('cavalry', {
   name: '기병대', crest: 'horseshoe', hue: '#c07a3a',
+  look: { face: '#502b4e', dark: '#a37ba2', flow: ['#7a2978', '#64264b'] },
   mix: { P: 0.9, N: 2.8, B: 0.6, R: 0.6, Q: 0.6 }, unique: { L: 1.6 },
   habit: { text: '증원으로 나이트와 낙타만 온다', apply(r) { r.reinforceMix = { N: 4, L: 2 }; } },
   boss: 'mirror',
 });
 faction('abbey', {
   name: '수도원', crest: 'lantern', hue: '#d8c070',
+  look: { face: '#352852', dark: '#877ba3', flow: ['#41297a', '#4f2664'] },
   mix: { P: 0.8, N: 0.6, B: 3.5, R: 0.6, Q: 0.8 }, unique: { E: 1.5 },
   habit: { text: '대국마다 돌기둥 셋~다섯이 길을 막는다', apply(r) { r.walls = [3, 5]; } },
   boss: 'silence',
 });
 faction('fortress', {
   name: '성채', crest: 'tower', hue: '#9aa4b0',
+  look: { face: '#333347', dark: '#84849a', flow: ['#3a4170', '#2e2f52'] },
   mix: { P: 0.8, N: 0.6, B: 0.6, R: 1.8, Q: 0.5 }, unique: { T: 0.5, O: 1 },
   habit: { text: '성벽 한 줄이 판을 가른다 · 문은 하나', apply(r) { r.wallRow = { ranks: [3] }; } },
   boss: 'iron_wall',
 });
 faction('hunters', {
   name: '숲 사냥꾼', crest: 'bow', hue: '#4f9a5a',
+  look: { face: '#204b3b', dark: '#7ba394', flow: ['#297a5c', '#266464'] },
   mix: { P: 0.5, N: 1.2, B: 0.6, R: 0.5, Q: 0.5 }, unique: { S: 6, D: 1 },
   habit: { text: '위 두 줄은 숲이라 놓을 수 없다 · 갈 수 있는 칸만 보인다', apply(r) { r.fog = Math.max(r.fog || 0, 2); } },
   boss: 'fog',
 });
 faction('heralds', {
   name: '전령단', crest: 'horn', hue: '#5a8ec8',
+  look: { face: '#233357', dark: '#7886a5', flow: ['#29417a', '#2a2664'] },
   mix: { P: 0.4, N: 0.8, B: 1, R: 0.4, Q: 0.3 }, unique: { E: 4, V: 2 },
   habit: { text: '증원 +1 · 두 수 앞까지 보인다', apply(r) { r.reinforceBonus = (r.reinforceBonus || 0) + 1; r.lookahead = Math.max(r.lookahead || 1, 2); } },
   boss: 'hourglass',
 });
 faction('mercs', {
   name: '용병단', crest: 'coin', hue: '#e0b040',
+  look: { face: '#442a51', dark: '#967ba3', flow: ['#5f297a', '#642662'] },
   mix: { P: 0.8, fairy: 2 }, unique: ANY_FAIRY,
   habit: { text: '적 특성이 두 배 자주 붙는다', apply(r) { r.traitMult = 2; r.traitFrom = 2; } },
   boss: 'grudge',
 });
 faction('royal', {
   name: '왕궁 근위', crest: 'crown', hue: '#b04a6a',
+  look: { face: '#522840', dark: '#a37b91', flow: ['#7a2957', '#642662'] },
   mix: { P: 1.3, N: 0.6, B: 0.6, R: 0.9, Q: 1.7 }, unique: { Z: 0.3, T: 0.6 },
   habit: { text: '킹을 지키는 적 +1', apply(r) { r.guardsBonus = (r.guardsBonus || 0) + 1; } },
   boss: 'grandmaster',

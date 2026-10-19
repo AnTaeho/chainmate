@@ -58,14 +58,15 @@ export class RewardScreen {
     const lay = this.layout();
     // 폭도 글에 맞춘다(끝없는 대국의 큰 점수 줄): 240 이상
     const scoreLine = `점수 ${num(last.score || 0)} / 목표 ${num(last.target || 0)}`;
-    const w = Math.max(240, measure(scoreLine) + PAD_BOX * 2 + 8), h = lay.h, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2), P = PAD_BOX;
+    // 넘친 목표 도장(제목 옆)이 있으면 가운데 제목과 4 띄울 만큼 넓힌다(영어 「Match Won」)
+    const title = last.reason === 'mate' ? '체크메이트 승리' : '대국 승리', stamp = last.overflow >= 2 ? `목표 ×${last.overflow}` : null;
+    const sw = stamp ? measure(stamp, true) + 8 : 0;
+    const w = Math.max(240, measure(scoreLine) + PAD_BOX * 2 + 8, stamp ? measure(title, true) * 2 + (sw + PAD_BOX + 4) * 2 : 0), h = lay.h, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2), P = PAD_BOX;
     openBox('panel', x, y, w, h, P, { name: '보상' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
-    text(ctx, last.reason === 'mate' ? '체크메이트 승리' : '대국 승리', W / 2, y + lay.title, PAL.gold, { align: 'center', bold: true, scale: 2 });
-    // 넘친 목표는 제목 옆 도장으로
-    if (last.overflow >= 2) {
-      const col = last.overflow >= 5 ? PAL.red : PAL.gold, s = `목표 ×${last.overflow}`;
-      const sw = measure(s, true) + 8;
+    text(ctx, title, W / 2, y + lay.title, PAL.gold, { align: 'center', bold: true, scale: 2 });
+    if (stamp) {
+      const col = last.overflow >= 5 ? PAL.red : PAL.gold, s = stamp;
       openBox('edge', x + w - sw - P, y + P + 6, sw, BTN_S, 1, { name: '넘친 목표' });
       box(ctx, x + w - sw - P, y + P + 6, sw, BTN_S, PAL.feltDk, col);
       text(ctx, s, x + w - P - sw / 2, inkY(y + P + 6, BTN_S), col, { align: 'center', bold: true });

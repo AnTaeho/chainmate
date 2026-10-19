@@ -78,7 +78,7 @@ export class DraftScreen {
       ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
       const hov = ui.isHover(uid) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
-      if (p < 0.5) { box(ctx, xx, y, nw, CH, '#2a3a33', PAL.frameDk); if (nw > 30) rect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, TIER_COL[j.tier]); return; }
+      if (p < 0.5) { box(ctx, xx, y, nw, CH, PAL.fogHi, PAL.frameDk); if (nw > 30) rect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, TIER_COL[j.tier]); return; }
       if (j.tier === 'rainbow') motion();
       const col = j.tier === 'rainbow' ? `hsl(${Math.floor(time * 120 + i * 60) % 360},70%,70%)` : TIER_COL[j.tier];
       const picked = this.chosen && this.chosen.i === i;

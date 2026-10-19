@@ -1,7 +1,7 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { richText } from './glossary.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, frame, dots, sprite, measure, digits, place } from '../render/gfx.js';
+import { box, rect, text, frame, dots, sprite, measure, digits, place, edgeW, slot } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf, hiFor } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
@@ -16,7 +16,7 @@ import { CHARTS, chartText } from '../data/charts.js';
 import { PIECE_NAME, PIECE_MOVE, FRAG_SOURCE } from './words.js';
 import { wrap, textGen } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
-import { shade, glow, flicker } from '../render/light.js';
+import { shade, glow, flicker, unshaded } from '../render/light.js';
 import { live } from '../render/look.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
@@ -29,13 +29,15 @@ export { maximArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, S
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
 // 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
 export function cardBase(ctx, x, y, w, h, { fill = PAL.card, hover = false, edge = null, double = false, ticks = false, line = PAL.frameDk } = {}) {
+  // 틀 문법(layout.md 27절): 테 t(큰 카드 2 · 작은 칸 1) 안쪽 윗변 한 줄 빛이 카드를 들어 보이게 한다
+  const t = edgeW(w, h);
   shade(ctx, x, y, w, h);
   box(ctx, x, y, w, h, fill, hover ? PAL.gold : line);
-  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
+  rect(ctx, x + t, y + t, w - 2 * t, 1, PAL.cardHi);
   if (edge) {
-    frame(ctx, x + 1, y + 1, w - 2, h - 2, edge);
-    if (double) frame(ctx, x + 2, y + 2, w - 4, h - 4, edge);
-    if (ticks) cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, edge, 3);
+    frame(ctx, x + t, y + t, w - 2 * t, h - 2 * t, edge);
+    if (double) frame(ctx, x + t + 1, y + t + 1, w - 2 * t - 2, h - 2 * t - 2, edge);
+    if (ticks) cornerTicks(ctx, x + t + 2, y + t + 2, w - 2 * t - 4, h - 2 * t - 4, edge, 3);
   }
 }
 
@@ -173,11 +175,13 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   openBox('card', x, y, w, h, PAD_CARD, { overlay, name: `격언 ${m.id}` });
   const fill = legendary ? '#f6d98a' : obsidian ? '#231a2c' : PAL.card;
   // 밑 그림자 · 판본 빛(칸 뒤 층, 판본 빛깔로 천천히 숨 쉰다)
-  shade(ctx, x, y, w, h, 1 + Math.min(3, lift));
+  // 격언 칸은 LIST_GAP(2)으로 잇는 목록이라 그림자를 두지 않는다(그림자 3이 틈을 메운다) — 들렸을 때만 들린 만큼
+  if (lift) shade(ctx, x, y, w, h, 1 + Math.min(3, lift));
   if (m.edition) glow(ctx, x, y, w, h, EDITION_TINT[m.edition] || PAL.goldHi, 0.32 * flicker(t, 2.2, 0.35), 4);
-  box(ctx, x, y, w, h, fill, PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, legendary ? PAL.goldHi : obsidian ? '#4a3a5c' : PAL.cardHi);
-  rect(ctx, x + 1, y + 2, 2, h - 3, RARITY[info.rarity] || PAL.dim);
+  unshaded(() => box(ctx, x, y, w, h, fill, PAL.frameDk));
+  const et = edgeW(w, h);
+  rect(ctx, x + et, y + et, w - 2 * et, 1, legendary ? PAL.goldHi : obsidian ? '#4a3a5c' : PAL.cardHi);
+  rect(ctx, x + et, y + et + 1, 2, h - 2 * et - 1, RARITY[info.rarity] || PAL.dim);
   if (legendary) {
     if (t) live();
     const k = Math.floor(t * 8) % 20;
@@ -185,7 +189,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   }
   rarityTrim(ctx, info.rarity, x, y, w, h);
   editionShine(ctx, m.edition, x, y, w, h, t);
-  if (hot) frame(ctx, x, y, w, h, PAL.gold);
+  if (hot) frame(ctx, x, y, w, h, PAL.gold, et);
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
   const P = PAD_CARD;
   // 그림은 진열 카드와 같은 그림을 작은 그림 칸(20 × 22)에(art.js maximArt — CHM-69). 좁은 칸은 그림만 가운데
@@ -202,16 +206,16 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
 
 // 등급별 테두리 무늬: 흔함 단색 · 드묾 점선 · 귀함 이중 테 · 전설 금박 모서리
 export function rarityTrim(ctx, rarity, x, y, w, h) {
-  const col = RARITY[rarity] || PAL.dim;
-  if (rarity === 'uncommon') dots(ctx, x + 1, y + 1, w - 2, h - 2, col, 2);
-  else if (rarity === 'rare') { frame(ctx, x + 1, y + 1, w - 2, h - 2, col); if (h > 10) frame(ctx, x + 3, y + 3, w - 6, h - 6, col); }
+  const col = RARITY[rarity] || PAL.dim, t = edgeW(w, h);
+  if (rarity === 'uncommon') dots(ctx, x + t, y + t, w - 2 * t, h - 2 * t, col, 2);
+  else if (rarity === 'rare') { frame(ctx, x + t, y + t, w - 2 * t, h - 2 * t, col); if (h > 10) frame(ctx, x + t + 2, y + t + 2, w - 2 * t - 4, h - 2 * t - 4, col); }
   else if (rarity === 'legendary') {
     const n = Math.min(5, Math.floor(h / 3));
     for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1], [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
       for (let k = 0; k < n; k++) { rect(ctx, cx + sx * k, cy, 1, 1, k % 2 ? PAL.goldHi : PAL.gold); rect(ctx, cx, cy + sy * k, 1, 1, k % 2 ? PAL.goldHi : PAL.gold); }
       rect(ctx, cx + sx, cy + sy, 1, 1, PAL.goldDk);
     }
-  } else frame(ctx, x, y, w, h, '#5d4a33');
+  }
 }
 
 // 격언 칸 목록(오른쪽 칸): 칸 높이는 maximCellH(내용에 맞춘 높이), 칸 사이 LIST_GAP.
@@ -235,7 +239,7 @@ export function maximColumn(ctx, ui, run, x, y, w, hTotal, { idPrefix = 'maxim',
     const xx = x + (i % cols) * (cw + gap), yy = y + Math.floor(i / cols) * (h + gap);
     const m = maxims[i];
     if (!m) {
-      dots(ctx, xx, yy, cw, h, PAL.feltHi, 3);
+      slot(ctx, xx, yy, cw, h);
       continue;
     }
     const id = `${idPrefix}:${i}`;
@@ -262,7 +266,7 @@ export function maximGrid(ctx, ui, run, x, y, cols, cw, gapX, gapY, { idPrefix =
   for (let i = 0; i < slots; i++) {
     const xx = x + (i % cols) * (cw + gapX), yy = y + Math.floor(i / cols) * (ch + gapY);
     const m = maxims[i];
-    if (!m) { dots(ctx, xx, yy, cw, ch, PAL.feltHi, 3); continue; }
+    if (!m) { slot(ctx, xx, yy, cw, ch); continue; }
     const id = `${idPrefix}:${i}`;
     ui.region(id, xx, yy, cw, ch, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null });
     maximCard(ctx, m, xx, yy, cw, ch, { hot: ui.isHover(id) || hotIndex === i, t: ui.time + i * 0.37 });
@@ -398,12 +402,10 @@ export function discardIcon(ctx, x, y, col) {
   rect(ctx, x + 6, y + 4, 1, 2, col); rect(ctx, x + 5, y - 1, 1, 3, col); rect(ctx, x + 6, y, 1, 1, col);
 }
 
-// 패널: 윗변 한 줄 빛, 아랫변 한 줄 그늘
+// 패널: 모습의 상자 면 + 크림 테 2 + 그림자(틀 문법 — layout.md 27절)
 export function panel(ctx, x, y, w, h) {
   shade(ctx, x, y, w, h);
   box(ctx, x, y, w, h, PAL.feltDk, PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, '#1f302a');
-  rect(ctx, x + 1, y + h - 2, w - 2, 1, '#0e1813');
 }
 
 export const labelW = (s) => measure(s);

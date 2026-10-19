@@ -15,7 +15,7 @@ import { accountProps } from '../telemetry.js';
 import { USERNAME_FILTER } from '../textfield.js';
 import { gainText } from './link.js';
 
-const CARD_BG = '#0e1814';
+const CARD_BG = PAL.deep;
 export const PRIVACY_URL = 'privacy.html';
 export const FIELD_H = 18, LABEL_W = 68, MSG_LINES = 2;
 // 탭 줄(기기 잇기 화면과 같이 쓴다)

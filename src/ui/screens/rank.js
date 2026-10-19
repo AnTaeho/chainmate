@@ -12,7 +12,7 @@ import { getLang } from '../lang.js';
 import { shiftDate, PAGE as PER } from '../rank.js';
 
 const en = () => getLang() === 'en';
-const MINE_BG = '#3a3014', CARD_BG = '#0e1814';
+const MINE_BG = '#3a3014', CARD_BG = PAL.deep;
 // 도달: 이겼으면 「8관 이김」, 아니면 「7관 마스터전」. 영어는 줄 폭에 맞춘 짧은 꼴(Hall 7 Master — 결과 화면의 「Master Match」보다 짧다)
 const KIND = { ko: ['연습 대국', '정식 대국', '마스터전'], en: ['Practice', 'Rated', 'Master'] };
 export const reachText = (r) => (en()

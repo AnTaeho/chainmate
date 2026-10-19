@@ -9,7 +9,8 @@ import { PIECES } from '../data/pieces.js';
 // 작은 판: 칸 PEEK.cell(테 1 둘레). 적은 종류마다 빛깔(킹 붉음 · 퀸 보라 · 룩 파랑 · 비숍 초록 · 나이트 주황 · 폰 짙은 밤 · 특수 기물 청록)
 export const PEEK = { cell: 5, big: 12 };
 export const peekSize = (cell = PEEK.cell) => cell * 8 + 2;
-const SQ = { light: '#cdb68b', dark: '#8f6743' };
+// 작은 판 칸: 대국 판과 같은 빛깔(모습을 따른다)
+const SQ = { get light() { return PAL.light; }, get dark() { return PAL.dark; } };
 export const PEEK_INK = { K: PAL.red, Q: '#b27ad6', R: '#4f86d4', B: '#4f9f5c', N: '#d98a2c', P: '#3b2c20', fairy: '#2f9f97', X: '#7a8288', J: '#9fe6ee' };
 export const peekInk = (t) => PEEK_INK[t] || (PIECES[t] && PIECES[t].fairy ? PEEK_INK.fairy : PEEK_INK.P);
 // 판 칸 → 그림 자리(흰 쪽이 아래: 0번 줄이 맨 아래)

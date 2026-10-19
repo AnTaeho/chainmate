@@ -4,8 +4,9 @@ import { sway } from '../sway.js';
 import { hint as coachHint } from '../coach.js';
 import { PAL, RARITY } from '../../render/palette.js';
 import { wrap } from '../../render/text.js';
-import { W, text, box, rect, frame, measure } from '../../render/gfx.js';
+import { W, text, box, rect, frame, measure, slot } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
+import { unshaded } from '../../render/light.js';
 import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } from '../../sim/run.js';
 import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
@@ -122,7 +123,8 @@ export function consumableCard(ctx, c, x, y, w, h, hover, { names = true } = {})
   const P = PAD_CARD, narrow = scrollNarrow(w);
   // 좁은 칸은 이름 자리가 좁아(55 − 띠) 안 여백을 테 안쪽 한 칸까지 쓴다(한글 석 자 36)
   openBox('card', x, y, w, h, narrow ? { x: 2, y: P } : P, { name: `두루마리 ${c.kind}` });
-  cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge });
+  // 두루마리 칸은 LIST_GAP으로 잇는 목록 — 그림자 없이(그림자가 칸 사이 틈을 메운다)
+  unshaded(() => cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge }));
   const name = scrollName(c);
   kindBand(ctx, c.kind, x + 1, y + 1, h - 2);
   // 혼 두루마리: 띠 오른끝(문양 옆 빈 줄)에 겹쳐 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙) — 이름과 한 칸 띄운다
@@ -388,7 +390,7 @@ export class ShopScreen {
       const cw = rl.wide ? RW : Math.floor((RW - LIST_GAP) / 2);
       const x = rl.wide ? RX : RX + (i % 2) * (cw + LIST_GAP), y = rl.scrollY + (rl.wide ? i : Math.floor(i / 2)) * (rl.ch + LIST_GAP);
       const c = run.consumables[i];
-      if (!c) { frame(ctx, x, y, cw, rl.ch, PAL.feltHi); continue; }
+      if (!c) { slot(ctx, x, y, cw, rl.ch); continue; }
       const id = `cons:${i}`;
       ui.region(id, x, y, cw, rl.ch, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c), preview: true });
       // 좁은 칸은 줄(두 칸)마다 이름 · 그림을 함께 고른다(CHM-41)

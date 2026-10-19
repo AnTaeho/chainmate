@@ -18,7 +18,7 @@ export async function boot(env = {}) {
   const canvas = doc.getElementById('screen');
   // 가짜 DOM의 getElementById는 무엇을 물어도 게임 캔버스를 준다 — 다른 것이면 쓰지 않는다
   const own = (id) => { const el = doc.getElementById(id); return el && el !== canvas ? el : null; };
-  const pad = own('pad'), stage = own('stage'), safe = own('safe');
+  const pad = own('pad'), stage = own('stage'), safe = own('safe'), crt = own('crt');
   const media = (q) => { try { return !!(win.matchMedia && win.matchMedia(q).matches); } catch { return false; } };
   const coarse = () => media('(pointer: coarse)') || (win.navigator && win.navigator.maxTouchPoints > 0 && !media('(pointer: fine)'));
 
@@ -116,6 +116,8 @@ export async function boot(env = {}) {
     }
     if (doc.body && doc.body.classList) doc.body.classList.toggle('rot', fit.rot);
     win.__fit = fit;
+    // 화면 효과의 주사선: 도트 줄마다 한 줄(도트가 2 CSS 화소보다 작으면 두 줄마다), 캔버스 윗변에 맞춘다
+    if (crt && stage) { stage.style.setProperty('--gp', `${fit.css >= 2 ? fit.css : fit.css * 2}px`); stage.style.setProperty('--gy', `${c.top}px`); }
     // 뒷면 캔버스 배율 N(빛과 움직임, src/ui/fit.js backScale). 480×270 좌표는 그대로, 움직이는 것만 1/N 칸에 선다
     if (app) app.setScale(fit.n); else pendingScale = fit.n;
     fields.layout();
@@ -297,8 +299,11 @@ export async function boot(env = {}) {
     app.key(k);
   });
 
+  let crtWas = null;
   const loop = (t) => {
     app.frame(t);
+    const on = app.crtOn();
+    if (crt && on !== crtWas && doc.body && doc.body.classList) { crtWas = on; doc.body.classList.toggle('crt', on); }
     if (pad) drawPad(pad, fit.pad, app.surround());
     win.requestAnimationFrame(loop);
   };

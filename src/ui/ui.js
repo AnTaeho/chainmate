@@ -3,11 +3,11 @@
 import { richText } from './glossary.js';
 import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
-import { box, rect, text, frame, measure, lift } from '../render/gfx.js';
+import { box, rect, text, frame, measure, lift, edgeOf } from '../render/gfx.js';
 import { familyChips, chipRows, chipBlockH, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
 import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, flow, inkY } from './frame.js';
-import { openBox, closeBox, logClip } from '../render/layoutlog.js';
+import { openBox, closeBox, logClip, LOG, logFrame } from '../render/layoutlog.js';
 
 export class UI {
   constructor() {
@@ -121,10 +121,14 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
   if (!enabled) { fill = PAL.feltDk; ink = PAL.dimDk; }
   const oy = pressed ? 1 : 0;
   openBox('edge', x, y + oy, w, h, 1, { name: `단추 ${id}` });
-  box(ctx, x, y + oy, w, h, fill, hov ? PAL.gold : PAL.frameDk);
-  // 윗변 한 줄 빛 · 아랫변 한 줄 그늘(누르면 1px 내려앉고 빛이 사라진다)
-  if (!pressed) rect(ctx, x + 1, y + 1 + oy, w - 2, 1, hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)');
-  rect(ctx, x + 1, y + h - 2 + oy, w - 2, 1, 'rgba(0,0,0,0.28)');
+  // 틀 문법(layout.md 27절): 테 1 + 아래 · 오른쪽 단색 그림자 2(누르면 1px 내려앉고 그림자가 1로), 윗변 한 줄 빛
+  const d = 2 - oy;
+  if (LOG.on) logFrame(Math.round(x), Math.round(y + oy), Math.round(w), Math.round(h));
+  rect(ctx, x + d, y + h + oy, w, d, PAL.drop);
+  rect(ctx, x + w, y + oy + d, d, h - d, PAL.drop);
+  rect(ctx, x, y + oy, w, h, hov ? PAL.gold : enabled ? edgeOf(fill) : PAL.dimDk);
+  rect(ctx, x + 1, y + 1 + oy, w - 2, h - 2, fill);
+  if (!pressed && enabled) rect(ctx, x + 1, y + 1 + oy, w - 2, 1, hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.14)');
   const tw = label ? measure(label, true) + (icon ? 10 : 0) : 7;
   let tx = x + Math.floor((w - tw) / 2);
   const ty = inkY(y, h) + oy;

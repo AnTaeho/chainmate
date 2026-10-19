@@ -5,10 +5,10 @@ import { LOOK, MOTION } from '../render/look.js';
 import { flowLayer, flowTime } from '../render/light.js';
 import { swayBegin, swaySettle } from './sway.js';
 import { factionFor } from '../sim/run.js';
-import { FACTION_BY_ID } from '../data/factions.js';
+import { FACTION_BY_ID, FACTIONS } from '../data/factions.js';
 import { createRun, applyRun, migrateRun } from '../sim/run.js';
 import { createDailyRun } from '../sim/daily.js';
-import { PAL } from '../render/palette.js';
+import { PAL, setTheme, addLook } from '../render/palette.js';
 import { W, H, text, box, rect, lift, fine, measure } from '../render/gfx.js';
 import { wrap, textGen } from '../render/text.js';
 import { LINE, BTN_S, LIST_GAP, inkY } from './frame.js';
@@ -33,6 +33,9 @@ import { coachDown, updateGuide, drawCoach, coachPlan } from './coach.js';
 import { foldSide } from './fold.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
+for (const f of FACTIONS) addLook(f.id, f.look);
+// 판 밖 화면: 판이 있어도 남색 기본 모습
+const OUTSIDE = new Set(['title', 'settings', 'setup', 'codex', 'records', 'lessons', 'lesson', 'rank', 'link', 'account', 'unlocks']);
 
 // track(name, props): 기록 보내기(CHM-63, src/ui/telemetry.js) — main.js가 넘긴다. 없으면 아무것도 보내지 않는다(Node 시험 · 도구)
 // rank: 순위(CHM-70, src/ui/rank.js createRank) — main.js가 넘긴다. 없으면 닿지 못하는 순위(한 번도 부르지 않는다)
@@ -79,15 +82,17 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (canvas.height !== H * n) canvas.height = H * n;
     app.invalidate(); // 캔버스 크기를 바꾸면 그림이 지워진다 · 손가락 구역도 다시 잰다
   };
-  // 흐르는 배경에 섞을 세력 빛깔(판이 없으면 없음)
-  let tintKey = null, tintCol = null;
+  // 모습(layout.md 27절): 판 안 화면은 그 관 세력의 모습(상자 면 · 판 어두운 칸 · 흐르는 얼룩), 판 밖 화면 · 수업 · scratch 판은 남색 기본.
+  // 돌려주는 값은 세력 id(없으면 null) — 흐르는 배경 · 여백 판이 이 id로 얼룩 빛깔을 찾는다(palette.js lookOf)
+  let tintKey = null, tintId = null;
   app.tint = () => {
-    const r = app.run;
-    if (!r || !r.factions || r.scratch) return null;
-    const k = `${r.seed}:${r.ante}`;
-    if (k !== tintKey) { tintKey = k; const fa = FACTION_BY_ID[factionFor(r, r.ante)]; tintCol = fa ? fa.hue : null; }
-    return tintCol;
+    const r = app.run, s = app.screen;
+    if (!r || !r.factions || r.scratch || (s && OUTSIDE.has(s.name))) return null;
+    const k = `${r.seed}:${r.ante}:${r.factions.join(',')}`;
+    if (k !== tintKey) { tintKey = k; const fa = FACTION_BY_ID[factionFor(r, r.ante)]; tintId = fa ? fa.id : null; }
+    return tintId;
   };
+  app.applyTheme = () => { setTheme(app.tint()); };
   // 여백 판(main.js · src/render/backdrop.js)이 칠할 것: 화면이 제 장면을 그리면 그 장면(surroundScene — 창 전체로 이어 그린다), 아니면 펠트 · 흐름.
   // flash: 화면 전체 번쩍임(전설 · 상자, surroundFlash). dim: 덮개(0.72) · 따라 하는 길(0.45)이 화면을 어둡게 한 만큼
   app.coachDim = 0;
@@ -95,6 +100,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const s = app.screen;
     return { time: app.time, tint: app.tint(), scene: s && s.surroundScene ? s.surroundScene() : null, flash: s && s.surroundFlash ? s.surroundFlash() : null, dim: app.overlay ? 0.72 : app.coachDim || 0 };
   };
+  // 화면 효과(주사선 · 가장자리 어둡기, main.js가 CSS로 얹는다): 설정 「화면 효과」, 움직임 줄이기면 끈다
+  app.crtOn = () => app.settings.crt !== false && !app.reducedMotion;
   app.speed = () => app.settings.speed || 1;
   app.records = loadRecords(store);
   setLang(app.settings.lang);
@@ -433,6 +440,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     logBegin();
     ctx.setTransform(app.scale, 0, 0, app.scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
+    app.applyTheme();
     ctx.save();
     if (app.shakeAmt > 0) {
       const a = Math.round(app.shakeAmt * Math.min(1, app.shakeT * 6));

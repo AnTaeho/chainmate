@@ -43,7 +43,7 @@ export function moveDiagram(ctx, t, x, y, { dir = 1 } = {}) {
     const sq = r * 8 + f;
     // 판은 위가 먼 줄(rank 7): 대국 판과 같은 방향
     const cx = x + 1 + f * C, cy = y + 1 + (7 - r) * C;
-    rect(ctx, cx, cy, C, C, (r + f) % 2 ? '#2f4a41' : '#243a33');
+    rect(ctx, cx, cy, C, C, (r + f) % 2 ? PAL.diagA : PAL.diagB);
     if (sq === FROM) rect(ctx, cx, cy, C, C, PAL.gold);
     else if (blocks.has(sq)) rect(ctx, cx, cy, C, C, '#6b6454');
     if (rs.has(sq)) rect(ctx, cx + 1, cy + 1, 2, 2, blocks.has(sq) ? PAL.white : PAL.goldHi);

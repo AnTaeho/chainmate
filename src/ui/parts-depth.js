@@ -33,7 +33,7 @@ export function familyGlyph(ctx, id, x, y, col = null, scale = 1) {
 // 문양 여럿을 나란히(상점 카드 귀퉁이)
 export function familyGlyphs(ctx, ids, x, y, { dark = true } = {}) {
   ids.forEach((id, k) => {
-    if (dark) rect(ctx, x + k * 8 - 1, y - 1, 7, 7, '#1b2b27');
+    if (dark) rect(ctx, x + k * 8 - 1, y - 1, 7, 7, PAL.felt);
     familyGlyph(ctx, id, x + k * 8, y);
   });
 }
@@ -74,7 +74,7 @@ export const chipW = (id) => CHIP_PAD + 5 + 3 + measure(chipLabel(id)) + CHIP_PA
 export function familyChip(ctx, id, x, y) {
   const w = chipW(id);
   openBox('edge', x, y, w, CHIP_H, 0, { name: `칩 ${id}` });
-  rect(ctx, x, y, w, CHIP_H, '#1b2b27');
+  rect(ctx, x, y, w, CHIP_H, PAL.felt);
   familyGlyph(ctx, id, x + CHIP_PAD, y + ((CHIP_H - 5) >> 1));
   text(ctx, chipLabel(id), x + CHIP_PAD + 8, inkY(y, CHIP_H), PAL.ink);
   closeBox();
@@ -153,7 +153,7 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
     if (since < 1.2) live();
     openBox('edge', cx, cy, cw, FAM_H, 1, { name: `띠 ${f.id}` });
-    box(ctx, cx, cy, cw, FAM_H, lv ? '#132019' : PAL.feltDk, lv ? f.col : PAL.frameDk);
+    box(ctx, cx, cy, cw, FAM_H, lv ? PAL.well : PAL.feltDk, lv ? f.col : PAL.frameDk);
     if (glow > 0) {
       ctx.globalAlpha = glow * 0.6; rect(ctx, cx - 2, cy - 2, cw + 4, FAM_H + 4, f.col); ctx.globalAlpha = 1;
       frame(ctx, cx - 1 - Math.round(glow * 2), cy - 1 - Math.round(glow * 2), cw + 2 + Math.round(glow * 4), FAM_H + 2 + Math.round(glow * 4), PAL.goldHi);
@@ -187,7 +187,7 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
     const glow = since < 1.2 ? 1 - since / 1.2 : 0;
     if (since < 1.2) live();
     openBox('edge', x, yy, w, FAM_H, 1, { name: `시너지 줄 ${f.id}` });
-    box(ctx, x, yy, w, FAM_H, lv ? '#132019' : PAL.feltDk, ui.isHover(id) ? PAL.gold : lv ? f.col : PAL.frameDk);
+    box(ctx, x, yy, w, FAM_H, lv ? PAL.well : PAL.feltDk, ui.isHover(id) ? PAL.gold : lv ? f.col : PAL.frameDk);
     if (glow > 0) { ctx.globalAlpha = glow * 0.6; rect(ctx, x - 2, yy - 2, w + 4, FAM_H + 4, f.col); ctx.globalAlpha = 1; }
     familyGlyph(ctx, f.id, x + CHIP_PAD, yy + ((FAM_H - 5) >> 1), lv ? f.col : PAL.dim);
     const cnt = next ? `${n[f.id]}/${next}` : `${n[f.id]}`;
@@ -221,7 +221,7 @@ export function josekiBadges(ctx, ui, run, x, y) {
     const j = JOSEKI_BY_ID[id];
     const bx = x + k * 12;
     ui.region(`joseki:${id}`, bx, y, 11, 11, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [{ chips: j.families }] : []) });
-    box(ctx, bx, y, 11, 11, '#132019', TIER_COL[j.tier]);
+    box(ctx, bx, y, 11, 11, PAL.well, TIER_COL[j.tier]);
     if (j.families[0]) familyGlyph(ctx, j.families[0], bx + 3, y + 3, TIER_COL[j.tier]);
     else rect(ctx, bx + 4, y + 4, 3, 3, TIER_COL[j.tier]);
   });
@@ -240,6 +240,6 @@ export function traitMark(ctx, id, x, y) {
   const rows = TRAIT_GLYPH[id];
   const tr = TRAIT_BY_ID[id];
   if (!rows || !tr) return;
-  rect(ctx, x - 1, y - 1, 7, 7, '#0e1513');
+  rect(ctx, x - 1, y - 1, 7, 7, PAL.deep);
   rows.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, tr.col); });
 }

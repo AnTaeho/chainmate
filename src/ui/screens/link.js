@@ -15,7 +15,7 @@ import { accountTabs } from './account.js';
 export const CODE_LEN = 8;
 export const POLL_SEC = 5;       // 코드를 띄운 동안 이어졌는지 묻는 간격
 export const JOIN_TRIES = 3;     // 이어진 뒤 그 기기의 기록을 당겨 보는 횟수
-const CARD_BG = '#0e1814';
+const CARD_BG = PAL.deep;
 // 숫자판: 세 줄 × 네 칸(오른쪽 칸이 지우기 · 0 · 잇기)
 export const PAD_ROWS = [['1', '2', '3', 'del'], ['4', '5', '6', '0'], ['7', '8', '9', 'go']];
 

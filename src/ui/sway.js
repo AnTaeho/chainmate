@@ -27,7 +27,7 @@ export function sway(ctx, time, key, x, y, w, h, fn, { hover = false, press = fa
   if (Math.abs(s.dy - dy) < 0.01) s.dy = dy;
   else live();
   const oy = LOOK.n >= 2 ? snap(s.dy) : Math.round(s.dy);
-  if (shadow) shade(ctx, x, y, w, h, 2 + Math.max(0, Math.round(-s.dy)));
+  if (shadow) shade(ctx, x, y, w, h, 3 + Math.max(0, Math.round(-s.dy)));
   const body = (c) => (shadow ? unshaded(() => fn(c)) : fn(c));
   if (!oy) { body(ctx); return; }
   ctx.save();

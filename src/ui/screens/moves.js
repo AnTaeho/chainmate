@@ -115,7 +115,7 @@ export class MovesScreen {
   card(ctx, it, cx, cy, CW, CH) {
     const P = PAD_CARD, board = this.tab === 'board' && it.board;
     openBox('card', cx, cy, CW, CH, P, { name: `행마 ${it.t}` });
-    box(ctx, cx, cy, CW, CH, '#132019', board ? PAL.gold : PAL.frameDk);
+    box(ctx, cx, cy, CW, CH, PAL.well, board ? PAL.gold : PAL.frameDk);
     if (board) frame(ctx, cx + 1, cy + 1, CW - 2, CH - 2, PAL.goldDk);
     const dir = this.tab === 'board' && !it.hand ? -1 : 1;
     moveDiagram(ctx, it.t, cx + P, cy + P, { dir });

@@ -4,7 +4,7 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, artOf } from '../../render/gfx.js';
+import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, artOf, slot } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, hiFor, SW, SH, TONE, tierOf } from '../../render/sprites.js';
 import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws } from '../../sim/battle.js';
@@ -27,7 +27,7 @@ export const factionOfBattle = (b) => { const s = b && b.mods && b.mods.find((x)
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { sway } from '../sway.js';
-import { glow, glowText, groundShadow, flicker } from '../../render/light.js';
+import { glow, glowText, groundShadow, flicker, shade } from '../../render/light.js';
 import { live as motion, beat } from '../../render/look.js';
 import { button } from '../ui.js';
 import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel } from '../parts.js';
@@ -1362,24 +1362,12 @@ export class BattleScreen {
     }
   }
 
-  // 세력마다 판 틀 한 가지(다른 땅에 왔다는 표지): 틀 안쪽 테 한 줄이 세력 빛깔, 네 모서리 조각 자리에 작은 문장 빛
-  drawFactionFrame(ctx) {
-    const fa = factionOfBattle(this.b);
-    if (!fa) return;
-    const n = S * 8 + 12, x0 = BX - 6, y0 = BY - 6;
-    ctx.globalAlpha = 0.85;
-    frame(ctx, BX - 2, BY - 2, S * 8 + 4, S * 8 + 4, fa.hue);
-    ctx.globalAlpha = 1;
-    // 모서리 조각(5×5 꽃)을 세력 빛깔로 덧칠한다
-    const orn = ['..#..', '.#o#.', '#o#o#', '.#o#.', '..#..'];
-    for (const [ox, oy] of [[0, 0], [n - 6, 0], [0, n - 6], [n - 6, n - 6]]) orn.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === 'o') rect(ctx, x0 + ox + i, y0 + oy + j, 1, 1, fa.hue); });
-  }
-
   drawBoard(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, time = app.time;
     this.drawGoalBar(ctx);
+    // 판: 크림 테 2 + 아래 · 오른쪽 단색 그림자(틀 문법). 다른 땅에 왔다는 표지는 판 어두운 칸 · 상자 면 빛깔(세력 모습)
+    shade(ctx, BX - 2, BY - 2, S * 8 + 4, S * 8 + 4, 4);
     ctx.drawImage(boardFrameCanvas(S), BX - 6, BY - 6);
-    this.drawFactionFrame(ctx);
     // 사슬 평가의 테두리 불빛: 흰 → 금 → 붉은 금 → 무지개. 사슬이 끝나면 사그라든다
     if (this.glow) {
       motion();
@@ -1388,7 +1376,7 @@ export class BattleScreen {
       const hue = Math.floor(time * 360) % 360;
       const cols = { '★': [PAL.white], '★★': [PAL.gold, PAL.goldHi], '★★★': [PAL.red, PAL.gold, PAL.red], '∞': [`hsl(${hue},85%,60%)`, `hsl(${(hue + 90) % 360},85%,60%)`, `hsl(${(hue + 180) % 360},85%,60%)`] }[g.mark];
       ctx.globalAlpha = a;
-      cols.forEach((c, i) => frame(ctx, BX - 6 + i, BY - 6 + i, S * 8 + 12 - i * 2, S * 8 + 12 - i * 2, c, 1));
+      cols.forEach((c, i) => frame(ctx, BX - 2 - i * 2, BY - 2 - i * 2, S * 8 + 4 + i * 4, S * 8 + 4 + i * 4, c, 2));
       ctx.globalAlpha = 1;
     }
     if (this.ring) {
@@ -1582,7 +1570,7 @@ export class BattleScreen {
       // 묘수 칸(15)은 손 이름표 줄(BTN_S) 가운데
       const ty = y + ((BTN_S - 15) >> 1);
       ui.region(id, x, ty, 15, 15, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c), preview: true });
-      box(ctx, x, ty, 15, 15, '#132019', ui.isHover(id) && ok ? PAL.gold : PAL.frameDk);
+      box(ctx, x, ty, 15, 15, PAL.well, ui.isHover(id) && ok ? PAL.gold : PAL.frameDk);
       ctx.save(); ctx.translate(x + 1, ty + 2); ctx.scale(0.8, 0.8); tacticIcon(ctx, c.id, 0, 0); ctx.restore();
     });
   }
@@ -2045,8 +2033,8 @@ export class BattleScreen {
     ui.region('next', col.x, col.y, col.w, col.h, { tip: () => this.nextTip() });
     col.slots.forEach((r, k) => {
       const p = next[k];
-      if (!p) { dots(ctx, r.x, r.y, r.w, r.h, PAL.frameDk); return; }
-      box(ctx, r.x, r.y, r.w, r.h, '#132019', PAL.frameDk);
+      if (!p) { slot(ctx, r.x, r.y, r.w, r.h); return; }
+      box(ctx, r.x, r.y, r.w, r.h, PAL.well, PAL.frameDk);
       // 반 크기(sprite는 16×22 칸의 아래 가운데에 줄여 그린다): 8×11을 칸 가운데로
       sprite(ctx, p.t, 'w', r.x + 1 - 4, r.y + 2 - 11, { sx: 0.5, sy: 0.5, alpha: k === 0 ? 0.85 : 0.6, eng: p.eng ? p.eng.id : null });
     });
