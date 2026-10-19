@@ -187,7 +187,10 @@ function igniteWatch() {
   if (!s.combo && igSeen.cur) { igSeen.closed++; if (igSeen.opened > 2 && igSeen.cur.t >= 2.9) igSeen.auto++; igSeen.cur = null; }
 }
 function region(id) { return app.ui.regions.find((r) => r.id === id) || null; }
+// 마스터 등장 장면(1.5초)은 온 화면 구역이 누르기 · 가리킴을 받는다 — 다른 구역을 누르거나 가리키기 전에 끝나길 기다린다
+function introWait(id) { for (let n = 0; n < 200 && id !== 'intro' && app.screen && app.screen.intro && !app.overlay; n++) pump(1); }
 function click(id) {
+  introWait(id);
   const r = region(id);
   if (!r) throw new Error(`no region ${id} on ${app.overlay ? app.overlay.name : app.screen.name}`);
   const gx = r.x + Math.floor(r.w / 2), gy = r.y + Math.floor(r.h / 2);
@@ -216,6 +219,7 @@ function rightAt(id, toId = id) {
   dom.mouse('mouseup', ...c(b), 2); pump(1);
 }
 function hover(id) {
+  introWait(id);
   const r = region(id);
   if (!r) return false;
   dom.mouse('mousemove', r.x + Math.floor(r.w / 2), r.y + Math.floor(r.h / 2));

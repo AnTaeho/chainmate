@@ -2,7 +2,7 @@
 // 프레임마다 그리되(alwaysDraw) 그리기 판단(app.lastWant)은 그대로 셈한다. 판단이 「안 그려도 된다」였는데 캔버스가 지난 프레임과 달라진 프레임이 어김이다.
 //   node tools/drawcheck.mjs [--scale 1440x810] [--only title,shop,...]
 // 게임 루프(requestAnimationFrame)를 도구가 잡아 1/60초씩 돌리고, 프레임마다 캔버스 화소를 지난 프레임과 견준다.
-// 장면: 첫 화면(움직임 줄이기 포함) · 첫 판 대본 대국(끝까지) · 실제 대국(쉼 6초 · 손 들썩임 · 가리킴 · 놓기 · 잡기 · 긴 콤보 · 희생 · 평가 도장 ·
+// 장면: 첫 화면(움직임 줄이기 포함) · 첫 판 대본 대국(끝까지) · 실제 대국(쉼 6초 · 손 들썩임 · 가리킴 · 놓기 · 잡기 · 긴 콤보 · 희생 · 평가 도장 · 마스터 등장 · 목표 넘김 · 동전 · 색종이 ·
 //   강 · 문 · 안개 · 금빛 적 · 횃불 · 시계 깜빡임 · 움직임 줄이기) · 복기 갈림길 · 다시 두기 · 튜토리얼 수업 · 상점(가리킴 · 끌기 · 사기 · 리롤) · 팩 열기 ·
 //   레퍼토리 · 보상 · 마스터의 상자 · 각성 · 전설 · 도감 · 해금 · 설정 바꾸기 · 결과 · 알림 · 도움말 팁 · 하이라이트 · 계정 · 기기 잇기 · 순위(가짜 서버) · 창 크기.
 // 정적 파일과 /api(가짜 서버 test/helpers/fakeapi.js)는 도구가 스스로 띄운 서버(127.0.0.1:--port, 기본 8793)로 연다.
@@ -195,6 +195,23 @@ const BATTLE_OPT = (opt) => {
   }
   a.go('battle', { events: opt.banner ? ev : [] });
 };
+// 마스터 대국(관의 셋째 대국): 온 화면 등장 장면 → 마스터 띠
+const MASTER = (opt = {}) => {
+  const a = window.__app; a.overlay = null; a.nextSeed = opt.seed ?? 11; a.newRun();
+  if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
+  const r = a.run; r.ante = opt.ante ?? 2; r.blind = 2;
+  const ev = a.cmd({ type: 'play' }); a.go('battle', { events: ev });
+};
+// 목표를 낮춰 첫 사슬이 목표를 넘기게(넘김 번쩍 · 꽂히는 점수 · 동전 · 대국 승리 색종이)
+const LOW_TARGET = () => { const a = window.__app, b = a.run.battle; b.target = 40; a.screen.sync(); };
+// 상점 진열에 명경기 조각(반짝 띠)
+const SHOP_SHEEN = () => {
+  const a = window.__app; a.overlay = null; a.nextSeed = 13; a.newRun();
+  if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
+  const r = a.run; r.money = 60; r.phase = 'shop';
+  r.shop = { rng: window.__rng(), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'fragment', legend: 'immortal', part: 0, price: 4, sold: false }], packs: [{ kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
+  a.go('shop');
+};
 // 다음 수: 둔 뒤 먹을 수가 가장 많은 것(긴 콤보). sac면 희생을 먼저
 const PLAY = async ({ k, sac = false }) => {
   const a = window.__app; const { legalCommands, apply } = await import('/src/sim/battle.js'); const { cloneBattle } = await import('/src/sim/replay.js');
@@ -242,6 +259,18 @@ const PLAY = async ({ k, sac = false }) => {
     }
     await h.settle();
     await h.move(240, 200, 1); await h.step(240); // 손이 들썩이는 쉼(2.5초 뒤)
+  });
+  await scene(page, 'battle master intro (1.5s) + banner', async () => { await h.ev(MASTER); await h.move(1, 1, 1); await h.step(300); });
+  await scene(page, 'battle master intro tap skip', async () => { await h.ev(MASTER, { ante: 4 }); await h.step(20); await h.click(240, 135, 2); await h.step(200); });
+  await scene(page, 'battle overflow · slam · coins · win confetti', async () => {
+    await h.ev(BATTLE); await h.step(20); await h.ev(LOW_TARGET);
+    for (let k = 0; k < 6; k++) { await h.settle(); const r = await h.ev(PLAY, { k }); if (r === 'end') break; await h.step(2); }
+    await h.settle(); await h.step(240);
+  });
+  await scene(page, 'shop sheen (fragment card)', async () => { await h.ev(SHOP_SHEEN); await h.move(1, 1, 1); await h.step(420); await h.hoverAll(/^shop:buy/, 20); await h.step(60); });
+  await scene(page, 'result won (confetti)', async () => {
+    await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 11; a.newRun(); if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); const r = a.run; r.ante = 8; r.log.push({ ante: 8, blind: 2, kind: 'master', score: 9000, target: 6000, best: 3000 }); r.phase = 'won'; a.go('result'); });
+    await h.step(200); await h.move(1, 1, 60);
   });
   await scene(page, 'battle grade stamp · glow · ring', async () => {
     await h.ev(BATTLE); await h.step(10);
@@ -439,6 +468,7 @@ const PLAY = async ({ k, sac = false }) => {
   const page = await openPage({ reducedMotion: 'reduce' });
   const h = helpers(page);
   await scene(page, 'title idle 8s (reduced motion)', async () => { await h.step(480); });
+  await scene(page, 'battle master intro (reduced motion)', async () => { await h.ev(MASTER); await h.move(1, 1, 1); await h.step(240); });
   await scene(page, 'shop (reduced motion)', async () => { await h.ev(SHOP); await h.step(60); await h.hoverAll(/^(shop:buy|deck:)/, 8); await h.step(60); });
   await scene(page, 'battle (reduced motion)', async () => {
     await h.ev(BATTLE_OPT, { banner: true, marks: true }); await h.move(1, 1, 1); await h.step(240);
