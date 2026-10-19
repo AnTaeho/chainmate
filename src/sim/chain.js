@@ -102,7 +102,7 @@ export function chainCaptures(t) {
       if (s >= 0 && s !== c.sq && takeableAt(t, s, c.sq, bo, c.form) && !list.includes(s)) list.push(s);
     }
   }
-  // 외통 실험 A: 이 사슬에서 킹을 지키던 적을 guardLimit보다 많이 잡았으면 킹은 못 잡는다
+  // 외통 조건: 이 콤보에서 킹을 지키던 적을 guardLimit보다 많이 잡았으면 킹은 못 잡는다(폭약 · 화약병 · 순교자로 터진 적은 세지 않는다)
   if (c.guardsTaken > MATE.guardLimit && !bo.openKings) list = list.filter((s) => t.board[s].t !== 'K');
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
   if (list.length && ((t.mods && t.mods.length) || c.engraving || c.soul)) {
@@ -111,7 +111,7 @@ export function chainCaptures(t) {
   return list;
 }
 
-// 외통 실험 A: s의 적이 지금 어느 적 킹을 지키나(킹 칸의 노림수 목록에 드나)
+// 외통 조건: s의 적이 지금 어느 적 킹을 지키나(킹 칸의 노림수 목록에 드나)
 function guardsKing(t, s) {
   const bo = boardOpts(t);
   for (let k = 0; k < 64; k++) { const x = t.board[k]; if (x && isEnemy(x) && x.t === 'K' && attackers(t.board, k, bo).includes(s)) return true; }
