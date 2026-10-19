@@ -954,7 +954,7 @@ export class BattleScreen {
     this.shake(hot ? 3 : 2, 0.14);
     if (this.app.reducedMotion) return;
     const sy = this.leftLayout().score;
-    this.fx.add({ life: 0.16, layer: 1, draw: (ctx, f) => { ctx.globalAlpha = 0.7 * (1 - f.t / f.life); rect(ctx, LX + 2, sy - 1, LW - 4, LINE + 2, PAL.white); ctx.globalAlpha = 1; } });
+    this.fx.add({ life: 0.16, layer: 1, board: true, draw: (ctx, f) => { ctx.globalAlpha = 0.7 * (1 - f.t / f.life); rect(ctx, LX + 2, sy - 1, LW - 4, LINE + 2, PAL.white); ctx.globalAlpha = 1; } });
     sparkBurst(this.fx, LX + LW - 20, sy + 6, { n: hot ? 14 : 8, seed: Math.round(this.app.time * 60) % 97 + 1, speed: 60, life: 0.5 }).board = true;
   }
   // 목표를 넘기는 순간: 화면 번쩍 + 점수 줄에서 반짝이 터짐(층이 높을수록 세다). 움직임 줄이기면 없음(글 · 고리는 남는다)
@@ -1183,7 +1183,8 @@ export class BattleScreen {
     this.fx.add({
       life: 0.95, layer: 1, formName: true,
       draw: (ctx, e) => {
-        at = this.pieceXY() || at;
+        const now = this.pieceXY();
+        if (now) at = now; else if (e.t < e.life - 0.12) e.t = e.life - 0.12; // 사슬이 끝나 기물이 판을 떠나면 곧 접는다
         const k = e.t / e.life;
         const sc = calm ? 2 : stepScale(2 + Math.max(0, 1 - e.t / 0.14) * 1.2 + (e.t < 0.14 ? 0 : Math.max(0, 0.25 - (e.t - 0.14) * 2.5)));
         const w = measure(s, true) * sc, h = 11 * sc;
