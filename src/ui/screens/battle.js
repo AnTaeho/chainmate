@@ -1358,7 +1358,7 @@ export class BattleScreen {
     text(ctx, '마스터', tx, 66, PAL.red, { bold: true, scale: 2 });
     const room = W - 190 - 8, ns = [3, 2, 1].find((k) => measure(M.name, true) * k <= room) || 1;
     boldText(ctx, M.name, tx, 92 + (3 - ns) * 6, PAL.goldHi, { align: 'left', scale: ns });
-    text(ctx, `「${M.rule}」`, tx, 132, PAL.gold, { bold: true });
+    text(ctx, `「${L(M.rule)}」`, tx, 132, PAL.gold, { bold: true }); // 별칭만 옮긴다(괄호를 붙인 글은 표에 없다)
     // 규칙 띠: 붉은 띠가 오른쪽에서 밀려 들어오고 규칙 글이 선다
     const lines = wrap(M.text, W - 190 - 16).slice(0, 3);
     const bh = 8 + lines.length * LINE, by = 158, bx = Math.round(176 + (1 - slide(0.2, 0.22)) * 320);
