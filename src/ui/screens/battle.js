@@ -78,7 +78,7 @@ const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 �
 export const VAL_H = 22;
 const INTRO = 1.5; // 마스터 등장 장면 길이(초, 벽시계)
 // 멈칫(hit-stop) 예산(초, ×1): 한 수의 멈칫 합은 move까지, 그중 잡기 멈칫은 impact까지. 멈칫은 Seq 밖의 시간이라 한 수 연출 4초 안에 같이 든다(smoke가 더해 잰다)
-export const STOP = { move: 0.3, impact: 0.15 };
+export const STOP = { move: 0.25, impact: 0.15 };
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // 값 · 배수 상자에 들어가는 짧은 숫자(gfx.js — 다른 화면도 fitNum으로 쓴다)
