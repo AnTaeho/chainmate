@@ -443,6 +443,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16);
     // 입력 칸: 이번 프레임에 화면이 부른 칸만 남긴다(덮개가 뜨면 밑 화면의 칸은 치운다)
     app.fields.begin();
+    fine(() => app.fx.draw(ctx, 'back')); // 화면 뒤 연출(색종이 — juice.js)
     if (app.screen) app.screen.draw(ctx, ui);
     if (app.overlay) app.fields.begin();
     foldUnder(ctx);

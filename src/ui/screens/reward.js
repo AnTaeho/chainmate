@@ -48,8 +48,9 @@ export class RewardScreen {
     const app = this.app;
     if (app.reducedMotion || !v) { this.sum += v; this.kick = app.time; return; }
     const g = this.geom(), n = Math.max(1, Math.min(CAP.coinsLine, v));
-    const xr = g.x + g.w - g.P - 18;
-    flyCoins(app.fx, xr, g.y + g.lay.rows[i] + 5, xr, g.y + g.lay.total + 5, { n, seed: i * 17 + v, rise: 14, onHit: () => { this.sum += v / n; this.kick = app.time; } });
+    // 금액(오른쪽 맞춤, x + w − P − 12) 바로 오른쪽 칸에서 솟아 같은 칸으로 「합」 줄까지 내려간다 — 금액 · 이름 글을 덮지 않는다
+    const xr = g.x + g.w - g.P - 4;
+    flyCoins(app.fx, xr, g.y + g.lay.rows[i] + 5, xr, g.y + g.lay.total + 5, { n, seed: i * 17 + v, rise: 8, jitter: 0, onHit: () => { this.sum += v / n; this.kick = app.time; } });
   }
   // 상자 자리(그리기와 동전이 같이 쓴다)
   geom() {

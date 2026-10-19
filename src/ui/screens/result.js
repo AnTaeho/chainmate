@@ -42,7 +42,11 @@ export class ResultScreen {
     this.replay = run.bestReplay || null;
     if (!quiet) app.sfx(this.won ? 'fanfare' : 'lose');
     // 판 승리(8관 돌파): 화면 번쩍과 양쪽 위에서 색종이 두 번(28절). 움직임 줄이기면 없음
-    if (!quiet && this.won && !app.reducedMotion) { screenFlash(app.fx, { col: PAL.goldHi, a: 0.45, life: 0.3 }); confetti(app.fx, W * 0.25, 40, { n: CAP.confetti, seed: 11, spread: 240, life: 2 }); confetti(app.fx, W * 0.75, 40, { n: CAP.confetti, seed: 23, spread: 240, life: 2 }); }
+    // 색종이는 제목 줄(제목 양 끝에서 터짐) 안에서만 보이고 제목 글 위는 지나가지 않는다 — 상자 안 다른 글을 가리지 않게(titleBand는 그릴 때 잰다)
+    if (!quiet && this.won && !app.reducedMotion) {
+      screenFlash(app.fx, { col: PAL.goldHi, a: 0.45, life: 0.3 });
+      this.burst = true;
+    }
     this.out = app.finishRun() || { unlocked: [], dan: null, fresh: 0 };
     this.next = nextUnlock(app.records);
     this.opened = this.out.tier ?? null; // 이번 판에 열린 묶음(단계)
@@ -180,6 +184,16 @@ export class ResultScreen {
     const leftW = MX - 4 - GAP_GROUP - (x + P);
     const big = measure(title, true) * 2 <= leftW;
     text(ctx, title, x + P + Math.floor(leftW / 2), big ? tY : tY + LINE - 7, this.won || run.endless ? PAL.gold : PAL.red, { align: 'center', bold: true, scale: big ? 2 : 1 });
+    {
+      const tw = measure(title, true) * (big ? 2 : 1), cx = x + P + Math.floor(leftW / 2);
+      this.titleBand = { clip: { x: x + 2, y: y + 2, w: leftW + P - 2, h: Math.max(8, (rowYs.length ? rowYs[0] : tY + 30) - 2 - (y + 2)) }, avoid: { x: cx - tw / 2 - 1, y: tY - 1, w: tw + 2, h: (big ? 24 : 13) } };
+      if (this.burst) {
+        this.burst = false;
+        const area = () => (app.screen === this ? this.titleBand : null);
+        confetti(app.fx, cx - tw / 2 - 8, tY + 10, { n: CAP.confetti, seed: 11, spread: 150, life: 2, area });
+        confetti(app.fx, cx + tw / 2 + 8, tY + 10, { n: CAP.confetti, seed: 23, spread: 150, life: 2, area });
+      }
+    }
     rows.forEach(([a, b], i) => {
       text(ctx, a, x + P + 8, rowYs[i], PAL.dim);
       text(ctx, b, ROW_R, rowYs[i], a === '모자란 점수' ? PAL.red : PAL.ink, { align: 'right', bold: true });

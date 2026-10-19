@@ -1165,7 +1165,7 @@ export class BattleScreen {
   }
   word(s, col, life = 1, scale = 2) {
     this.fx.add({
-      life, layer: 1, word: true,
+      life, layer: 1, word: true, band: { w: measure(s, true) * scale, y0: BY + 100 - scale * 6, y1: BY + 100 + scale * 6 },
       draw: (ctx, e) => {
         const k = e.t / e.life;
         const sc = k < 0.1 ? scale + 1 : scale;
@@ -1173,7 +1173,6 @@ export class BattleScreen {
       },
     });
   }
-  // 모습이 바뀐 칸 위로 새 모습 이름이 떠오르며 사라진다(「룩!」)
   // 굵은 테 이름표가 내 기물 위로 툭 튀어 올랐다(3배 → 2배) 사라진다. 기물을 따라가고, 늘 기물 위(윗줄이면 판 위 틈까지 올라가 다음 먹이를 가리지 않는다).
   // 새 이름표가 뜨면 앞 이름표는 곧바로 접는다(한 번에 하나)
   formName(sq, t) {
@@ -1189,8 +1188,14 @@ export class BattleScreen {
         const sc = calm ? 2 : stepScale(2 + Math.max(0, 1 - e.t / 0.14) * 1.2 + (e.t < 0.14 ? 0 : Math.max(0, 0.25 - (e.t - 0.14) * 2.5)));
         const w = measure(s, true) * sc, h = 11 * sc;
         const rise = calm ? 0 : ease.out(Math.min(1, k * 1.6)) * 3;
-        const y = Math.max(1, at.y - 14 - h - 3 - rise);
+        let y = Math.max(1, at.y - 14 - h - 3 - rise);
         const x = Math.max(2 + w / 2, Math.min(W - 2 - w / 2, at.x));
+        // 판 가운데 큰 글자(「프로모션」 · 「목표 달성」)가 떠 있으면 그 띠 밖으로 비킨다: 위에 자리가 있으면 위, 없으면 아래
+        for (const f of this.fx.list) {
+          const b = f.word && f.band;
+          if (!b || f.t >= f.life || Math.abs(x - (BX + 112)) >= (w + b.w) / 2 + 2 || y > b.y1 + 2 || y + h < b.y0 - 2) continue;
+          y = b.y0 - h - 4 >= 1 ? b.y0 - h - 4 : b.y1 + 4;
+        }
         const fade = k > 0.7 ? (1 - k) / 0.3 : 1;
         boldText(ctx, s, x, y - sc, e.t < 0.08 && !calm ? PAL.white : PAL.goldHi, { scale: sc, alpha: fade });
       },

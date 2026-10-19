@@ -69,21 +69,31 @@ export function sparkBurst(fx, x, y, { n = 16, seed = 3, cols = [PAL.goldHi, PAL
 
 // 색종이: 위에서 터져 흩날리며 떨어지는 도트 조각(가로 · 세로로 납작해졌다 펴지는 것으로 뒤집힘을 보인다)
 const CONFETTI = ['#efbd55', '#df5a45', '#72c24e', '#9fd3e0', '#f2ead8', '#c58ae0'];
-export function confetti(fx, x, y, { n = 36, seed = 5, spread = 200, life = 1.6, tag = null } = {}) {
+// area(): 그 안에서만 보이는 { clip, avoid } 네모(결과 화면 — 제목 줄 안, 제목 글 위는 지나가지 않는다). 없으면 화면 뒤 층에 온 화면
+export function confetti(fx, x, y, { n = 36, seed = 5, spread = 200, life = 1.6, tag = null, area = null } = {}) {
   const r = seeded(seed), parts = [];
   const m = Math.min(CAP.confetti, n);
   for (let i = 0; i < m; i++) {
     const a = -Math.PI / 2 + (r() - 0.5) * 2.4, sp = spread * (0.45 + r() * 0.65);
     parts.push({ x: x + (r() - 0.5) * 20, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, col: CONFETTI[i % CONFETTI.length], ph: r() * 6, w: 3 + (i % 2) });
   }
+  // 색종이는 화면 그림 뒤 층(app.js — 'back')에 그린다: 보상 상자 뒤로 떨어져 상자 안 글을 가리지 않는다
   const e = fx.add({
-    life, layer: 1, parts, confetti: true,
+    life, layer: area ? 1 : 'back', parts, confetti: true,
     update: (dt, f) => { for (const p of f.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy = p.vy * 0.96 + 190 * dt; p.ph += dt * 9; } },
     draw: (ctx, f) => {
       const k = f.t / f.life;
+      const ar = area ? area() : null;
+      if (area && !ar) return;
+      if (ar) { ctx.save(); ctx.beginPath(); ctx.rect(ar.clip.x, ar.clip.y, ar.clip.w, ar.clip.h); ctx.clip(); }
       ctx.globalAlpha = k < 0.75 ? 1 : 1 - (k - 0.75) / 0.25;
-      for (const p of f.parts) { const flat = Math.abs(Math.sin(p.ph)) < 0.35; rect(ctx, p.x, p.y, flat ? 1 : p.w, flat ? p.w : 3, p.col); }
+      const av = ar && ar.avoid;
+      for (const p of f.parts) {
+        if (av && p.x > av.x - 4 && p.x < av.x + av.w && p.y > av.y - 4 && p.y < av.y + av.h) continue;
+        const flat = Math.abs(Math.sin(p.ph)) < 0.35; rect(ctx, p.x, p.y, flat ? 1 : p.w, flat ? p.w : 3, p.col);
+      }
       ctx.globalAlpha = 1;
+      if (ar) ctx.restore();
     },
   });
   if (tag) e[tag] = true;
@@ -121,10 +131,11 @@ export function drawCoin(ctx, x, y, { alpha = 1, sx = 1 } = {}) {
 }
 
 // 동전이 (x0, y0)에서 솟았다가 (x1, y1)로 날아간다. n개는 조금씩 늦게. 닿을 때마다 onHit(동전 소리 · 상금 흔들림)
-export function flyCoins(fx, x0, y0, x1, y1, { n = 3, seed = 9, delay = 0, onHit = null, rise = 22 } = {}) {
+// jitter: 솟는 자리의 좌우 흩어짐(보상 화면은 0 — 금액 오른쪽 한 줄로 내려가 글을 덮지 않는다)
+export function flyCoins(fx, x0, y0, x1, y1, { n = 3, seed = 9, delay = 0, onHit = null, rise = 22, jitter = 14 } = {}) {
   const r = seeded(seed), m = Math.min(CAP.coins, n);
   for (let i = 0; i < m; i++) {
-    const d = delay + i * 0.06, ox = (r() - 0.5) * 14, up = rise + r() * 10;
+    const d = delay + i * 0.06, ox = (r() - 0.5) * jitter, up = rise + r() * (jitter ? 10 : 0);
     fx.add({
       life: d + 0.62, layer: 1, coin: true, hit: false,
       update: (dt, e) => { if (!e.hit && e.t >= d + 0.55) { e.hit = true; if (onHit) onHit(i); } },
