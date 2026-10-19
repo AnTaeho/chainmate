@@ -77,6 +77,8 @@ const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 �
 // … 아래 칸(수 · 희생 · 상금 · 덱). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
 export const VAL_H = 22;
 const INTRO = 1.5; // 마스터 등장 장면 길이(초, 벽시계)
+// 멈칫(hit-stop) 예산(초, ×1): 한 수의 멈칫 합은 move까지, 그중 잡기 멈칫은 impact까지. 멈칫은 Seq 밖의 시간이라 한 수 연출 4초 안에 같이 든다(smoke가 더해 잰다)
+export const STOP = { move: 0.3, impact: 0.15 };
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // 값 · 배수 상자에 들어가는 짧은 숫자(gfx.js — 다른 화면도 fitNum으로 쓴다)
@@ -246,7 +248,8 @@ export class BattleScreen {
     const b = this.bRef;
     const m = b.mods.find((s) => MASTER_BY_ID[s.id]);
     // 마스터 대국: 온 화면 등장 장면(1.5초, 누르면 넘김) 뒤에 마스터 띠. 띠의 시간은 등장 장면 밑에서도 흐른다(from — 등장이 끝난 때부터 보인다)
-    if (m) { this.intro = { t: 0, life: INTRO, id: m.id, landed: false }; this.banner = { title: `마스터 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: INTRO + 1.6, from: INTRO, col: PAL.red, master: m.id }; this.snd('start'); }
+    // 이어 하기로 연 대국(대국 시작 사건이 없다)에는 등장 장면을 다시 세우지 않는다
+    if (m && info) { this.intro = { t: 0, life: INTRO, id: m.id, landed: false }; this.banner = { title: `마스터 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: INTRO + 1.6, from: INTRO, col: PAL.red, master: m.id }; this.snd('start'); }
     else if (info && this.run) { const fa = factionOfBattle(b); this.banner = { title: `${this.run.ante}관 · ${KIND_NAME[b.kind]}`, sub: `${fa ? `${fa.name} · ` : ''}목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold }; }
     // 이번 판에서 처음 나온 것(이형 적 · 적 특성 · 판 위 사물 · 금빛 적): 띠 아래에 작은 그림 한 줄
     if (this.banner && info && this.run) {
@@ -281,15 +284,25 @@ export class BattleScreen {
     return fresh.slice(0, 8).map(([, it]) => it);
   }
 
-  // 판 한가운데 뜨는 큰 글자는 대국 화면과 함께 사라진다(보상 화면 글자를 덮지 않게)
-  onLeave() { this.fx.list = this.fx.list.filter((e) => !e.word && !e.formName && !e.board); } // 모습 이름 · 판 위 반짝이도(색종이 · 동전은 다음 화면 위로 떨어진다)
+  // 대국 화면을 떠나면 판 위 연출(큰 글자 · 모습 이름 · 연기 · 조각 · 반짝이 · 동전)은 모두 함께 사라진다(보상 상자를 덮지 않게).
+  // 색종이만 남는다 — 화면 뒤 층(보상 상자 뒤)으로 이어 떨어진다
+  onLeave() { this.fx.list = this.fx.list.filter((e) => e.confetti); }
   get run() { return this.src.run; }
   live() { return this.src.live(); }
   // 갈림길 카드가 떠 있으면 그 상태(갈린 수 앞)를 그린다
   get b() { return (this.rv && this.rv.state) || this.live() || this.bRef; }
   snd(name, arg) { this.app.sfx(name, arg); }
   shake(px, dur) { this.app.shake(px, dur); }
-  hitstop(sec) { this.app.hitstop(sec); }
+  // 한 수의 멈칫은 예산(STOP.move) 안에서만. 쓴 만큼 한 수 연출 시간(moveT)에도 더해 뒤 걸음이 줄어든다. 프레임 하나를 더 서는 몫(1/60)까지 센다
+  hitstop(sec) {
+    if (this.app.reducedMotion) return 0;
+    const d = Math.min(sec, STOP.move - (this.stopT || 0) - 1 / 60);
+    if (d < 0.01) return 0;
+    this.app.hitstop(d);
+    this.stopT = (this.stopT || 0) + d + 1 / 60;
+    this.moveT = (this.moveT || 0) + d + 1 / 60;
+    return d;
+  }
   toast(msg, col, dur) { this.app.toast(msg, col, dur); }
   // 알림 자리(CHM-48): 판 아래쪽, 판 폭 안. 위 가운데는 목표 막대 · 얻을 몫(+N)을 덮었다.
   // 판 가운데는 「메이트」 · 「대국 승리」 글자와 마스터 띠, 왼쪽 칸은 목표 · 점수 · 사슬 칸, 오른쪽 칸은 격언 · 손이 쓴다
@@ -492,7 +505,7 @@ export class BattleScreen {
     const app = this.app, v = this.view, seq = this.seq;
     // 한 수의 연출이 쌓인 시간(moveT)이 1.3초를 넘으면 뒤 걸음을 줄여 간다: 한 수 연출이 4초(×1) 안에 들게.
     // 사슬 끝의 곱 · 외통은 줄이지 않는다(그 순간이 보상이라서).
-    if (cmd && cmd.type === 'drop') { this.moveT = 0; this.matesInMove = 0; this.stopT = 0; }
+    if (cmd && cmd.type === 'drop') { this.moveT = 0; this.matesInMove = 0; this.stopT = 0; this.impactT = 0; }
     const pace = () => { const T = this.moveT || 0; return T < 1.3 ? 1 : Math.max(0.01, (2.3 - T) / 1.0); };
     let label = '', mateSq = null;
     const add = (dur, o = {}) => {
@@ -940,12 +953,12 @@ export class BattleScreen {
       draw: (ctx, e) => { const k = e.t / e.life; ctx.globalAlpha = calm ? Math.max(0, 1 - k) : k < 0.5 ? 1 : Math.max(0, (1 - k) / 0.5); for (const p of e.parts) rect(ctx, p.x, p.y, p.s, p.h || p.s, p.col); ctx.globalAlpha = 1; },
     });
   }
-  // 잡을 때의 손맛(28절): 사슬이 길수록 큰 흔들림(그리기 변환만), 셋째 먹기부터 짧은 멈칫. 멈칫은 한 수에 0.3초까지(stopT — 한 수 연출 Seq 밖의 시간)
+  // 잡을 때의 손맛(28절): 사슬이 길수록 큰 흔들림(그리기 변환만), 셋째 먹기부터 짧은 멈칫. 잡기 멈칫은 한 수에 STOP.impact까지(impactT), 멈칫 전체는 STOP.move까지
   impact(n) {
     this.shake(Math.min(4, 1 + Math.floor(n / 3)), 0.08 + 0.015 * Math.min(8, n));
     if (n >= 3) {
-      const d = Math.min(0.05, 0.02 + 0.01 * (n - 3)), left = 0.3 - (this.stopT || 0);
-      if (left > 0.005) { this.hitstop(Math.min(d, left)); this.stopT = (this.stopT || 0) + Math.min(d, left); }
+      const d = Math.min(0.05, 0.02 + 0.01 * (n - 3)), left = STOP.impact - (this.impactT || 0);
+      if (left > 0.01) this.impactT = (this.impactT || 0) + this.hitstop(Math.min(d, left)) + 1 / 60;
     }
   }
   // 값 × 배수가 점수 줄에 꽂히는 순간: 점수 수가 크게 튀었다 돌아오고(drawLeft — this.slam) 흔들림 · 점수 줄 번쩍 · 금빛 반짝
@@ -966,6 +979,7 @@ export class BattleScreen {
   }
   // 상금을 얻으면: 「$」 동전이 내 기물 자리(없으면 판 가운데)에서 솟아 상금 줄로 날아가고, 닿을 때마다 상금 수가 흔들린다
   coinFx(money) {
+    if (this.app.reducedMotion) { kickMoney(this.app.time); return; } // 움직임 줄이기: 동전 없이 상금 수만 떤다(빛만 — moneyShake)
     const from = this.pieceXY() || { x: BX + 112, y: BY + 112 };
     const to = shardTo();
     const app = this.app;
@@ -1326,6 +1340,7 @@ export class BattleScreen {
     if (this.intro) {
       this.drawIntro(ctx, this.intro);
       ui.region('intro', 0, 0, W, H, { onClick: () => this.endIntro() });
+      pauseButton(ctx, ui, this.app); // 멈춤 단추는 등장 장면 위에(누르면 곧바로 멈춤이 열린다)
     }
     if (this.src.kind === 'run') this.coachHints();
   }
@@ -2086,7 +2101,7 @@ export class BattleScreen {
   }
   drawRight(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, run = this.run;
-    pauseButton(ctx, ui, app);
+    if (!this.intro) pauseButton(ctx, ui, app); // 등장 장면 동안은 장면 위에 그린다(draw)
     const lay = this.rightLayout(run);
     if (run) {
       // 이름표 줄: 「격언 5/5」와 정석 표(멈춤 단추 왼쪽에 붙여). 이름표가 길면(영어) 표에 닿기 전에 줄인다. 명국 조각은 상금 줄
@@ -2244,7 +2259,7 @@ export class BattleScreen {
 
   key(k) {
     if (this.combo) { this.closeCombo(); return; } // 점화 막간: 아무 키나 닫는다(다른 데로 새지 않는다)
-    if (this.intro) { this.endIntro(); return; } // 마스터 등장도 아무 키나 넘긴다
+    if (this.intro) { if (k === 'Escape') this.app.openOverlay('pause'); else this.endIntro(); return; } // 마스터 등장: Esc는 멈춤, 다른 키는 넘긴다
     const b = this.live();
     this.idleT = 0;
     // 갈림길 카드: Enter 다시 두기 · Esc · 스페이스 넘어가기

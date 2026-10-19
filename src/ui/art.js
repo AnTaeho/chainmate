@@ -14,8 +14,8 @@ import { ART, inkBox, centre } from '../render/ink.js';
 import { SOUL_BY_ID } from '../data/souls.js';
 import { chartForm } from '../data/pieces.js';
 
-// 그림 칸 바탕과 윗줄 한 줄 빛
-export const CELL = { bg: PAL.felt, top: PAL.fogHi };
+// 그림 칸 바탕과 윗줄 한 줄 빛: 그릴 때마다 PAL에서 읽는다(윗줄 빛은 관 세력 모습을 따른다 — setTheme)
+export const CELL = { get bg() { return PAL.felt; }, get top() { return PAL.fogHi; } };
 // 기보 = 「이 모습일 때」: 네 귀 꺾쇠
 export const CHART_TICK = '#8fd3c6';
 
@@ -114,7 +114,7 @@ export function tacticIcon(ctx, id, x, y) {
 // 격언 그림 빛깔(어두운 칸 위): art16.js MAXIM16의 문자
 export const MAXIM_COL = { '#': '#fff1b8', d: '#b79c68', k: '#2a1c10', g: '#d9a23a', o: '#8a5f1c', r: '#c94a37', w: '#ffffff', s: '#9fb0bc', p: '#a77ad6', b: '#6f9ad8', G: '#7fb85f' };
 const SHARD_COL = { c: PAL.gold, h: PAL.goldHi, d: PAL.goldDk };
-const AWAKEN_COL = { D: PAL.goldDk, g: PAL.gold, h: PAL.goldHi, k: CELL.bg };
+const AWAKEN_COL = { D: PAL.goldDk, g: PAL.gold, h: PAL.goldHi, get k() { return CELL.bg; } };
 // 도박의 도는 빛깔: 한 바퀴를 스물넷으로 끊는다(구운 칸을 그만큼만 둔다)
 const gambleHue = (t) => { if (t) live(); return (Math.floor((t * 200) / 15) * 15) % 360; };
 const gambleCols = (id, hue) => (id === 'roulette'
@@ -168,6 +168,7 @@ export const artW = (it) => (it.kind === 'evolve' ? ART.w * 2 : ART.w);
 
 const BAKED = new Map();
 function bake(key, w2, h2, paint) {
+  key += `|${CELL.bg}|${CELL.top}`; // 칸 빛깔이 바뀌면(세력 모습) 새로 굽는다
   let c = BAKED.get(key);
   if (c) return c;
   c = makeCanvas(w2, h2);

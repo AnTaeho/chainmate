@@ -190,7 +190,8 @@ export class LessonScreen extends BattleScreen {
     lessonDone(app, this.index);
   }
   skipAll() { finishLessons(this.app); }
-  get skipLabel() { return this.app.lessonFrom === 'list' ? '목록' : '건너뛰기'; }
+  // 가는 곳에 맞는 이름: 처음 켬 덮개에서 왔으면 곧바로 판으로(건너뛰기), 목록 · 「이어서」 흐름은 목록으로
+  get skipLabel() { return this.app.lessonFrom === 'welcome' ? '건너뛰기' : '목록'; }
 
   // ── 그리기
   draw(ctx, ui) {
@@ -226,7 +227,7 @@ export class LessonScreen extends BattleScreen {
       if (r) { motion(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); frame(ctx, r.x - 2, r.y - 2 + (st.pick != null ? 4 : 0), r.w + 4, st.pick != null ? 40 : r.h + 4, PAL.goldHi, 1); ctx.globalAlpha = 1; }
     }
   }
-  // 오른쪽 칸 위 이름표 줄(멈춤 단추 왼쪽): 「건너뛰기」(목록에서 열었으면 「목록」) · 「행마」(대국과 같은 자리)
+  // 오른쪽 칸 위 이름표 줄(멈춤 단추 왼쪽): 「건너뛰기」(처음 켬 덮개에서 왔을 때) 또는 「목록」 · 「행마」(대국과 같은 자리)
   drawTopRow(ctx, ui) {
     const mw = measure('행마', true) + 6, mx = PAUSE.x - 4 - mw;
     button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves() });

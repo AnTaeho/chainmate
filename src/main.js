@@ -116,8 +116,8 @@ export async function boot(env = {}) {
     }
     if (doc.body && doc.body.classList) doc.body.classList.toggle('rot', fit.rot);
     win.__fit = fit;
-    // 화면 효과의 주사선: 도트 줄마다 한 줄(도트가 2 CSS 화소보다 작으면 두 줄마다), 캔버스 윗변에 맞춘다
-    if (crt && stage) { stage.style.setProperty('--gp', `${fit.css >= 2 ? fit.css : fit.css * 2}px`); stage.style.setProperty('--gy', `${c.top}px`); }
+    // 화면 효과의 주사선: 도트 줄마다 한 줄(도트가 2 CSS 화소보다 작으면 2 화소 이상이 되는 정수 줄마다 — 무아레를 피한다), 캔버스 윗변에 맞춘다
+    if (crt && stage) { stage.style.setProperty('--gp', `${fit.css * Math.ceil(2 / fit.css - 1e-9)}px`); stage.style.setProperty('--gy', `${c.top}px`); }
     // 뒷면 캔버스 배율 N(빛과 움직임, src/ui/fit.js backScale). 480×270 좌표는 그대로, 움직이는 것만 1/N 칸에 선다
     if (app) app.setScale(fit.n); else pendingScale = fit.n;
     fields.layout();

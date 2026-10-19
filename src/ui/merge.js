@@ -1,6 +1,6 @@
 // 기록 합치기(CHM-71, docs/design-notes/leaderboard.md 「기기 잇기 · 클라우드 저장」): 두 기기의 기록 덩이를 하나로.
 // 순수 함수 — 교환 · 결합 법칙이 서고 merge(a, a) = a(고른 꼴 norm(a) 기준). 새 기록 칸을 더하면 RULES에도 규칙을 넣는다(test/merge.test.js가 잡는다).
-import { emptyRecords, gradeKeys, OPENING_ORDER } from './records.js';
+import { emptyRecords, gradeKeys, OPENING_ORDER, fixRecords } from './records.js';
 import { ANTES } from '../sim/run.js';
 
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -83,7 +83,7 @@ function mergeRaw(a, b) {
     const v = (RULES[k] || loose)(a[k], b[k]);
     if (v !== undefined) out[k] = v;
   }
-  return out;
+  return fixRecords(out); // lessonsDone은 합친 lessonsSeen으로 다시 센다(옛 참이 번지지 않게)
 }
 export function mergeRecords(a, b) { return mergeRaw(normRecords(a), normRecords(b)); }
 

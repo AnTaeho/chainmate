@@ -282,7 +282,8 @@ export function kingNoteLayout(say, w, foot = null) {
   return { headTop, lines, ys, feet, fys, h: f.y + PAD_BOX };
 }
 // line(글, x, y): 글 줄을 그리는 곳(수업은 값 · 배수 칸을 richText로). 없으면 짙은 글. inner(): 상자 안에 더 그릴 것(단추 줄)
-export function kingNote(ctx, app, x, y, w, say, lay, { joy = false, line = null, name = '킹 말', inner = null } = {}) {
+// headRight: 머리줄 오른쪽에 비워 둘 폭(닫기 단추 자리)
+export function kingNote(ctx, app, x, y, w, say, lay, { joy = false, line = null, name = '킹 말', inner = null, headRight = 0 } = {}) {
   if (say !== talkSay) { talkSay = say; talkT0 = app.time; }
   if (!LOOK.calm && (joy || app.time - talkT0 < 1)) live(); // 말이 바뀐 뒤 들썩이는 동안 · 금관이 반짝이는 동안
   openBox('panel', x, y, w, lay.h, PAD_BOX, { name });
@@ -291,7 +292,7 @@ export function kingNote(ctx, app, x, y, w, say, lay, { joy = false, line = null
   drawKing(ctx, app, x + P - 2, y + lay.headTop - 6, { joy });
   const nw = measure(KING_NAME, true);
   text(ctx, KING_NAME, x + P + 18, textY(y + lay.headTop, KING_HEAD), PAL.goldDk, { bold: true });
-  rect(ctx, x + P + 22 + nw, y + lay.headTop + 9, w - P * 2 - 22 - nw, 1, PAL.cardDim);
+  rect(ctx, x + P + 22 + nw, y + lay.headTop + 9, w - P * 2 - 22 - nw - headRight, 1, PAL.cardDim);
   lay.lines.forEach((l, k) => (line ? line(l, x + P, y + lay.ys[k]) : text(ctx, l, x + P, y + lay.ys[k], PAL.cardInk)));
   lay.feet.forEach((l, k) => text(ctx, l, x + w - P, y + lay.fys[k], PAL.goldDk, { align: 'right' }));
   if (inner) inner();

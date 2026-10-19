@@ -1,5 +1,5 @@
 // 손맛 연출(layout.md 28절): 잡기 연기 · 동전 · 색종이 · 화면 번쩍 · 굵은 테 글 · 진열 반짝 띠 · 상금 흔들림.
-// 모두 Fx(따로 도는 효과)라 한 수 연출 시간(Seq)을 늘리지 않는다. 무작위는 시드, 개수는 CAP 안. 움직임 줄이기면 부르는 쪽이 끄거나 정지 그림으로.
+// 모두 Fx(따로 도는 효과)라 한 수 연출 시간(Seq)을 늘리지 않는다. 무작위는 시드, 개수는 CAP 안. 움직임 줄이기면 부르는 쪽이 끄거나 정지 그림으로(동전은 날리지 않고 상금 수 빛만).
 import { PAL } from '../render/palette.js';
 import { W, H, rect, text, measure } from '../render/gfx.js';
 import { live, beat, LOOK } from '../render/look.js';
@@ -189,9 +189,11 @@ export function sheen(ctx, x, y, w, h, time, phase = 0) {
 }
 
 // 상금 수 흔들림: 바뀐 순간부터 0.4초 좌우로 흔들리고 빛깔이 번진다(상금 줄 · moneyRow). 동전이 닿으면 kickMoney로 한 번 더
-const MONEY = { n: null, t: -9, up: true };
+// 기준값은 판마다(run): 판이 바뀌거나 이어 하기로 처음 그릴 때는 흔들지 않고 기준만 잡는다
+const MONEY = { n: null, t: -9, up: true, run: null };
 export function kickMoney(time) { MONEY.t = time; MONEY.up = true; }
-export function moneyShake(n, time) {
+export function moneyShake(n, time, run = null) {
+  if (MONEY.run !== run) { MONEY.run = run; MONEY.n = n; MONEY.t = -9; }
   if (MONEY.n !== n) { if (MONEY.n != null) { MONEY.t = time; MONEY.up = n > MONEY.n; } MONEY.n = n; }
   const k = (time - MONEY.t) / 0.4;
   if (k < 0 || k >= 1) return null;

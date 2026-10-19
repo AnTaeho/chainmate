@@ -5,6 +5,7 @@ import { OLD_GRADE_MARK } from '../sim/chain.js';
 import { renameOldPieces } from '../sim/oldsave.js';
 import { advanceUnlock, gatesOfRun } from '../data/unlocks.js';
 import { ANTES } from '../sim/run.js';
+import { LESSONS } from './lessons.js';
 
 export const OPENING_ORDER = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 // 해금 과제(내가 정한 것): 판마다 하나씩 보이는 「다음 해금까지」
@@ -46,7 +47,17 @@ export function loadRecords(store) {
   const base = emptyRecords();
   if (!r || r.v !== 1) return base;
   // 최고 도달은 8관까지(끝없는 대국의 깊이는 bestEndless) — 예전에 8을 넘겨 적힌 기록도 읽을 때 맞춘다
-  return { ...base, ...r, bestAnte: Math.min(ANTES, r.bestAnte || 0), codex: { ...base.codex, ...(r.codex || {}) }, unlocked: { ...base.unlocked, ...(r.unlocked || {}) }, grades: gradeKeys(r.grades) };
+  return fixRecords({ ...base, ...r, bestAnte: Math.min(ANTES, r.bestAnte || 0), codex: { ...base.codex, ...(r.codex || {}) }, unlocked: { ...base.unlocked, ...(r.unlocked || {}) }, grades: gradeKeys(r.grades) });
+}
+
+// 튜토리얼을 다 끝냈나: 끝낸 수업이 지금 수업을 모두 덮는가(옛 기록의 lessonsDone은 첫 수업만 끝내도 참이었다)
+export const allLessonsDone = (seen) => LESSONS.every((L) => !!(seen && seen[L.id]));
+// 읽을 때 · 합칠 때 맞추는 칸: lessonsDone은 lessonsSeen에서 다시 셈하고, 옛 첫 판 대본 칸(kingDone · kingAgain)은 버린다
+export const OLD_KEYS = ['kingDone', 'kingAgain'];
+export function fixRecords(r) {
+  for (const k of OLD_KEYS) delete r[k];
+  r.lessonsDone = allLessonsDone(r.lessonsSeen);
+  return r;
 }
 
 // 사슬 평가 열쇠: 옛 기록의 「!」 · 「!!」 · 「!!!」를 별로 옮긴다(둘 다 있으면 더한다, CHM-47)

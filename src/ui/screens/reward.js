@@ -44,6 +44,8 @@ export class RewardScreen {
     this.coinT = (this.coinT || 0) - dt * this.app.speed();
     if (this.coins > 0 && this.coinT <= 0) { this.coins--; this.coinT = 0.05; this.app.sfx('coin', this.coinN = (this.coinN || 0) + 1); }
   }
+  // 떠나면 날던 동전을 거둔다(다음 화면 — 상점 — 위로 떨어지지 않게)
+  onLeave() { this.app.fx.list = this.app.fx.list.filter((e) => !e.coin); }
   coinsOf(i, v) {
     const app = this.app;
     if (app.reducedMotion || !v) { this.sum += v; this.kick = app.time; return; }
