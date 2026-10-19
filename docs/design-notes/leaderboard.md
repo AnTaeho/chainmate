@@ -124,7 +124,7 @@
 **열쇠는 화면 · 콘솔 · 기록 보내기 어디에도 싣지 않는다**(`rank.player()`는 이름과 남은 횟수만 — `test/rank.test.js`).
 
 ### 제출
-오늘의 대국 판이 끝나는 명령(`app.cmd` — 국면이 `won` · `lost`로 바뀐 자리, 저장을 지우기 전)에서 `app.submitDaily(run)`이 `run.cmds`를 복사해 낸다. 수업 · 대본 대국 · scratch · 옛 저장 · 보통 판 · 우승 뒤 끝없는 대국은 내지 않는다.
+오늘의 대국 판이 끝나는 명령(`app.cmd` — 국면이 `won` · `lost`로 바뀐 자리, 저장을 지우기 전)에서 `app.submitDaily(run)`이 `run.cmds`를 복사해 낸다. 수업 · scratch · 옛 저장 · 보통 판 · 우승 뒤 끝없는 대국은 내지 않는다.
 
 | 답 | 화면 쪽이 하는 일 | `rank.status(date).phase` |
 |---|---|---|
@@ -172,10 +172,10 @@
 | `grades` · `danWins` | 열쇠마다 큰 쪽 |
 | `bestMove` · `bestBrilliant` | 점수가 큰 쪽(같으면 JSON 글이 큰 쪽) |
 | `codex` · `unlocked.openings` · `coachSeen` · `lessonsSeen` · `movesSeen` | 합집합 |
-| `lessonsDone` · `kingDone` | 켜진 쪽 |
+| `lessonsDone` · `tutorialAsked` | 켜진 쪽 |
 | `daily` | 날짜가 늦은 쪽, 같은 날이면 더 좋은 판 + 둔 판 수는 큰 쪽 |
 | `runNew` | 같은 판이면 합집합, 다른 판이면 글이 큰 쪽 |
-| `kingAgain` · `lastOpening` · `lastDan` | **옮기지 않는다**(`LOCAL_ONLY`) |
+| `lastOpening` · `lastDan` | **옮기지 않는다**(`LOCAL_ONLY`) |
 | 규칙이 없는 칸 | 수는 큰 쪽 · 참거짓은 켜진 쪽 · 객체는 칸마다 · 그 밖은 글이 큰 쪽 |
 
 - **기록에 칸을 더하면 `RULES`에도 규칙을 넣는다**(없으면 `test/merge.test.js`가 실패한다).
@@ -270,7 +270,7 @@ CHM-70은 열쇠 해시를 `players.key_hash`(not null unique)에 두었다. 지
 |---|---|
 | 가입 | 지금 기기의 플레이어에 아이디 · 비번 해시를 붙인다 |
 | 들어오기 | 그 기기를 계정의 플레이어에 **새 열쇠**로 붙인다. 기기 잇기의 넣기와 같은 길(`store.absorb`) — 옛 플레이어 성적을 합치고 지운 뒤 화면이 저장을 당겨 합친다(`cloud.join`). 이미 그 계정의 기기면 그대로 |
-| 나가기 | 이 기기의 열쇠만 지우고 **새 빈 플레이어**를 준다. 화면은 서버 답을 받은 **뒤에** 기기의 기록 · 진행 중인 판 · 사람 판 기록을 비운다(`app.wipeDevice`, 설정과 `coachSeen` · `kingDone` · `lessonsDone`은 둔다). 나가기 앞에 한 번 올리고, 못 올리면 나가지 않는다 |
+| 나가기 | 이 기기의 열쇠만 지우고 **새 빈 플레이어**를 준다. 화면은 서버 답을 받은 **뒤에** 기기의 기록 · 진행 중인 판 · 사람 판 기록을 비운다(`app.wipeDevice`, 설정과 `coachSeen` · `tutorialAsked` · `lessonsDone` · `lessonsSeen`은 둔다). 나가기 앞에 한 번 올리고, 못 올리면 나가지 않는다 |
 | 비번 바꾸기 | 지금 비번 + 새 비번. 지금 비번이 없으면 그 열쇠가 계정 플레이어의 것이면 된다 — 하루 3번 |
 | 지우기 | 비번을 견준 뒤 플레이어를 지운다(계정 · 모든 열쇠 · 성적 · 저장 · 코드 cascade + 한도 줄). 이 기기는 새 빈 플레이어 |
 

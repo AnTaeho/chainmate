@@ -5,7 +5,7 @@
 ## 흐름
 - **세기:** 새 판(`app.newRun`)이 `run.track`(`src/sim/runlog.js` `newTrack`)을 단다. `app.cmd`가 명령마다 `trackCommand`로 센다. 판 저장(`KEYS.run`)에 함께 들어가 이어 하기에도 남는다. 판 시간은 `app.update`가 판이 살아 있는 동안 프레임 시간을 더한다(화면이 숨으면 프레임이 멈춰 세지 않는다).
 - **남기기:** 명령 하나로 판이 이김 · 짐이 되는 순간 `runRow`로 한 줄을 만들어 `KEYS.runs`(`chainmate.runs.v1`, `{ v: 1, runs: [...] }`)에 더한다(`src/ui/runlog.js` `keepRow`). 끝나지 않은 판을 새 판으로 덮어쓰면 `end: 'quit'`. 이긴 판에서 끝없는 대국을 이어 두면 같은 `id` 줄을 `end: 'endless'`로 갈아 끼운다.
-- **빼는 것:** 수업(대국은 `apply`로 따로 돈다) · `run.scratch`(수업 ⑩) 판은 track이 없다. 킹과 두는 대본 대국은 그 대국이 끝나며 늘어난 `log` 자리를 `track.script`에 적어 두고 요약에서 뺀다(그 뒤 대국은 보통 판으로 남는다). 타이틀로 나가기만 한 판은 남기지 않는다.
+- **빼는 것:** 수업(대국은 `apply`로 따로 돈다) · `run.scratch`(수업 ⑩) 판은 track이 없다. 없앤 첫 판 대본 대국을 둔 옛 판은 `track.script`에 적힌 `log` 자리를 요약에서 뺀다(새 판은 비어 있다). 타이틀로 나가기만 한 판은 남기지 않는다.
 - **크기:** 200판까지, 오래된 것부터 버린다. 저장이 꽉 차면(`setItem`이 던짐) 오래된 네 몫 하나씩 덜어 다시 쓴다. 판 한 줄은 대국 하나 ≈ 340자, 200판이 모두 끝까지 간 판이면 ≈ 2MB(글자 수)다.
 - **내보내기:** 설정 맨 아래 「기록 내보내기」(영어 Export runs). 웹 · 앱(Tauri) 모두 `<a download>` Blob으로 `chainmate-runs-YYYYMMDD-HHMM.json`을 받는다. 받을 길이 없으면 클립보드로 복사하고, 둘 다 안 되면 「내보내지 못했다」. 받은 판 수는 알림 한 줄(「판 N개를 내보냈다」).
   - **폰 브라우저는 공유 시트(CHM-54):** 손가락 기기에서 `navigator.canShare({ files })`가 되면 누른 그 순간 `navigator.share`로 같은 이름의 JSON 파일 하나를 보낸다(iOS 사파리 · 안드로이드 크롬). 마우스 기기는 받기 그대로다. 공유를 그만두면(AbortError) 알림 없이 끝나고, 다른 까닭으로 실패하면 클립보드 → 「내보내지 못했다」 차례다. 성공 알림은 공유를 마친 뒤에만 뜬다. 손가락 기기의 앱(WKWebView)은 `<a download>`가 아무 일도 하지 않아 받기 길을 건너뛴다(`src/main.js` `share` · `download`, 시험 `test/export.test.js`).
@@ -51,5 +51,5 @@
 | `battles` · `sacrifices` · `brilliants` | 둔 대국 수 · 희생 합 · 탁월수 합 |
 | `lostAt` | 진 대국마다 `{ ante, blind, kind, score, target, pct(목표 대비 %), reason, clockLost }` |
 | `buys` | 산 것 모두 `{ a: 관, b: 대국, k: 종류(maxim · piece · soul · engraving · chart · tactic · fragment · gamble · pack …), id, $: 값, pack: 1(꾸러미에서 고름) }` |
-| `script` | 뺀 대본 대국 줄 수 |
+| `script` | 뺀 대본 대국 줄 수(옛 판만, 새 판은 0) |
 | `app` | `{ version, commit, platform: web · app }`. 커밋은 `desktop/collect.sh`가 앱에 모을 때만 채운다(웹은 null) |

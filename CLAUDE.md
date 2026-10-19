@@ -38,7 +38,7 @@
 - 판 봇은 돈 · 시계에 아주 민감하다. 새 보상은 하네스로 재고 넣는다. 판 조정(거르기 · 다시 놓기)은 `src/sim/tuning.js` 한 곳. 희생 규칙 · 격언을 바꾸면 `tools/bot.mjs` `sacrificeChoice`도.
 - 한 수 연출 ×1은 4초 안(smoke가 잰다, 지금 최대 3.8초 안팎).
 - 화면은 대국 상태를 이벤트 뒤에 다시 읽는다(`redrop` · `refill`). 미리 보기는 `previewCapture` · `previewDrop`(풀이기 복사본)으로만 잰다.
-- 대본 대국 · 수업의 판을 바꾸면 `test/tutorial.test.js` · `test/lessons.test.js`가 실제 규칙으로 잰다. 세력은 대국 규칙 깃발로만 규칙에 닿는다(`src/data/factions.js`).
+- 튜토리얼(타이틀 「튜토리얼」 · 처음 켬 덮개, `docs/design-notes/tutorial.md`) 수업의 판을 바꾸면 `test/lessons.test.js`가 실제 규칙으로 잰다. 수업이 가르치는 도움말 팁은 `coach.js` `TAUGHT`에 묶는다(그 수업을 끝낸 사람에게 판 안에서 안 뜬다). 판은 대본 없이 시작한다. 세력은 대국 규칙 깃발로만 규칙에 닿는다(`src/data/factions.js`).
 - 그릴 때만 그린다(layout.md 9절): 스스로 안 움직이는 새 화면만 `animating() { return false; }`, 시간 따라 바뀌는 그림은 그리는 순간 `live()`(계단처럼 바뀌면 `beat(app.time, …)`), 입력 없이 바뀐 상태는 `app.invalidate()`.
 - 해금: 뽑거나 만드는 자리는 `src/sim/unlock.js` `openPool`(대국은 `openTypes`)을 거친다. 새 물건은 `src/data/unlocks.js` `UNLOCK_TIERS`에. 단계는 `records.unlockTier`에 따로 둔다. 판을 만드는 화면 길은 `app.newRun` 하나, 오늘의 대국에는 단계를 넘기지 않는다.
 - 기록(`app.records`)에 칸을 더하면 `src/ui/merge.js` `RULES`에도(이 기기에만 둘 칸은 `LOCAL_ONLY`).

@@ -14,9 +14,9 @@
 | 호스트가 `chainmate.papercut.kr`(`TELEMETRY_HOSTS`)이거나 앱(Tauri) | `createTelemetry` `allowed` |
 | `navigator.webdriver`가 거짓 | 같은 곳 |
 | 설정 「플레이 기록 전송」 켬(`settings.telemetry`, 기본 켬) | `enabled()` |
-| 수업 · 대본 대국 · scratch 판이 아님 | `app.track`(scratch) · `commandEvents`(대본 대국) |
+| 수업 · scratch 판이 아님 | `app.track`(scratch) |
 
-- 넷째 조건 없이 나가는 것(위 셋은 그대로): `tutorial_*` · `lesson_done` · `setting_change` · `rank_submit` · `name_reroll` · `link_*` · `save_sync` · `account_*` · `unlock_tier` · `unlocks_open` · 오류.
+- 넷째 조건 없이 나가는 것(위 셋은 그대로): `tutorial_offer` · `lesson_*` · `setting_change` · `rank_submit` · `name_reroll` · `link_*` · `save_sync` · `account_*` · `unlock_tier` · `unlocks_open` · 오류.
 - 로컬 · 미리 보기 배포 · smoke · Playwright 도구에서는 0건이다(smoke 「기록 보내기: 0건」, `tools/shots-telemetry.mjs`가 로컬 0건과 배포 주소인 척한 묶음을 본다).
 
 ## 익명 방침
@@ -42,10 +42,9 @@
 | 사건 | 속성 |
 |---|---|
 | `app_open` | `first` · `days_since_first` |
-| `tutorial_step` | `step`(`src/ui/tutorial.js` 걸음 차례) |
-| `tutorial_done` · `tutorial_skip` | `won` |
-| `lesson_done` ★ | `id` |
-| `run_start` | `dan` · `opening` · `daily` · `script` |
+| `tutorial_offer` ★ | `pick`(lesson · play · close — 처음 켬 덮개에서 고른 것) |
+| `lesson_start` ★ · `lesson_done` ★ | `id`(`src/ui/lessons.js` 수업) |
+| `run_start` | `dan` · `opening` · `daily` |
 | `run_end` | `row`(`runRow` 한 줄 통째 — 열쇠는 `human-runs.md`) + `won` · `end`(win · lose · quit · endless) · `ante` · `blind` · `dan` · `opening` · `daily` · `josekis[]` · `maxims[]` · `legends[]` · `families_max` · `skips` · `holds` · `ignite_at` · `brilliants` · `battles` · `duration_s` |
 | `battle_end` | `ante` · `blind` · `kind` · `won` · `reason`(mate · target · gomoku · moves · stuck) · `ratio` · `moves_used` · `first_move_win` · `sacrifices` |
 | `draft_pick` | `ante` · `offered[]` · `picked` |
@@ -95,7 +94,7 @@ from events
 where event = 'run_end' and properties.`end` in ('win', 'lose')
   and properties.selftest is null and timestamp > now() - interval 30 day
 ```
-단별 · 레퍼토리별(`JSONExtractArrayRaw(properties.josekis)`) · 격언별 승률, 끝난 관 분포는 같은 꼴로 묶는 열만 바꾼다. 튜토리얼 깔때기는 Funnel 인사이트(`app_open` first = true → `tutorial_step` → `tutorial_done` → `battle_end`), DAU · MAU는 `app_open`의 `uniq(distinct_id)`, 잔존은 Retention 인사이트(`app_open`)로 본다.
+단별 · 레퍼토리별(`JSONExtractArrayRaw(properties.josekis)`) · 격언별 승률, 끝난 관 분포는 같은 꼴로 묶는 열만 바꾼다. 튜토리얼 깔때기는 Funnel 인사이트(`app_open` first = true → `tutorial_offer` → `lesson_start` → `lesson_done` → `battle_end`), DAU · MAU는 `app_open`의 `uniq(distinct_id)`, 잔존은 Retention 인사이트(`app_open`)로 본다.
 
 ## `humans.mjs --posthog`
 모인 `run_end`의 `row`를 내려받아 내보낸 JSON과 같은 표로 찍는다. `--vs`로 하네스 dump와 나란히.
