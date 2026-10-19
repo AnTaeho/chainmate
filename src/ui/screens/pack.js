@@ -16,10 +16,12 @@ import { MAIN, TOP, CARD, BTN_H, GAP_GROUP, LIST_GAP, PAD_CARD, flow, BTN_S } fr
 import { bagRow } from './shop.js';
 import { familyCounts } from '../../data/families.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
+import { LOOK } from '../../render/look.js';
 
 // 봉투가 열리는 시간, 카드 i가 뒤집히기 시작하는 때
 const OPEN = 0.4;
 const flipAt = (i) => OPEN + i * 0.18;
+const RAYS = 0.75; // 봉투가 열리며 뒤로 퍼지는 빛줄기가 사라지는 때(초)
 
 // 명국 조각 칸(금빛 꾸러미의 넷째 것): 카드 줄 아래 건너뛰기 줄 왼쪽. 조각 그림 옆에 이름 → 「조각 셋이면 전설」 두 줄(꾸러미 칸과 같은 42)
 const SHARD_ART = 22;
@@ -77,7 +79,7 @@ export class PackScreen {
   }
   get run() { return this.app.run; }
   // 봉투가 열리고 카드가 뒤집히는 동안 · 도움말 팁이 뜰 때(1.2초)까지 움직인다
-  animating() { const n = this.run.pack ? this.run.pack.options.length : 0; return this.t <= Math.max(1.25, OPEN + 0.3, flipAt(n) + 0.35); }
+  animating() { const n = this.run.pack ? this.run.pack.options.length : 0; return this.t <= Math.max(1.25, OPEN + 0.3, flipAt(n) + 0.35, RAYS); }
   update(dt) {
     const before = this.t;
     this.t += dt * this.app.speed();
@@ -161,6 +163,19 @@ export class PackScreen {
   drawCards(ctx, ui, lay, gold) {
     const run = this.run, pack = run.pack;
     const { cw, ch, gap, x0, n } = lay;
+    // 빛줄기(28절): 봉랍이 깨질 때 봉투 자리에서 빛살 열넷이 천천히 돌며 퍼지고 카드 뒤로 사라진다. 움직임 줄이기면 없음
+    if (!LOOK.calm && this.t > 0.1 && this.t < RAYS) {
+      const cx = x0 + (n * cw + (n - 1) * gap) / 2, cy = 83, k = (this.t - 0.1) / (RAYS - 0.1);
+      const col = gold ? PAL.goldHi : (ENV_COL[pack.kind] || ENV_COL.piece).flap;
+      fine(() => {
+        for (let r = 0; r < 14; r++) {
+          const ang = (r / 14) * Math.PI * 2 + this.t * 0.8, reach = 30 + 150 * Math.min(1, k * 1.6);
+          ctx.globalAlpha = 0.85 * (1 - k) * (r % 2 ? 0.55 : 1);
+          for (let d = 12; d < reach; d += 3) { const q = d > 70 ? 4 : 3; rect(ctx, cx + Math.cos(ang) * d - q / 2, cy + Math.sin(ang) * d - q / 2, q, q, d < 40 ? PAL.white : col); }
+        }
+        ctx.globalAlpha = 1;
+      });
+    }
     const flipCard = (o, i, x, y, w, h, draw) => {
       const p = Math.max(0, Math.min(1, (this.t - flipAt(i)) / 0.24));
       const id = `pack:pick:${i}`;
@@ -182,7 +197,7 @@ export class PackScreen {
       // 들림(sway.js): 다 뒤집힌 카드만 가리키면 들린다
       const id = `pack:pick:${i}`, hov = ui.isHover(id), done = this.t - flipAt(i) > 0.3;
       sway(ctx, ui.time, `${id}:${o.kind}:${o.id || o.form || o.t || ''}`, x, y, cw, ch, (c) => {
-        flipCard(o, i, x, y, cw, ch, (scaleX, hover) => itemCard(c, o, x, y, cw, ch, { hover, price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + k, run, ui, under: { onClick: () => this.pick(i) } }));
+        flipCard(o, i, x, y, cw, ch, (scaleX, hover) => itemCard(c, o, x, y, cw, ch, { hover, price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + k, run, ui, under: { onClick: () => this.pick(i) }, sheen: { time: ui.time, phase: k } }));
       }, { hover: hov && done, press: hov && ui.press && ui.press.id === id, shadow: done });
     });
     if (lay.cell) {

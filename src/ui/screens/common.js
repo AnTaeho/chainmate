@@ -12,6 +12,8 @@ import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM
 import { openBox, closeBox, logClip } from '../../render/layoutlog.js';
 import { L as L_ } from '../lang.js';
 import { emberMark } from '../ignite.js';
+import { moneyShake } from '../juice.js';
+import { glowText } from '../../render/light.js';
 
 // 세력 빛깔을 짙은 판넬 위 글자로 읽히게 조금 밝힌다
 export function lightHue(hex, k = 0.25) {
@@ -223,5 +225,8 @@ export function moneyRow(ctx, ui, run, ty) {
   const amt = `$${run.money}`;
   const fx = L + P + measure('상금') + 4;
   fragmentStrip(ctx, ui, run, fx, ty + 1, { max: Math.floor((L + LW - P - measure(amt, true) - 3 - fx) / 13), step: 13 });
-  text(ctx, amt, L + LW - P, ty, PAL.gold, { align: 'right', bold: true });
+  // 상금이 바뀌면(벌기 · 쓰기 · 동전이 닿음) 수가 좌우로 흔들리고 빛이 번진다(juice.js moneyShake — 움직임 줄이기면 빛만)
+  const sh = ui ? moneyShake(run.money, ui.time) : null;
+  if (sh) { const aw = measure(amt, true); glowText(ctx, L + LW - P - aw, ty, aw, 12, sh.up ? PAL.goldHi : PAL.red, 0.7 * sh.hot, 7); }
+  text(ctx, amt, L + LW - P + (sh ? sh.dx : 0), ty, sh && sh.hot > 0.6 ? (sh.up ? PAL.white : PAL.red) : PAL.gold, { align: 'right', bold: true });
 }

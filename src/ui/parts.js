@@ -1,5 +1,6 @@
 // 여러 화면이 같이 쓰는 조각: 격언 칸, 손 기물 카드, 상금, 말풍선 내용.
 import { richText } from './glossary.js';
+import { sheen } from './juice.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, frame, dots, sprite, measure, digits, place, edgeW, slot } from '../render/gfx.js';
 import { button } from './ui.js';
@@ -481,13 +482,13 @@ export function itemExtraTip(it) {
 }
 
 // wide: 폭이 88보다 좁아도 넓은 카드로(꾸러미 카드 넷 — 효과 글을 카드에 그대로 적는다)
-export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false, hold = false } = {}) {
+export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false, hold = false, sheen: shine = null } = {}) {
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
     x += Math.floor((w - nw) / 2); w = nw;
   }
-  if (scaleX === 1 && (w >= 88 || wide)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under, hold });
+  if (scaleX === 1 && (w >= 88 || wide)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under, hold, shine });
   // 좁은 카드는 뒤집히는 순간에만 그린다(연출 — 글 넘침은 재지 않는다)
   openBox('card', x, y, w, h, 0, { loose: true, name: '뒤집히는 카드' });
   narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run });
@@ -606,7 +607,8 @@ export function wrapHead(s, w1, w2) {
 // 넓은 카드 높이(폭 w). 한 줄의 카드는 가장 긴 카드에 맞춘다(itemRowH)
 export const itemCardH = (it, w, opts = {}) => itemCardLayout(it, w, opts).h;
 export const itemRowH = (items, w, opts = {}) => Math.max(0, ...items.filter(Boolean).map((it) => itemCardH(it, w, opts)));
-function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under, hold = false }) {
+// shine: 진열 · 꾸러미 카드의 반짝 띠(귀함 · 전설 · 명경기 조각, juice.js sheen) — { time, phase }. 도감에서는 없음
+function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under, hold = false, shine = null }) {
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   const edge = it.kind === 'engraving' ? ENG_EDGE[it.id] : it.kind === 'soul' ? SOUL_BY_ID[it.id].col : null;
   openBox('card', x, y, w, h, PAD_CARD, { name: `카드 ${it.kind}` });
@@ -628,6 +630,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   for (const [l, c, ly] of lay.lines) { if (c === PAL.cardInk) richText(ctx, l, x + P, y + ly, c, { ui: sold ? null : ui, under }); else text(ctx, l, x + P, y + ly, c); }
   // 칩 줄은 카드 아랫변에 붙인다(한 줄의 카드가 같은 높이라 칩이 한 줄로 맞는다)
   if (lay.fams.length) familyChips(ctx, lay.fams, x + P, y + lay.chips + (h - lay.h), lay.IW, CARD_CHIP_ROWS);
+  if (shine && !sold && (rar === 'rare' || rar === 'legendary' || it.kind === 'fragment')) sheen(ctx, x, y, w, h, shine.time, shine.phase);
   if (sold) {
     ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '구매함', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });

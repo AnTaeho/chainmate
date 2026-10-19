@@ -345,7 +345,7 @@ export class ShopScreen {
         // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
         const hov = (ui.isHover(id) && ok) || ui.isHover(hid);
         sway(ctx, ui.time, `${id}:${it.kind}:${it.id || it.form || it.t || ''}`, x, y, CARD_W, lay.cardH, (c) => {
-          itemCard(c, it, x, y, CARD_W, lay.cardH, { hover: hov && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok }, hold: true });
+          itemCard(c, it, x, y, CARD_W, lay.cardH, { hover: hov && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok }, hold: true, sheen: { time: ui.time, phase: i } });
           if (!it.sold && !ok) { c.globalAlpha = 0.35; rect(c, x, y, CARD_W, lay.cardH, PAL.shadow); c.globalAlpha = 1; }
           if (it.sold) return;
           // 리본: 찜했거나 넘어온 카드는 위 테에 금빛 띠

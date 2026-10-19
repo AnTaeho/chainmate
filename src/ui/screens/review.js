@@ -37,6 +37,7 @@ export class ReviewScreen extends BattleScreen {
     this.queue = [];      // 이번 수에 남은 명령(사슬 먹기)
     this.playing = false;
     this.banner = null;   // 마스터 띠 · 대국 띠는 다시 띄우지 않는다
+    this.intro = null;    // 마스터 등장 장면도
     this.hideGain = true; // 목표 막대 위 「+N」 자리에 「복기 · i/n수」
   }
   get rehearsal() { return true; }

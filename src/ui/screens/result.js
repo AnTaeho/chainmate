@@ -18,6 +18,7 @@ import { replayState, routeAt } from '../fxroute.js';
 import { rankCard, drawRankCard, CARD_NEIGHBOURS } from './rank.js';
 import { hasHighlight } from '../highlight.js';
 import { unlockState, bundleSize, nextLine, progressBar, BAR_H } from '../unlockview.js';
+import { confetti, screenFlash, CAP } from '../juice.js';
 
 const Q = 16, MX = 330, ROW_R = 300; // 다시 보기 판: 칸 16px. 윗변 MY는 결과 상자 자리에 따라(draw가 정한다). ROW_R: 기록 줄 수치의 오른끝
 let MY = 50;
@@ -40,6 +41,8 @@ export class ResultScreen {
     this.pct = last && last.target ? Math.floor((last.score / last.target) * 100) : 0;
     this.replay = run.bestReplay || null;
     if (!quiet) app.sfx(this.won ? 'fanfare' : 'lose');
+    // 판 승리(8관 돌파): 화면 번쩍과 양쪽 위에서 색종이 두 번(28절). 움직임 줄이기면 없음
+    if (!quiet && this.won && !app.reducedMotion) { screenFlash(app.fx, { col: PAL.goldHi, a: 0.45, life: 0.3 }); confetti(app.fx, W * 0.25, 40, { n: CAP.confetti, seed: 11, spread: 240, life: 2 }); confetti(app.fx, W * 0.75, 40, { n: CAP.confetti, seed: 23, spread: 240, life: 2 }); }
     this.out = app.finishRun() || { unlocked: [], dan: null, fresh: 0 };
     this.next = nextUnlock(app.records);
     this.opened = this.out.tier ?? null; // 이번 판에 열린 묶음(단계)
