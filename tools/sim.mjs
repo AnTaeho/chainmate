@@ -14,6 +14,7 @@ import { decideBattle } from './bot.mjs';
 import { lineCommands } from '../src/sim/solver.js';
 import '../src/data/josekis.js'; // --mod joseki:… 조정자를 등록한다
 import { writeFileSync } from 'node:fs';
+import { MATE } from '../src/sim/tuning.js';
 
 function parseArgs(argv) {
   const a = { battles: 300, ante: [1, 8], seed: 1, nomate: false, soul: null, mods: [], sac: true };
@@ -25,6 +26,7 @@ function parseArgs(argv) {
     else if (k === '--nosac') a.sac = false;
     else if (k === '--soul') a.soul = argv[++i];
     else if (k === '--mod') a.mods.push({ id: argv[++i] });
+    else if (k === '--mate') Object.assign(MATE, JSON.parse(argv[++i])); // 외통 줄이기 실험
     else if (k === '--dump') a.dump = argv[++i]; // 대국별 결과(수마다 기록 · 점수 · 끝난 이유)를 JSON으로 — 결정성 비교(CHM-44)
     else if (k === '--ante') {
       const v = argv[++i];

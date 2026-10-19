@@ -446,6 +446,7 @@ function endBattle(run, events) {
     // 하네스용: 이 대국 때 덱에 있던 혼 · 외통을 낸 사슬의 혼
     souls: [...new Set(run.deck.filter((p) => p.soul).map((p) => p.soul))],
     mateSoul: b.result.reason === 'mate' ? (b.history.at(-1) || {}).soul || null : null,
+    mateChains: b.history.reduce((a, h) => a + (h.mates || 0), 0), // 하네스용: 외통을 낸 사슬 수
     discarded: b.discarded,
     brilliants: b.brilliants || [],
     brilliantFrags: b.brilliantFrags || [], // 하네스용: 탁월수로 얻은 명경기 조각(CHM-47)

@@ -13,3 +13,7 @@ export const boardFilter = () => {
   return f > 1 ? f : 0;
 };
 export const reboardOn = () => !!BOARD_TUNING.reboard;
+
+// 외통 조건(docs/reports/mate.md). guardLimit: 한 콤보에서 킹을 지키던 적을 이만큼 넘게 잡았으면 그 콤보로는 킹을 못 잡는다(Infinity = 옛 규칙).
+//   하네스는 --tune '{"mate":{"guardLimit":…}}'(run.mjs) · --mate '{…}'(sim.mjs)로 바꿔 잰다.
+export const MATE = { guardLimit: Infinity };

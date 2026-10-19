@@ -12,6 +12,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRun, B, targetFor, REWARD, CHEST, TAGS, igniteKey } from '../src/sim/run.js';
 import { applyNight2 } from './night2.mjs';
+import { MATE } from '../src/sim/tuning.js';
 import { GOLDEN } from '../src/sim/battle.js';
 import { SHOP } from '../src/sim/shop.js';
 import { playRun, SMART, DRAFT, applyStrength, REPLAY, PEEK, TAG_BONUS, HOLD, BEATS, BUILD } from './shopbot.mjs';
@@ -118,6 +119,7 @@ if (!isMainThread) {
   if (tune && tune.calling != null) GOLDEN.calling = tune.calling;
   // 밤샘 2 D4: 장치를 하나씩 켜 보며 잰다 {"clock":1,"reboard":false,"filter":0,"reboardRatio":1}
   applyNight2(tune);
+  if (tune && tune.mate) Object.assign(MATE, tune.mate); // 외통 줄이기 실험 {"mate":{"guardLimit":0}}
   SMART.K = k;
   applyStrength(strong || 1, look || 0);
   if (botstats) BOT.stats = { decisions: 0, capped: 0 };

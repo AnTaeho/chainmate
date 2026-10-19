@@ -15,6 +15,7 @@ import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
 import { UP, ABSORB } from '../data/souls.js';
 import { brilliantMult } from '../data/sacrifice.js';
+import { MATE } from './tuning.js';
 
 const NO_OPTS = {};
 // 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
@@ -101,11 +102,20 @@ export function chainCaptures(t) {
       if (s >= 0 && s !== c.sq && takeableAt(t, s, c.sq, bo, c.form) && !list.includes(s)) list.push(s);
     }
   }
+  // 외통 실험 A: 이 사슬에서 킹을 지키던 적을 guardLimit보다 많이 잡았으면 킹은 못 잡는다
+  if (c.guardsTaken > MATE.guardLimit && !bo.openKings) list = list.filter((s) => t.board[s].t !== 'K');
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
   if (list.length && ((t.mods && t.mods.length) || c.engraving || c.soul)) {
     list = list.filter((s) => runHook(t, 'allowCapture', { from: c.sq, to: s, piece: t.board[s].t, form: c.form }));
   }
   return list;
+}
+
+// 외통 실험 A: s의 적이 지금 어느 적 킹을 지키나(킹 칸의 노림수 목록에 드나)
+function guardsKing(t, s) {
+  const bo = boardOpts(t);
+  for (let k = 0; k < 64; k++) { const x = t.board[k]; if (x && isEnemy(x) && x.t === 'K' && attackers(t.board, k, bo).includes(s)) return true; }
+  return false;
 }
 
 // 행마와 상관없이 s의 적을 먹을 수 있나(벽 · 방패 · 지켜진 킹 규칙은 captures와 같다)
@@ -139,6 +149,7 @@ export function chainCapture(t, sq, legal = false) {
   const via = pathVia(board, move, from, sq);
   const at = formBefore === 'S' ? from : landingOf(board, move, from, sq);
   const stay = at === from;
+  if (MATE.guardLimit !== Infinity && target.t !== 'K' && guardsKing(t, sq)) c.guardsTaken = (c.guardsTaken || 0) + 1;
   board[sq] = null;
   board[from] = null;
   board[at] = { t: c.form, mine: true };
@@ -331,6 +342,7 @@ function refill(t, events) {
   board[c.sq] = { t: c.form, mine: true };
   t.nextId = base + hit.ids;
   t.board = board;
+  if (c.guardsTaken) c.guardsTaken = 0;
   markFairy(t);
   events.push({ type: 'refill', sq: c.sq, count: c.refills, enemies: board.filter(isEnemy).length });
 }
