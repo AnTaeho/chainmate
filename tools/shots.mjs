@@ -35,7 +35,11 @@ const srv = await serve();
 const port = srv.address().port;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 480, height: 270 }, deviceScaleFactor: 1 });
-await page.addInitScript(() => { window.__autoDraft = true; });
+await page.addInitScript(() => {
+  window.__autoDraft = true;
+  // 명인 대국 앞까지 건너뛴다(건너뛰기 패가 꾸러미를 열면 넘긴다)
+  window.__skipToMaster = () => { const a = window.__app; while (a.run.phase === 'select' && a.run.blind < 2) { a.cmd({ type: 'skip' }); if (a.run.phase === 'pack') a.cmd({ type: 'skipPack' }); } };
+});
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -129,19 +133,30 @@ await ev(async () => {
 });
 await settle(200);
 await shot('00-portraits');
+// 튜토리얼을 권한 것으로 둔다(처음 켬 덮개가 타이틀 · 대국을 가리지 않게)
+await ev(() => { const a = window.__app; a.records.tutorialAsked = true; a.saveRecords(); });
 await page.reload();
 await page.waitForFunction(() => window.__app && window.__app.screen);
 await ev(() => { window.__app.settings.speed = 2; });
 await settle(900);
 await shot('01-title');
 
-// 응수가 걸린 순간(노림수 빗금): seed 3 첫 대국 최선 수의 첫 먹기 뒤
+// 응수가 걸린 순간(노림수 빗금): seed 3 첫 대국에서 첫 먹기 뒤 응수가 걸리고 잡을 수 있는 노림수가 있는 수(최선 수는 응수 없이 갈 수 있다)
 await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.cmd({ type: 'play' }); a.go('battle', { events: [] }); });
 await settle(2600);
 const plan3 = await ev(async () => {
-  const { bestMove } = await import('/src/sim/solver.js');
-  const d = bestMove(window.__app.run.battle, { preferMate: 'avoid' });
-  return { hand: d.handIndex, sq: d.sq, line: d.line };
+  const { apply, legalCommands } = await import('/src/sim/battle.js');
+  const { chainCaptures } = await import('/src/sim/chain.js');
+  const b0 = window.__app.run.battle, copy = (b) => JSON.parse(JSON.stringify(b));
+  for (const d of legalCommands(b0).filter((c) => c.type === 'drop')) {
+    const b1 = copy(b0); apply(b1, d);
+    for (const c of legalCommands(b1).filter((q) => q.type === 'capture')) {
+      const b2 = copy(b1); apply(b2, c);
+      const atk = b2.status === 'chain' && b2.chain.forced ? chainCaptures(b2).find((q) => b2.chain.forced.includes(q)) : undefined;
+      if (atk !== undefined) return { hand: d.handIndex, sq: d.sq, line: [c.sq, atk] };
+    }
+  }
+  throw new Error('응수가 걸리는 수가 없다');
 });
 await clickId(`hand:${plan3.hand}`);
 await clickId(`sq:${plan3.sq}`);
@@ -175,13 +190,13 @@ await shot('27d-reinforce-fall');
 await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.run.factions[0] = 'hunters'; a.goPhase(); });
 await settle(200);
 await shot('02b-select-fog');
-await ev(() => { const a = window.__app; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase(); });
+await ev(() => { window.__skipToMaster(); window.__app.goPhase(); });
 await settle(200);
 await clickId('select:play');
 await settle(600);
 await shot('02c-fog-banner');
 // 명인 대국 들어가기(초상이 들어오는 띠)
-await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase(); });
+await ev(() => { localStorage.clear(); const a = window.__app; a.newRun({ seed: 3 }); window.__skipToMaster(); a.goPhase(); });
 await settle(100);
 await clickId('select:play');
 await settle(450);
@@ -377,12 +392,12 @@ await ev(() => window.__app.go('title'));
 await settle(300);
 await shot('01-title');
 
-// 첫 수업 넷: 1 시범 손가락 · 2 미리 보기가 처음 나오는 내 차례 · 3 넷을 이은 끝(「!」 · 막대) · 4 시범의 끊김
+// 수업 넷(src/ui/lessons.js): 1 시범 손가락(잡으면 바뀐다) · 2 미리 보기가 처음 나오는 내 차례 · 3 넷을 이은 끝(이을수록 곱해진다) · 4 시범의 끊김(지키는 적부터)
 const inLesson = (fn, arg) => page.waitForFunction(fn, arg, { timeout: 20000 });
 await ev(() => window.__app.go('lesson', { index: 0 }));
-await inLesson(() => { const s = window.__app.screen; return s.demo && s.demo.i === 1 && s.demo.stage === 'move' && s.demo.t > 0.4; });
+await inLesson(() => { const s = window.__app.screen; return s.demo && s.si === 1 && s.demo.stage === 'move' && s.demo.t > 0.4; });
 await shot('21-lesson-1');
-await ev(() => window.__app.go('lesson', { index: 1, phase: 'play' }));
+await ev(() => window.__app.go('lesson', { index: 0, phase: 'play' }));
 await settle(200);
 await clickId('hand:0');
 await clickId('sq:10');
@@ -390,7 +405,7 @@ await idle();
 await hoverId('sq:27');
 await settle(200);
 await shot('21-lesson-2');
-await ev(() => window.__app.go('lesson', { index: 2, phase: 'play' }));
+await ev(() => window.__app.go('lesson', { index: 1, phase: 'play' }));
 await settle(200);
 await clickId('hand:0');
 await clickId('sq:52');
@@ -400,7 +415,7 @@ await clickId('sq:15');
 await inLesson(() => { const v = window.__app.screen.view; return v.gather && v.gather.burst; });
 await settle(90);
 await shot('21-lesson-3');
-await ev(() => window.__app.go('lesson', { index: 3 }));
+await ev(() => window.__app.go('lesson', { index: 2 }));
 await inLesson(() => { const v = window.__app.screen.view; return v.cut && v.cut.p > 0.5; });
 await shot('21-lesson-4');
 

@@ -200,7 +200,7 @@ await page.goto(`http://localhost:${srv.address().port}/index.html${SPACING ? `?
 await ev((lang) => {
   localStorage.clear();
   localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang, speed: 2 }));
-  localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, runs: 3 }));
+  localStorage.setItem('chainmate.records.v1', JSON.stringify({ v: 1, runs: 3, tutorialAsked: true }));
 }, LANG);
 await page.reload();
 await until(() => window.__app && window.__app.screen);
@@ -209,8 +209,11 @@ if (FOLD_STYLE) await ev(async (st) => { try { (await import('/src/ui/fold.js'))
 await ev(async () => {
   const a = window.__app;
   const { HINTS } = await import('/src/ui/coach.js');
+  const { LESSONS } = await import('/src/ui/lessons.js');
   a.records.coachSeen = Object.fromEntries(Object.keys(HINTS).map((k) => [k, true]));
-  a.records.lessonsSeen = { drop: true, become: true, chain: true, reply: true };
+  a.records.lessonsSeen = Object.fromEntries(LESSONS.map((L) => [L.id, true])); a.records.lessonsDone = true;
+  // 명인 대국 앞까지 건너뛴다(건너뛰기 패가 꾸러미를 열면 넘긴다)
+  window.__skipToMaster = () => { const r = a.run; while (r.phase === 'select' && r.blind < 2) { a.cmd({ type: 'skip' }); if (r.phase === 'pack') a.cmd({ type: 'skipPack' }); } };
   a.records.runs = 7; a.records.wins = 1; a.records.bestAnte = 8; a.records.mates = 3;
   a.records.unlocked = { openings: ['standard', 'london', 'queens_gambit'], dan: 2 };
   a.records.bestMove = { score: 48210, steps: ['N', 'B', 'R', 'Q', 'P', 'Q', 'R', 'K'], ante: 6 };
@@ -249,14 +252,14 @@ if (ko) {
 }
 // ── 판: 관 선택 · 정석 · 대국
 await scene('select', js(fresh(7, "const r = window.__app.run; if (r.phase === 'draft') { window.__app.cmd({ type: 'joseki', index: 0 }); window.__app.goPhase(); }")));
-if (ko) await scene('select-master', js(fresh(3, "const a = window.__app; if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); a.run.factions[0] = 'hunters'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' }); a.goPhase();")));
+if (ko) await scene('select-master', js(fresh(3, "const a = window.__app; if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); a.run.factions[0] = 'hunters'; window.__skipToMaster(); a.goPhase();")));
 await scene('draft', js(fresh(7)), { wait: 1600 });
 if (ko) await scene('draft-ante3', js(fresh(7, "const a = window.__app, r = a.run; a.cmd({ type: 'joseki', index: 0 }); r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; a.goPhase();")), { wait: 1600 });
 const battleSrc = (seed, extra) => fresh(seed, `const a = window.__app, r = a.run; if (r.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); ${extra} a.cmd({ type: 'play' }); a.go('battle', { events: [] });`);
 await scene('battle', js(battleSrc(7, '')), { wait: 2600 });
 if (ko) {
-  await scene('battle-master', js(battleSrc(3, "a.run.factions[0] = 'cavalry'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' });")), { wait: 3400 });
-  await scene('battle-fog', js(battleSrc(3, "a.run.factions[0] = 'hunters'; a.cmd({ type: 'skip' }); a.cmd({ type: 'skip' });")), { wait: 3400 });
+  await scene('battle-master', js(battleSrc(3, "a.run.factions[0] = 'cavalry'; window.__skipToMaster();")), { wait: 3400 });
+  await scene('battle-fog', js(battleSrc(3, "a.run.factions[0] = 'hunters'; window.__skipToMaster();")), { wait: 3400 });
 }
 await scene('battle-full', js(battleSrc(11, "window.__fill(r); r.ante = 5; r.blind = 0;")), { wait: 2800 });
 if (ko) {

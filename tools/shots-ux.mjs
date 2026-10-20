@@ -84,12 +84,13 @@ await page.waitForFunction(() => window.__app && window.__app.screen);
 await ev(() => { window.__app.settings.speed = 2; });
 await settle(1200);
 await shot('first-launch');
+await clickId('welcome:lesson'); // 처음 켬 덮개에서 「튜토리얼부터」
 
 // ── 2. 첫 수업: 수업마다 시범 한 장 · 내 차례 한 장
 const lessons = await ev(async () => (await import('/src/ui/lessons.js')).LESSONS.map((L) => ({ shop: !!L.shop })));
 for (let i = 0; i < lessons.length; i++) {
   if (lessons[i].shop) {
-    // 수업 ⑩: 상점 길을 걸음마다 한 장
+    // 상점 수업: 상점 길을 걸음마다 한 장
     await ev(async (i) => (await import('/src/ui/screens/lessons.js')).openLesson(window.__app, i, 'shots'), i);
     for (let k = 0; k < 8; k++) {
       await settle(900);
@@ -108,7 +109,7 @@ for (let i = 0; i < lessons.length; i++) {
   await settle(500);
   await shot(`lesson-${i + 1}-play`);
 }
-await ev(() => { const a = window.__app; a.records.lessonsSeen = { drop: true, become: true, chain: true }; a.go('lessons'); });
+await ev(async () => { const a = window.__app; const { LESSONS } = await import('/src/ui/lessons.js'); a.records.lessonsSeen = Object.fromEntries(LESSONS.slice(0, 3).map((L) => [L.id, true])); a.go('lessons'); });
 await settle(300);
 await shot('lesson-list');
 await clickId('lessons:terms');
@@ -116,7 +117,7 @@ await settle(200);
 await shot('glossary');
 
 // ── 3. 첫 판: 수업을 다 한 사람의 새 판
-await ev(() => { const a = window.__app; a.records.lessonsDone = true; a.saveRecords(); a.nextSeed = 7; a.newRun(); });
+await ev(async () => { const a = window.__app; const { LESSONS } = await import('/src/ui/lessons.js'); a.records.lessonsSeen = Object.fromEntries(LESSONS.map((L) => [L.id, true])); a.records.lessonsDone = true; a.saveRecords(); a.nextSeed = 7; a.newRun(); });
 await settle(1400);
 await shot(`first-${await screen()}`);
 if ((await screen()) === 'draft') {
