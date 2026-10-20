@@ -36,14 +36,14 @@ faction('peasants', {
 });
 faction('cavalry', {
   name: '기병대', crest: 'horseshoe', hue: '#c07a3a',
-  look: { face: '#502b4e', dark: '#a37ba2', flow: ['#7a2978', '#64264b'] },
+  look: { face: '#48294c', dark: '#a57cab', flow: ['#70297a', '#452664'] },
   mix: { P: 0.9, N: 2.8, B: 0.6, R: 0.6, Q: 0.6 }, unique: { L: 1.6 },
   habit: { text: '증원으로 나이트와 낙타만 온다', apply(r) { r.reinforceMix = { N: 4, L: 2 }; } },
   boss: 'mirror',
 });
 faction('abbey', {
   name: '수도원', crest: 'lantern', hue: '#d8c070',
-  look: { face: '#352852', dark: '#877ba3', flow: ['#41297a', '#4f2664'] },
+  look: { face: '#3d3a34', dark: '#938f85', flow: ['#605643', '#3c3f4e'] },
   mix: { P: 0.8, N: 0.6, B: 3.5, R: 0.6, Q: 0.8 }, unique: { E: 1.5 },
   habit: { text: '대국마다 돌기둥 셋~다섯이 길을 막는다', apply(r) { r.walls = [3, 5]; } },
   boss: 'silence',
@@ -57,7 +57,7 @@ faction('fortress', {
 });
 faction('hunters', {
   name: '숲 사냥꾼', crest: 'bow', hue: '#4f9a5a',
-  look: { face: '#204b3b', dark: '#7ba394', flow: ['#297a5c', '#266464'] },
+  look: { face: '#144031', dark: '#6f9788', flow: ['#196e51', '#185959'] },
   mix: { P: 0.5, N: 1.2, B: 0.6, R: 0.5, Q: 0.5 }, unique: { S: 6, D: 1 },
   habit: { text: '위 두 줄은 숲이라 놓을 수 없다 · 갈 수 있는 칸만 보인다', apply(r) { r.fog = Math.max(r.fog || 0, 2); } },
   boss: 'fog',
@@ -71,14 +71,14 @@ faction('heralds', {
 });
 faction('mercs', {
   name: '용병단', crest: 'coin', hue: '#e0b040',
-  look: { face: '#442a51', dark: '#967ba3', flow: ['#5f297a', '#642662'] },
+  look: { face: '#3c3f22', dark: '#949966', flow: ['#6c7231', '#455d2d'] },
   mix: { P: 0.8, fairy: 2 }, unique: ANY_FAIRY,
   habit: { text: '적 특성이 두 배 자주 붙는다', apply(r) { r.traitMult = 2; r.traitFrom = 2; } },
   boss: 'grudge',
 });
 faction('royal', {
   name: '왕궁 근위', crest: 'crown', hue: '#b04a6a',
-  look: { face: '#522840', dark: '#a37b91', flow: ['#7a2957', '#642662'] },
+  look: { face: '#532231', dark: '#ae7586', flow: ['#7a2941', '#64264f'] },
   mix: { P: 1.3, N: 0.6, B: 0.6, R: 0.9, Q: 1.7 }, unique: { Z: 0.3, T: 0.6 },
   habit: { text: '킹을 지키는 적 +1', apply(r) { r.guardsBonus = (r.guardsBonus || 0) + 1; } },
   boss: 'grandmaster',
