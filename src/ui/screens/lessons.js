@@ -170,8 +170,9 @@ export class LessonsScreen {
     const x = Math.floor(W / 2 - w / 2), y = Math.floor(H / 2 - h / 2);
     const bw = Math.floor((w - PAD_BOX * 2 - 6) / 2);
     kingNote(ctx, app, x, y, w, END_SAY, { ...lay, h }, { joy: true, name: '튜토리얼 끝', inner: () => {
-      button(ctx, ui, 'lessons:list', x + PAD_BOX, y + btnY, bw, BTN_S, '목록', { onClick: () => { this.end = false; } });
-      button(ctx, ui, 'lessons:play', x + w - PAD_BOX - bw, y + btnY, bw, BTN_S, playLabel(app), { tone: 'gold', onClick: () => play(app) });
+      // 손가락 구역(CHM-52): 덮개라 바깥쪽은 막힘 없이, 두 단추 사이는 반씩
+      button(ctx, ui, 'lessons:list', x + PAD_BOX, y + btnY, bw, BTN_S, '목록', { onClick: () => { this.end = false; }, grow: { l: Infinity, r: 3, u: Infinity, d: Infinity } });
+      button(ctx, ui, 'lessons:play', x + w - PAD_BOX - bw, y + btnY, bw, BTN_S, playLabel(app), { tone: 'gold', onClick: () => play(app), grow: { l: 3, r: Infinity, u: Infinity, d: Infinity } });
     } });
   }
   // 낱말 풀이: 카드 옆 낱말 상자와 같은 표(glossary.js TERMS)를 묶음 탭(대국 · 판 · 물건 · 모음)과 쪽으로

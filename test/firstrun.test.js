@@ -154,6 +154,27 @@ test('튜토리얼 목록: 「이어서」는 안 끝낸 첫 수업부터, 마�
   assert.equal(app.screen.name, 'draft', '새 판은 평범한 판(레퍼토리 고르기부터)');
 });
 
+// 손가락 기기(CHM-52): 덮개 단추의 누르는 구역은 44pt까지 넓어지고 서로 겹치지 않는다(그림은 그대로)
+const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+const fingerCheck = (app, ids) => {
+  for (const ps of [1, 4 / 3]) {
+    app.coarse = true; app.pixelScale = ps; tick(app);
+    const need = app.ui.finger, rs = ids.map((id) => app.ui.regions.find((r) => r.id === id));
+    assert.ok(need >= 33, `finger ${need}`);
+    rs.forEach((r, i) => assert.ok(r && r.w >= need && r.h >= need, `${ids[i]} ${r && r.w}×${r && r.h} < ${need}`));
+    for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) assert.ok(!overlap(rs[i], rs[j]), `${ids[i]} · ${ids[j]} 겹침`);
+  }
+};
+test('손가락 기기: 처음 켬 덮개 「×」 · 「바로 시작」 · 「튜토리얼부터」와 튜토리얼 끝 카드 「목록」 · 「새 판」은 44pt 구역, 서로 겹치지 않는다', async () => {
+  let app = await fresh();
+  assert.equal(app.overlay && app.overlay.name, 'welcome');
+  fingerCheck(app, ['welcome:close', 'welcome:play', 'welcome:lesson']);
+  app = await fresh({ tutorialAsked: true });
+  app.go('lessons'); tick(app);
+  app.screen.end = true; tick(app);
+  fingerCheck(app, ['lessons:list', 'lessons:play']);
+});
+
 test('튜토리얼에서 가르친 도움말 팁은 그 수업을 끝낸 사람에게 판 안에서 뜨지 않는다', async () => {
   const { hint, TAUGHT, HINTS } = await import('../src/ui/coach.js');
   const { LESSON_BY_ID } = await import('../src/ui/lessons.js');

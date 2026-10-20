@@ -35,11 +35,13 @@ export class WelcomeScreen {
   draw(ctx, ui) {
     const { lay, btnY, x, y } = welcomeLayout(), w = WELCOME.w;
     const bw = Math.floor((w - PAD_BOX * 2 - 6) / 2);
+    // 손가락 구역(CHM-52): 덮개라 바깥쪽은 막힘 없이, 두 단추 사이 · 「×」와 단추 줄 사이는 반씩
+    const mid = (btnY - PAD_BOX - BTN_S) >> 1;
     kingNote(ctx, this.app, x, y, w, WELCOME_SAY, lay, { name: '튜토리얼 권하기', headRight: BTN_S + 4, inner: () => {
       // 닫기(킹 머리줄 오른쪽 끝): 바깥을 눌러서는 닫히지 않는다(실수로 닫히지 않게)
-      button(ctx, ui, 'welcome:close', x + w - PAD_BOX - BTN_S, y + PAD_BOX, BTN_S, BTN_S, '', { onClick: () => this.choose('close'), icon: cross });
-      button(ctx, ui, 'welcome:play', x + PAD_BOX, y + btnY, bw, BTN_S, '바로 시작', { onClick: () => this.choose('play') });
-      button(ctx, ui, 'welcome:lesson', x + w - PAD_BOX - bw, y + btnY, bw, BTN_S, '튜토리얼부터', { tone: 'gold', onClick: () => this.choose('lesson') });
+      button(ctx, ui, 'welcome:close', x + w - PAD_BOX - BTN_S, y + PAD_BOX, BTN_S, BTN_S, '', { onClick: () => this.choose('close'), icon: cross, grow: { l: Infinity, r: Infinity, u: Infinity, d: mid } });
+      button(ctx, ui, 'welcome:play', x + PAD_BOX, y + btnY, bw, BTN_S, '바로 시작', { onClick: () => this.choose('play'), grow: { l: Infinity, r: 3, u: mid, d: Infinity } });
+      button(ctx, ui, 'welcome:lesson', x + w - PAD_BOX - bw, y + btnY, bw, BTN_S, '튜토리얼부터', { tone: 'gold', onClick: () => this.choose('lesson'), grow: { l: 3, r: Infinity, u: mid, d: Infinity } });
     } });
   }
   key(k) {
