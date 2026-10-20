@@ -273,7 +273,9 @@ test('재현 판정: 명국마다 조건', () => {
   assert.ok(!chk('immortal', { caps: 'PRNR', captures: 4, cuts: 1 }), '끊김(넘긴 것 포함)이 있으면 안 된다');
   assert.ok(!chk('immortal', { caps: 'PRN' }));
   assert.ok(chk('opera', { move: 0, mates: 1 }));
-  assert.ok(!chk('opera', { move: 1, mates: 1 }));
+  assert.ok(chk('opera', { move: 2, mates: 1 }));
+  assert.ok(!chk('opera', { move: 3, mates: 1 }));
+  assert.ok(!chk('opera', { move: 0, mates: 0 }));
   assert.ok(chk('century', { caps: 'NQQ' }));
   assert.ok(!chk('century', { caps: 'QNQ' }));
   assert.ok(chk('evergreen', { captures: 8 }));

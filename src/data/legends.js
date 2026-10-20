@@ -28,8 +28,8 @@ export const OPERA_REFILLS = 3;
 legend('opera', {
   name: '오페라 대국', year: 1858, story: '모피가 오페라 관람석에서 17수 만에 이겼다',
   text: '지켜진 킹도 잡는다 · 체크메이트하면 적이 다시 나타나고 콤보가 이어진다', verb: '체크메이트',
-  feat: '대국 첫 수에 체크메이트', source: 'display',
-  check: (h) => h.move === 0 && h.mates > 0,
+  feat: '대국 셋째 수 안에 체크메이트', source: 'display',
+  check: (h) => h.move <= 2 && h.mates > 0, // 첫 수만이던 것을 셋째 수까지(외통 조건 뒤 첫 수 외통이 거의 없어서, docs/reports/mate.md)
 }, {
   // 킹 수비(셋 · 넷)를 그대로 두면 외통이 대국당 3~5%라 이 전설이 거의 듣지 않았다(첫 손 최선 수 평균 ×1.0).
   onBattleStart(ctx) { ctx.rules.openKings = true; },

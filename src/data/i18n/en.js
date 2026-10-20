@@ -380,7 +380,7 @@ export const EN = {
   '불멸의 대국': 'The Immortal Game', '앤더슨이 룩 둘 · 비숍 · 퀸을 희생하고 이겼다': 'Anderssen gave up both rooks, a bishop and his queen, and won',
   '끊겨도 콤보가 이어진다': 'Breaks never end the chain', '한 콤보에서 끊기지 않고 룩 둘을 잡는다': 'Two rooks in one unbroken chain',
   '오페라 대국': 'The Opera Game', '모피가 오페라 관람석에서 17수 만에 이겼다': 'Morphy won in 17 moves from a box at the opera',
-  '지켜진 킹도 잡는다': 'Take even guarded kings', '대국 첫 수에 체크메이트': 'Checkmate on the first move of a match',
+  '지켜진 킹도 잡는다': 'Take even guarded kings', '대국 셋째 수 안에 체크메이트': 'Checkmate within the first three moves of a match',
   '세기의 대국': 'The Game of the Century', '열세 살 피셔의 퀸 희생': "Thirteen-year-old Fischer's queen sacrifice",
   '퀸을 잡고 곧바로 퀸을 또 잡는다': 'Take a queen, then another queen right after',
   '상록의 대국': 'The Evergreen Game', '끝없이 이어지는 공격': 'An attack that never ends',
