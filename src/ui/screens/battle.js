@@ -60,6 +60,8 @@ export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S
 // 게임 좌표 → 판 칸(판 밖이면 -1)
 export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
+// 대국이 끝난 뒤 막간 화면(afterSeq → app.flow): 날던 동전 · 명국 조각이 이어 난다
+const AFTER = new Set(['reward', 'chest', 'awaken', 'legend']);
 // 다음 수(CHM-60, docs/design-notes/agency.md A): 손 카드 오른쪽 끝의 좁은 칸에 덱 맨 앞 둘을 반 크기 기물로(위가 먼저, 흐리게).
 // 새 카드는 손 오른쪽 끝에 붙으니 들어오는 쪽에 둔다. 손 카드는 그만큼 좁아진다(넷이면 25 → 22).
 // 칸 둘은 손 높이(36)의 아래쪽에 — 넷째 카드의 「!?」 딱지(오른쪽 위 밖으로 2 · 위로 4)와 떨어지게.
@@ -251,8 +253,12 @@ export class BattleScreen {
     const b = this.bRef;
     const m = b.mods.find((s) => MASTER_BY_ID[s.id]);
     // 마스터 대국: 온 화면 등장 장면(1.5초, 누르면 넘김) 뒤에 마스터 띠. 띠의 시간은 등장 장면 밑에서도 흐른다(from — 등장이 끝난 때부터 보인다)
-    // 이어 하기로 연 대국(대국 시작 사건이 없다)에는 등장 장면을 다시 세우지 않는다
-    if (m && info) { this.intro = { t: 0, life: INTRO, id: m.id, landed: false }; this.banner = { title: `마스터 ${MASTER_BY_ID[m.id].name}`, sub: MASTER_BY_ID[m.id].text, t: 0, life: INTRO + 1.6, from: INTRO, col: PAL.red, master: m.id }; this.snd('start'); }
+    // 이어 하기로 연 대국(대국 시작 사건이 없다)에는 등장 장면 없이 마스터 띠만 곧바로 세운다
+    if (m) {
+      const M = MASTER_BY_ID[m.id], at = info ? INTRO : 0;
+      if (info) { this.intro = { t: 0, life: INTRO, id: m.id, landed: false }; this.snd('start'); }
+      this.banner = { title: `마스터 ${M.name}`, sub: M.text, t: 0, life: at + 1.6, from: at, col: PAL.red, master: m.id };
+    }
     else if (info && this.run) { const fa = factionOfBattle(b); this.banner = { title: `${this.run.ante}관 · ${KIND_NAME[b.kind]}`, sub: `${fa ? `${fa.name} · ` : ''}목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold }; }
     // 이번 판에서 처음 나온 것(이형 적 · 적 특성 · 판 위 사물 · 금빛 적): 띠 아래에 작은 그림 한 줄
     if (this.banner && info && this.run) {
@@ -287,9 +293,9 @@ export class BattleScreen {
     return fresh.slice(0, 8).map(([, it]) => it);
   }
 
-  // 대국 화면을 떠나면 판 위 연출(큰 글자 · 모습 이름 · 연기 · 조각 · 반짝이 · 동전)은 모두 함께 사라진다(보상 상자를 덮지 않게).
-  // 색종이만 남는다 — 화면 뒤 층(보상 상자 뒤)으로 이어 떨어진다
-  onLeave() { this.fx.list = this.fx.list.filter((e) => e.confetti); }
+  // 대국 화면을 떠나면 판 위 연출(큰 글자 · 모습 이름 · 연기 · 조각 · 반짝이)은 사라진다(보상 상자를 덮지 않게). 색종이는 화면 뒤 층으로 이어 떨어지고,
+  // 날던 동전 · 명국 조각(carry)은 대국 뒤 막간(보상 · 상자 · 각성 · 전설)으로 갈 때만 이어 난다 — 결과 · 목록 · 메인 화면 위로는 날지 않는다
+  onLeave(next) { this.fx.list = this.fx.list.filter((e) => e.confetti || (e.carry && AFTER.has(next))); }
   get run() { return this.src.run; }
   live() { return this.src.live(); }
   // 갈림길 카드가 떠 있으면 그 상태(갈린 수 앞)를 그린다
@@ -986,7 +992,8 @@ export class BattleScreen {
     const from = this.pieceXY() || { x: BX + 112, y: BY + 112 };
     const to = shardTo();
     const app = this.app;
-    flyCoins(this.fx, from.x, from.y - 6, LX + LW - PAD_BOX - 8, to.y + 5, { n: Math.max(1, Math.min(CAP.coins, money)), seed: Math.round(from.x * 3 + money), onHit: () => kickMoney(app.time) });
+    // 막간으로 넘어간 뒤 닿은 동전은 상금 수를 흔들지 않는다(보상 화면에는 상금 줄이 없다)
+    flyCoins(this.fx, from.x, from.y - 6, LX + LW - PAD_BOX - 8, to.y + 5, { n: Math.max(1, Math.min(CAP.coins, money)), seed: Math.round(from.x * 3 + money), carry: true, onHit: () => { if (app.screen === this) kickMoney(app.time); } });
   }
   // 대국 승리: 판 위에서 색종이가 터진다(움직임 줄이기면 없음). 보상 화면 위로 이어 떨어진다
   winFx() {

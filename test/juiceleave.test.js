@@ -1,4 +1,4 @@
-// 손맛 연출의 뒤처리(layout.md 28절): 화면을 떠나면 판 위 연출 · 날던 동전을 거두고, 마스터 등장은 대국을 처음 열 때만,
+// 손맛 연출의 뒤처리(layout.md 28절): 화면을 떠나면 판 위 연출을 거두고(날던 동전 · 명국 조각은 막간으로만 이어 난다), 마스터 등장은 대국을 처음 열 때만(띠는 이어 하기에도),
 // 등장 중에도 멈춤이 열리고, 움직임 줄이기에서는 상금 동전을 날리지 않으며, 상금 떨림 기준은 판마다 새로 잡는다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,14 +28,21 @@ const masterBattle = (app) => {
   return app.screen;
 };
 
-test('마스터 등장: 대국을 열 때만 서고, 이어 하기로 연 대국에는 다시 서지 않는다', async () => {
+test('마스터 등장: 대국을 열 때만 서고, 이어 하기로 연 대국에는 다시 서지 않는다 — 마스터 띠는 이어 하기에도 곧바로', async () => {
   const app = await fresh();
   const s = masterBattle(app);
   assert.equal(s.name, 'battle');
   assert.ok(s.intro, '대국 시작에 등장 장면');
+  const id = s.intro.id;
+  assert.equal(s.banner && s.banner.master, id);
   app.continueRun(); tick(app);
-  assert.equal(app.screen.name, 'battle');
-  assert.ok(!app.screen.intro, '이어 하기에는 등장 장면이 없다');
+  const r = app.screen;
+  assert.equal(r.name, 'battle');
+  assert.ok(!r.intro, '이어 하기에는 등장 장면이 없다');
+  assert.equal(r.banner && r.banner.master, id, '이어 하기에도 마스터 띠');
+  assert.equal(r.banner.from, 0, '띠는 기다리지 않고 곧바로 보인다');
+  tick(app, 120); // 16ms × 120 = 1.92초
+  assert.equal(r.banner, null, '띠는 1.6초 뒤 걷힌다');
 });
 
 test('마스터 등장 중에도 멈춤 단추 · Esc는 곧바로 멈춤을 연다', async () => {
@@ -54,18 +61,42 @@ test('마스터 등장 중에도 멈춤 단추 · Esc는 곧바로 멈춤을 연
   assert.equal(s.intro, null, '다른 키는 장면을 넘긴다');
 });
 
-test('대국을 떠나면 판 위 연출(연기 · 조각 · 동전)은 사라지고 색종이만 남는다 · 보상을 떠나면 날던 동전도', async () => {
+test('대국을 떠나면 판 위 연출(연기 · 조각)은 사라진다 · 날던 동전 · 명국 조각은 보상으로만 이어 난다 · 보상을 떠나면 날던 동전도', async () => {
+  const { BX, BY } = await import('../src/ui/screens/battle.js');
   const app = await fresh();
-  const s = masterBattle(app);
-  s.endIntro();
-  s.coinFx(3);
-  s.shatter(27, 'P', 'b');
-  s.winFx();
-  assert.ok(app.fx.list.some((e) => e.coin) && app.fx.list.some((e) => e.confetti));
-  const n = app.fx.list.length;
+  const battle = () => {
+    const s = masterBattle(app);
+    s.endIntro();
+    app.fx.clear();
+    s.coinFx(3);
+    app.flyShard(BX + 112, BY + 112, 50, 200);
+    s.shatter(27, 'P', 'b');
+    s.winFx();
+    assert.ok(app.fx.list.some((e) => e.coin) && app.fx.list.some((e) => e.confetti) && app.fx.list.some((e) => e.carry && !e.coin));
+    assert.ok(app.fx.list.some((e) => !e.confetti && !e.carry), '판 위 연출');
+    return s;
+  };
+  // 대국 → 보상(막간): 색종이 · 동전 · 명국 조각이 이어 난다, 연기 · 조각은 없다
+  battle();
+  app.go('reward', { reward: { base: 3, total: 3 }, events: [] });
+  assert.ok(app.fx.list.every((e) => e.confetti || e.carry), '판 위 연출은 없다');
+  assert.ok(app.fx.list.some((e) => e.coin) && app.fx.list.some((e) => e.carry && !e.coin), '동전 · 명국 조각은 이어 난다');
+  // 이어 난 동전이 닿아도 상금 수는 흔들지 않는다(보상 화면에는 상금 줄이 없다)
+  const { moneyShake } = await import('../src/ui/juice.js');
+  const run = app.run;
+  moneyShake(run.money, app.time, run);
+  tick(app, 45); // 0.72초: 동전이 다 닿은 바로 뒤(떨림 0.4초 안)
+  assert.equal(moneyShake(run.money, app.time, run), null, '닿은 동전이 상금을 흔들지 않는다');
+  tick(app, 25);
+  assert.ok(!app.fx.list.some((e) => e.carry && !e.coin), '명국 조각은 0.9초에 끝난다');
+  // 대국 → 메인 화면: 모두 지운다
+  battle();
+  app.toTitle();
+  assert.equal(app.fx.list.length, 0, '메인 화면으로는 아무것도');
+  // 대국 → 막간이 아닌 화면(도감 · 결과): 색종이만
+  battle();
   app.go('codex');
-  assert.ok(app.fx.list.length > 0 && app.fx.list.length < n);
-  assert.ok(app.fx.list.every((e) => e.confetti), '색종이만');
+  assert.ok(app.fx.list.length > 0 && app.fx.list.every((e) => e.confetti), '색종이만');
   // 보상: 날던 동전을 거둔다
   app.fx.clear();
   app.go('reward', { reward: { base: 3, total: 3 }, events: [] });

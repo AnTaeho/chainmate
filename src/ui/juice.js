@@ -131,13 +131,13 @@ export function drawCoin(ctx, x, y, { alpha = 1, sx = 1 } = {}) {
 }
 
 // 동전이 (x0, y0)에서 솟았다가 (x1, y1)로 날아간다. n개는 조금씩 늦게. 닿을 때마다 onHit(동전 소리 · 상금 흔들림)
-// jitter: 솟는 자리의 좌우 흩어짐(보상 화면은 0 — 금액 오른쪽 한 줄로 내려가 글을 덮지 않는다)
-export function flyCoins(fx, x0, y0, x1, y1, { n = 3, seed = 9, delay = 0, onHit = null, rise = 22, jitter = 14 } = {}) {
+// jitter: 솟는 자리의 좌우 흩어짐(보상 화면은 0 — 금액 오른쪽 한 줄로 내려가 글을 덮지 않는다). carry: 대국이 끝나 막간으로 넘어가도 이어 난다
+export function flyCoins(fx, x0, y0, x1, y1, { n = 3, seed = 9, delay = 0, onHit = null, rise = 22, jitter = 14, carry = false } = {}) {
   const r = seeded(seed), m = Math.min(CAP.coins, n);
   for (let i = 0; i < m; i++) {
     const d = delay + i * 0.06, ox = (r() - 0.5) * jitter, up = rise + r() * (jitter ? 10 : 0);
     fx.add({
-      life: d + 0.62, layer: 1, coin: true, hit: false,
+      life: d + 0.62, layer: 1, coin: true, carry, hit: false,
       update: (dt, e) => { if (!e.hit && e.t >= d + 0.55) { e.hit = true; if (onHit) onHit(i); } },
       draw: (ctx, e) => {
         const t = e.t - d;

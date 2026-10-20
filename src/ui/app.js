@@ -225,7 +225,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.go = (name, args = {}) => {
     const S = SCREENS[name];
     if (!S) throw new Error(`no screen ${name}`);
-    if (app.screen && app.screen.onLeave) app.screen.onLeave();
+    if (app.screen && app.screen.onLeave) app.screen.onLeave(name);
     app.fields.clear(); // 화면을 떠나면 입력 칸을 반드시 치운다
     app.screen = new S(app, args);
     app.screen.name = name;
@@ -345,10 +345,10 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.shakeT = Math.max(app.shakeT, dur);
   };
   app.hitstop = (sec) => { if (!app.reducedMotion) app.hitstopT = Math.max(app.hitstopT || 0, sec / app.speed()); };
-  // 명국 조각이 (x0, y0)에서 조각 띠(x1, y1)로 날아간다
+  // 명국 조각이 (x0, y0)에서 조각 띠(x1, y1)로 날아간다. 대국이 끝나 막간(보상 …)이 열려도 이어 난다(carry — battle.js onLeave)
   app.flyShard = (x0, y0, x1, y1) => {
     app.fx.add({
-      life: 0.9, layer: 1,
+      life: 0.9, layer: 1, carry: true,
       draw: (c, e) => {
         const k = Math.min(1, e.t / 0.75);
         const q = k * k * (3 - 2 * k);
