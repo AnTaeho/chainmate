@@ -30,7 +30,9 @@ import { Seq, ease, lerp } from '../anim.js';
 import { sway } from '../sway.js';
 import { glow, glowText, groundShadow, flicker, shade } from '../../render/light.js';
 import { live as motion, beat } from '../../render/look.js';
-import { button } from '../ui.js';
+import { button, tipHeight } from '../ui.js';
+import { keyHeight } from '../glossary.js';
+import { SIDE_W, NOTE_GAP } from '../placement.js';
 import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton, headLayout, footLayout, sideStack, drawFoot, shardTo, hallText, clockRow, hasClock, clockPips, clockTip } from './common.js';
@@ -50,6 +52,7 @@ import { openCombo, drawCombo, comboLand, comboClose, emberMark } from '../ignit
 import { reviewOn, forkTitle, forkLine, forkScores, forkScoreLines, forkScoreRows, forkMarks, NO_PATH, THINKING } from '../review.js';
 
 const KING_SHUT = '킹을 지키던 적을 둘 잡은 콤보로는 못 잡아요';
+const NOTE_ROOM = 266; // 설명 묶음이 쓸 수 있는 높이(화면 270 - 가장자리 2 × 2, placement.js)
 
 // 복기(CHM-59): 진 순간 프레임마다 이만큼(ms)씩 나눠 잰다. 답은 마디 예산(replay.js REVIEW.nodes)이 정하고, 이 기기에서
 // REVIEW_WALL초를 넘기면(느린 기기) 카드 없이 지금 흐름대로 넘어간다(그 대국의 기록은 unknown)
@@ -1545,13 +1548,22 @@ export class BattleScreen {
       if (cell && !cell.mine && cell.muted && !isHidden(b, sq)) tip = tip ? [tip[0], [...tip[1], `횃불: ${L('아무것도 지키지 못해요')}`]] : [`횃불 · ${PIECE_NAME[cell.t]}`, ['아무것도 지키지 못해요']];
       // 외통 조건: 지키던 적을 둘 잡은 콤보에서는 킹을 가리키면 까닭을 말한다
       const shut = cell && !cell.mine && cell.t === 'K' && !this.busy && b.status === 'chain' && mateBlocked(b.chain) && !b.rules.openKings && !isHidden(b, sq);
-      if (shut) { tip = [PIECE_NAME.K, [KING_SHUT]]; diag = null; } // 행마 글을 까닭 한 줄로 갈아 끼우니 행마 그림도 뺀다
+      // 행마 글 · 그림만 까닭 줄로 갈아 끼운다. 특성 글(이 콤보로는 못 잡아 덜 쓸모 있다)이 체크메이트 낱말 상자를 밀어낼 때만 뺀다
+      if (shut) {
+        const tr = cell.trait && TRAIT_BY_ID[cell.trait];
+        const torch = cell.muted && (tr ? `횃불: ${L('아무것도 지키지 못해요')}` : '아무것도 지키지 못해요');
+        const head = tr ? `${tr.name} · ${PIECE_NAME.K}` : cell.muted ? `횃불 · ${PIECE_NAME.K}` : PIECE_NAME.K;
+        const full = [KING_SHUT, tr && tr.text, torch].filter(Boolean), lean = [KING_SHUT, torch].filter(Boolean);
+        const fits = (body, more) => tipHeight(tipLines(head, body), SIDE_W) + more <= NOTE_ROOM, box = NOTE_GAP + keyHeight('mate', SIDE_W);
+        tip = [head, !tr || fits(full, box) || (!fits(lean, box) && fits(full, 0)) ? full : lean];
+        diag = null;
+      }
       // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
       if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
       const tipOpt = tip ? sqTip(tip[0], tip[1], diag) : null;
       // 낱말 상자: 말풍선 제목이 곧 낱말인 것(증원 · 지키는 적 · 특성 · 벽 · 보석 · 특수 기물)
-      if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }, shut && { id: 'mate' }, shut && { skip: 'threat' }].filter(Boolean); // 「지키던 적」에 응수 낱말 상자를 붙이지 않고 체크메이트 풀이를 띄운다
+      if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, shut && { id: 'mate' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }, shut && { skip: 'threat' }].filter(Boolean); // 「지키던 적」에 응수 낱말 상자를 붙이지 않고 체크메이트 풀이를 띄운다
       ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
         motion();
