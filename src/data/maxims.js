@@ -6,6 +6,7 @@
 import { defineModifier } from '../sim/scoring.js';
 import { reach, capWay } from '../sim/board.js';
 import { kingGuards } from '../sim/setup.js';
+import { mateBlocked } from '../sim/tuning.js';
 import { PIECES, chartForm } from './pieces.js';
 
 const EDGE = (sq) => (sq & 7) === 0 || (sq & 7) === 7 || sq >> 3 === 0 || sq >> 3 === 7;
@@ -112,6 +113,7 @@ maxim('kings_neck', '왕의 목', '킹을 지키는 적을 잡으면 배수 +2 �
   onBoard(ctx) {
     const t = ctx.t;
     const open = [];
+    if (mateBlocked(t.chain)) { t.hints = { ...t.hints, openKings: open }; return; } // 지키던 적을 둘 잡은 콤보는 킹을 못 잡는다
     t.board.forEach((c, sq) => {
       if (c && !c.mine && c.t === 'K' && ctx.attackers(sq).length === 0) open.push(sq);
     });

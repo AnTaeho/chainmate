@@ -61,6 +61,7 @@ export const LESSONS = [
       { cap: 'h8', say: '퀸을 잡아' },
     ] },
   { id: 'mate', group: 'battle', title: '체크메이트', target: 99999, hand: ['N'], board: { e7: 'K', a7: 'R', h1: 'P' }, preview: true,
+    after: '킹을 지키던 적을 둘 잡은 콤보로는 킹을 못 잡아요',
     steps: [
       { pick: 0, say: '킹은 지키는 적이 있으면 못 잡아. 지금은 룩이 지키고 있어' },
       { drop: 'b5', say: '킹을 지키는 룩을 잡을 수 있는 칸에 놓아 봐' },

@@ -2,9 +2,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { table } from './helpers/chain.js';
-import { parseSq as S, sqName } from '../src/sim/board.js';
+import { parseSq as S, sqName, boardFrom } from '../src/sim/board.js';
+import { createBattle, refreshHints } from '../src/sim/battle.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
 import { MATE } from '../src/sim/tuning.js';
+import '../src/data/maxims.js';
 
 const names = (list) => list.map(sqName).sort();
 
@@ -60,4 +62,20 @@ test('폭약에 함께 터진 지키던 적은 세지 않는다', () => {
   assert.equal(t.chain.guardsTaken, 1);
   assert.ok(chainCaptures(t).includes(S('h8')));
   assert.equal(chainCapture(t, S('h8')).at(-1).reason, 'mate');
+});
+
+test('왕의 목: 지키던 적을 둘 잡은 콤보 동안은 킹이 빛나지 않는다', () => {
+  const b = createBattle({ seed: 1, mods: [{ id: 'kings_neck' }] });
+  b.board = boardFrom({ h8: 'K', h1: 'R', a1: 'B', c4: 'P' });
+  startChain(b, { type: 'R', sq: S('d1') });
+  chainCapture(b, S('h1'));
+  refreshHints(b);
+  assert.deepEqual(b.hints.openKings, [], 'a1 비숍이 아직 지킨다');
+  b.chain.guardsTaken = 2;
+  b.board[S('a1')] = null;
+  refreshHints(b);
+  assert.deepEqual(b.hints.openKings, [], '지키는 적은 없지만 이 콤보로는 못 잡는다');
+  b.chain.guardsTaken = 1;
+  refreshHints(b);
+  assert.deepEqual(b.hints.openKings, [S('h8')]);
 });

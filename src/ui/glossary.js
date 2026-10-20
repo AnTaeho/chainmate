@@ -38,7 +38,7 @@ export const TERMS = [
   B('change', 'battle', '갈아입기', 'Change', /갈아입\S*/, /\bchanges? form\b/i, '적을 잡으면 그 적과 같은 기물이 된다', 'Take an enemy and become that piece'),
   T('threat', 'battle', '지키는 적', 'Guard', /지키는 적|지키던 적|지켜진 \S+/, /\bguard\w*/i, '방금 잡은 칸을 지키는 적. 다음엔 이 적을 잡아야 이어진다', 'An enemy guarding the square you just took. Take it next to keep going'),
   T('promote', 'battle', '프로모션', 'Promotion', /프로모션\S*/, /\bpromot\w*/i, '폰 모습으로 여덟째 줄에 가면 퀸이 된다', 'A pawn that reaches the 8th rank becomes a queen'),
-  T('mate', 'battle', '체크메이트', 'Checkmate', /체크메이트|(?<!체인)메이트/, /\b(?:check)?mat(?:e|ing)\b/i, '지키는 적이 없는 킹을 잡으면 곧바로 이긴다', 'Take an unguarded king and win at once'),
+  T('mate', 'battle', '체크메이트', 'Checkmate', /체크메이트|(?<!체인)메이트/, /\b(?:check)?mat(?:e|ing)\b/i, '지키는 적이 없는 킹을 잡으면 곧바로 이긴다. 킹을 지키던 적을 둘 잡은 콤보로는 못 잡는다', 'Take an unguarded king and win at once. A chain that took two of its guards cannot take it'),
   T('reinforce', 'battle', '증원', 'Recruit', /증원/, /\brecruits?\b/i, '수가 끝날 때 ▼ 그림자 자리로 들어오는 새 적', 'A new enemy that arrives on a ▼ shadow when the move ends'),
   B('move', 'battle', '수', 'Move', null, null, '기물 하나를 놓고 콤보가 끝나면 한 수. 대국마다 횟수가 정해져 있다', 'One drop and its chain. Each match gives you a set number'),
   B('hand', 'battle', '손', 'Hand', null, null, '지금 손에 든 기물. 덱에서 뽑는다', 'The pieces you hold, drawn from your deck'),

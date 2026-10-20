@@ -120,6 +120,8 @@ export const EN = {
   '움직이지 말고 룩을 잡아': 'Take the rook without moving',
   '룩이 됐으니 곧게 가서 비숍까지 잡아': 'Now a rook, slide straight on to the bishop',
   '특수 기물은 관을 돌파하면 하나씩 열려요': 'Clear halls to unlock special pieces one by one',
+  '킹을 지키던 적을 둘 잡은 콤보로는 킹을 못 잡아요': 'A chain that took two of its guards cannot take the king',
+  '킹을 지키던 적을 둘 잡은 콤보로는 못 잡아요': 'A chain that took two of its guards cannot take it',
   '진열의 격언 「기사도」를 사 봐. 격언은 판이 끝날 때까지 효과가 있어': 'Buy the maxim “Chivalry”. Maxims work all run',
   '산 격언은 오른쪽 칸에 들어가. 효과는 카드에 적혀 있어': 'Maxims you buy go in the right column. The card says what it does',
   '기물 팩을 열어 봐. 셋 중 하나를 고르면 돼': 'Open the piece bundle. Keep one of three',
