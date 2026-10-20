@@ -1545,7 +1545,7 @@ export class BattleScreen {
       if (cell && !cell.mine && cell.muted && !isHidden(b, sq)) tip = tip ? [tip[0], [...tip[1], `횃불: ${L('아무것도 지키지 못해요')}`]] : [`횃불 · ${PIECE_NAME[cell.t]}`, ['아무것도 지키지 못해요']];
       // 외통 조건: 지키던 적을 둘 잡은 콤보에서는 킹을 가리키면 까닭을 말한다
       const shut = cell && !cell.mine && cell.t === 'K' && !this.busy && b.status === 'chain' && mateBlocked(b.chain) && !b.rules.openKings && !isHidden(b, sq);
-      if (shut) tip = [PIECE_NAME.K, [KING_SHUT]];
+      if (shut) { tip = [PIECE_NAME.K, [KING_SHUT]]; diag = null; } // 행마 글을 까닭 한 줄로 갈아 끼우니 행마 그림도 뺀다
       // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
       if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
