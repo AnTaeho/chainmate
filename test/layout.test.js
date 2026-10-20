@@ -1052,7 +1052,9 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
     assert.equal(scr.mine.phase, 'code');
     assert.match(scr.mine.code, /^\d{8}$/);
     const big = f.texts.find((q) => q.s === K.codeText(scr.mine.code));
-    assert.ok(big && big.w >= 120 && big.x >= lay.left.x + 8 && big.x + big.w <= lay.left.x + lay.left.w - 8, tag('큰 숫자'));
+    // 숫자마다 폭이 달라(굵은 「1」은 5, 나머지는 8) 받은 코드로 두 배 폭을 재고, 상자에는 가장 넓은 코드로 잰다
+    assert.ok(big && big.w === measure(big.s, true) * 2 && big.x >= lay.left.x + 8 && big.x + big.w <= lay.left.x + lay.left.w - 8, tag(`큰 숫자 ${scr.mine.code} ${big ? `${big.x} · ${big.w}` : '없음'}`));
+    assert.ok(measure(K.codeText('00000000'), true) * 2 <= lay.left.w - 16, tag('가장 넓은 큰 숫자'));
     assert.ok(said(f, '다른 기기에서 이 코드를 입력하세요') && !a.has('link:code'));
     assert.equal(scr.devices, 1);
     f = good(a.frame(), '혼자');
