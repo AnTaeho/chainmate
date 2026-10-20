@@ -78,7 +78,7 @@ faction('mercs', {
 });
 faction('royal', {
   name: '왕궁 근위', crest: 'crown', hue: '#b04a6a',
-  look: { face: '#532231', dark: '#ae7586', flow: ['#7a2941', '#64264f'] },
+  look: { face: '#532231', dark: '#a7818f', flow: ['#7a2941', '#64264f'] },
   mix: { P: 1.3, N: 0.6, B: 0.6, R: 0.9, Q: 1.7 }, unique: { Z: 0.3, T: 0.6 },
   habit: { text: '킹을 지키는 적 +1', apply(r) { r.guardsBonus = (r.guardsBonus || 0) + 1; } },
   boss: 'grandmaster',
