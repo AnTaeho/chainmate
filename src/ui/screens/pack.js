@@ -171,7 +171,7 @@ export class PackScreen {
       const cx = x0 + (n * cw + (n - 1) * gap) / 2, cy = 83, k = (this.t - 0.1) / (RAYS - 0.1);
       const col = gold ? PAL.goldHi : (ENV_COL[pack.kind] || ENV_COL.piece).flap;
       fine(() => {
-        // 빛살 하나 = 가운데에서 넓어지는 쐐기(안쪽은 흰빛)
+        // 빛살 하나 = 가운데에서 바깥으로 넓어지는 긴 세모(안쪽은 흰빛)
         const wedge = (ang, r0, r1, half, fill) => {
           ctx.beginPath();
           ctx.moveTo(cx + Math.cos(ang - half * 0.3) * r0, cy + Math.sin(ang - half * 0.3) * r0);
