@@ -721,9 +721,11 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
 }
 
 // ── 불멸의 기보 조각 띠: 조각을 하나라도 모은 명국마다 작은 조각 + 모은 수. 올리면 명국 · 조각 · 재현 조건(첫 조각 뒤에만).
+// 5 × 5 칸의 깨진 조각(벡터): 아래로 뾰족한 다각형 + 왼쪽 위 빛 조각
 export function miniShard(ctx, x, y, col = PAL.gold) {
-  const rows = ['.###.', '#####', '####.', '.##..', '..#..'];
-  rows.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, j === 0 && i === 1 ? PAL.goldHi : col); });
+  const poly = (pts, c) => { ctx.fillStyle = c; ctx.beginPath(); pts.forEach(([px, py], k) => (k ? ctx.lineTo(x + px, y + py) : ctx.moveTo(x + px, y + py))); ctx.closePath(); ctx.fill(); };
+  poly([[1, 0], [4.2, 0], [5, 1.6], [3.4, 3.2], [2.5, 5], [0, 1.6]], col);
+  poly([[1.3, 0.6], [2.8, 0.6], [1.2, 2]], PAL.goldHi);
 }
 // 조각 세 걸음(첫 → 재현 → 금빛 차례로만 모인다 — legends.js): 한 줄에 하나, 그 조각을 얻는 길로.
 // f = 이 판의 조각({ first, feat, gold }). null이면 판 밖(도감): 얻은 것 · 다음 것을 가르지 않는다.
