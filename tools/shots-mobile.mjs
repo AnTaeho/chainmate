@@ -7,7 +7,7 @@
 // 기기마다 타이틀 · 대국 · 상점 · 멈춤 · 전설 · 상자 · 결과를 찍고, 캔버스 크기(CSS · 뒷면)를 표로 적는다. 폰 세로는 화면을 90도 돌려 그린다(스크린샷도 세로 그대로).
 // 전설 · 상자는 금빛 번쩍임 한가운데(-flash)와 가라앉은 뒤를 따로 찍는다(여백 판도 같이 밝아지나). 번쩍임은 update를 멈춰 세운다.
 // 타이틀은 여백 판 장면을 칠한 시간(ms, padStats.sceneMs)을 표에 적는다.
-// 터치가 있는 기기는 page.touchscreen.tap으로 「새 판」 → 대본 대국 첫 수(나이트 떨구기 → 룩 → 퀸)까지 눌러 본다. 돌려 그린 폰 세로는 돌린 축으로 누른다(src/ui/fit.js toClient).
+// 터치가 있는 기기는 page.touchscreen.tap으로 처음 켠 첫 화면 → 「바로 시작」 → 대국 첫 수까지 눌러 본다. 돌려 그린 폰 세로는 돌린 축으로 누른다(src/ui/fit.js toClient).
 // 폰 · 태블릿은 webkit(없으면 chromium 기기 흉내), 데스크톱은 chromium.
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
 import http from 'node:http';
@@ -53,6 +53,7 @@ const DEVICES = [
 ];
 
 async function loadPlaywright() {
+  if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
   try { return await import('playwright'); } catch { /* 전역 */ }
   return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
 }
@@ -222,7 +223,8 @@ async function shotsFor(d) {
   await context.close();
 }
 
-// 터치로 새 판 → 대본 대국 첫 수. 걸음 번호가 5(첫 수 끝 — 「점수」 설명)에 닿으면 된 것
+// 터치로 처음 켠 첫 화면 → 대국 첫 수. 새 프로필은 튜토리얼 묻기 덮개가 「새 판」을 가리고(판은 대본 없이 시작한다),
+// 「바로 시작」 → 정석 첫째 → 「대국」 → 손 첫 카드 → 놓을 칸 하나를 손가락으로 누른다. 내 기물이 판에 서면(콤보 · 수 줄기) 된 것
 async function touchFlow(d) {
   const { context, page, ev, settle } = await session(d, { fresh: true });
   const rot = await ev(() => !!(window.__fit && window.__fit.rot));
@@ -234,37 +236,48 @@ async function touchFlow(d) {
     return toClient(q.x + q.w / 2, q.y + Math.min(q.h / 2, 16), b, !!window.__fit.rot);
   }, id);
   const tap = async (id) => { const p = await toXY(id); if (!p) throw new Error(`no region ${id}`); await page.touchscreen.tap(p[0], p[1]); await settle(120); };
-  const ready = () => page.waitForFunction(() => { const a = window.__app, g = a.guide; return !g || (!a.overlay && !(g.hold && g.hold(a)) && a.hintRect); }, null, { timeout: 30000 });
+  const idle = () => page.waitForFunction(() => { const s = window.__app.screen; return !s.busy && !s.banner && !s.intro; }, null, { timeout: 30000 }).catch(() => null);
   const log = [];
+  let moved = false;
   try {
     await settle(300);
-    await tap('title:new');
-    for (let guard = 0; guard < 16; guard++) {
-      await ready();
-      const st = await ev(() => { const a = window.__app, g = a.guide; if (!g) return null; const s = g.steps[g.i]; return { i: g.i, ok: !!s.ok, target: typeof s.target === 'function' ? s.target(a) : s.target }; });
-      if (!st || st.i >= 5) { log.push(st ? `걸음 ${st.i}` : '길 없음'); break; }
-      const id = st.ok ? 'guide:ok' : st.target;
-      await tap(id);
-      // 손가락은 먹기 · 떨구기를 한 번 누르면 미리 보기, 한 번 더 누르면 둔다
-      let after = await ev(() => window.__app.guide && window.__app.guide.i);
-      if (after === st.i) { await tap(id); after = await ev(() => window.__app.guide && window.__app.guide.i); log.push(`${st.i}:${id}×2`); } else log.push(`${st.i}:${id}`);
+    // 화면이 바뀔 때까지(손가락은 미리 보기 카드를 한 번 누르면 고르고 한 번 더 누르면 정한다)
+    const where = () => ev(() => { const a = window.__app; return `${a.screen.constructor.name}|${a.overlay ? a.overlay.name || '' : ''}|${a.run ? a.run.phase : ''}`; });
+    for (const id of ['welcome:play', 'draft:0', 'select:play']) {
+      const from = await where();
+      for (let k = 0; k < 3 && (await where()) === from; k++) {
+        await tap(id); await settle(500);
+      }
+      log.push(id);
     }
+    await idle();
+    await settle(400);
+    const placed = () => ev(() => { const b = window.__app.run.battle; return b.board.filter((c) => c && c.mine).length + (b.status === 'chain' ? 1 : 0) + (9 - b.movesLeft); });
+    const before = await placed();
+    await tap('hand:0'); log.push('hand:0');
+    const sq = await ev(() => window.__app.screen.clickable().list[0]);
+    if (sq == null) throw new Error('놓을 칸 없음');
+    // 손가락은 놓을 칸을 한 번 누르면 미리 보기, 한 번 더 누르면 둔다
+    await tap(`sq:${sq}`);
+    if ((await placed()) === before) await tap(`sq:${sq}`);
+    log.push(`sq:${sq}`);
+    await idle();
+    moved = (await placed()) > before;
     await settle(1500);
     await page.screenshot({ path: path.join(OUT, `${PREFIX}-${d.name}-touch-first-move.png`) });
   } catch (e) { log.push(`막힘 ${String(e).split('\n')[0]}`); }
-  const i = await ev(() => window.__app.guide && window.__app.guide.i);
   // 돌려 그린 폰은 가로로 들어 본다: 판 상태(화면 · 걸음 · 손)가 그대로이고 돌리기가 풀려야 한다
   let flip = '';
   if (rot && !d.emu) {
-    const before = await ev(() => { const a = window.__app; return JSON.stringify({ s: a.screen && a.screen.constructor.name, i: a.guide && a.guide.i, b: a.screen && a.screen.bRef && a.screen.bRef.board, h: a.screen && a.screen.bRef && a.screen.bRef.hand }); });
+    const before = await ev(() => { const a = window.__app; return JSON.stringify({ s: a.screen && a.screen.constructor.name, b: a.run && a.run.battle && a.run.battle.board, h: a.run && a.run.battle && a.run.battle.hand }); });
     await page.setViewportSize({ width: d.h, height: d.w });
     await settle(800);
-    const after = await ev(() => { const a = window.__app; return { st: JSON.stringify({ s: a.screen && a.screen.constructor.name, i: a.guide && a.guide.i, b: a.screen && a.screen.bRef && a.screen.bRef.board, h: a.screen && a.screen.bRef && a.screen.bRef.hand }), rot: window.__fit.rot, k: window.__fit.k, tf: document.getElementById('stage').style.transform }; });
+    const after = await ev(() => { const a = window.__app; return { st: JSON.stringify({ s: a.screen && a.screen.constructor.name, b: a.run && a.run.battle && a.run.battle.board, h: a.run && a.run.battle && a.run.battle.hand }), rot: window.__fit.rot, k: window.__fit.k, tf: document.getElementById('stage').style.transform }; });
     await page.screenshot({ path: path.join(OUT, `${PREFIX}-${d.name}-flip-landscape.png`) });
     flip = ` · 가로로 들면 돌리기 ${after.rot ? '그대로(틀림)' : '풀림'} K ${after.k} transform「${after.tf}」 판 상태 ${after.st === before ? '그대로' : '바뀜(틀림)'}`;
   }
   await context.close();
-  return { name: d.name, result: `${i >= 5 ? `첫 수 끝(걸음 ${i})` : `멈춤(걸음 ${i})`}${rot ? ' · 돌려 그림' : ''}${flip}`, log: log.join(' → ') };
+  return { name: d.name, result: `${moved ? '첫 수 끝' : '멈춤'}${rot ? ' · 돌려 그림' : ''}${flip}`, log: log.join(' → ') };
 }
 
 const touchResults = [];
