@@ -38,7 +38,11 @@ async function session(sc, lang = 'ko') {
   const context = await browser.newContext({ viewport: { width: 480 * sc, height: 270 * sc }, deviceScaleFactor: 1 });
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(String(e)));
-  await page.addInitScript((lang) => { localStorage.clear(); if (lang !== 'ko') localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang })); }, lang);
+  await page.addInitScript((lang) => {
+    localStorage.clear();
+    // 처음 켬 덮개(튜토리얼 묻기)가 판을 가리지 않게. 기록은 v 1이어야 읽힌다(records.js loadRecords)
+    localStorage.setItem('chainmate.records.v1', JSON.stringify({ v: 1, runs: 3, tutorialAsked: true }));
+    if (lang !== 'ko') localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang })); }, lang);
   await page.goto(`http://localhost:${port}/index.html`);
   await page.waitForFunction(() => window.__app && window.__app.screen);
   const ev = (fn, arg) => page.evaluate(fn, arg);
