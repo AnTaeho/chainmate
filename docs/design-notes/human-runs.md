@@ -23,7 +23,7 @@
 | `seed` | 판 시드 |
 | `won` | 8관 마스터를 꺾었나. 끝없는 대국에서 져도 참(결과 화면 · 기록과 같다). 하네스 판에는 끝없는 대국이 없다 |
 | `ante` · `blind` | 끝난 관 · 대국(0 연습 · 1 정식 · 2 마스터) |
-| `log` | 대국마다 한 줄(`src/sim/run.js` endBattle: 관 · 종류 · 세력 · 목표 `target` · 점수 `score` · 이김 · 까닭 · 쓴 수 `moves` · 최고 한 수 `best` · 사슬 평가 `grades` · 희생 `discarded` · 탁월수 `brilliants` · 시계 `clockLost` …). 대본 대국 줄은 뺀다 |
+| `log` | 대국마다 한 줄(`src/sim/run.js` endBattle: 관 · 종류 · 세력 · 목표 `target` · 점수 `score` · 이김 · 까닭 · 쓴 수 `moves` · 최고 한 수 `best` · 사슬 평가 `grades` · 희생 `discarded` · 탁월수 `brilliants` · 시계 `clockLost` · 외통을 낸 사슬 수 `mateChains` …). 대본 대국 줄은 뺀다 |
 | `bought` | 상점 · 꾸러미에서 새로 든 격언 id(겹치면 한 번) |
 | `final` | 판 끝 격언(전설 빼고) |
 | `money` | 판 끝 상금 |

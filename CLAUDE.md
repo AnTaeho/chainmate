@@ -26,7 +26,7 @@
 
 ## git · 배포
 - 커밋 갈래에 「수치 조정」도 있다. 올라간 커밋은 amend · force-push 하지 않는다.
-- **main 푸시 = 프로덕션 배포**(chainmate.papercut.kr, 화면 · 규칙 · `api/` 한 묶음). 사용자가 「올려」라고 한 뒤에만 모아서 푸시하고, 뒤에 `tools/daily-e2e.mjs` · `link-e2e.mjs` · `account-e2e.mjs`를 프로덕션 주소로 돌린다. 배포 순간 두던 오늘의 대국은 409 `stale`로 순위에 못 오른다.
+- **main 푸시 = 프로덕션 배포**(chainmate.papercut.kr, 화면 · 규칙 · `api/` 한 묶음). 사용자가 「올려」라고 한 뒤에만 모아서 푸시하고, 뒤에 `tools/daily-e2e.mjs` · `link-e2e.mjs` · `account-e2e.mjs`를 프로덕션 주소로 돌린다. 배포 순간 두던 오늘의 대국은 409 `stale`로 순위에 못 오른다. 옛 판본에서 시작한 판을 새로 켜 이어 두거나 대기열에서 다시 보내면 새 판본 식별자가 실려, 규칙이 바뀌었으면 422 `bad_cmd`로 조용히 버려진다.
 - 배포 빌드 `node tools/stamp.mjs`가 `dist/`를 만들고 `src/` · `style.css` 주소에 판본을 붙인다. 루트에 새 정적 파일을 두면 `STATIC`에도 넣는다. 미리 보기 배포도 프로덕션과 같은 DB를 쓴다.
 
 ## 일하는 방식
