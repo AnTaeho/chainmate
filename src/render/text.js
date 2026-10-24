@@ -148,12 +148,19 @@ export function edgeImage(s, col, bold = false, k = 1, ow = 1) {
 const noDot = (l) => (l.endsWith(' ·') ? l.slice(0, -2) : l);
 export const CLOSE_PUNCT = /^[.,·:;!?…)\]}」』》〉’”%]/;
 // 값 · 배수와 그 수(「배수 ×1.5」 · 「+20 Value」)는 한 덩이로 줄을 바꾼다(카드에 색 칸 하나로 그린다 — glossary.js richText)
+// 색 칸 글: 낱말 상자 값 · 배수가 찾는 꼴과 같다. 칸은 글보다 CHIP_X씩 넓어 줄 폭에 더한다
+export const VM_RE = { value: [/(?<!상점 )값 [+×−][\d.]+/, /[+×−][\d.,]+ Value\b/], links: [/배수 [+×−][\d.]+/, /[+×−][\d.,]+ Mult\b/] };
+export const CHIP_X = 2.5;
+const VM_ALL = { ko: new RegExp(`${VM_RE.value[0].source}|${VM_RE.links[0].source}`, 'g'), en: new RegExp(`${VM_RE.value[1].source}|${VM_RE.links[1].source}`, 'g') };
+export function chipCount(s) { const m = String(s).match(VM_ALL[getLang() === 'en' ? 'en' : 'ko']); return m ? m.length : 0; }
+// 줄 폭: 글 폭 + 색 칸이 넓힌 몫
+export function lineWidth(s, bold = false) { return textWidth(s, bold) + chipCount(L(String(s))) * CHIP_X * 2; }
 const vmPair = (a, b) => (/^(?:값|배수)$/.test(a) && /^[+×−][\d.,]+/.test(b)) || (/^[+×−][\d.,]+$/.test(a) && /^(?:Value|Mult)\b/.test(b));
 function glueVM(words, w, bold) {
   const out = [];
   for (const word of words) {
     const prev = out[out.length - 1];
-    if (prev != null && vmPair(prev.split(' ').pop(), word) && textWidth(`${prev} ${word}`, bold) <= w && !prev.includes(' ')) out[out.length - 1] = `${prev} ${word}`;
+    if (prev != null && vmPair(prev.split(' ').pop(), word) && lineWidth(`${prev} ${word}`, bold) <= w && !prev.includes(' ')) out[out.length - 1] = `${prev} ${word}`;
     else out.push(word);
   }
   return out;
@@ -192,10 +199,10 @@ function wrapRaw(s, w, bold) {
     let line = '';
     for (const word of glueVM(para.split(' '), w, bold)) {
       const tryLine = line ? `${line} ${word}` : word;
-      if (textWidth(tryLine, bold) <= w) { line = tryLine; continue; }
+      if (lineWidth(tryLine, bold) <= w) { line = tryLine; continue; }
       if (line) out.push(noDot(line));
       if (word === '·') { line = ''; continue; }
-      if (textWidth(word, bold) <= w) { line = word; continue; }
+      if (lineWidth(word, bold) <= w) { line = word; continue; }
       line = '';
       // 줄보다 긴 낱말은 먼저 낱말 안 경계에서 나눈다: 붙임표(-) 뒤 · 숫자 사이 쉼표 뒤(「Thirteen-year- / old」 · 「1,000,000,000, / 000」).
       // 이것은 글자 끊김이 아니다. 조각 하나가 그래도 줄보다 길 때만 그 조각을 글자 단위로 끊는다
@@ -229,7 +236,7 @@ function wrapRaw(s, w, bold) {
       let cut = prev.lastIndexOf(' ');
       if (cut > 0 && vmPair(prev.slice(0, cut).split(' ').pop(), prev.slice(cut + 1))) cut = prev.lastIndexOf(' ', cut - 1);
       const moved = `${prev.slice(cut + 1)} ${out[n - 1]}`;
-      if (cut > 0 && textWidth(moved, bold) <= w) { out[n - 2] = noDot(prev.slice(0, cut)); out[n - 1] = moved; }
+      if (cut > 0 && lineWidth(moved, bold) <= w) { out[n - 2] = noDot(prev.slice(0, cut)); out[n - 1] = moved; }
     }
   }
   return out;
