@@ -1,22 +1,52 @@
-# 글꼴 줄이기(CHM-75): 원본 Galmuri11(tools/fonts/, 배포 · 앱에 안 든다)에서 쓰는 글자만 남긴 woff2를 assets/fonts/에 쓴다.
-# 남기는 글자: KS X 1001 한글 2,350 + 출력 ASCII + src/**/*.js · index.html · privacy.html · style.css · manifest.webmanifest의 모든 글자.
+# 글꼴 줄이기(CHM-75 · 안 3 CHM-77): 원본 글꼴에서 쓰는 글자만 남긴 woff2를 assets/fonts/에 쓴다.
+# 글꼴 둘: Black Han Sans(굵은 글 — 숫자 · 제목 · 단추) · IBM Plex Sans KR Medium(보통 글 — 본문 · 효과 · 말풍선). 둘 다 SIL OFL 1.1.
+# 원본은 google/fonts의 고정 커밋에서 curl로 받아 tools/fonts/src/(git 밖)에 두고 sha256을 맞춘다. 배포 · 앱에는 줄인 파일과 OFL만 든다.
+# 남기는 글자: 출력 ASCII + src/**/*.js · index.html · privacy.html · style.css · manifest.webmanifest의 모든 글자(KS X 1001 한글 전체는 넣지 않는다 —
+#   화면에 그리는 바깥 글은 아이디(a-z0-9_)와 목록에서 뽑는 순위 이름뿐이다). Plex KR에 없는 ‹ ›는 IBM Plex Sans(같은 500 굵기)에서 옮겨 넣는다.
+# Black Han Sans에 없는 기호(· → … ★ 등)는 그리는 쪽 글꼴 줄(text.js)이 Plex KR로 넘긴다 — 그래서 덮은 글자표(covered)는 Plex KR 파일이 기준이다.
 # 파일 이름에 내용 해시를 붙이고(오래 캐시해도 되게) style.css @font-face를 고친다. 덮은 글자표는 tools/fonts/glyphs.json(test/fonts.test.js가 읽는다).
-# 돌리기: fonttools · brotli가 든 파이썬으로(저장소 밖 venv — 예: python3 -m venv ~/.venvs/fonts && ~/.venvs/fonts/bin/pip install fonttools brotli) ~/.venvs/fonts/bin/python tools/fonts.py
-# 그 뒤 node tools/preload.mjs(index.html의 미리 받기 줄)도 다시 돌린다.
+# 돌리기(저장소 밖 임시 환경 — 설치 없이 uv 캐시로): uv run --no-project --with fonttools --with brotli python tools/fonts.py
+# 그 뒤 node tools/preload.mjs(index.html의 미리 받기 줄)와 node tools/fontwidths.mjs(연기 시험의 글 폭 표)도 다시 돌린다.
 import hashlib
 import json
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
 
 from fontTools import subset
 from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SRC_DIR = ROOT / 'tools' / 'fonts'
+SRC_DIR = ROOT / 'tools' / 'fonts' / 'src'
 OUT_DIR = ROOT / 'assets' / 'fonts'
-FONTS = ['Galmuri11', 'Galmuri11-Bold']
 FILES = ['index.html', 'privacy.html', 'style.css', 'manifest.webmanifest']
+COMMIT = 'e7db6ca603fd4862010383ff17ffd6cc4ffac1c0'  # google/fonts main, 2026-10-24
+BASE = f'https://raw.githubusercontent.com/google/fonts/{COMMIT}/ofl'
+SOURCES = {
+    'BlackHanSans-Regular.ttf': ('blackhansans/BlackHanSans-Regular.ttf', '31960809284026681774a8e52dc19ebcad26cf69b0ad9d560f288296fbb52739'),
+    'OFL-BlackHanSans.txt': ('blackhansans/OFL.txt', 'c324192c8b3a988bae45a9a7e4ac1258b684739003bda114e0523423440457c9'),
+    'IBMPlexSansKR-Medium.ttf': ('ibmplexsanskr/IBMPlexSansKR-Medium.ttf', '4a7130f56ce50bf10f9d383f624e50bad2c80bebc63e51f4269ece2c7d919166'),
+    'OFL-IBMPlex.txt': ('ibmplexsanskr/OFL.txt', '7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da'),
+    'IBMPlexSans-VF.ttf': ('ibmplexsans/IBMPlexSans%5Bwdth,wght%5D.ttf', '3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3'),
+}
+# 내보낼 글꼴: (파일 이름 앞, CSS 글꼴 이름, 원본)
+FONTS = [('BlackHanSans', 'Black Han Sans', 'BlackHanSans-Regular.ttf'), ('PlexSansKR-Medium', 'IBM Plex Sans KR', 'IBMPlexSansKR-Medium.ttf')]
+BORROW = '‹›'  # Plex KR에 없어 IBM Plex Sans에서 옮기는 글자
+LICENSES = ['OFL-BlackHanSans.txt', 'OFL-IBMPlex.txt']
+
+
+def fetch():
+    SRC_DIR.mkdir(parents=True, exist_ok=True)
+    for name, (rel, sha) in SOURCES.items():
+        p = SRC_DIR / name
+        if not p.exists() or hashlib.sha256(p.read_bytes()).hexdigest() != sha:
+            subprocess.run(['curl', '-sSfL', '-o', str(p), f'{BASE}/{rel}'], check=True)
+        got = hashlib.sha256(p.read_bytes()).hexdigest()
+        if got != sha:
+            sys.exit(f'{name}: sha256이 다르다({got})')
 
 
 def used_chars():
@@ -24,29 +54,44 @@ def used_chars():
     out = set()
     for p in paths:
         out.update(ch for ch in p.read_text(encoding='utf-8') if ord(ch) >= 0x20)
-    return out
+    return out | {chr(c) for c in range(0x20, 0x7F)}
 
 
-def ksx_hangul():
-    out = set()
-    for hi in range(0xB0, 0xC9):
-        for lo in range(0xA1, 0xFF):
-            out.add(bytes([hi, lo]).decode('euc-kr'))
-    return out
+# IBM Plex Sans(가변)를 500 굵기 · 보통 폭으로 굳혀 BORROW 글자의 모양 · 폭을 Plex KR에 옮긴다(둘 다 1000 upem · TrueType)
+def borrow(font):
+    donor = instancer.instantiateVariableFont(TTFont(SRC_DIR / 'IBMPlexSans-VF.ttf'), {'wght': 500, 'wdth': 100})
+    dcmap = donor.getBestCmap()
+    order = list(font.getGlyphOrder())
+    for ch in BORROW:
+        src = dcmap[ord(ch)]
+        g = donor['glyf'][src]
+        if g.isComposite():
+            sys.exit(f'{ch}: 겹 글리프는 옮기지 않는다')
+        name = f'borrow.{src}'
+        font['glyf'][name] = g
+        font['hmtx'][name] = donor['hmtx'][src]
+        order.append(name)
+        for t in font['cmap'].tables:
+            if t.isUnicode():
+                t.cmap[ord(ch)] = name
+    font.setGlyphOrder(order)
+    font['glyf'].glyphOrder = order
 
 
 def main():
-    want = used_chars() | ksx_hangul() | {chr(c) for c in range(0x20, 0x7F)}
-    covered = None
-    absent = set()
+    fetch()
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    want = used_chars()
     fonts = {}
+    have_all = {}
     css = (ROOT / 'style.css').read_text(encoding='utf-8')
-    for name in FONTS:
-        font = TTFont(SRC_DIR / f'{name}.woff2', recalcTimestamp=False)
+    for stem, family, src in FONTS:
+        font = TTFont(SRC_DIR / src, recalcTimestamp=False)
+        if stem.startswith('PlexSansKR'):
+            borrow(font)
         have = {chr(c) for c in font.getBestCmap()}
         keep = want & have
-        absent |= want - have
-        covered = keep if covered is None else covered & keep
+        have_all[stem] = keep
         opts = subset.Options()
         opts.flavor = 'woff2'
         opts.layout_features = ['*']
@@ -57,29 +102,36 @@ def main():
         sub = subset.Subsetter(opts)
         sub.populate(unicodes=sorted(ord(c) for c in keep))
         sub.subset(font)
-        tmp = OUT_DIR / f'{name}.tmp.woff2'
+        tmp = OUT_DIR / f'{stem}.tmp.woff2'
         subset.save_font(font, str(tmp), opts)
         data = tmp.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
-        out = OUT_DIR / f'{name}.{digest[:8]}.woff2'
-        for old in OUT_DIR.glob(f'{name}.*.woff2'):
-            if old != tmp and re.fullmatch(re.escape(name) + r'\.[0-9a-f]{8}\.woff2', old.name):
+        out = OUT_DIR / f'{stem}.{digest[:8]}.woff2'
+        for old in OUT_DIR.glob(f'{stem}.*.woff2'):
+            if old != tmp and re.fullmatch(re.escape(stem) + r'\.[0-9a-f]{8}\.woff2', old.name):
                 old.unlink()
         tmp.rename(out)
         rel = f'assets/fonts/{out.name}'
-        fonts[rel] = {'sha256': digest, 'bytes': len(data), 'glyphs': len(keep)}
-        css, n = re.subn(r'url\("assets/fonts/' + re.escape(name) + r'(\.[0-9a-f]{8})?\.woff2"\)', f'url("{rel}")', css)
+        fonts[rel] = {'family': family, 'sha256': digest, 'bytes': len(data), 'glyphs': len(keep)}
+        css, n = re.subn(r'url\("assets/fonts/' + re.escape(stem) + r'(\.[0-9a-f]{8})?\.woff2"\)', f'url("{rel}")', css)
         if n != 1:
-            sys.exit(f'style.css에서 {name}의 @font-face를 하나 찾지 못했다({n}개)')
+            sys.exit(f'style.css에서 {stem}의 @font-face를 하나 찾지 못했다({n}개)')
         print(f'{rel}: {len(keep)}자 {len(data)} B')
+    for lic in LICENSES:
+        shutil.copyfile(SRC_DIR / lic, OUT_DIR / lic)
     (ROOT / 'style.css').write_text(css, encoding='utf-8')
+    # 덮은 글자 = 보통 글(Plex KR) 파일에 든 글자. 굵은 글은 없는 글자를 Plex KR로 넘긴다
+    covered = have_all['PlexSansKR-Medium']
+    absent = want - covered
     glyphs = {
         'fonts': fonts,
         'covered': ''.join(sorted(covered)),
-        'missingInSource': ''.join(sorted(absent - covered)),
+        'boldFallback': ''.join(sorted(covered - have_all['BlackHanSans'])),
+        'missingInSource': ''.join(sorted(absent)),
     }
-    (SRC_DIR / 'glyphs.json').write_text(json.dumps(glyphs, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
-    print(f'덮은 글자 {len(covered)} · 원본 둘 중 하나라도 없는 글자 {len(glyphs["missingInSource"])}: {glyphs["missingInSource"]}')
+    (ROOT / 'tools' / 'fonts' / 'glyphs.json').write_text(json.dumps(glyphs, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
+    print(f'덮은 글자 {len(covered)} · 굵은 글이 Plex KR로 넘기는 글자 {len(glyphs["boldFallback"])} · 원본에 없는 글자 {len(absent)}: {glyphs["missingInSource"]}')
+    print(f'합 {sum(f["bytes"] for f in fonts.values())} B')
 
 
 main()

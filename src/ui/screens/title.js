@@ -7,7 +7,8 @@ import { inkY } from '../frame.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, rect, frame, measure } from '../../render/gfx.js';
 import { makeCanvas, context } from '../../render/surface.js';
-import { textImage, textWidth, wrap, textGen } from '../../render/text.js';
+import { LOOK } from '../../render/look.js';
+import { textImage, textWidth, wrap, textGen, inkBox } from '../../render/text.js';
 import { drawIcon } from '../../render/icons.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { paintNight, drawNightLive, drawVignette, drawSky, skyScale, silShift } from '../../render/night.js';
@@ -23,32 +24,37 @@ function stillCanvas() {
 }
 export const TITLE_SCENE = { key: 'title-night', paint: paintNight };
 
-// ── 로고: 금빛 3단 명암 + 어두운 그림자. 글자마다 따로 구워 정수 칸으로 오르내린다(회전 없음)
-function bakeLetter(s, sc) {
-  const img = textImage(s, '#ffffff', true);
-  const w = img.w * sc + 4, h = img.h * sc + 4;
-  const c = makeCanvas(w, h), g = context(c);
-  const put = (col, dx, dy) => { const t = textImage(s, col, true); g.drawImage(t.c, dx, dy, t.c.width * sc, t.h * sc); };
+// ── 로고: 금빛 3단 명암 + 어두운 그림자. 글자마다 따로 구워 정수 칸으로 오르내린다(회전 없음).
+// 화면 배율 n으로 구워(글꼴을 sc × n배로) 어느 N에서나 또렷하다. 명암 띠는 잰 잉크 높이의 3/11 · 7/11 자리
+function bakeLetter(s, sc, n) {
+  const img = textImage(s, '#ffffff', true, sc * n);
+  const w = img.cw * sc + 4, h = img.h * sc + 4;
+  const c = makeCanvas(Math.ceil(w * n), Math.ceil(h * n)), g = context(c);
+  g.scale(n, n);
+  const put = (col, dx, dy) => { const t = textImage(s, col, true, sc * n); g.drawImage(t.c, dx, dy, t.cw * sc, t.h * sc); };
   put('#1a0f05', 3, 3); put('#6b4410', 2, 2);
   // 몸: 위 금빛 · 가운데 금 · 아래 짙은 금(글자 모양 안에만)
-  const body = makeCanvas(w, h), b = context(body);
-  const t = textImage(s, '#efbd55', true);
-  b.drawImage(t.c, 0, 0, t.c.width * sc, t.h * sc);
+  const body = makeCanvas(c.width, c.height), b = context(body);
+  b.scale(n, n);
+  const t = textImage(s, '#efbd55', true, sc * n);
+  b.drawImage(t.c, 0, 0, t.cw * sc, t.h * sc);
   b.globalCompositeOperation = 'source-atop';
-  const top = 3 * sc, mid = 7 * sc;
-  b.fillStyle = '#fff1b8'; b.fillRect(0, 0, w, top + sc);
-  b.fillStyle = '#efbd55'; b.fillRect(0, top + sc, w, mid - top);
-  b.fillStyle = '#c8902c'; b.fillRect(0, mid + sc, w, h);
-  b.fillStyle = '#efbd55'; b.fillRect(0, mid + sc * 3, w, h);
+  const ink = inkBox(img), y0 = (ink.top - img.top) * sc, ih = ink.h * sc;
+  const top = y0 + (ih * 3) / 11, mid = y0 + (ih * 7) / 11;
+  b.fillStyle = '#fff1b8'; b.fillRect(0, 0, w, top);
+  b.fillStyle = '#efbd55'; b.fillRect(0, top, w, mid - top);
+  b.fillStyle = '#c8902c'; b.fillRect(0, mid, w, h);
+  b.fillStyle = '#efbd55'; b.fillRect(0, mid + sc * 2, w, h);
+  g.setTransform(1, 0, 0, 1, 0, 0);
   g.drawImage(body, 0, 0);
-  return c;
+  return { c, w, h, dy: img.top * sc };
 }
 let logo = null;
 function bakeLogo() {
-  const s = L('체인메이트'), sc = 3, chars = [...s];
+  const s = L('체인메이트'), sc = 3, n = LOOK.n, chars = [...s];
   const letters = [];
-  chars.forEach((ch, i) => { if (ch !== ' ') letters.push({ c: bakeLetter(ch, sc), x: textWidth(chars.slice(0, i).join(''), true) * sc, i }); });
-  return { s, gen: textGen(), letters, w: textWidth(s, true) * sc + 4, h: 16 * sc + 4 };
+  chars.forEach((ch, i) => { if (ch !== ' ') letters.push({ ...bakeLetter(ch, sc, n), x: textWidth(chars.slice(0, i).join(''), true) * sc, i }); });
+  return { s, n, gen: textGen(), letters, w: textWidth(s, true) * sc + 4 };
 }
 export const LOGO_Y = 34, SUB_Y = 82;
 export const TELEMETRY_NOTE = '판 결과를 익명으로 수집해요 · 설정에서 끌 수 있어요';
@@ -169,11 +175,11 @@ export class TitleScreen {
   }
   drawLogo(ctx, calm) {
     // 말이 바뀌거나 글꼴이 다시 오면(글자 캐시를 비우면) 다시 굽는다
-    if (!logo || logo.s !== L('체인메이트') || logo.gen !== textGen()) logo = bakeLogo();
+    if (!logo || logo.s !== L('체인메이트') || logo.gen !== textGen() || logo.n !== LOOK.n) logo = bakeLogo();
     const lx = Math.round(W / 2 - logo.w / 2), t = this.app.time;
-    for (const { c, x, i } of logo.letters) {
+    for (const { c, x, i, w, h, dy } of logo.letters) {
       const bob = calm ? 0 : Math.round(Math.sin(t * 2.2 + i * 0.8) * 2);
-      ctx.drawImage(c, lx + x, LOGO_Y + bob);
+      ctx.drawImage(c, lx + x, LOGO_Y + bob + dy, w, h);
     }
   }
   drawMenu(ctx, ui) {

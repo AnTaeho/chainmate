@@ -23,7 +23,7 @@ export const reachShort = (r) => (r.won ? '승리' : `${r.ante}관`);
 export const dayText = (date) => { const [, m, d] = date.split('-').map(Number); return `${m}월 ${d}일`; };
 export const peopleText = (n) => `${num(n)}명`;
 
-// ── 순위 표의 칸(판 밖 틀 본 칸). 가장 긴 이름(한국어 130 · 영어 173) · 큰 점수(「3,482,150」 63) · 네 자리 인원(「14 / 1,204」)이 들어간다:
+// ── 순위 표의 칸(판 밖 틀 본 칸). 가장 긴 이름(한국어 113 · 영어 152) · 큰 점수(「3,482,150」 63) · 네 자리 인원(「14 / 1,204」)이 들어간다:
 //   등수 20 ~ 57(「9,999」) · 이름 76 ~ 249 · 도달 268 ~ 362(「Hall 8 Practice」 94) · 점수 397 ~ 460.
 //   내 줄의 「14 / 1,204」가 이름 칸을 넘으면 그 줄만 이름 · 도달을 오른쪽으로 민다(colsFor)
 export const COL = { x0: 12, x1: W - 12, rank: 20, name: 76, reach: 268, score: W - 20, gap: 8 };

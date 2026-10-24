@@ -5,7 +5,7 @@ import { NAMES, NAME_COUNT, nameText, randomName } from '../src/data/names.js';
 import { PIECES } from '../src/data/pieces.js';
 import { textWidth } from '../tools/fakedom.mjs';
 
-// 순위 줄의 이름 칸에 들어가는 가장 넓은 이름(Galmuri11 12px 보통 굵기의 폭 표 — tools/fakedom.mjs)
+// 순위 줄의 이름 칸에 들어가는 가장 넓은 이름(IBM Plex Sans KR 12px 보통 굵기의 폭 표 — tools/fakedom.mjs)
 const CAP = { ko: textWidth('호기심 많은 바다코끼리'), en: textWidth('Mischievous Hippopotamus') };
 const LISTS = [['ko', 'adj'], ['ko', 'animal'], ['en', 'adj'], ['en', 'animal']];
 
@@ -32,8 +32,8 @@ test('이름 목록: 글자는 한글 · 영문 · 빈칸뿐(숫자 · 기호 �
   }
 });
 
-test('이름 목록: 가장 긴 조합이 순위 줄 한도 안(한국어 130 · 영어 173)', () => {
-  assert.deepEqual(CAP, { ko: 130, en: 173 });
+test('이름 목록: 가장 긴 조합이 순위 줄 한도 안(한국어 113 · 영어 152)', () => {
+  assert.deepEqual(CAP, { ko: 113, en: 152 });
   for (const lang of ['ko', 'en']) {
     const widest = (L) => L.reduce((a, w) => (textWidth(w) > textWidth(a) ? w : a));
     const a = NAMES[lang].adj.indexOf(widest(NAMES[lang].adj)), n = NAMES[lang].animal.indexOf(widest(NAMES[lang].animal));

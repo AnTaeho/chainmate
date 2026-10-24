@@ -1,13 +1,16 @@
 // 연기 시험용 가짜 DOM: 캔버스 컨텍스트는 그리기 호출을 세기만 한다(setTransform · translate · rotate · putImageData도 센다). 입력은 등록된 듣개에 직접 넣는다.
-// 글 폭은 Galmuri11 12px의 실제 글자 폭(브라우저에서 잰 표, 보통 · 굵게)을 더한다 — 연기 시험의 「글 넘침」이 실제 화면과 맞게.
-// 표에 없는 글자는 한글 · 한자 · 넓은 기호 12, 그 밖 6. 짝 글자 사이 좁힘(커닝)은 빼서 실제보다 조금 넓거나 같다.
-const W_CHARS = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~·×…—›‹■□○●★→←↑↓–’‘“”";
-const W_REG = [5,4,4,8,8,10,8,4,4,4,6,8,4,6,4,6,8,6,8,8,8,8,8,8,8,8,4,4,5,6,5,6,10,8,8,9,8,7,7,9,8,4,7,8,7,10,8,9,8,9,8,8,8,9,8,10,8,8,7,4,6,4,6,8,4,7,8,7,8,8,6,8,7,4,6,7,4,10,7,8,8,8,6,7,6,8,8,10,8,8,7,5,4,5,8,4,8,12,10,4,4,12,12,12,12,12,12,12,12,12,8,4,4,6,6];
-const W_BOLD = [5,5,6,10,9,12,11,5,5,5,7,9,5,6,5,7,8,5,8,8,8,8,8,8,8,8,5,5,7,6,7,7,9,9,8,8,8,7,7,8,8,5,8,9,7,10,8,8,8,8,8,8,9,8,9,13,8,9,8,5,7,5,6,8,5,7,8,8,8,8,6,8,8,3,5,8,3,11,8,8,8,8,6,7,6,8,8,11,8,8,7,6,5,6,10,5,9,12,10,5,5,12,12,12,12,12,12,12,12,12,8,5,5,6,6];
-const W_MAP = new Map([...W_CHARS].map((c, i) => [c, [W_REG[i], W_BOLD[i]]]));
-const charW = (ch, bold) => { const w = W_MAP.get(ch); return w ? w[bold ? 1 : 0] : ch.charCodeAt(0) > 0x2000 ? 12 : 6; };
-// 글 한 줄의 폭(논리 px) — 시험이 화면 없이 길이 한도를 잴 때(test/names.test.js)
-export const textWidth = (s, bold = false) => [...String(s)].reduce((a, ch) => a + charW(ch, bold), 0);
+// 글 폭은 실제 글꼴(굵게 Black Han Sans · 보통 IBM Plex Sans KR)의 글자 폭 표(tools/fonts/widths.json — 브라우저에서 잰 표, node tools/fontwidths.mjs)를 더한다 —
+// 연기 시험의 「글 넘침」이 실제 화면과 맞게. 표는 1/1000 em(올림)이고 글꼴 크기(font의 px)를 곱한다. 짝 글자 사이 좁힘(커닝)은 빼서 실제보다 조금 넓거나 같다.
+import fs from 'node:fs';
+import { FACE } from '../src/render/type.js';
+
+const WIDTHS = JSON.parse(fs.readFileSync(new URL('./fonts/widths.json', import.meta.url), 'utf8')).fonts;
+const W_MAP = { regular: new Map(), bold: new Map() };
+for (const role of ['regular', 'bold']) { const t = WIDTHS[role]; [...t.chars].forEach((c, i) => W_MAP[role].set(c, t.w[i])); }
+const charEm = (ch, bold) => { const role = bold ? 'bold' : 'regular'; const w = W_MAP[role].get(ch); return w !== undefined ? w : ch.charCodeAt(0) > 0x2000 ? WIDTHS[role].hangul : 500; };
+const widthAt = (s, bold, px) => ([...String(s)].reduce((a, ch) => a + charEm(ch, bold), 0) * px) / 1000;
+// 글 한 줄의 폭(논리 px, text.js textWidth처럼 올림) — 시험이 화면 없이 길이 한도를 잴 때(test/names.test.js)
+export const textWidth = (s, bold = false) => Math.ceil(widthAt(s, bold, (bold ? FACE.bold : FACE.regular).px) - 1e-3);
 export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
   const counter = { calls: 0 };
   function makeCtx(canvas) {
@@ -17,7 +20,7 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
       globalCompositeOperation: 'source-over', shadowBlur: 0, shadowColor: 'rgba(0,0,0,0)', filter: 'none',
       createRadialGradient() { counter.calls++; return { addColorStop() {} }; },
       createLinearGradient() { counter.calls++; return { addColorStop() {} }; },
-      measureText(s) { const bold = /700|bold/.test(this.font || ''); return { width: [...String(s)].reduce((a, ch) => a + charW(ch, bold), 0) }; },
+      measureText(s) { const f = this.font || '', bold = /Black Han Sans/.test(f), px = Number((f.match(/([\d.]+)px/) || [0, 12])[1]); return { width: widthAt(s, bold, px) }; },
       getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(Math.max(1, w * h * 4)), width: w, height: h }),
     };
     return new Proxy(base, {

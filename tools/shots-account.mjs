@@ -155,7 +155,7 @@ async function shots(browserType, name) {
       await a.toAccount();
       await lay(a, `없음 ${lang}`);
       const at = [await a.aligned('user'), await a.aligned('pass')];
-      check(`${name} ${lang} 입력 칸이 그린 칸 위에 놓였다(어긋남 1px 안) · Galmuri11 · 이름표 연결`, at.every((q) => q.ok && q.font === 'Galmuri11' && q.label && Math.abs(q.size - 12 * q.css) < 0.01), at.map((q) => `${q.off}px ${q.box.join(',')} ${q.font} ${q.size}px`).join(' | '));
+      check(`${name} ${lang} 입력 칸이 그린 칸 위에 놓였다(어긋남 1px 안) · IBM Plex Sans KR · 이름표 연결`, at.every((q) => q.ok && q.font === 'IBM Plex Sans KR' && q.label && Math.abs(q.size - 12 * q.css) < 0.01), at.map((q) => `${q.off}px ${q.box.join(',')} ${q.font} ${q.size}px`).join(' | '));
       await a.shot(`none${en}${tag}`);
       if (ko) {
         // 초점 동안 게임은 키를 받지 않는다: 빈칸 · Enter · 숫자에 화면이 그대로, Esc는 초점만 푼다

@@ -7,7 +7,7 @@ import { chartForm } from '../data/pieces.js';
 import { L } from '../ui/lang.js';
 import { LOG, logText, logFrame } from './layoutlog.js';
 import { SOUL_BY_ID } from '../data/souls.js';
-import { snap, live } from './look.js';
+import { snap, live, LOOK } from './look.js';
 
 // 소수점 자리(빛과 움직임): fine(fn) 안에서 그린 rect · text · sprite는 정수 칸 대신 1/N 칸에 선다(N = 화면 배율).
 // 움직이는 것(미끄러지는 기물 · 날아가는 카드 · 흐르는 점수)만 감싼다 — 멈춘 화면은 늘 정수 칸이라 도트가 어긋나지 않는다.
@@ -102,22 +102,27 @@ export function line(ctx, x0, y0, x1, y1, col) {
   }
 }
 
-// 글자. align: left | center | right. scale: 정수배 확대(큰 글자).
-export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false, scale = 1, shadow = null, alpha = 1 } = {}) {
+// 글자. align: left | center | right. scale: 확대(큰 글자 — 글꼴을 그 배율로 다시 그린다).
+// 글자 그림은 그리는 곳의 화소 배율(화면 N × scale)로 굽는다(text.js textImage)
+const resOf = (ctx) => { const t = ctx && ctx.getTransform ? ctx.getTransform() : null; return t && typeof t.a === 'number' ? Math.hypot(t.a, t.b) : LOOK.n; };
+// w: 글 폭을 따로 줄 때(한 줄을 조각으로 나눠 그리는 richText — 앞 글 전체로 잰 조각 폭)
+export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false, scale = 1, shadow = null, alpha = 1, w: fixW = null } = {}) {
   s = L(String(s));
-  const img = textImage(s, col, bold);
-  const w = img.w * scale;
+  const k = resOf(ctx) * scale;
+  const img = textImage(s, col, bold, k);
+  const w = fixW ?? img.w * scale;
   let dx = x;
   if (align === 'center') dx = x - Math.floor(w / 2);
   else if (align === 'right') dx = x - w;
   dx = R(dx); y = R(y);
   if (LOG.on && alpha > 0 && ctx.globalAlpha > 0) logText(s, Math.round(dx), Math.round(y), w, scale);
   if (alpha !== 1) ctx.globalAlpha = alpha;
+  const iw = img.cw * scale, ih = img.h * scale, ox = img.left * scale, oy = img.top * scale;
   if (shadow) {
-    const sh = textImage(s, shadow, bold);
-    ctx.drawImage(sh.c, dx + scale, y + scale, sh.c.width * scale, sh.h * scale);
+    const sh = textImage(s, shadow, bold, k);
+    ctx.drawImage(sh.c, dx + ox + scale, y + oy + scale, iw, ih);
   }
-  ctx.drawImage(img.c, dx, y, img.c.width * scale, img.h * scale);
+  ctx.drawImage(img.c, dx + ox, y + oy, iw, ih);
   if (alpha !== 1) ctx.globalAlpha = 1;
   return w;
 }
@@ -127,8 +132,8 @@ export const measure = (s, bold = false) => textWidth(s, bold);
 // 높이 h인 칸(위 y) 안에 글자의 잉크를 세로 가운데로 놓는다(그림 칸 안의 큰 글자 — 잉크 높이를 재어 위아래 여백을 같게)
 export function textMid(ctx, s, x, y, h, col = PAL.ink, opts = {}) {
   const scale = opts.scale || 1;
-  const ink = inkBox(textImage(L(String(s)), col, !!opts.bold));
-  return text(ctx, s, x, y + Math.floor((h - ink.h * scale) / 2) - ink.top * scale, col, opts);
+  const ink = inkBox(textImage(L(String(s)), col, !!opts.bold, resOf(ctx) * scale));
+  return text(ctx, s, x, y + Math.floor((h - ink.h * scale) / 2 - ink.top * scale), col, opts);
 }
 
 // 기물. sx: 가로 배율(뒤집힘 1 → 0 → 1), lift: 위로 띄우기, alpha

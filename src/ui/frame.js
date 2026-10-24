@@ -29,8 +29,9 @@ export let LINE = 14;
 export let LINE_TITLE = 18;
 export let GAP_IN = 3;
 export let GAP_GROUP = 8;
-export const FONT_H = 12;                    // 글꼴 크기(Galmuri11 12px)
-export const INK_H = 11;                     // 글자 잉크 높이: text()의 y부터 11줄(한글 · 숫자 · 대문자). g j p q y , 는 2줄 더 내려간다
+export const FONT_H = 12;                    // 글꼴 크기(논리 12px — src/render/type.js)
+import { INK_H } from '../render/type.js';
+export { INK_H };                            // 글자 띠: text()의 y부터 11줄(한글 · 숫자 · 대문자의 잉크가 이 가운데에). g j p q y , 는 2줄 더 내려간다
 // 줄 윗변 top, 줄 높이 lh일 때 text()에 넘길 y: 잉크(11)가 줄 가운데에 온다(본문 줄 위 1 · 아래 2, 제목 줄 위 3 · 아래 4)
 export const textY = (top, lh = LINE) => top + ((lh - INK_H) >> 1);
 // 테가 있는 작은 칸(단추 · 칩 · 작은 표) 높이 h 안에서 글 y: 잉크가 가운데(남는 줄이 홀수면 아래가 한 줄 더)

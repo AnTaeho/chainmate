@@ -1,4 +1,4 @@
-// 줄인 글꼴(CHM-75, tools/fonts.py): 게임이 쓰는 글자가 모두 들었나 · 글자표와 파일 · style.css가 맞나.
+// 줄인 글꼴(CHM-75 · 안 3, tools/fonts.py): 게임이 쓰는 글자가 모두 들었나 · 글자표와 파일 · style.css가 맞나.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const GLYPHS = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/fonts/glyphs.json'), 'utf8'));
-const RERUN = '글꼴을 다시 줄여야 한다: fonttools · brotli가 든 파이썬으로 `python tools/fonts.py` 뒤 `node tools/preload.mjs` (tools/fonts.py 머리말)';
+const RERUN = '글꼴을 다시 줄여야 한다: `uv run --no-project --with fonttools --with brotli python tools/fonts.py` 뒤 `node tools/preload.mjs` · `node tools/fontwidths.mjs` (tools/fonts.py 머리말)';
 
 function jsFiles(dir) {
   const out = [];
@@ -34,14 +34,12 @@ test('글꼴: src · index.html · privacy.html · style.css · manifest의 모�
   assert.equal(miss.size, 0, `글꼴에 없는 글자 ${miss.size}개: ${list}\n${RERUN}`);
 });
 
-test('글꼴: KS X 1001 한글 2,350자와 출력 ASCII를 모두 덮는다', () => {
+test('글꼴: 출력 ASCII를 모두 덮고, 굵은 글이 넘기는 글자는 보통 글 파일에 있다', () => {
   const covered = new Set(GLYPHS.covered);
-  const dec = new TextDecoder('euc-kr');
-  for (let hi = 0xb0; hi <= 0xc8; hi++) for (let lo = 0xa1; lo <= 0xfe; lo++) {
-    const ch = dec.decode(new Uint8Array([hi, lo]));
-    assert.ok(covered.has(ch), `${ch} 없음 — ${RERUN}`);
-  }
   for (let c = 0x20; c < 0x7f; c++) assert.ok(covered.has(String.fromCharCode(c)), `ASCII ${c} 없음 — ${RERUN}`);
+  for (const ch of GLYPHS.boldFallback) assert.ok(covered.has(ch), ch);
+  // 원본 둘 다에 없는 글자는 주석에만 있다(화면에 그리지 않는다)
+  assert.ok([...GLYPHS.missingInSource].every((ch) => '≈⊄章紋'.includes(ch)), GLYPHS.missingInSource);
 });
 
 test('글꼴: style.css가 가리키는 파일이 글자표의 파일이고 내용 해시가 맞다', () => {

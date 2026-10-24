@@ -6,16 +6,19 @@
 //           글(잉크 11줄)과 테 사이가 네 변 모두 EDGE_CLEAR(2) 이상이어야 한다(「안 여백 검사」).
 //           아래로 빠지는 줄(g p y …)은 그 틈에 들어가도 되지만 테에 닿으면 안 된다(1 이상)
 //   'tile'  테가 없는 줄(덱 줄 · 차림표) — 글이 상자 안에만 있으면 된다(pad 0)
-// 글의 네모는 실제 잉크(Galmuri11 12px): text()의 y부터 11줄(한글 · 숫자 · 대문자), 아래로 빠지는 글자(g j p q y ,)는 2줄 더.
+// 글의 네모는 글자 띠(src/render/type.js INK_H): text()의 y부터 11줄 — 기준 글자 「가A」의 잉크(Plex KR 12px 10.6줄 · Black Han Sans 12px 9.3줄)가
+//   이 띠 가운데에 선다. 아래로 빠지는 글자(g j p q y ,)는 2줄 더(Plex 띠 아래 1.2줄 · Black Han Sans 1.5줄까지 내려간다).
 //   빠지는 줄은 안 여백 안으로 들어가도 되지만 테에 닿으면 안 된다(상자 안쪽 끝까지).
 // 테 기록(box()): 열린 상자와 상관없이 그린 테를 모두 적는다. 같은 상자(또는 둘 다 상자 밖)에서 그린 글이 그 테를 가로지르면 어긴 것 —
 //   openBox를 잊은 그리기 길(옛 격언 칸 둘째 줄처럼)도 잡는다.
 // overlay: 다른 상자 위에 뜨는 것(말풍선 · 낱말 상자 · 처음 안내 · 차림표 · 끄는 카드). 상자끼리 겹침을 재지 않는다.
 // loose: 연출 중(뒤집히는 카드 등)이라 이번 프레임은 재지 않는다.
 // clips: 이번 프레임에 줄이거나 자른 글(「잘린 글」 검사, layout.md 「잘린 글 검사」) — logClip
+import { INK_H } from './type.js';
 export const LOG = { on: false, boxes: [], texts: [], frames: [], stack: [], layer: 0, folded: [], clips: [] };
 export const EDGE_CLEAR = 2;          // 'edge' 칸: 글과 테 사이 최소 틈
-export const INK_H = 11, INK_DESC = 2; // 글자 잉크 높이 · 아래로 빠지는 글자의 더 내려가는 줄(12px, 1배)
+export const INK_DESC = 2; // 아래로 빠지는 글자의 더 내려가는 줄(12px, 1배)
+export { INK_H };
 const DESC = /[gjpqy,]/;
 
 export function logBegin() {

@@ -9,3 +9,4 @@ desktop/src-tauri/gen/schemas
 .agents/
 skills-lock.json
 /dist
+/tools/fonts/src/

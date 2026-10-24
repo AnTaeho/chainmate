@@ -8,6 +8,7 @@ import { createRank } from './ui/rank.js';
 import { createCloud } from './ui/cloud.js';
 import { createFields, keyboardLift } from './ui/textfield.js';
 import { VERSION } from './version.js';
+import { fontOf } from './render/type.js';
 
 export async function boot(env = {}) {
   const win = env.window || globalThis.window;
@@ -141,7 +142,7 @@ export async function boot(env = {}) {
   if (win.visualViewport && win.visualViewport.addEventListener) win.visualViewport.addEventListener('resize', () => later());
 
   try {
-    await Promise.all([doc.fonts.load('400 12px Galmuri11'), doc.fonts.load('700 12px Galmuri11')]);
+    await Promise.all([doc.fonts.load(fontOf(false), '가A'), doc.fonts.load(fontOf(true), '가A')]);
   } catch { /* 글꼴이 없어도 돈다 */ }
 
   let audio = null;
