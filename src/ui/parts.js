@@ -2,7 +2,7 @@
 import { richText } from './glossary.js';
 import { sheen } from './juice.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, frame, dots, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf } from '../render/gfx.js';
+import { box, rect, rrect, text, frame, dots, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
@@ -480,13 +480,14 @@ export function itemExtraTip(it) {
 }
 
 // wide: 폭이 88보다 좁아도 넓은 카드로(꾸러미 카드 넷 — 효과 글을 카드에 그대로 적는다)
-export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false, hold = false, sheen: shine = null } = {}) {
+// tag: 값을 머릿말 글 대신 오른쪽 위 금빛 값표로(상점 진열 — 자리는 같다)
+export function itemCard(ctx, it, x, y, w, h, { hover = false, sold = false, price = true, scaleX = 1, golden = false, t = 0, run = null, ui = null, under = null, wide = false, hold = false, sheen: shine = null, tag = false } = {}) {
   if (scaleX <= 0.02) return;
   if (scaleX !== 1) {
     const nw = Math.max(2, Math.round(w * scaleX));
     x += Math.floor((w - nw) / 2); w = nw;
   }
-  if (scaleX === 1 && (w >= 88 || wide)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under, hold, shine });
+  if (scaleX === 1 && (w >= 88 || wide)) return itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui: scaleX === 1 ? ui : null, under, hold, shine, tag });
   // 좁은 카드는 뒤집히는 순간에만 그린다(연출 — 글 넘침은 재지 않는다)
   openBox('card', x, y, w, h, 0, { loose: true, name: '뒤집히는 카드' });
   narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run });
@@ -523,7 +524,7 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   if (it.kind === 'chart' && run) { const lv = run.charts[it.form] || 0; text(ctx, `${lv} › ${lv + 1}`, cx, ay + 30 + lines.length * LINE, PAL.cardDim, { align: 'center' }); }
   if (it.kind === 'maxim' && it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + h - 28, PAL.goldDk, { align: 'center' });
   if (sold) {
-    ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.7; rrect(ctx, x + 1, y + 1, w - 2, h - 2, radiusOf(w, h) - 1, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '구매함', cx, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
   } else if (price && it.price != null) {
     text(ctx, `$${it.price}`, cx, y + h - 15, PAL.goldDk, { align: 'center', bold: true });
@@ -610,7 +611,7 @@ export function wrapHead(s, w1, w2) {
 export const itemCardH = (it, w, opts = {}) => itemCardLayout(it, w, opts).h;
 export const itemRowH = (items, w, opts = {}) => Math.max(0, ...items.filter(Boolean).map((it) => itemCardH(it, w, opts)));
 // shine: 진열 · 꾸러미 카드의 반짝 띠(귀함 · 전설 · 명경기 조각, juice.js sheen) — { time, phase }. 도감에서는 없음
-function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under, hold = false, shine = null }) {
+function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run, ui, under, hold = false, shine = null, tag = false }) {
   const fill = golden ? '#f6d98a' : it.kind === 'fragment' ? '#f3e2b0' : PAL.card;
   const edge = it.kind === 'engraving' ? ENG_EDGE[it.id] : it.kind === 'soul' ? SOUL_BY_ID[it.id].col : null;
   openBox('card', x, y, w, h, PAD_CARD, { name: `카드 ${it.kind}` });
@@ -625,7 +626,8 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   kindTab(ctx, it.kind, x + P, y + lay.tabY);
   for (const [l, ly] of lay.kinds) if (l) text(ctx, l, x + lay.kindX, y + ly, lay.kindCol);
   const showPrice = price && it.price != null && !sold;
-  if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
+  if (showPrice && tag) priceTag(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1]);
+  else if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
   itemArt(ctx, it, x + P, y + lay.art, t, run);
   if (lay.nameThin) logClip('thin', L(lay.nameSrc), L(lay.nameSrc), lay.IW);
   lay.names.forEach((l, k) => text(ctx, l, x + lay.nameX, y + lay.nameYs[k], PAL.cardInk, { bold: !lay.nameThin }));
@@ -635,9 +637,21 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (lay.fams.length) familyChips(ctx, lay.fams, x + P, y + lay.chips + (h - lay.h), lay.IW, CARD_CHIP_ROWS);
   if (shine && !sold && (rar === 'rare' || rar === 'legendary' || it.kind === 'fragment')) sheen(ctx, x, y, w, h, shine.time, shine.phase);
   if (sold) {
-    ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.7; rrect(ctx, x + 1, y + 1, w - 2, h - 2, radiusOf(w, h) - 1, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '구매함', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
   }
+  closeBox();
+}
+
+// 금빛 값표(상점 진열): 값 글 자리(오른끝 x2 · 글 y)에서 TAG.out만큼 오른쪽으로 옮겨 카드 오른쪽 테 밖까지 걸친다(둥근 5, 잉크 테 · 아래 그림자)
+export const TAG = { h: 17, padX: 4, out: 6 };
+export function priceTag(ctx, label, x2, ty) {
+  const tw = measure(label, true), w = tw + TAG.padX * 2, x = x2 + TAG.out + TAG.padX - w, y = ty - 3, r = 5;
+  openBox('edge', x, y, w, TAG.h, 1, { name: '값표', r });
+  rrect(ctx, x, y + 2, w, TAG.h, r, PAL.drop);
+  rrect(ctx, x, y, w, TAG.h, r, PAL.frameDk);
+  rrect(ctx, x + 1, y + 1, w - 2, TAG.h - 2, r - 1, PAL.gold);
+  text(ctx, label, x + TAG.padX, ty, PAL.cardInk, { bold: true });
   closeBox();
 }
 
