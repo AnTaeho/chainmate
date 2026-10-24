@@ -1,10 +1,10 @@
 // 꾸러미 열기: 카드가 차례로 뒤집히며 나오고 하나를 고른다(건너뛰기 가능). 금빛 꾸러미는 금빛.
 // 각인이면 고른 뒤 덱에서 새길 기물을 누른다. 금빛 꾸러미의 격언을 칸이 찬 채로 고르면 격언 칸이 펼쳐지고,
 // 옛 격언 하나를 골라 바꾼다(팔고 받는다). 격언 칸은 평소엔 위 띠의 이름표 「격언 5/5」 — 누르면 펼쳐 판다.
-import { sway } from '../sway.js';
+import { sway, tiltHit } from '../sway.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { box, rect, measure, fine } from '../../render/gfx.js';
+import { box, rrect, measure, fine } from '../../render/gfx.js';
 import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../../sim/run.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
@@ -22,6 +22,9 @@ import { LOOK } from '../../render/look.js';
 const OPEN = 0.4;
 const flipAt = (i) => OPEN + i * 0.18;
 const RAYS = 0.75; // 봉투가 열리며 뒤로 퍼지는 빛줄기가 사라지는 때(초)
+// 카드 줄 부채(상점 걸린 카드와 같은 결): 양 끝 카드만 바깥 윗모서리 쪽이 처지게 1.2도, 안쪽 윗모서리에 건다
+const FAN = 0.021;
+const fanOf = (k, n, x, y, w) => (n < 2 || (n % 2 && k === (n - 1) / 2) ? { tilt: 0, pivot: null } : k < n / 2 ? { tilt: -FAN, pivot: [x + w, y] } : { tilt: FAN, pivot: [x, y] });
 
 // 명국 조각 칸(금빛 꾸러미의 넷째 것): 카드 줄 아래 건너뛰기 줄 왼쪽. 조각 그림 옆에 이름 → 「조각 셋이면 전설」 두 줄(꾸러미 칸과 같은 42)
 const SHARD_ART = 22;
@@ -168,27 +171,38 @@ export class PackScreen {
       const cx = x0 + (n * cw + (n - 1) * gap) / 2, cy = 83, k = (this.t - 0.1) / (RAYS - 0.1);
       const col = gold ? PAL.goldHi : (ENV_COL[pack.kind] || ENV_COL.piece).flap;
       fine(() => {
+        // 빛살 하나 = 가운데에서 넓어지는 쐐기(안쪽은 흰빛)
+        const wedge = (ang, r0, r1, half, fill) => {
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(ang - half * 0.3) * r0, cy + Math.sin(ang - half * 0.3) * r0);
+          ctx.lineTo(cx + Math.cos(ang - half) * r1, cy + Math.sin(ang - half) * r1);
+          ctx.lineTo(cx + Math.cos(ang + half) * r1, cy + Math.sin(ang + half) * r1);
+          ctx.lineTo(cx + Math.cos(ang + half * 0.3) * r0, cy + Math.sin(ang + half * 0.3) * r0);
+          ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+        };
         for (let r = 0; r < 14; r++) {
           const ang = (r / 14) * Math.PI * 2 + this.t * 0.8, reach = 30 + 150 * Math.min(1, k * 1.6);
           ctx.globalAlpha = 0.85 * (1 - k) * (r % 2 ? 0.55 : 1);
-          for (let d = 12; d < reach; d += 3) { const q = d > 70 ? 4 : 3; rect(ctx, cx + Math.cos(ang) * d - q / 2, cy + Math.sin(ang) * d - q / 2, q, q, d < 40 ? PAL.white : col); }
+          wedge(ang, 12, reach, 0.07, col);
+          wedge(ang, 12, Math.min(reach, 40), 0.035, PAL.white);
         }
         ctx.globalAlpha = 1;
       });
     }
-    const flipCard = (o, i, x, y, w, h, draw) => {
+    const flipCard = (o, i, x, y, w, h, draw, fan = null) => {
       const p = Math.max(0, Math.min(1, (this.t - flipAt(i)) / 0.24));
       const id = `pack:pick:${i}`;
       const scaleX = Math.abs(1 - 2 * p);
       const shown = p >= 0.5;
-      ui.region(id, x, y, w, h, { onClick: () => this.pick(i), tip: shown ? () => itemExtraTip(o) : null, keys: shown ? () => itemKeys(o) : null, preview: true });
+      const th = fan && fan.tilt ? tiltHit(x, y, w, h, fan.tilt, fan.pivot) : { x, y, w, h };
+      ui.region(id, th.x, th.y, th.w, th.h, { hit: th.hit, onClick: () => this.pick(i), tip: shown ? () => itemExtraTip(o) : null, keys: shown ? () => itemKeys(o) : null, preview: true });
       if (!shown) {
         const nw = Math.max(2, Math.round(w * scaleX));
         if (this.t < OPEN) return;
-        // 카드 뒷면: 봉투 몸 종이에 덮개 빛깔 네모
+        // 카드 뒷면: 봉투 몸 종이에 덮개 빛깔 둥근 봉랍
         const E = ENV_COL[pack.kind] || ENV_COL.piece;
         box(ctx, x + Math.floor((w - nw) / 2), y, nw, h, E.body, PAL.frameDk);
-        if (nw > 20) rect(ctx, x + Math.floor(w / 2) - 6, y + Math.min(46, Math.floor(h / 2) - 6), 12, 12, E.flap);
+        if (nw > 20) { const sy = y + Math.min(46, Math.floor(h / 2) - 7); rrect(ctx, x + Math.floor(w / 2) - 7, sy, 14, 14, 7, PAL.frameDk); rrect(ctx, x + Math.floor(w / 2) - 6, sy + 1, 12, 12, 6, E.flap); }
       } else draw(scaleX, ui.isHover(id));
     };
     lay.cards.forEach((i, k) => {
@@ -196,9 +210,10 @@ export class PackScreen {
       const x = x0 + k * (cw + gap), y = TOP;
       // 들림(sway.js): 다 뒤집힌 카드만 가리키면 들린다
       const id = `pack:pick:${i}`, hov = ui.isHover(id), done = this.t - flipAt(i) > 0.3;
+      const fan = gap >= CARD.gap ? fanOf(k, lay.cards.length, x, y, cw) : { tilt: 0, pivot: null };
       sway(ctx, ui.time, `${id}:${o.kind}:${o.id || o.form || o.t || ''}`, x, y, cw, ch, (c) => {
-        flipCard(o, i, x, y, cw, ch, (scaleX, hover) => itemCard(c, o, x, y, cw, ch, { hover, price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + k, run, ui, under: { onClick: () => this.pick(i) }, sheen: { time: ui.time, phase: k } }));
-      }, { hover: hov && done, press: hov && ui.press && ui.press.id === id, shadow: done });
+        flipCard(o, i, x, y, cw, ch, (scaleX, hover) => itemCard(c, o, x, y, cw, ch, { hover, price: false, scaleX, wide: true, golden: gold && o.kind !== 'fragment' && !o.edition, t: ui.time + k, run, ui, under: { onClick: () => this.pick(i) }, sheen: { time: ui.time, phase: k } }), fan);
+      }, { hover: hov && done, press: hov && ui.press && ui.press.id === id, shadow: done, ...fan });
     });
     if (lay.cell) {
       const { i, x, y, w, h } = lay.cell;
