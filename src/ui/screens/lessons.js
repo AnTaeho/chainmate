@@ -8,7 +8,7 @@ import { createRng, fork } from '../../sim/rng.js';
 import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide, kingNoteLayout, kingNote } from '../coach.js';
 import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
-import { pageHead, pageButtons } from './common.js';
+import { pageHead, pageButtons, headW, HEAD_BIG } from './common.js';
 import { wrapName, drawName } from '../parts.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, flow, textY, BTN_S } from '../frame.js';
 import { openBox, closeBox, layerUp } from '../../render/layoutlog.js';
@@ -189,11 +189,14 @@ export class LessonsScreen {
   // 낱말 풀이: 카드 옆 낱말 상자와 같은 표(glossary.js TERMS)를 묶음 탭(대국 · 판 · 물건 · 모음)과 쪽으로
   drawTerms(ctx, ui) {
     // 판 밖 틀: 머리줄(제목 · 탭) + 본 칸 + 맨 아래 단추 줄(돌아가기 왼쪽 · 쪽 넘기기 오른쪽)
-    pageHead(ctx, '용어 사전', null, { big: true });
+    // 큰 제목 오른쪽 가운데 줄에 탭. 다 안 들어가면 작은 제목 · 윗줄 탭(옛 머리줄)
     const tab = this.termTab || 'battle';
-    const tw = 62;
+    const tw = 62, tabsW = TERM_GROUPS.length * (tw + 4) - 4;
+    const big = PAGE.titleX + headW('용어 사전') + 10 + tabsW <= W - PAGE.titleX;
+    pageHead(ctx, '용어 사전', null, { big });
+    const tx0 = big ? PAGE.titleX + headW('용어 사전') + 10 : 90, ty = big ? HEAD_BIG.mid - (BTN_S >> 1) : 5;
     TERM_GROUPS.forEach(([id, name], k) => {
-      button(ctx, ui, `terms:tab:${id}`, 90 + k * (tw + 4), 5, tw, BTN_S, name, { tone: id === tab ? 'gold' : 'plain', onClick: () => { this.termTab = id; this.termPage = 0; } });
+      button(ctx, ui, `terms:tab:${id}`, tx0 + k * (tw + 4), ty, tw, BTN_S, name, { tone: id === tab ? 'gold' : 'plain', onClick: () => { this.termTab = id; this.termPage = 0; } });
     });
     const pages = this.termPages(tab);
     const page = Math.min(this.termPage || 0, pages.length - 1);
