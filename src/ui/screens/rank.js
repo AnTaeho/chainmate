@@ -3,15 +3,17 @@
 //   순위 화면: 머리줄(제목 · 「오늘 · 어제」 탭 · 날짜와 사람 수) → 머릿줄 → 열 줄 → 붙박은 내 줄(금빛) 또는 「오늘의 대국 두기」 → 단추 줄(쪽 넘김)
 //   결과 카드: 「오늘 14등 / 312명」 · 「순위 보기」 → 내 위아래 이웃(자리가 되는 만큼 둘씩 · 하나씩 · 내 줄만), 줄마다 등수 · 이름 · 도달(순위 화면과 같은 글) · 점수
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rect, measure, num, fitNum } from '../../render/gfx.js';
+import { W, text, box, rect, rrect, measure, num, fitNum } from '../../render/gfx.js';
 import { button } from '../ui.js';
-import { pageHead, tabRow } from './common.js';
+import { pageHead, tabRow, headW, HEAD_BIG } from './common.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, GAP_IN, BTN_S, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { getLang } from '../lang.js';
 import { shiftDate, PAGE as PER } from '../rank.js';
 
 const en = () => getLang() === 'en';
+// 내 줄 바탕: 둥근 짙은 금빛 띠 + 금빛 테 1
+function mineRow(ctx, x, y, w) { rrect(ctx, x, y, w, LINE, 3, PAL.goldDk); rrect(ctx, x + 1, y + 1, w - 2, LINE - 2, 2, MINE_BG); }
 const MINE_BG = '#3a3014', CARD_BG = PAL.deep;
 // 도달: 이겼으면 「8관 이김」, 아니면 「7관 마스터전」. 영어는 줄 폭에 맞춘 짧은 꼴(Hall 7 Master — 결과 화면의 「Master Match」보다 짧다)
 const KIND = { ko: ['연습 대국', '정식 대국', '마스터전'], en: ['Practice', 'Rated', 'Master'] };
@@ -73,20 +75,20 @@ export class RankScreen {
     const v = app.rank.board(date, this.page + 1), d = v.data;
     if (d) this.seen = { date, total: d.total, pages: d.pages, me: d.me };
     const seen = this.seen && this.seen.date === date ? this.seen : null;
-    pageHead(ctx, '순위', seen ? `${dayText(date)} · ${peopleText(seen.total)}` : dayText(date));
-    tabRow(ctx, ui, 'rank', [['today', '오늘'], ['yesterday', '어제']], this.tab, PAGE.titleX + measure('순위', true) + 10, 5, BTN_S, (id) => this.setTab(id));
+    pageHead(ctx, '순위', seen ? `${dayText(date)} · ${peopleText(seen.total)}` : dayText(date), { big: true });
+    tabRow(ctx, ui, 'rank', [['today', '오늘'], ['yesterday', '어제']], this.tab, PAGE.titleX + headW('순위') + 10, HEAD_BIG.mid - (BTN_S >> 1), BTN_S, (id) => this.setTab(id), 20);
     const pages = seen ? seen.pages : 1;
     if (this.page > pages - 1) this.page = pages - 1;
     // 머릿줄
     [['이름', COL.name, 'left'], ['도달', COL.reach, 'left'], ['점수', COL.score, 'right']].forEach(([s, x, align]) => text(ctx, s, x, textY(BOARD.headY), PAL.dimDk, { align }));
-    rect(ctx, COL.x0, BOARD.headY + LINE + 1, COL.x1 - COL.x0, 1, PAL.feltHi);
+    rect(ctx, COL.x0, BOARD.headY + LINE + 1, COL.x1 - COL.x0, 1, PAL.slotEdge);
     const say = (s) => text(ctx, s, W / 2, textY(BOARD.rowsY + 4 * LINE), PAL.dim, { align: 'center' });
     if (d && d.rows.length) {
       d.rows.forEach((r, i) => {
         const top = BOARD.rowsY + i * LINE, mine = !!d.me && d.me.rank === r.rank;
         openBox('tile', COL.x0, top, COL.x1 - COL.x0, LINE, 0, { name: `순위 줄 ${r.rank}` });
-        if (i % 2) { ctx.globalAlpha = 0.5; rect(ctx, COL.x0, top, COL.x1 - COL.x0, LINE, PAL.feltDk); ctx.globalAlpha = 1; }
-        if (mine) { rect(ctx, COL.x0, top, COL.x1 - COL.x0, LINE, MINE_BG); rect(ctx, COL.x0, top, 2, LINE, PAL.gold); }
+        if (i % 2) { ctx.globalAlpha = 0.5; rrect(ctx, COL.x0, top, COL.x1 - COL.x0, LINE, 3, PAL.feltDk); ctx.globalAlpha = 1; }
+        if (mine) mineRow(ctx, COL.x0, top, COL.x1 - COL.x0);
         rowLine(ctx, r, app.rank.nameOf(r), top, { mine });
         closeBox();
       });
@@ -171,8 +173,8 @@ export function drawRankCard(ctx, ui, app, card, x, y, w) {
     // 서버가 판을 다시 두는 동안: 빈 줄(가운데가 내 줄 자리)
     for (let i = 0; i < card.count; i++) {
       const top = y0 + i * LINE, mid = i === (card.count >> 1);
-      if (mid) { rect(ctx, x + P, top, w - P * 2, LINE, MINE_BG); rect(ctx, x + P, top, 2, LINE, PAL.gold); }
-      rect(ctx, x + P + 4, top + 6, 12, 2, PAL.feltHi); rect(ctx, x + P + 24, top + 6, 70 - (i % 2) * 18, 2, PAL.feltHi); rect(ctx, x + w - P - 42, top + 6, 40, 2, PAL.feltHi);
+      if (mid) mineRow(ctx, x + P, top, w - P * 2);
+      rrect(ctx, x + P + 4, top + 5, 12, 4, 2, PAL.slotEdge); rrect(ctx, x + P + 24, top + 5, 70 - (i % 2) * 18, 4, 2, PAL.slotEdge); rrect(ctx, x + w - P - 42, top + 5, 40, 4, 2, PAL.slotEdge);
     }
     closeBox();
     return;
@@ -180,7 +182,7 @@ export function drawRankCard(ctx, ui, app, card, x, y, w) {
   const names = rows.map((r) => app.rank.nameOf(r)), at = cardCols(rows, names, x, w);
   rows.forEach((r, i) => {
     const top = y0 + i * LINE, ty = textY(top), mine = r.rank === st.me.rank, c = mine ? PAL.gold : PAL.ink;
-    if (mine) { rect(ctx, x + P, top, w - P * 2, LINE, MINE_BG); rect(ctx, x + P, top, 2, LINE, PAL.gold); }
+    if (mine) mineRow(ctx, x + P, top, w - P * 2);
     text(ctx, num(r.rank), at.rank, ty, mine ? PAL.gold : PAL.dim, { bold: mine });
     text(ctx, names[i], at.name, ty, c, { bold: mine });
     if (at.reach != null) text(ctx, at.reachOf(r), at.reach, ty, r.won || mine ? PAL.gold : PAL.dim, { align: 'right' });
