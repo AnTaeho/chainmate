@@ -1,6 +1,6 @@
 // 첫 화면(CHM-49, docs/design-notes/layout.md 「첫 화면」): 달밤 하늘에서 흰 기물이 검은 기물 다섯을 차례로 먹으며 그 모습으로 바뀐다
 // (하늘의 사슬 — src/ui/skychain.js 시간표 · src/render/night.js 그림). 로고는 글자마다 정수 칸으로 오르내리고,
-// 주인공 단추 하나(저장이 있으면 「이어 하기」, 없으면 「새 판」)가 금빛으로 숨 쉬며, 나머지는 아래 도트 아이콘 줄이다.
+// 주인공 단추 하나(저장이 있으면 「이어 하기」, 없으면 「새 판」)가 금빛으로 숨 쉬며, 나머지는 아래 아이콘 줄이다.
 // 바탕(하늘 · 달 · 별 · 실루엣 · 가장자리 어둡기)은 여백 판이 창 전체로 같은 함수로 이어 칠한다(surroundScene).
 import { hint, markSeen } from '../coach.js';
 import { inkY } from '../frame.js';
@@ -204,7 +204,7 @@ export class TitleScreen {
     rrect(ctx, hx + 1, hy + 1, HERO.w - 2, HERO.h - 2, pr - 1, ui.isHover(hid) ? PAL.goldHi : PAL.gold);
     text(ctx, hlabel, W / 2, inkY(hy, HERO.h), PAL.cardInk, { align: 'center', bold: true });
     closeBox();
-    // 아이콘 줄: 같은 폭 칸, 칸마다 어두운 상자 + 도트 아이콘 + 이름(넘치면 낱말 단위 두 줄). 고른 칸은 한 칸 들리고 금빛 테
+    // 아이콘 줄: 같은 폭 칸, 칸마다 둥근 남색 칸 + 벡터 아이콘 + 이름(넘치면 낱말 단위 두 줄). 고른 칸은 한 칸 들리고 금빛 테
     const row = items.slice(1), n = row.length, CW = rowCw(n), x0 = Math.round(W / 2 - (n * CW) / 2);
     row.forEach(([id, label, fn], k) => {
       const i = k + 1, on = this.sel === i;
