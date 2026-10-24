@@ -1,4 +1,4 @@
-// 여백 판(src/render/backdrop.js, layout.md 「화면 맞춤」): 판 밖 흐름은 게임과 같은 칸의 같은 얼룩, 바뀐 것이 없으면 다시 칠하지 않는다
+// 여백 판(src/render/backdrop.js, layout.md 「화면 맞춤」): 판 밖 바탕(안 3 — 남색 빛 · 기운 띠)은 게임과 같은 칸의 같은 빛깔, 바뀐 것이 없으면 다시 칠하지 않는다
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom } from './helpers/dom.js';
@@ -10,7 +10,7 @@ before(async () => {
 });
 after(() => { delete globalThis.document; delete globalThis.window; });
 
-test('흐르는 얼룩: 판 밖으로 넓힌 칸도 겹치는 곳은 게임의 64×36과 같다', () => {
+test('바탕: 판 밖으로 넓힌 칸도 겹치는 곳은 게임의 칸과 같다', () => {
   const game = new Uint8ClampedArray(64 * 36 * 4);
   M.light.paintFlow(game, 64, 36, 0, 0, 3.25, '#8fae4a', 1.6);
   const cols = 90, rows = 50, i0 = -13, j0 = -7;
@@ -30,8 +30,10 @@ test('여백 판: 창 크기 · 흐름 시각 · 어둡기가 같으면 다시 �
   assert.equal(cv.width, f.pad.cols);
   assert.equal(M.pad.drawPad(cv, f.pad, { time: 1.01, tint: null, dim: 0 }), false);
   assert.equal(M.pad.drawPad(cv, f.pad, { time: 1.01, tint: null, dim: 0.72 }), true);
-  assert.equal(M.pad.drawPad(cv, f.pad, { time: 2, tint: null, dim: 0.72 }), true);
-  // 움직임 줄이기: 흐름이 멈춰 시각이 바뀌어도 그대로
+  // 바탕은 흐르지 않는다(안 3): 시각이 바뀌어도 그대로, 모습(세력)이 바뀌면 다시
+  assert.equal(M.pad.drawPad(cv, f.pad, { time: 2, tint: null, dim: 0.72 }), false);
+  assert.equal(M.pad.drawPad(cv, f.pad, { time: 2, tint: 'peasants', dim: 0.72 }), true);
+  // 움직임 줄이기도 같다
   M.look.LOOK.calm = true;
   M.pad.drawPad(cv, f.pad, { time: 3, tint: null, dim: 0 });
   assert.equal(M.pad.drawPad(cv, f.pad, { time: 9, tint: null, dim: 0 }), false);

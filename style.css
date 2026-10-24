@@ -21,19 +21,6 @@ canvas {
 /* 캔버스 바탕은 비워 둔다: WebKit은 반 CSS 화소 자리의 캔버스 그림을 1 기기 화소 밀어 그려, 바탕이 있으면 테두리에 한 줄이 비친다(뒤는 같은 결의 여백 판) */
 #screen { background: transparent; cursor: default; }
 #pad { background: #05061a; }
-/* 화면 효과(docs/design-notes/layout.md 27절): 키운 화면 위 가는 주사선(게임 도트 줄마다 한 줄) · 가장자리 어둡기. 그라디언트 한 장이라 한 번 합성하면 끝이다.
-   main.js가 --gp(주사선 간격)와 캔버스 상자 --gx · --gy · --gw · --gh를 적고 body.crt로 켠다(설정 「화면 효과」, 움직임 줄이기면 꺼진다).
-   가장자리 어둡기는 캔버스 상자에만 깐다(넓은 창 · 폰 세로의 여백에 어둡기가 지지 않게), 주사선은 틀 전체에 캔버스 윗변부터. #stage 안이라 돌린 틀과 같이 돈다 */
-#crt {
-  position: absolute; inset: 0; pointer-events: none; display: none;
-  background:
-    radial-gradient(ellipse 80% 80% at 50% 50%, rgba(0, 0, 0, 0) 66%, rgba(0, 0, 0, 0.28) 100%),
-    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) calc(var(--gp, 3px) * 0.62), rgba(0, 0, 0, 0.2) calc(var(--gp, 3px) * 0.62), rgba(0, 0, 0, 0.2) var(--gp, 3px));
-  background-size: var(--gw, 100%) var(--gh, 100%), auto;
-  background-repeat: no-repeat, repeat;
-  background-position: var(--gx, 0px) var(--gy, 0px), 0 var(--gy, 0px);
-}
-body.crt #crt { display: block; }
 /* 안전 영역 재기(노치 · 홈 막대): main.js가 padding을 읽는다 */
 #safe {
   position: fixed; inset: 0; visibility: hidden; pointer-events: none;

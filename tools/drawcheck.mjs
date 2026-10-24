@@ -374,23 +374,12 @@ const PLAY = async ({ k, sac = false }) => {
     await h.ev(SHOP); await h.step(20);
     await h.ev(() => window.__app.openOverlay('settings')); await h.step(30);
     await h.hoverAll(/^set:/, 4);
-    for (const id of ['set:shake', 'set:calm', 'set:big', 'set:lang', 'set:coach', 'set:crt', 'set:vol+', 'set:vol-']) { await h.press(new RegExp(`^${id}$`), 30); }
+    for (const id of ['set:shake', 'set:calm', 'set:big', 'set:lang', 'set:coach', 'set:vol+', 'set:vol-']) { await h.press(new RegExp(`^${id}$`), 30); }
     await h.press(/^set:back$/, 30);
     await h.step(120);
     await h.ev(() => window.__app.openOverlay('settings')); await h.step(10);
     for (const id of ['set:calm', 'set:lang', 'set:big', 'set:shake', 'set:coach']) await h.press(new RegExp(`^${id}$`), 20);
     await h.press(/^set:back$/, 60);
-  });
-  // 화면 효과(CRT, CSS 덮개): 끄고 켜도 캔버스 그리기 판단은 같다 — 켠 채 · 끈 채 쉬는 대국, 설정 줄 누르기
-  await scene(page, 'screen effect off · battle idle + settings row', async () => {
-    await h.ev(() => { window.__app.settings.crt = false; }); await h.ev(BATTLE); await h.move(1, 1, 1); await h.step(240);
-    await h.ev(() => window.__app.openOverlay('settings')); await h.step(20);
-    await h.press(/^set:crt$/, 30); await h.press(/^set:back$/, 30); await h.step(120);
-  });
-  await scene(page, 'screen effect on · battle idle + settings row', async () => {
-    await h.ev(() => { window.__app.settings.crt = true; }); await h.ev(BATTLE); await h.move(1, 1, 1); await h.step(240);
-    await h.ev(() => window.__app.openOverlay('settings')); await h.step(20);
-    await h.press(/^set:crt$/, 30); await h.press(/^set:crt$/, 30); await h.press(/^set:back$/, 30); await h.step(120);
   });
   await scene(page, 'settings over codex (calm · lang · big)', async () => {
     await h.ev(() => { const a = window.__app; a.toTitle(); a.go('codex'); }); await h.step(30);

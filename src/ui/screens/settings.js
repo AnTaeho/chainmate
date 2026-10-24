@@ -1,4 +1,4 @@
-// 설정(덮개): 소리 크기 · 음악(오른쪽에 화면 효과) · 연출 속도 ×1/×2/×4 · 화면 흔들림 · 복기 · 큰 글자 · 언어 · 처음 안내 · 움직임 줄이기 · 기록 보내기(CHM-63),
+// 설정(덮개): 소리 크기 · 음악 · 연출 속도 ×1/×2/×4 · 화면 흔들림 · 복기 · 큰 글자 · 언어 · 처음 안내 · 움직임 줄이기 · 기록 보내기(CHM-63),
 // 맨 아래 수업 · 킹과 다시 두기(다음 새 판의 첫 대국을 킹과 둔다, CHM-22) · 기록 내보내기(사람 판 기록 JSON, CHM-50) · 돌아가기.
 // 기록 내보내기는 줄 하나를 더하면 상자가 화면(270)을 넘어 맨 아래 단추 줄에 둔다.
 // 순위 이름(CHM-70): 「큰 글자」 · 「언어」 줄의 빈 오른쪽 반에 두 줄 — 윗줄 「이름 졸린 수달」, 아랫줄 주사위 「다시 짓기」. 순위에 오른 적이 있을 때만(열쇠가 있을 때) 보인다.
@@ -16,7 +16,6 @@ export const TELEMETRY_TIP = '익명으로 판 결과만 보내요 · 화면은 
 export const rerollTip = (left) => (left == null ? '순위에 오르는 이름을 바꿔요' : left > 0 ? `오늘 ${left}번 더 바꿀 수 있어요` : '오늘은 더 바꿀 수 없어요 · 내일 다시 바꿀 수 있어요');
 // 이름 줄의 자리(재는 쪽 test/layout.test.js와 같이 쓴다): 이름은 오른끝 맞춤, 「이름」 이름표는 이름 왼쪽에 들어갈 때만
 export const LINK_TIP = '로그인하거나 다른 기기와 연결해요';
-export const CRT_TIP = '옛 TV처럼 가는 줄무늬와 어두운 가장자리를 입혀요';
 export const NAME_X = 192;
 export function nameRow(x, w, name) {
   const x0 = x + NAME_X, x1 = x + w - PAD_BOX, nw = measure(name, true), lw = measure('이름') + 6;
@@ -52,7 +51,6 @@ export class SettingsScreen {
     if (ui.isHover('set:telemetry')) text(ctx, TELEMETRY_TIP, W / 2, y + ty, PAL.ink, { align: 'center' });
     else if (me && ui.isHover('set:name')) text(ctx, rerollTip(me.rerolls), W / 2, y + ty, PAL.ink, { align: 'center' });
     else if (ui.isHover('set:link')) text(ctx, LINK_TIP, W / 2, y + ty, PAL.ink, { align: 'center' });
-    else if (ui.isHover('set:crt')) text(ctx, CRT_TIP, W / 2, y + ty, PAL.ink, { align: 'center' });
     else text(ctx, '설정', W / 2, y + ty, PAL.gold, { align: 'center', bold: true });
     const row = (i, label) => { const top = y + rowTops[i]; text(ctx, label, x + PAD_BOX + 4, textY(top, RH), PAL.ink); return top; };
     const set = (k, v) => { s[k] = v; app.saveSettings(); if (app.audio) app.audio.apply(s); app.track('setting_change', { key: k, value: v }, { always: true }); };
@@ -66,10 +64,6 @@ export class SettingsScreen {
     button(ctx, ui, 'set:mus-', x + 120, yy, 20, 18, '-', { onClick: () => set('music', Math.max(0, Math.round((s.music - 0.1) * 10) / 10)), grow: GM });
     text(ctx, `${Math.round(s.music * 10)}`, x + 156, textY(yy, RH), PAL.ink, { align: 'center', bold: true });
     button(ctx, ui, 'set:mus+', x + 172, yy, 20, 18, '+', { onClick: () => set('music', Math.min(1, Math.round((s.music + 0.1) * 10) / 10)), grow: GM });
-    // 화면 효과(주사선 · 가장자리 어둡기): 음악 줄 오른쪽(복기 · 기록 보내기와 같은 꼴). 움직임 줄이기면 꺼지고 누를 수 없다
-    const crt = app.crtOn();
-    text(ctx, '화면 효과', x + w - PAD_BOX - rbw - 6, textY(yy, RH), app.reducedMotion ? PAL.dimDk : PAL.ink, { align: 'right' });
-    button(ctx, ui, 'set:crt', x + w - PAD_BOX - rbw, yy, rbw, 18, crt ? '켬' : '끔', { enabled: !app.reducedMotion, onClick: () => set('crt', !crt), tone: crt ? 'gold' : 'plain', grow: G });
     yy = row(2, '연출 속도');
     [1, 2, 4].forEach((v, i) => button(ctx, ui, `set:speed${v}`, x + 120 + i * 34, yy, 30, 18, `×${v}`, { onClick: () => set('speed', v), tone: s.speed === v ? 'gold' : 'plain', grow: GS }));
     yy = row(3, '화면 흔들림');

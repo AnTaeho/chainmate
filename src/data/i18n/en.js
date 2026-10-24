@@ -128,7 +128,7 @@ export const EN = {
   '나이트를 골라 봐. 기사도는 나이트로 시작할 때 효과를 내': 'Take the knight. Chivalry works when you start with a knight',
   '격언 「첫수」도 사 봐. 기사도와 같은 기사 시너지야': 'Buy “First Move” too. It is Rider synergy, like Chivalry',
   '알겠어': 'Got it', '도움말 팁': 'First-time tips', '다시 보기': 'Show again', '도움말 팁을 처음부터 다시 봐요': 'First-time tips will show again',
-  '화면 효과': 'Retro screen', '옛 TV처럼 가는 줄무늬와 어두운 가장자리를 입혀요': 'Thin scanlines and dark edges, like an old TV',
+
   '플레이 기록 전송': 'Share play stats', '익명으로 판 결과만 보내요 · 화면은 수집하지 않아요': 'Anonymous results only. No screen recording.',
   '판 결과를 익명으로 수집해요 · 설정에서 끌 수 있어요': 'Anonymous run results are collected. Turn it off in Settings',
   '기록 내보내기': 'Export runs', '아직 끝낸 판이 없어요': 'No finished runs yet', '내보내지 못했어요': 'Could not export',

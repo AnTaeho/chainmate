@@ -2,7 +2,7 @@
 import { richText } from './glossary.js';
 import { sheen } from './juice.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, text, frame, dots, sprite, measure, digits, place, edgeW, slot } from '../render/gfx.js';
+import { box, rect, text, frame, dots, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf, hiFor } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
@@ -27,17 +27,18 @@ import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
 export { maximArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, SHARD_ROWS, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
 
+// 카드 모서리를 따라 안쪽 k에 그리는 둥근 테(k < 0이면 바깥)
+export const edgeRing = (ctx, x, y, w, h, k, col, t = 1) => rframe(ctx, x + k, y + k, w - 2 * k, h - 2 * k, Math.max(0, radiusOf(w, h) - k), col, t);
+
 // 카드 바탕(물건 · 정석 · 두루마리 · 도감 칸이 같이 쓴다 — docs/design-notes/layout.md 「부품」):
-// 바탕 · 짙은 테 · 윗변 한 줄 빛, edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
+// 둥근 바탕 · 잉크 테 · 흐린 그림자(box), edge가 있으면 안쪽 테(등급 · 각인 · 혼 빛깔, double이면 두 겹), 가리키면 금빛 테(들리지 않는다)
 export function cardBase(ctx, x, y, w, h, { fill = PAL.card, hover = false, edge = null, double = false, ticks = false, line = PAL.frameDk } = {}) {
-  // 틀 문법(layout.md 27절): 테 t(큰 카드 2 · 작은 칸 1) 안쪽 윗변 한 줄 빛이 카드를 들어 보이게 한다
+  // 틀 문법(안 3 — layout.md 27절): 테 1, 안쪽 테(등급 · 각인 · 혼)는 카드 모서리를 따라 둥글게
   const t = edgeW(w, h);
-  shade(ctx, x, y, w, h);
   box(ctx, x, y, w, h, fill, hover ? PAL.gold : line);
-  rect(ctx, x + t, y + t, w - 2 * t, 1, PAL.cardHi);
   if (edge) {
-    frame(ctx, x + t, y + t, w - 2 * t, h - 2 * t, edge);
-    if (double) frame(ctx, x + t + 1, y + t + 1, w - 2 * t - 2, h - 2 * t - 2, edge);
+    edgeRing(ctx, x, y, w, h, t, edge);
+    if (double) edgeRing(ctx, x, y, w, h, t + 1, edge);
     if (ticks) cornerTicks(ctx, x + t + 2, y + t + 2, w - 2 * t - 4, h - 2 * t - 4, edge, 3);
   }
 }
@@ -145,7 +146,7 @@ export function editionShine(ctx, edition, x, y, w, h, t) {
       if (x1 > x0) rect(ctx, x0, y + j, x1 - x0, 1, edition === 'foil' ? '#ffffff' : '#c9a0ff');
     }
     ctx.globalAlpha = 1;
-    frame(ctx, x, y, w, h, edition === 'foil' ? EDITION_TINT.foil : EDITION_TINT.obsidian);
+    edgeRing(ctx, x, y, w, h, 0, edition === 'foil' ? EDITION_TINT.foil : EDITION_TINT.obsidian);
   } else if (edition === 'pearl') {
     for (let i = 0; i < 7; i++) {
       const px = x + 5 + ((i * 37) % (w - 10)), py = y + 3 + ((i * 13) % (h - 6));
@@ -153,11 +154,11 @@ export function editionShine(ctx, edition, x, y, w, h, t) {
       rect(ctx, px, py, 2, 1, `hsl(${Math.floor(t * 90 + i * 51) % 360},70%,80%)`);
       ctx.globalAlpha = 1;
     }
-    frame(ctx, x, y, w, h, `hsl(${Math.floor(t * 60) % 360},45%,82%)`);
+    edgeRing(ctx, x, y, w, h, 0, `hsl(${Math.floor(t * 60) % 360},45%,82%)`);
   } else if (edition === 'rainbow') {
     const hue = Math.floor(t * 140) % 360;
-    frame(ctx, x, y, w, h, `hsl(${hue},85%,60%)`);
-    frame(ctx, x + 1, y + 1, w - 2, h - 2, `hsl(${(hue + 60) % 360},85%,70%)`);
+    edgeRing(ctx, x, y, w, h, 0, `hsl(${hue},85%,60%)`);
+    edgeRing(ctx, x, y, w, h, 1, `hsl(${(hue + 60) % 360},85%,70%)`);
   }
 }
 
@@ -181,8 +182,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   if (m.edition) glow(ctx, x, y, w, h, EDITION_TINT[m.edition] || PAL.goldHi, 0.32 * flicker(t, 2.2, 0.35), 4);
   unshaded(() => box(ctx, x, y, w, h, fill, PAL.frameDk));
   const et = edgeW(w, h);
-  rect(ctx, x + et, y + et, w - 2 * et, 1, legendary ? PAL.goldHi : obsidian ? '#4a3a5c' : PAL.cardHi);
-  rect(ctx, x + et, y + et + 1, 2, h - 2 * et - 1, RARITY[info.rarity] || PAL.dim);
+  rect(ctx, x + et + 1, y + 4, 2, h - 8, RARITY[info.rarity] || PAL.dim);
   if (legendary) {
     if (t) live();
     const k = Math.floor(t * 8) % 20;
@@ -190,7 +190,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   }
   rarityTrim(ctx, info.rarity, x, y, w, h);
   editionShine(ctx, m.edition, x, y, w, h, t);
-  if (hot) frame(ctx, x, y, w, h, PAL.gold, et);
+  if (hot) edgeRing(ctx, x, y, w, h, 0, PAL.gold, et);
   const ink = off ? PAL.cardDim : obsidian ? '#eadcff' : PAL.cardInk;
   const P = PAD_CARD;
   // 그림은 진열 카드와 같은 그림을 작은 그림 칸(20 × 22)에(art.js maximArt — CHM-69). 좁은 칸은 그림만 가운데
@@ -209,7 +209,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
 export function rarityTrim(ctx, rarity, x, y, w, h) {
   const col = RARITY[rarity] || PAL.dim, t = edgeW(w, h);
   if (rarity === 'uncommon') dots(ctx, x + t, y + t, w - 2 * t, h - 2 * t, col, 2);
-  else if (rarity === 'rare') { frame(ctx, x + t, y + t, w - 2 * t, h - 2 * t, col); if (h > 10) frame(ctx, x + t + 2, y + t + 2, w - 2 * t - 4, h - 2 * t - 4, col); }
+  else if (rarity === 'rare') { edgeRing(ctx, x, y, w, h, t, col); if (h > 10) edgeRing(ctx, x, y, w, h, t + 2, col); }
   else if (rarity === 'legendary') {
     const n = Math.min(5, Math.floor(h / 3));
     for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1], [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
@@ -286,9 +286,8 @@ export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hove
   const yy = y - lift;
   if (alpha !== 1) ctx.globalAlpha = alpha;
   box(ctx, x, yy, w, h, PAL.light, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk);
-  rect(ctx, x + 1, yy + 1, w - 2, 1, PAL.cardHi);
-  if (selected) frame(ctx, x - 1, yy - 1, w + 2, h + 2, PAL.gold);
-  if (p.eng && ENG_EDGE[p.eng.id]) { frame(ctx, x + 1, yy + 1, w - 2, h - 2, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
+  if (selected) edgeRing(ctx, x, yy, w, h, -1, PAL.gold);
+  if (p.eng && ENG_EDGE[p.eng.id]) { edgeRing(ctx, x, yy, w, h, 1, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
   sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null });
   if (level > 0) chartBadge(ctx, level, x + w - 1, yy + 1, { dim, glow });
   if (p.soul && (p.awake || isCracked(p))) soulMark(ctx, p, x, yy, w, h, time, dim);
@@ -305,8 +304,8 @@ export function soulMark(ctx, p, x, y, w, h, time = null, dim = false) {
   if (time != null) live();
   if (dim) ctx.globalAlpha *= 0.6;
   if (p.awake) {
-    frame(ctx, x + 1, y + 1, w - 2, h - 2, PAL.gold);
-    frame(ctx, x + 2, y + 2, w - 4, h - 4, PAL.goldDk);
+    edgeRing(ctx, x, y, w, h, 1, PAL.gold);
+    edgeRing(ctx, x, y, w, h, 2, PAL.goldDk);
     const k = Math.floor(t * 3) % 4, corners = [[x + 1, y + 1], [x + w - 2, y + 1], [x + w - 2, y + h - 2], [x + 1, y + h - 2]];
     const [ax, ay] = corners[k];
     rect(ctx, ax, ay, 1, 1, PAL.white);
@@ -403,9 +402,8 @@ export function discardIcon(ctx, x, y, col) {
   rect(ctx, x + 6, y + 4, 1, 2, col); rect(ctx, x + 5, y - 1, 1, 3, col); rect(ctx, x + 6, y, 1, 1, col);
 }
 
-// 패널: 모습의 상자 면 + 크림 테 2 + 그림자(틀 문법 — layout.md 27절)
+// 패널: 모습의 상자 면 + 잉크 테 1 + 아래 그림자 2, 둥근 모서리(안 3 틀 문법 — layout.md 27절)
 export function panel(ctx, x, y, w, h) {
-  shade(ctx, x, y, w, h);
   box(ctx, x, y, w, h, PAL.feltDk, PAL.frameDk);
 }
 
@@ -501,7 +499,7 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   if (it.edition && !sold) glow(ctx, x, y, w, h, EDITION_TINT[it.edition] || PAL.goldHi, 0.35 * flicker(t, 2.2, 0.35), 6);
   cardBase(ctx, x, y, w, h, { fill, hover });
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
-  if (hover) frame(ctx, x, y, w, h, PAL.gold);
+  if (hover) edgeRing(ctx, x, y, w, h, 0, PAL.gold);
   if (w < 30 || back) return;
   text(ctx, ITEM_KIND[it.kind], x + w / 2, y + 4, PAL.cardDim, { align: 'center' });
   const cx = x + Math.floor(w / 2);
@@ -511,9 +509,9 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   }
   // 그림은 진열 카드와 같은 그림 칸(art.js itemArt, 22×26 — 진화는 겹 꺾쇠만)
   const ay = y + 22;
-  if (it.kind === 'engraving') { const col = ENG_EDGE[it.id] || PAL.gold; frame(ctx, x + 1, y + 1, w - 2, h - 2, col); cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, col, 3); }
-  else if (it.kind === 'awaken') frame(ctx, x + 1, y + 1, w - 2, h - 2, PAL.gold);
-  else if (it.kind === 'soul') frame(ctx, x + 1, y + 1, w - 2, h - 2, SOUL_BY_ID[it.id].col);
+  if (it.kind === 'engraving') { const col = ENG_EDGE[it.id] || PAL.gold; edgeRing(ctx, x, y, w, h, 1, col); cornerTicks(ctx, x + 3, y + 3, w - 6, h - 6, col, 3); }
+  else if (it.kind === 'awaken') edgeRing(ctx, x, y, w, h, 1, PAL.gold);
+  else if (it.kind === 'soul') edgeRing(ctx, x, y, w, h, 1, SOUL_BY_ID[it.id].col);
   const rar = it.kind === 'maxim' ? maximInfo(it.id).rarity : it.kind === 'soul' ? SOUL_BY_ID[it.id].rarity : null;
   if (rar) rect(ctx, x + 6, y + 18, w - 12, 2, RARITY[rar]);
   itemArt(ctx, it, cx - 11, ay, t0, run, { w: 22 });
@@ -621,7 +619,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   const rar = it.kind === 'maxim' ? maximInfo(it.id).rarity : soulRarity(it);
   if (rar) rect(ctx, x + 2, y + 2, w - 4, 2, RARITY[rar]);
   if (it.edition && !sold) editionShine(ctx, it.edition, x, y, w, h, t);
-  if (hover) frame(ctx, x, y, w, h, PAL.gold);
+  if (hover) edgeRing(ctx, x, y, w, h, 0, PAL.gold);
   const lay = itemCardLayout(it, w, { run, price, hold });
   const P = PAD_CARD;
   kindTab(ctx, it.kind, x + P, y + lay.tabY);

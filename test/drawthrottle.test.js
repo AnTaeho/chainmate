@@ -51,11 +51,11 @@ test('입력 · 알림 · 화면 바뀜 · 배율은 그리게 하고, 알림이
   assert.equal(app.tick(30), 0, '설정 덮개도 멈춘 화면');
 });
 
-test('흐르는 배경이 켜져 있으면 초당 12번만 그린다 · 움직이는 화면(첫 화면)은 프레임마다', () => {
+test('바탕은 흐르지 않아(안 3) 멈춘 화면은 움직임 줄이기가 아니어도 쉰다 · 움직이는 화면(첫 화면)은 프레임마다', () => {
   const app = makeApp({ calm: false });
   app.go('codex'); app.tick(5);
   const n = app.tick(120);
-  assert.ok(n >= 22 && n <= 26, `2초에 ${n}번`);
+  assert.equal(n, 0, `2초에 ${n}번`);
   app.go('title');
   assert.equal(app.tick(60), 60);
   assert.ok(LOOK.flow > 0);

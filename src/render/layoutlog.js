@@ -25,10 +25,13 @@ export function logBegin() {
   if (!LOG.on) return;
   LOG.boxes = []; LOG.texts = []; LOG.frames = []; LOG.stack = []; LOG.layer = 0; LOG.folded = []; LOG.clips = [];
 }
-export function openBox(kind, x, y, w, h, pad = 0, { overlay = false, loose = false, name = '' } = {}) {
+// 둥근 모서리(안 3): 반지름 r인 모서리에서, 상자 윗변(또는 아랫변)으로부터 a 떨어진 줄의 가로 들어감
+export function arcInset(r, a) { if (!(r > 0) || a >= r) return 0; const dy = r - Math.max(0, a); return r - Math.sqrt(Math.max(0, r * r - dy * dy)); }
+// r: 'edge' 칸의 모서리 반지름(둥근 단추 · 칩) — 안 여백 검사가 글 잉크 윗줄 · 아랫줄 높이에서 둥근 테까지를 잰다
+export function openBox(kind, x, y, w, h, pad = 0, { overlay = false, loose = false, name = '', r = 0 } = {}) {
   if (!LOG.on) return;
   const parent = LOG.stack[LOG.stack.length - 1] || null;
-  const b = { kind, x, y, w, h, pad, overlay: overlay || !!(parent && parent.overlay), loose: loose || !!(parent && parent.loose), name, parent, layer: LOG.layer };
+  const b = { kind, x, y, w, h, pad, r, overlay: overlay || !!(parent && parent.overlay), loose: loose || !!(parent && parent.loose), name, parent, layer: LOG.layer };
   LOG.boxes.push(b);
   LOG.stack.push(b);
 }
@@ -80,7 +83,9 @@ export function checkLayout({ W = 480, H = 270 } = {}) {
     if (b.kind === 'edge') {
       // 안 여백 검사: 글(빠지는 줄 포함)과 테 사이가 네 변 모두 EDGE_CLEAR 이상
       const e = b.pad + EDGE_CLEAR;
-      if (!inside(t, b.x + e, b.y + e, b.x + b.w - e, b.y + b.h - e) || !inside(full, b.x, b.y, b.x + b.w, b.y + b.h - b.pad - 1)) out.push({ what: 'pad', msg: `「${t.s}」 ${at} 테에 붙음 ${where(b)} 테 ${b.pad} + 틈 ${EDGE_CLEAR}` });
+      // 둥근 칸: 잉크 윗줄 · 아랫줄 높이에서 둥근 테가 들어온 만큼 옆 여백을 더 둔다(둥근 끝에 글이 붙지 않게)
+      const ins = b.r ? Math.max(arcInset(b.r, t.y - b.y), arcInset(b.r, b.y + b.h - (t.y + t.h))) : 0;
+      if (!inside(t, b.x + e + ins, b.y + e, b.x + b.w - e - ins, b.y + b.h - e) || !inside(full, b.x, b.y, b.x + b.w, b.y + b.h - b.pad - 1)) out.push({ what: 'pad', msg: `「${t.s}」 ${at} 테에 붙음 ${where(b)} 테 ${b.pad} + 틈 ${EDGE_CLEAR}${ins ? ` + 둥근 끝 ${ins.toFixed(1)}` : ''}` });
       continue;
     }
     const px = typeof b.pad === 'object' ? b.pad.x : b.pad, py = typeof b.pad === 'object' ? b.pad.y : b.pad, p = typeof b.pad === 'object' ? `${px}·${py}` : b.pad;

@@ -1,6 +1,6 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL, lightFill } from './palette.js';
-import { shade } from './light.js';
+import { shade, softShadow, rpath, DROP } from './light.js';
 import { textImage, textWidth, inkBox } from './text.js';
 import { soulOrb, SW, SH } from './sprites.js';
 import { fitPiece, artOf } from './pieces3.js';
@@ -40,44 +40,69 @@ export function rect(ctx, x, y, w, h, col) {
   ctx.fillRect(R(x), R(y), Math.round(w), Math.round(h));
 }
 
-// 틀 문법(layout.md 27절): 판넬 · 카드 · 큰 상자(가로 · 세로 BIG 이상)는 테 2 + 아래 · 오른쪽 단색 그림자 3, 작은 칸은 테 1.
-// 테 빛깔을 따로 주지 않으면(PAL.frameDk) 어두운 바탕은 크림 테, 밝은 바탕(카드 · 금빛)은 짙은 남색 테
+// 틀 문법(안 3 — layout.md 27절): 둥근 상자 + 잉크 테 1 + 바로 아래 잉크 그림자(큰 상자 2). 크림 카드는 흐린 그림자를 더한다(light.js softShadow).
+// 테 빛깔을 따로 주지 않으면(PAL.frameDk · PAL.frameHi) 잉크. 금빛 · 등급 · 세력 빛깔처럼 뜻이 있는 테는 그대로
 export const BIG = 24;
-export const edgeOf = (fill, edge = PAL.frameDk) => ((edge === PAL.frameDk || edge === PAL.frameHi) && !lightFill(fill) ? PAL.edge : edge === PAL.frameHi ? PAL.frameDk : edge);
-export const edgeW = (w, h) => (Math.min(w, h) >= BIG ? 2 : 1);
-export function box(ctx, x, y, w, h, fill, edge = PAL.frameDk) {
+export const R_BIG = 4;                       // 큰 상자(가로 · 세로 BIG 이상) 모서리
+export const radiusOf = (w, h) => (Math.min(w, h) >= BIG ? R_BIG : Math.min(w, h) >= 12 ? 3 : 2);
+export const edgeOf = (fill, edge = PAL.frameDk) => (edge === PAL.frameDk || edge === PAL.frameHi ? PAL.frameDk : edge);
+export const edgeW = () => 1;
+// 둥근 네모 칠하기(정수 칸 · fine 안이면 1/N 칸)
+export function rrect(ctx, x, y, w, h, r, col) {
+  if (w <= 0 || h <= 0) return;
+  ctx.fillStyle = col;
+  if (!(r > 0)) { ctx.fillRect(R(x), R(y), Math.round(w), Math.round(h)); return; }
+  rpath(ctx, R(x), R(y), Math.round(w), Math.round(h), r);
+  ctx.fill();
+}
+// 둥근 테만(두께 t): 바깥 둥근 판에서 안쪽 둥근 판을 비운다(evenodd)
+export function rframe(ctx, x, y, w, h, r, col, t = 1) {
+  x = R(x); y = R(y); w = Math.round(w); h = Math.round(h);
+  if (w <= 0 || h <= 0) return;
+  ctx.fillStyle = col;
+  rpath(ctx, x, y, w, h, r);
+  const ir = Math.max(0, r - t), iw = w - 2 * t, ih = h - 2 * t;
+  if (iw > 0 && ih > 0) {
+    ctx.moveTo(x + t + ir, y + t);
+    ctx.arcTo(x + t, y + t, x + t, y + t + ih, ir);
+    ctx.arcTo(x + t, y + t + ih, x + t + iw, y + t + ih, ir);
+    ctx.arcTo(x + t + iw, y + t + ih, x + t + iw, y + t, ir);
+    ctx.arcTo(x + t + iw, y + t, x + t, y + t, ir);
+    ctx.closePath();
+  }
+  ctx.fill('evenodd');
+}
+// 상자: 큰 것(BIG 이상)은 아래 그림자 2, 밝은 바탕(크림 카드)은 흐린 그림자도. r: 모서리(기본은 크기로), drop: 그림자 거리
+export function box(ctx, x, y, w, h, fill, edge = PAL.frameDk, { r = radiusOf(w, h), drop = null } = {}) {
   if (LOG.on) logFrame(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
-  const t = edgeW(w, h);
-  if (t === 2) shade(ctx, x, y, w, h);
-  rect(ctx, x, y, w, h, edgeOf(fill, edge));
-  rect(ctx, x + t, y + t, w - 2 * t, h - 2 * t, fill);
+  const big = Math.min(w, h) >= BIG;
+  const d = drop ?? (big ? DROP : 0);
+  if (d > 0) shade(ctx, x, y, w, h, d, { r, soft: big && lightFill(fill) });
+  rrect(ctx, x, y, w, h, r, edgeOf(fill, edge));
+  rrect(ctx, x + 1, y + 1, w - 2, h - 2, Math.max(0, r - 1), fill);
 }
 
-// 뜨는 설명(말풍선 · 낱말 상자 · 처음 안내)의 받침: 네모 바깥 1px 어두운 테 + 아래 · 오른쪽 1px 그늘.
-// 뒤 판넬 테 · 글과 설명 상자 사이를 끊는다. 묶음은 한 번에 깔아 상자 사이 틈도 이음선이 된다(테 검사에 안 걸리게 rect만)
+// 뜨는 설명(말풍선 · 낱말 상자 · 처음 안내)의 받침: 흐린 그림자 + 바깥 잉크 테 1 + 아래 잉크 그림자 2(둥근 판).
+// 뒤 판넬 테 · 글과 설명 상자 사이를 끊는다. 묶음은 한 번에 깔아 상자 사이 틈도 이음선이 된다(테 기록 logFrame 없이 칠만)
 export function lift(ctx, x, y, w, h) {
-  rect(ctx, x - 1, y - 1, w + 2, h + 2, PAL.shadow);
-  rect(ctx, x, y + h + 1, w + 2, 1, PAL.shadow);
-  rect(ctx, x + w + 1, y, 1, h + 1, PAL.shadow);
+  softShadow(ctx, x, y + 3, w, h);
+  rrect(ctx, x - 1, y + 1, w + 2, h + 2, R_BIG + 1, PAL.shadow);
+  rrect(ctx, x - 1, y - 1, w + 2, h + 2, R_BIG + 1, PAL.shadow);
 }
 
-// 테두리만
+// 테두리만(네모). 둥근 상자 위에 겹치는 테는 rframe
 export function frame(ctx, x, y, w, h, col, t = 1) {
   rect(ctx, x, y, w, t, col); rect(ctx, x, y + h - t, w, t, col);
   rect(ctx, x, y, t, h, col); rect(ctx, x + w - t, y, t, h, col);
 }
 
-// 빈 자리(격언 빈칸 · 두루마리 빈칸 · 다음 수 빈칸): 움푹 들어간 칸 — 반쯤 비치는 어두운 바탕, 위 · 왼쪽 안쪽 그늘 2, 아래 · 오른쪽 밝은 줄 1(틀 문법 — layout.md 27절)
-export function slot(ctx, x, y, w, h) {
+// 빈 자리(격언 빈칸 · 두루마리 빈칸 · 다음 수 빈칸 · 콤보 빈칸): 테 두른 둥근 칸 — 깊은 남색 바탕 + 옅은 남색 테 1(안 3 틀 문법 — layout.md 27절).
+// 모서리는 낮은 칸이면 알약(높이의 반), 14까지
+export const slotR = (w, h) => Math.min(14, Math.floor(Math.min(w, h) / 2));
+export function slot(ctx, x, y, w, h, { r = slotR(w, h) } = {}) {
   if (LOG.on) logFrame(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
-  const pa = ctx.globalAlpha;
-  ctx.globalAlpha = pa * 0.5;
-  rect(ctx, x, y, w, h, PAL.deep);
-  rect(ctx, x, y, w, 2, PAL.black);
-  rect(ctx, x, y + 2, 2, h - 2, PAL.black);
-  ctx.globalAlpha = pa;
-  rect(ctx, x, y + h - 1, w, 1, PAL.fogHi);
-  rect(ctx, x + w - 1, y, 1, h - 1, PAL.fogHi);
+  rrect(ctx, x, y, w, h, r, PAL.slotEdge);
+  rrect(ctx, x + 1, y + 1, w - 2, h - 2, Math.max(0, r - 1), PAL.slot);
 }
 
 // 점선 테두리(증원 그림자 · 빈 칸)

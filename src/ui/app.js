@@ -1,6 +1,5 @@
 // 앱: 화면 전환 · 판 상태 · 저장 · 입력 · 프레임. DOM을 모른다(main.js가 캔버스와 입력을 넘긴다).
 import { LOG, logBegin, layerUp, openBox, closeBox } from '../render/layoutlog.js';
-import { feltCanvas } from '../render/texture.js';
 import { LOOK, MOTION } from '../render/look.js';
 import { flowLayer, flowTime } from '../render/light.js';
 import { swayBegin, swaySettle } from './sway.js';
@@ -100,8 +99,6 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const s = app.screen;
     return { time: app.time, tint: app.tint(), scene: s && s.surroundScene ? s.surroundScene() : null, flash: s && s.surroundFlash ? s.surroundFlash() : null, dim: app.overlay ? 0.72 : app.coachDim || 0 };
   };
-  // 화면 효과(주사선 · 가장자리 어둡기, main.js가 CSS로 얹는다): 설정 「화면 효과」, 움직임 줄이기면 끈다
-  app.crtOn = () => app.settings.crt !== false && !app.reducedMotion;
   app.speed = () => app.settings.speed || 1;
   app.records = loadRecords(store);
   setLang(app.settings.lang);
@@ -439,8 +436,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       const a = Math.round(app.shakeAmt * Math.min(1, app.shakeT * 6));
       ctx.translate(Math.round((Math.random() * 2 - 1) * a), Math.round((Math.random() * 2 - 1) * a));
     }
-    ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8);
-    flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16);
+    flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16); // 바탕(안 3 — 남색 빛 · 기운 띠, 모습마다 한 번 굽는다)
     // 입력 칸: 이번 프레임에 화면이 부른 칸만 남긴다(덮개가 뜨면 밑 화면의 칸은 치운다)
     app.fields.begin();
     fine(() => app.fx.draw(ctx, 'back')); // 화면 뒤 연출(색종이 — juice.js)
@@ -575,7 +571,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const ui = app.ui;
     // 가리킨 것을 이번 프레임 구역으로 다시 잡는다(화면이 막 바뀐 프레임에 지난 화면의 구역 · 말풍선을 쓰지 않게 — end()와 같은 값)
     ui.hover = ui.hitIn(ui.regions, ui.mouse.x, ui.mouse.y);
-    const ground = (r) => { ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip(); ctx.drawImage(feltCanvas(W + 16, H + 16), -8, -8); flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16); ctx.restore(); };
+    const ground = (r) => { ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip(); flowLayer(ctx, app.time, app.tint(), -8, -8, W + 16, H + 16); ctx.restore(); };
     const c = coachPlan(app);
     if (c && c.rect) foldSide(ctx, ui.side, c.rect, c.r, ground);
     if (app.settings.big) return;

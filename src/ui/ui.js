@@ -3,11 +3,11 @@
 import { richText } from './glossary.js';
 import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
-import { box, rect, text, frame, measure, lift, edgeOf } from '../render/gfx.js';
+import { box, rect, rrect, text, frame, measure, lift } from '../render/gfx.js';
 import { familyChips, chipRows, chipBlockH, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
-import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, flow, inkY } from './frame.js';
-import { openBox, closeBox, logClip, LOG, logFrame } from '../render/layoutlog.js';
+import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, EDGE_PAD, INK_H, flow, inkY } from './frame.js';
+import { openBox, closeBox, logClip, LOG, logFrame, arcInset } from '../render/layoutlog.js';
 
 export class UI {
   constructor() {
@@ -107,30 +107,37 @@ export function growHit(x, y, w, h, need, room = {}) {
 // 버튼: 글자 버튼(도트 테두리). 누를 수 없으면 흐리게.
 // label이 비면 아이콘(7)만 가운데 — 이름은 tip(말풍선)으로.
 // grow: 손가락 기기에서 누르는 구역을 넓힐 수 있는 쪽마다 최대 도트 { l, r, u, d }(이웃 단추 · 칸과 겹치지 않는 만큼, CHM-52). 그림은 그대로
+// 알약 모서리: 높이의 반까지, 글(잉크 윗줄 · 아랫줄)이 둥근 끝에서 EDGE_PAD 넘게 떨어지는 가장 큰 반지름(좁은 단추는 덜 둥글다 — layoutlog.js 안 여백 검사와 같은 셈)
+export function pillR(w, h, tw) {
+  const slack = (w - tw) / 2 - 1 - EDGE_PAD, top = inkY(0, h), bot = h - top - INK_H;
+  for (let r = Math.floor(h / 2); r > 0; r--) if (Math.max(arcInset(r, top), arcInset(r, bot)) <= slack - 0.5) return r;
+  return 0;
+}
 export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null, grow = null } = {}) {
   const g = grow && ui.finger ? growHit(x, y, w, h, ui.finger, grow) : { x, y, w, h };
   const r = ui.region(id, g.x, g.y, g.w, g.h, { enabled, onClick, ...(tip ? { tip } : {}) });
   const hov = enabled && ui.isHover(id);
   const pressed = hov && ui.press && ui.press.id === id;
+  // 알약 단추(안 3 — layout.md 27절): 크림(보조) · 금빛(주) · 붉은(위험), 꺼진 단추는 빈 자리 빛깔. 잉크 테 1 + 바로 아래 잉크 그림자 2(누르면 1 내려앉고 1)
   const fills = {
-    plain: [PAL.feltDk, PAL.ink],
-    gold: [PAL.gold, PAL.linkInk],
-    red: [PAL.red, PAL.cardHi],
-    card: [PAL.card, PAL.cardInk],
+    plain: [PAL.btn, PAL.cardInk],
+    gold: [PAL.gold, PAL.cardInk],
+    red: [PAL.btnRed, PAL.btnRedInk],
+    card: [PAL.btn, PAL.cardInk],
+    dark: [PAL.slot, PAL.ink],
   };
   let [fill, ink] = fills[tone] || fills.plain;
-  if (!enabled) { fill = PAL.feltDk; ink = PAL.dimDk; }
+  if (!enabled) { fill = PAL.slot; ink = PAL.dimDk; }
   const oy = pressed ? 1 : 0;
-  openBox('edge', x, y + oy, w, h, 1, { name: `단추 ${id}` });
-  // 틀 문법(layout.md 27절): 테 1 + 아래 · 오른쪽 단색 그림자 2(누르면 1px 내려앉고 그림자가 1로), 윗변 한 줄 빛
-  const d = 2 - oy;
+  const tw0 = label ? measure(label, true) + (icon ? 10 : 0) : 7;
+  const pr = pillR(w, h, tw0);
+  openBox('edge', x, y + oy, w, h, 1, { name: `단추 ${id}`, r: pr });
+  const d = enabled ? 2 - oy : 0;
   if (LOG.on) logFrame(Math.round(x), Math.round(y + oy), Math.round(w), Math.round(h));
-  rect(ctx, x + d, y + h + oy, w, d, PAL.drop);
-  rect(ctx, x + w, y + oy + d, d, h - d, PAL.drop);
-  rect(ctx, x, y + oy, w, h, hov ? PAL.gold : enabled ? edgeOf(fill) : PAL.dimDk);
-  rect(ctx, x + 1, y + 1 + oy, w - 2, h - 2, fill);
-  if (!pressed && enabled) rect(ctx, x + 1, y + 1 + oy, w - 2, 1, hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.14)');
-  const tw = label ? measure(label, true) + (icon ? 10 : 0) : 7;
+  if (d > 0) rrect(ctx, x, y + oy + d, w, h, pr, PAL.drop);
+  rrect(ctx, x, y + oy, w, h, pr, hov ? (tone === 'gold' ? PAL.goldDk : PAL.gold) : !enabled ? PAL.slotEdge : PAL.frameDk);
+  rrect(ctx, x + 1, y + 1 + oy, w - 2, h - 2, Math.max(0, pr - 1), hov && tone === 'gold' ? PAL.goldHi : fill);
+  const tw = tw0;
   let tx = x + Math.floor((w - tw) / 2);
   const ty = inkY(y, h) + oy;
   if (icon) { icon(ctx, tx, ty + 2, ink); tx += 10; }
@@ -237,7 +244,6 @@ export function tooltip(ctx, x, y, tip, w, maxH = Infinity) {
   const P = PAD_BOX, h = lay.h, dx = lay.side ? DIAG_W : 0;
   openBox('note', x, y, w, h, P, { overlay: true, name: '말풍선' });
   box(ctx, x, y, w, h, PAL.card, PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
   for (const [l, ly] of lay.titles) text(ctx, l, x + P, y + ly, tip.titleCol || PAL.cardInk, { bold: true });
   if (lay.diagOn) moveDiagram(ctx, tip.diagram.t, x + P, y + lay.diag, { dir: tip.diagram.dir || 1 });
   if (tip.block) tip.block.draw(ctx, x + P, y + lay.block, w - P * 2);
@@ -247,7 +253,6 @@ export function tooltip(ctx, x, y, tip, w, maxH = Infinity) {
     if (Array.isArray(l)) text(ctx, l[0], x + P + dx, y + ly, l[1]);
     else richText(ctx, l, x + P + dx, y + ly, PAL.cardDim, { termCol: PAL.goldDk });
   }
-  frame(ctx, x, y, w, h, PAL.frameDk);
   // 자리 높이로 자른 말풍선(CHM-34 — 설계): 「잘린 글」 검사가 허용 목록으로 가른다
   if (lay.cut) logClip('cut', lay.titles.map(([l]) => l).join(' '), TIP_CUT, w);
   closeBox();

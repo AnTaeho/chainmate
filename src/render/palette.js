@@ -1,14 +1,16 @@
-// 색. 잉크 남색 바탕 + 크림 테 + 금빛(docs/design-notes/layout.md 27절). 판 안 화면은 관 세력이 상자 면 · 판 어두운 칸 · 흐르는 얼룩을 바꾼다(setTheme).
+// 색. 잉크 남색 바탕 + 잉크 테 + 크림 카드 + 금빛(안 3 틀 문법 — docs/design-notes/layout.md 27절). 판 안 화면은 관 세력이 상자 면 · 판 어두운 칸 · 바탕을 바꾼다(setTheme).
 export const PAL = {
   felt: '#11142c', feltDk: '#262c5f', feltHi: '#181c3a', well: '#181b3b', deep: '#0b0d22',
-  frame: '#2d3360', frameHi: '#5b6290', frameDk: '#141633',
-  edge: '#f3e6c8', drop: '#04040f',
+  frame: '#2d3360', frameHi: '#5b6290', frameDk: '#12153a',
+  edge: '#f3e6c8', drop: '#12153a',
+  slot: '#161a44', slotEdge: '#3a4280', // 빈 자리(테 두른 둥근 칸) — 상자 면에서 섞는다(setTheme)
+  btn: '#efe6d2', btnRed: '#ef6a52', btnRedInk: '#fff4ea', // 알약 단추: 크림(보조) · 붉은(위험), 주는 금빛 gold
   light: '#efe6d2', dark: '#7c87a6',
   gold: '#efbd55', goldDk: '#9c6f24', goldHi: '#fff1b8',
   red: '#df5a45', redDk: '#8a2a1f',
-  ink: '#f2ead8', dim: '#a3abd0', dimDk: '#6a719a',
+  ink: '#efe6d2', dim: '#8f97c9', dimDk: '#5f6696',
   val: '#f4ead2', valInk: '#3b2a1b', link: '#efbd55', linkInk: '#2a1c08',
-  card: '#efe3c6', cardHi: '#fff8e8', cardInk: '#2a1c10', cardDim: '#6b563c',
+  card: '#f7eedb', cardHi: '#fff8e8', cardInk: '#12153a', cardDim: '#545a8c',
   silver: '#d8dee6', shadow: '#05061a', black: '#000000', white: '#ffffff',
   fog: '#202551', fogHi: '#373d6c',
   sky: '#9fd3e0',
@@ -17,7 +19,8 @@ export const PAL = {
 };
 
 // 모습(상자 면 · 판 어두운 칸 · 흐르는 얼룩 두 빛깔). 판 밖 화면은 남색 기본, 판 안 화면은 세력 모습(src/data/factions.js look)
-export const BASE_LOOK = { face: '#262c5f', dark: '#7c87a6', flow: ['#2c3290', '#5a2a80'] };
+// bg: 바탕 [가운데, 중간, 가장자리, 기운 띠](안 3 시안 p3 — 둥근 남색 빛 + −8도 띠 하나 + 판 어두운 칸 빛깔 줄). 세력은 상자 면에서 섞는다(bgOf)
+export const BASE_LOOK = { face: '#262c5f', dark: '#7c87a6', flow: ['#2c3290', '#5a2a80'], bg: ['#2b326e', '#1c2152', '#141838', '#232a62'] };
 const LOOKS = new Map();
 export const THEME = { id: null, look: BASE_LOOK };
 // 세력 모습을 id로 적어 둔다(흐르는 얼룩 · 여백 판은 id로 찾는다 — app.js가 처음에 여덟을 모두 적는다)
@@ -31,6 +34,7 @@ export function setTheme(id) {
   // 상자 면에서 나온 빛깔: 움푹한 칸(well) · 행마 그림 칸 두 빛깔 · 안개
   PAL.well = mix(l.face, '#000000', 0.38); PAL.diagA = mix(l.face, '#ffffff', 0.1); PAL.diagB = mix(l.face, '#000000', 0.12);
   PAL.fog = mix(l.face, '#000000', 0.15); PAL.fogHi = mix(l.face, '#ffffff', 0.08);
+  PAL.slot = l === BASE_LOOK ? '#161a44' : mix(l.face, '#000000', 0.42); PAL.slotEdge = l === BASE_LOOK ? '#3a4280' : mix(l.face, '#ffffff', 0.16);
   return true;
 }
 // 두 '#rrggbb'를 k(0~1)만큼 섞는다
@@ -40,6 +44,12 @@ export function mix(a, b, k) {
   return `#${((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1)}`;
 }
 export const lookOf = (id) => (id && LOOKS.get(id)) || BASE_LOOK;
+// 모습의 바탕 네 빛깔(가운데 · 중간 · 가장자리 · 기운 띠): 기본은 시안 그대로, 세력은 상자 면에서
+export function bgOf(id) {
+  const l = lookOf(id);
+  if (!l.bg) l.bg = [mix(l.face, '#ffffff', 0.05), mix(l.face, '#000000', 0.22), mix(l.face, '#000000', 0.45), mix(l.face, '#000000', 0.08)];
+  return l.bg;
+}
 
 // 바탕이 밝은가(크림 카드 · 금빛 단추는 테를 어둡게)
 export function lightFill(col) {
