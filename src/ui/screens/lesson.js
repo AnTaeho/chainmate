@@ -6,7 +6,8 @@ import { text, rect, frame, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { apply } from '../../sim/battle.js';
 import { previewDrop } from '../../sim/solver.js';
-import { BattleScreen, BX, S, LX, LW, RX, RW, sqXY } from './battle.js';
+import { BattleScreen, BX, S, LX, LW, RX, RW, sqCenter } from './battle.js';
+import { strokeSq } from '../../render/board3.js';
 import { PAD_BOX, TOP, PAUSE, BTN_S } from '../frame.js';
 import { button } from '../ui.js';
 import { kingNoteLayout, kingNote } from '../coach.js';
@@ -62,8 +63,8 @@ export class LessonScreen extends BattleScreen {
     let sq = lessonSq(st.drop ?? st.cap);
     if (sq == null && 'drop' in st) sq = this.clickable().list[0];
     if (sq == null) return { x: 240, y: 140 };
-    const p = sqXY(sq);
-    return { x: p.x + 16, y: p.y + 18 };
+    const p = sqCenter(sq);
+    return { x: p.x + 2, y: p.y + 4 };
   }
   updateDemo(dt) {
     const d = this.demo;
@@ -209,7 +210,7 @@ export class LessonScreen extends BattleScreen {
     super.drawBoard(ctx, ui);
     const t = this.clickable();
     const pulse = t.kind === 'capture' && t.list.length ? beat(this.app.time, 4) % 2 : 0;
-    if (t.kind === 'capture') for (const sq of t.list) { const { x, y } = sqXY(sq); frame(ctx, x + pulse, y + pulse, S - pulse * 2, S - pulse * 2, PAL.goldHi, 2); }
+    if (t.kind === 'capture') for (const sq of t.list) strokeSq(ctx, sq, PAL.goldHi, 2, pulse * 2);
   }
   drawRight(ctx, ui) {
     super.drawRight(ctx, ui);

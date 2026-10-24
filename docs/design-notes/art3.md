@@ -37,10 +37,11 @@
 ## 3. 투영
 
 - 판은 아이소메트릭 마름모. a1이 왼쪽 꼭짓점, h1이 아래, a8이 위, h8이 오른쪽(시안과 같다). 칸 (f, r) 가운데 = 원점 + (f + ½)·파일 벡터 + (r + ½)·단 벡터.
-- 손잡이 하나(`src/render/board3.js` `VIEW`): `diamond`(45° 돌리고 세로 0.64 — 칸 28 × 18) · `shallow`(돌리지 않고 세로만 눌러 비스듬히) · `flat`(정면). 화면은 `project` · `unproject` · 칸 경로 · 뒤에서 앞 차례만 쓰므로 손잡이를 바꿔도 화면 코드는 그대로다.
+- 손잡이 하나(`src/render/board3.js` `VIEW.name`, 각 판의 `tilt`): `diamond`(45° 돌리고 세로 0.786 — 칸 28 × 22) · `shallow`(돌리지 않고 세로만 0.75로 눌러 비스듬히 — 칸 28 × 21) · `flat`(정면, 높이에 맞춰 칸 25). 화면은 `project` · `unproject` · 칸 경로 · 뒤에서 앞 차례만 쓰므로 손잡이를 바꿔도 화면 코드는 그대로다.
 - 크기: 대국 화면의 지금 판 자리(x 128 ~ 352, y 30 ~ 254) 안에 폭으로 맞춘다. 판 두께 4, 좌표 글자는 판 밖 가장자리(a~h는 왼쪽 아래 변, 1~8은 왼쪽 위 변).
 - 누르는 구역은 bbox 네모 + 칸 모양 판정(`hit`)이다. 레이아웃 기록 · 연기 시험은 bbox를 쓰고, 마름모 가운데 = bbox 가운데다.
-- 기물은 칸 가운데의 화면 y 차례(같으면 x)로 뒤에서 앞으로 그린다.
+- 기물은 칸 가운데의 화면 y 차례(같으면 x)로 뒤에서 앞으로 그린다. 칸 위 표시(놓을 칸 · 노림 · 안개 · 길)는 모두 기물보다 먼저 바닥 층에 — 뒤 칸 기물이 앞 칸에 걸치기 때문이다. 움직이는 내 기물은 맨 위.
+- **고른 기울기(2026-10-24)**: 시안 그대로(세로 0.64, 칸 28 × 18)는 7관 붐비는 판(킹 둘레 여덟 + 벽)에서 앞 줄 기물이 뒷줄 기물 몸을 반 넘게 가렸다. 판 자리 높이가 남아(판 144 → 176) 세로를 0.786으로 세웠다 — 줄 사이가 18 → 22로 벌어져 뒷줄의 관 · 성가퀴 · 비숍 홈이 1배에서도 보인다. 폭은 그대로라 칸 수 · 기물 크기 · 다른 칸은 안 바뀐다. 마름모가 1 · 2 · 3배 모두 읽혀 `shallow`로 물러서지 않았다(찍은 그림 `node tools/shots-art3.mjs`).
 
 ## 4. 글자(예정)
 
@@ -73,7 +74,7 @@
 - [ ] `src/render/crests.js` — 세력 문장
 - [ ] `src/render/icons.js` — 아이콘(`tools/icons.mjs` 홈 화면 아이콘)
 - [ ] `src/render/dice.js` — 주사위
-- [ ] `src/render/texture.js` — `boardCanvas` · `boardFrameCanvas` · `feltCanvas` · 3×5 좌표 글자
+- [ ] `src/render/texture.js` — (대국 판은 `board3.js boardImage`로 옮겼다 — 남은 쓰임 없음 확인 뒤 지운다) `boardCanvas` · `boardFrameCanvas` · `feltCanvas` · 3×5 좌표 글자
 - [ ] `src/ui/diagram.js` — 행마 그림(4 px 칸)
 - [ ] `src/ui/envelope.js` — 꾸러미 봉투
 - [ ] `src/ui/art.js` — 물건 그림 칸(`itemArt` · `engravingEmblem` · `soulEmblem` · `awakenArt` · 격언 그림)
@@ -86,11 +87,12 @@
 
 **쓰는 곳**
 - [ ] `src/render/gfx.js` `sprite` · `soulSpark` (기물 그리기 입구)
-- [ ] `src/ui/screens/battle.js` — 판 · 기물 · 증원 그림자 · 미리 보기 · 부서짐 · 쓰러지는 킹 · 손 카드 · 먹으면 판넬 · 사슬 칸 · 초상 · 문장
+- [x] `src/ui/screens/battle.js` 판 위 — 판 · 체스 기물 여섯 · 증원 그림자 · 미리 보기 · 부서짐 · 쓰러지는 킹 · 판 위 연출(2단계)
+- [ ] `src/ui/screens/battle.js` 판 밖 — 손 카드 · 먹으면 판넬 · 사슬 칸 · 초상 · 문장 · 판 위 특수 기물 · 사물(도트 그대로, 자리만 투영)
 - [ ] `src/ui/screens/lesson.js` · `review.js` (대국 화면을 물려받는다)
-- [ ] `src/ui/ignite.js` — 콤비네이션 길 · 카드 기물
-- [ ] `src/ui/marks.js` — 판 위 표시 · 화살표
-- [ ] `src/ui/annot.js` — 판 위 !! · ? 딱지 자리
+- [x] `src/ui/ignite.js` — 콤비네이션 길 · 카드 기물
+- [x] `src/ui/marks.js` — 판 위 표시 · 화살표
+- [x] `src/ui/annot.js` — 판 위 !! · ? 딱지 자리
 - [ ] `src/ui/parts.js` — 기물 카드 · 진열 카드 · 격언 칸 · 봉투 · 행마 그림
 - [ ] `src/ui/ui.js` — 말풍선 행마 그림
 - [ ] `src/ui/coach.js` — 도움말 그림

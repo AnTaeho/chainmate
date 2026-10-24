@@ -5,6 +5,7 @@
 // 딱지 글은 글꼴로 쓰지 않고 도트 글자(7줄)로 찍는다 — 작은 칸에 12px 글꼴이 안 들어가고, 글 넘침 검사의 테와 엉키지 않게.
 // 자리 셈(handTagRect · boardTagRect · offeredRow)은 그리기와 따로 두어 시험이 잰다(test/annot.test.js).
 import { rect } from '../render/gfx.js';
+import { center as sqCenter, AREA, PIECE_UP } from '../render/board3.js';
 
 export const ANNOT = {
   red: { fill: '#df5a45', edge: '#8a2a1f', ink: '#fff8e8' },
@@ -75,13 +76,14 @@ export function chartBadgeRect(x, y, w, level) {
 
 // 판 위 「!!」 자리: 메이트 친 칸(sx, sy, 칸 크기 S)의 오른쪽 위 구석에 걸친다.
 // 판(bx, by, 8칸) 밖으로 나가면 판 안쪽으로 뒤집는다 — 오른쪽 끝 줄이면 왼쪽 위, 맨 윗줄이면 아래
-export function boardTagRect(sq, { bx, by, S, mark = '!!', scale = 2 }) {
+// 판 칸의 딱지 자리: 칸 오른쪽 위(기물 머리 옆). 판 자리(board3.js AREA — 대국 화면의 판 자리) 밖으로 나가면 판 안쪽으로 뒤집는다(왼쪽 · 아래)
+export function boardTagRect(sq, { mark = '!!', scale = 2 } = {}) {
   const { w, h } = annotSize(mark, scale);
-  const sx = bx + (sq & 7) * S, sy = by + (7 - (sq >> 3)) * S;
-  let x = sx + S - 6, y = sy - h + 6;
-  const flipX = x + w > bx + S * 8, flipY = y < by;
-  if (flipX) x = sx - w + 6;
-  if (flipY) y = sy + S - 6;
+  const c = sqCenter(sq);
+  let x = Math.round(c.x + 4), y = Math.round(c.y - PIECE_UP - h + 8);
+  const flipX = x + w > AREA.x + AREA.w, flipY = y < AREA.y;
+  if (flipX) x = Math.round(c.x - 4 - w);
+  if (flipY) y = Math.round(c.y + 2);
   return { x, y, w, h, flipX, flipY };
 }
 

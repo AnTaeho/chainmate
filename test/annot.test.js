@@ -11,6 +11,7 @@ before(async () => {
     annot: await import('../src/ui/annot.js'),
     parts: await import('../src/ui/parts.js'),
     battle: await import('../src/ui/screens/battle.js'),
+    board3: await import('../src/render/board3.js'),
     gfx: await import('../src/render/gfx.js'),
     lang: await import('../src/ui/lang.js'),
     run: await import('../src/sim/run.js'),
@@ -55,21 +56,23 @@ test('!? 딱지: 기보 표가 없으면 오른쪽 위, 있으면 왼쪽 위 —
   assert.ok(r.x + r.w <= 480, `오른끝 ${r.x + r.w}`);
 });
 
-test('!! 딱지: 판 64칸 어디서든 판 안 — 오른쪽 끝 줄은 왼쪽으로, 맨 윗줄은 아래로 뒤집는다', () => {
-  const { boardTagRect } = M.annot;
-  const { S, BX, BY, sqXY } = M.battle;
+test('!! 딱지: 판 64칸 어디서든 판 자리 안 — 판 자리 밖으로 나갈 칸만 안쪽으로 뒤집고, 늘 그 칸의 기물 기둥에 걸친다', () => {
+  const { boardTagRect, annotSize } = M.annot;
+  const { S, BX, BY } = M.battle;
+  const { projectSq, center, PIECE_UP } = M.board3;
+  const { w, h } = annotSize('!!', 2);
   for (let sq = 0; sq < 64; sq++) {
-    const r = boardTagRect(sq, { bx: BX, by: BY, S });
-    const f = sq & 7, rank = sq >> 3;
+    const r = boardTagRect(sq);
     assert.ok(r.x >= BX && r.y >= BY && r.x + r.w <= BX + S * 8 && r.y + r.h <= BY + S * 8, `칸 ${sq}: ${JSON.stringify(r)}`);
-    assert.equal(r.flipX, f === 7, `칸 ${sq} 가로 뒤집기`);
-    assert.equal(r.flipY, rank === 7, `칸 ${sq} 세로 뒤집기`);
-    const s = sqXY(sq);
-    assert.ok(cross(r, { x: s.x, y: s.y, w: S, h: S }), `칸 ${sq}: 딱지가 메이트 친 칸에 걸친다`);
+    // 뒤집기 전 자리(칸 가운데 오른쪽 위)가 판 자리 밖일 때만 뒤집는다
+    const c = center(sq), x0 = Math.round(c.x + 4), y0 = Math.round(c.y - PIECE_UP - h + 8);
+    assert.equal(r.flipX, x0 + w > BX + S * 8, `칸 ${sq} 가로 뒤집기`);
+    assert.equal(r.flipY, y0 < BY, `칸 ${sq} 세로 뒤집기`);
+    const b = projectSq(sq).box;
+    assert.ok(cross(r, { x: b.x, y: b.y - PIECE_UP, w: b.w, h: b.h + PIECE_UP }), `칸 ${sq}: 딱지가 메이트 친 칸(기물 기둥)에 걸친다`);
   }
-  // 시안(B1)의 칸: h7 — 오른쪽 끝이라 왼쪽 위
-  const h7 = boardTagRect(55, { bx: BX, by: BY, S });
-  assert.ok(h7.flipX && !h7.flipY);
+  // 마름모 판의 오른쪽 꼭짓점 h8은 왼쪽으로 뒤집힌다
+  assert.ok(boardTagRect(63).flipX);
 });
 
 test('바친 기물 줄: 다 들어가면 모두, 모자라면 앞에서부터 + 「+N」, 늘 자리 안', () => {

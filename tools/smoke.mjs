@@ -60,6 +60,7 @@ const { tipTexts } = await import('../src/ui/ui.js');
 const P = await import('../src/ui/placement.js');
 // 글 넘침(docs/design-notes/layout.md 「검사」): 프레임마다 그린 글이 제 상자(안 여백 안)를 넘는지, 상자끼리 겹치는지, 화면 밖인지
 const LL = await import('../src/render/layoutlog.js');
+const LL3 = await import('../src/render/board3.js');
 LL.LOG.on = true;
 // 보류: 사람이 고를 때까지 따로 세는 화면(docs/design-notes/layout.md 「보류」). 지금은 없다
 // (카드 넷인 금빛 꾸러미는 명국 조각을 건너뛰기 줄로 빼고 격언 칸을 접어 풀었다 — CHM-12)
@@ -1750,7 +1751,9 @@ const brillSeen = { sac: 0, deal: 0, tag: 0, hint: 0, row: 0, gone: 0, fx: 0, fl
       measureSeq(s);
       brillSeen.sec = s.seq.total;
       if (((app.stats && app.stats.brilliantFx) || 0) > fx0) brillSeen.fx++; else bad('탁월수 「!!」가 뜨지 않았다');
-      if (s.lastBrilliantTag && s.lastBrilliantTag.flipX && s.lastBrilliantTag.flipY) brillSeen.flip++; else bad(`h8 「!!」가 판 안쪽으로 뒤집히지 않았다(${JSON.stringify(s.lastBrilliantTag)})`);
+      // h8은 판 자리 가장자리 칸(마름모 판에서는 오른쪽 꼭짓점): 딱지가 뒤집혀 판 자리(board3.js AREA) 안에 들어야 한다
+      const tg = s.lastBrilliantTag, A = LL3.AREA;
+      if (tg && (tg.flipX || tg.flipY) && tg.x >= A.x && tg.y >= A.y && tg.x + tg.w <= A.x + A.w && tg.y + tg.h <= A.y + A.h) brillSeen.flip++; else bad(`h8 「!!」가 판 안쪽으로 뒤집히지 않았다(${JSON.stringify(tg)})`);
       if (sawMult) brillSeen.mult++; else bad('배수 칸에 「×2」가 붙지 않았다');
       if ((app.records.brilliants || 0) === recBefore + 1 && app.records.bestBrilliant) brillSeen.record++; else bad('기록에 탁월수가 남지 않았다');
     }

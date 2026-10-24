@@ -78,15 +78,15 @@ export function comboCard(ig) {
   return { P, CW, CH: f.y + P, kick, title, row, rule, caps, vm, sc, vmY, scY, nShow, more: steps.length - nShow };
 }
 
-// 막간 그리기. geo = { BX, BY, S, sqXY }. 판 위 길 · 번호는 재지 않는 상자(움직이는 것), 카드는 판넬 상자로 잰다(앉은 뒤)
-export function drawCombo(ctx, g, { BX, BY, S, sqXY }) {
+// 막간 그리기. geo = { BX, BY, S, center } — center(sq)는 칸 가운데(판 투영, board3.js). 판 위 길 · 번호는 재지 않는 상자(움직이는 것), 카드는 판넬 상자로 잰다(앉은 뒤)
+export function drawCombo(ctx, g, { BX, BY, S, center }) {
   const ig = g.data, t = g.t, W8 = S * 8, calm = g.calm;
   layerUp(); // 덮개처럼: 밑 화면(격언 칸 · 손)과는 상자 겹침을 재지 않는다
   const fade = calm ? 1 : Math.min(1, t / 0.2);
   ctx.globalAlpha = fade * 0.45; rect(ctx, 0, 0, W, H, PAL.shadow);
   ctx.globalAlpha = fade * 0.45; rect(ctx, BX, BY, W8, W8, PAL.shadow); ctx.globalAlpha = 1;
   // 사슬의 길: 먹은 차례대로 이어진다. 먹은 칸에 차례 숫자
-  const ctr = (sq) => { const p = sqXY(sq); return { x: p.x + S / 2 - 1, y: p.y + S / 2 - 1 }; };
+  const ctr = (sq) => { const p = center(sq); return { x: p.x - 1, y: p.y - 1 }; };
   const n = ig.path.length, upto = calm ? n : Math.min(n, (t / COMBO.PATH) * n);
   openBox('fx', BX, BY, W8, W8, 0, { loose: true, name: '콤비네이션 길' });
   const marks = [];
@@ -95,11 +95,11 @@ export function drawCombo(ctx, g, { BX, BY, S, sqXY }) {
     if (q > 0) drawRoute(ctx, capPts(c, ctr), q);
     if (q >= 1) marks.push({ sq: c.to, i: i + 1 });
   });
-  { const p = sqXY(ig.drop); frame(ctx, p.x + 9, p.y + 9, 10, 10, PAL.goldHi, 2); }
+  { const p = center(ig.drop); frame(ctx, p.x - 5, p.y - 5, 10, 10, PAL.goldHi, 2); }
   for (const m of marks) {
-    const p = sqXY(m.sq);
-    rect(ctx, p.x + 11, p.y + 11, 6, 6, PAL.goldDk); rect(ctx, p.x + 12, p.y + 12, 4, 4, PAL.goldHi);
-    text(ctx, String(m.i), p.x + 3, p.y + 2, PAL.goldHi, { bold: true, shadow: PAL.shadow });
+    const p = center(m.sq);
+    rect(ctx, p.x - 3, p.y - 3, 6, 6, PAL.goldDk); rect(ctx, p.x - 2, p.y - 2, 4, 4, PAL.goldHi);
+    text(ctx, String(m.i), p.x - 11, p.y - 12, PAL.goldHi, { bold: true, shadow: PAL.shadow });
   }
   closeBox();
   // 카드: 위에서 떨어져 오른쪽 칸(격언 · 손 자리)에 앉는다 — 판 위의 길을 가리지 않게

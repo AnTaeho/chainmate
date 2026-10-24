@@ -24,26 +24,30 @@ export class Marks {
 }
 
 // 칸 칠: 기물 아래, 반투명
-export function drawMarkSquares(ctx, marks, sqXY, S) {
+// fill(ctx, sq, col): 칸 하나를 칠한다(판 투영 — board3.js fillSq)
+export function drawMarkSquares(ctx, marks, fill) {
   if (!marks.squares.size) return;
   ctx.globalAlpha = 0.55;
-  for (const sq of marks.squares) { const { x, y } = sqXY(sq); rect(ctx, x, y, S, S, PAL.mark); }
+  for (const sq of marks.squares) fill(ctx, sq, PAL.mark);
   ctx.globalAlpha = 1;
 }
 
 // 화살표: 굵기 3px 도트 선 + 도트 머리. 모든 화살표의 화소를 한 번에 모아 칠해 겹친 곳이 짙어지지 않는다.
 // 나이트 걸음(2 · 1)이면 긴 쪽으로 먼저 가다 꺾는 ㄱ자, 그 밖은 곧은 선. 기물 위에 반투명으로 그린다
 const HEAD_LEN = 9, HEAD_HALF = 6, SHAFT = 1.2, START = 9, TIP = 5;
-export function drawMarkArrows(ctx, marks, sqXY, S, pending = null) {
+// at(f, r): 판 칸 단위 자리(소수도 된다) → 칸 가운데 화면 자리(board3.js centerAt). 나이트 꺾는 자리도 칸 단위로 잡아 투영한다
+export function drawMarkArrows(ctx, marks, at, pending = null) {
   if (!marks.arrows.length && !pending) return;
-  const c = (sq) => { const p = sqXY(sq); return { x: p.x + S / 2 - 0.5, y: p.y + S / 2 - 0.5 }; }; // 칸 가운데 화소 한 줄의 가운데
+  const px = (p) => ({ x: p.x - 0.5, y: p.y - 0.5 }); // 칸 가운데 화소 한 줄의 가운데
+  const c = (sq) => px(at(sq & 7, sq >> 3));
+  const bend = (from, to) => px(Math.abs((to & 7) - (from & 7)) === 2 ? at(to & 7, from >> 3) : at(from & 7, to >> 3));
   // 화소 모음은 화살표가 바뀔 때만 다시 센다(프레임마다 세지 않는다)
   const sig = marks.arrows.map((a) => `${a.from}-${a.to}`).join(',') + (pending ? `|${pending.from}-${pending.to}` : '');
   if (!marks.px || marks.px.sig !== sig) {
     const solid = new Set();
-    for (const a of marks.arrows) arrowPixels(c(a.from), c(a.to), a.from, a.to, solid);
+    for (const a of marks.arrows) arrowPixels(c(a.from), c(a.to), a.from, a.to, solid, bend);
     const p = new Set();
-    if (pending) { arrowPixels(c(pending.from), c(pending.to), pending.from, pending.to, p); for (const k of solid) p.delete(k); }
+    if (pending) { arrowPixels(c(pending.from), c(pending.to), pending.from, pending.to, p, bend); for (const k of solid) p.delete(k); }
     marks.px = { sig, rim: runs(rim(solid)), solid: runs(solid), pending: runs(p) };
   }
   // 1px 어두운 테: 짙은 기물 · 짙은 칸 위에서도 화살 모양이 읽히게
@@ -76,12 +80,12 @@ function paint(ctx, list, alpha, col = PAL.mark) {
   ctx.globalAlpha = 1;
 }
 
-function arrowPixels(A, B, from, to, set) {
+function arrowPixels(A, B, from, to, set, bend) {
   const df = (to & 7) - (from & 7), dr = (to >> 3) - (from >> 3);
   const knight = (Math.abs(df) === 1 && Math.abs(dr) === 2) || (Math.abs(df) === 2 && Math.abs(dr) === 1);
   if (knight) {
     // 긴 다리(두 칸)를 먼저, 한 칸 꺾어 과녁으로
-    const C = Math.abs(df) === 2 ? { x: B.x, y: A.y } : { x: A.x, y: B.y };
+    const C = bend(from, to);
     const u = unit(A, C), v = unit(C, B);
     const s = { x: A.x + u.x * START, y: A.y + u.y * START };
     const tip = { x: B.x + v.x * TIP, y: B.y + v.y * TIP };

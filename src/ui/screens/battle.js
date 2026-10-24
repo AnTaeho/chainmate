@@ -6,7 +6,8 @@ import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, artOf, slot } from '../../render/gfx.js';
 import { spriteChips, spriteCanvas, outlineCanvas, hiFor, SW, SH, TONE, tierOf } from '../../render/sprites.js';
-import { boardCanvas, boardFrameCanvas } from '../../render/texture.js';
+import { center as sqCenter, centerAt, projectSq, unproject, sqBox, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM } from '../../render/board3.js';
+import { piece3, pieceCanvas, pieceChips, scaleOf, STANDARD, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { mateBlocked } from '../../sim/tuning.js';
@@ -58,10 +59,11 @@ const NOTE_ROOM = 266; // 설명 묶음이 쓸 수 있는 높이(화면 270 - �
 // REVIEW_WALL초를 넘기면(느린 기기) 카드 없이 지금 흐름대로 넘어간다(그 대국의 기록은 unknown)
 export const REVIEW_SLICE_MS = 12, REVIEW_WALL = 3;
 
+// 판 자리(bbox): BX · BY에서 S × 8 네모. 칸 자리는 투영(src/render/board3.js — 안 3 마름모)이 정한다
 export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
-export const sqXY = (sq) => ({ x: BX + (sq & 7) * S, y: BY + (7 - (sq >> 3)) * S });
+export { sqCenter };
 // 게임 좌표 → 판 칸(판 밖이면 -1)
-export const sqAt = (x, y) => { const f = Math.floor((x - BX) / S), r = 7 - Math.floor((y - BY) / S); return f >= 0 && f < 8 && r >= 0 && r < 8 ? r * 8 + f : -1; };
+export const sqAt = (x, y) => { const sq = unproject(x, y); return sq == null ? -1 : sq; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
 // 대국이 끝난 뒤 막간 화면(afterSeq → app.flow): 날던 동전 · 명국 조각이 이어 난다
 const AFTER = new Set(['reward', 'chest', 'awaken', 'legend']);
@@ -92,9 +94,11 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 // 값 · 배수 상자에 들어가는 짧은 숫자(gfx.js — 다른 화면도 fitNum으로 쓴다)
 export { short };
 // 빗금(노림수 · 끊김): 붉은색을 못 가려도 무늬로 알아보게
-function hatch(ctx, x, y, col) {
-  ctx.fillStyle = col;
-  for (let i = 0; i < S * 2; i += 5) for (let j = 0; j < S; j++) { const k = i - j; if (k >= 0 && k < S) ctx.fillRect(x + k, y + j, 1, 1); }
+function hatch(ctx, sq, col) {
+  clipSq(ctx, sq, (b) => {
+    ctx.fillStyle = col;
+    for (let i = 0; i < b.w + b.h; i += 5) for (let j = 0; j < b.h; j++) { const k = i - j; if (k >= 0 && k < b.w) ctx.fillRect(b.x + k, b.y + j, 1, 1); }
+  });
 }
 // 다시 놓기 아이콘(7×7): 판 넷 칸이 뒤집히는 모양 — 칸 둘은 먹, 둘은 비고 가운데 화살
 function reboardIcon(ctx, x, y, col) {
@@ -175,14 +179,11 @@ function gateArch(ctx, x, y, size, glow) {
 const WATER = '#4fa6c6'; // 물수제비가 튕긴 칸의 물방울 · 고리(나뭇결 위에서도 보이게 하늘빛보다 진하게)
 const FALL = 0.2, FALL_PX = 14; // 증원이 위에서 떨어지는 시간(×1) · 높이
 
-// 칸 안의 둥근 고리(다음에 먹을 적)
-function ringAt(ctx, x, y, col, thick = 1) {
-  for (let k = 0; k < thick; k++) {
-    const o = k;
-    for (let i = 10; i < 18; i++) { rect(ctx, x + i, y + 3 + o, 1, 1, col); rect(ctx, x + i, y + 24 - o, 1, 1, col); rect(ctx, x + 3 + o, y + i, 1, 1, col); rect(ctx, x + 24 - o, y + i, 1, 1, col); }
-    for (const [px, py] of [[8, 5], [9, 4], [18, 4], [19, 5], [5, 8], [4, 9], [22, 8], [23, 9], [4, 18], [5, 19], [23, 18], [22, 19], [8, 22], [9, 23], [18, 23], [19, 22]]) rect(ctx, x + px, y + py, 1, 1, col);
-    for (const [px, py] of [[6, 6], [7, 6], [6, 7], [20, 6], [21, 6], [21, 7], [6, 20], [6, 21], [7, 21], [21, 20], [20, 21], [21, 21]]) rect(ctx, x + px, y + py, 1, 1, col);
-  }
+// 판 위 함정(정석): 칸 안의 어두운 구덩이 + 네 꼭짓점 말뚝(마름모 칸)
+function trapSq(ctx, sq) {
+  ctx.globalAlpha = 0.55; fillSq(ctx, sq, '#1a1512', 5); ctx.globalAlpha = 1;
+  strokeSq(ctx, sq, '#c0c8d0', 1, 5);
+  for (const p of projectSq(sq).pts) { const c = sqCenter(sq), x = c.x + (p.x - c.x) * 0.55, y = c.y + (p.y - c.y) * 0.55; rect(ctx, x - 1, y - 1, 2, 2, '#c0c8d0'); }
 }
 // 먹으러 가는 시간: 미끄러지는 기물은 지나는 칸 수만큼, 나이트는 L자로 한 번 튀고, 폰 · 킹은 한 칸
 const dist = (a, b) => Math.max(Math.abs((a & 7) - (b & 7)), Math.abs((a >> 3) - (b >> 3)));
@@ -194,29 +195,32 @@ function moveDur(form, from, to, stay = false) {
 }
 // 움직이는 기물의 자리(p 0→1): 나이트는 긴 다리 → 짧은 다리, 작은 포물선
 const isLine = (a, b) => { const df = (b & 7) - (a & 7), dr = (b >> 3) - (a >> 3); return df === 0 || dr === 0 || Math.abs(df) === Math.abs(dr); };
+// 자리는 판 칸 단위(f, r)로 잇고 투영한다 — 꺾는 자리가 마름모 판에서도 칸을 따른다. 돌려주는 자리는 칸 가운데(받침 가운데)
+const fr = (sq) => ({ f: sq & 7, r: sq >> 3 });
+const along = (a, c, k) => centerAt(lerp(a.f, c.f, k), lerp(a.r, c.r, k));
 export function moverXY(form, from, to, p) {
-  const a = sqXY(from), c = sqXY(to);
-  if (!LEAPERS.has(form) || (isLine(from, to) && form !== 'V')) return { x: lerp(a.x, c.x, p), y: lerp(a.y, c.y, p) };
+  const a = fr(from), c = fr(to);
+  if (!LEAPERS.has(form) || (isLine(from, to) && form !== 'V')) return along(a, c, p);
   // 나이트 L자가 아닌 도약(낙타 · 까마귀)은 한 번의 높은 포물선
   const ddf = Math.abs((to & 7) - (from & 7)), ddr = Math.abs((to >> 3) - (from >> 3));
-  if (!((ddf === 1 && ddr === 2) || (ddf === 2 && ddr === 1))) { const q = ease.inOut(p); return { x: lerp(a.x, c.x, q), y: lerp(a.y, c.y, q) - Math.sin(p * Math.PI) * 14, arc: Math.sin(p * Math.PI) * 14 }; }
+  if (!((ddf === 1 && ddr === 2) || (ddf === 2 && ddr === 1))) { const q = ease.inOut(p), pt = along(a, c, q); return { x: pt.x, y: pt.y - Math.sin(p * Math.PI) * 14, arc: Math.sin(p * Math.PI) * 14 }; }
   const df = (to & 7) - (from & 7);
-  const mid = Math.abs(df) === 2 ? { x: c.x, y: a.y } : { x: a.x, y: c.y };
+  const mid = Math.abs(df) === 2 ? { f: c.f, r: a.r } : { f: a.f, r: c.r };
   const q = ease.inOut(p);
   const k = q < 2 / 3 ? q * 1.5 : (q - 2 / 3) * 3;
-  const pt = q < 2 / 3 ? { x: lerp(a.x, mid.x, k), y: lerp(a.y, mid.y, k) } : { x: lerp(mid.x, c.x, k), y: lerp(mid.y, c.y, k) };
+  const pt = q < 2 / 3 ? along(a, mid, k) : along(mid, c, k);
   return { x: pt.x, y: pt.y - Math.sin(p * Math.PI) * 9, arc: Math.sin(p * Math.PI) * 9 };
 }
 // 움직이는 내 기물의 자리(CHM-57): 꺾는 길은 꺾은 칸을 거쳐(꺾는 칸에서 잠깐 선다), 넘기는 짧은 포물선, 그 밖은 행마(path)대로
 export function routeXY(m) {
   const r = m.route;
   if (r && r.kind === 'bend') {
-    const at = routeAt(r.pts, m.p), a = sqXY(r.pts[at.i]), c = sqXY(r.pts[at.i + 1]);
-    return { x: lerp(a.x, c.x, at.k), y: lerp(a.y, c.y, at.k) };
+    const at = routeAt(r.pts, m.p);
+    return along(fr(r.pts[at.i]), fr(r.pts[at.i + 1]), at.k);
   }
   if (r && r.kind === 'hop') {
-    const a = sqXY(m.from), c = sqXY(m.to), q = ease.inOut(m.p), h = Math.sin(m.p * Math.PI) * 10;
-    return { x: lerp(a.x, c.x, q), y: lerp(a.y, c.y, q) - h, arc: h };
+    const q = ease.inOut(m.p), h = Math.sin(m.p * Math.PI) * 10, pt = along(fr(m.from), fr(m.to), q);
+    return { x: pt.x, y: pt.y - h, arc: h };
   }
   return moverXY(m.path || m.form, m.from, m.to, m.p);
 }
@@ -899,7 +903,7 @@ export class BattleScreen {
     let y = bottom - h;
     if (rv.phase === 'card' && rv.res.kind === 'path') {
       const m = forkMarks(rv.res);
-      const under = [m.mine, m.best].some((sq) => sq != null && sqXY(sq).y + S > y - 6);
+      const under = [m.mine, m.best].some((sq) => { if (sq == null) return false; const b = sqBox(sq); return b.y + b.h > y - 6 && sqCenter(sq).y - PIECE_UP < y + h; });
       if (under) y = BY + 4;
     }
     return { x, y, w: CW, h, rows, by, tw };
@@ -926,18 +930,19 @@ export class BattleScreen {
   drawForkMarks(ctx, res) {
     const m = forkMarks(res);
     const tag = (sq, mark, tone, edge) => {
-      const { x, y } = sqXY(sq);
-      frame(ctx, x, y, S, S, edge, 2);
-      const r = boardTagRect(sq, { bx: BX, by: BY, S, mark, scale: 2 });
+      strokeSq(ctx, sq, edge, 2);
+      const r = boardTagRect(sq, { mark, scale: 2 });
       drawAnnot(ctx, mark, r.x, r.y, tone, 2);
     };
-    if (m.best != null && m.ghost) sprite(ctx, m.ghost, 'w', sqXY(m.best).x + 6, sqXY(m.best).y + 2, { alpha: 0.6 });
+    if (m.best != null && m.ghost) { const c = sqCenter(m.best); this.putPiece(ctx, m.ghost, 'w', c.x, c.y, { alpha: 0.6 }); }
     if (m.mine != null) tag(m.mine, '?', ANNOT.red, ANNOT.red.fill);
     if (m.best != null) tag(m.best, '!', ANNOT.teal, ANNOT.teal.fill);
   }
 
   // ── 효과
-  center(sq) { const p = sqXY(sq); return { x: p.x + 14, y: p.y + 14 }; }
+  // 칸 가운데(받침 가운데) — 선 · 연출이 기댄다. 기물 몸 가운데는 그보다 위(bodyOf)
+  center(sq) { return sqCenter(sq); }
+  bodyOf(sq) { const c = sqCenter(sq); return { x: c.x, y: c.y - 10 }; }
   // 내 기물의 모습: 떨군 기물의 각인 톤 + 지금 모습의 기보 단계
   look(form, time = null) {
     const run = this.run, v = this.view;
@@ -945,8 +950,9 @@ export class BattleScreen {
   }
   // 먹힌 기물이 부서진다: 기물 빛깔 조각이 튀어 떨어지고(움직임 줄이기면 작은 조각만), 칸에서 흰 연기가 부푼다(28절)
   shatter(sq, type, side) {
-    const { x, y } = sqXY(sq);
-    const chips = spriteChips(artOf(type), side);
+    // 조각 자리는 16 × 22 상자(기물 그림 가운데에 맞춘다)
+    const c0 = sqCenter(sq), x = c0.x - 8, y = c0.y - PIECE_TOP + 1;
+    const chips = STANDARD.has(type) ? pieceChips(type, side === 'g' ? 'g' : side) : spriteChips(artOf(type), side);
     const calm = this.app.reducedMotion, n = calm ? 14 : CAP.chips;
     let seed = sq * 97 + chips.length;
     const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
@@ -954,11 +960,11 @@ export class BattleScreen {
     const SHAPES = [[2, 2], [3, 2], [2, 3], [3, 3], [4, 2], [2, 1]];
     for (let i = 0; i < n; i++) {
       const c = chips[Math.floor(rnd() * chips.length)];
-      if (calm) { parts.push({ x: x + 6 + c.x, y: y + 3 + c.y, vx: (c.x - 8) * 6 + (rnd() - 0.5) * 30, vy: -40 - rnd() * 50, col: c.col, s: rnd() < 0.3 ? 2 : 1 }); continue; }
+      if (calm) { parts.push({ x: x + c.x, y: y + c.y, vx: (c.x - 8) * 6 + (rnd() - 0.5) * 30, vy: -40 - rnd() * 50, col: c.col, s: rnd() < 0.3 ? 2 : 1 }); continue; }
       const [w, h] = SHAPES[i % SHAPES.length];
-      parts.push({ x: x + 6 + c.x, y: y + 3 + c.y, vx: (c.x - 8) * 11 + (rnd() - 0.5) * 70, vy: -70 - rnd() * 80, col: c.col, s: w, h });
+      parts.push({ x: x + c.x, y: y + c.y, vx: (c.x - 8) * 11 + (rnd() - 0.5) * 70, vy: -70 - rnd() * 80, col: c.col, s: w, h });
     }
-    if (!calm) puff(this.fx, x + 14, y + 16, { seed: sq * 13 + 5, power: Math.min(3, (this.view.chain ? this.view.chain.steps.length : 1) / 3) });
+    if (!calm) puff(this.fx, c0.x, c0.y - 8, { seed: sq * 13 + 5, power: Math.min(3, (this.view.chain ? this.view.chain.steps.length : 1) / 3) });
     this.fx.add({
       life: 0.7, layer: 1, parts,
       update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt; } },
@@ -996,7 +1002,7 @@ export class BattleScreen {
     const to = shardTo();
     const app = this.app;
     // 막간으로 넘어간 뒤 닿은 동전은 상금 수를 흔들지 않는다(보상 화면에는 상금 줄이 없다)
-    flyCoins(this.fx, from.x, from.y - 6, LX + LW - PAD_BOX - 8, to.y + 5, { n: Math.max(1, Math.min(CAP.coins, money)), seed: Math.round(from.x * 3 + money), carry: true, onHit: () => { if (app.screen === this) kickMoney(app.time); } });
+    flyCoins(this.fx, from.x, from.y - 16, LX + LW - PAD_BOX - 8, to.y + 5, { n: Math.max(1, Math.min(CAP.coins, money)), seed: Math.round(from.x * 3 + money), carry: true, onHit: () => { if (app.screen === this) kickMoney(app.time); } });
   }
   // 대국 승리: 판 위에서 색종이가 터진다(움직임 줄이기면 없음). 보상 화면 위로 이어 떨어진다
   winFx() {
@@ -1004,7 +1010,7 @@ export class BattleScreen {
     confetti(this.fx, BX + 112, BY + 120, { n: CAP.confetti, seed: (this.run ? this.run.ante : 1) * 31 + 7, spread: 230, life: 1.5 });
   }
   burst(sq, col, n) {
-    const { x, y } = this.center(sq);
+    const { x, y } = this.bodyOf(sq);
     const parts = [];
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; parts.push({ x, y, vx: Math.cos(a) * 70, vy: Math.sin(a) * 70 }); }
     this.fx.add({
@@ -1014,7 +1020,7 @@ export class BattleScreen {
     });
   }
   sparkle(sq, col, n) {
-    const { x, y } = sqXY(sq);
+    const c = sqCenter(sq), x = c.x - 14, y = c.y - PIECE_TOP;
     const pts = [];
     for (let i = 0; i < n; i++) pts.push({ x: x + 3 + ((i * 7 + sq * 3) % 22), y: y + 2 + ((i * 11 + sq) % 22) });
     this.fx.add({
@@ -1023,8 +1029,7 @@ export class BattleScreen {
     });
   }
   flash(sq, col) {
-    const { x, y } = sqXY(sq);
-    this.fx.add({ life: 0.15, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = 0.6 * (1 - e.t / e.life); rect(ctx, x, y, S, S, col); ctx.globalAlpha = 1; } });
+    this.fx.add({ life: 0.15, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = 0.6 * (1 - e.t / e.life); fillSq(ctx, sq, col); ctx.globalAlpha = 1; } });
   }
   // 꺾는 칸(CHM-57): 꺾쇠는 흰 빛 한 점(십자), 물수제비는 물방울 몇 개가 튀고 칸 테두리에 물빛 고리. 움직임 줄이기면 칸 빛만
   cornerFx(sq, water) {
@@ -1056,13 +1061,13 @@ export class BattleScreen {
     for (let df = -1; df <= 1; df++) for (let dr = -1; dr <= 1; dr++) {
       const f = f0 + df, r = r0 + dr;
       if (f < 0 || f > 7 || r < 0 || r > 7) continue;
-      const s = r * 8 + f; cells.push({ ...sqXY(s), hot: s === sq || set.has(s) });
+      const s = r * 8 + f; cells.push({ sq: s, hot: s === sq || set.has(s) });
     }
     this.fx.add({ life: 0.28 + 0.03 * Math.min(6, n), layer: 1, draw: (ctx, e) => {
       const k = e.t / e.life;
       for (const c of cells) {
         ctx.globalAlpha = (c.hot ? 0.75 : 0.35) * (1 - k);
-        rect(ctx, c.x, c.y, S, S, c.hot ? (k < 0.3 ? PAL.goldHi : PAL.red) : PAL.red);
+        fillSq(ctx, c.sq, c.hot ? (k < 0.3 ? PAL.goldHi : PAL.red) : PAL.red);
       }
       ctx.globalAlpha = 1;
     } });
@@ -1124,8 +1129,8 @@ export class BattleScreen {
     if (st) st.brilliantFx = (st.brilliantFx || 0) + 1;
     if (sq == null) return;
     const calm = this.app.reducedMotion, T = ANNOT.teal;
-    const tag = boardTagRect(sq, { bx: BX, by: BY, S });
-    const s0 = sqXY(sq), cx = s0.x + 14, cy = s0.y + 14;
+    const tag = boardTagRect(sq);
+    const { x: cx, y: cy } = sqCenter(sq);
     this.lastBrilliantTag = { sq, ...tag };
     // 딱지는 칸 쪽에서 제자리로 튀어나온다: 처음엔 칸 가운데 쪽으로 6 비켜 있다(뒤집히면 반대쪽)
     const ox = tag.flipX ? 1 : -1, oy = tag.flipY ? -1 : 1;
@@ -1134,7 +1139,7 @@ export class BattleScreen {
       draw: (ctx, f) => {
         const t = f.t, fade = t > 0.7 ? Math.max(0, (0.9 - t) / 0.2) : 1;
         ctx.globalAlpha = fade;
-        frame(ctx, s0.x, s0.y, S, S, T.fill);
+        strokeSq(ctx, sq, T.fill, 1);
         if (!calm) {
           const k = Math.min(1, t / 0.45), r = 9 + 13 * ease.out(k), ra = Math.max(0, 1 - t / 0.6);
           ctx.globalAlpha = fade * ra;
@@ -1215,7 +1220,7 @@ export class BattleScreen {
         const sc = calm ? 2 : stepScale(2 + Math.max(0, 1 - e.t / 0.14) * 1.2 + (e.t < 0.14 ? 0 : Math.max(0, 0.25 - (e.t - 0.14) * 2.5)));
         const w = measure(s, true) * sc, h = 11 * sc;
         const rise = calm ? 0 : ease.out(Math.min(1, k * 1.6)) * 3;
-        let y = Math.max(1, at.y - 14 - h - 3 - rise);
+        let y = Math.max(1, at.y - PIECE_TOP - 3 - h - 3 - rise);
         const x = Math.max(2 + w / 2, Math.min(W - 2 - w / 2, at.x));
         // 판 가운데 큰 글자(「프로모션」 · 「목표 달성」)가 떠 있으면 그 띠 밖으로 비킨다: 위에 자리가 있으면 위, 없으면 아래
         for (const f of this.fx.list) {
@@ -1236,7 +1241,7 @@ export class BattleScreen {
   }
   // 먹힌 킹이 천천히 쓰러진다
   topple(sq) {
-    const { x, y } = sqXY(sq);
+    const { x, y } = sqCenter(sq);
     this.fx.add({
       life: 1.0, layer: 1,
       draw: (ctx, e) => {
@@ -1244,9 +1249,10 @@ export class BattleScreen {
         const ang = (k * k) * Math.PI / 2;
         ctx.save();
         ctx.globalAlpha = e.t < 0.7 ? 1 : Math.max(0, 1 - (e.t - 0.7) / 0.3);
-        ctx.translate(x + 6 + 14, y + 3 + 21);
+        ctx.translate(x + 6, y);
         ctx.rotate(ang);
-        ctx.drawImage(spriteCanvas('K', 'b', null, 0, hiFor(ctx)), -14, -21, SW, SH);
+        const c = pieceCanvas('K', 'b');
+        ctx.drawImage(c.cv, -6 - c.ox, -c.oy, c.w, c.h);
         ctx.restore();
       },
     });
@@ -1346,7 +1352,7 @@ export class BattleScreen {
     if (this.rv) this.drawReview(ctx, ui);
     // 점화 막간: 화면을 덮는 구역 하나가 모든 누르기를 받아 막간을 닫는다(밑의 단추 · 칸은 눌리지 않는다)
     if (this.combo) {
-      drawCombo(ctx, this.combo, { BX, BY, S, sqXY });
+      drawCombo(ctx, this.combo, { BX, BY, S, center: sqCenter });
       ui.region('ignite', 0, 0, W, H, { onClick: () => this.closeCombo() });
     }
     // 마스터 등장: 온 화면을 덮는 구역 하나가 누르기를 받아 넘긴다
@@ -1499,9 +1505,8 @@ export class BattleScreen {
   drawBoard(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, time = app.time;
     this.drawGoalBar(ctx);
-    // 판: 크림 테 2 + 아래 · 오른쪽 단색 그림자(틀 문법). 다른 땅에 왔다는 표지는 판 어두운 칸 · 상자 면 빛깔(세력 모습)
-    shade(ctx, BX - 2, BY - 2, S * 8 + 4, S * 8 + 4, 4);
-    ctx.drawImage(boardFrameCanvas(S), BX - 6, BY - 6);
+    // 판: 그림자 · 두께 · 크림 테 · 칸 · 좌표를 한 번 구운 그림(board3.js). 다른 땅에 왔다는 표지는 판 어두운 칸 빛깔(세력 모습)
+    drawBoardImage(ctx, scaleOf(ctx));
     // 사슬 평가의 테두리 불빛: 흰 → 금 → 붉은 금 → 무지개. 사슬이 끝나면 사그라든다
     if (this.glow) {
       motion();
@@ -1510,14 +1515,13 @@ export class BattleScreen {
       const hue = Math.floor(time * 360) % 360;
       const cols = { '★': [PAL.white], '★★': [PAL.gold, PAL.goldHi], '★★★': [PAL.red, PAL.gold, PAL.red], '∞': [`hsl(${hue},85%,60%)`, `hsl(${(hue + 90) % 360},85%,60%)`, `hsl(${(hue + 180) % 360},85%,60%)`] }[g.mark];
       ctx.globalAlpha = a;
-      cols.forEach((c, i) => frame(ctx, BX - 2 - i * 2, BY - 2 - i * 2, S * 8 + 4 + i * 4, S * 8 + 4 + i * 4, c, 2));
+      cols.forEach((c, i) => { boardPath(ctx, RIM, 2 + i * 2); ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke(); });
       ctx.globalAlpha = 1;
     }
     if (this.ring) {
       const k = this.ring.t / this.ring.life;
       ctx.globalAlpha = Math.max(0, 1 - k);
-      const o = Math.round(k * 10);
-      frame(ctx, BX - 6 - o, BY - 6 - o, S * 8 + 12 + o * 2, S * 8 + 12 + o * 2, this.ring.col, 2);
+      boardPath(ctx, RIM, 6 + Math.round(k * 10)); ctx.strokeStyle = this.ring.col; ctx.lineWidth = 2; ctx.stroke();
       ctx.globalAlpha = 1;
     }
     const t = this.clickable();
@@ -1527,14 +1531,13 @@ export class BattleScreen {
     // 증원 그림자: 이번 수 뒤(k 0) · 그다음 수 뒤(k 1)
     const ghosts = new Map();
     visibleIncoming(b).forEach((wave, k) => { for (const r of wave || []) if (!v.board[r.sq] && !isHidden(b, r.sq) && !ghosts.has(r.sq)) ghosts.set(r.sq, { t: r.t, k }); });
-    ctx.drawImage(boardCanvas(S), BX, BY);
     this.drawBoardThings(ctx, b.rules, time);
+    // ── 바닥(칸 위 표시): 기물보다 먼저 — 마름모 판에서는 뒤 칸 기물이 앞 칸에 걸치므로 칸 표시는 모두 이 층에서
     for (let sq = 0; sq < 64; sq++) {
-      const { x, y } = sqXY(sq);
       const r = sq >> 3;
       if (isHidden(b, sq)) {
-        rect(ctx, x, y, S, S, PAL.fog);
-        for (let k = 0; k < S; k += 4) rect(ctx, x + ((k + (r * 2)) % S), y + k, 2, 1, PAL.fogHi);
+        fillSq(ctx, sq, PAL.fog);
+        clipSq(ctx, sq, (bx) => { for (let k = 0; k < bx.h; k += 3) rect(ctx, bx.x + ((k * 3 + (r * 2)) % bx.w), bx.y + k, 2, 1, PAL.fogHi); });
       }
       const id = `sq:${sq}`;
       const g = ghosts.get(sq);
@@ -1564,60 +1567,61 @@ export class BattleScreen {
       const tipOpt = tip ? sqTip(tip[0], tip[1], diag) : null;
       // 낱말 상자: 말풍선 제목이 곧 낱말인 것(증원 · 지키는 적 · 특성 · 벽 · 보석 · 특수 기물)
       if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, shut && { id: 'mate' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }, shut && { skip: 'threat' }].filter(Boolean); // 「지키던 적」에 응수 낱말 상자를 붙이지 않고 체크메이트 풀이를 띄운다
-      ui.region(id, x, y, S, S, { onClick: () => this.clickSq(sq), ...tipOpt });
+      // 누르는 구역: 칸 bbox + 마름모 판정(이웃 칸 bbox가 겹친다)
+      const bx = sqBox(sq);
+      ui.region(id, bx.x, bx.y, bx.w, bx.h, { hit: (x, y) => unproject(x, y) === sq, onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
         motion();
         const pulse = 0.22 + 0.12 * Math.sin(time * 5);
-        ctx.globalAlpha = pulse; rect(ctx, x, y, S, S, PAL.gold); ctx.globalAlpha = 1;
-        frame(ctx, x + 1, y + 1, S - 2, S - 2, PAL.goldHi);
+        ctx.globalAlpha = pulse; fillSq(ctx, sq, PAL.gold); ctx.globalAlpha = 1;
+        strokeSq(ctx, sq, PAL.goldHi, 1, 1);
       }
-      if (ui.isHover(id) && tset.has(sq)) frame(ctx, x, y, S, S, PAL.white);
+      if (ui.isHover(id) && tset.has(sq)) strokeSq(ctx, sq, PAL.white, 1);
+      if (!cell || cell.mine || isHidden(b, sq)) continue;
+      if (openKings && openKings.has(sq) && cell.t === 'K') {
+        motion();
+        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(time * 4); strokeSq(ctx, sq, PAL.gold, 1, 2); ctx.globalAlpha = 1;
+      }
+      if (forced && forced.has(sq)) {
+        if (beat(time, 6) % 2 === 0) strokeSq(ctx, sq, PAL.red, 2);
+        ctx.globalAlpha = 0.25; fillSq(ctx, sq, PAL.red); ctx.globalAlpha = 1;
+        hatch(ctx, sq, PAL.redDk);
+      }
+      // 얼린 적(묘수 「빙결」): 얼음빛 바닥 · 이번 수 동안 아무것도 지키지 못한다
+      if (cell.frozen) { ctx.globalAlpha = 0.35; fillSq(ctx, sq, '#9fd3e0', 2); ctx.globalAlpha = 1; strokeSq(ctx, sq, '#9fd3e0', 1, 1); }
+      if (t.kind === 'capture' && tset.has(sq) && ui.isHover(id)) strokeSq(ctx, sq, PAL.white, 1);
     }
-    drawMarkSquares(ctx, this.marks, sqXY, S);
-    // 증원 그림자: 점선 테 안에 빈 윤곽(속이 비어 판 위의 적과 섞이지 않는다)과 흔들리는 ▼. 두 수 앞은 윤곽도 점선
-    for (const [sq, g] of ghosts) {
-      const { x, y } = sqXY(sq);
-      dots(ctx, x, y, S, S, g.k ? PAL.dimDk : PAL.shadow, 2);
-      ctx.drawImage(outlineCanvas(artOf(g.t), TONE.b.o, g.k > 0, hiFor(ctx)), x + 5, y + 5, SW + 2, SH + 2);
-      const bob = beat(time, 3, sq * 0.37) % 2;
-      ctx.globalAlpha = g.k ? 0.5 : 1;
-      dropMark(ctx, x + 12, y + 1 + bob, TONE.b.o);
-      ctx.globalAlpha = 1;
-    }
+    drawMarkSquares(ctx, this.marks, fillSq);
+    // 증원 그림자의 바닥: 붉은 점선 마름모(두 수 앞은 흐린 점선)
+    for (const [sq, g] of ghosts) strokeSq(ctx, sq, g.k ? PAL.dimDk : PAL.red, 1, 2, g.k ? [1, 2] : [3, 2]);
     // 사슬 길
     if (v.chain) {
       // 꺾쇠 · 물수제비의 길은 꺾은 칸(bends)을 거쳐 꺾여 그린다 — 꺾은 칸에는 작은 금빛 점
       const path = v.chain.path, bends = v.chain.bends || [];
+      for (let i = 1; i < path.length; i++) strokeSq(ctx, path[i], PAL.gold, 1);
       for (let i = 0; i + 1 < path.length; i++) {
         const pts = [path[i], ...(bends[i + 1] || []), path[i + 1]];
         for (let j = 0; j + 1 < pts.length; j++) { const a = this.center(pts[j]), c = this.center(pts[j + 1]); line(ctx, a.x, a.y, c.x, c.y, PAL.gold); }
         for (const k of bends[i + 1] || []) { const c = this.center(k); rect(ctx, c.x - 1, c.y - 1, 3, 3, PAL.goldHi); }
       }
-      for (let i = 1; i < path.length; i++) {
-        const { x, y } = sqXY(path[i]);
-        frame(ctx, x, y, S, S, PAL.gold);
-      }
-      for (const [a0, b0] of v.chain.shots || []) { const a = this.center(a0), c = this.center(b0); dotLine(ctx, a.x, a.y, c.x, c.y, PAL.gold, 2); const B = sqXY(b0); dots(ctx, B.x, B.y, S, S, PAL.gold, 2); }
-    }
-    // 궁수의 화살
-    if (v.arrow) {
-      const a = this.center(v.arrow.from), c = this.center(v.arrow.to), k = v.arrow.p;
-      const x = a.x + (c.x - a.x) * k, y = a.y + (c.y - a.y) * k - Math.sin(k * Math.PI) * 6;
-      const tx = a.x + (c.x - a.x) * Math.max(0, k - 0.15), ty = a.y + (c.y - a.y) * Math.max(0, k - 0.15) - Math.sin(Math.max(0, k - 0.15) * Math.PI) * 6;
-      line(ctx, tx, ty, x, y, PAL.goldHi);
-      rect(ctx, Math.round(x) - 1, Math.round(y) - 1, 2, 2, PAL.white);
+      for (const [a0, b0] of v.chain.shots || []) { const a = this.center(a0), c = this.center(b0); dotLine(ctx, a.x, a.y, c.x, c.y, PAL.gold, 2); strokeSq(ctx, b0, PAL.gold, 1, 0, [1, 1]); }
     }
     // 지금 모습의 행마선: 다음 먹기를 기다릴 때 갈 수 있는 칸을 흐리게(막히면 끊긴다)
     if (v.chain && !this.busy && !v.chain.awaiting && !v.cut && b.status === 'chain') {
       this.drawReach(ctx, v.chain.form, v.chain.sq);
       for (const f of v.chain.absorbed || []) this.drawReach(ctx, f, v.chain.sq);
     }
-    // 기물
-    for (let sq = 0; sq < 64; sq++) {
+    // 끊김 · 응수 칸의 바닥
+    if (v.cut) { strokeSq(ctx, v.cut.sq, PAL.red, 2); hatch(ctx, v.cut.sq, PAL.red); }
+    if (v.chain && v.chain.forced && !v.cut && beat(time, 6) % 2 === 0) strokeSq(ctx, v.chain.sq, PAL.red, 2);
+    // ── 기물: 뒤에서 앞으로(칸 가운데의 화면 y). 증원 그림자의 흐린 적도 같은 차례에 선다
+    for (const sq of sqOrder()) {
+      const { x, y } = sqCenter(sq);
+      const g = ghosts.get(sq);
+      if (g) this.drawGhost(ctx, sq, g, x, y, time);
       const c = v.board[sq];
       if (!c) continue;
       if (isHidden(b, sq) && !c.mine) continue;
-      const { x, y } = sqXY(sq);
       if (c.mine) {
         if (v.mover) continue;
         let sx = 1, dy = 0, side = 'w';
@@ -1628,36 +1632,32 @@ export class BattleScreen {
         let alpha = 1;
         if (v.cut && v.cut.sq === sq) alpha = 1 - v.cut.p;
         const lk = side === 'w' ? this.look(c.t, time) : {};
-        this.putPiece(ctx, c.t, side, x + 6, y + 3 + dy, { sx, alpha, ...lk }, -dy);
+        this.putPiece(ctx, c.t, side, x, y + dy, { sx, alpha, ...lk }, -dy);
+        if (v.cut && v.cut.sq === sq) this.drawCrack(ctx, sq);
         continue;
       }
       let dy = 0;
       if (t.kind === 'capture' && tset.has(sq)) dy = beat(time, 4, sq * 0.37) % 2 ? -2 : -1;
       if (this.falls && this.falls.has(sq)) { const p = this.falls.get(sq) / FALL; dy -= (1 - p * p) * FALL_PX; }
-      if (openKings && openKings.has(sq) && c.t === 'K') {
-        motion();
-        const a = 0.5 + 0.3 * Math.sin(time * 4);
-        ctx.globalAlpha = a; frame(ctx, x + 2, y + 2, S - 4, S - 4, PAL.gold); ctx.globalAlpha = 1;
-      }
-      if (forced && forced.has(sq)) {
-        if (beat(time, 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
-        ctx.globalAlpha = 0.25; rect(ctx, x, y, S, S, PAL.red); ctx.globalAlpha = 1;
-        hatch(ctx, x, y, PAL.redDk);
-      }
       // 금빛 적: 몸 뒤에 은은한 금빛(천천히 숨 쉰다)
-      if (c.gold) glowText(ctx, x + 6, y + 4, 16, 20, PAL.gold, 0.45 * flicker(time + sq, 2.4, 0.3), 5);
-      this.putPiece(ctx, c.t, c.gold ? 'g' : 'b', x + 6, y + 3 + dy, {}, -dy);
-      if (c.trait) traitMark(ctx, c.trait, x + 2, y + S - 8);
-      if (c.muted) torchMark(ctx, x + S - 7, y + 2, time);
-      // 얼린 적(묘수 「빙결」): 얼음빛 덮개 · 이번 수 동안 아무것도 지키지 못한다
-      if (c.frozen) { ctx.globalAlpha = 0.35; rect(ctx, x + 2, y + 2, S - 4, S - 4, '#9fd3e0'); ctx.globalAlpha = 1; frame(ctx, x + 1, y + 1, S - 2, S - 2, '#9fd3e0'); }
+      if (c.gold) glowText(ctx, x - 9, y - PIECE_TOP + dy, 18, 22, PAL.gold, 0.45 * flicker(time + sq, 2.4, 0.3), 5);
+      this.putPiece(ctx, c.t, c.gold ? 'g' : 'b', x, y + dy, {}, -dy);
+      if (c.trait) traitMark(ctx, c.trait, x - 12, y - 1);
+      if (c.muted) torchMark(ctx, x + 6, y - PIECE_TOP - 2, time);
       if (c.gold) {
         const k = beat(time, 8, sq) % 12;
-        if (k < 3) rect(ctx, x + 8 + k * 4, y + 4 + k * 3, 1, 1, PAL.goldHi);
+        if (k < 3) rect(ctx, x - 7 + k * 5, y - PIECE_TOP + 2 + k * 4 + dy, 1, 1, PAL.goldHi);
       }
-      if (t.kind === 'capture' && tset.has(sq) && ui.isHover(`sq:${sq}`)) frame(ctx, x, y, S, S, PAL.white);
     }
-    // 움직이는 내 기물
+    // 궁수의 화살
+    if (v.arrow) {
+      const a = this.bodyOf(v.arrow.from), c = this.bodyOf(v.arrow.to), k = v.arrow.p;
+      const x = a.x + (c.x - a.x) * k, y = a.y + (c.y - a.y) * k - Math.sin(k * Math.PI) * 6;
+      const tx = a.x + (c.x - a.x) * Math.max(0, k - 0.15), ty = a.y + (c.y - a.y) * Math.max(0, k - 0.15) - Math.sin(Math.max(0, k - 0.15) * Math.PI) * 6;
+      line(ctx, tx, ty, x, y, PAL.goldHi);
+      rect(ctx, Math.round(x) - 1, Math.round(y) - 1, 2, 2, PAL.white);
+    }
+    // 움직이는 내 기물(맨 위 — 지나는 칸의 앞 기물보다 앞에 선다)
     if (v.mover) {
       const m = routeXY(v.mover);
       // 꺾는 길: 지나온 몫을 흐린 금빛 선으로 끌고 간다
@@ -1666,43 +1666,52 @@ export class BattleScreen {
         let a = this.center(pts[0]);
         ctx.globalAlpha = 0.7;
         for (let i = 0; i < at.i; i++) { const b = this.center(pts[i + 1]); line(ctx, a.x, a.y, b.x, b.y, PAL.goldHi); a = b; }
-        line(ctx, a.x, a.y, Math.round(m.x) + 14, Math.round(m.y) + 14, PAL.goldHi);
+        line(ctx, a.x, a.y, Math.round(m.x), Math.round(m.y + (m.arc || 0)), PAL.goldHi);
         ctx.globalAlpha = 1;
       }
       // 그림자는 뛰는 호 밑 바닥 자리에(뛰면 작아지고 옅어진다)
-      this.putPiece(ctx, v.mover.form, 'w', m.x + 6, m.y + 3, this.look(v.mover.form, time), Math.max(0, m.arc || 0));
+      this.putPiece(ctx, v.mover.form, 'w', m.x, m.y, this.look(v.mover.form, time), Math.max(0, m.arc || 0));
     }
     // 노림수: 내 기물을 노리는 적에서 붉은 끊어진 선이 내 기물 쪽으로 흐른다(먹을 수 없는 적은 어두운 붉은색).
-    // 붙어 있는 적이 많아 기물 위에 긋되, 양 끝은 기물 몸을 비켜 칸 가장자리 쪽만
+    // 기물 몸 높이에 긋되, 양 끝은 기물 몸을 비켜 칸 가장자리 쪽만
     if (forced && !v.cut) {
-      const c = this.center(v.chain.sq);
+      const c = this.bodyOf(v.chain.sq);
       const off = this.app.reducedMotion ? 0 : beat(time, 12);
       for (const s of forced) {
         if (isHidden(b, s)) continue;
-        const a = this.center(s);
+        const a = this.bodyOf(s);
         const d = Math.hypot(c.x - a.x, c.y - a.y), k = 10 / d;
         if (d < 24) continue;
         dashLine(ctx, a.x + (c.x - a.x) * k, a.y + (c.y - a.y) * k, c.x - (c.x - a.x) * k, c.y - (c.y - a.y) * k, t.kind === 'capture' && tset.has(s) ? PAL.red : PAL.redDk, off);
       }
     }
     this.drawPreview(ctx, ui);
-    // 끊김: 노린 적에서 붉은 선 · 금
+    // 끊김: 노린 적에서 붉은 선
     if (v.cut) {
-      const c = this.center(v.cut.sq);
-      for (const s of v.cut.attackers) { const a = this.center(s); line(ctx, a.x, a.y, c.x, c.y, PAL.red); }
-      const { x, y } = sqXY(v.cut.sq);
-      line(ctx, x + 4, y + 3, x + 12, y + 12, PAL.red); line(ctx, x + 12, y + 12, x + 9, y + 18, PAL.red); line(ctx, x + 9, y + 18, x + 22, y + 26, PAL.red);
-      frame(ctx, x, y, S, S, PAL.red, 2);
-      hatch(ctx, x, y, PAL.red);
-    }
-    // 응수 칸
-    if (v.chain && v.chain.forced && !v.cut) {
-      const { x, y } = sqXY(v.chain.sq);
-      if (beat(time, 6) % 2 === 0) frame(ctx, x, y, S, S, PAL.red, 2);
+      const c = this.bodyOf(v.cut.sq);
+      for (const s of v.cut.attackers) { const a = this.bodyOf(s); line(ctx, a.x, a.y, c.x, c.y, PAL.red); }
     }
     // 판 위 화살표(오른쪽으로 끌어 그은 것): 기물 위에 반투명. 끄는 중이면 가리킨 칸까지 흐리게
     const mk = this.marks, to = mk.from >= 0 ? sqAt(ui.mouse.x, ui.mouse.y) : -1;
-    drawMarkArrows(ctx, mk, sqXY, S, to >= 0 && to !== mk.from ? { from: mk.from, to } : null);
+    drawMarkArrows(ctx, mk, centerAt, to >= 0 && to !== mk.from ? { from: mk.from, to } : null);
+  }
+  // 증원 그림자: 그 적 빛깔로 흐리게(속이 비친다) + 붉은 ▼(흔들린다). 두 수 앞은 더 흐리게
+  drawGhost(ctx, sq, g, x, y, time) {
+    const a = g.k ? 0.3 : 0.5;
+    if (STANDARD.has(g.t)) piece3(ctx, g.t, 'b', x, y, { alpha: a });
+    else ctx.drawImage(outlineCanvas(artOf(g.t), TONE.b.o, g.k > 0, hiFor(ctx)), x - 9, y - 20, SW + 2, SH + 2);
+    const bob = beat(time, 3, sq * 0.37) % 2, ty = y - PIECE_TOP - 7 + bob;
+    ctx.globalAlpha = g.k ? 0.5 : 1;
+    ctx.beginPath(); ctx.moveTo(x - 3.5, ty); ctx.lineTo(x + 3.5, ty); ctx.lineTo(x, ty + 5); ctx.closePath();
+    ctx.fillStyle = PAL.red; ctx.fill(); ctx.strokeStyle = INK3; ctx.lineWidth = 0.8; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  // 끊긴 내 기물 위 붉은 금(칸 반 폭 · 반 높이 단위로)
+  drawCrack(ctx, sq) {
+    const c = sqCenter(sq), G = boardGeo();
+    const pt = (u, w) => [c.x + u * G.hw, c.y - 10 + w * 12];
+    const p = [pt(-0.6, -0.6), pt(-0.1, 0), pt(-0.3, 0.35), pt(0.55, 0.8)];
+    for (let i = 0; i + 1 < p.length; i++) line(ctx, p[i][0], p[i][1], p[i + 1][0], p[i + 1][1], PAL.red);
   }
 
   // 묘수(깊이 F): 손 이름표 옆의 작은 칸. 떨구기 전에 눌러 쓴다
@@ -1731,40 +1740,47 @@ export class BattleScreen {
     }
   }
 
-  // 판 위 사물(정석): 고속도로 줄 · 금빛 발판 · 문
+  // 판 위 사물(정석): 고속도로 줄 · 금빛 발판 · 강 · 함정 · 문
   drawBoardThings(ctx, rules, time) {
     if (!rules) return;
+    // 고속도로: 그 줄을 따라 금빛 점선 두 줄(칸 가운데 양옆)
     for (const f of rules.highways || []) {
-      const x = BX + f * S + Math.floor(S / 2);
-      ctx.globalAlpha = 0.35;
-      for (let y = BY + 2; y < BY + S * 8 - 2; y += 4) { rect(ctx, x - 4, y, 1, 2, PAL.goldDk); rect(ctx, x + 3, y, 1, 2, PAL.goldDk); }
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = 0.5; ctx.strokeStyle = PAL.goldDk; ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
+      for (const d of [-0.22, 0.22]) { const a = centerAt(f + d, -0.4), c = centerAt(f + d, 7.4); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(c.x, c.y); ctx.stroke(); }
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
     }
     for (const sq of rules.steps || []) {
-      const { x, y } = sqXY(sq);
-      ctx.globalAlpha = 0.45; rect(ctx, x + 3, y + 3, S - 6, S - 6, PAL.gold); ctx.globalAlpha = 1;
-      frame(ctx, x + 3, y + 3, S - 6, S - 6, PAL.goldDk);
-      for (const [i, j] of [[4, 4], [S - 5, 4], [4, S - 5], [S - 5, S - 5]]) rect(ctx, x + i, y + j, 1, 1, PAL.goldHi);
+      ctx.globalAlpha = 0.45; fillSq(ctx, sq, PAL.gold, 3); ctx.globalAlpha = 1;
+      strokeSq(ctx, sq, PAL.goldDk, 1, 3);
+      const c = sqCenter(sq);
+      for (const p of projectSq(sq).pts) rect(ctx, Math.round(c.x + (p.x - c.x) * 0.55), Math.round(c.y + (p.y - c.y) * 0.55), 1, 1, PAL.goldHi);
     }
-    // 강(정석): 넷째 줄과 다섯째 줄 사이를 흐르는 물결
+    // 강(정석): 넷째 줄과 다섯째 줄 사이를 흐르는 물결(판을 가로지르는 경계선을 따라)
     if (rules.river) {
       motion();
-      const y = BY + S * 4;
-      for (let x = BX + 1; x < BX + S * 8 - 1; x++) { const w = Math.round(Math.sin((x + time * 12) / 3)); rect(ctx, x, y - 1 + w, 1, 1, '#6fa8d8'); if ((x & 3) === 0) rect(ctx, x, y + w, 1, 1, '#c8e0f0'); }
+      const n = 64;
+      for (let i = 0; i <= n; i++) {
+        const f = -0.5 + (8 * i) / n, p = centerAt(f, 3.5), w = Math.round(Math.sin((i * 2 + time * 12) / 3));
+        rect(ctx, p.x, p.y - 1 + w, 1, 1, '#6fa8d8');
+        if ((i & 3) === 0) rect(ctx, p.x, p.y + w, 1, 1, '#c8e0f0');
+      }
     }
-    for (const sq of rules.traps || []) { const { x, y } = sqXY(sq); trapPit(ctx, x, y, S); }
-    // 문: 어두운 청록 문 안쪽 + 굵은 아치 테 + 문턱. 기물이 서도 기둥 · 윗테 · 문턱이 남는다. 두 문이 번갈아 숨 쉰다
+    for (const sq of rules.traps || []) trapSq(ctx, sq);
+    // 문: 어두운 청록 문 안쪽 + 굵은 아치 테 + 문턱(칸 가운데에 선 작은 아치). 기물이 서도 기둥 · 윗테가 남는다. 두 문이 번갈아 숨 쉰다
     (rules.gates || []).forEach((sq, k) => {
       motion();
-      const { x, y } = sqXY(sq);
-      gateArch(ctx, x, y, S, 0.35 + 0.25 * Math.sin(time * 3 + k * Math.PI));
+      const c = sqCenter(sq);
+      gateArch(ctx, c.x - 9, c.y - 14, 18, 0.35 + 0.25 * Math.sin(time * 3 + k * Math.PI));
     });
   }
 
-  // 판 위 기물 하나.
-  // 발밑 그림자(light.js): lift는 바닥에서 들린 높이(도트) — 들리면 작아지고 옅어진다. 움직이는 기물은 소수점 자리에 선다(fine)
-  putPiece(ctx, type, side, x, y, opts = {}, lift = 0) {
-    if (opts.alpha == null || opts.alpha > 0.3) groundShadow(ctx, x + 8, y + lift + 22, lift);
+  // 판 위 기물 하나를 받침 가운데 (cx, cy)에. 체스 기물 여섯은 벡터(pieces3.js — 받침 · 그림자를 같이 굽는다), 특수 기물 · 사물은 도트 그림(16 × 22)
+  // lift는 바닥에서 들린 높이(도트): 들리면 바닥에 그림자가 남는다(작아지고 옅어진다). 움직이는 기물은 소수점 자리에 선다(fine)
+  putPiece(ctx, type, side, cx, cy, opts = {}, lift = 0) {
+    const std = STANDARD.has(type);
+    if ((!std || lift > 0.5) && (opts.alpha == null || opts.alpha > 0.3)) groundShadow(ctx, cx, cy + lift + 2, lift);
+    if (std) { piece3(ctx, type, side, cx, cy, opts); return; }
+    const x = cx - 8, y = cy - 20;
     if (y % 1 || x % 1) fine(() => sprite(ctx, type, side, x, y, opts));
     else sprite(ctx, type, side, x, y, opts);
   }
@@ -1776,7 +1792,7 @@ export class BattleScreen {
     for (const s of reach(v.board, form, from, 1)) {
       const c = this.center(s);
       if (slide) dotLine(ctx, o.x, o.y, c.x, c.y, PAL.goldHi, 2);
-      if (!v.board[s]) { if (slide) rect(ctx, c.x - 1, c.y - 1, 2, 2, PAL.goldHi); else frame(ctx, c.x - 3, c.y - 3, 6, 6, PAL.goldHi); }
+      if (!v.board[s]) { if (slide) rect(ctx, c.x - 1, c.y - 1, 2, 2, PAL.goldHi); else strokeSq(ctx, s, PAL.goldHi, 1, 8); }
     }
     ctx.globalAlpha = 1;
   }
@@ -1789,27 +1805,28 @@ export class BattleScreen {
     this.pvNow = pv;
     if (!pv) return;
     const time = this.app.time;
-    const T = sqXY(pv.sq), tc = this.center(pv.sq);
+    const tc = this.center(pv.sq);
     if (pv.kind === 'capture' && v.chain) {
       const fc = this.center(v.chain.sq);
       dotLine(ctx, fc.x, fc.y, tc.x, tc.y, PAL.goldHi);
-      frame(ctx, T.x, T.y, S, S, PAL.gold);
+      strokeSq(ctx, pv.sq, PAL.gold, 1);
       motion();
-      sprite(ctx, pv.form, 'w', T.x + 6, T.y + 2, { alpha: 0.62 + 0.12 * Math.sin(time * 6), ...this.look(pv.form) });
+      this.putPiece(ctx, pv.form, 'w', tc.x, tc.y - 1, { alpha: 0.62 + 0.12 * Math.sin(time * 6), ...this.look(pv.form) });
       if (pv.cut) {
-        for (const s of pv.cut) { const a = this.center(s); dotLine(ctx, a.x, a.y, tc.x, tc.y, PAL.red, 2); const A = sqXY(s); ringAt(ctx, A.x, A.y, PAL.red, 2); }
-        line(ctx, T.x + 5, T.y + 5, T.x + 22, T.y + 22, PAL.red); line(ctx, T.x + 22, T.y + 5, T.x + 5, T.y + 22, PAL.red);
+        for (const s of pv.cut) { const a = this.center(s); dotLine(ctx, a.x, a.y, tc.x, tc.y, PAL.red, 2); ringSq(ctx, s, PAL.red, 2); }
+        const G = boardGeo(), dx = G.hw * 0.55, dy = G.hh * 0.55;
+        line(ctx, tc.x - dx, tc.y - dy, tc.x + dx, tc.y + dy, PAL.red); line(ctx, tc.x + dx, tc.y - dy, tc.x - dx, tc.y + dy, PAL.red);
         return;
       }
     } else if (pv.kind === 'drop') {
-      sprite(ctx, pv.form, 'w', T.x + 6, T.y + 3, { alpha: 0.5, eng: this.sel.length === 1 && v.hand[this.sel[0]] && v.hand[this.sel[0]].eng ? v.hand[this.sel[0]].eng.id : null, tier: this.look(pv.form).tier });
+      this.putPiece(ctx, pv.form, 'w', tc.x, tc.y, { alpha: 0.5, eng: this.sel.length === 1 && v.hand[this.sel[0]] && v.hand[this.sel[0]].eng ? v.hand[this.sel[0]].eng.id : null, tier: this.look(pv.form).tier });
     }
     for (const s of pv.next) {
-      const A = sqXY(s), c = this.center(s);
+      const c = this.center(s);
       const reply = pv.forced && pv.forced.includes(s);
       dotLine(ctx, tc.x, tc.y, c.x, c.y, reply ? PAL.red : PAL.gold);
-      if (reply) { ctx.globalAlpha = 0.6; hatch(ctx, A.x, A.y, PAL.red); ctx.globalAlpha = 1; }
-      ringAt(ctx, A.x, A.y, reply ? PAL.red : PAL.gold, 2);
+      if (reply) { ctx.globalAlpha = 0.6; hatch(ctx, s, PAL.red); ctx.globalAlpha = 1; }
+      ringSq(ctx, s, reply ? PAL.red : PAL.gold, 2);
     }
   }
 
