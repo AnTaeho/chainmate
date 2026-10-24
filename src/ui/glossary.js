@@ -114,21 +114,24 @@ const VM_CHIP = { value: [PAL.val, PAL.valInk], links: [PAL.link, PAL.linkInk] }
 // 낱말 자리는 누르기 · 가리키기를 가로채지 않는다(밑의 카드가 그대로 받는다). under는 옛 호출과 맞추려고 남겼다.
 export function richText(ctx, s, x, y, col, { termCol = PAL.goldDk, ui = null, under = null, bold = false } = {}) {
   s = L(String(s));
-  let xx = x;
+  // 조각 자리 · 폭은 앞 글 전체로 잰다(조각마다 올림한 폭을 더하면 한 줄로 잰 폭보다 넓어진다 — 글꼴 폭이 소수라서)
+  let head = '', end = x;
   for (const [part, id] of splitTerms(s)) {
-    const w = measure(part, bold);
+    head += part;
+    const xx = end;
+    end = x + measure(head, bold);
+    const w = end - xx;
     const lit = id && !TERM_BY_ID[id].basic;
     const chip = id && VM_CHIP[id];
     if (chip) {
       // 대국의 흰 칸 · 금빛 칸과 같은 빛깔의 작은 칸(테 1 · 안쪽 여백 1, 띄어쓰기 3 안에 든다)
       rect(ctx, xx - 2, y - 1, w + 4, 13, PAL.frameDk);
       rect(ctx, xx - 1, y, w + 2, 11, chip[0]);
-      text(ctx, part, xx, y, chip[1], { bold });
-    } else text(ctx, part, xx, y, lit ? termCol : col, { bold });
+      text(ctx, part, xx, y, chip[1], { bold, w });
+    } else text(ctx, part, xx, y, lit ? termCol : col, { bold, w });
     if (lit && ui && ui.termSpans) ui.termSpans.push({ id, x: xx, y, w, h: 12 });
-    xx += w;
   }
-  return xx - x;
+  return end - x;
 }
 
 // ── 낱말 상자(Slay the Spire의 키워드 상자처럼): 카드 · 말풍선 옆에 낱말마다 제목 + 한 문장, 위에서 아래로 쌓는다.

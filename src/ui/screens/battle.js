@@ -2151,7 +2151,7 @@ export class BattleScreen {
       const nj = (run.josekis || []).length;
       const bx = PAUSE.x - 4 - nj * 12;
       // 이름표는 단추 왼쪽에 들어가는 만큼: 「격언 5/5」 → 「5/5」 → 없음(영어 · 정석 셋)
-      const mw = measure('행마', true) + 6, mx = bx - 4 - mw;
+      const mw = measure('행마', true) + 10, mx = bx - 4 - mw;
       const room = mx - RX - 4, full = `격언 ${maximCount(run)}/${maximCapacity(run)}`, count = `${maximCount(run)}/${maximCapacity(run)}`;
       const label = measure(full) <= room ? full : measure(count) <= room ? count : null;
       if (label) text(ctx, label, RX, 8, PAL.dim);

@@ -565,7 +565,11 @@ export function itemCardLayout(it, w, { run = null, price = true, hold = false }
   f.gap(GAP_IN);
   const nx = artW(it) + 4, nw = IW - nx - (PAD_CARD > 4 ? 0 : 0);
   out.nameX = P + nx;
-  out.names = wrap(itemNameOf(it), nw, true);
+  // 이름: 굵게, 낱말 하나라도 굵게 안 들어가면 보통 굵기(영어 「Pilgrimage」 — 낱말 가운데서 끊지 않게)
+  const nm = wrapName(itemNameOf(it), nw, { max: 3 });
+  out.nameThin = !!(nm && nm.thin);
+  out.names = nm ? nm.lines : wrap(itemNameOf(it), nw, true);
+  out.nameSrc = itemNameOf(it);
   const nameH = out.names.length * LINE_TITLE;
   const headH = Math.max(ART_H, nameH);
   const headTop = f.space(headH);
@@ -625,7 +629,8 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   const showPrice = price && it.price != null && !sold;
   if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
   itemArt(ctx, it, x + P, y + lay.art, t, run);
-  lay.names.forEach((l, k) => text(ctx, l, x + lay.nameX, y + lay.nameYs[k], PAL.cardInk, { bold: true }));
+  if (lay.nameThin) logClip('thin', L(lay.nameSrc), L(lay.nameSrc), lay.IW);
+  lay.names.forEach((l, k) => text(ctx, l, x + lay.nameX, y + lay.nameYs[k], PAL.cardInk, { bold: !lay.nameThin }));
   rect(ctx, x + P, y + lay.rule, lay.IW, 1, edge || PAL.cardDim);
   for (const [l, c, ly] of lay.lines) { if (c === PAL.cardInk) richText(ctx, l, x + P, y + ly, c, { ui: sold ? null : ui, under }); else text(ctx, l, x + P, y + ly, c); }
   // 칩 줄은 카드 아랫변에 붙인다(한 줄의 카드가 같은 높이라 칩이 한 줄로 맞는다)
@@ -642,7 +647,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
 // what: { kind: 'engraving'|'soul'|'evolve', id }, p: 고른 기물(없으면 고르라는 말), to: 진화 결과 종류
 // 자리(재기와 그리기가 같이 쓴다): 안 여백 PAD_BOX, 왼쪽에 고른 기물 › 된 모습(기물을 골랐으면), 그 오른쪽에 이름(제목 줄) → 묶음 틈 → 효과 글.
 // 단추(「새긴다」 · 「그만」)는 폭이 넉넉하면(300 이상) 오른쪽에 세로로, 좁으면 글 아래 줄에 나란히.
-const TP_BTN = { w: 58, h: BTN_S }; // 영어 「Engrave」(52) + 글과 테 사이 2 × 2 + 테
+const TP_BTN = { w: 62, h: BTN_S }; // 영어 「Engrave」(굵게 54) + 글과 테 사이 2 × 2 + 테 + 여유 2
 // 한 기물에 각인 하나 · 혼 하나(run.js engrave · ensoul은 있던 것을 바꾼다). 같은 종류가 이미 있으면 그 id(바꾸기), 같은 것이면 고를 수 없다
 export const heldOf = (what, p) => (!p ? null : what.kind === 'engraving' ? (p.eng ? p.eng.id : null) : what.kind === 'soul' ? p.soul || null : null);
 export const targetOk = (what, p) => !what || (what.kind === 'awaken' ? isCracked(p) : heldOf(what, p) !== what.id || what.kind === 'evolve');

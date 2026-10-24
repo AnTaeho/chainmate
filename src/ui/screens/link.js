@@ -26,7 +26,7 @@ export function linkLayout() {
   const titleY = y + P, cellsY = titleY + LINE + 6, cw = 20, ch = 22, cg = 3, mid = 9;
   const cellsW = CODE_LEN * cw + (CODE_LEN - 2) * cg + mid, cx0 = right.x + Math.floor((right.w - cellsW) / 2);
   const cells = Array.from({ length: CODE_LEN }, (_, i) => ({ x: cx0 + i * (cw + cg) + (i >= 4 ? mid - cg : 0), y: cellsY, w: cw, h: ch }));
-  const msgY = cellsY + ch + 4, padY = msgY + LINE + 4, kw = 48, kh = 24, gx = 5, gy = 4;
+  const msgY = cellsY + ch + 4, padY = msgY + LINE + 4, kw = 50, kh = 24, gx = 3, gy = 4;
   const kx0 = right.x + Math.floor((right.w - (4 * kw + 3 * gx)) / 2);
   const keys = PAD_ROWS.flatMap((row, r) => row.map((k, c) => ({ k, x: kx0 + c * (kw + gx), y: padY + r * (kh + gy), w: kw, h: kh })));
   return { left, right, titleY, cells, msgY, padY, keys, status: { x: 12, y: sy, w: W - 24, h: sh }, grow: { l: gx >> 1, r: gx >> 1, u: gy >> 1, d: gy >> 1 } };

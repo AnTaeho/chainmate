@@ -27,7 +27,8 @@ export function accountTabs(ctx, ui, app, cur) {
 // 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다). 입력 칸은 위쪽 띠(y 110 위)에 둔다 — 폰 키보드가 올라와도 보이게
 export function accountLayout() {
   const P = PAD_BOX, y = PAGE.bodyY, h = PAGE.btnY - GAP_GROUP - y;
-  const left = { x: 12, y, w: 224, h }, right = { x: W - 12 - 224, y, w: 224, h };
+  // 왼쪽 칸이 조금 넓다: 가장 넓은 아이디(「m」 스무 자 212)가 안 여백 안에 한 줄로 든다
+  const left = { x: 12, y, w: 232, h }, right = { x: 12 + 232 + 8, y, w: W - 12 - 232 - 8 - 12, h };
   const titleY = y + P, r1 = titleY + LINE + 6, r2 = r1 + FIELD_H + 6, msgY = r2 + FIELD_H + 6, btnY = msgY + MSG_LINES * LINE + 4;
   const cell = (b, top) => ({ x: b.x + P + LABEL_W, y: top, w: b.w - P * 2 - LABEL_W, h: FIELD_H });
   return {

@@ -152,10 +152,10 @@ test('두루마리 좁은 칸: 줄의 이름이 다 굵게 들어갈 때만 이�
   // 한국어는 모든 두루마리 이름이 좁은 칸에 굵게 들어간다 — 좁은 칸도 늘 이름
   for (const c of await scrollItems()) assert.ok(M.text.textWidth(S.scrollName(c), true) <= 36, `ko 「${S.scrollName(c)}」`);
   M.lang.setLang('en');
-  assert.equal(S.scrollRowNames([freeze, evolve], w), false); // Freeze 44 · Evolve 42
-  assert.equal(S.scrollRowNames([glass, echo], w), true); // Glass 32 · Echo 31
-  assert.equal(S.scrollRowNames([glass, awaken], w), false); // 하나만 넘쳐도 줄 전체가 그림
-  assert.equal(S.scrollRowNames([glass, undefined], w), true); // 빈 칸은 따지지 않는다
+  assert.equal(S.scrollRowNames([freeze, evolve], w), false); // Freeze 45 · Evolve 44
+  assert.equal(S.scrollRowNames([echo, echo], w), true); // Echo 32
+  assert.equal(S.scrollRowNames([echo, glass], w), false); // 하나만 넘쳐도 줄 전체가 그림(Glass 37)
+  assert.equal(S.scrollRowNames([echo, undefined], w), true); // 빈 칸은 따지지 않는다
   assert.equal(S.scrollRowNames([undefined, awaken], w), false);
   M.lang.setLang('ko');
 });
@@ -321,7 +321,7 @@ test('꾸러미 좁은 칸: 줄의 이름이 다 굵게 들어갈 때만 이름,
 });
 
 // CHM-58 ②: 건너뛰기 패 글은 관 선택 카드 판 아래 온 폭에 두 줄까지(세 줄이면 영어 카드가 본 칸을 넘는다 — 관 선택 시험)
-test('건너뛰기 패 글: 모든 패가 카드 폭에 두 줄 안, 낱말 가운데서 끊기지 않는다(한국어 · 영어)', async () => {
+test('건너뛰기 패 글: 모든 패가 카드 폭에 두 줄 안(굵게 · 넘치면 보통 굵기), 낱말 가운데서 끊기지 않는다(한국어 · 영어)', async () => {
   const { CHART_FORMS } = await import('../src/data/charts.js');
   const run = M.run.createRun({ seed: 1, draft: false });
   const IW = M.select.blindLayout(run, 0).IW;
@@ -330,9 +330,10 @@ test('건너뛰기 패 글: 모든 패가 카드 폭에 두 줄 안, 낱말 가�
   for (const lang of LANGS) {
     M.lang.setLang(lang);
     for (const t of tags) {
-      const s = M.select.tagText(t), lines = M.text.wrap(s, IW, true);
+      // 굵게 두 줄에 안 들면 보통 굵기로(select.js tagLines)
+      const s = M.select.tagText(t), o = {}, lines = M.select.tagLines(t, IW, o);
       assert.ok(s && lines.length <= 2, `${lang} ${t.kind} ${JSON.stringify(lines)}`);
-      for (const l of lines) assert.ok(M.text.textWidth(l, true) <= IW, `${lang} ${t.kind} 「${l}」`);
+      for (const l of lines) assert.ok(M.text.textWidth(l, o.tagBold) <= IW, `${lang} ${t.kind} 「${l}」`);
     }
   }
   M.lang.setLang('ko');
@@ -872,9 +873,9 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
         if (phase === 'stale') for (const s of R.STALE_LINES) assert.ok(measure(s) <= gc.w - 16, `${tag}: 「${s}」`);
       }
     }
-    // 카드 줄의 칸: 가장 넓은 이름 + 열 자리 점수면 도달을 짧은 꼴(관만)로 — 가장 넓은 영어 이름이면 칸을 줄 전체에서 뺀다. 어느 쪽이든 이름과 다음 글 사이 6 이상
+    // 카드 줄의 칸: 가장 넓은 이름 + 열 자리 점수면 도달이 다 들어가거나(한국어) 칸을 줄 전체에서 뺀다(영어 — 굵은 영어 이름이 넓다). 어느 쪽이든 이름과 다음 글 사이 6 이상
     const names = data.around.map((r) => a.app.rank.nameOf(r)), at = R.cardCols(data.around, names, 20, 298);
-    assert.equal(at.reachOf, lang === 'en' ? null : R.reachShort, `${lang}: 도달 칸`);
+    assert.equal(at.reachOf, lang === 'en' ? null : R.reachText, `${lang}: 도달 칸`);
     assert.equal(at.reach == null, lang === 'en', `${lang}: 도달 칸`);
     const { fitNum } = await import('../src/render/gfx.js');
     // 보통 이름 + 일곱 자리 점수(영어는 「Hall 8 Practice」가 넓어 여섯 자리까지): 순위 화면과 같은 글(관 + 대국)이 다 들어간다 — 대국 셋 · 이김 모두
@@ -928,8 +929,9 @@ test('설정 이름 줄: 큰 글자 · 언어 줄의 오른쪽 반에 이름 + �
       const [x, , w] = plain, at = S.nameRow(x, w, name);
       // 이름은 큰 글자 단추(x + 120 ~ 184)에 닿지 않는다
       assert.ok(at.nameX >= x + 184 + 8, `${tag}: 이름이 단추에 닿는다 ${at.nameX}`);
-      assert.equal(at.label == null, longName, `${tag}: 「이름」 이름표`);
-      assert.equal(f.texts.some((q) => q.s === M.lang.L('이름')), !longName, tag);
+      // 「이름」 이름표는 이름 옆에 들어갈 때만 — 짧은 이름이면 늘 있다
+      if (!longName) assert.ok(at.label != null, `${tag}: 「이름」 이름표`);
+      assert.equal(f.texts.some((q) => q.s === M.lang.L('이름')), at.label != null, tag);
       assert.ok(f.texts.some((q) => q.s === name));
       if (at.label != null) assert.ok(at.label >= at.x0 && at.label + measure('이름') + 6 <= at.nameX);
       // 다시 짓기 단추는 언어 단추에 닿지 않는다 · 가리키면 제목 자리에 한 줄

@@ -86,6 +86,12 @@ const TAG_VIEW = {
 };
 // 옛 패(CHM-58 전 저장의 기록: 상금 +5)도 같은 글로 읽힌다
 export const tagText = (tag) => (tag && TAG_VIEW[tag.kind] ? TAG_VIEW[tag.kind].text(tag) : '');
+// 받는 것 글: 굵게 두 줄까지, 넘치면 보통 굵기(영어 굵은 글은 넓어 「Pick 1 of 3 / edition / maxims」처럼 세 줄이 되면 카드가 본 칸을 넘는다)
+export function tagLines(tag, IW, out = {}) {
+  const bold = wrap(tagText(tag), IW, true);
+  out.tagBold = bold.length <= 2;
+  return out.tagBold ? bold : wrap(tagText(tag), IW, false);
+}
 // 패 그림 12×12를 (x, y)에 sc배로(관 선택 카드는 2배)
 export function tagIcon(ctx, tag, x, y, sc = 1) {
   const v = tag && TAG_VIEW[tag.kind];
@@ -173,11 +179,11 @@ export function blindLayout(run, i, w = SEL.w, { tight = false } = {}) {
     out.peek = { x: IW - BW, y: top };
     f.y = Math.max(f.y, top + BW);
     f.gap(GAP_IN);
-    out.lines = wrap(tagText(info.tag), IW, true).map((l) => [l, f.line()]);
+    out.lines = tagLines(info.tag, IW, out).map((l) => [l, f.line()]);
   } else {
     out.skipLabel = f.line();
     f.gap(GAP_IN);
-    out.lines = wrap(tagText(info.tag), IW, true).map((l) => [l, f.line()]);
+    out.lines = tagLines(info.tag, IW, out).map((l) => [l, f.line()]);
   }
   f.gap(GAP_GROUP);
   out.btn = f.space(BTN_H);
@@ -289,7 +295,7 @@ export class SelectScreen {
         text(ctx, '건너뛰면', x + P, y + lay.skipLabel, PAL.dim);
         if (lay.icon2) tagIcon(ctx, info.tag, x + P + lay.icon2.x, y + lay.icon2.y, 2);
         // 받는 것 글 안 낱말(꾸러미 · 판본 · 명경기 조각)은 밝게 — 가리키면 낱말 상자(위 select:board keys)
-        for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, cur ? PAL.gold : PAL.dim, { bold: true, termCol: cur ? PAL.goldHi : PAL.dim });
+        for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, cur ? PAL.gold : PAL.dim, { bold: lay.tagBold, termCol: cur ? PAL.goldHi : PAL.dim });
       }
       // 단추 줄은 카드 아래 안 여백 위(세 카드가 같은 높이라 같은 줄)
       const by = y + h - P - BTN_H;
