@@ -23,6 +23,7 @@ import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox, logClip, LOG } from '../render/layoutlog.js';
 import { kindTab, TAB, TAB_GAP } from './kinds.js';
+import { blitVec } from '../render/vec.js';
 import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
 export { maximArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
@@ -289,14 +290,21 @@ export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hove
   if (selected) edgeRing(ctx, x, yy, w, h, -1, PAL.gold);
   if (p.eng && ENG_EDGE[p.eng.id]) { edgeRing(ctx, x, yy, w, h, 1, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
   sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null });
-  if (level > 0) chartBadge(ctx, level, x + w - 1, yy + 1, { dim, glow });
+  // 혼 표(각성 금테)가 기보 표를 덮지 않게 먼저
   if (p.soul && (p.awake || isCracked(p))) soulMark(ctx, p, x, yy, w, h, time, dim);
+  if (level > 0) chartBadge(ctx, level, x + w - 1, yy + 1, { dim, glow });
   if (flash > 0) { ctx.globalAlpha = flash * 0.8; rect(ctx, x + 1, yy + 1, w - 2, h - 2, PAL.white); ctx.globalAlpha = 1; }
   if (alpha !== 1) ctx.globalAlpha = 1;
 }
 // 혼의 금 · 각성 표(CHM-17): 금이 간 혼은 카드 왼쪽 위에서 흘러내리는 금(혼 빛깔로 비치는 틈), 깨어난 혼은 금빛 이중 테와 도는 모서리 빛.
 // 시안 셋(금선 · 금테 / 구석 표 / 기운) 가운데 1배에서 가장 잘 보이는 것을 골랐다 — docs/shots/souls/draft-*-deck, 보고서 docs/reports/souls.md
-const CRACK_PX = [[2, 1], [3, 2], [3, 3], [4, 4], [5, 4], [5, 5], [6, 6], [6, 7], [7, 8]];
+// 벡터(안 3): 금은 잉크 틈 위에 혼 빛깔 가는 선(깜빡인다), 각성의 도는 빛은 네 뿔 반짝(각성 막간처럼 키운 곳에서도 또렷하게)
+const CRACK_LINE = [[2.5, 1.5], [3.5, 3], [4.5, 4.5], [5.5, 5], [6.5, 7], [7.5, 8.5]];
+function crackPath(ctx, x, y) { ctx.beginPath(); CRACK_LINE.forEach(([dx, dy], i) => (i ? ctx.lineTo(x + dx, y + dy) : ctx.moveTo(x + dx, y + dy))); }
+const glintPaint = (g) => {
+  g.fillStyle = PAL.white;
+  g.beginPath(); g.moveTo(1.5, 0); g.quadraticCurveTo(1.75, 1.25, 3, 1.5); g.quadraticCurveTo(1.75, 1.75, 1.5, 3); g.quadraticCurveTo(1.25, 1.75, 0, 1.5); g.quadraticCurveTo(1.25, 1.25, 1.5, 0); g.closePath(); g.fill();
+};
 export function soulMark(ctx, p, x, y, w, h, time = null, dim = false) {
   const s = SOUL_BY_ID[p.soul];
   if (!s) return;
@@ -308,12 +316,13 @@ export function soulMark(ctx, p, x, y, w, h, time = null, dim = false) {
     edgeRing(ctx, x, y, w, h, 2, PAL.goldDk);
     const k = Math.floor(t * 3) % 4, corners = [[x + 1, y + 1], [x + w - 2, y + 1], [x + w - 2, y + h - 2], [x + 1, y + h - 2]];
     const [ax, ay] = corners[k];
-    rect(ctx, ax, ay, 1, 1, PAL.white);
+    blitVec(ctx, 'glint', ax - 1, ay - 1, 3, 3, glintPaint);
   } else {
-    for (const [dx, dy] of CRACK_PX) rect(ctx, x + dx, y + dy, 1, 1, PAL.ink);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    crackPath(ctx, x, y); ctx.strokeStyle = PAL.cardInk; ctx.lineWidth = 1; ctx.stroke();
     const k = 0.55 + 0.45 * Math.sin(t * 3.3);
     ctx.globalAlpha *= k;
-    for (const [dx, dy] of CRACK_PX.slice(1, -1)) rect(ctx, x + dx + 1, y + dy, 1, 1, s.col);
+    crackPath(ctx, x, y); ctx.strokeStyle = s.col; ctx.lineWidth = 0.5; ctx.stroke();
     ctx.globalAlpha /= k;
   }
   if (dim) ctx.globalAlpha /= 0.6;

@@ -2,7 +2,8 @@
 import { PAL, lightFill } from './palette.js';
 import { shade, softShadow, rpath, DROP } from './light.js';
 import { textImage, textWidth, inkBox, tinyText } from './text.js';
-import { soulOrb, SW, SH } from './sprites.js';
+import { orbPaint, SW, SH } from './sprites.js';
+import { blitVec } from './vec.js';
 import { fitPiece, artOf } from './pieces3.js';
 import { L } from '../ui/lang.js';
 import { LOG, logText, logFrame } from './layoutlog.js';
@@ -17,20 +18,14 @@ const R = (v) => (FINE ? snap(v) : Math.round(v));
 // 자리 하나를 지금 모드(정수 칸 · fine 안이면 1/N 칸)에 맞춘다 — gfx 밖에서 drawImage를 바로 부르는 그림용
 export const place = R;
 
-// 혼이 깃든 기물: 몸 뒤 왼쪽 위에 혼 빛깔 기운 한 점(천천히 떠오르며 깜빡인다)
-// hi(두 배 도트): 같은 3×3 자리에 반 도트로 구운 둥근 빛(sprites.js soulOrb)
-export function soulSpark(ctx, x, y, col, t = null, hi = false) {
+// 혼이 깃든 기물: 몸 뒤 왼쪽 위에 혼 빛깔 기운 한 점(천천히 떠오르며 깜빡인다). 3 × 3 자리의 둥근 빛을 그리는 곳의 배율로 굽는다(sprites.js orbPaint).
+// 옛 부름의 다섯째 인자(hi)는 쓰지 않는다
+export function soulSpark(ctx, x, y, col, t = null) {
   const k = t == null ? 0 : t;
   if (t != null) live();
-  const bob = Math.round(Math.sin(k * 2.5));
+  const bob = Math.sin(k * 2.5);
   const a = t == null ? 1 : 0.65 + 0.35 * Math.sin(k * 3.1);
-  ctx.globalAlpha *= a;
-  if (hi) ctx.drawImage(soulOrb(col), x, y + 5 + bob, 3, 3);
-  else {
-    ctx.fillStyle = col;
-    ctx.fillRect(x + 1, y + 6 + bob, 2, 2); ctx.fillRect(x + 2, y + 5 + bob, 1, 1); ctx.fillRect(x, y + 7 + bob, 1, 1);
-  }
-  ctx.globalAlpha /= a;
+  fine(() => blitVec(ctx, `orb:${col}`, x, y + 5 + bob, 3, 3, orbPaint(col), a));
 }
 
 export const W = 480, H = 270;

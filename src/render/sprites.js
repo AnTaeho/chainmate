@@ -1,6 +1,6 @@
-// 기물 톤 · 16×22 상자 · 작은 반 도트 그림. 기물 그림은 벡터(pieces3.js)이고 여기는 톤 표와 작은 반짝임만 둔다.
-import { makeCanvas, context } from './surface.js';
-import { LOOK, live } from './look.js';
+// 기물 톤 · 16×22 상자 · 작은 반짝임. 기물 그림은 벡터(pieces3.js)이고 여기는 톤 표와 금 기운 · 혼 기운 그림만 둔다.
+import { live } from './look.js';
+import { blitVec } from './vec.js';
 
 export const SW = 16, SH = 22;
 // w 내 쪽(상아) · b 적(흑단) · g 황금 적(금빛 테) · s 은빛(갈아입는 순간) · q 금빛 몸(승급)
@@ -33,55 +33,31 @@ export const ENG_EDGE = { gold: '#efbd55', silver: '#d8dee6', ivory: '#f2d6c4', 
 export const TIER = [null, { o: null, d: '#b8733a' }, { o: '#6f7f8a', d: '#dfe6ec' }, { o: '#9c6f24', d: '#efbd55' }];
 export const tierOf = (level) => (!level ? 0 : level <= 2 ? 1 : level <= 4 ? 2 : 3);
 
-// 반 도트 그림을 쓸지: 그리는 곳의 실제 배율(뒷면 N × 그리기 변환 × 기물 배율 s)이 2 이상일 때만.
-// N = 1 화면이나 1배 오프스크린 캔버스에는 16×22를 쓴다 — 32×44를 반으로 줄이면 도트가 빠진다.
-// N = 1이어도 두 배로 크게 그리는 곳(사슬 칸의 큰 기물)은 32×44가 1:1로 들어맞는다.
-// 변환을 모르는 캔버스(연기 시험의 가짜)는 LOOK.n을 따른다
-export function hiFor(ctx, s = 1) {
-  const t = ctx && ctx.getTransform ? ctx.getTransform() : null;
-  const a = t && typeof t.a === 'number' ? Math.hypot(t.a, t.b) : LOOK.n;
-  return a * Math.abs(s) >= 2 - 1e-6;
-}
-
-const CACHE = new Map();
-// 반 도트 작은 그림(기운 점 · 혼 기운 · 아이콘 · 문장 …)을 한 번 굽는다: rows의 문자 → [빛깔, 세기]. 그릴 때는 정수 칸 상자에 늘인다(N = 3에서 번지지 않게)
-export function baked(key, rows, cols) {
-  let c = CACHE.get(key);
-  if (c) return c;
-  c = makeCanvas(rows[0].length, rows.length);
-  const g = context(c);
-  rows.forEach((r, j) => [...r].forEach((ch, i) => { const v = cols[ch]; if (!v) return; g.globalAlpha = v[1]; g.fillStyle = v[0]; g.fillRect(i, j, 1, 1); }));
-  CACHE.set(key, c);
-  return c;
-}
-
-// 금 단계 기물 둘레의 기운 점과 반짝임(캔버스 밖이라 따로). t가 있으면 천천히 깜빡인다
-// 두 배: 반 도트 한 점 + 반 도트 두 칸 길이의 가는 십자(3×3 칸 상자에 구운 그림)
+// 금 단계 기물 둘레의 기운 점과 반짝임(캔버스 밖이라 따로). t가 있으면 천천히 깜빡인다.
+// 벡터(안 3): 밝을 때는 네 뿔 반짝, 흐릴 때는 둥근 빛 점 — 3 × 3 자리에 그리는 곳의 배율로 굽는다(각성 막간처럼 키운 곳에서도 또렷하게)
 const AURA = [[-2, 4], [16, 7], [-1, 14], [17, 15], [8, -2]];
-const STAR_HI = ['..a...', '..a...', 'aaCaa.', '..a...', '..a...', '......'];
-const DOT_HI = ['......', '......', '..C...', '......', '......', '......'];
-export function tierSparkle(ctx, x, y, t = null, hi = hiFor(ctx)) {
-  const a0 = ctx.globalAlpha;
+const SPARK = '#fff1b8';
+function starPaint(g) {
+  g.fillStyle = SPARK;
+  g.beginPath(); g.moveTo(1.5, 0); g.quadraticCurveTo(1.75, 1.25, 3, 1.5); g.quadraticCurveTo(1.75, 1.75, 1.5, 3); g.quadraticCurveTo(1.25, 1.75, 0, 1.5); g.quadraticCurveTo(1.25, 1.25, 1.5, 0); g.closePath(); g.fill();
+}
+function dotPaint(g) { g.fillStyle = SPARK; g.beginPath(); g.arc(1.5, 1.5, 0.6, 0, Math.PI * 2); g.fill(); }
+export function tierSparkle(ctx, x, y, t = null) {
   if (t != null) live();
   AURA.forEach(([i, j], k) => {
     const on = t == null ? 1 : 0.5 + 0.5 * Math.sin(t * 2.2 + k * 1.7);
     if (on < 0.25) return;
-    if (hi) {
-      const img = on > 0.7 ? baked('star', STAR_HI, { C: ['#fff1b8', 1], a: ['#fff1b8', 0.5] }) : baked('dot', DOT_HI, { C: ['#fff1b8', 1] });
-      ctx.globalAlpha = a0 * on;
-      ctx.drawImage(img, x + i - 1, y + j - 1, 3, 3);
-      return;
-    }
-    ctx.globalAlpha = a0 * on;
-    ctx.fillStyle = '#fff1b8'; ctx.fillRect(x + i, y + j, 1, 1);
-    if (on > 0.7) { ctx.globalAlpha = a0 * on * 0.5; ctx.fillRect(x + i - 1, y + j, 1, 1); ctx.fillRect(x + i + 1, y + j, 1, 1); ctx.fillRect(x + i, y + j - 1, 1, 1); ctx.fillRect(x + i, y + j + 1, 1, 1); }
+    if (on > 0.7) blitVec(ctx, 'spark:star', x + i - 1, y + j - 1, 3, 3, starPaint, on);
+    else blitVec(ctx, 'spark:dot', x + i - 1, y + j - 1, 3, 3, dotPaint, on);
   });
-  ctx.globalAlpha = a0;
 }
 
-// 혼 기운 한 점(gfx.soulSpark가 두 배일 때 쓴다): 3×3 칸 상자에 구운 둥근 빛 — 가운데 밝고 왼쪽 위에 빛 한 점
-const ORB_HI = ['..oo..', '.ohoo.', 'ooCCoo', 'ooCCoo', '.oooo.', '..oo..'];
-export function soulOrb(col) {
-  return baked(`orb:${col}`, ORB_HI, { o: [col, 0.75], C: [col, 1], h: ['#ffffff', 0.9] });
+// 혼 기운 한 점(gfx.soulSpark): 3 × 3 자리의 둥근 빛 — 옅은 달무리 · 진한 가운데 · 왼쪽 위 흰 빛 한 점
+export function orbPaint(col) {
+  return (g) => {
+    g.globalAlpha = 0.45; g.fillStyle = col; g.beginPath(); g.arc(1.5, 1.5, 1.5, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = 1; g.beginPath(); g.arc(1.5, 1.5, 1.05, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = 0.9; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(1.1, 1.1, 0.38, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = 1;
+  };
 }
-
