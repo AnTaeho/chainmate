@@ -2,11 +2,12 @@
 // 그리는 것은 두기를 누르면 열릴 대국 상태(run.js previewBattle) 그대로 — 적 · 벽 · 보석 · 금빛 적 · 첫 증원 예고, 안개 칸은 안개.
 // 손 · 덱은 그리지 않는다(대국을 열 때 섞는다).
 import { PAL } from '../render/palette.js';
-import { rect, frame, dots, sprite } from '../render/gfx.js';
+import { rect, sprite } from '../render/gfx.js';
+import { INK, blitVec } from '../render/vec.js';
 import { isHidden, visibleIncoming } from '../sim/battle.js';
 import { PIECES } from '../data/pieces.js';
 
-// 작은 판: 칸 PEEK.cell(테 1 둘레). 적은 종류마다 빛깔(킹 붉음 · 퀸 보라 · 룩 파랑 · 비숍 초록 · 나이트 주황 · 폰 짙은 밤 · 특수 기물 청록)
+// 작은 판: 칸 PEEK.cell(테 1 둘레). 적은 종류마다 빛깔 둥근 말(킹 붉음 · 퀸 보라 · 룩 파랑 · 비숍 초록 · 나이트 주황 · 폰 짙은 밤 · 특수 기물 청록)
 export const PEEK = { cell: 5, big: 12 };
 export const peekSize = (cell = PEEK.cell) => cell * 8 + 2;
 // 작은 판 칸: 대국 판과 같은 빛깔(모습을 따른다)
@@ -21,46 +22,51 @@ function ghosts(b) {
   visibleIncoming(b).forEach((wave, k) => { for (const r of wave || []) if (!b.board[r.sq] && !isHidden(b, r.sq) && !out.has(r.sq)) out.set(r.sq, { t: r.t, k }); });
   return out;
 }
-function fogCell(ctx, x, y, c, r) {
-  rect(ctx, x, y, c, c, PAL.fog);
-  for (let k = 0; k < c; k += 2) rect(ctx, x + ((k + r) % c), y + k, 1, 1, PAL.fogHi);
+// 안개 칸: 안개 빛깔에 옅은 빗금 둘
+function fogCell(g, x, y, c) {
+  g.fillStyle = PAL.fog; g.fillRect(x, y, c, c);
+  g.save(); g.beginPath(); g.rect(x, y, c, c); g.clip();
+  g.strokeStyle = PAL.fogHi; g.lineWidth = Math.max(0.5, c / 10);
+  g.beginPath(); for (const o of [c * 0.35, c * 0.85]) { g.moveTo(x + o - c, y + c); g.lineTo(x + o, y); g.moveTo(x + o, y + c); g.lineTo(x + o + c, y); } g.stroke();
+  g.restore();
 }
+const disc = (g, cx, cy, r, fill, lw) => { g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); if (lw) { g.strokeStyle = INK; g.lineWidth = lw; g.stroke(); } };
 
-// 작은 판(카드 안): (x, y)는 테 바깥 왼쪽 위
+// 작은 판(카드 안, 안 3 벡터): 잉크 테 · 판 칸 · 적은 종류 빛깔 둥근 말(잉크 테), 킹은 금 점, 벽은 돌 네모, 보석은 마름모, 증원 예고는 점선 고리.
+// 판 상태 · 칸 크기 · 모습 빛깔 · 배율마다 한 번 굽는다. (x, y)는 테 바깥 왼쪽 위
 export function miniBoard(ctx, b, x, y, { cell = PEEK.cell, dim = false } = {}) {
-  const c = cell, n = c * 8;
-  rect(ctx, x, y, n + 2, n + 2, PAL.frameDk);
-  const g = ghosts(b);
-  const m = c >= 5 ? 1 : 0, k = c - m * 2; // 기물 네모: 칸 안 여백 1(칸 5 이상)
-  for (let sq = 0; sq < 64; sq++) {
-    const p = at(x, y, c, sq), r = sq >> 3, f = sq & 7;
-    if (isHidden(b, sq)) { fogCell(ctx, p.x, p.y, c, r); continue; }
-    rect(ctx, p.x, p.y, c, c, (r + f) % 2 ? SQ.light : SQ.dark);
-    const cell0 = b.board[sq];
-    if (cell0 && !cell0.mine) {
-      if (cell0.t === 'X') { rect(ctx, p.x, p.y, c, c, PEEK_INK.X); rect(ctx, p.x, p.y, c, 1, '#a3abb0'); continue; }
-      if (cell0.t === 'J') { const h = c >> 1; rect(ctx, p.x + h, p.y + m, 1, k, PEEK_INK.J); rect(ctx, p.x + m, p.y + h, k, 1, PEEK_INK.J); continue; }
-      const ink = cell0.gold ? PAL.gold : peekInk(cell0.t);
-      rect(ctx, p.x + m, p.y + m, k, k, ink);
-      if (cell0.gold) rect(ctx, p.x + m, p.y + m, 1, 1, PAL.goldHi);
-      // 킹: 가운데 한 점을 밝게(메이트할 과녁)
-      if (cell0.t === 'K' && k >= 3) rect(ctx, p.x + (c >> 1), p.y + (c >> 1), 1, 1, PAL.goldHi);
-      continue;
+  const c = cell, n = c * 8, gh = ghosts(b);
+  const sig = b.board.map((q, sq) => (isHidden(b, sq) ? '~' : q && !q.mine ? q.t + (q.gold ? '*' : '') : gh.has(sq) ? `g${gh.get(sq).k}` : '.')).join('');
+  blitVec(ctx, `peek:${sig}:${c}:${dim ? 1 : 0}:${PAL.light}${PAL.dark}${PAL.fog}`, x, y, n + 2, n + 2, (g, N) => {
+    const lw = Math.max(0.6, 1 / N);
+    g.fillStyle = INK; g.fillRect(0, 0, n + 2, n + 2);
+    for (let sq = 0; sq < 64; sq++) {
+      const p = at(0, 0, c, sq), r = sq >> 3, f = sq & 7, cx = p.x + c / 2, cy = p.y + c / 2;
+      if (isHidden(b, sq)) { fogCell(g, p.x, p.y, c); continue; }
+      g.fillStyle = (r + f) % 2 ? SQ.light : SQ.dark; g.fillRect(p.x, p.y, c, c);
+      const q = b.board[sq];
+      if (q && !q.mine) {
+        if (q.t === 'X') { g.fillStyle = PEEK_INK.X; g.fillRect(p.x + 0.5, p.y + 0.5, c - 1, c - 1); g.strokeStyle = INK; g.lineWidth = lw; g.strokeRect(p.x + 0.5, p.y + 0.5, c - 1, c - 1); continue; }
+        if (q.t === 'J') { g.beginPath(); g.moveTo(cx, p.y + 0.6); g.lineTo(p.x + c - 0.6, cy); g.lineTo(cx, p.y + c - 0.6); g.lineTo(p.x + 0.6, cy); g.closePath(); g.fillStyle = PEEK_INK.J; g.fill(); g.strokeStyle = INK; g.lineWidth = lw; g.stroke(); continue; }
+        disc(g, cx, cy, c * 0.38, q.gold ? PAL.gold : peekInk(q.t), lw);
+        if (q.t === 'K') disc(g, cx, cy, c * 0.14, PAL.goldHi, 0);
+        continue;
+      }
+      const w = gh.get(sq);
+      if (w) { g.globalAlpha = w.k ? 0.5 : 1; g.setLineDash([c * 0.18, c * 0.14]); g.beginPath(); g.arc(cx, cy, c * 0.32, 0, Math.PI * 2); g.strokeStyle = PAL.shadow; g.lineWidth = lw; g.stroke(); g.setLineDash([]); g.globalAlpha = 1; }
     }
-    const gh = g.get(sq);
-    if (gh) { ctx.globalAlpha = gh.k ? 0.5 : 1; frame(ctx, p.x + m, p.y + m, k, k, PAL.shadow); ctx.globalAlpha = 1; }
-  }
-  if (dim) { ctx.globalAlpha = 0.45; rect(ctx, x, y, n + 2, n + 2, PAL.felt); ctx.globalAlpha = 1; }
+    if (dim) { g.globalAlpha = 0.45; g.fillStyle = PAL.felt; g.fillRect(0, 0, n + 2, n + 2); g.globalAlpha = 1; }
+  });
 }
 
 // 큰 판(왼쪽 칸 설명 자리): 반 크기 기물 그림(8 × 11)을 칸 12에. (x, y)는 테 바깥 왼쪽 위
 export function bigBoard(ctx, b, x, y, { cell = PEEK.big } = {}) {
   const c = cell, n = c * 8;
-  rect(ctx, x, y, n + 2, n + 2, PAL.frameDk);
+  rect(ctx, x, y, n + 2, n + 2, INK);
   const g = ghosts(b);
   for (let sq = 0; sq < 64; sq++) {
     const p = at(x, y, c, sq), r = sq >> 3, f = sq & 7;
-    if (isHidden(b, sq)) { fogCell(ctx, p.x, p.y, c, r); continue; }
+    if (isHidden(b, sq)) { fogCell(ctx, p.x, p.y, c); continue; }
     rect(ctx, p.x, p.y, c, c, (r + f) % 2 ? PAL.light : PAL.dark);
     const cell0 = b.board[sq];
     // 반 크기 기물: sprite는 16 × 22 자리의 아래 가운데에 8 × 11로 그린다 — 칸 안 (2, 1)에 오게 당긴다
@@ -72,7 +78,7 @@ export function bigBoard(ctx, b, x, y, { cell = PEEK.big } = {}) {
     }
     const gh = g.get(sq);
     if (gh) {
-      dots(ctx, p.x, p.y, c, c, gh.k ? PAL.dimDk : PAL.shadow, 2);
+      ctx.setLineDash([2, 1.5]); ctx.strokeStyle = gh.k ? PAL.dimDk : PAL.shadow; ctx.lineWidth = 1; ctx.strokeRect(p.x + 1, p.y + 1, c - 2, c - 2); ctx.setLineDash([]);
       sprite(ctx, gh.t, 'b', px, py, { sx: 0.5, sy: 0.5, alpha: gh.k ? 0.2 : 0.35 });
     }
   }
