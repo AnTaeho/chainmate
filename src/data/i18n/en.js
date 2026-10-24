@@ -69,6 +69,7 @@ export const EN = {
   '전술은 놓기 전에 눌러서 이번 대국에 한 번 써': 'Tap a tactic before you drop to use it once this match',
   '창이 작아서 글이 작아. 설정에서 큰 글자를 켤 수 있어': 'Small window, small text. Turn on Large Text in Settings',
   // 낱말 풀이(glossary.js)
+  '한 수에 잡은 적의 수. 잡을 때마다 그 기물로 바뀌어 콤보 칸이 하나씩 찬다': 'Captures this move. Each capture turns you into that piece and fills one chain slot',
   '용어 사전': 'Glossary', '콤보': 'Chain', '값': 'Value', '배수': 'Mult', '모습': 'Form',
   // 풀이 글은 glossary.js TERMS의 영어 칸(enWord · enSay)에 있다
   // 글 다시 쓰기: 「언제 → 무엇」(친절 손질)

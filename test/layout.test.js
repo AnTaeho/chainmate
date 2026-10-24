@@ -42,48 +42,56 @@ test('토큰: 이름마다 한 값(후보 2) · 시안 덮어쓰기는 이름 �
   assert.equal(F.rowBoxH(F.PAD_CARD), 28);
 });
 
-test('대국 왼쪽 칸: 머리 칸 · 값 × 배수 · 사슬 칸 · 아래 칸이 위아래로 쌓여 사슬 칸이 남는다(수업 제목 두 줄 · 영어 포함)', () => {
-  const { headLayout, footLayout, sideStack } = M.common;
-  const { LEFT, PAD_BOX, GAP_GROUP } = M.frame;
+// 안 3: 왼쪽 칸은 판넬 없이 관 줄 → 대국 이름 → 점수 → 목표 막대 → 값 × 배수 큰 칸 → 빈 자리 → 아래에서부터 줄(17).
+// 빈 자리는 다시 두기의 견주기 두 줄(28 이상) · 수업의 콤보 줄(이름표 14 + 모습 18 = 33 이상)이 쓴다
+test('대국 왼쪽 칸: 점수 · 막대 · 값 × 배수 · 빈 자리 · 아래 줄이 겹치지 않는다(수업 제목 두 줄 · 영어 포함)', () => {
+  const B = M.battle, { LEFT, PAD_BOX } = M.frame;
+  const run = M.run.createRun({ seed: 1, draft: false });
+  const lay = (spec, r) => B.BattleScreen.prototype.leftLayout.call({ headSpec: () => spec, run: r });
   for (const lang of LANGS) {
     M.lang.setLang(lang);
-    // 대국: 제목 한 줄, 목표 · 점수(상금이 관 줄에 안 들어가면 한 줄 더), 아래 칸 넷
-    for (const rows of [2, 3]) {
-      const st = sideStack(headLayout(1, rows).h, footLayout(4).h);
-      const chain = st.mid.h - M.battle.VAL_H - GAP_GROUP;
-      assert.ok(chain >= 22 + 4, `${lang} 대국 사슬 칸 ${chain}`);
-      if (rows === 2) assert.ok(chain >= 44 + 4, `${lang} 대국 사슬 칸(두 배 모습) ${chain}`);
+    for (const clock of [0, 3]) {
+      run.clockMax = clock; run.clock = clock;
+      const l = lay({ kicker: '1/8관', right: '이기면 $3', titles: ['농민군 · 연습'], target: '150', targetN: 150 }, run);
+      assert.ok(l.score + 33 < l.bar.y && l.bar.y + l.bar.h < l.val.y, `${lang} 점수 → 막대 → 값 칸`);
+      assert.ok(l.chain.h >= 28, `${lang} 시계 ${clock}: 견주기 자리 ${l.chain.h}`);
+      assert.equal(l.rowsTop + l.n * 17, 270 - 8);
     }
-    // 수업: 제목이 줄바꿈되고 상금 줄이 없다
     for (const L of M.lessons.LESSONS) {
-      const n = M.text.wrap(L.title, LEFT.w - PAD_BOX * 2, true).length;
-      const st = sideStack(headLayout(n, 2).h, footLayout(3).h);
-      assert.ok(st.mid.h - M.battle.VAL_H - GAP_GROUP >= 26, `${lang} 수업 ${L.id}`);
+      const titles = M.text.wrap(L.title, LEFT.w - PAD_BOX * 2, true);
+      const l = lay({ kicker: 'x 1/3', right: null, titles, target: '체크메이트' }, null);
+      assert.ok(l.chain.h >= 33, `${lang} 수업 ${L.id}: 콤보 줄 ${l.chain.h}`);
     }
   }
+  M.lang.setLang('ko');
 });
 
-test('오른쪽 칸: 격언 다섯 칸 · 시너지 띠 · 손 이름표 · 손이 화면 안, 칸이 늘면 두 줄로', () => {
-  const lay = M.battle.BattleScreen.prototype.rightLayout.call({});
-  const { TOP } = M.frame;
+// 안 3: 오른쪽 칸은 위 줄(콤보 수 · 행마) → 콤보 칸(알약, 다섯까지) → 시너지 띠 → 격언 칸(그림만, 한 줄에 다섯) → 손 이름표 줄 → 부채꼴 손
+test('오른쪽 칸: 콤보 칸 · 시너지 띠 · 격언 칸 · 손 이름표 · 손이 겹치지 않고 화면 안, 격언 칸이 늘면 두 줄', () => {
+  const B = M.battle, { FAM_H, GAP_IN } = M.frame;
   const run = M.run.createRun({ seed: 1, draft: false });
-  const five = M.parts.maximColumnH(run, lay.room);
-  assert.equal(five.cols, 1);
-  assert.ok(TOP + five.used <= lay.stripY - M.frame.GAP_GROUP);
-  assert.equal(lay.handY + lay.HAND_H, BOTTOM);
+  const at = () => B.BattleScreen.prototype.rightLayout.call({}, run);
+  let lay = at();
+  assert.equal(lay.mrows, 1);
+  assert.equal(lay.comboN, 5);
+  assert.ok(lay.comboY + lay.comboN * (B.COMBO.h + B.COMBO.gap) - B.COMBO.gap <= lay.stripY - 2);
+  assert.ok(lay.stripY + FAM_H <= lay.maxY && lay.maxY + B.MAXC.h <= lay.rowY);
+  assert.ok(lay.handY + lay.HAND_H <= BOTTOM && lay.rowY + 18 <= lay.handY - B.HAND.lift);
   run.maximSlots = 7;
-  const seven = M.parts.maximColumnH(run, lay.room);
-  assert.equal(seven.cols, 2);
-  assert.ok(seven.used <= lay.room);
+  lay = at();
+  assert.equal(lay.mrows, 2);
+  assert.ok(lay.comboN >= 3, `격언 일곱이면 콤보 칸 ${lay.comboN}`);
+  assert.ok(lay.stripY + FAM_H <= lay.maxY && lay.maxY + 2 * B.MAXC.h + 2 <= lay.rowY);
+  // 수업(판 없음): 킹의 말 아래에 콤보 칸이 없고, 손 이름표 줄은 그대로
+  assert.equal(B.BattleScreen.prototype.rightLayout.call({}).mrows, 0);
 });
 
-// CHM-40: 다시 놓기 단추는 손 이름표 줄에 있어 격언 칸 자리를 먹지 않는다 — 첫 수 전 · 기본 다섯 칸도 한 줄(이름이 다 보인다)
 test('오른쪽 칸: 다시 놓기가 보이는 첫 수 전에도 격언 다섯 칸은 한 줄 · 단추는 희생 앞에 들어간다', () => {
   const { RX, RW } = M.battle;
   const run = M.run.createRun({ seed: 1, draft: false });
   const self = { run, canReboard: () => true };
   const lay = M.battle.BattleScreen.prototype.rightLayout.call(self, run);
-  assert.equal(M.parts.maximColumnH(run, lay.room).cols, 1);
+  assert.equal(lay.mrows, 1);
   // 묘수 0 · 1 · 2개와 다시 놓기가 희생 단추(폭 62, 틈 3) 앞에 들어간다
   for (const lang of LANGS) {
     M.lang.setLang(lang);
@@ -625,26 +633,24 @@ test('마스터전 제목: 마스터 여덟 이름이 머리 칸 제목 줄에 �
   M.lang.setLang('ko');
 });
 
-// 다음 수(CHM-60): 손 카드 오른쪽 끝의 좁은 칸 — 카드 1~5장과 겹치지 않고, 넷째 카드의 「!?」 딱지와도 겹치지 않고, 화면 안
-test('다음 수 칸: 손 카드 · 「!?」 딱지와 겹치지 않고 오른쪽 칸 안에 든다', async () => {
+// 다음 수(CHM-60 · 안 3): 손 부채 왼쪽 아래 작은 칸 둘 — 카드 1~6장 · 「!?」 딱지와 겹치지 않고, 화면 안, 판 아래 변 밑
+test('다음 수 칸: 손 카드 · 「!?」 딱지와 겹치지 않고 화면 안 · 손 부채는 판 오른쪽 아래 변 밑에 든다', async () => {
   const { handTagRect } = await import('../src/ui/annot.js');
   const B = M.battle;
   const lay = B.BattleScreen.prototype.rightLayout.call({});
-  const col = B.nextColumn(lay);
   const over = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  assert.equal(col.x + col.w, B.RX + B.RW);
-  assert.ok(col.y >= lay.handY && col.y + col.h <= BOTTOM, `칸 ${col.y}~${col.y + col.h}`);
-  for (const r of col.slots) assert.ok(r.w >= 10 && r.h >= 11 + 2, '반 크기 기물(8×11)이 테 안에 든다');
-  for (let n = 1; n <= 5; n++) {
-    for (let i = 0; i < n; i++) {
-      const hr = B.BattleScreen.prototype.handRect.call({}, i, n, lay);
-      assert.ok(hr.w >= 17, `${n}장 카드 폭 ${hr.w}(기물 16이 든다)`);
+  for (let n = 1; n <= 6; n++) {
+    const hand = Array.from({ length: n }, (_, i) => B.BattleScreen.prototype.handRect.call({}, i, n, lay));
+    const col = B.nextColumn(lay, hand[0].x);
+    assert.ok(col.x >= B.BX && col.y + col.h <= BOTTOM && col.labelY >= 230, `${n}장: 다음 칸 ${JSON.stringify(col)}`);
+    for (const r of col.slots) assert.ok(r.w >= 14 && r.h >= 18, '기물이 칸 안에 든다');
+    hand.forEach((hr, i) => {
+      assert.ok(hr.w >= 30 && hr.x + hr.w <= B.RX + B.RW && hr.y + hr.h <= BOTTOM, `${n}장 ${i}째 카드 ${JSON.stringify(hr)}`);
+      assert.ok(hr.x >= B.fanLeft(lay.handY - B.HAND.lift), `${n}장 ${i}째 카드가 판 변 위로 올라간다`);
       assert.ok(!over(hr, col), `${n}장 ${i}째 카드가 다음 수 칸과 겹친다`);
-      for (const lift of [0, 4]) assert.ok(!over(handTagRect(hr.x, hr.y - lift, hr.w, 0), col), `${n}장 ${i}째 「!?」`);
-    }
+      for (const lift of [0, B.HAND.lift]) assert.ok(!over(handTagRect(hr.x, hr.y - lift, hr.w, 0), col), `${n}장 ${i}째 「!?」`);
+    });
   }
-  // 넷이면 카드는 22(전에는 25)
-  assert.equal(B.BattleScreen.prototype.handRect.call({}, 0, 4, lay).w, 22);
 });
 
 // CHM-68 뒤: 연줄로 명경기 조각이 흔해져 전설 화면에 격언을 많이 들고 들어온다. 가진 격언 칸이 넘치면 여러 줄로 나란히(아이콘만),

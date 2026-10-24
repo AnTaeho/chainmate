@@ -4,50 +4,50 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
-import { SW, SH, tierOf } from '../../render/sprites.js';
-import { center as sqCenter, centerAt, projectSq, unproject, sqBox, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM } from '../../render/board3.js';
+import { W, H, text, box, rect, rrect, rframe, R_BIG, radiusOf, frame, line, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
+import { SW, SH, tierOf, ENG_EDGE } from '../../render/sprites.js';
+import { center as sqCenter, centerAt, projectSq, unproject, sqBox, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
 import { piece3, fitPiece, pieceCanvas, pieceChips, scaleOf, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { mateBlocked } from '../../sim/tuning.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
-import { FAMILY_BY_ID } from '../../data/families.js';
+import { FAMILY_BY_ID, maximFamilies } from '../../data/families.js';
 import { familyStrip, josekiBadges, traitMark } from '../parts-depth.js';
 import { TRAIT_BY_ID } from '../../data/traits.js';
 import { JOSEKI_BY_ID } from '../../data/josekis.js';
-import { L, getLang } from '../lang.js';
+import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
-import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
+import { REWARD, ANTES, maximCapacity } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
 import { FACTION_BY_ID } from '../../data/factions.js';
-import { drawCrest } from '../../render/crests.js';
 
 // 대국의 세력(버릇 조정자 faction:<id>) — 수업은 없다
 export const factionOfBattle = (b) => { const s = b && b.mods && b.mods.find((x) => typeof x.id === 'string' && x.id.startsWith('faction:')); return s ? FACTION_BY_ID[s.id.slice(8)] : null; };
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { Seq, ease, lerp } from '../anim.js';
 import { sway } from '../sway.js';
-import { glow, glowText, groundShadow, flicker, shade } from '../../render/light.js';
+import { glow, glowText, groundShadow, flicker } from '../../render/light.js';
 import { live as motion, beat } from '../../render/look.js';
-import { button, tipHeight } from '../ui.js';
+import { button, tipHeight, growHit, pillR } from '../ui.js';
 import { keyHeight } from '../glossary.js';
 import { SIDE_W, NOTE_GAP } from '../placement.js';
-import { maximColumn, maximColumnH, pieceCard, pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel } from '../parts.js';
+import { pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel, maximCard, maximTip, edgeRing, chartBadge, soulMark, fragmentStrip } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
-import { pauseButton, headLayout, footLayout, sideStack, drawFoot, shardTo, hallText, clockRow, hasClock, clockPips, clockTip } from './common.js';
-import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S, EDGE_PAD, rowSpan } from '../frame.js';
+import { pauseButton, shardTo, hasClock, clockPips, clockTip, SIDE } from './common.js';
+import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S, INK_H } from '../frame.js';
+import { INK_DESC } from '../../render/layoutlog.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { drawPortrait } from '../../render/portraits.js';
 import { wrap } from '../../render/text.js';
 import { Marks, drawMarkSquares, drawMarkArrows } from '../marks.js';
 import { awakenFlow } from './awaken.js';
-import { SOUL_BY_ID } from '../../data/souls.js';
+import { SOUL_BY_ID, isCracked } from '../../data/souls.js';
 import { ANNOT, drawAnnot, annotSize, handTagRect, boardTagRect, offeredRow, drawMore } from '../annot.js';
 import { drawStars, starsW, starCount, STAR_N } from '../stars.js';
 import { capRoute, routeAt, bendDur } from '../fxroute.js';
-import { puff, chip, screenFlash, sparkBurst, confetti, flyCoins, boldText, kickMoney, stepScale, seeded, CAP } from '../juice.js';
+import { puff, chip, screenFlash, sparkBurst, confetti, flyCoins, boldText, kickMoney, stepScale, CAP, moneyShake } from '../juice.js';
 import { noteStep, reviewGen, cloneBattle } from '../../sim/replay.js';
 import { openCombo, drawCombo, comboLand, comboClose, emberMark } from '../ignite.js';
 import { reviewOn, forkTitle, forkLine, forkScores, forkScoreLines, forkScoreRows, forkMarks, NO_PATH, THINKING } from '../review.js';
@@ -60,22 +60,34 @@ const NOTE_ROOM = 266; // 설명 묶음이 쓸 수 있는 높이(화면 270 - �
 export const REVIEW_SLICE_MS = 12, REVIEW_WALL = 3;
 
 // 판 자리(bbox): BX · BY에서 S × 8 네모. 칸 자리는 투영(src/render/board3.js — 안 3 마름모)이 정한다
-export const S = 28, BX = 128, BY = 30; // 판 위에 목표 막대 자리를 두려고 mockup(23)보다 7px 내렸다
+export const S = 28, BX = 128, BY = 14; // 목표 막대가 왼쪽 칸으로 가서(안 3) 판을 위로 올렸다. 위 14줄은 수업 · 복기 제목 줄
 export { sqCenter };
 // 게임 좌표 → 판 칸(판 밖이면 -1)
 export const sqAt = (x, y) => { const sq = unproject(x, y); return sq == null ? -1 : sq; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
 // 대국이 끝난 뒤 막간 화면(afterSeq → app.flow): 날던 동전 · 명국 조각이 이어 난다
 const AFTER = new Set(['reward', 'chest', 'awaken', 'legend']);
-// 다음 수(CHM-60, docs/design-notes/agency.md A): 손 카드 오른쪽 끝의 좁은 칸에 덱 맨 앞 둘을 반 크기 기물로(위가 먼저, 흐리게).
-// 새 카드는 손 오른쪽 끝에 붙으니 들어오는 쪽에 둔다. 손 카드는 그만큼 좁아진다(넷이면 25 → 22).
-// 칸 둘은 손 높이(36)의 아래쪽에 — 넷째 카드의 「!?」 딱지(오른쪽 위 밖으로 2 · 위로 4)와 떨어지게.
-export const NEXT_COL = { w: 10, gap: 2, slotH: 15, slotGap: 2 };
-export function nextColumn(lay) {
-  const { w, slotH, slotGap } = NEXT_COL, h = slotH * 2 + slotGap;
-  const x = RX + RW - w, y = lay.handY + lay.HAND_H - h;
-  return { x, y, w, h, slots: [0, 1].map((k) => ({ x, y: y + k * (slotH + slotGap), w, h: slotH })) };
+// 다음 수(CHM-60, docs/design-notes/agency.md A): 덱 맨 앞 둘을 손 부채 왼쪽 아래 작은 칸 둘에(왼쪽이 먼저, 흐리게), 위에 「다음」 이름표.
+// fanX: 손 부채의 왼끝(handRect(0).x) — 그 왼쪽 틈 6에 붙인다
+export const NEXT_COL = { w: 16, h: 22, gap: 3, sep: 6 };
+export function nextColumn(lay, fanX = RX) {
+  const { w, h, gap, sep } = NEXT_COL, cw = w * 2 + gap;
+  const x = fanX - sep - cw, y = 270 - 4 - h;
+  return { x, y, w: cw, h, labelY: y - LINE + 1, slots: [0, 1].map((k) => ({ x: x + k * (w + gap), y, w, h })) };
 }
+// 손 부채(안 3): 카드 폭 · 높이 · 걸음(겹침) · 고른 카드 들림 · 카드마다 기울기(도)
+export const HAND = { w: 42, h: 48, hLesson: 40, step: 44, lift: 6, deg: 4 };
+// 판 오른쪽 아래 변(h1 꼭짓점 → h8 꼭짓점) 밑에 카드 윗변 y가 들어가는 가장 왼쪽 x(두께 · 기울기 몫 6을 더 둔다)
+export function fanLeft(y) {
+  const g = boardGeo(), B = g.at(8, 0), R = g.at(8, 8), lim = y - DEPTH - 6;
+  if (lim >= B.y) return BX;
+  return Math.ceil(B.x + ((lim - B.y) * (R.x - B.x)) / (R.y - B.y));
+}
+// 오른쪽 칸 격언 칸(그림만) · 콤보 칸 · 왼쪽 칸 줄의 크기
+export const MAXC = { w: 21, h: 26 }, MAXIM_ROW = 5;
+export const COMBO = { top: 39, h: 18, gap: 3, max: 5 };
+const ROW_L = 17, PX = 4, VAL_W = 47;
+const maximSlotsOf = (run) => Math.max(maximCapacity(run) + run.maxims.filter((m) => m.legendary).length, run.maxims.length);
 // 손 이름표 줄 오른쪽 희생 단추: 아이콘 + 이름이 62 안에 들어가면 그대로. 안 들어가면(영어 「Sacrifice」 굵게 57) 아이콘을 빼고
 // 이름에 맞춘 폭(테 1 + 틈 2 양쪽 — 단추 글 안 여백 검사). 손 이름표 줄(handRowLayout)은 이 폭을 뺀 자리를 쓴다(CHM-40)
 export function discardButton() {
@@ -83,9 +95,8 @@ export function discardButton() {
   return tw + 10 + 6 <= 62 ? { w: 62, icon: true } : { w: Math.max(62, tw + 7), icon: false };
 }
 const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 · ×5 · ×10) = 넘친 층
-// 대국 왼쪽 칸(판 틀 공통 쌓기 — common.js sideStack): 머리 칸(관 · 대국 종류 · 목표 · 점수) → 값 × 배수 → 사슬 칸(남는 높이)
-// … 아래 칸(수 · 희생 · 상금 · 덱). 값 × 배수 칸은 값 칸(단추처럼 글이 가운데) 높이 VAL_H.
-export const VAL_H = 22;
+// 대국 왼쪽 칸(안 3): 값 × 배수 큰 칸 높이(이름표 줄 + 두 배 수)
+export const VAL_H = 38;
 const INTRO = 1.5; // 마스터 등장 장면 길이(초, 벽시계)
 // 멈칫(hit-stop) 예산(초, ×1): 한 수의 멈칫 합은 move까지, 그중 잡기 멈칫은 impact까지. 멈칫은 Seq 밖의 시간이라 한 수 연출 4초 안에 같이 든다(smoke가 더해 잰다)
 export const STOP = { move: 0.25, impact: 0.15 };
@@ -324,10 +335,12 @@ export class BattleScreen {
     if (this.rv) {
       const rb = this.reviewBox();
       if (rb.y > BY + 4) return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: rb.y - 2, top: Math.min(top, rb.y - 22) };
-      return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: BY + S * 8 - 4, top: rb.y + rb.h + 2 };
+      return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: Math.min(BY + S * 8 - 4, this.nextLabelY() - 3), top: rb.y + rb.h + 2 };
     }
-    return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: BY + S * 8 - 4, top };
+    // 밑변은 손 부채 왼쪽의 「다음」 이름표 위(안 3 — 판 아래 오른쪽에 손이 선다)
+    return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: Math.min(BY + S * 8 - 4, this.nextLabelY() - 3), top };
   }
+  nextLabelY() { return nextColumn(this.rightLayout(this.run)).labelY; }
   // 대국 시작 띠의 자리(drawOver · toastSpot). 명인 띠: 이름(두 배, 초상 왼쪽 146에 안 들어가면 한 배) → 묶음 틈 → 규칙 글(줄마다 LINE) — 띠 높이는 글에 맞춘다(초상 64 이상)
   bannerBox() {
     const bn = this.banner, row = bn.news ? 26 : 0;
@@ -879,7 +892,7 @@ export class BattleScreen {
   // 갈림길 카드 자리(판 아래쪽, 판 폭 안 — hug): 복기 중이면 한 줄, 카드면 제목 → 묶음 안 틈 → 문장 · 점수 → 묶음 틈 → 단추 줄
   reviewBox() {
     const rv = this.rv, CW = S * 8 - 8, P = PAD_BOX, tw = CW - P * 2;
-    const x = BX + Math.floor((S * 8 - CW) / 2), bottom = BY + S * 8 - 4;
+    const x = BX + Math.floor((S * 8 - CW) / 2), bottom = Math.min(BY + S * 8 - 4, this.nextLabelY() - 3);
     const f = flow(P), rows = [];
     let by = null;
     if (rv.phase === 'think') rows.push([THINKING, f.line(), PAL.dim, false]);
@@ -1158,7 +1171,8 @@ export class BattleScreen {
   // 점수 줄에 겹쳤다(CHM-67). 잉크 윗변을 머리 칸 아랫변 바로 밑에 두면 아래쪽(그림자까지)은 값 칸 윗테 · 안 여백에 걸치고 칸 안 수(VT)에는 닿지 않는다.
   // 상금은 아래 칸 상금 줄 위로 떠오른다(예전 그대로)
   pop(s, where, { col = null, delay = 0, dx = 0, align = 'center' } = {}) {
-    const lay = this.leftLayout(), vy = lay.val.y - GAP_GROUP;
+    // 안 3: 값 칸 위는 목표 막대라 몫은 값 칸 바로 아래 빈 자리에 머문다
+    const lay = this.leftLayout(), vy = lay.val.y + VAL_H + 2;
     const pos = where === 'value' ? { x: LX + 24 + dx, y: vy } : where === 'mult' ? { x: LX + 88 + dx, y: vy } : { x: LX + LW - 20, y: shardTo().y - 6 };
     const rise = where === 'money' ? 10 : 0;
     const c = col || (where === 'value' ? PAL.val : PAL.gold);
@@ -1438,11 +1452,23 @@ export class BattleScreen {
   // 건너뛴 프레임: 막대 끝이 따라가는 시각만 옮긴다(app.frame — 늘 그릴 때와 같은 걸음)
   settle(time) { if (this.bar) this.bar.t = time; }
 
-  // 목표는 막대로: 지금 점수는 채움, 이번 사슬로 얻을 몫(값 × 배수)은 빗금으로 미리 차오른다.
+  // 목표는 막대로(왼쪽 칸 점수 아래 — 안 3): 지금 점수는 채움, 이번 사슬로 얻을 몫(값 × 배수)은 빗금으로 미리 차오른다.
   // 목표를 넘기면 막대가 ×2 · ×5 · ×10 눈금으로 늘어나고 채움 끝에 불이 붙는다.
   // 사슬 중에는 막대 끝을 늘 다음 눈금에 둔다: 목표를 넘겨도 막대가 꽉 차지 않고 다음 눈금까지 계속 차오른다
-  // (대국은 사슬이 끝난 뒤에 끝난다 — 규칙과 같다). 눈금이 바뀌면 막대는 한 번에 튀지 않고 늘어난다.
-  drawGoalBar(ctx) {
+  // (대국은 사슬이 끝난 뒤에 끝난다 — 규칙과 같다). 눈금이 바뀌면 막대는 한 번에 튀지 않고 늘어난다. 얻을 몫(+N)은 「점수」 이름표 줄 오른쪽
+  // 얻을 몫(이번 사슬의 값 × 배수): 「점수」 이름표 줄 오른쪽(몫이 오를 때 잠깐 밝아진다 · 목표를 넘길 몫이면 더 밝다)
+  drawGain(ctx, lay) {
+    const v = this.view, tgt = v.target, time = this.app.time;
+    if (!tgt || this.hideGain) return;
+    const going = !!v.chain && !v.gather;
+    const live = going ? Math.floor(v.chain.value * v.chain.mult) : v.gather && !v.count ? v.gather.score : 0;
+    if (live <= 0) return;
+    const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
+    const gs = `+${fitNum(live, LW / 2)}`, gsw = measure(gs, true), gy = lay.scoreLab;
+    glowText(ctx, LX + LW - PX - gsw, gy, gsw, 12, PAL.gold, (score + live >= tgt ? 0.45 * flicker(time, 5) : 0.2) + this.pulseAt('gain', live, time) * 0.5, 8);
+    text(ctx, gs, LX + LW - PX, gy, PAL.gold, { align: 'right', bold: true, shadow: PAL.shadow });
+  }
+  drawGoalBar(ctx, lay = this.leftLayout()) {
     const v = this.view, tgt = v.target;
     if (!tgt) return;
     const time = this.app.time;
@@ -1452,53 +1478,44 @@ export class BattleScreen {
     const total = score + live;
     const maxMul = BAR_TIERS.find((m) => (going ? total < m * tgt : total <= m * tgt)) ?? BAR_TIERS[BAR_TIERS.length - 1];
     const maxV = this.barScale(tgt * maxMul, time);
-    const X = BX, Y = 15, Wd = S * 8, Hh = 7;
-    // 목표 막대를 빈 상자로 적는다(막대 테) — smoke 「글 넘침」이 알림(toastSpot)과 겹치면 「상자 겹침」으로,
-    // 막대 위 얻을 몫(+N, 상자 밖 글)을 알림이 덮으면 「글이 상자 밖」으로 잡는다(CHM-48). 수업 제목 줄(y 1)은 막대 상자 밖이다
+    const X = LX + 1, Y = lay.bar.y, Wd = LW - 2, Hh = lay.bar.h;
+    // 목표 막대를 빈 상자로 적는다(막대 테) — smoke 「글 넘침」이 알림 · 다른 글과 겹치면 잡는다(CHM-48)
     openBox('tile', X - 1, Y - 1, Wd + 2, Hh + 2, 0, { name: '목표 막대' });
     closeBox();
     this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '콤보가 끝났을 때 점수가 목표를 넘으면 이겨요. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어나요') });
-    // 목표를 넘긴 막대 뒤 빛(막대 칸 뒤 층)
     if (score >= tgt) glow(ctx, X, Y, Math.round(Wd * Math.min(1, score / maxV)), Hh, PAL.gold, 0.3 * flicker(time, 4), 5);
-    box(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, PAL.feltDk, PAL.frameDk);
+    // 둥근 막대: 깊은 남색 + 옅은 테(빈 자리와 같은 결), 채움은 금빛 둥근 판
+    rrect(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, (Hh + 2) / 2, PAL.slotEdge);
+    rrect(ctx, X, Y, Wd, Hh, Hh / 2, PAL.slot);
     const fill = Math.round(Wd * Math.min(1, score / maxV));
     const hot = score >= tgt;
-    rect(ctx, X, Y, fill, Hh, hot ? PAL.gold : PAL.goldDk);
-    if (fill > 1) rect(ctx, X, Y, fill, 1, PAL.goldHi);
+    if (fill > 0) rrect(ctx, X, Y, Math.max(fill, Hh), Hh, Hh / 2, hot ? PAL.gold : PAL.goldDk);
     const gw = Math.round(Wd * Math.min(1, total / maxV)) - fill;
     if (gw > 0) {
       ctx.fillStyle = PAL.gold;
       const hk = beat(time, 8);
-      for (let i = 0; i < gw; i++) for (let j = 0; j < Hh; j++) if ((i + j + hk) % 3 === 0) ctx.fillRect(X + fill + i, Y + j, 1, 1);
-      // 얻을 몫: 채움 끝 위 가운데, 판 폭 안으로(왼쪽 칸 · 오른쪽 칸을 덮지 않게)
-      const gs = `+${num(live)}`, gw2 = Math.ceil(measure(gs, true) / 2);
-      const gx = Math.max(X + gw2, Math.min(X + Wd - gw2, X + fill + gw / 2));
-      // 얻을 몫의 빛: 목표를 넘길 몫이면 더 밝다(몫이 오를 때 잠깐 밝아진다)
-      if (!this.hideGain) glowText(ctx, gx - gw2, 1, gw2 * 2, 12, PAL.gold, (total >= tgt ? 0.45 * flicker(time, 5) : 0.2) + this.pulseAt('gain', live, time) * 0.5, 8);
-      if (!this.hideGain) text(ctx, gs, gx, 1, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
+      for (let i = 0; i < gw; i++) for (let j = 1; j < Hh - 1; j++) if ((i + j + hk) % 3 === 0) ctx.fillRect(X + fill + i, Y + j, 1, 1);
     }
-    // 눈금: 목표(×1)는 흰 막대(사슬 중에 넘기면 금빛으로 깜빡인다), 넘친 층은 작은 숫자
+    // 눈금: 목표(×1)는 흰 막대(사슬 중에 넘기면 금빛으로 깜빡인다), 넘친 층은 붉은 막대 + 작은 숫자(막대 아래)
     const passed = going && total >= tgt && beat(time, 6) % 2 === 0;
     for (const m of BAR_TIERS) {
       if (m * tgt > maxV + 0.5) break;
       const tx = X + Math.round((Wd * m) / maxV * tgt) - 1;
-      rect(ctx, tx, Y - 3, 2, Hh + 6, m === 1 ? (passed ? PAL.goldHi : PAL.white) : PAL.red);
-      if (m > 1) { rect(ctx, tx - 7, Y - 8, 1, 1, PAL.red); rect(ctx, tx - 5, Y - 6, 1, 1, PAL.red); rect(ctx, tx - 6, Y - 7, 1, 1, PAL.red); rect(ctx, tx - 7, Y - 6, 1, 1, PAL.red); rect(ctx, tx - 5, Y - 8, 1, 1, PAL.red); digits(ctx, m, tx - 3, Y - 9, PAL.red); }
+      rect(ctx, tx, Y - 2, 2, Hh + 4, m === 1 ? (passed ? PAL.goldHi : PAL.white) : PAL.red);
+      if (m > 1) digits(ctx, `${m}`, tx - 2 * String(m).length, Y - 7, PAL.red);
     }
-    // 불: 목표를 넘기면 채움 끝에서 불꽃이 인다
     if (hot && !this.app.reducedMotion) {
       motion();
       const ex = X + fill;
       for (let i = 0; i < 6; i++) {
         const k = (time * 3 + i / 6) % 1;
-        rect(ctx, ex - 4 + ((i * 5) % 9) - Math.round(Math.sin(time * 9 + i) * 1.5), Y - 1 - Math.round(k * 9), k < 0.4 ? 2 : 1, k < 0.4 ? 2 : 1, k < 0.3 ? PAL.goldHi : k < 0.6 ? PAL.gold : PAL.red);
+        rect(ctx, ex - 4 + ((i * 5) % 9) - Math.round(Math.sin(time * 9 + i) * 1.5), Y - 1 - Math.round(k * 7), k < 0.4 ? 2 : 1, k < 0.4 ? 2 : 1, k < 0.3 ? PAL.goldHi : k < 0.6 ? PAL.gold : PAL.red);
       }
     }
   }
 
   drawBoard(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, time = app.time;
-    this.drawGoalBar(ctx);
     // 판: 그림자 · 두께 · 크림 테 · 칸 · 좌표를 한 번 구운 그림(board3.js). 다른 땅에 왔다는 표지는 판 어두운 칸 빛깔(세력 모습)
     drawBoardImage(ctx, scaleOf(ctx));
     // 사슬 평가의 테두리 불빛: 흰 → 금 → 붉은 금 → 무지개. 사슬이 끝나면 사그라든다
@@ -1878,22 +1895,29 @@ export class BattleScreen {
       targetN: this.view.target,
     };
   }
+  // 왼쪽 칸 자리(안 3 시안 p3 — 판넬 없이 바탕 위에 글): 관 · 이기면 알약 → 대국 이름(세력 점) → 「점수」 이름표 → 큰 점수(목표는 오른쪽) →
+  // 목표 막대 → 값 × 배수 큰 칸 → (빈 자리 — 다시 두기의 견주기 · 수업의 콤보 줄) → 아래에서부터 수 · 희생 · 시계 · 상금 · 덱 줄
   leftLayout() {
     const spec = this.headSpec();
-    // 이기면 받는 상금: 관 줄 오른쪽에 들어가면 거기, 안 들어가면(영어 · 긴 관) 목표 줄 아래 한 줄
-    spec.rightInline = !!spec.right && measure(spec.kicker) + 4 + measure(spec.right) <= LW - PAD_BOX * 2;
-    const head = headLayout(spec.titles.length, spec.right && !spec.rightInline ? 3 : 2);
-    const foot = footLayout(this.run ? (hasClock(this.run) ? 5 : 4) : 3);
-    const st = sideStack(head.h, foot.h);
-    const val = { y: st.mid.y, h: VAL_H };
-    const chainY = val.y + VAL_H + GAP_GROUP;
-    return { spec, headLay: head, head: st.head, foot: st.foot, val, chain: { y: chainY, h: st.mid.y + st.mid.h - chainY }, score: st.head.y + head.rows[head.rows.length - 1] };
+    let y = 4;
+    const kick = { y, h: 17 };
+    y += 17;
+    const titles = spec.titles.map(() => { const t = textY(y, LINE_TITLE); y += LINE_TITLE; return t; });
+    const scoreLab = textY(y); y += LINE;
+    // 큰 점수(세 배): 잉크 33 + 아래로 빠지는 쉼표 6
+    const score = y; y += INK_H * 3 + INK_DESC * 3 + 1;
+    const bar = { y, h: 6 }; y = bar.y + bar.h + 5;
+    const val = { y, h: VAL_H }; y += VAL_H;
+    const n = this.run ? (hasClock(this.run) ? 5 : 4) : 3;
+    const rowsTop = SIDE.bottom - n * ROW_L;
+    const chainY = y + 3;
+    return { spec, kick, titles, scoreLab, score, bar, val, chain: { y: chainY, h: rowsTop - 3 - chainY }, rowsTop, n, headY: 4, headBottom: score + INK_H * 3 };
   }
   // 탁월수 배수(CHM-43): 배수 칸(모인 뒤엔 점수 칸)에 청록 테와 오른쪽 위 「×N」 딱지. 값 × 배수가 점수로 흘러갈 때까지
   brillTag(ctx, x, y, w) {
     const T = ANNOT.teal, mark = `×${Number(this.view.brill.x.toFixed(2))}`, sz = annotSize(mark);
-    frame(ctx, x, y, w, VAL_H, T.fill);
-    frame(ctx, x + 1, y + 1, w - 2, VAL_H - 2, T.edge);
+    rframe(ctx, x, y, w, VAL_H, R_BIG, T.fill);
+    rframe(ctx, x + 1, y + 1, w - 2, VAL_H - 2, R_BIG - 1, T.edge);
     drawAnnot(ctx, mark, x + w - sz.w + 4, y - 7, T);
   }
   // 수가 오른 순간부터 스러지는 빛 세기(1 → 0, 0.45초). 움직임 줄이기에도 남는다(한 번 밝아지는 것은 떨림이 아니다)
@@ -1906,168 +1930,207 @@ export class BattleScreen {
     if (k >= 0 && k < 1) { motion(); return (1 - k) * (1 - k); }
     return 0;
   }
+  // 왼쪽 칸 자리 하나를 접기(fold.js) 몫으로 적는다: 설명 묶음이 걸치면 그 자리를 바탕으로 다시 칠한다(판넬이 없다)
+  sideSpot(ui, x, y, w, h) { ui.sideItem(x, y, w, h, { blank: (c, ground) => { if (ground) ground({ x, y, w, h }); } }); }
+  // 큰 수 글자 배율: 폭 room 안에 3 → 2 → 1배, 그래도 넘치면 1배 짧은 꼴
+  bigNum(n, room, top = 3) {
+    const s = typeof n === 'number' ? num(Math.floor(n)) : String(n);
+    for (let k = top; k >= 1; k--) if (measure(s, true) * k <= room) return { s, k };
+    return { s: typeof n === 'number' ? short(n) : s, k: 1 };
+  }
   drawLeft(ctx, ui) {
     const app = this.app, v = this.view, run = this.run;
-    const P = PAD_BOX, lay = this.leftLayout(), spec = lay.spec, hl = lay.headLay, hy = lay.head.y;
-    // 머리 칸(판 틀 공통): 관(머릿말, 오른쪽에 이기면 받는 상금) → 대국 종류(제목) → 목표 · 점수
+    const lay = this.leftLayout(), spec = lay.spec;
     const score = v.count ? lerp(v.count.from, v.count.to, v.count.p) : v.score;
     const hot = v.target && score >= v.target;
-    openBox('panel', LX, hy, LW, lay.head.h, P, { name: '머리 칸' });
-    panel(ctx, LX, hy, LW, lay.head.h);
-    ui.sideItem(LX, hy, LW, lay.head.h, { rows: [rowSpan(hy + hl.kicker), ...hl.titles.map((t) => rowSpan(hy + t, LINE_TITLE)), ...hl.rows.map((t) => rowSpan(hy + t))] });
-    text(ctx, spec.kicker, LX + P, hy + hl.kicker, PAL.dim);
-    if (spec.rightInline) text(ctx, spec.right, LX + LW - P, hy + hl.kicker, PAL.goldDk, { align: 'right' });
-    spec.titles.forEach((l, k) => fitText(ctx, l, LX + P, hy + hl.titles[k], LW - P * 2, spec.titleCol));
-    // 제목 줄을 가리키면: 명인 대국은 명인 규칙, 연습 · 정식은 세력의 버릇
-    if (spec.master) { const m = spec.master; ui.region('master', LX + 2, hy + hl.titles[0], LW - 4, 16, { tip: () => tipLines(`마스터 ${m.name}`, m.text) }); }
-    else if (spec.faction) { const fa = spec.faction; ui.region('faction', LX + 2, hy + hl.titles[0], LW - 4, 16, { tip: () => tipLines(fa.name, fa.habit.text) }); }
-    // 수치가 이름표 옆에 안 들어가면(끝없는 대국의 큰 수) 짧은 꼴(1.2G)로
-    const fitRow = (label, n) => (typeof n === 'number' ? fitNum(n, LW - P * 2 - measure(label) - 4) : n);
-    text(ctx, '목표', LX + P, hy + hl.rows[0], PAL.dim);
-    text(ctx, fitRow('목표', spec.targetN ?? spec.target), LX + LW - P, hy + hl.rows[0], PAL.ink, { align: 'right', bold: true });
-    if (spec.right && !spec.rightInline) { const m = spec.right.match(/^(.*?)\s*(\$\d+)$/); text(ctx, m ? m[1] : spec.right, LX + P, hy + hl.rows[1], PAL.dim); if (m) text(ctx, m[2], LX + LW - P, hy + hl.rows[1], PAL.goldDk, { align: 'right', bold: true }); }
-    // 점수(목표를 넘기면 불붙는다) — 머리 칸 마지막 줄
-    const sy = hy + hl.rows[hl.rows.length - 1];
-    if (hot) { const k = beat(app.time, 10) % 3; frame(ctx, LX + 2, sy, LW - 4, LINE, k ? PAL.gold : PAL.red); }
-    // 점수 빛: 오르는 동안 밝아졌다가 가라앉고, 목표를 넘기면 금빛이 남는다(글자 뒤 층)
+    // 관 줄: 관(흐림) · 오른쪽에 이기면 받는 상금(금빛 알약)
+    const ky = lay.kick.y, kt = inkY(ky, lay.kick.h);
+    this.sideSpot(ui, LX, ky, LW, lay.kick.h);
+    openBox('tile', LX, ky, LW, lay.kick.h, 0, { name: '관 줄' });
+    let pillW = 0;
+    if (spec.right) {
+      pillW = measure(spec.right, true) + 12;
+      const px = LX + LW - pillW;
+      const pr = pillR(pillW, lay.kick.h, pillW - 12);
+      openBox('edge', px, ky, pillW, lay.kick.h, 1, { name: '이기면', r: pr });
+      rrect(ctx, px, ky + 2, pillW, lay.kick.h, pr, PAL.drop);
+      rrect(ctx, px, ky, pillW, lay.kick.h, pr, PAL.frameDk);
+      rrect(ctx, px + 1, ky + 1, pillW - 2, lay.kick.h - 2, pr - 1, PAL.gold);
+      text(ctx, spec.right, px + 6, kt, PAL.cardInk, { bold: true });
+      closeBox();
+    }
+    fitText(ctx, spec.kicker, LX + PX, kt, LW - PX - (pillW ? pillW + 4 : 0), PAL.dim, { bold: false });
+    closeBox();
+    // 대국 이름: 세력 점(판 어두운 칸 빛깔) + 이름(금빛 · 마스터는 붉은). 가리키면 마스터 규칙 · 세력 버릇
+    const t0 = lay.titles[0] - ((LINE_TITLE - INK_H) >> 1);
+    this.sideSpot(ui, LX, t0, LW, LINE_TITLE * spec.titles.length);
+    openBox('tile', LX, t0, LW, LINE_TITLE * spec.titles.length, 0, { name: '대국 이름' });
+    const dot = spec.faction ? 9 : 0;
+    if (dot) rrect(ctx, LX + PX, lay.titles[0] + 3, 6, 6, 3, spec.faction.look ? spec.faction.look.dark : PAL.dark);
+    spec.titles.forEach((l, k) => fitText(ctx, l, LX + PX + (k ? 0 : dot), lay.titles[k], LW - PX * 2 - (k ? 0 : dot), spec.titleCol));
+    closeBox();
+    if (spec.master) { const m = spec.master; ui.region('master', LX + 2, t0, LW - 4, LINE_TITLE, { tip: () => tipLines(`마스터 ${m.name}`, m.text) }); }
+    else if (spec.faction) { const fa = spec.faction; ui.region('faction', LX + 2, t0, LW - 4, LINE_TITLE, { tip: () => tipLines(fa.name, fa.habit.text) }); }
+    // 「점수」 이름표(불씨 · 얻을 몫은 이 줄) → 큰 점수 · 오른쪽 「목표 / 150」
+    const sl = lay.scoreLab, sy = lay.score;
+    // 접기 몫은 가리킬 수 있는 것마다 따로(이름표 줄 · 큰 점수 · 막대) — 가리킨 것을 품은 큰 몫은 접기가 판넬 빛깔로 칠한다
+    this.sideSpot(ui, LX, sl - 1, LW, LINE);
+    this.sideSpot(ui, LX, sy, LW, INK_H * 3 + INK_DESC * 3);
+    this.sideSpot(ui, LX, lay.bar.y - 3, LW, lay.bar.h + 6);
+    openBox('tile', LX, sl - 1, LW, sy + INK_H * 3 + INK_DESC * 3 - (sl - 1), 0, { name: '점수' });
+    text(ctx, '점수', LX + PX, sl, PAL.dim);
+    // 점화(CHM-67): 점수 이름표 옆에 불씨 — 가리키면 이 판의 콤비네이션. 규칙이 사슬 끝에 남기니 막간이 열리기 전(ignPending)에는 감춘다
+    if (run && run.ignite && !this.ignPending) emberMark(ctx, ui, run.ignite, LX + PX + measure('점수') + 4, sl);
+    const tgt = spec.targetN ?? spec.target;
+    const gS = `/ ${typeof tgt === 'number' ? fitNum(tgt, LW / 2) : L(String(tgt))}`;
+    const gw = Math.max(measure('목표'), measure(gS, true));
+    text(ctx, '목표', LX + LW - PX - gw, sy + 4, PAL.dim);
+    text(ctx, gS, LX + LW - PX - gw, sy + 4 + LINE, PAL.ink, { bold: true });
+    const big = this.bigNum(score, LW - PX * 2 - gw - 6);
+    const by = sy + INK_H * (3 - big.k);
     {
       const up = this.pulseAt('score', score, app.time);
-      const sw = measure(num(Math.floor(score)), true);
+      const sw = measure(big.s, true) * big.k;
       const a = (hot ? 0.3 * flicker(app.time, 4) : 0) + up * 0.55;
-      if (a > 0.01) glowText(ctx, LX + LW - P - sw, sy, sw, 12, PAL.gold, a, 7);
+      if (a > 0.01) glowText(ctx, LX + PX, by, sw, INK_H * big.k, PAL.gold, a, 8);
     }
-    text(ctx, '점수', LX + P, sy, PAL.dim);
-    // 점화(CHM-67): 점수 이름표 옆에 불씨 — 가리키면 이 판의 콤비네이션. 규칙이 사슬 끝에 남기니 막간이 열리기 전(ignPending)에는 감춘다
-    const ign = run && run.ignite && !this.ignPending ? emberMark(ctx, ui, run.ignite, LX + P + measure('점수') + 4, sy) : 0;
-    const scoreS = typeof score === 'number' ? fitNum(score, LW - P * 2 - measure('점수') - 4 - ign) : score;
-    // 꽂힌 점수(slamFx): 0.3초 동안 크게 튀었다가 제 크기로. 큰 수는 칸을 넘으니 상자 밖(연출)에 그린다. 움직임 줄이기면 크기는 그대로
+    // 꽂힌 점수(slamFx): 0.3초 동안 크게 튀었다가 제 크기로(상자 밖 연출). 움직임 줄이기면 크기는 그대로
     const sk = this.slam != null && !app.reducedMotion ? (app.time - this.slam) / 0.3 : 1;
-    if (sk >= 0 && sk < 1) motion();
-    if (!(sk >= 0 && sk < 1)) text(ctx, scoreS, LX + LW - P, sy, hot ? PAL.gold : PAL.ink, { align: 'right', bold: true });
+    const slamming = sk >= 0 && sk < 1;
+    if (slamming) motion();
+    if (!slamming) text(ctx, big.s, LX + PX, by, hot ? PAL.gold : PAL.ink, { bold: true, scale: big.k });
+    this.drawGain(ctx, lay);
     closeBox();
-    if (sk >= 0 && sk < 1) {
-      const sc = stepScale(1 + 0.9 * (1 - sk) * (1 - sk));
-      openBox('fx', LX, sy - 12, LW, 30, 0, { loose: true, name: '꽂힌 점수' });
-      fine(() => boldText(ctx, scoreS, LX + LW - P, sy + 6 - 6 * sc, sk < 0.2 ? PAL.white : hot ? PAL.gold : PAL.goldHi, { align: 'right', scale: sc, edge: PAL.shadow }));
+    if (slamming) {
+      const sc = big.k * stepScale(1 + 0.5 * (1 - sk) * (1 - sk));
+      openBox('fx', LX, sy - 20, LW, 60, 0, { loose: true, name: '꽂힌 점수' });
+      fine(() => boldText(ctx, big.s, LX + PX, sy + INK_H * 3 - INK_H * sc, sk < 0.2 ? PAL.white : hot ? PAL.gold : PAL.goldHi, { scale: sc, edge: PAL.shadow }));
       closeBox();
     }
     this.drawFlames(ctx);
-    // 값 × 배수
-    const c = v.chain;
-    const g = v.gather;
+    this.drawGoalBar(ctx, lay);
+    // 값 × 배수: 큰 칸 둘(크림 값 · 금빛 배수), 이름표는 칸 안 왼쪽 위
+    const c = v.chain, g = v.gather;
     const val = g ? g.value : c ? c.value : 0;
     const mul = g ? g.mult : c ? c.mult : 0;
     const gp = g ? g.p : 0;
     const dx = gp * 32;
-    const VY = lay.val.y, VT = VY + Math.floor((VAL_H - 12) / 2) - 1;
-    // 설명 자리 접기(fold.js): 빈 값 칸 · 배수 칸(수 · 「×」 없이)
-    ui.sideItem(LX, VY, LW, VAL_H, { blank: (ctx2, ground) => { box(ctx2, LX, VY, 48, VAL_H, PAL.val, PAL.frameDk); box(ctx2, LX + 64, VY, 48, VAL_H, PAL.link, PAL.frameDk); if (ground) ground({ x: LX + 48, y: VY, w: 16, h: VAL_H }); } });
-    // 값 × 배수 빛: 수가 오를 때 잠깐 밝아졌다가 가라앉는다. 사슬이 이어지는 동안은 옅게 남는다(칸 뒤 층)
+    const VY = lay.val.y, TW = VAL_W, MX = LX + LW - VAL_W;
+    this.sideSpot(ui, LX, VY, TW, VAL_H); this.sideSpot(ui, LX + TW, VY, MX - LX - TW, VAL_H); this.sideSpot(ui, MX, VY, TW, VAL_H);
     const t = app.time, uv = this.pulseAt('value', val, t), um = this.pulseAt('mult', mul, t);
-    // 수가 오른 칸은 잠깐 부풀고 하얗게 번쩍인다(정수 도트로, 움직임 줄이기면 번쩍만)
     const punch = (u) => (app.reducedMotion ? 0 : Math.round(u * 3));
     {
-      const live = c && !g ? 0.22 * flicker(t, 3.2) : 0;
+      const liveA = c && !g ? 0.22 * flicker(t, 3.2) : 0;
       if (g && g.burst) glow(ctx, LX, VY, LW, VAL_H, PAL.goldHi, 0.7 * Math.max(0, 1 - (g.p || 0)) + 0.3, 8);
       else {
-        if (val > 0) glow(ctx, LX + dx, VY, 48, VAL_H, PAL.val, live + uv * 0.6, 6);
-        if (mul > 0) glow(ctx, LX + 64 - dx, VY, 48, VAL_H, PAL.gold, live + um * 0.6, 6);
+        if (val > 0) glow(ctx, LX + dx, VY, TW, VAL_H, PAL.val, liveA + uv * 0.6, 6);
+        if (mul > 0) glow(ctx, MX - dx, VY, TW, VAL_H, PAL.gold, liveA + um * 0.6, 6);
       }
     }
     if (v.count) {
-      // 곱이 점수 줄로 흘러 들어간다
       const k = v.count.p;
-      const tx = lerp(LX + LW / 2, LX + LW - 30, k), ty = lerp(VT, lay.score, k);
+      const tx = lerp(LX + LW / 2, LX + PX + 20, k), ty = lerp(VY + 16, sy + 10, k);
       openBox('fx', Math.round(tx) - 40, Math.round(ty), 80, 14, 0, { loose: true, name: '흘러가는 수' });
       const fs = fitNum(v.count.to - v.count.from, LW), fw = measure(fs, true);
       glowText(ctx, tx - fw / 2, ty, fw, 12, PAL.gold, 0.5 * (1 - k * 0.8), 7);
-      // 큰 수가 두 배로 떠서 점수 줄로 날아가며 줄어든다(칸 폭을 넘으면 한 배)
-      const big = app.reducedMotion || fw * 2 > LW ? 1 : stepScale(2 - k);
-      fine(() => boldText(ctx, fs, tx, ty + 6 - 6 * big, PAL.gold, { scale: big, alpha: 1 - k * 0.5 }));
+      const bg = app.reducedMotion || fw * 2 > LW ? 1 : stepScale(2 - k);
+      fine(() => boldText(ctx, fs, tx, ty + 6 - 6 * bg, PAL.gold, { scale: bg, alpha: 1 - k * 0.5 }));
       closeBox();
     }
-    if (g && g.burst) {
-      openBox('edge', LX, VY, LW, VAL_H, 1, { name: '값 × 배수' });
-      box(ctx, LX, VY, LW, VAL_H, PAL.gold, PAL.frameDk);
-      // 곱이 칸 폭(테 1 + 틈 EDGE_PAD 양쪽)을 넘으면 짧은 꼴(끝없는 대국의 13자리 곱)
-      text(ctx, fitNum(g.score, LW - (1 + EDGE_PAD) * 2), LX + LW / 2, VT, PAL.linkInk, { align: 'center', bold: true });
+    const tile = (x, y, w, fill, label, labCol, n, pulse, name) => {
+      const p = pulse;
+      openBox('panel', x, y, w, VAL_H, 2, { name, loose: !!g });
+      box(ctx, x - p, y - p, w + p * 2, VAL_H + p * 2, fill, PAL.frameDk);
+      if (!g && (name === '값' ? uv : um) > 0.3) { ctx.globalAlpha = ((name === '값' ? uv : um) - 0.3) * 1.2; rrect(ctx, x - p + 2, y - p + 2, w - 4 + p * 2, VAL_H - 4 + p * 2, R_BIG - 1, PAL.white); ctx.globalAlpha = 1; }
+      if (label) text(ctx, label, x + 5, y + 3, labCol);
+      const bn = this.bigNum(n, w - 8, 2);
+      text(ctx, bn.s, x + w / 2, y + 14 + (bn.k === 2 ? 0 : INK_H / 2), PAL.cardInk, { align: 'center', bold: true, scale: bn.k });
       closeBox();
+    };
+    if (g && g.burst) {
+      tile(LX, VY, LW, PAL.gold, null, null, g.score, 0, '값 × 배수');
       if (v.brill) this.brillTag(ctx, LX, VY, LW);
     } else {
-      ui.region('box:value', LX, VY, 48, VAL_H, { keys: [{ id: 'value' }] });
-      ui.region('box:links', LX + 64, VY, 48, VAL_H, { keys: [{ id: 'links' }] });
-      // 모이는 동안(g) 두 칸은 소수점 자리로 미끄러진다
+      ui.region('box:value', LX, VY, TW, VAL_H, { keys: [{ id: 'value' }] });
+      ui.region('box:links', MX, VY, TW, VAL_H, { keys: [{ id: 'links' }] });
       const drawVM = () => {
-        const pv = g ? 0 : punch(uv), pm = g ? 0 : punch(um);
-        openBox('edge', LX + dx, VY, 48, VAL_H, 1, { name: '값', loose: !!g });
-        box(ctx, LX + dx - pv, VY - pv, 48 + pv * 2, VAL_H + pv * 2, PAL.val, PAL.frameDk);
-        if (uv > 0.3) { ctx.globalAlpha = (uv - 0.3) * 1.2; rect(ctx, LX + dx - pv + 2, VY - pv + 2, 44 + pv * 2, VAL_H - 4 + pv * 2, PAL.white); ctx.globalAlpha = 1; }
-        text(ctx, short(val), LX + dx + 24, VT - (pv ? 1 : 0), PAL.valInk, { align: 'center', bold: true });
-        closeBox();
-        if (!g) text(ctx, '×', LX + 56, VT, PAL.ink, { align: 'center', bold: true });
-        openBox('edge', LX + 64 - dx, VY, 48, VAL_H, 1, { name: '배수', loose: !!g });
-        box(ctx, LX + 64 - dx - pm, VY - pm, 48 + pm * 2, VAL_H + pm * 2, PAL.link, PAL.frameDk);
-        if (um > 0.3) { ctx.globalAlpha = (um - 0.3) * 1.2; rect(ctx, LX + 64 - dx - pm + 2, VY - pm + 2, 44 + pm * 2, VAL_H - 4 + pm * 2, PAL.white); ctx.globalAlpha = 1; }
-        text(ctx, short(mul), LX + 88 - dx, VT - (pm ? 1 : 0), PAL.linkInk, { align: 'center', bold: true });
-        closeBox();
+        tile(LX + dx, VY, TW, PAL.val, '값', '#6b6f9a', val, g ? 0 : punch(uv), '값');
+        if (!g) text(ctx, '×', LX + LW / 2, VY + 13, PAL.ink, { align: 'center', bold: true });
+        tile(MX - dx, VY, TW, PAL.link, '배수', '#7a4e0e', mul, g ? 0 : punch(um), '배수');
       };
       if (g) fine(drawVM); else drawVM();
-      if (v.brill) fine(() => this.brillTag(ctx, LX + 64 - dx, VY, 48));
+      if (v.brill) fine(() => this.brillTag(ctx, MX - dx, VY, TW));
     }
     this.drawChainPanel(ctx, ui, lay);
-    this.drawFootRows(ctx, ui);
+    this.drawFootRows(ctx, ui, lay);
   }
-  // 사슬 칸: 지나온 모습은 작게(왼쪽 아래), 지금 모습은 크게(2배, 오른쪽). 남는 높이를 가진다(모자라면 지금 모습도 1배)
+  // 왼쪽 칸 빈 자리(lay.chain): 대국은 콤보가 오른쪽 칸에 있어 비워 둔다. 판이 없는 화면(수업)은 오른쪽 칸 위가 킹의 말이라 여기에 콤보 줄.
+  // 다시 두기(review.js)는 견주기 두 줄로 덮어 쓴다
   drawChainPanel(ctx, ui, lay) {
-    const v = this.view, run = this.run, P = PAD_BOX, c = v.chain;
-    const cy = lay.chain.y, ch = lay.chain.h;
-    openBox('panel', LX, cy, LW, ch, P, { name: '사슬 칸' });
-    panel(ctx, LX, cy, LW, ch);
-    ui.sideItem(LX, cy, LW, ch);
+    if (this.run || lay.chain.h < 22) return;
+    const v = this.view, c = v.chain, cy = lay.chain.y, ch = lay.chain.h;
     const steps = c ? c.steps : this.lastEnd ? this.lastEnd.steps : [];
-    const a = c ? 1 : 0.45;
-    const eng = c ? c.eng : this.lastEnd ? this.lastEnd.eng : null;
-    const tierAt = (tp) => (run ? tierOf(run.charts[tp]) : 0);
-    const big = ch >= 44 + 4;
-    const cw = big ? 32 : 16, chh = big ? 44 : 22, cx0 = LX + LW - 6 - cw;
-    // 지나온 모습: 지금 모습 칸 앞까지 들어가는 만큼(최근 것부터, 셋까지). 못 보인 앞의 모습은 줄 왼쪽에 「+N」(작은 그림과 같은 줄 — 그림 위에 겹치지 않게)
-    const prev = steps.slice(0, -1), sy = cy + ch - 24;
-    let k = Math.min(3, prev.length), lw = 0;
-    // 글은 판넬 안 여백(P) 안쪽에서 시작한다. 「+N」이 있으면 그림은 그 뒤 3에서
-    const fits = (n) => { const more = prev.length - n; lw = more > 0 ? P + measure(`+${more}`) + 3 : 5; return LX + lw + (n ? (n - 1) * 19 + 16 : 0) <= cx0 - 2; };
-    while (k > 0 && !fits(k)) k--;
-    fits(k);
-    const past = prev.slice(prev.length - k);
-    if (prev.length > k) text(ctx, `+${prev.length - k}`, LX + P, sy + 5, PAL.dim);
-    past.forEach((tp, i) => sprite(ctx, tp, 'w', LX + lw + i * 19, sy, { alpha: a, eng, tier: tierAt(tp) }));
-    const cur = steps[steps.length - 1];
-    if (cur) {
-      const cy0 = cy + Math.floor((ch - chh) / 2);
-      if (c && c.cut) { ctx.globalAlpha = 0.35; rect(ctx, cx0 - 2, cy + 2, cw + 4, ch - 4, PAL.red); ctx.globalAlpha = 1; }
+    const a = c ? 1 : 0.45, eng = c ? c.eng : this.lastEnd ? this.lastEnd.eng : null;
+    this.sideSpot(ui, LX, cy, LW, ch);
+    openBox('tile', LX, cy, LW, ch, 0, { name: '콤보 줄' });
+    text(ctx, '콤보', LX + PX, cy + 1, PAL.dim);
+    const n = Math.max(0, steps.length - 1);
+    text(ctx, `${n}`, LX + LW - PX, cy + 1, n ? PAL.gold : PAL.dim, { align: 'right', bold: true });
+    // 지나온 모습(왼쪽부터) · 지금 모습(오른쪽 끝, 금빛 받침): 들어가는 만큼 최근 것부터, 못 보인 앞은 「+N」
+    const step = 19, iy = cy + LINE + 1, k = Math.min(steps.length, Math.floor((LW - PX * 2 - 14) / step) + 1);
+    const shown = steps.slice(steps.length - k), more = steps.length - k;
+    let x = LX + PX;
+    if (more > 0) { text(ctx, `+${more}`, x, iy + 4, PAL.dim); x += measure(`+${more}`) + 3; }
+    shown.forEach((tp, i) => {
+      const last = i === shown.length - 1;
+      if (last && c) rrect(ctx, x - 1, iy + 15, 18, 3, 1.5, c.cut ? PAL.red : PAL.gold);
       ctx.globalAlpha = a;
-      fitPiece(ctx, cur, 'w', cx0, cy0, cw, chh, { eng, tier: tierAt(cur), spark: false });
+      fitPiece(ctx, tp, 'w', x, iy, 16, 18, { eng, spark: false });
       ctx.globalAlpha = 1;
-    }
+      x += step;
+    });
     closeBox();
   }
-  // 아래 칸: 수 · 희생(구슬) → 상금 → 덱
-  drawFootRows(ctx, ui) {
-    const app = this.app, v = this.view, run = this.run, P = PAD_BOX;
-    const pipX = Math.max(52, Math.max(measure('수'), measure('희생')) + PAD_BOX + 6);
-    const pipN = Math.max(v.moves, v.discards, 1);
-    const pipStep = Math.min(14, Math.floor((LW - PAD_BOX - pipX) / pipN));
-    const pipW = Math.max(4, pipStep - 4);
-    const pips = (n, left, col) => (ctx2, ty) => {
-      for (let i = 0; i < n; i++) rect(ctx2, LX + pipX + i * pipStep, ty + 3, pipW, 7, i < left ? col : PAL.frame);
+  // 아래 칸 줄(판넬 없이): 수 · 희생(둥근 구슬) → 시계 → 상금 → 덱. 이름표는 왼쪽, 값은 오른쪽 끝
+  drawFootRows(ctx, ui, lay = this.leftLayout()) {
+    const app = this.app, v = this.view, run = this.run;
+    const right = LX + LW - PX;
+    const pipRow = (n, left, col, ty) => {
+      const step = Math.min(11, Math.floor((LW - 40) / Math.max(1, n))), d = Math.max(5, step - 3);
+      const x0 = right - n * step + (step - d);
+      for (let i = 0; i < n; i++) {
+        const x = x0 + i * step, y = ty + Math.floor((INK_H - d) / 2);
+        if (i < left) { rrect(ctx, x, y + 1, d, d, d / 2, PAL.drop); rrect(ctx, x, y, d, d, d / 2, PAL.frameDk); rrect(ctx, x + 1, y + 1, d - 2, d - 2, (d - 2) / 2, col); }
+        else { rrect(ctx, x, y, d, d, d / 2, PAL.slotEdge); rrect(ctx, x + 1, y + 1, d - 2, d - 2, (d - 2) / 2, PAL.slot); }
+      }
+      return x0;
     };
     const rows = [
-      { id: 'pips:moves', label: '수', tip: () => tipLines('수', '이번 대국에 놓을 수 있는 횟수. 다 쓰면 대국이 끝나요'), draw: (ctx2, ty) => { text(ctx2, '수', LX + P, ty, PAL.dim); pips(v.moves, v.movesLeft, PAL.gold)(ctx2, ty); } },
-      { id: 'pips:discards', label: '희생', tip: () => this.offeredTip(), draw: (ctx2, ty) => { text(ctx2, '희생', LX + P, ty, PAL.dim); pips(v.discards, v.discardsLeft, PAL.red)(ctx2, ty); this.offeredRow(ctx2, LX + pipX + Math.max(0, v.discards - 1) * pipStep + pipW + 3, LX + LW - 2, ty); } },
+      { id: 'pips:moves', tip: () => tipLines('수', '이번 대국에 놓을 수 있는 횟수. 다 쓰면 대국이 끝나요'), draw: (ty) => { text(ctx, '수', LX + PX, ty, PAL.dim); pipRow(v.moves, v.movesLeft, PAL.gold, ty); } },
+      { id: 'pips:discards', tip: () => this.offeredTip(), draw: (ty) => { text(ctx, '희생', LX + PX, ty, PAL.dim); const x0 = pipRow(v.discards, v.discardsLeft, PAL.btnRed, ty); this.offeredRow(ctx, LX + PX + measure('희생') + 4, x0 - 3, ty); } },
     ];
-    if (hasClock(run)) rows.push(clockRow(app, run));
-    if (run) rows.push({ money: run });
-    rows.push({ id: 'bag', label: '덱', val: `${v.bag} / ${v.deckSize}`, tip: () => bagTip(this.b) });
-    drawFoot(ctx, ui, rows);
+    if (hasClock(run)) rows.push({ id: 'clock', tip: () => clockTip(run), draw: (ty) => { text(ctx, '시계', LX + PX, ty, PAL.dim); clockPips(ctx, run, right, ty, app.time, app.clockFx); } });
+    if (run) rows.push({ money: true, draw: (ty) => this.moneyRow(ctx, ui, run, ty) });
+    rows.push({ id: 'bag', tip: () => bagTip(this.b), draw: (ty) => { text(ctx, '덱', LX + PX, ty, PAL.dim); text(ctx, `${v.bag} / ${v.deckSize}`, right, ty, PAL.ink, { align: 'right', bold: true }); } });
+    const top = SIDE.bottom - rows.length * ROW_L;
+    openBox('tile', LX, top, LW, rows.length * ROW_L, 0, { name: '아래 칸' });
+    rows.forEach((r, i) => {
+      const ry = top + i * ROW_L, ty = textY(ry, ROW_L);
+      ui.sideItem(LX, ry, LW, ROW_L, { blank: (c, ground) => { if (ground) ground({ x: LX, y: ry, w: LW, h: ROW_L }); } });
+      if (r.id) ui.region(r.id, LX, ry, LW, ROW_L, { tip: r.tip });
+      r.draw(ty);
+    });
+    closeBox();
+  }
+  // 상금 줄: 「상금」 · 명국 조각 · 금액(벌거나 쓰면 흔들리고 빛이 번진다 — juice.js moneyShake)
+  moneyRow(ctx, ui, run, ty) {
+    text(ctx, '상금', LX + PX, ty, PAL.dim);
+    const amt = `$${run.money}`, right = LX + LW - PX;
+    const fx = LX + PX + measure('상금') + 4;
+    fragmentStrip(ctx, ui, run, fx, ty + 1, { max: Math.floor((right - measure(amt, true) - 3 - fx) / 13), step: 13 });
+    const sh = ui ? moneyShake(run.money, ui.time, run) : null;
+    if (sh) { const aw = measure(amt, true); glowText(ctx, right - aw, ty, aw, 12, sh.up ? PAL.goldHi : PAL.red, 0.7 * sh.hot, 7); }
+    text(ctx, amt, right + (sh ? sh.dx : 0), ty, sh && sh.hot > 0.6 ? (sh.up ? PAL.white : PAL.red) : PAL.gold, { align: 'right', bold: true });
   }
 
   // 바친 기물 줄(CHM-43 시안 A1): 희생 구슬 오른쪽에 반 크기 흐린 실루엣. 자리가 모자라면 앞에서부터 들어가는 만큼 + 작은 「+N」
@@ -2084,23 +2147,20 @@ export class BattleScreen {
     if (list.length) body.push(`희생한 기물: ${list.map((t) => PIECE_NAME[t]).join(' · ')}`);
     return tipLines('희생', body);
   }
-  // 오른쪽 칸 쌓기: 격언 칸(칸마다 이름 한 줄) → 시너지 띠 → 손 이름표 줄(묘수 · 희생) → 손. 묶음 사이 GAP_GROUP
-  // 시너지 띠는 칩(FAM_H) 두 줄 — 그러면 격언 칸이 한 줄로 안 들어가는 판(칸 다섯 이상)은 한 줄에 못 놓은 것을 「+N」로
-  // 다시 놓기(밤샘 2 D2): 첫 수 전에만, 손 이름표 줄의 「손」 · 묘수 오른쪽에 아이콘 단추(이름은 말풍선 — CHM-40).
-  // 전에는 손 이름표 줄 위에 단추 줄을 따로 두었는데, 그 줄 때문에 기본 격언 다섯 칸이 두 줄로 접혀 이름이 잘렸다.
-  // 시안(docs/shots/night2/draft-*): 1 왼쪽 사슬 칸 가운데(골랐다가 옮김 — 왼쪽 칸은 판 틀의 설명 자리라 말풍선이 단추를 덮었다) ·
-  // 2 사슬 칸 구석 아이콘만 · 3 사슬 칸을 채운 금빛 단추
+  // 오른쪽 칸 쌓기(안 3 시안 p3): 위 줄(콤보 수 · 행마 · 정석 표 · 멈춤) → 콤보 칸(고리로 잇는 알약 칸, 남는 높이만큼 다섯까지) → 시너지 띠 →
+  // 격언 칸(그림만, 한 줄에 다섯) → 손 이름표 줄(손 · 묘수 · 다시 놓기 · 희생) → 부채꼴 손(판 오른쪽 아래 빈 세모까지 왼쪽으로 펼친다)
   rightLayout(run = this && this.run) {
-    const HAND_H = 36, ROW_H = BTN_S;
-    const at = (rows) => {
-      const strip = rows * FAM_H + (rows - 1) * LIST_GAP;
-      // 아래에서부터: 손(화면 아래 2px 위까지) → 손 이름표 줄 → 시너지 띠. 격언 칸은 TOP부터 띠 위까지(room)
-      const handY = 270 - 2 - HAND_H, rowY = handY - GAP_IN - ROW_H;
-      const stripY = rowY - GAP_GROUP - strip;
-      return { room: stripY - GAP_GROUP - TOP, stripY, rows, rowY, handY, HAND_H };
-    };
-    const two = at(2);
-    return run && maximColumnH(run, two.room).cols === 1 ? two : at(1);
+    // 수업(판 없음)은 킹의 말이 오른쪽 칸 위를 길게 쓰므로 손 카드를 조금 낮춘다(격언 · 시너지 · 콤보 칸이 없다)
+    const HAND_H = run ? HAND.h : HAND.hLesson, ROW_H = BTN_S;
+    const handY = 270 - 6 - HAND_H, rowY = handY - 6 - ROW_H;
+    const slots = run ? maximSlotsOf(run) : 0;
+    const mrows = slots ? Math.ceil(slots / MAXIM_ROW) : 0;
+    const mH = mrows ? mrows * MAXC.h + (mrows - 1) * LIST_GAP : 0;
+    const maxY = rowY - LIST_GAP - mH;
+    const stripY = run ? maxY - LIST_GAP - FAM_H : rowY;
+    const comboY = COMBO.top, comboEnd = (run ? stripY : rowY) - LIST_GAP;
+    const comboN = Math.max(0, Math.min(COMBO.max, Math.floor((comboEnd - comboY + COMBO.gap) / (COMBO.h + COMBO.gap))));
+    return { handY, HAND_H, rowY, maxY, mrows, stripY, rows: 1, comboY, comboN, room: stripY - GAP_GROUP - TOP };
   }
   // 손 이름표 줄 왼쪽(희생 단추 앞, 틈 3): 「손」 → 묘수 칸들 → 다시 놓기 단추(칸마다 15, 사이 2).
   // 칸이 다 들어가지 않으면 「손」 글자를 빼고(손 카드가 바로 아래 있다), 그래도 모자라면 칸 사이를 1로
@@ -2117,45 +2177,111 @@ export class BattleScreen {
     const step = 15 + (label || itemsW(2) <= space ? 2 : 1);
     return { label, tactics: tactics.map((i, k) => ({ i, x: x0 + k * step })), rb: rb ? x0 + tactics.length * step : null };
   }
-  // 손 카드 i의 자리(n장일 때). 희생 연출(흩어지는 카드)도 같은 셈을 쓴다. 오른쪽 끝은 다음 수 칸(NEXT_COL)
+  // 손 카드 i의 자리(n장일 때) — 부채꼴: 오른쪽 끝(오른쪽 칸 끝)에 붙여 왼쪽으로 펼치고, 가운데에서 멀수록 기울고 조금 내려앉는다.
+  // 왼쪽 끝은 판 오른쪽 아래 변 밑(빈 세모 — fanLeft)까지. 희생 연출(흩어지는 카드)도 같은 셈을 쓴다. rot: 기울기(라디안), 구역은 기울이지 않은 네모
   handRect(i, n, lay = this.rightLayout(this.run)) {
     n = Math.max(1, n);
-    const room = RW - NEXT_COL.w - NEXT_COL.gap;
-    const w = Math.min(26, Math.floor((room - (n - 1) * 3) / n));
-    const gap = n > 1 ? Math.floor((room - w * n) / (n - 1)) : 0;
-    return { x: RX + i * (w + Math.min(gap, 4)), y: lay.handY, w, h: lay.HAND_H };
+    const w = HAND.w, h = lay.HAND_H, right = RX + RW - 1;
+    const step = n > 1 ? Math.min(HAND.step, Math.floor((right - w - fanLeft(lay.handY - HAND.lift)) / (n - 1))) : 0;
+    const x0 = right - w - step * (n - 1), d = i - (n - 1) / 2;
+    return { x: x0 + i * step, y: lay.handY + Math.round(d * d * 0.5), w, h, step, rot: (d * HAND.deg * Math.PI) / 180 };
+  }
+  // 콤보 칸: 이번 콤보가 거쳐 간 모습을 차례로(지난 콤보는 흐리게). 위 줄 왼쪽에 잡은 수(크게)와 「콤보」. 칸이 모자라면 최근 것부터
+  drawComboSlots(ctx, ui, lay, headRoom) {
+    const v = this.view, run = this.run, c = v.chain;
+    const steps = c ? c.steps : this.lastEnd ? this.lastEnd.steps : [];
+    const a = c ? 1 : 0.45, eng = c ? c.eng : this.lastEnd ? this.lastEnd.eng : null;
+    const tierAt = (tp) => (run ? tierOf(run.charts[tp]) : 0);
+    const n = Math.max(0, steps.length - 1);
+    // 위 줄: 잡은 수(두 배 굵게), 그 아래 「콤보」 이름표
+    // 위 줄에 자리가 없으면(영어 「Moves」 · 정석 표 셋) 수는 「콤보」 줄 오른쪽에 한 배로
+    const ns = `${n}`, inHead = measure(ns, true) <= headRoom, nw = inHead ? Math.min(headRoom, measure(ns, true) * 2) : 0;
+    const ncol = c && n ? PAL.gold : PAL.ink, na = c || !n ? 1 : 0.6;
+    if (inHead) {
+      openBox('tile', RX, 0, headRoom, 24, 0, { name: '콤보 수' });
+      const big = this.bigNum(n, headRoom, 2);
+      text(ctx, big.s, RX, 1 + (big.k === 2 ? 0 : 6), ncol, { bold: true, scale: big.k, alpha: na });
+      closeBox();
+    } else text(ctx, ns, RX + RW, 25, ncol, { align: 'right', bold: true, alpha: na });
+    text(ctx, '콤보', RX, 25, PAL.dim);
+    const k = lay.comboN, y0 = lay.comboY, H = COMBO.h, step = H + COMBO.gap;
+    ui.region('combo', RX, inHead ? 0 : 24, inHead ? Math.max(1, nw, headRoom) : RW, (inHead ? y0 : y0 - 24) + k * step - COMBO.gap, { tip: () => tipLines('콤보', ['한 수에 잡은 적의 수. 잡을 때마다 그 기물로 바뀌어 콤보 칸이 하나씩 찬다']) });
+    // 고리: 칸과 칸 사이를 잇는 세로 고리(칸 왼쪽, 번호 아래)
+    for (let j = 0; j < k - 1; j++) { const ly = y0 + j * step + H - 3; rrect(ctx, RX + 9, ly, 5, COMBO.gap + 6, 2.5, PAL.slotEdge); rrect(ctx, RX + 10, ly + 1, 3, COMBO.gap + 4, 1.5, PAL.slot); }
+    const start = Math.max(0, steps.length - k);
+    for (let j = 0; j < k; j++) {
+      const y = y0 + j * step, s = start + j, tp = steps[s];
+      if (!tp) { slot(ctx, RX, y, RW, H); text(ctx, `${s + 1}`, RX + 8, inkY(y, H), PAL.slotEdge, { bold: true }); continue; }
+      const cur = s === steps.length - 1;
+      const fill = cur && c ? (c.cut ? PAL.btnRed : PAL.gold) : PAL.card;
+      openBox('edge', RX, y, RW, H, 1, { name: '콤보 칸', r: H / 2 });
+      ctx.globalAlpha = a;
+      box(ctx, RX, y, RW, H, fill, PAL.frameDk, { r: H / 2 });
+      text(ctx, `${s + 1}`, RX + 8, inkY(y, H), PAL.cardDim, { bold: true });
+      fitPiece(ctx, tp, 'w', RX + 22, y + 1, 12, H - 2, { eng, tier: tierAt(tp), spark: false });
+      const name = L(PIECE_NAME[tp] || ''), room = RW - 38 - 8;
+      if (name && measure(name, true) <= room) text(ctx, name, RX + 38, inkY(y, H), PAL.cardInk, { bold: true });
+      else if (name && measure(name) <= room) text(ctx, name, RX + 38, inkY(y, H), PAL.cardInk);
+      ctx.globalAlpha = 1;
+      closeBox();
+    }
+  }
+  // 격언 칸(대국): 그림만 한 줄에 다섯(이름 · 효과 · 판본 · 잠듦은 가리키면 왼쪽 칸 설명에). 빈 칸은 빈 자리
+  drawMaxims(ctx, ui, lay) {
+    const run = this.run, b = this.b;
+    const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
+    const slots = maximSlotsOf(run);
+    for (let i = 0; i < slots; i++) {
+      const col = i % MAXIM_ROW, row = Math.floor(i / MAXIM_ROW);
+      const x = RX + Math.round((col * (RW - MAXC.w)) / (MAXIM_ROW - 1)), y = lay.maxY + row * (MAXC.h + LIST_GAP);
+      const m = run.maxims[i];
+      if (!m) { slot(ctx, x, y, MAXC.w, MAXC.h, { r: radiusOf(MAXC.w, MAXC.h) }); continue; }
+      const id = `maxim:${i}`;
+      ui.region(id, x, y, MAXC.w, MAXC.h, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })) });
+      maximCard(ctx, m, x, y, MAXC.w, MAXC.h, { narrow: true, off: off.includes(m.uid), hot: ui.isHover(id), t: ui.time + i * 0.37 });
+    }
+  }
+  // 손 카드 하나(크림 카드 · 기물 그림 · 이름이 들어가면 이름): 고른 카드는 금빛 두 겹 테
+  // vis: 다음 카드에 덮이지 않고 보이는 폭(이름은 그 안 가운데에, 안 들어가면 뺀다)
+  handCard(c, p, x, y, w, h, { selected = false, hover = false, dim = false, alpha = 1, tier = 0, level = 0, time = null, loose = false, vis = w } = {}) {
+    if (alpha !== 1) c.globalAlpha = alpha;
+    openBox('card', x, y, w, h, 2, { overlay: true, loose, name: '손 카드' });
+    box(c, x, y, w, h, PAL.card, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk);
+    if (selected) { edgeRing(c, x, y, w, h, -1, PAL.gold); edgeRing(c, x, y, w, h, -2, PAL.frameDk); }
+    if (p.eng && ENG_EDGE[p.eng.id]) edgeRing(c, x, y, w, h, 1, ENG_EDGE[p.eng.id]);
+    const nm = L(PIECE_NAME[p.t] || ''), vw = Math.min(w, vis), room = vw - 4;
+    const bold = measure(nm, true) <= room, show = bold || measure(nm) <= room;
+    fitPiece(c, p.t, 'w', x + 3, y + 3, w - 6, h - 17, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null, awake: !!p.awake });
+    if (show) text(c, nm, x + Math.floor(vw / 2), y + h - 14, dim ? PAL.cardDim : PAL.cardInk, { align: 'center', bold });
+    if (level > 0) chartBadge(c, level, x + w - 3, y + 3, { dim });
+    if (p.soul && (p.awake || isCracked(p))) soulMark(c, p, x, y, w, h, time, dim);
+    closeBox();
+    if (alpha !== 1) c.globalAlpha = 1;
   }
   drawRight(ctx, ui) {
     const app = this.app, v = this.view, b = this.b, run = this.run;
     if (!this.intro) pauseButton(ctx, ui, app); // 등장 장면 동안은 장면 위에 그린다(draw)
     const lay = this.rightLayout(run);
     if (run) {
-      // 이름표 줄: 「격언 5/5」와 정석 표(멈춤 단추 왼쪽에 붙여). 이름표가 길면(영어) 표에 닿기 전에 줄인다. 명국 조각은 상금 줄
-      // 「행마」 단추(행마 보기)는 정석 표 왼쪽
+      // 위 줄: 콤보 수(왼쪽) · 「행마」 단추 · 정석 표(멈춤 단추 왼쪽에 붙여)
       const nj = (run.josekis || []).length;
       const bx = PAUSE.x - 4 - nj * 12;
-      // 이름표는 단추 왼쪽에 들어가는 만큼: 「격언 5/5」 → 「5/5」 → 없음(영어 · 정석 셋)
-      const mw = measure('행마', true) + 10, mx = bx - 4 - mw;
-      const room = mx - RX - 4, full = `격언 ${maximCount(run)}/${maximCapacity(run)}`, count = `${maximCount(run)}/${maximCapacity(run)}`;
-      const label = measure(full) <= room ? full : measure(count) <= room ? count : null;
-      if (label) text(ctx, label, RX, 8, PAL.dim);
-      // 손가락 구역(CHM-52): 위로는 캔버스 밖 여백까지, 아래로는 본 칸 윗변(TOP) 앞까지, 옆으로는 이름표 쪽(정석 표 · 멈춤은 오른쪽)
-      button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { l: Math.max(0, mx - RX - 4), u: Infinity, d: Math.max(0, TOP - 1 - 2 - BTN_S) } });
+      const mw = measure('행마', true) + 14, mx = bx - 4 - mw;
+      // 손가락 구역(CHM-52): 위로는 캔버스 밖 여백까지, 아래로는 콤보 칸 윗변 앞까지, 옆으로는 콤보 수 쪽
+      button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { l: Math.max(0, mx - RX - 34), u: Infinity, d: Math.max(0, lay.comboY - 1 - 2 - BTN_S) } });
       josekiBadges(ctx, ui, run, bx, 9);
-      const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
-      maximColumn(ctx, ui, run, RX, TOP, RW, lay.room, { offUids: off });
-      // 시너지: 칩 줄 lay.rows개(격언 칸이 다섯이면 한 줄), 못 놓은 것은 「+N」
+      this.drawComboSlots(ctx, ui, lay, mx - 4 - RX);
       familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: lay.rows });
+      this.drawMaxims(ctx, ui, lay);
     }
     this.drawPreviewPanel(ctx);
-    // 손
+    // 손 이름표 줄
     const ry = lay.rowY;
     const row = this.handRowLayout();
     if (row.label) text(ctx, '손', RX, inkY(ry, BTN_S), PAL.dim);
     this.drawTactics(ctx, ui, ry, row);
     const db = discardButton();
-    // 손가락 구역(CHM-52): 위로 시너지 띠까지의 틈(GAP_GROUP − 1), 다시 놓기는 옆으로 「손」 글자 · 희생 단추 앞 틈까지
-    const upRoom = GAP_GROUP - 1;
+    const upRoom = GAP_IN;
     if (row.rb != null) {
       const left = row.tactics.length ? 1 : Math.max(0, row.rb - RX), right = Math.max(0, RX + RW - db.w - (row.rb + 15) - 1);
       button(ctx, ui, 'btn:reboard', row.rb, ry, 15, BTN_S, '', { onClick: () => this.reboard(), icon: reboardIcon, tip: () => tipLines('다시 놓기', []), grow: { l: left, r: right, u: upRoom } });
@@ -2163,46 +2289,54 @@ export class BattleScreen {
     const live = this.live();
     const canDiscard = !this.busy && live && live.status === 'play' && this.sel.length > 0 && live.discardsLeft > 0 && live.bag.length > 0;
     this.actionButton(ctx, ui, RX + RW - db.w, ry, db, !!canDiscard, upRoom);
+    // 부채꼴 손: 왼쪽 카드부터 그린다(오른쪽 카드가 위에 겹친다). 구역은 보이는 몫(다음 카드 왼끝까지), 마지막 카드는 온 폭
     const drawn = v.drawn || [], hiding = v.hiding || [], deal = this.dealIn;
     const nudging = this.nudgeOn = this.nudging();
+    const n = v.hand.length;
     v.hand.forEach((p, i) => {
-      const hr = this.handRect(i, v.hand.length, lay);
+      const hr = this.handRect(i, n, lay);
       const w = hr.w, x = hr.x, id = `hand:${i}`;
       if (hiding.includes(i)) return; // 바친 카드: 흩어지는 동안 자리만 남는다
-      // 희생으로 새로 뽑은 카드는 아래에서 올라온다(0.18초)
       const dk = deal && deal.ids.includes(p.id) && !app.reducedMotion ? Math.min(1, (app.time - deal.t) / 0.18) : 1;
       if (dk < 1) motion();
       const y = hr.y + Math.round((1 - ease.out(dk)) * 10);
       const selected = this.sel.includes(i);
-      ui.region(id, x, y - 4, w, lay.HAND_H + 4, { onClick: () => this.toggle(i), tip: () => pieceTip(p) });
+      const vis = i < n - 1 ? hr.step : w;
+      const g = ui.finger ? growHit(x, y - HAND.lift, vis, hr.h + HAND.lift, ui.finger, { u: 0, d: Math.max(0, 270 - (y + hr.h)) }) : { x, y: y - HAND.lift, w: vis, h: hr.h + HAND.lift };
+      ui.region(id, g.x, g.y, g.w, g.h, { onClick: () => this.toggle(i), tip: () => pieceTip(p) });
       const hov = ui.isHover(id);
       const usable = live && live.status === 'play' && !this.busy;
-      // 한동안 아무것도 들지 않으면 손이 차례로 살짝 들썩인다(누를 곳이 손이라는 것을 글 없이)
-      const nudge = nudging && beat(app.time, 3) % v.hand.length === i ? 2 : 0;
-      // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
+      const nudge = nudging && beat(app.time, 3) % n === i ? 2 : 0;
       const pressed = hov && ui.press && ui.press.id === id;
-      sway(ctx, app.time, `hand:${i}:${p.id ?? p.t}`, x, y - (selected ? 4 : nudge), w, lay.HAND_H, (c) => {
-        const level = chartLevel(run, p.t), lift = selected ? 4 : nudge;
-        pieceCard(c, p, x, y, w, lay.HAND_H, { lift, selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(level), level, time: app.time + i, alpha: dk < 1 ? dk : 1 });
-        // !? 흥미로운 수: 희생으로 새로 뽑은 기물(이것으로 시작한 다음 사슬이 체크메이트면 탁월수). 기보 표가 있으면 왼쪽 위
-        if (drawn.includes(p.id)) { const r = handTagRect(x, y - lift, w, level); drawAnnot(c, '!?', r.x, r.y, ANNOT.red); }
-      }, { hover: hov && usable, press: pressed });
+      const lift = selected ? HAND.lift : nudge;
+      sway(ctx, app.time, `hand:${i}:${p.id ?? p.t}`, x, y - lift, w, hr.h, (c) => {
+        const level = chartLevel(run, p.t);
+        // 기울임: 카드 아래쪽 가운데(카드 높이의 1.2배 아래)를 축으로 돌린다 — 그리기 변환만, 구역 · 기록은 기울이지 않은 네모
+        const px = x + w / 2, py = y - lift + hr.h * 1.2;
+        c.save(); c.translate(px, py); c.rotate(hr.rot); c.translate(-px, -py);
+        try {
+          this.handCard(c, p, x, y - lift, w, hr.h, { selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(level), level, time: app.time + i, alpha: dk < 1 ? dk : 1, loose: dk < 1, vis });
+          // !? 흥미로운 수: 희생으로 새로 뽑은 기물(이것으로 시작한 다음 사슬이 체크메이트면 탁월수). 기보 표가 있으면 왼쪽 위
+          if (drawn.includes(p.id)) { const r = handTagRect(x, y - lift, w, level); drawAnnot(c, '!?', r.x, r.y, ANNOT.red); }
+        } finally { c.restore(); }
+      }, { hover: hov && usable, press: pressed, shadow: false });
     });
     this.drawNext(ctx, ui, lay);
   }
 
-  // 다음 수(CHM-60): 덱 맨 앞 둘, 위가 먼저. 흐린 반 크기 기물(숫자 없음), 덱이 비면 점선 빈칸
+  // 다음 수(CHM-60): 덱 맨 앞 둘(왼쪽이 먼저), 손 부채 왼쪽 아래에 「다음」 이름표와 작은 칸 둘. 덱이 비면 빈 자리
   drawNext(ctx, ui, lay) {
-    const col = nextColumn(lay), next = this.view.next || [];
-    ui.region('next', col.x, col.y, col.w, col.h, { tip: () => this.nextTip() });
+    const col = nextColumn(lay, this.handRect(0, Math.max(1, this.view.hand.length), lay).x), next = this.view.next || [];
+    ui.region('next', col.x, col.labelY, col.w, col.y + col.h - col.labelY, { tip: () => this.nextTip() });
+    text(ctx, '다음', col.x, col.labelY, PAL.dim);
     col.slots.forEach((r, k) => {
       const p = next[k];
-      if (!p) { slot(ctx, r.x, r.y, r.w, r.h); return; }
-      box(ctx, r.x, r.y, r.w, r.h, PAL.well, PAL.frameDk);
-      // 반 크기(sprite는 16×22 칸의 아래 가운데에 줄여 그린다): 8×11을 칸 가운데로
-      sprite(ctx, p.t, 'w', r.x + 1 - 4, r.y + 2 - 11, { sx: 0.5, sy: 0.5, alpha: k === 0 ? 0.85 : 0.6, eng: p.eng ? p.eng.id : null });
+      if (!p) { slot(ctx, r.x, r.y, r.w, r.h, { r: radiusOf(r.w, r.h) }); return; }
+      box(ctx, r.x, r.y, r.w, r.h, PAL.slot, PAL.slotEdge);
+      fitPiece(ctx, p.t, 'w', r.x + 2, r.y + 2, r.w - 4, r.h - 4, { alpha: k === 0 ? 0.9 : 0.65, eng: p.eng ? p.eng.id : null, spark: false });
     });
   }
+
   nextTip() {
     const next = this.view.next || [];
     return tipLines('다음에 뽑을 기물', [next.length ? next.map((p) => PIECE_NAME[p.t]).join(' · ') : '덱이 비었어요']);

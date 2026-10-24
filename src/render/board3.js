@@ -13,7 +13,7 @@ export const VIEWS = {
 };
 export const VIEW = { name: 'diamond' };
 // 판이 들어갈 자리(대국 화면의 판 자리 — battle.js BX · BY · S × 8과 같다)
-export const AREA = { x: 128, y: 30, w: 224, h: 224 };
+export const AREA = { x: 128, y: 14, w: 224, h: 224 };
 export const DEPTH = 5;     // 판 두께
 export const RIM = 0.14;    // 칸 밖 크림 테(칸 단위)
 export const PIECE_UP = 24; // 기물 꼭대기가 칸 가운데 위로 솟는 높이(기물 그림 26 중 받침 아래 2를 뺀 것)
