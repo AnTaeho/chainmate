@@ -2,9 +2,10 @@
 //   !?  흥미로운 수: 희생으로 새로 뽑은 기물(b.offering.drawn)이 손에 있는 동안 그 카드 구석에. 붉은 바탕
 //   !!  탁월수: 그 기물로 시작한 사슬이 체크메이트로 끝난 순간, 메이트 친 칸에서 튀어나온다. 청록 바탕
 //   ×N  탁월수 배수: 값 × 배수 칸의 배수 칸에 붙는다. 청록 바탕
-// 딱지 글은 글꼴로 쓰지 않고 도트 글자(7줄)로 찍는다 — 작은 칸에 12px 글꼴이 안 들어가고, 글 넘침 검사의 테와 엉키지 않게.
+// 딱지는 둥근 칸 + 짙은 테, 글은 굵은 글꼴을 옛 7줄 글자 자리에 맞춰 줄여 쓴다(text.js tinyText — 글 넘침 검사의 테와 엉키지 않게 글 기록 밖).
 // 자리 셈(handTagRect · boardTagRect · offeredRow)은 그리기와 따로 두어 시험이 잰다(test/annot.test.js).
-import { rect } from '../render/gfx.js';
+import { rrect } from '../render/gfx.js';
+import { tinyText } from '../render/text.js';
 import { center as sqCenter, AREA, PIECE_UP } from '../render/board3.js';
 
 export const ANNOT = {
@@ -12,7 +13,7 @@ export const ANNOT = {
   teal: { fill: '#1baca6', edge: '#0e6b67', ink: '#ffffff' },
 };
 
-// 도트 글자 7줄(굵게 2칸 줄기). 글자 사이 1
+// 글자 자리 폭 표(옛 7줄 도트 글자의 폭 — 딱지 크기 · 자리 셈이 이 폭을 쓴다). 글자 사이 1
 const G = {
   '!': ['##', '##', '##', '##', '..', '##', '##'],
   '?': ['.###.', '##.##', '...##', '..##.', '.....', '..##.', '..##.'],
@@ -35,14 +36,9 @@ export function glyphW(s, scale = 1) {
   const ws = [...String(s)].map((ch) => (G[ch] ? G[ch][0].length : 0));
   return (ws.reduce((a, w) => a + w, 0) + Math.max(0, ws.length - 1)) * scale;
 }
+// 글자열을 자리 폭 glyphW(s) 가운데에(잉크 높이 7 × 배율)
 export function drawGlyphs(ctx, s, x, y, col, scale = 1) {
-  let cx = x;
-  for (const ch of String(s)) {
-    const g = G[ch];
-    if (!g) continue;
-    g.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === '#') rect(ctx, cx + i * scale, y + j * scale, scale, scale, col); });
-    cx += (g[0].length + 1) * scale;
-  }
+  tinyText(ctx, s, x + glyphW(s, scale) / 2, y + (GLYPH_H * scale) / 2, GLYPH_H * scale, col);
 }
 
 // 딱지 크기: 테 1 + 안 여백(가로 padX · 세로 1) + 글자. !!는 두 배 글자에 가로 여백을 넓게
@@ -51,14 +47,15 @@ export function annotSize(mark, scale = 1) {
   const [px, py] = PAD[scale] || PAD[1];
   return { w: glyphW(mark, scale) + (1 + px) * 2, h: GLYPH_H * scale + (1 + py) * 2 };
 }
-// 딱지 하나(바탕 · 테 · 도트 글자). 테는 rect로 — box()의 테 기록에 들지 않는다
+// 딱지 하나(둥근 바탕 · 짙은 테 · 글). 테는 rrect로 — box()의 테 기록에 들지 않는다. 큰 딱지(!!)는 아래 그림자 1
 export function drawAnnot(ctx, mark, x, y, tone = ANNOT.teal, scale = 1) {
   const { w, h } = annotSize(mark, scale);
   const [px, py] = PAD[scale] || PAD[1];
   x = Math.round(x); y = Math.round(y);
-  rect(ctx, x, y, w, h, tone.fill);
-  rect(ctx, x, y, w, 1, tone.edge); rect(ctx, x, y + h - 1, w, 1, tone.edge);
-  rect(ctx, x, y, 1, h, tone.edge); rect(ctx, x + w - 1, y, 1, h, tone.edge);
+  const r = Math.min(Math.floor(h / 2), scale > 1 ? 6 : 4);
+  if (scale > 1) rrect(ctx, x, y + 1, w, h, r, tone.edge);
+  rrect(ctx, x, y, w, h, r, tone.edge);
+  rrect(ctx, x + 1, y + 1, w - 2, h - 2, r - 1, tone.fill);
   drawGlyphs(ctx, mark, x + 1 + px, y + 1 + py, tone.ink, scale);
   return { x, y, w, h };
 }
@@ -99,9 +96,7 @@ export function offeredRow(n, x0, x1, { sw = 8, step = 9 } = {}) {
   const more = n - k;
   return { shown: k, more, xs: Array.from({ length: k }, (_, i) => x0 + i * step), moreX: x0 + k * step, fits: k * step + moreW(more) <= room };
 }
-// 작은 「+N」(3 × 5 숫자, gfx digits와 같은 꼴)
-const PLUS = ['000', '010', '111', '010', '000'];
-export function drawMore(ctx, n, x, y, col, digits) {
-  PLUS.forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '1') rect(ctx, x + i, y + j, 1, 1, col); });
-  digits(ctx, String(n), x + 4, y, col);
+// 작은 「+N」: 옛 3 × 5 숫자 자리(moreW 폭) 가운데에 굵은 글꼴(잉크 높이 5). 옛 부름의 다섯째 인자(digits)는 쓰지 않는다
+export function drawMore(ctx, n, x, y, col) {
+  tinyText(ctx, `+${n}`, x + moreW(n) / 2, y + 2.5, 5, col);
 }

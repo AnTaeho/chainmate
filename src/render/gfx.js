@@ -1,7 +1,7 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL, lightFill } from './palette.js';
 import { shade, softShadow, rpath, DROP } from './light.js';
-import { textImage, textWidth, inkBox } from './text.js';
+import { textImage, textWidth, inkBox, tinyText } from './text.js';
 import { soulOrb, SW, SH } from './sprites.js';
 import { fitPiece, artOf } from './pieces3.js';
 import { L } from '../ui/lang.js';
@@ -177,35 +177,11 @@ export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng =
   fitPiece(ctx, type, side, R(x + (SW - bw) / 2), R(y + SH - bh), bw, bh, { alpha, hx: still ? 1 : Math.abs(sx) / (k || 1), eng, tier, time, soul, awake, spark: still && k === 1 });
 }
 
-// 천 무늬 바탕(한 번 그려 캐시)
-let feltCache = null;
-export function felt(ctx, makeCanvas, context) {
-  if (!feltCache) {
-    feltCache = makeCanvas(W, H);
-    const c = context(feltCache);
-    rect(c, 0, 0, W, H, PAL.felt);
-    c.fillStyle = PAL.feltHi;
-    for (let y = 0; y < H; y += 3) for (let x = (y / 3) % 2 ? 1 : 0; x < W; x += 6) c.fillRect(x, y, 1, 1);
-  }
-  ctx.drawImage(feltCache, 0, 0);
-}
-
-// 1~3자리 숫자 모양(작은 칸 번호용, mockup DIG)
-const DIG = {
-  0: ['111', '101', '101', '101', '111'], 1: ['010', '110', '010', '010', '111'], 2: ['110', '001', '010', '100', '111'],
-  3: ['110', '001', '010', '001', '110'], 4: ['101', '101', '111', '001', '001'], 5: ['111', '100', '110', '001', '110'],
-  6: ['011', '100', '110', '101', '010'], 7: ['111', '001', '010', '010', '010'], 8: ['010', '101', '010', '101', '010'],
-  9: ['010', '101', '011', '001', '110'],
-};
+// 작은 숫자(작은 칸 번호 · 기보 수): 옛 3 × 5 도트 숫자 자리(글자마다 폭 4)의 가운데에 굵은 글꼴 숫자(잉크 높이 5). 돌려주는 값은 자리 폭
 export function digits(ctx, n, x, y, col) {
-  ctx.fillStyle = col;
-  const s = String(n);
-  for (let k = 0; k < s.length; k++) {
-    const rows = DIG[s[k]];
-    if (!rows) continue;
-    rows.forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '1') ctx.fillRect(x + k * 4 + i, y + j, 1, 1); });
-  }
-  return s.length * 4 - 1;
+  const s = String(n), w = s.length * 4 - 1;
+  tinyText(ctx, s, x + w / 2, y + 2.5, 5, col);
+  return w;
 }
 
 // 1,234 꼴

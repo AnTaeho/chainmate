@@ -318,14 +318,14 @@ export function soulMark(ctx, p, x, y, w, h, time = null, dim = false) {
   }
   if (dim) ctx.globalAlpha /= 0.6;
 }
-// 기보 수준 표: 오른끝 right · 윗변 y에 붙는 청록 칸(숫자 3 × 5 + 둘레 1). 돌려주는 값은 폭
+// 기보 수준 표: 오른끝 right · 윗변 y에 붙는 둥근 청록 칸(숫자 자리 3 × 5 + 둘레 1). 돌려주는 값은 폭
 export function chartBadge(ctx, level, right, y, { dim = false, glow = 0 } = {}) {
   const [, hi, dk] = SEAL.chart;
   const s = String(Math.min(99, level));
   const bw = s.length * 4 + 1, bh = 7, bx = right - bw;
   const a0 = ctx.globalAlpha;
   if (dim) ctx.globalAlpha = a0 * 0.6;
-  rect(ctx, bx, y, bw, bh, glow > 0 ? mixHex(dk, hi, glow * 0.6) : dk);
+  rrect(ctx, bx, y, bw, bh, 2, glow > 0 ? mixHex(dk, hi, glow * 0.6) : dk);
   digits(ctx, s, bx + 1, y + 1, glow > 0.5 ? PAL.white : hi);
   ctx.globalAlpha = a0;
   return bw;

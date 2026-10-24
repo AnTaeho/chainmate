@@ -19,16 +19,11 @@ before(async () => {
 });
 after(async () => { const { setCanvasFactory } = await import('../src/render/surface.js'); setCanvasFactory(null); M.lang.setLang('ko'); });
 
-// 칠한 칸을 모으는 가짜 그리기 판(그린 도트의 자리로 겹침을 잰다)
-function recorder() {
-  const px = new Set();
-  const ctx = { globalAlpha: 1, fillStyle: '', fillRect(x, y, w, h) { for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) px.add(`${x + i},${y + j}`); } };
-  return { ctx, px };
-}
-const overlap = (a, b) => [...a].some((k) => b.has(k));
+// 아무 그리기나 받는 가짜 그리기 판(딱지는 둥근 칸 · 글꼴 글자라 겹침은 네모 셈으로 잰다)
+const fakeCtx = () => new Proxy({ globalAlpha: 1 }, { get: (t, k) => (k in t ? t[k] : () => ({ width: 0 })), set: (t, k, v) => { t[k] = v; return true; } });
 const cross = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-test('!? 딱지: 기보 표가 없으면 오른쪽 위, 있으면 왼쪽 위 — 기보 표의 도트와 겹치지 않는다', () => {
+test('!? 딱지: 기보 표가 없으면 오른쪽 위, 있으면 왼쪽 위 — 기보 표와 겹치지 않는다', () => {
   const { handTagRect, drawAnnot, ANNOT, chartBadgeRect } = M.annot;
   for (const w of [20, 22, 25, 26]) {
     const x = 400, y = 232, h = 36;
@@ -39,15 +34,12 @@ test('!? 딱지: 기보 표가 없으면 오른쪽 위, 있으면 왼쪽 위 —
       const r = handTagRect(x, y, w, level);
       assert.equal(r.left, true, `w ${w} 기보 ${level}: 왼쪽 위로 옮긴다`);
       assert.ok(r.x < x + 4 && r.y < y, `w ${w} 기보 ${level}: 왼쪽 위 구석`);
-      const a = recorder(), b = recorder();
-      drawAnnot(a.ctx, '!?', r.x, r.y, ANNOT.red);
-      M.parts.chartBadge(b.ctx, level, x + w - 1, y + 1);
-      assert.ok(!overlap(a.px, b.px), `w ${w} 기보 ${level}: 딱지와 기보 표가 겹친다`);
-      assert.ok(!cross(r, chartBadgeRect(x, y, w, level)), `w ${w} 기보 ${level}: 네모가 겹친다`);
+      assert.ok(!cross(r, chartBadgeRect(x, y, w, level)), `w ${w} 기보 ${level}: 딱지와 기보 표가 겹친다`);
       // 기보 표 자리에 그대로 두었다면 겹쳤다(옮기는 까닭)
-      const c = recorder();
-      drawAnnot(c.ctx, '!?', plain.x, plain.y, ANNOT.red);
-      assert.ok(overlap(c.px, b.px), `w ${w} 기보 ${level}: 오른쪽 위 자리는 기보 표와 겹친다`);
+      assert.ok(cross(plain, chartBadgeRect(x, y, w, level)), `w ${w} 기보 ${level}: 오른쪽 위 자리는 기보 표와 겹친다`);
+      // 그려도 던지지 않는다(둥근 칸 · 글꼴 글자)
+      drawAnnot(fakeCtx(), '!?', r.x, r.y, ANNOT.red);
+      M.parts.chartBadge(fakeCtx(), level, x + w - 1, y + 1);
     }
   }
   // 손 오른끝 카드의 딱지도 화면(480) 안
