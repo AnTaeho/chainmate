@@ -161,14 +161,6 @@ test('꾸러미 봉투: 구운 그림 하나를 정수 칸에(3배는 반 칸 �
   }
 });
 
-test('타이틀 시연 판: 기물 그림을 판 하나에 하나로(hi를 주면 줄마다 배율이 달라도 같은 그림)', () => {
-  for (const sy of [0.75, 0.9, 1.1]) {
-    const r = rec(2);
-    gfx.sprite(r.ctx, 'N', 'w', 0, 0, { sx: sy, sy, hi: true });
-    assert.equal(images(r.calls).pop()[1].width, 32, `sy ${sy}`);
-  }
-});
-
 test('주사위(설정 「다시 짓기」, CHM-70): 반 칸 그림은 1배 그림과 짝 · 잉크가 7×7 자리를 꽉 채운다 · 배율에 맞는 그림을 7×7 자리에 찍는다', async () => {
   const D = await import('../src/render/dice.js');
   const { inkBox } = await import('../src/render/ink.js');

@@ -66,36 +66,6 @@ test('spriteCanvas: hi면 32×44, 아니면 16×22 · 캐시는 둘을 가른다
   assert.deepEqual([o.width, o.height, o1.width, o1.height], [36, 48, 18, 24]);
 });
 
-test('gfx.sprite: N = 1이면 16×22 그림, N = 3이면 32×44 그림을 같은 16×22 자리에', () => {
-  for (const [n, w] of [[1, 16], [2, 32], [3, 32], [4, 32]]) {
-    withN(n, () => {
-      const { ctx, calls } = rec();
-      gfx.sprite(ctx, 'Q', 'b', 40, 30, { tier: 3, soul: 'echo', awake: true });
-      const img = calls.filter((c) => c[0] === 'drawImage');
-      const body = img[img.length - 1];
-      assert.equal(body[1].width, w, `N ${n}`);
-      assert.deepEqual(body.slice(2), [40, 30, 16, 22], `N ${n}`);
-      // 반 도트 덧그림(기운 점 · 혼 기운)은 N ≥ 2에서 구운 그림을 정수 칸 상자에 — 0.5 칸 fillRect는 N = 3에서 번진다
-      const half = calls.filter((c) => c[0] === 'fillRect' && c.slice(1).some((v) => v % 1));
-      assert.equal(half.length, 0, `N ${n}`);
-      if (n >= 2) for (const c of img) assert.ok(c.slice(2).every((v) => Number.isInteger(v)), `N ${n} ${c.slice(2)}`);
-    });
-  }
-});
-
-test('1배 캔버스에 그리면 N이 3이어도 16×22(타이틀 시연 판의 연출 같은 오프스크린)', () => {
-  withN(3, () => {
-    assert.equal(S.hiFor(rec(1).ctx), false);
-    assert.equal(S.hiFor(rec(3).ctx), true);
-    assert.equal(S.hiFor(rec(3).ctx, 0.6), false); // 멀리 작게 세운 기물(3 × 0.6 < 2)
-    const { ctx, calls } = rec(1);
-    gfx.sprite(ctx, 'K', 'w', 0, 0);
-    assert.equal(calls.find((c) => c[0] === 'drawImage')[1].width, 16);
-  });
-  // N = 1이어도 두 배로 그리는 곳(사슬 칸의 큰 기물)은 32×44가 1:1
-  withN(1, () => { assert.equal(S.hiFor(rec(1).ctx, 2), true); assert.equal(S.hiFor(rec().ctx), false); });
-});
-
 test('조각은 두 배에서도 16×22 칸 안의 자리', () => {
   for (const hi of [false, true]) {
     const chips = S.spriteChips('N', 'g', null, hi);

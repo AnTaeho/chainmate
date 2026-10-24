@@ -4,10 +4,10 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, artOf, slot } from '../../render/gfx.js';
-import { spriteChips, spriteCanvas, outlineCanvas, hiFor, SW, SH, TONE, tierOf } from '../../render/sprites.js';
+import { W, H, text, box, rect, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
+import { SW, SH, tierOf } from '../../render/sprites.js';
 import { center as sqCenter, centerAt, projectSq, unproject, sqBox, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM } from '../../render/board3.js';
-import { piece3, pieceCanvas, pieceChips, scaleOf, STANDARD, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
+import { piece3, fitPiece, pieceCanvas, pieceChips, scaleOf, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
 import { mateBlocked } from '../../sim/tuning.js';
@@ -154,25 +154,19 @@ export function objectsAt(rules, sq) {
 }
 // 판 위 사물 「문」: size×size 칸 안의 아치 문(어두운 청록 안쪽 · 굵은 테 · 문턱). glow = 문 안쪽 빛(0~1)
 const GATE = { rim: '#6fd1bf', hi: '#c8f5ea', in: '#1d4d48', glow: '#2f8a7e' };
-// 아치의 줄마다 [y, 왼쪽 x, 오른쪽 x]: 위는 반원, 아래는 곧은 기둥(바닥 두 줄 위까지)
-function archRows(size, inset) {
-  const top = inset - 1, w = size - inset * 2, r = Math.floor(w / 2), cx = inset + (w - 1) / 2, rows = [];
-  for (let yy = top; yy < size - 2; yy++) {
-    const dy = Math.max(0, r - (yy - top)), dx = Math.sqrt(Math.max(0, r * r - dy * dy));
-    rows.push([yy, Math.round(cx - dx), Math.round(cx + dx)]);
-  }
-  return rows;
-}
 function gateArch(ctx, x, y, size, glow) {
-  const t = size >= 24 ? 2 : 1, inset = size >= 24 ? 3 : 2;
-  const outer = archRows(size, inset);
-  for (const [yy, a, b] of outer) rect(ctx, x + a, y + yy, b - a + 1, 1, GATE.in);
-  ctx.globalAlpha = glow;
-  for (const [yy, a, b] of archRows(size, inset + 2)) rect(ctx, x + a, y + yy + 1, b - a + 1, 1, GATE.glow);
-  ctx.globalAlpha = 1;
-  for (const [yy, a, b] of outer) { rect(ctx, x + a, y + yy, t, 1, GATE.rim); rect(ctx, x + b - t + 1, y + yy, t, 1, GATE.rim); }
-  // 윗테: 반원 꼭대기 줄들은 가로로 이어 그린다(1배에서 끊겨 보이지 않게)
-  for (let k = 0; k < t; k++) { const [yy, a, b] = outer[k]; rect(ctx, x + a, y + yy, b - a + 1, 1, GATE.rim); }
+  const inset = size >= 24 ? 3 : 2, t = size >= 24 ? 2 : 1.5;
+  const L = x + inset, R = x + size - inset, r = (R - L) / 2, cx = (L + R) / 2, top = y + inset - 1, bot = y + size - 2.5, cy = top + r;
+  // 위는 반원, 아래는 곧은 기둥. k: 안쪽으로 들인 몫 · open: 바닥 변을 닫지 않는다(테)
+  const arch = (k, dy = 0, open = false) => {
+    ctx.beginPath(); ctx.moveTo(L + k, bot + dy); ctx.lineTo(L + k, cy + dy); ctx.arc(cx, cy + dy, Math.max(0.5, r - k), Math.PI, 0); ctx.lineTo(R - k, bot + dy);
+    if (!open) ctx.closePath();
+  };
+  arch(0); ctx.fillStyle = GATE.in; ctx.fill();
+  ctx.globalAlpha = glow; arch(2, 1); ctx.fillStyle = GATE.glow; ctx.fill(); ctx.globalAlpha = 1;
+  ctx.lineJoin = 'round';
+  arch(t / 2, 0, true); ctx.strokeStyle = GATE.rim; ctx.lineWidth = t; ctx.stroke();
+  arch(-0.4, 0, true); ctx.strokeStyle = INK3; ctx.lineWidth = 0.8; ctx.stroke();
   rect(ctx, x + 2, y + size - 2, size - 4, 1, GATE.hi);
   rect(ctx, x + inset, y + size - 3, size - inset * 2, 1, GATE.rim);
 }
@@ -952,7 +946,7 @@ export class BattleScreen {
   shatter(sq, type, side) {
     // 조각 자리는 16 × 22 상자(기물 그림 가운데에 맞춘다)
     const c0 = sqCenter(sq), x = c0.x - 8, y = c0.y - PIECE_TOP + 1;
-    const chips = STANDARD.has(type) ? pieceChips(type, side === 'g' ? 'g' : side) : spriteChips(artOf(type), side);
+    const chips = pieceChips(type, side === 'g' ? 'g' : side);
     const calm = this.app.reducedMotion, n = calm ? 14 : CAP.chips;
     let seed = sq * 97 + chips.length;
     const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
@@ -1106,7 +1100,7 @@ export class BattleScreen {
       const p = v.hand[i];
       if (!p) continue;
       const r = this.handRect(i, n);
-      const chips = spriteChips(artOf(p.t), 'w');
+      const chips = pieceChips(p.t, 'w');
       for (let k = 0; k < 18; k++) {
         const card = k < 8, c = card ? null : chips[Math.floor(rnd() * chips.length)];
         const x = card ? r.x + 2 + rnd() * (r.w - 4) : r.x + Math.floor((r.w - 16) / 2) + c.x;
@@ -1698,8 +1692,7 @@ export class BattleScreen {
   // 증원 그림자: 그 적 빛깔로 흐리게(속이 비친다) + 붉은 ▼(흔들린다). 두 수 앞은 더 흐리게
   drawGhost(ctx, sq, g, x, y, time) {
     const a = g.k ? 0.3 : 0.5;
-    if (STANDARD.has(g.t)) piece3(ctx, g.t, 'b', x, y, { alpha: a });
-    else ctx.drawImage(outlineCanvas(artOf(g.t), TONE.b.o, g.k > 0, hiFor(ctx)), x - 9, y - 20, SW + 2, SH + 2);
+    piece3(ctx, g.t, 'b', x, y, { alpha: a });
     const bob = beat(time, 3, sq * 0.37) % 2, ty = y - PIECE_TOP - 7 + bob;
     ctx.globalAlpha = g.k ? 0.5 : 1;
     ctx.beginPath(); ctx.moveTo(x - 3.5, ty); ctx.lineTo(x + 3.5, ty); ctx.lineTo(x, ty + 5); ctx.closePath();
@@ -1774,15 +1767,11 @@ export class BattleScreen {
     });
   }
 
-  // 판 위 기물 하나를 받침 가운데 (cx, cy)에. 체스 기물 여섯은 벡터(pieces3.js — 받침 · 그림자를 같이 굽는다), 특수 기물 · 사물은 도트 그림(16 × 22)
-  // lift는 바닥에서 들린 높이(도트): 들리면 바닥에 그림자가 남는다(작아지고 옅어진다). 움직이는 기물은 소수점 자리에 선다(fine)
+  // 판 위 기물 하나를 받침 가운데 (cx, cy)에: 벡터 기물(pieces3.js — 받침을 같이 굽는다) · 사물(벽 · 보석, board3.js)
+  // lift는 바닥에서 들린 높이: 들리면 바닥에 그림자가 남는다(작아지고 옅어진다)
   putPiece(ctx, type, side, cx, cy, opts = {}, lift = 0) {
-    const std = STANDARD.has(type);
-    if ((!std || lift > 0.5) && (opts.alpha == null || opts.alpha > 0.3)) groundShadow(ctx, cx, cy + lift + 2, lift);
-    if (std) { piece3(ctx, type, side, cx, cy, opts); return; }
-    const x = cx - 8, y = cy - 20;
-    if (y % 1 || x % 1) fine(() => sprite(ctx, type, side, x, y, opts));
-    else sprite(ctx, type, side, x, y, opts);
+    if (lift > 0.5 && (opts.alpha == null || opts.alpha > 0.3)) groundShadow(ctx, cx, cy + lift + 2, lift);
+    piece3(ctx, type, side, cx, cy, opts);
   }
 
   drawReach(ctx, form, from) {
@@ -2056,7 +2045,7 @@ export class BattleScreen {
       const cy0 = cy + Math.floor((ch - chh) / 2);
       if (c && c.cut) { ctx.globalAlpha = 0.35; rect(ctx, cx0 - 2, cy + 2, cw + 4, ch - 4, PAL.red); ctx.globalAlpha = 1; }
       ctx.globalAlpha = a;
-      ctx.drawImage(spriteCanvas(artOf(cur), 'w', eng, tierAt(cur), hiFor(ctx, cw / SW)), cx0, cy0, cw, chh);
+      fitPiece(ctx, cur, 'w', cx0, cy0, cw, chh, { eng, tier: tierAt(cur), spark: false });
       ctx.globalAlpha = 1;
     }
     closeBox();
@@ -2085,12 +2074,7 @@ export class BattleScreen {
   offeredRow(ctx, x0, x1, ty) {
     const list = this.view.offered || [];
     const row = offeredRow(list.length, x0, x1);
-    const hi = hiFor(ctx, 0.5);
-    row.xs.forEach((x, i) => {
-      ctx.globalAlpha = 0.55;
-      ctx.drawImage(spriteCanvas(artOf(list[i]), 'w', null, 0, hi), x, ty - 1, SW / 2, SH / 2);
-      ctx.globalAlpha = 1;
-    });
+    row.xs.forEach((x, i) => fitPiece(ctx, list[i], 'w', x, ty - 1, SW / 2, SH / 2, { alpha: 0.55 }));
     if (row.more && row.fits) drawMore(ctx, row.more, row.moreX, ty + 4, PAL.dim, digits);
     this.offeredLayout = { ...row, x0, x1, n: list.length };
   }

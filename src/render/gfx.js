@@ -2,8 +2,8 @@
 import { PAL, lightFill } from './palette.js';
 import { shade } from './light.js';
 import { textImage, textWidth, inkBox } from './text.js';
-import { spriteCanvas, tierSparkle, soulOrb, hiFor, SW, SH, spritePixels } from './sprites.js';
-import { chartForm } from '../data/pieces.js';
+import { soulOrb, SW, SH } from './sprites.js';
+import { fitPiece, artOf } from './pieces3.js';
 import { L } from '../ui/lang.js';
 import { LOG, logText, logFrame } from './layoutlog.js';
 import { SOUL_BY_ID } from '../data/souls.js';
@@ -131,32 +131,14 @@ export function textMid(ctx, s, x, y, h, col = PAL.ink, opts = {}) {
   return text(ctx, s, x, y + Math.floor((h - ink.h * scale) / 2) - ink.top * scale, col, opts);
 }
 
-// 기물. sx: 가로 배율(뒤집힘 1 → 0 → 1), lift: 위로 띄우기, alpha
-// eng: 각인 id(몸 톤) · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게(없으면 멈춘 모습)
-// 두 배 도트(CHM-39): 그리는 곳의 배율이 2 이상이면(hiFor) 32×44 그림을 16×22 자리에 반 도트로. 자리 · 크기는 늘 16×22
-// hi: 그림 크기를 정해 줄 때. 없으면 그리는 곳의 실제 배율로
-// 그림이 아직 없는 기물(새 특수 기물, CHM-55)은 바탕 기물(기보 모습)의 그림을 빌려 그린다 — 그림이 들어오면 저절로 제 그림으로
-export const artOf = (t) => (spritePixels(t) ? t : chartForm(t) || 'P');
-export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null, awake = false, hi: pick = null } = {}) {
+// 기물(판 밖). 옛 16 × 22 상자 (x, y)에 벡터 기물(pieces3.js fitPiece)을 맞춘다 — 받침 아래가 상자 아래, 가로 가운데.
+// sx · sy: 상자 배율(작은 칸은 0.5). sx만 바뀌면 뒤집힘(1 → 0 → 1). eng: 각인 id · tier: 기보 단계 0~3 · time: 금 단계 반짝임을 깜빡이게
+// 그림이 없는 id(뺀 기물)는 바탕 기물(기보 모습)의 그림을 빌린다(artOf). hi는 옛 부름을 위해 받기만 한다
+export { artOf };
+export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng = null, tier = 0, time = null, soul = null, awake = false } = {}) {
   if (alpha <= 0) return;
-  type = artOf(type);
-  const hi = pick ?? hiFor(ctx, sy);
-  const c = spriteCanvas(type, side, eng, tier, hi);
-  const px = R(x), py = R(y);
-  if (tier === 3 && sx === 1 && sy === 1) { if (alpha !== 1) ctx.globalAlpha = alpha; tierSparkle(ctx, px, py, time, hi); if (alpha !== 1) ctx.globalAlpha = 1; }
-  if (alpha !== 1) ctx.globalAlpha = alpha;
-  if (soul && sx === 1 && sy === 1) {
-    soulSpark(ctx, px, py, SOUL_BY_ID[soul] ? SOUL_BY_ID[soul].col : '#ffffff', time, hi);
-    // 깨어난 혼(CHM-17): 오른쪽 위에 금빛 기운 한 점 더(엇박으로 깜빡인다)
-    if (awake) soulSpark(ctx, px + 12, py - 2, PAL.gold, time == null ? null : time + 1.3, hi);
-  }
-  if (sx === 1 && sy === 1) ctx.drawImage(c, px, py, SW, SH);
-  else {
-    const w = Math.max(1, Math.round(SW * Math.abs(sx)));
-    const h = Math.max(1, Math.round(SH * sy));
-    ctx.drawImage(c, R(x + (SW - w) / 2), R(y + SH - h), w, h);
-  }
-  if (alpha !== 1) ctx.globalAlpha = 1;
+  const k = Math.abs(sy), bw = SW * k, bh = SH * k, still = sx === sy;
+  fitPiece(ctx, type, side, R(x + (SW - bw) / 2), R(y + SH - bh), bw, bh, { alpha, hx: still ? 1 : Math.abs(sx) / (k || 1), eng, tier, time, soul, awake, spark: still && k === 1 });
 }
 
 // 천 무늬 바탕(한 번 그려 캐시)

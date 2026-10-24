@@ -2,7 +2,7 @@
 // 손잡이는 VIEW.name 하나(diamond · shallow · flat) — 바꾸면 판 · 누르기 · 연출이 같이 따라간다. DOM 없이 돈다(연기 시험의 가짜 캔버스).
 import { PAL } from './palette.js';
 import { makeCanvas, context } from './surface.js';
-import { LOOK } from './look.js';
+import { LOOK, snap } from './look.js';
 import { glyph } from './texture.js';
 
 // rot: 판을 돌린 각(도), tilt: 세로 눌림(칸 높이 / 칸 폭)
@@ -168,4 +168,88 @@ export function boardImage(n = LOOK.n) {
 export function drawBoardImage(ctx, n = LOOK.n) {
   const b = boardImage(n);
   ctx.drawImage(b.cv, b.x, b.y, b.w, b.h);
+}
+
+// ── 판 위 사물(벽 · 보석): 칸 마름모에서 세운 벡터 그림. 모든 칸이 같은 모양이라 (사물, 크기, 배율, 손잡이)마다 한 번 굽고 칸 가운데에 붙인다
+export const THINGS = new Set(['X', 'J']);
+const WALL = { top: '#a9b3ae', inner: '#8c9792', left: '#77827d', right: '#535d59', mortar: '#3a423f', h: 7, inset: 0.84 };
+const GEM = { light: '#6fd8e6', dark: '#2f9fb0', table: '#bff3f8', facet: '#1f7280', hi: '#ffffff' };
+const thingCache = new Map();
+// f: 판 위 크기에 대한 배율(판 밖 맞춤 그림이 쓴다). 돌려주는 것: { cv, w, h, ox, oy(칸 가운데 자리), below(가운데에서 그림 아래까지) }
+export function thingImage(t, n = LOOK.n, f = 1) {
+  const g = geo();
+  f = Math.round(f * 8) / 8;
+  const key = `${t}|${g.name}|${n}|${f}`;
+  let c = thingCache.get(key);
+  if (c) return c;
+  // 칸 가운데를 원점으로 한 꼭짓점(벽은 조금 들여 세운다)
+  const k = t === 'X' ? WALL.inset / 2 : 0;
+  const ef = { x: g.ef.x * f, y: g.ef.y * f }, er = { x: g.er.x * f, y: g.er.y * f };
+  const pts = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => ({ x: (a * ef.x + b * er.x) * k, y: (a * ef.y + b * er.y) * k }));
+  const H = WALL.h * f;
+  const box = t === 'X'
+    ? { x0: Math.min(...pts.map((p) => p.x)), x1: Math.max(...pts.map((p) => p.x)), y0: Math.min(...pts.map((p) => p.y)) - H, y1: Math.max(...pts.map((p) => p.y)) }
+    : { x0: -9 * f, x1: 9 * f, y0: -15 * f, y1: 4 * f };
+  const pad = 2, x0 = Math.floor(box.x0) - pad, y0 = Math.floor(box.y0) - pad;
+  const w = Math.ceil(box.x1) + pad - x0, h = Math.ceil(box.y1) + pad - y0;
+  const cv = makeCanvas(w * n, h * n), x = context(cv);
+  x.imageSmoothingEnabled = true;
+  x.setTransform(n, 0, 0, n, -x0 * n, -y0 * n);
+  const lw = Math.max(1 / n, 0.9 * f);
+  x.lineJoin = 'round';
+  const poly = (ps, dy = 0) => { x.beginPath(); x.moveTo(ps[0].x, ps[0].y + dy); for (let i = 1; i < ps.length; i++) x.lineTo(ps[i].x, ps[i].y + dy); x.closePath(); };
+  const seg = (a, b, col, wd) => { x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.strokeStyle = col; x.lineWidth = wd; x.stroke(); };
+  const mix = (a, b, u) => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
+  if (t === 'X') {
+    // 낮은 돌 덩이: 아래를 보는 옆면 둘(왼쪽 밝게) → 윗면. 옆면에 줄눈 한 줄 · 엇갈린 이음매
+    const top = pts.map((p) => ({ x: p.x, y: p.y - H }));
+    for (let i = 0; i < 4; i++) {
+      const p = pts[i], q = pts[(i + 1) % 4];
+      if ((p.y + q.y) / 2 <= 0.01) continue;
+      const tp = top[i], tq = top[(i + 1) % 4];
+      poly([tp, tq, q, p]);
+      x.fillStyle = (p.x + q.x) / 2 < 0 ? WALL.left : WALL.right; x.fill();
+      const ml = mix(tp, p, 0.5), mr = mix(tq, q, 0.5);
+      seg(ml, mr, WALL.mortar, lw * 0.8);
+      seg(mix(mix(tp, tq, 0.35), mix(p, q, 0.35), 0), mix(mix(tp, tq, 0.35), mix(p, q, 0.35), 0.5), WALL.mortar, lw * 0.8);
+      seg(mix(mix(tp, tq, 0.7), mix(p, q, 0.7), 0.5), mix(mix(tp, tq, 0.7), mix(p, q, 0.7), 1), WALL.mortar, lw * 0.8);
+      poly([tp, tq, q, p]); x.strokeStyle = INK; x.lineWidth = lw; x.stroke();
+    }
+    poly(top); x.fillStyle = WALL.top; x.fill();
+    const inn = top.map((p) => ({ x: p.x * 0.62, y: p.y * 0.62 - H * 0.38 }));
+    poly(inn); x.strokeStyle = WALL.inner; x.lineWidth = lw * 0.9; x.stroke();
+    poly(top); x.strokeStyle = INK; x.lineWidth = lw; x.stroke();
+    c = { below: box.y1 };
+  } else {
+    // 보석: 칸 위에 선 깎은 돌(정면) — 바닥 그림자 · 왼쪽 밝은 면 · 오른쪽 그늘 면 · 윗면 띠 · 면 금 · 빛 한 점
+    x.globalAlpha = 0.3; x.beginPath(); x.ellipse(0, 1.5 * f, 7.5 * f, 2.4 * f, 0, 0, Math.PI * 2); x.fillStyle = '#000'; x.fill(); x.globalAlpha = 1;
+    const P = (a, b) => ({ x: a * f, y: b * f });
+    const TL = P(-5, -13), TR = P(5, -13), R = P(8.5, -8), B = P(0, 1.5), L = P(-8.5, -8), ML = P(-2.5, -8), MR = P(2.5, -8);
+    poly([TL, TR, R, B, L]); x.fillStyle = GEM.light; x.fill();
+    x.save(); x.beginPath(); x.rect(0, -20 * f, 20 * f, 30 * f); x.clip(); poly([TL, TR, R, B, L]); x.fillStyle = GEM.dark; x.fill(); x.restore();
+    poly([TL, TR, MR, ML]); x.fillStyle = GEM.table; x.fill();
+    seg(L, R, GEM.facet, lw * 0.8); seg(ML, B, GEM.facet, lw * 0.8); seg(MR, B, GEM.facet, lw * 0.8);
+    seg(TL, ML, GEM.facet, lw * 0.8); seg(TR, MR, GEM.facet, lw * 0.8);
+    poly([TL, TR, R, B, L]); x.strokeStyle = INK; x.lineWidth = lw; x.stroke();
+    x.beginPath(); x.arc(-3.5 * f, -10.5 * f, 1.1 * f, 0, Math.PI * 2); x.fillStyle = GEM.hi; x.fill();
+    c = { below: 1.5 * f + 2.4 * f };
+  }
+  Object.assign(c, { cv, n, w: cv.width / n, h: cv.height / n, ox: -x0, oy: -y0 });
+  if (thingCache.size > 60) thingCache.clear();
+  thingCache.set(key, c);
+  return c;
+}
+const nOf = (ctx) => { const m = ctx && ctx.getTransform ? ctx.getTransform() : null; const a = m && typeof m.a === 'number' ? Math.hypot(m.a, m.b) : LOOK.n; return Math.max(1, Math.min(6, Math.round(a))); };
+// 판 위: 칸 가운데 (cx, cy)에
+export function drawThing(ctx, t, cx, cy, alpha = 1) { drawThing2(ctx, thingImage(t, nOf(ctx)), cx, cy, alpha); }
+// 판 밖: 기물 크기(120 상자 논리 폭 w120)에 맞춘 사물을 가운데 cx, 아래 by에
+export function drawThingFit(ctx, t, cx, by, w120, alpha = 1) {
+  const c = thingImage(t, nOf(ctx), w120 / 22);
+  drawThing2(ctx, c, cx, by - c.below, alpha);
+}
+function drawThing2(ctx, c, cx, cy, alpha) {
+  const a0 = ctx.globalAlpha;
+  if (alpha !== 1) ctx.globalAlpha = a0 * alpha;
+  ctx.drawImage(c.cv, snap(cx - c.ox), snap(cy - c.oy), c.w, c.h);
+  ctx.globalAlpha = a0;
 }
