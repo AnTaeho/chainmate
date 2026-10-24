@@ -1,10 +1,9 @@
 // 물건 종류 표시(CHM-37, docs/design-notes/layout.md 「종류 표시」): 종류마다 문양 하나(12×12 마스크, 잉크 10×10 안)와 빛깔 둘(밝은 문양 · 짙은 바탕).
 // 종류 빛깔은 늘 짙은 바탕 위 밝은 문양으로만 쓴다 — 얇은 선으로 쓰는 등급 · 판본 · 혼/각인 테와 다른 층이다.
 // 카드 · 꾸러미 봉투는 딱지(kindTab, 14×14), 두루마리 칸은 왼쪽 띠(kindBand). 종류 빛깔과 문양은 이 표 한 곳에만 둔다.
+// 문양은 안 3 벡터(docs/design-notes/art3.md): 12×12 자리(잉크 10×10)에 한 빛깔 굵은 모양, 빈 곳은 뚫는다. g(12×12 마스크)는 문양의 원본 기록이다.
 import { rect, place } from '../render/gfx.js';
-import { baked, hiFor } from '../render/sprites.js';
-import { KIND_HI } from '../render/art-hi.js';
-import { inkBox, centre } from '../render/ink.js';
+import { bake, scaleOf, trace } from '../render/vec.js';
 
 // 혼은 드묾 등급(#6fb3c8)과 갈리게 흰 청백(KIND_SOUL). 혼마다의 빛깔(src/data/souls.js col)은 혼 하나하나의 것이라 그대로 둔다
 export const KIND_SOUL = '#e4f4fa';
@@ -40,13 +39,38 @@ export const TAB = 14;  // 딱지 한 변(문양 잉크 10 안 + 둘레 2 이상
 export const TAB_GAP = 2; // 딱지와 그 옆 글 사이
 export const BAND = 14; // 두루마리 칸 왼쪽 띠 폭
 
-// 문양을 칸(cw × ch) 가운데에: 잉크 상자로 잰다(render/ink.js). 화면 배율 2 이상이면 24×24 반 도트 그림(art-hi.js)을 12×12 자리에
-const BOX = {};
-const boxOf = (kind) => BOX[kind] || (BOX[kind] = inkBox(KIND[kind].g));
+// 벡터 문양(24 단위 상자 → 12 논리). fill: 채울 모양, cut: 뚫을 모양(경로 글 · 원 [cx, cy, r]), line: 뚫는 선 [경로, 굵기]
+const GLYPH = {
+  maxim: { fill: ['M2 5 Q7 3 11.2 5.6 L11.2 20 Q7 17.6 2 19 Z', 'M22 5 Q17 3 12.8 5.6 L12.8 20 Q17 17.6 22 19 Z', 'M11 20.5 L13 20.5 L13 22.5 L11 22.5 Z'], line: [['M4.5 9 Q7 8.2 9 9.4 M4.5 13 Q7 12.2 9 13.4 M15 9.4 Q17 8.2 19.5 9 M15 13.4 Q17 12.2 19.5 13', 1.3]] },
+  chart: { fill: ['M5 2 L20 2 Q22 2 22 4 L22 20 Q22 22 20 22 L5 22 Z'], cut: [[5, 6, 1.4], [5, 12, 1.4], [5, 18, 1.4]], line: [['M9.5 7 L18.5 7 M9.5 12 L18.5 12 M9.5 17 L15.5 17', 1.6]] },
+  engraving: { fill: ['M14 3 L21 3 L21 6 L11.5 15.5 L8.5 12.5 Z', 'M9.6 14.4 L7 17 L3 21 L3 22 L4 22 L8 18 L10.6 15.4 Z'] },
+  soul: { fill: ['M12 2 C14 6 20 9 20 15 C20 19.5 16.5 22.5 12 22.5 C7.5 22.5 4 19.5 4 15 C4 11 7 9 8 6 C9 8 9.5 10 11 11 C11 8 11 5 12 2 Z'], cut: ['M12 13 C13.5 15 15.5 16 15.5 18.5 C15.5 20.2 14 21 12 21 C10 21 8.5 20.2 8.5 18.5 C8.5 16.5 10.5 15.5 12 13 Z'] },
+  evolve: { fill: ['M12 2 L21 10.5 L17.5 10.5 L12 5.5 L6.5 10.5 L3 10.5 Z', 'M12 12 L21 20.5 L17.5 20.5 L12 15.5 L6.5 20.5 L3 20.5 Z'] },
+  tactic: { fill: ['M15 2 L6 13 L11 13 L8 22 L18 10 L13 10 L16 2 Z'] },
+  gamble: { fill: ['M9 2 L15 2 L15 4 L14 4 L14 9 C18 10.5 20.5 13.5 20.5 17 C20.5 20 18 22 15 22 L9 22 C6 22 3.5 20 3.5 17 C3.5 13.5 6 10.5 10 9 L10 4 L9 4 Z'], cut: ['M10.6 10.6 C7.5 11.8 5.8 13.4 5.4 15 L18.6 15 C18.2 13.4 16.5 11.8 13.4 10.6 Z', [9, 18.2, 1.1]] },
+  piece: { fill: [[12, 6, 3.8], 'M8 11 L16 11 L16 12.8 L14.2 12.8 C14.6 16 16.5 18 18 19.5 L18 22 L6 22 L6 19.5 C7.5 18 9.4 16 9.8 12.8 L8 12.8 Z'] },
+  awaken: { fill: ['M2 13 C6 6 18 6 22 13 C18 20 6 20 2 13 Z', 'M11 2.5 L13 2.5 L13 5.5 L11 5.5 Z', 'M3.5 5 L5 3.8 L7 6.4 L5.5 7.6 Z', 'M20.5 5 L19 3.8 L17 6.4 L18.5 7.6 Z'], cut: ['M4.8 13 C8 9 16 9 19.2 13 C16 17 8 17 4.8 13 Z'], over: [[12, 13, 3.2]] },
+  joseki: { fill: ['M4 2 L7 2 L7 21 L9 21 L9 23 L2 23 L2 21 L4 21 Z', 'M7 3 L20 6.5 L7 12 Z'] },
+  fragment: { fill: ['M7 3 L16 2 L21 8 L19.5 13 L13.5 12 L12 15 L14.5 21 L5 22 L3 13 Z', 'M17.5 15 L21.5 16.5 L19.5 22 L16 21 Z'], line: [['M8.5 8 L11.5 11.5', 1.4]] },
+};
+const fillShape = (g, d) => { if (typeof d === 'string') trace(g, d); else { g.moveTo(d[0] + d[2], d[1]); g.arc(d[0], d[1], d[2], 0, Math.PI * 2); } };
+// 문양 하나를 굽는다(12 × 12 논리, 투명 바탕). 열쇠: 종류 · 빛깔 · 크기 · 배율
+export function glyphCanvas(kind, col, size = 12, n = 1) {
+  const G = GLYPH[kind] || GLYPH.piece;
+  return bake(`kglyph:${kind}:${col}`, size, size, n, (g) => {
+    g.scale(size / 24, size / 24);
+    g.fillStyle = col;
+    for (const d of G.fill) { g.beginPath(); fillShape(g, d); g.fill(); }
+    g.globalCompositeOperation = 'destination-out';
+    for (const d of G.cut || []) { g.beginPath(); fillShape(g, d); g.fill(); }
+    for (const [d, w] of G.line || []) { g.beginPath(); trace(g, d); g.lineWidth = w; g.lineCap = 'round'; g.strokeStyle = '#000'; g.stroke(); }
+    g.globalCompositeOperation = 'source-over';
+    for (const d of G.over || []) { g.beginPath(); fillShape(g, d); g.fill(); }
+  });
+}
+// 문양을 칸(cw × ch) 가운데 12×12 자리에(구운 그림 하나)
 export function kindGlyph(ctx, kind, x, y, cw, ch, col = KIND[kind].col) {
-  const o = centre(cw, ch, boxOf(kind)), g = KIND[kind].g;
-  if (KIND_HI[kind] && hiFor(ctx)) { ctx.drawImage(baked(`kind:${kind}:${col}`, KIND_HI[kind], { '#': [col, 1] }), place(x + o.x), place(y + o.y), 12, 12); return; }
-  for (let j = 0; j < 12; j++) for (let i = 0; i < 12; i++) if (g[j][i] === '#') rect(ctx, x + o.x + i, y + o.y + j, 1, 1, col);
+  ctx.drawImage(glyphCanvas(kind, col, 12, scaleOf(ctx)), place(x + Math.floor((cw - 12) / 2)), place(y + Math.floor((ch - 12) / 2)), 12, 12);
 }
 // 딱지: 짙은 바탕 14×14에 밝은 문양(잉크 가운데)
 export function kindTab(ctx, kind, x, y) {
