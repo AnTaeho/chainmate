@@ -2303,6 +2303,7 @@ export class BattleScreen {
     const drawn = v.drawn || [], hiding = v.hiding || [], deal = this.dealIn;
     const nudging = this.nudgeOn = this.nudging();
     const n = v.hand.length;
+    const nc = nextColumn(lay, this.handRect(0, Math.max(1, n), lay).x), nextRight = nc.x + nc.w;
     v.hand.forEach((p, i) => {
       const hr = this.handRect(i, n, lay);
       const w = hr.w, x = hr.x, id = `hand:${i}`;
@@ -2312,7 +2313,11 @@ export class BattleScreen {
       const y = hr.y + Math.round((1 - ease.out(dk)) * 10);
       const selected = this.sel.includes(i);
       const vis = i < n - 1 ? hr.step : w;
-      const g = ui.finger ? growHit(x, y - HAND.lift, vis, hr.h + HAND.lift, ui.finger, { u: 0, d: Math.max(0, 270 - (y + hr.h)) }) : { x, y: y - HAND.lift, w: vis, h: hr.h + HAND.lift };
+      // 누르는 구역: 카드 온 폭을 왼쪽부터 쌓는다 — 뒤에 쌓인(오른쪽) 카드가 겹친 곳을 가져가(ui.hitIn은 나중 것이 먼저) 보이는 몫이 곧 구역이다.
+      // 손가락 기기는 바깥 카드를 빈 자리로(첫 카드는 「다음」 칸 앞까지 왼쪽, 끝 카드는 화면 끝까지 오른쪽), 모두 아래로 화면 끝 · 위로 이름표 줄(희생 단추) 앞까지 넓힌다
+      const g = ui.finger
+        ? growHit(x, y - HAND.lift, w, hr.h + HAND.lift, ui.finger, { l: i === 0 ? Math.max(0, x - nextRight - 2) : 0, r: i === n - 1 ? Math.max(0, W - (x + w)) : 0, u: Math.max(0, y - HAND.lift - (lay.rowY + BTN_S) - 1), d: Math.max(0, 270 - (y + hr.h)) })
+        : { x, y: y - HAND.lift, w, h: hr.h + HAND.lift };
       ui.region(id, g.x, g.y, g.w, g.h, { onClick: () => this.toggle(i), tip: () => pieceTip(p) });
       const hov = ui.isHover(id);
       const usable = live && live.status === 'play' && !this.busy;
