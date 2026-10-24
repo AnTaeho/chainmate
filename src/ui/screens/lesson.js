@@ -6,7 +6,7 @@ import { text, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { apply } from '../../sim/battle.js';
 import { previewDrop } from '../../sim/solver.js';
-import { BattleScreen, BX, S, LX, LW, RX, RW, sqCenter } from './battle.js';
+import { BattleScreen, BX, S, LX, LW, RX, RW, sqCenter, HAND } from './battle.js';
 import { strokeSq } from '../../render/board3.js';
 import { PAD_BOX, TOP, PAUSE, BTN_S } from '../frame.js';
 import { button } from '../ui.js';
@@ -225,13 +225,24 @@ export class LessonScreen extends BattleScreen {
     if (this.phase === 'play' && st && !this.busy) {
       const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : st.moves ? 'btn:moves' : null;
       const r = id && ui.regions.find((x) => x.id === id);
-      if (r) { motion(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); pointRing(ctx, st.pick != null ? { x: r.x, y: r.y + 4, w: r.w, h: 36 } : r, PAL.goldHi, 2); ctx.globalAlpha = 1; }
+      if (!r) return;
+      motion(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6);
+      if (st.pick != null) {
+        // 손 카드: 부채의 그 카드 자리(크기 · 들림 · 기울기)를 그대로 따라 두른다
+        const n = this.view.hand.length, hr = this.handRect(st.pick, n), y = hr.y - (this.sel.includes(st.pick) ? HAND.lift : 0);
+        const px = hr.x + hr.w / 2, py = y + hr.h * 1.2;
+        ctx.save(); ctx.translate(px, py); ctx.rotate(hr.rot); ctx.translate(-px, -py);
+        pointRing(ctx, { x: hr.x, y, w: hr.w, h: hr.h }, PAL.goldHi, 2);
+        ctx.restore();
+      } else pointRing(ctx, r, PAL.goldHi, 2);
+      ctx.globalAlpha = 1;
     }
   }
   // 오른쪽 칸 위 이름표 줄(멈춤 단추 왼쪽): 「건너뛰기」(처음 켬 덮개에서 왔을 때) 또는 「목록」 · 「행마」(대국과 같은 자리)
   drawTopRow(ctx, ui) {
-    const mw = measure('행마', true) + 10, mx = PAUSE.x - 4 - mw;
-    button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves() });
+    // 대국과 같은 「행마」 단추(폭 · 손가락 구역): 왼쪽은 「건너뛰기」 · 「목록」이 붙어 있어 넓히지 않는다
+    const mw = measure('행마', true) + 14, mx = PAUSE.x - 4 - mw;
+    button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { u: Infinity, d: Math.max(0, TOP - 1 - (2 + BTN_S)) } });
     button(ctx, ui, 'lesson:skip', RX, 2, mx - 4 - RX, BTN_S, this.skipLabel, { onClick: () => this.skipAll() });
   }
   // 머리 칸: 대국 제목 대신 수업 묶음과 지금 수업(제목은 두 줄까지), 목표는 점수나 외통
