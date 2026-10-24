@@ -4,7 +4,7 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, rrect, rframe, R_BIG, radiusOf, frame, line, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
+import { W, H, text, box, rect, rrect, rframe, R_BIG, radiusOf, frame, line, seg, dot, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
 import { SW, SH, tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { center as sqCenter, centerAt, projectSq, unproject, sqBox, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
 import { piece3, fitPiece, pieceCanvas, pieceChips, scaleOf, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
@@ -19,7 +19,7 @@ import { TRAIT_BY_ID } from '../../data/traits.js';
 import { JOSEKI_BY_ID } from '../../data/josekis.js';
 import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
-import { REWARD, ANTES, maximCapacity } from '../../sim/run.js';
+import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
 import { FACTION_BY_ID } from '../../data/factions.js';
 
@@ -104,49 +104,51 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // 값 · 배수 상자에 들어가는 짧은 숫자(gfx.js — 다른 화면도 fitNum으로 쓴다)
 export { short };
-// 빗금(노림수 · 끊김): 붉은색을 못 가려도 무늬로 알아보게
+// 빗금(노림수 · 끊김): 붉은색을 못 가려도 무늬로 알아보게. 칸 모양 안에 5 간격 가는 사선(벡터)
 function hatch(ctx, sq, col) {
   clipSq(ctx, sq, (b) => {
-    ctx.fillStyle = col;
-    for (let i = 0; i < b.w + b.h; i += 5) for (let j = 0; j < b.h; j++) { const k = i - j; if (k >= 0 && k < b.w) ctx.fillRect(b.x + k, b.y + j, 1, 1); }
+    ctx.strokeStyle = col; ctx.lineWidth = 0.8; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 0; i < b.w + b.h; i += 5) { ctx.moveTo(b.x + i, b.y); ctx.lineTo(b.x + i - b.h, b.y + b.h); }
+    ctx.stroke();
   });
 }
-// 다시 놓기 아이콘(7×7): 판 넷 칸이 뒤집히는 모양 — 칸 둘은 먹, 둘은 비고 가운데 화살
+// 다시 놓기 아이콘(7×7): 판 넷 칸이 뒤집히는 모양 — 칸 둘은 먹, 둘은 빈 테
 function reboardIcon(ctx, x, y, col) {
-  rect(ctx, x, y, 3, 3, col); rect(ctx, x + 4, y + 4, 3, 3, col);
-  rect(ctx, x + 4, y, 3, 1, col); rect(ctx, x + 6, y, 1, 3, col);
-  rect(ctx, x, y + 6, 3, 1, col); rect(ctx, x, y + 4, 1, 3, col);
+  rrect(ctx, x, y, 3, 3, 0.8, col); rrect(ctx, x + 4, y + 4, 3, 3, 0.8, col);
+  ctx.strokeStyle = col; ctx.lineWidth = 0.9; ctx.lineJoin = 'round';
+  ctx.strokeRect(x + 4.45, y + 0.45, 2.1, 2.1); ctx.strokeRect(x + 0.45, y + 4.45, 2.1, 2.1);
 }
 // 판 위 사물 「함정」(정석): 칸 안의 어두운 구덩이 + 네 귀퉁이 말뚝. 매복 시너지 빛(회청)
 function trapPit(ctx, x, y, size) {
-  const i = size >= 24 ? 5 : 3;
-  ctx.globalAlpha = 0.55; rect(ctx, x + i, y + i, size - i * 2, size - i * 2, '#1a1512'); ctx.globalAlpha = 1;
-  frame(ctx, x + i, y + i, size - i * 2, size - i * 2, '#c0c8d0');
-  for (const [a, b] of [[i - 2, i - 2], [size - i, i - 2], [i - 2, size - i], [size - i, size - i]]) rect(ctx, x + a, y + b, 2, 2, '#c0c8d0');
-  for (let k = i + 2; k < size - i - 1; k += 3) rect(ctx, x + k, y + size - i - 3, 1, 2, '#6e767e');
+  const i = size >= 24 ? 5 : 3, w = size - i * 2;
+  ctx.globalAlpha = 0.55; rrect(ctx, x + i, y + i, w, w, 2, '#1a1512'); ctx.globalAlpha = 1;
+  rframe(ctx, x + i, y + i, w, w, 2, '#c0c8d0');
+  for (const [a, b] of [[i - 1, i - 1], [size - i + 1, i - 1], [i - 1, size - i + 1], [size - i + 1, size - i + 1]]) { ctx.beginPath(); ctx.arc(x + a, y + b, 1.1, 0, Math.PI * 2); ctx.fillStyle = '#c0c8d0'; ctx.fill(); }
+  for (let k = i + 2.5; k < size - i - 1; k += 3) seg(ctx, x + k, y + size - i - 2.6, x + k, y + size - i - 1.4, '#6e767e', 0.9);
 }
-// 횃불(정석): 이 적은 아무것도 지키지 못한다 — 칸 오른쪽 위의 작은 불꽃(3×5)
+// 횃불(정석): 이 적은 아무것도 지키지 못한다 — 칸 오른쪽 위의 작은 불꽃(둥근 받침 위 두 겹 불꽃 · 자루)
 function torchMark(ctx, x, y, time) {
   const k = beat(time, 6) % 2;
-  rect(ctx, x - 1, y - 1, 7, 10, '#1a1512');
-  rect(ctx, x + 2 - k, y, 1, 1, '#fff1b8'); rect(ctx, x + 1, y + 1, 3, 1, '#fff1b8'); rect(ctx, x, y + 2, 5, 2, '#efbd55'); rect(ctx, x + 1, y + 4, 3, 1, '#df8a45');
-  rect(ctx, x + 2, y + 5, 1, 3, '#8c6a3a');
+  rrect(ctx, x - 1, y - 1, 7, 10, 2.5, '#1a1512');
+  seg(ctx, x + 2.5, y + 5, x + 2.5, y + 7.5, '#8c6a3a', 1.2);
+  const flame = (h, w, col) => { ctx.beginPath(); ctx.moveTo(x + 2.5 - k * 0.4, y + 5 - h); ctx.quadraticCurveTo(x + 2.5 + w, y + 3.5, x + 2.5, y + 5); ctx.quadraticCurveTo(x + 2.5 - w, y + 3.5, x + 2.5 - k * 0.4, y + 5 - h); ctx.fillStyle = col; ctx.fill(); };
+  flame(5.2, 2.6, '#df8a45'); flame(4.4, 1.9, '#efbd55'); flame(3, 1, '#fff1b8');
 }
-// 점선(미리 보기의 길)
+// 점선(미리 보기의 길): step 간격 둥근 점
 function dotLine(ctx, x0, y0, x1, y1, col, step = 3) {
-  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  const n = Math.hypot(x1 - x0, y1 - y0);
   ctx.fillStyle = col;
-  for (let i = 0; i <= n; i += step) ctx.fillRect(Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), 1, 1);
+  ctx.beginPath();
+  for (let i = 0; i <= n; i += step) { const t = n ? i / n : 0, px = x0 + (x1 - x0) * t, py = y0 + (y1 - y0) * t; ctx.moveTo(px + 0.6, py); ctx.arc(px, py, 0.6, 0, Math.PI * 2); }
+  ctx.fill();
 }
-// 끊어진 굵은 선(노림수, 2px): off가 늘면 마디가 끝(x1, y1) 쪽으로 흐른다
+// 끊어진 굵은 선(노림수, 굵기 2 · 마디 4 · 틈 2): off가 늘면 마디가 끝(x1, y1) 쪽으로 흐른다
 function dashLine(ctx, x0, y0, x1, y1, col, off = 0) {
-  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
-  ctx.fillStyle = col;
-  for (let i = 0; i <= n; i++) if ((((i - off) % 6) + 6) % 6 < 4) ctx.fillRect(Math.round(x0 + ((x1 - x0) * i) / n) - 1, Math.round(y0 + ((y1 - y0) * i) / n) - 1, 2, 2);
-}
-// 증원 그림자의 떨어질 표(▼ 5×3)
-function dropMark(ctx, x, y, col) {
-  rect(ctx, x, y, 5, 1, col); rect(ctx, x + 1, y + 1, 3, 1, col); rect(ctx, x + 2, y + 2, 1, 1, col);
+  ctx.save();
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineCap = 'butt'; ctx.setLineDash([4, 2]); ctx.lineDashOffset = -off;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.restore();
 }
 // 칸 말풍선: 자리는 설명 자리 규칙(판 틀 = 왼쪽 칸, 그 칸의 줄 높이 — placement.js)
 // diag: 적 기물의 행마 그림(적 폰은 아래로 먹는다)
@@ -1023,7 +1025,7 @@ export class BattleScreen {
     this.fx.add({
       life: 0.5, layer: 1, parts,
       update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; } },
-      draw: (ctx, e) => { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life); for (const p of e.parts) rect(ctx, p.x, p.y, 2, 2, col); ctx.globalAlpha = 1; },
+      draw: (ctx, e) => { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life); for (const p of e.parts) dot(ctx, p.x, p.y, 2, col); ctx.globalAlpha = 1; },
     });
   }
   sparkle(sq, col, n) {
@@ -1032,7 +1034,7 @@ export class BattleScreen {
     for (let i = 0; i < n; i++) pts.push({ x: x + 3 + ((i * 7 + sq * 3) % 22), y: y + 2 + ((i * 11 + sq) % 22) });
     this.fx.add({
       life: 0.35, layer: 1,
-      draw: (ctx, e) => { const k = e.t / e.life; ctx.globalAlpha = 1 - k; for (const p of pts) { rect(ctx, p.x, p.y - k * 6, 1, 1, col); rect(ctx, p.x - 1, p.y - k * 6, 3, 1, col); } ctx.globalAlpha = 1; },
+      draw: (ctx, e) => { const k = e.t / e.life; ctx.globalAlpha = 1 - k; for (const p of pts) { seg(ctx, p.x - 1, p.y + 0.5 - k * 6, p.x + 2, p.y + 0.5 - k * 6, col, 1); } ctx.globalAlpha = 1; },
     });
   }
   flash(sq, col) {
@@ -1045,8 +1047,8 @@ export class BattleScreen {
     this.fx.add({ life: 0.22, layer: 1, draw: (ctx, e) => {
       const k = e.t / e.life;
       ctx.globalAlpha = 1 - k;
-      if (water) { const r = 5 + Math.floor(k * 9); frame(ctx, x - r, y - r, r * 2, r * 2, col); }
-      else { const r = 2 + Math.floor((1 - k) * 3); rect(ctx, x - r, y, r * 2 + 1, 1, col); rect(ctx, x, y - r, 1, r * 2 + 1, col); }
+      if (water) { const r = 5 + k * 9; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke(); }
+      else { const r = 2 + (1 - k) * 3; seg(ctx, x - r, y, x + r, y, col, 1); seg(ctx, x, y - r, x, y + r, col, 1); }
       ctx.globalAlpha = 1;
     } });
     if (water && !this.app.reducedMotion) {
@@ -1055,7 +1057,7 @@ export class BattleScreen {
       this.fx.add({
         life: 0.35, layer: 1, parts,
         update: (dt, f) => { for (const p of f.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * dt; } },
-        draw: (ctx, f) => { ctx.globalAlpha = Math.max(0, 1 - f.t / f.life); for (const p of f.parts) { rect(ctx, p.x, p.y, p.s, p.s + 1, col); if (p.s > 1) rect(ctx, p.x, p.y, 1, 1, PAL.white); } ctx.globalAlpha = 1; },
+        draw: (ctx, f) => { ctx.globalAlpha = Math.max(0, 1 - f.t / f.life); for (const p of f.parts) { dot(ctx, p.x, p.y, p.s + 0.5, col); if (p.s > 1) dot(ctx, p.x, p.y, 1, PAL.white); } ctx.globalAlpha = 1; },
       });
     }
     this.snd('tick');
@@ -1082,8 +1084,8 @@ export class BattleScreen {
     if (!calm) {
       const reach = 18 + 4 * Math.min(6, n);
       this.fx.add({ life: 0.3, layer: 1, draw: (ctx, e) => {
-        const k = e.t / e.life, r = Math.floor(6 + k * reach);
-        ctx.globalAlpha = 1 - k; frame(ctx, x - r, y - r, r * 2, r * 2, PAL.goldHi); ctx.globalAlpha = 1;
+        const k = e.t / e.life, r = 6 + k * reach;
+        ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.strokeStyle = PAL.goldHi; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
       } });
       const parts = [], m = 10 + 3 * Math.min(8, n);
       let seed = sq * 131 + n;
@@ -1285,7 +1287,7 @@ export class BattleScreen {
     this.fx.add({
       life: 1.1, layer: 1, parts,
       update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt; p.vx *= 0.97; } },
-      draw: (ctx, e) => { for (const p of e.parts) { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life) * (Math.floor(e.t * 20 + p.x) % 3 ? 1 : 0.4); rect(ctx, p.x, p.y, 1, 1, p.c); } ctx.globalAlpha = 1; },
+      draw: (ctx, e) => { for (const p of e.parts) { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life) * (Math.floor(e.t * 20 + p.x) % 3 ? 1 : 0.4); dot(ctx, p.x, p.y, 1.2, p.c); } ctx.globalAlpha = 1; },
     });
   }
   // 점수 칸의 불꽃: 목표를 넘기면 붙고, 넘친 층(×2 · ×5 · ×10)마다 세진다
@@ -1502,9 +1504,12 @@ export class BattleScreen {
     if (fill > 0) rrect(ctx, X, Y, Math.max(fill, Hh), Hh, Hh / 2, hot ? PAL.gold : PAL.goldDk);
     const gw = Math.round(Wd * Math.min(1, total / maxV)) - fill;
     if (gw > 0) {
-      ctx.fillStyle = PAL.gold;
+      // 얻을 몫: 둥근 막대 안을 흐르는 금빛 사선(벡터)
       const hk = beat(time, 8);
-      for (let i = 0; i < gw; i++) for (let j = 1; j < Hh - 1; j++) if ((i + j + hk) % 3 === 0) ctx.fillRect(X + fill + i, Y + j, 1, 1);
+      ctx.save(); ctx.beginPath(); ctx.rect(X + fill, Y, gw, Hh); ctx.clip();
+      ctx.strokeStyle = PAL.gold; ctx.lineWidth = 1; ctx.beginPath();
+      for (let i = -Hh - 3 + (hk % 3); i < gw + 3; i += 3) { ctx.moveTo(X + fill + i, Y + Hh); ctx.lineTo(X + fill + i + Hh, Y); }
+      ctx.stroke(); ctx.restore();
     }
     // 눈금: 목표(×1)는 흰 막대(사슬 중에 넘기면 금빛으로 깜빡인다), 넘친 층은 붉은 막대 + 작은 숫자(막대 아래)
     const passed = going && total >= tgt && beat(time, 6) % 2 === 0;
@@ -1622,7 +1627,7 @@ export class BattleScreen {
       for (let i = 1; i < path.length; i++) strokeSq(ctx, path[i], PAL.gold, 1);
       for (let i = 0; i + 1 < path.length; i++) {
         const pts = [path[i], ...(bends[i + 1] || []), path[i + 1]];
-        for (let j = 0; j + 1 < pts.length; j++) { const a = this.center(pts[j]), c = this.center(pts[j + 1]); line(ctx, a.x, a.y, c.x, c.y, PAL.gold); }
+        for (let j = 0; j + 1 < pts.length; j++) { const a = this.center(pts[j]), c = this.center(pts[j + 1]); seg(ctx, a.x, a.y, c.x, c.y, PAL.gold); }
         for (const k of bends[i + 1] || []) { const c = this.center(k); rect(ctx, c.x - 1, c.y - 1, 3, 3, PAL.goldHi); }
       }
       for (const [a0, b0] of v.chain.shots || []) { const a = this.center(a0), c = this.center(b0); dotLine(ctx, a.x, a.y, c.x, c.y, PAL.gold, 2); strokeSq(ctx, b0, PAL.gold, 1, 0, [1, 1]); }
@@ -1667,7 +1672,7 @@ export class BattleScreen {
       if (c.muted) torchMark(ctx, x + 6, y - PIECE_TOP - 2, time);
       if (c.gold) {
         const k = beat(time, 8, sq) % 12;
-        if (k < 3) rect(ctx, x - 7 + k * 5, y - PIECE_TOP + 2 + k * 4 + dy, 1, 1, PAL.goldHi);
+        if (k < 3) dot(ctx, x - 7.25 + k * 5, y - PIECE_TOP + 1.75 + k * 4 + dy, 1.5, PAL.goldHi);
       }
     }
     // 궁수의 화살
@@ -1675,7 +1680,7 @@ export class BattleScreen {
       const a = this.bodyOf(v.arrow.from), c = this.bodyOf(v.arrow.to), k = v.arrow.p;
       const x = a.x + (c.x - a.x) * k, y = a.y + (c.y - a.y) * k - Math.sin(k * Math.PI) * 6;
       const tx = a.x + (c.x - a.x) * Math.max(0, k - 0.15), ty = a.y + (c.y - a.y) * Math.max(0, k - 0.15) - Math.sin(Math.max(0, k - 0.15) * Math.PI) * 6;
-      line(ctx, tx, ty, x, y, PAL.goldHi);
+      seg(ctx, tx, ty, x, y, PAL.goldHi);
       rect(ctx, Math.round(x) - 1, Math.round(y) - 1, 2, 2, PAL.white);
     }
     // 움직이는 내 기물(맨 위 — 지나는 칸의 앞 기물보다 앞에 선다)
@@ -1686,8 +1691,8 @@ export class BattleScreen {
         const pts = v.mover.route.pts, at = routeAt(pts, v.mover.p);
         let a = this.center(pts[0]);
         ctx.globalAlpha = 0.7;
-        for (let i = 0; i < at.i; i++) { const b = this.center(pts[i + 1]); line(ctx, a.x, a.y, b.x, b.y, PAL.goldHi); a = b; }
-        line(ctx, a.x, a.y, Math.round(m.x), Math.round(m.y + (m.arc || 0)), PAL.goldHi);
+        for (let i = 0; i < at.i; i++) { const b = this.center(pts[i + 1]); seg(ctx, a.x, a.y, b.x, b.y, PAL.goldHi); a = b; }
+        seg(ctx, a.x, a.y, Math.round(m.x), Math.round(m.y + (m.arc || 0)), PAL.goldHi);
         ctx.globalAlpha = 1;
       }
       // 그림자는 뛰는 호 밑 바닥 자리에(뛰면 작아지고 옅어진다)
@@ -1710,7 +1715,7 @@ export class BattleScreen {
     // 끊김: 노린 적에서 붉은 선
     if (v.cut) {
       const c = this.bodyOf(v.cut.sq);
-      for (const s of v.cut.attackers) { const a = this.bodyOf(s); line(ctx, a.x, a.y, c.x, c.y, PAL.red); }
+      for (const s of v.cut.attackers) { const a = this.bodyOf(s); seg(ctx, a.x, a.y, c.x, c.y, PAL.red); }
     }
     // 판 위 화살표(오른쪽으로 끌어 그은 것): 기물 위에 반투명. 끄는 중이면 가리킨 칸까지 흐리게
     const mk = this.marks, to = mk.from >= 0 ? sqAt(ui.mouse.x, ui.mouse.y) : -1;
@@ -1731,7 +1736,7 @@ export class BattleScreen {
     const c = sqCenter(sq), G = boardGeo();
     const pt = (u, w) => [c.x + u * G.hw, c.y - 10 + w * 12];
     const p = [pt(-0.6, -0.6), pt(-0.1, 0), pt(-0.3, 0.35), pt(0.55, 0.8)];
-    for (let i = 0; i + 1 < p.length; i++) line(ctx, p[i][0], p[i][1], p[i + 1][0], p[i + 1][1], PAL.red);
+    for (let i = 0; i + 1 < p.length; i++) seg(ctx, p[i][0], p[i][1], p[i + 1][0], p[i + 1][1], PAL.red);
   }
 
   // 묘수(깊이 F): 손 이름표 옆의 작은 칸. 떨구기 전에 눌러 쓴다
@@ -1765,25 +1770,26 @@ export class BattleScreen {
     if (!rules) return;
     // 고속도로: 그 줄을 따라 금빛 점선 두 줄(칸 가운데 양옆)
     for (const f of rules.highways || []) {
-      ctx.globalAlpha = 0.5; ctx.strokeStyle = PAL.goldDk; ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
+      ctx.globalAlpha = 0.55; ctx.strokeStyle = PAL.goldDk; ctx.lineWidth = 1.2; ctx.lineCap = 'round'; ctx.setLineDash([0.1, 3]);
       for (const d of [-0.22, 0.22]) { const a = centerAt(f + d, -0.4), c = centerAt(f + d, 7.4); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(c.x, c.y); ctx.stroke(); }
-      ctx.setLineDash([]); ctx.globalAlpha = 1;
+      ctx.setLineDash([]); ctx.lineCap = 'butt'; ctx.globalAlpha = 1;
     }
     for (const sq of rules.steps || []) {
       ctx.globalAlpha = 0.45; fillSq(ctx, sq, PAL.gold, 3); ctx.globalAlpha = 1;
       strokeSq(ctx, sq, PAL.goldDk, 1, 3);
       const c = sqCenter(sq);
-      for (const p of projectSq(sq).pts) rect(ctx, Math.round(c.x + (p.x - c.x) * 0.55), Math.round(c.y + (p.y - c.y) * 0.55), 1, 1, PAL.goldHi);
+      for (const p of projectSq(sq).pts) dot(ctx, c.x + (p.x - c.x) * 0.55 - 0.75, c.y + (p.y - c.y) * 0.55 - 0.75, 1.5, PAL.goldHi);
     }
     // 강(정석): 넷째 줄과 다섯째 줄 사이를 흐르는 물결(판을 가로지르는 경계선을 따라)
     if (rules.river) {
       motion();
-      const n = 64;
-      for (let i = 0; i <= n; i++) {
-        const f = -0.5 + (8 * i) / n, p = centerAt(f, 3.5), w = Math.round(Math.sin((i * 2 + time * 12) / 3));
-        rect(ctx, p.x, p.y - 1 + w, 1, 1, '#6fa8d8');
-        if ((i & 3) === 0) rect(ctx, p.x, p.y + w, 1, 1, '#c8e0f0');
-      }
+      // 두 겹 물결 선(짙은 물 · 옅은 물빛)을 판 경계를 따라 흐르게 — 둥근 끝 벡터 선
+      const n = 64, wave = (dy, col, lw, ph) => {
+        ctx.beginPath();
+        for (let i = 0; i <= n; i++) { const f = -0.5 + (8 * i) / n, p = centerAt(f, 3.5), w = Math.sin((i * 2 + time * 12) / 3 + ph); if (i) ctx.lineTo(p.x, p.y + dy + w); else ctx.moveTo(p.x, p.y + dy + w); }
+        ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+      };
+      wave(-0.5, '#6fa8d8', 1.3, 0); wave(0.8, '#c8e0f0', 0.7, 1.4);
     }
     for (const sq of rules.traps || []) trapSq(ctx, sq);
     // 문: 어두운 청록 문 안쪽 + 굵은 아치 테 + 문턱(칸 가운데에 선 작은 아치). 기물이 서도 기둥 · 윗테가 남는다. 두 문이 번갈아 숨 쉰다
@@ -1831,7 +1837,7 @@ export class BattleScreen {
       if (pv.cut) {
         for (const s of pv.cut) { const a = this.center(s); dotLine(ctx, a.x, a.y, tc.x, tc.y, PAL.red, 2); ringSq(ctx, s, PAL.red, 2); }
         const G = boardGeo(), dx = G.hw * 0.55, dy = G.hh * 0.55;
-        line(ctx, tc.x - dx, tc.y - dy, tc.x + dx, tc.y + dy, PAL.red); line(ctx, tc.x + dx, tc.y - dy, tc.x - dx, tc.y + dy, PAL.red);
+        seg(ctx, tc.x - dx, tc.y - dy, tc.x + dx, tc.y + dy, PAL.red); seg(ctx, tc.x + dx, tc.y - dy, tc.x - dx, tc.y + dy, PAL.red);
         return;
       }
     } else if (pv.kind === 'drop') {
@@ -2237,6 +2243,17 @@ export class BattleScreen {
     }
   }
   // 격언 칸(대국): 그림만 한 줄에 다섯(이름 · 효과 · 판본 · 잠듦은 가리키면 왼쪽 칸 설명에). 빈 칸은 빈 자리
+  // 격언 수(「격언 2/5」): 시너지 띠 줄 오른쪽 끝, 띠가 쓰고 남은 자리에 들어갈 때만(안 들어가면 「2/5」, 그래도 안 되면 뺀다)
+  maximCountLabel(ctx, ui, lay) {
+    const run = this.run, n = maximCount(run), cap = maximCapacity(run);
+    const used = ui.regions.filter((r) => r.id.startsWith('fam:') && r.y === lay.stripY).reduce((u, r) => Math.max(u, r.x + r.w), RX - 6);
+    const room = RX + RW - (used + 6);
+    const s = [`격언 ${n}/${cap}`, `${n}/${cap}`].find((q) => measure(q) <= room);
+    if (!s) return;
+    const x = RX + RW - measure(s);
+    ui.region('maxims:count', x, lay.stripY, measure(s), FAM_H, { tip: () => tipLines('격언', [`격언 칸 ${cap}개 중 ${n}개를 채웠어요`]) });
+    text(ctx, s, RX + RW, inkY(lay.stripY, FAM_H), n >= cap ? PAL.gold : PAL.dim, { align: 'right' });
+  }
   drawMaxims(ctx, ui, lay) {
     const run = this.run, b = this.b;
     const off = b.mods.filter((s) => s.off && s.uid != null).map((s) => s.uid);
@@ -2282,6 +2299,7 @@ export class BattleScreen {
       josekiBadges(ctx, ui, run, bx, 9);
       this.drawComboSlots(ctx, ui, lay, mx - 4 - RX);
       familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: lay.rows });
+      this.maximCountLabel(ctx, ui, lay);
       this.drawMaxims(ctx, ui, lay);
     }
     this.drawPreviewPanel(ctx);
@@ -2417,18 +2435,23 @@ export class BattleScreen {
   // 판 위 사물의 작은 그림(18×18): 발판 · 문 · 고속도로 줄
   newsObj(ctx, obj, x, y) {
     if (obj === 'step') {
-      ctx.globalAlpha = 0.6; rect(ctx, x, y, 18, 18, PAL.gold); ctx.globalAlpha = 1;
-      frame(ctx, x, y, 18, 18, PAL.goldDk);
-      for (const [i, j] of [[1, 1], [16, 1], [1, 16], [16, 16]]) rect(ctx, x + i, y + j, 1, 1, PAL.goldHi);
+      ctx.globalAlpha = 0.6; rrect(ctx, x, y, 18, 18, 3, PAL.gold); ctx.globalAlpha = 1;
+      rframe(ctx, x, y, 18, 18, 3, PAL.goldDk);
+      for (const [i, j] of [[3, 3], [13.5, 3], [3, 13.5], [13.5, 13.5]]) dot(ctx, x + i, y + j, 1.5, PAL.goldHi);
     } else if (obj === 'gate') {
       gateArch(ctx, x, y, 18, 0.5);
     } else if (obj === 'trap') {
       trapPit(ctx, x, y, 18);
     } else if (obj === 'river') {
-      for (let k = 0; k < 18; k++) { const w = Math.round(Math.sin(k / 3)); rect(ctx, x + k, y + 8 + w, 1, 1, '#6fa8d8'); rect(ctx, x + k, y + 11 + w, 1, 1, '#c8e0f0'); }
+      for (const [dy, col, lw] of [[8.5, '#6fa8d8', 1.3], [11.5, '#c8e0f0', 0.9]]) {
+        ctx.beginPath(); for (let k = 0; k <= 18; k++) { const py = y + dy + Math.sin(k / 3); if (k) ctx.lineTo(x + k, py); else ctx.moveTo(x + k, py); }
+        ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+      }
     } else if (obj === 'highway') {
-      for (let j = 0; j < 18; j += 4) { rect(ctx, x + 4, y + j, 1, 2, PAL.goldDk); rect(ctx, x + 13, y + j, 1, 2, PAL.goldDk); }
-      rect(ctx, x + 8, y + 4, 2, 10, PAL.gold); rect(ctx, x + 7, y + 5, 4, 1, PAL.gold); rect(ctx, x + 7, y + 12, 4, 1, PAL.gold);
+      for (let j = 1; j < 18; j += 4) { dot(ctx, x + 3.75, y + j, 1.5, PAL.goldDk); dot(ctx, x + 12.75, y + j, 1.5, PAL.goldDk); }
+      // 세로 두 갈래 화살(위아래로 곧게 간다)
+      seg(ctx, x + 9, y + 4.5, x + 9, y + 13.5, PAL.gold, 1.6);
+      for (const [ty, d] of [[4, 1], [14, -1]]) { ctx.beginPath(); ctx.moveTo(x + 9, ty); ctx.lineTo(x + 6.5, ty + 2.6 * d); ctx.lineTo(x + 11.5, ty + 2.6 * d); ctx.closePath(); ctx.fillStyle = PAL.gold; ctx.fill(); }
     }
   }
 
