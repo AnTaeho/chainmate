@@ -1,5 +1,5 @@
 // 글 상자가 내용에 맞춰(hug) 480×270 안에 들어가는지 — 연기 시험이 그리지 않는 물건 · 정석 · 명인 · 수업 글까지 한국어 · 영어로 잰다.
-// 글 폭은 연기 시험의 가짜 캔버스(Galmuri11 글자 폭 표)로 잰다. docs/design-notes/layout.md 「격자와 여백」 · 「상점 · 금빛 꾸러미」
+// 글 폭은 연기 시험의 가짜 캔버스(tools/fonts/widths.json 글자 폭 표)로 잰다. docs/design-notes/layout.md 「격자와 여백」 · 「상점 · 금빛 꾸러미」
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { installDom } from './helpers/dom.js';
