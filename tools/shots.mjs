@@ -88,7 +88,7 @@ async function hoverId(id) {
 
 // 기물 12종 식별 시험(mockup의 시트): 흰 · 검은 · 금빛 기물을 밝은 칸과 어두운 칸에
 await ev(async () => {
-  const { spriteCanvas } = await import('/src/render/sprites.js');
+  const { fitPiece } = await import('/src/render/pieces3.js');
   const c = document.getElementById('screen');
   const a = window.__app;
   a.go('title');
@@ -98,7 +98,7 @@ await ev(async () => {
     ['P', 'N', 'B', 'R', 'Q', 'K'].forEach((t, i) => ['w', 'b', 'g', 's', 'q'].forEach((side, row) => [0, 1].forEach((k) => {
       const x = 36 + (i * 2 + k) * 34, y = 40 + row * 34;
       g.fillStyle = k ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
-      g.drawImage(spriteCanvas(t, side), x + 6, y + 3, 16, 22);
+      fitPiece(g, t, side, x + 6, y + 3, 16, 22);
     })));
   };
 });
@@ -106,7 +106,7 @@ await settle(200);
 await shot('00-sprites');
 // 이형 아홉을 체스 여섯과 나란히(1배에서 갈리나): 흰 · 검은 · 금빛, 밝은 칸과 어두운 칸
 await ev(async () => {
-  const { spriteCanvas } = await import('/src/render/sprites.js');
+  const { fitPiece } = await import('/src/render/pieces3.js');
   const c = document.getElementById('screen');
   window.__app.draw = () => {
     const g = c.getContext('2d');
@@ -114,7 +114,7 @@ await ev(async () => {
     ['P', 'N', 'B', 'R', 'Q', 'K', 'Z', 'L', 'O', 'S', 'W', 'T', 'E', 'V', 'M', 'D'].forEach((t, i) => ['w', 'b', 'g'].forEach((side, row) => [0, 1].forEach((k) => {
       const x = 8 + i * 31, y = 30 + (row * 2 + k) * 34;
       g.fillStyle = (i + k) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
-      g.drawImage(spriteCanvas(t, side), x + 6, y + 3, 16, 22);
+      fitPiece(g, t, side, x + 6, y + 3, 16, 22);
     })));
   };
 });
@@ -470,7 +470,7 @@ await settle(300);
 await shot('27-engravings-shop');
 // 기보 단계 넷(0 · 1~2 · 3~4 · 5~), 각인과 겹친 모습
 await ev(async () => {
-  const { spriteCanvas, tierSparkle } = await import('/src/render/sprites.js');
+  const { fitPiece } = await import('/src/render/pieces3.js');
   const c = document.getElementById('screen');
   window.__app.draw = () => {
     const g = c.getContext('2d');
@@ -479,16 +479,14 @@ await ev(async () => {
     ['P', 'N', 'B', 'R', 'Q', 'K'].forEach((t, i) => [0, 1, 2, 3].forEach((tier, row) => {
       const x = 20 + i * 34, y = 16 + row * 34;
       g.fillStyle = (i + row) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
-      g.drawImage(spriteCanvas(t, 'w', null, tier), x + 6, y + 3, 16, 22);
-      if (tier === 3) tierSparkle(g, x + 6, y + 3);
+      fitPiece(g, t, 'w', x + 6, y + 3, 16, 22, { tier });
     }));
     ['gold', 'silver', 'ivory', 'ebony', 'glass', 'feather'].forEach((eng, i) => [0, 3].forEach((tier, row) => {
       const x = 240 + i * 34, y = 16 + row * 34;
       g.fillStyle = (i + row) % 2 ? '#a4744a' : '#e2cda2'; g.fillRect(x, y, 28, 28);
-      g.drawImage(spriteCanvas('N', 'w', eng, tier), x + 6, y + 3, 16, 22);
-      if (tier === 3) tierSparkle(g, x + 6, y + 3);
+      fitPiece(g, 'N', 'w', x + 6, y + 3, 16, 22, { eng, tier });
     }));
-    [0, 3].forEach((tier, i) => { g.drawImage(spriteCanvas('N', 'w', null, tier), 250 + i * 80, 100, 64, 88); g.drawImage(spriteCanvas('Q', 'w', null, tier), 290 + i * 80, 196, 32, 44); });
+    [0, 3].forEach((tier, i) => { fitPiece(g, 'N', 'w', 250 + i * 80, 100, 64, 88, { tier }); fitPiece(g, 'Q', 'w', 290 + i * 80, 196, 32, 44, { tier }); });
   };
 });
 await settle(200);

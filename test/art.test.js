@@ -127,12 +127,7 @@ test('꾸러미 봉투: 덮개에 찍는 문양이 덮개 한가운데 · 덮개
   }
 });
 
-test('기물 · 기보: 가로 잉크 자리를 스프라이트에서 잰다(1배 16 안 · 두 배 32 안)', () => {
-  for (const t of ['P', 'N', 'B', 'R', 'Q', 'K', 'L']) {
-    const lo = art.pieceBox(t, false), hi = art.pieceBox(t, true);
-    assert.ok(lo.x >= 0 && lo.x + lo.w <= 16, `${t} 1배`);
-    assert.ok(hi.x >= 0 && hi.x + hi.w <= 32, `${t} 두 배`);
-  }
+test('그림 칸 폭: 진화만 넓다', () => {
   assert.equal(art.artW({ kind: 'evolve' }), 44);
   assert.equal(art.artW({ kind: 'maxim' }), 22);
 });

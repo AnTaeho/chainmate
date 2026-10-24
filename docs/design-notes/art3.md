@@ -15,6 +15,21 @@
   | 킹 | 넓은 관 + 금 십자가 | 관 위 십자가는 늘 금빛 |
 - **두 톤**: 왼쪽 빛(몸 빛깔) · 오른쪽 그늘(x 62 오른쪽을 그늘 빛깔로 자른다). 왼쪽 가장자리에 흰 빛 한 줄(내 편 0.7 · 적 0.22).
 - **선 굵기(논리 px)**: 실루엣 테 1.0(원본 4.5를 그대로 줄이면 0.83이라 N = 1에서 사라진다 — 1 논리 px = N = 1의 1 화소를 바닥으로), 받침 테 0.8, 고리 0.6, 룩 창 · 나이트 눈 · 비숍 홈은 채운 모양(선 아님).
+- **특수 기물**(도트 그림의 정체를 이었다, 같은 120 × 140 상자 · 받침 · 두 톤 · 톤 규칙):
+  | 기물 | 실루엣 | 알아보는 표 |
+  |---|---|---|
+  | 아마존 Z | 나이트 말머리 + 뾰족 관 | 관과 구슬 셋(적이면 금, 퀸처럼) |
+  | 낙타 L | 혹 둘 · 긴 목(오른쪽을 본다) | 머리가 막대 끝에 |
+  | 포 O | 비스듬한 포신 · 바퀴 | 포구 띠 · 바퀴살 |
+  | 궁수 S | 두건 쓴 몸 · 오른쪽 활 | 어두운 얼굴 구멍 · 시위 |
+  | 유령 W | 떠 있는 망토(받침과 사이가 뜬다) | 아랫몸 반 비침 · 눈 둘 |
+  | 꺾쇠 T | 몸 위 직각 갈고리 | 왼쪽 아래로 걸린 끝 |
+  | 물수제비 E | 둥근 머리 + 뜬 납작한 돌 | 머리의 물결 새김 |
+  | 까마귀 V | 왼쪽을 본 새(나이트 · 낙타와 반대) | 위로 든 날개 · 부리 |
+  | 광대 M | 늘어진 두 갈래 고깔 · 주름 깃 | 끝 방울 둘 · 가면 눈 |
+  | 화약병 D | 아래가 무거운 둥근 병 | 금빛 불꽃(편과 상관없이 금) |
+- **판 밖 기물**(손 카드 · 사슬 칸 · 미리 보기 판넬 · 상점 · 덱 · 도감 · 행마 · 타이틀 하늘): 같은 정면 그림을 `fitPiece(ctx, t, side, x, y, w, h)`가 상자에 맞춘다 — 받침 아래가 상자 아래, 가로 가운데, 모든 기물이 같은 비율(16 × 22 상자면 받침 폭 14.6). 옛 `gfx.sprite(x, y)`는 이것을 16 × 22 상자로 부른다. 크기마다 기기 화소에 맞춰 따로 굽는다.
+- **작은 그림**: 테는 기기 화소 1 밑으로 가늘어지지 않는다. 받침 폭이 기기 화소 16 밑이면(8 × 11 상자의 N = 1 · 2) 받침 고리 · 왼쪽 빛 줄을 빼고 눈 · 홈 · 새김을 1.35배 굵게 — 따로 그린 작은 모양은 두지 않았다.
 - **굽기**: (모양, 편 · 톤, 고리 빛깔, N)마다 N배 캔버스에 한 번 그려 두고, 판에는 논리 크기로 붙인다. 고리 빛깔이 세력마다 바뀌므로 열쇠에 넣는다. `Path2D`는 쓰지 않는다(연기 시험의 가짜 캔버스에 없다) — 경로는 `moveTo` · `bezierCurveTo` · `ellipse`로.
 
 ## 2. 편과 톤
@@ -32,7 +47,7 @@
 
 - 기보 2단계부터 머리 보석(은 · 금), 3단계는 지금처럼 금 기운 점(`tierSparkle`)을 기물 상자에 둔다. 혼 기운(`soulSpark`)도 같은 상자 왼쪽 위.
 - 받침 빛깔이 편을 말한다: 크림 받침 = 내 편, 남색 받침 = 적. 금빛 적 · 승급처럼 몸이 금이어도 받침으로 갈린다.
-- 특수 기물(`fairy-sprites.js`) · 판 위 사물(벽 · 보석)은 다음 단계까지 도트 그대로, 자리만 투영한 칸 가운데에.
+- 판 위 사물은 편과 상관없이 제 빛깔이고 받침이 없다(`board3.js` `thingImage` — 모든 칸이 같은 모양이라 한 번 굽는다). 벽 = 칸 마름모를 0.84로 들여 7 세운 낮은 돌 덩이(아래를 보는 옆면 둘, 왼쪽 밝게, 줄눈 · 엇갈린 이음매), 보석 = 칸 위에 선 정면 깎은 돌(청록 두 톤 · 윗면 띠 · 바닥 그림자). 판 밖(도감)은 같은 그림을 기물 크기에 맞춘다. 문 = 벡터 아치(잉크 테 + 청록 테), 함정은 칸 경로 그대로.
 
 ## 3. 투영
 
@@ -94,9 +109,9 @@
 
 **모듈**
 - [x] `src/render/text.js` — Galmuri 도트 글자(12px · 알파 문턱값) → 벡터 글꼴 둘(4절)
-- [ ] `src/render/sprites.js` — 기물 16×22 마스크 · 톤(`TONE` · `ENG_TONE` · `TIER` · `THING_TONE`) · `spriteCanvas` · `outlineCanvas` · `spriteChips` · `tierSparkle` · `soulOrb` · `baked`
-- [ ] `src/render/sprites-hi.js` — 기물 32×44 마스크(`tools/sprites-hi.mjs`가 쓴다)
-- [ ] `src/render/fairy-sprites.js` — 특수 기물 마스크
+- [ ] `src/render/sprites.js` — 남은 것: 체스 여섯 16×22 마스크(`SPR` · `spritePixels` — 타이틀 하늘 실루엣 · `tools/icons.mjs` · 조각 빛깔 자리) · 톤 표(`TONE` · `ENG_TONE` · `TIER` — 벡터 톤이 읽는다) · `tierSparkle` · `soulOrb` · `baked` · `hiFor`. 지운 것: `spriteCanvas` · `outlineCanvas` · `spriteChips` · `THING_TONE` · 두 배 화소 목록
+- [x] `src/render/sprites-hi.js` — 기물 32×44 마스크(지웠다, `tools/sprites-hi.mjs`도)
+- [x] `src/render/fairy-sprites.js` — 특수 기물 마스크(지웠다 → `pieces3.js` `SHAPE`)
 - [ ] `src/render/art-hi.js` — 격언 · 문양 · 문장 · 각인 재료 · 전술 · 조각 두 배 마스크(`tools/art-hi.mjs`)
 - [ ] `src/render/art16.js` — 물약 · 룰렛 1배 그림
 - [ ] `src/render/portraits.js` — 마스터 초상 64×64
@@ -106,30 +121,33 @@
 - [ ] `src/render/texture.js` — (대국 판은 `board3.js boardImage`로 옮겼다 — 남은 쓰임 없음 확인 뒤 지운다) `boardCanvas` · `boardFrameCanvas` · `feltCanvas` · 3×5 좌표 글자
 - [ ] `src/ui/diagram.js` — 행마 그림(4 px 칸)
 - [ ] `src/ui/envelope.js` — 꾸러미 봉투
-- [ ] `src/ui/art.js` — 물건 그림 칸(`itemArt` · `engravingEmblem` · `soulEmblem` · `awakenArt` · 격언 그림)
+- [ ] `src/ui/art.js` — 물건 그림 칸(`itemArt` · `engravingEmblem` · `soulEmblem` · `awakenArt` · 격언 그림). 기물 · 기보 · 진화 칸의 기물은 벡터, `pieceBox`는 지웠다
 - [ ] `src/ui/juice.js` — 동전(`coinCanvas`) · 연기 · 조각 · 색종이
 - [ ] `src/ui/stars.js` — 평가 별
 - [ ] `src/ui/kinds.js` — 종류 딱지 문양
 - [ ] `src/ui/peek.js` — 관 선택 카드의 작은 판
-- [ ] `src/render/night.js` — 타이틀 하늘 · 실루엣(`spritePixels`)
+- [ ] `src/render/night.js` — 타이틀 하늘 · 먼 실루엣(`spritePixels`). 하늘 사슬의 기물 · 빛 테 · 흰 번쩍임 · 먹힌 조각은 벡터(`fitPiece` · `pieceMask`)
 - [ ] `src/ui/screens/title.js` — 로고(`bakeLogo`) — 글자는 Black Han Sans를 화면 배율로 굽게 바꿨다(4절). 금빛 3단 띠 · 그림자 모양은 그대로
 
 **쓰는 곳**
-- [ ] `src/render/gfx.js` `sprite` · `soulSpark` (기물 그리기 입구)
+- [x] `src/render/gfx.js` `sprite` (기물 그리기 입구 → `pieces3.js` `fitPiece`). `soulSpark`는 그대로
 - [x] `src/ui/screens/battle.js` 판 위 — 판 · 체스 기물 여섯 · 증원 그림자 · 미리 보기 · 부서짐 · 쓰러지는 킹 · 판 위 연출(2단계)
-- [ ] `src/ui/screens/battle.js` 판 밖 — 손 카드 · 먹으면 판넬 · 사슬 칸 · 초상 · 문장 · 판 위 특수 기물 · 사물(도트 그대로, 자리만 투영)
-- [ ] `src/ui/screens/lesson.js` · `review.js` (대국 화면을 물려받는다)
+- [x] `src/ui/screens/battle.js` 판 위 특수 기물 · 벽 · 보석 · 문 · 증원 그림자, 판 밖 손 카드 · 먹으면 판넬 · 사슬 칸 · 바친 기물 줄(3단계)
+- [ ] `src/ui/screens/battle.js` 초상 · 문장 · 강 · 발판 · 고속도로 점(도트 그대로)
+- [x] `src/ui/screens/lesson.js` · `review.js` (대국 화면을 물려받는다 · 복기 줄 기물)
 - [x] `src/ui/ignite.js` — 콤비네이션 길 · 카드 기물
 - [x] `src/ui/marks.js` — 판 위 표시 · 화살표
 - [x] `src/ui/annot.js` — 판 위 !! · ? 딱지 자리
-- [ ] `src/ui/parts.js` — 기물 카드 · 진열 카드 · 격언 칸 · 봉투 · 행마 그림
+- [ ] `src/ui/parts.js` — 기물 카드 · 덱 칸의 기물은 벡터(`gfx.sprite`). 남은 것: 진열 카드 틀 · 격언 칸 · 봉투 · 행마 그림
 - [ ] `src/ui/ui.js` — 말풍선 행마 그림
-- [ ] `src/ui/coach.js` — 도움말 그림
-- [ ] `src/ui/highlight.js` · `screens/highlight.js` — 하이라이트 카드(화면 = 내보내는 그림)
+- [ ] `src/ui/coach.js` — 도움말 그림(킹 말풍선 기물은 벡터, 도트 금관 반짝임은 뺐다)
+- [ ] `src/ui/highlight.js` · `screens/highlight.js` — 하이라이트 카드(화면 = 내보내는 그림). 카드의 기물은 벡터, 나머지는 도트
 - [ ] `src/ui/unlockview.js` — 해금 칸 그림 · 자물쇠
-- [ ] `src/ui/screens/shop.js` · `pack.js` · `chest.js` · `legend.js` · `reward.js` · `result.js` · `records.js` · `setup.js` · `moves.js` · `codex.js` · `select.js` · `settings.js` · `title.js`
+- [ ] `src/ui/screens/shop.js` · `pack.js` · `chest.js` · `legend.js` · `reward.js` · `result.js` · `records.js` · `setup.js` · `moves.js` · `codex.js` · `select.js` · `settings.js` · `title.js` — 이 화면들의 기물(`gfx.sprite` · `itemArt`)은 벡터. 남은 것: 아이콘 · 문장 · 초상 · 격언 그림 · 주사위 · 행마 그림
 - [ ] `src/ui/app.js` · `src/render/backdrop.js` — 바탕(`feltCanvas`)
 
 **시험 · 도구**
-- [ ] `test/sprites-hi.test.js` · `test/art-hi.test.js` · `test/annot.test.js` · `test/light.test.js`
-- [ ] `tools/sprites-hi.mjs` · `tools/art-hi.mjs` · `tools/icons.mjs` · `tools/shots-dot2x.mjs` · `tools/shots-factions.mjs` · `tools/shots-shop-art.mjs` · `tools/shots.mjs` · `tools/smoke.mjs`(그림 검사)
+- [x] `test/sprites-hi.test.js` → `test/pieces3.test.js`(모든 기물에 모양 · 판 밖 상자 맞춤 · 1배 오프스크린 · 조각 · 사물)
+- [ ] `test/art-hi.test.js` · `test/annot.test.js` · `test/light.test.js`
+- [x] `tools/sprites-hi.mjs`(지웠다) · `tools/shots.mjs` 기물 시트(`fitPiece`)
+- [ ] `tools/art-hi.mjs` · `tools/icons.mjs` · `tools/shots-dot2x.mjs` · `tools/shots-factions.mjs` · `tools/shots-shop-art.mjs` · `tools/smoke.mjs`(그림 검사)

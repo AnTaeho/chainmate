@@ -4,9 +4,10 @@
 // 1배 화면: 옛 1배 그림을 잉크 가운데로(물약 · 룰렛은 옛 그림이 글자였어서 16×16 원본).
 import { PAL } from '../render/palette.js';
 import { live } from '../render/look.js';
-import { rect, frame, sprite, place, soulSpark, artOf } from '../render/gfx.js';
+import { rect, frame, place } from '../render/gfx.js';
 import { makeCanvas, context } from '../render/surface.js';
-import { baked, hiFor, tierOf, spriteCanvas, spritePixels, spritePixelsHi, tierSparkle } from '../render/sprites.js';
+import { baked, hiFor, tierOf } from '../render/sprites.js';
+import { fitPiece } from '../render/pieces3.js';
 import { TACTIC_HI, SHARD_HI, MAXIM_ART, EMBLEM_ART, TACTIC_ART, SOUL_ART, SHARD_ART, POTION_ART, ROULETTE_ART, AWAKEN_ART } from '../render/art-hi.js';
 import { POTION16, ROULETTE16 } from '../render/art16.js';
 import { ICON_ROWS, drawIconLight } from '../render/icons.js';
@@ -151,19 +152,6 @@ export function artMask(it, t = 0) {
   if (it.kind === 'soul') return { rows: soulRows(it.id), cols: soulCols(it.id) };
   return null;
 }
-// 기물 몸(둘레 테 포함)의 가로 잉크 자리({ x, w } — 반 칸 그림이면 반 칸 단위). 세로는 발밑 줄을 지키므로 재지 않는다
-const PBOX = new Map();
-export function pieceBox(type, hi) {
-  type = artOf(type);
-  const key = `${type}:${hi ? 2 : 1}`;
-  if (PBOX.has(key)) return PBOX.get(key);
-  const px = (hi ? spritePixelsHi(type) : null) || spritePixels(type);
-  let x0 = Infinity, x1 = -1;
-  for (const [x] of px) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
-  const b = { x: x0, w: x1 - x0 + 1 };
-  PBOX.set(key, b);
-  return b;
-}
 export const artW = (it) => (it.kind === 'evolve' ? ART.w * 2 : ART.w);
 
 const BAKED = new Map();
@@ -198,25 +186,11 @@ export function itemArt(ctx, it, x, y, t = 0, run = null, { w = artW(it), h = AR
   const type = it.kind === 'piece' ? it.t : it.kind === 'chart' ? it.form : null;
   if (it.kind === 'evolve') { evolveCell(ctx, x, y, w, h, hi); return w; }
   if (type) {
-    // 기물 · 기보: 가로만 몸 잉크 가운데, 발밑 줄은 칸 아래에서 (h − 22) / 2
-    const b = pieceBox(type, hi), py = Math.floor((h - 22) / 2);
-    let px;
-    if (hi) {
-      const hx = centre(w * 2, 0, { x: b.x, y: 0, w: b.w, h: 0 }).x;
-      ctx.drawImage(bake(`p:${it.kind}:${artOf(type)}:${tier}:${w}x${h}`, w * 2, h * 2, (g) => {
-        if (it.kind === 'chart') { g.fillStyle = CHART_TICK; ticks((a, c, d, e) => g.fillRect(a, c, d, e), w * 2, h * 2, 2); }
-        g.drawImage(spriteCanvas(artOf(type), 'w', null, tier, true), hx, py * 2);
-      }), place(x), place(y), w, h);
-      px = x + Math.round(hx / 2);
-    } else {
-      rect(ctx, x, y, w, h, CELL.bg); rect(ctx, x + 1, y + 1, w - 2, 1, CELL.top);
-      if (it.kind === 'chart') ticks((a, c, d, e) => rect(ctx, x + a, y + c, d, e, CHART_TICK), w, h, 1);
-      px = x + centre(w, 0, { x: b.x, y: 0, w: b.w, h: 0 }).x;
-      ctx.drawImage(spriteCanvas(artOf(type), 'w', null, tier, false), place(px), place(y + py), 16, 22);
-    }
-    // 금 단계 반짝임 · 혼 기운은 움직이므로 칸 위에 따로
-    if (tier === 3) tierSparkle(ctx, place(px), place(y + py), t, hi);
-    if (it.kind === 'piece' && it.soul) soulSpark(ctx, place(px), place(y + py), SOUL_BY_ID[it.soul] ? SOUL_BY_ID[it.soul].col : '#ffffff', t, hi);
+    // 기물 · 기보: 16 × 22 상자(가로 가운데, 발밑 줄은 칸 아래에서 (h − 22) / 2)에 벡터 기물. 금 기운 · 혼 기운은 그 상자에
+    rect(ctx, x, y, w, h, CELL.bg); rect(ctx, x + 1, y + 1, w - 2, 1, CELL.top);
+    if (it.kind === 'chart') ticks((a, c, d, e) => rect(ctx, x + a, y + c, d, e, CHART_TICK), w, h, 1);
+    const px = x + Math.floor((w - 16) / 2), py = y + Math.floor((h - 22) / 2);
+    fitPiece(ctx, type, 'w', px, py, 16, 22, { tier, time: t, soul: it.kind === 'piece' ? it.soul || null : null });
     return w;
   }
   const m = hi ? artMask(it, t) : null;
@@ -260,26 +234,20 @@ function loArt(ctx, it, x, y, w, h, t) {
 }
 // 진화: 넓은 칸에 나이트 ›› 낙타(전후 두 그림 + 가운데 겹 꺾쇠). 좁은 칸(두루마리 칸)은 겹 꺾쇠만
 function evolveCell(ctx, x, y, w, h, hi) {
-  const wide = w >= 40, py = Math.floor((h - 22) / 2);
+  const wide = w >= 40, py = y + Math.floor((h - 22) / 2);
   if (hi) {
     ctx.drawImage(bake(`evolve:${w}x${h}`, w * 2, h * 2, (g) => {
-      if (wide) {
-        const bn = pieceBox('N', true), bl = pieceBox('L', true), m = 6;
-        g.drawImage(spriteCanvas('N', 'w', null, 0, true), m - bn.x, py * 2);
-        g.drawImage(spriteCanvas('L', 'w', null, 1, true), w * 2 - m - bl.w - bl.x, py * 2);
-      }
       g.fillStyle = PAL.gold;
       const k = wide ? 1 : 2; // 좁은 칸은 화살을 두 배로
       for (const ox of [-6, 0]) for (let i = 0; i < 5; i++) { g.fillRect(w + (ox + i) * k, h + (-5 + i) * k, 2 * k, k); g.fillRect(w + (ox + i) * k, h + (4 - i) * k, 2 * k, k); }
     }), place(x), place(y), w, h);
-    return;
+  } else {
+    rect(ctx, x, y, w, h, CELL.bg); rect(ctx, x + 1, y + 1, w - 2, 1, CELL.top);
+    const cx = x + Math.floor(w / 2), cy = y + Math.floor(h / 2);
+    for (const ox of [-3, 0]) for (let i = 0; i < 3; i++) { rect(ctx, cx + ox + i, cy - 3 + i, 1, 1, PAL.gold); rect(ctx, cx + ox + i, cy + 2 - i, 1, 1, PAL.gold); }
   }
-  rect(ctx, x, y, w, h, CELL.bg); rect(ctx, x + 1, y + 1, w - 2, 1, CELL.top);
   if (wide) {
-    const bn = pieceBox('N', false), bl = pieceBox('L', false), m = 3;
-    sprite(ctx, 'N', 'w', x + m - bn.x, y + py);
-    sprite(ctx, 'L', 'w', x + w - m - bl.w - bl.x, y + py, { tier: 1 });
+    fitPiece(ctx, 'N', 'w', x + 2, py, 16, 22);
+    fitPiece(ctx, 'L', 'w', x + w - 2 - 16, py, 16, 22, { tier: 1 });
   }
-  const cx = x + Math.floor(w / 2), cy = y + Math.floor(h / 2);
-  for (const ox of [-3, 0]) for (let i = 0; i < 3; i++) { rect(ctx, cx + ox + i, cy - 3 + i, 1, 1, PAL.gold); rect(ctx, cx + ox + i, cy + 2 - i, 1, 1, PAL.gold); }
 }
