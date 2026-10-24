@@ -102,7 +102,7 @@ export const EN = {
   '비숍을 잡을 수 있는 칸에 놓아 봐': 'Drop where you can take the bishop',
   '룩을 지키는 비숍부터 잡아': 'Take the bishop guarding the rook first',
   '지키던 비숍이 없으니 룩을 잡아도 안 끊겨': 'With the bishop gone, taking the rook keeps the chain going',
-  '위 막대가 목표야. 다 채우면 이겨. 왼쪽 금빛 구슬은 남은 수야': 'The bar on top is the Target. Fill it to win. The gold beads on the left are your moves',
+  '점수 아래 막대가 목표야. 다 채우면 이겨. 왼쪽 아래 금빛 구슬은 남은 수야': 'The bar under the Score is the Target. Fill it to win. The gold beads at the bottom left are your moves',
   '▼ 그림자는 증원이야. 이 수가 끝나면 그 칸에 적이 들어와': '▼ A shadow marks a recruit. When this move ends, an enemy arrives there',
   '폰을 잡아 봐. 수가 끝나면 구슬 하나가 꺼져': 'Take the pawn. When the move ends, one bead goes dark',
   '들어온 룩을 잡을 차례야. 나이트를 눌러 봐': 'Now go take the rook that arrived. Pick up the knight',

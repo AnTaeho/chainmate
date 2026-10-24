@@ -45,7 +45,7 @@ export const LESSONS = [
   // ── 대국
   { id: 'reinforce', group: 'battle', title: '목표 · 수 · 증원', target: 60, moves: 2, hand: ['N', 'N'], board: { e5: 'P' }, incoming: [{ sq: 'c6', t: 'R' }],
     steps: [
-      { pick: 0, say: '위 막대가 목표야. 다 채우면 이겨. 왼쪽 금빛 구슬은 남은 수야' },
+      { pick: 0, say: '점수 아래 막대가 목표야. 다 채우면 이겨. 왼쪽 아래 금빛 구슬은 남은 수야' },
       { drop: 'd3', say: '▼ 그림자는 증원이야. 이 수가 끝나면 그 칸에 적이 들어와' },
       { cap: 'e5', say: '폰을 잡아 봐. 수가 끝나면 구슬 하나가 꺼져' },
       { pick: 0, say: '들어온 룩을 잡을 차례야. 나이트를 눌러 봐' },
