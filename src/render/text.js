@@ -115,7 +115,7 @@ export function inkBox(img) {
 // edge: 테 빛깔 — 같은 글을 둥근 이음 선(굵기 ow 논리 px, 글 바깥으로 ow)으로 긋고 그 위에 글을 채운 그림 하나(left · top이 테만큼 더 바깥)
 export function textImage(s, col, bold = false, k = 1, edge = null, ow = 1) {
   s = String(s);
-  k = Math.max(1, Math.min(8, Math.ceil(k - 1e-6)));
+  k = Math.max(1, Math.min(12, Math.ceil(k - 1e-6)));
   if (unready && fontReady(false) && fontReady(true)) clearTextCache();
   // 테 굵기는 기기 화소 반 칸 단위로(크기가 움직이며 굵기를 맞춰 부르는 이름표가 프레임마다 다시 굽지 않게)
   if (edge) ow = Math.max(1, Math.round(ow * k * 2)) / (k * 2);

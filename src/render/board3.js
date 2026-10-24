@@ -278,7 +278,8 @@ export function thingImage(t, n = LOOK.n, f = 1) {
   thingCache.set(key, c);
   return c;
 }
-const nOf = (ctx) => { const m = ctx && ctx.getTransform ? ctx.getTransform() : null; const a = m && typeof m.a === 'number' ? Math.hypot(m.a, m.b) : LOOK.n; return Math.max(1, Math.min(6, Math.round(a))); };
+// 그리는 곳의 배율(정수): vec.js scaleOf와 같이 12배까지(각성 막간 카드 3배 × N 3 = 9)
+const nOf = (ctx) => { const m = ctx && ctx.getTransform ? ctx.getTransform() : null; const a = m && typeof m.a === 'number' ? Math.hypot(m.a, m.b) : LOOK.n; return Math.max(1, Math.min(12, Math.round(a))); };
 // 판 위: 칸 가운데 (cx, cy)에
 export function drawThing(ctx, t, cx, cy, alpha = 1) { drawThing2(ctx, thingImage(t, nOf(ctx)), cx, cy, alpha); }
 // 판 밖: 기물 크기(120 상자 논리 폭 w120)에 맞춘 사물을 가운데 cx, 아래 by에
