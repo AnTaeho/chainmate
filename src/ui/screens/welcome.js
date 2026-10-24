@@ -1,6 +1,6 @@
 // 처음 켬 덮개(docs/design-notes/tutorial.md): 판 · 수업 기록이 없는 사람이 첫 화면에 처음 오면 킹이 튜토리얼을 권한다.
 // 「튜토리얼부터」(금빛) → 수업을 차례로, 「바로 시작」 → 새 판. 어느 쪽이든 records.tutorialAsked. 오른쪽 위 「×」 · Esc는 덮개만 닫는다(다음에 켜면 다시 권한다).
-import { W, H, rect } from '../../render/gfx.js';
+import { W, H } from '../../render/gfx.js';
 import { button } from '../ui.js';
 import { PAD_BOX, GAP_GROUP, BTN_S } from '../frame.js';
 import { kingNoteLayout, kingNote } from '../coach.js';
@@ -15,8 +15,13 @@ export function welcomeLayout() {
   return { lay: { ...lay, h }, btnY, h, x: Math.floor(W / 2 - WELCOME.w / 2), y: Math.floor(H / 2 - h / 2) - 10 };
 }
 
-// 닫기 단추 그림(7×7 ×)
-const cross = (ctx, x, y, col) => { for (let i = 0; i < 7; i++) { rect(ctx, x + i, y - 1 + i, 1, 1, col); rect(ctx, x + 6 - i, y - 1 + i, 1, 1, col); } };
+// 닫기 단추 그림(7×7 ×): 둥근 끝 붓 두 획
+const cross = (ctx, x, y, col) => {
+  ctx.save();
+  ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x + 0.75, y - 0.25); ctx.lineTo(x + 6.25, y + 5.25); ctx.moveTo(x + 6.25, y - 0.25); ctx.lineTo(x + 0.75, y + 5.25); ctx.stroke();
+  ctx.restore();
+};
 
 export class WelcomeScreen {
   constructor(app) { this.app = app; }
