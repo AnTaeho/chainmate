@@ -6,7 +6,7 @@
 // 시너지 이름(「불굴 시너지」)은 같은 자리에서 시작하는 짧은 낱말(시너지)보다 먼저 둔다(splitTerms는 앞의 것을 고른다).
 import { wrap } from '../render/text.js';
 import { PAL } from '../render/palette.js';
-import { text, measure, box, rect } from '../render/gfx.js';
+import { text, measure, box, rrect } from '../render/gfx.js';
 import { L, getLang } from './lang.js';
 import { PAD_BOX, GAP_GROUP, flow } from './frame.js';
 import { openBox, closeBox, logClip } from '../render/layoutlog.js';
@@ -124,9 +124,9 @@ export function richText(ctx, s, x, y, col, { termCol = PAL.goldDk, ui = null, u
     const lit = id && !TERM_BY_ID[id].basic;
     const chip = id && VM_CHIP[id];
     if (chip) {
-      // 대국의 흰 칸 · 금빛 칸과 같은 빛깔의 작은 칸(테 1 · 안쪽 여백 1, 띄어쓰기 3 안에 든다)
-      rect(ctx, xx - 2, y - 1, w + 4, 13, PAL.frameDk);
-      rect(ctx, xx - 1, y, w + 2, 11, chip[0]);
+      // 대국의 흰 칸 · 금빛 칸과 같은 빛깔의 작은 둥근 칸(잉크 테 1 · 안쪽 여백 1, 띄어쓰기 3 안에 든다)
+      rrect(ctx, xx - 2, y - 1, w + 4, 13, 3, PAL.frameDk);
+      rrect(ctx, xx - 1, y, w + 2, 11, 2, chip[0]);
       text(ctx, part, xx, y, chip[1], { bold, w });
     } else text(ctx, part, xx, y, lit ? termCol : col, { bold, w });
     if (lit && ui && ui.termSpans) ui.termSpans.push({ id, x: xx, y, w, h: 12 });
@@ -183,7 +183,6 @@ export function drawKeyBox(ctx, id, x, y, w, hot = false, note = null, maxH = In
   openBox('note', x, y, w, h, P, { overlay: true, name: `낱말 ${id}` });
   // 말풍선과 같은 카드 빛깔(한 묶음): 뒤 판넬(어두운 초록)과 톤이 갈린다. 낱말은 말풍선 글 속 낱말과 같은 짙은 금빛
   box(ctx, x, y, w, h, PAL.card, hot ? PAL.gold : PAL.frameDk);
-  rect(ctx, x + 1, y + 1, w - 2, 1, PAL.cardHi);
   for (const [l, ly] of lay.words) text(ctx, l, x + P, y + ly, PAL.goldDk, { bold: true });
   const last = lay.words[lay.words.length - 1];
   if (note && last && measure(last[0], true) + 6 + measure(note) <= w - P * 2) text(ctx, note, x + w - P, y + last[1], PAL.cardInk, { align: 'right' });

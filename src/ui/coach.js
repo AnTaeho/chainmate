@@ -5,7 +5,8 @@
 //   TAUGHT — 튜토리얼 수업이 가르친 안내. 그 수업을 끝낸 사람에게는 판 안에서 다시 말하지 않는다(records.lessonsSeen).
 //   말하는 이는 내 편 킹(bubble): 상아 몸 · 금관 킹이 말풍선 머리에서 말하고, 말할 때 살짝 들썩이며 기쁠 때 금관이 반짝인다.
 import { PAL } from '../render/palette.js';
-import { W, H, text, box, rect, frame, lift, sprite, measure } from '../render/gfx.js';
+import { W, H, text, box, rect, rframe, lift, sprite, measure, R_BIG } from '../render/gfx.js';
+import { button } from './ui.js';
 import { SW } from '../render/sprites.js';
 import { LOOK, live } from '../render/look.js';
 import { wrap } from '../render/text.js';
@@ -203,13 +204,29 @@ export function drawKing(ctx, app, x, y, { joy = false } = {}) {
   const hop = !calm && t < 0.9 && Math.floor(t * 8) % 2 ? -1 : 0;
   sprite(ctx, 'K', 'w', x, y + hop);
   if (!joy) return;
-  // 기쁨: 관 둘레에 반짝이 넷
-  const stars = [[-3, 1], [SW + 1, 2], [-1, -3], [SW - 2, -3]];
-  stars.forEach(([sx, sy], n) => {
+  // 기쁨: 관 둘레에 네 갈래 반짝이 넷(벡터)
+  const stars = [[-3, 1, 2], [SW + 1, 2, 2], [-1, -3, 1.6], [SW - 2, -3, 1.6]];
+  stars.forEach(([sx, sy, s], n) => {
     if (!calm && (Math.floor(app.time * 4) + n) % 2) return;
-    const cx = x + sx, cy = y + hop + sy;
-    rect(ctx, cx, cy - 1, 1, 3, PAL.goldHi); rect(ctx, cx - 1, cy, 3, 1, PAL.goldHi);
+    sparkle(ctx, x + sx + 0.5, y + hop + sy + 0.5, s, PAL.goldHi);
   });
+}
+function sparkle(ctx, cx, cy, s, col) {
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - s);
+  ctx.quadraticCurveTo(cx, cy, cx + s, cy); ctx.quadraticCurveTo(cx, cy, cx, cy + s);
+  ctx.quadraticCurveTo(cx, cy, cx - s, cy); ctx.quadraticCurveTo(cx, cy, cx, cy - s);
+  ctx.fill();
+}
+function tri(ctx, pts, col) {
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]); ctx.lineTo(pts[4], pts[5]); ctx.closePath(); ctx.fill();
+}
+// 가리키는 것 둘레의 둥근 테(바깥 pad): 낮은 것(단추 · 칩)은 알약, 큰 것(카드 · 판넬)은 큰 상자 모서리
+export function pointRing(ctx, r, col, pad = 1) {
+  const w = r.w + pad * 2, h = r.h + pad * 2;
+  rframe(ctx, r.x - pad, r.y - pad, w, h, h <= 26 ? Math.floor(h / 2) : R_BIG + pad, col, 1);
 }
 export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip = null, joy = false } = {}) {
   live(); // 테가 깜박이고 킹이 들썩인다
@@ -219,32 +236,33 @@ export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip =
   const { x, y, w, h, lay } = p;
   app.hintRect = { x, y, w, h };
   if (r && p.arrow === 'right') {
-    // 가리키는 것: 금빛 테(1px)가 깜박인다
+    // 가리키는 것: 둥근 금빛 테가 깜박인다
     ctx.globalAlpha = LOOK.calm ? 1 : 0.6 + 0.4 * Math.sin(app.time * 6);
-    frame(ctx, r.x, r.y, r.w, r.h, PAL.goldHi);
+    pointRing(ctx, r, PAL.goldHi);
     ctx.globalAlpha = 1;
   }
   const bh = lay.h;
   openBox('note', x, y, w, bh, PAD_BOX, { overlay: true, name: '킹 말풍선' });
   lift(ctx, x, y, w, bh);
-  box(ctx, x, y, w, bh, PAL.card, PAL.gold);
+  box(ctx, x, y, w, bh, PAL.card, PAL.frameDk);
   if (r && p.arrow) {
-    for (let k = 0; k < 5; k++) {
-      const n = (4 - k) * 2 + 1, c = k === 0 ? PAL.gold : PAL.card;
-      if (p.arrow === 'right') {
-        const ay = Math.max(y + 4, Math.min(y + bh - 5, Math.round(r.y + r.h / 2)));
-        rect(ctx, x + w + k, ay - (4 - k), 1, n, c);
-      } else {
-        const ax = Math.max(x + 6, Math.min(x + w - 7, Math.round(r.x + r.w / 2)));
-        rect(ctx, ax - (4 - k), p.arrow === 'up' ? y - 1 - k : y + bh + k, n, 1, c);
-      }
+    // 꼬리: 잉크 삼각형 위에 크림 삼각형(상자 테를 덮어 한 몸으로)
+    if (p.arrow === 'right') {
+      const ay = Math.max(y + 6, Math.min(y + bh - 7, Math.round(r.y + r.h / 2))) + 0.5, ex = x + w;
+      tri(ctx, [ex - 1, ay - 5, ex + 5, ay, ex - 1, ay + 5], PAL.frameDk);
+      tri(ctx, [ex - 2, ay - 3.6, ex + 3.4, ay, ex - 2, ay + 3.6], PAL.card);
+    } else {
+      const ax = Math.max(x + 7, Math.min(x + w - 8, Math.round(r.x + r.w / 2))) + 0.5;
+      const up = p.arrow === 'up', ey = up ? y : y + bh, s = up ? -1 : 1;
+      tri(ctx, [ax - 5, ey - s, ax, ey + s * 5, ax + 5, ey - s], PAL.frameDk);
+      tri(ctx, [ax - 3.6, ey - s * 2, ax, ey + s * 3.4, ax + 3.6, ey - s * 2], PAL.card);
     }
   }
   const P = PAD_BOX;
   // 머리줄: 킹(16×22, 머리 줄 위로 조금 솟는다) · 이름 · 가는 줄
   drawKing(ctx, app, x + P - 2, y + lay.headTop - 6, { joy });
   const nw = measure(KING_NAME, true);
-  text(ctx, KING_NAME, x + P + 18, textY(y + lay.headTop, KING_HEAD), PAL.goldDk, { bold: true });
+  text(ctx, KING_NAME, x + P + 18, textY(y + lay.headTop, KING_HEAD), PAL.cardInk, { bold: true });
   rect(ctx, x + P + 22 + nw, y + lay.headTop + 9, w - P * 2 - 22 - nw, 1, PAL.cardDim);
   lay.lines.forEach((l, k) => text(ctx, l, x + P, y + lay.ys[k], PAL.cardInk));
   const act = { [okText]: [ok, 'gold', 'guide:ok'], [skipText]: [skip, 'plain', 'guide:skip'] };
@@ -254,12 +272,7 @@ export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip =
     for (const label of row) {
       const [fn, tone, id] = act[label], bw = bubbleBtnW(label);
       bx -= bw;
-      ui.region(id, bx, by, bw, BTN_S, { onClick: fn });
-      openBox('edge', bx, by, bw, BTN_S, 1, { name: label });
-      const hov = ui.isHover(id);
-      box(ctx, bx, by, bw, BTN_S, tone === 'gold' ? (hov ? PAL.goldHi : PAL.gold) : hov ? PAL.cardHi : PAL.card, tone === 'gold' ? PAL.frameDk : PAL.goldDk);
-      text(ctx, label, bx + bw / 2, inkY(by, BTN_S), tone === 'gold' ? PAL.linkInk : PAL.cardInk, { align: 'center', bold: true });
-      closeBox();
+      button(ctx, ui, id, bx, by, bw, BTN_S, label, { tone, onClick: fn });
       bx -= 4;
     }
   });
@@ -283,14 +296,14 @@ export function kingNote(ctx, app, x, y, w, say, lay, { joy = false, line = null
   if (say !== talkSay) { talkSay = say; talkT0 = app.time; }
   if (!LOOK.calm && (joy || app.time - talkT0 < 1)) live(); // 말이 바뀐 뒤 들썩이는 동안 · 금관이 반짝이는 동안
   openBox('panel', x, y, w, lay.h, PAD_BOX, { name });
-  box(ctx, x, y, w, lay.h, PAL.card, PAL.gold);
+  box(ctx, x, y, w, lay.h, PAL.card, PAL.frameDk);
   const P = PAD_BOX;
   drawKing(ctx, app, x + P - 2, y + lay.headTop - 6, { joy });
   const nw = measure(KING_NAME, true);
-  text(ctx, KING_NAME, x + P + 18, textY(y + lay.headTop, KING_HEAD), PAL.goldDk, { bold: true });
+  text(ctx, KING_NAME, x + P + 18, textY(y + lay.headTop, KING_HEAD), PAL.cardInk, { bold: true });
   rect(ctx, x + P + 22 + nw, y + lay.headTop + 9, w - P * 2 - 22 - nw - headRight, 1, PAL.cardDim);
   lay.lines.forEach((l, k) => (line ? line(l, x + P, y + lay.ys[k]) : text(ctx, l, x + P, y + lay.ys[k], PAL.cardInk)));
-  lay.feet.forEach((l, k) => text(ctx, l, x + w - P, y + lay.fys[k], PAL.goldDk, { align: 'right' }));
+  lay.feet.forEach((l, k) => text(ctx, l, x + w - P, y + lay.fys[k], PAL.cardDim, { align: 'right' }));
   if (inner) inner();
   closeBox();
 }
