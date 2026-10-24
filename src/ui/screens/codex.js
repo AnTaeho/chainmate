@@ -1,7 +1,7 @@
 // 도감: 격언 · 기물 · 혼 · 세력(우두머리 명인 포함) · 명국 · 오프닝 · 판본. 본 것만 채워지고 나머지는 「?」. 명국은 모은 조각 수까지.
 // 아직 안 연 묶음의 격언 · 특수 기물 · 혼은 「?」 대신 자물쇠 칸 — 누르면 해금 화면이 그 묶음을 펼친다(CHM-73). 본 적이 있으면(오늘의 대국 등) 잠겨 있어도 채워진다.
 import { PAL, RARITY, EDITION_TINT } from '../../render/palette.js';
-import { W, H, text, box, rect, rrect, rframe, sprite, measure, slot, slotR, radiusOf } from '../../render/gfx.js';
+import { W, text, rrect, rframe, sprite, measure, slot, slotR, radiusOf } from '../../render/gfx.js';
 import { PIECES } from '../../data/pieces.js';
 import { PIECE_NAME, PIECE_MOVE } from '../words.js';
 import { MAXIMS } from '../../data/maxims.js';
