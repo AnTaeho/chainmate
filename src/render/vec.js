@@ -50,11 +50,11 @@ export function line(x, d, col, lw) {
   x.beginPath(); trace(x, d); x.strokeStyle = col; x.lineWidth = lw; x.lineCap = 'round'; x.lineJoin = 'round'; x.stroke();
 }
 
-// 그리는 곳의 실제 배율(뒷면 N × 그리기 변환) — 정수로 굽는다
+// 그리는 곳의 실제 배율(뒷면 N × 그리기 변환) — 정수로 굽는다. 12배까지(각성 막간 카드는 3배 × N 3 = 9)
 export function scaleOf(ctx) {
   const m = ctx && ctx.getTransform ? ctx.getTransform() : null;
   const a = m && typeof m.a === 'number' ? Math.hypot(m.a, m.b) : LOOK.n;
-  return Math.max(1, Math.min(6, Math.round(a)));
+  return Math.max(1, Math.min(12, Math.round(a)));
 }
 // 한 번 굽기: w × h 논리 크기를 N배 캔버스에. paint(g, k)는 논리 좌표로 그린다(k = N, 선 바닥 1 / k)
 const CACHE = new Map();
