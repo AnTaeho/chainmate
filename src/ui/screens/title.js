@@ -25,7 +25,7 @@ function stillCanvas() {
 }
 export const TITLE_SCENE = { key: 'title-night', paint: paintNight };
 
-// ── 로고: 금빛 3단 명암 + 어두운 그림자. 글자마다 따로 구워 정수 칸으로 오르내린다(회전 없음).
+// ── 로고(안 3): 금 두 톤(위 빛 · 아래 그늘) + 잉크 남색 두께(오른쪽 아래로 세 칸 밀어 쌓는다). 글자마다 따로 구워 정수 칸으로 오르내린다(회전 없음).
 // 화면 배율 n으로 구워(글꼴을 sc × n배로) 어느 N에서나 또렷하다. 명암 띠는 잰 잉크 높이의 3/11 · 7/11 자리
 function bakeLetter(s, sc, n) {
   const img = textImage(s, '#ffffff', true, sc * n);
@@ -33,7 +33,7 @@ function bakeLetter(s, sc, n) {
   const c = makeCanvas(Math.ceil(w * n), Math.ceil(h * n)), g = context(c);
   g.scale(n, n);
   const put = (col, dx, dy) => { const t = textImage(s, col, true, sc * n); g.drawImage(t.c, dx, dy, t.cw * sc, t.h * sc); };
-  put('#1a0f05', 3, 3); put('#6b4410', 2, 2);
+  put('#0a0c22', 3, 3); put('#12153a', 2, 2); put('#12153a', 1, 1);
   // 몸: 위 금빛 · 가운데 금 · 아래 짙은 금(글자 모양 안에만)
   const body = makeCanvas(c.width, c.height), b = context(body);
   b.scale(n, n);
@@ -42,10 +42,10 @@ function bakeLetter(s, sc, n) {
   b.globalCompositeOperation = 'source-atop';
   const ink = inkBox(img), y0 = (ink.top - img.top) * sc, ih = ink.h * sc;
   const top = y0 + (ih * 3) / 11, mid = y0 + (ih * 7) / 11;
-  b.fillStyle = '#fff1b8'; b.fillRect(0, 0, w, top);
-  b.fillStyle = '#efbd55'; b.fillRect(0, top, w, mid - top);
-  b.fillStyle = '#c8902c'; b.fillRect(0, mid, w, h);
-  b.fillStyle = '#efbd55'; b.fillRect(0, mid + sc * 2, w, h);
+  b.fillStyle = '#f9d77e'; b.fillRect(0, 0, w, top);
+  b.fillStyle = '#f6be45'; b.fillRect(0, top, w, mid - top);
+  b.fillStyle = '#d48b1c'; b.fillRect(0, mid, w, h);
+  b.fillStyle = '#d48b1c'; b.fillRect(0, mid + sc * 2, w, h);
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.drawImage(body, 0, 0);
   return { c, w, h, dy: img.top * sc };

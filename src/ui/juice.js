@@ -3,13 +3,16 @@
 import { PAL } from '../render/palette.js';
 import { W, H, rect, text, measure } from '../render/gfx.js';
 import { live, beat, LOOK } from '../render/look.js';
+import { INK, bake, scaleOf } from '../render/vec.js';
+
+const TAU = Math.PI * 2;
 
 export const CAP = { chips: 12, puffs: 7, coins: 6, coinsLine: 6, confetti: 40, sparks: 24 };
 export const seeded = (seed) => { let s = (seed * 2654435761) & 0x7fffffff || 1; return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }; };
 // 1/N 칸 계단의 배율(뒷면 N배에서 글자 도트가 고르게 선다)
 export const stepScale = (s) => Math.round(s * LOOK.n) / LOOK.n;
 
-// 연기 덩어리: 잡힌 칸에서 흰 덩어리가 부풀었다 오그라들며 흩어진다(네모 둘을 겹친 둥근 도트). 테를 먼저 다 깔고 흰 몸을 얹어 한 덩이 구름으로 보인다
+// 연기 덩어리: 잡힌 칸에서 흰 둥근 덩어리가 부풀었다 오그라들며 흩어진다. 테를 먼저 다 깔고 흰 몸을 얹어 한 덩이 구름으로 보인다
 export function puff(fx, x, y, { n = 7, seed = 1, power = 1 } = {}) {
   const r = seeded(seed), parts = [];
   const m = Math.min(CAP.puffs, n);
@@ -31,12 +34,20 @@ export function puff(fx, x, y, { n = 7, seed = 1, power = 1 } = {}) {
   });
 }
 function blob(ctx, cx, cy, s, col) {
-  const h = s / 2;
-  if (s <= 3) { rect(ctx, cx - h, cy - h, s, s, col); return; }
-  const c = s >= 7 ? 2 : 1;
-  rect(ctx, cx - h + c, cy - h, s - 2 * c, s, col);
-  rect(ctx, cx - h, cy - h + c, s, s - 2 * c, col);
-  if (c === 2) rect(ctx, cx - h + 1, cy - h + 1, s - 2, s - 2, col);
+  ctx.beginPath(); ctx.arc(cx, cy, s / 2, 0, TAU); ctx.fillStyle = col; ctx.fill();
+}
+// 부서진 조각 하나: 기울어진 사각 조각(벡터, 돌며 난다). (x, y)는 조각 상자 왼쪽 위
+export function chip(ctx, x, y, w, h, col, a = 0) {
+  ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(a);
+  ctx.beginPath(); ctx.moveTo(-w / 2, -h / 2); ctx.lineTo(w / 2, -h * 0.25); ctx.lineTo(w * 0.3, h / 2); ctx.lineTo(-w / 2, h * 0.35); ctx.closePath();
+  ctx.fillStyle = col; ctx.fill();
+  ctx.restore();
+}
+// 네 뿔 반짝(반지름 r)
+function spark(ctx, x, y, r, col) {
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) { const q = (i * Math.PI) / 4, d = i % 2 ? r * 0.3 : r; (i ? ctx.lineTo : ctx.moveTo).call(ctx, x + Math.cos(q) * d, y + Math.sin(q) * d); }
+  ctx.closePath(); ctx.fillStyle = col; ctx.fill();
 }
 
 // 화면 번쩍: 온 화면을 덮는 빛(0.2초 안팎). col 흰빛 · 금빛
@@ -44,7 +55,7 @@ export function screenFlash(fx, { col = PAL.white, a = 0.5, life = 0.22 } = {}) 
   return fx.add({ life, layer: 1, draw: (ctx, e) => { ctx.globalAlpha = a * (1 - e.t / e.life) ** 2; rect(ctx, -8, -8, W + 16, H + 16, col); ctx.globalAlpha = 1; } });
 }
 
-// 반짝이 터짐: 한 점에서 별 반짝(십자 도트)이 사방으로 튀고 천천히 가라앉는다
+// 반짝이 터짐: 한 점에서 네 뿔 반짝이 사방으로 튀고 천천히 가라앉는다
 export function sparkBurst(fx, x, y, { n = 16, seed = 3, cols = [PAL.goldHi, PAL.gold, PAL.white], speed = 80, life = 0.7 } = {}) {
   const r = seeded(seed), parts = [];
   const m = Math.min(CAP.sparks, n);
@@ -59,15 +70,15 @@ export function sparkBurst(fx, x, y, { n = 16, seed = 3, cols = [PAL.goldHi, PAL
       const k = e.t / e.life;
       ctx.globalAlpha = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
       for (const p of e.parts) {
-        if (p.big && k < 0.55) { rect(ctx, p.x - 1, p.y, 3, 1, p.col); rect(ctx, p.x, p.y - 1, 1, 3, p.col); }
-        else rect(ctx, p.x, p.y, 1, 1, p.col);
+        if (p.big && k < 0.55) spark(ctx, p.x + 0.5, p.y + 0.5, 2.2, p.col);
+        else { ctx.beginPath(); ctx.arc(p.x + 0.5, p.y + 0.5, 0.7, 0, TAU); ctx.fillStyle = p.col; ctx.fill(); }
       }
       ctx.globalAlpha = 1;
     },
   });
 }
 
-// 색종이: 위에서 터져 흩날리며 떨어지는 도트 조각(가로 · 세로로 납작해졌다 펴지는 것으로 뒤집힘을 보인다)
+// 색종이: 위에서 터져 흩날리며 떨어지는 종이 조각(돌며, 폭이 줄었다 펴지는 것으로 뒤집힘을 보인다)
 const CONFETTI = ['#efbd55', '#df5a45', '#72c24e', '#9fd3e0', '#f2ead8', '#c58ae0'];
 // area(): 그 안에서만 보이는 { clip, avoid } 네모(결과 화면 — 제목 줄 안, 제목 글 위는 지나가지 않는다). 없으면 화면 뒤 층에 온 화면
 export function confetti(fx, x, y, { n = 36, seed = 5, spread = 200, life = 1.6, tag = null, area = null } = {}) {
@@ -90,7 +101,8 @@ export function confetti(fx, x, y, { n = 36, seed = 5, spread = 200, life = 1.6,
       const av = ar && ar.avoid;
       for (const p of f.parts) {
         if (av && p.x > av.x - 4 && p.x < av.x + av.w && p.y > av.y - 4 && p.y < av.y + av.h) continue;
-        const flat = Math.abs(Math.sin(p.ph)) < 0.35; rect(ctx, p.x, p.y, flat ? 1 : p.w, flat ? p.w : 3, p.col);
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ph * 0.35); ctx.scale(Math.max(0.15, Math.abs(Math.cos(p.ph))), 1);
+        ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -1.5, p.w, 3); ctx.restore();
       }
       ctx.globalAlpha = 1;
       if (ar) ctx.restore();
@@ -100,33 +112,21 @@ export function confetti(fx, x, y, { n = 36, seed = 5, spread = 200, life = 1.6,
   return e;
 }
 
-// 「$」 동전(11×11): 금빛 둥근 판 + 어두운 테 + 가운데 $. 한 번 굽고 늘 같은 그림
-let coinImg = null;
-function coinCanvas() {
-  if (coinImg) return coinImg;
-  const n = 4, c = typeof document !== 'undefined' ? document.createElement('canvas') : null;
-  if (!c || !c.getContext) return null;
-  c.width = 11 * n; c.height = 11 * n;
-  const g = c.getContext('2d');
-  g.imageSmoothingEnabled = false;
-  g.scale(n, n);
-  const px = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
-  px(3, 0, 5, 11, PAL.goldDk); px(0, 3, 11, 5, PAL.goldDk); px(1, 1, 9, 9, PAL.goldDk);
-  px(3, 1, 5, 9, PAL.gold); px(1, 3, 9, 5, PAL.gold); px(2, 2, 7, 7, PAL.gold);
-  px(3, 1, 4, 1, PAL.goldHi); px(2, 2, 1, 2, PAL.goldHi); px(1, 3, 1, 2, PAL.goldHi);
-  // $: 5×7 도트
-  const D = PAL.goldDk, S = ['.###.', '#.#..', '.###.', '..#.#', '.###.'];
-  px(5, 2, 1, 7, D);
-  S.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '#') px(3 + i, 3 + j, 1, 1, D); }));
-  coinImg = c;
-  return c;
+// 「$」 동전(11×11): 금 두 톤 둥근 판 + 잉크 테 + 안쪽 고리 + 가운데 $(안 3 벡터). 배율 N마다 한 번 굽는다
+function paintCoin(g) {
+  g.beginPath(); g.arc(5.5, 5.5, 4.9, 0, TAU); g.fillStyle = PAL.gold; g.fill();
+  g.save(); g.beginPath(); g.rect(5.8, 0, 6, 11); g.clip(); g.beginPath(); g.arc(5.5, 5.5, 4.9, 0, TAU); g.fillStyle = PAL.goldDk; g.fill(); g.restore();
+  g.beginPath(); g.arc(5.5, 5.5, 4.9, 0, TAU); g.strokeStyle = INK; g.lineWidth = 0.9; g.stroke();
+  g.beginPath(); g.arc(5.5, 5.5, 3.4, 0, TAU); g.strokeStyle = 'rgba(107,68,16,0.55)'; g.lineWidth = 0.6; g.stroke();
+  g.beginPath(); g.moveTo(7, 3.9); g.bezierCurveTo(6.2, 3.2, 4, 3.3, 4.1, 4.6); g.bezierCurveTo(4.2, 5.8, 7, 5.2, 7, 6.5); g.bezierCurveTo(7, 7.8, 4.8, 7.8, 4, 7.1);
+  g.moveTo(5.5, 2.6); g.lineTo(5.5, 8.4);
+  g.strokeStyle = '#6b4410'; g.lineWidth = 0.9; g.lineCap = 'round'; g.stroke();
 }
 export function drawCoin(ctx, x, y, { alpha = 1, sx = 1 } = {}) {
-  const c = coinCanvas();
+  const c = bake('coin', 11, 11, scaleOf(ctx), paintCoin);
   if (alpha !== 1) ctx.globalAlpha = alpha;
   const w = Math.max(1, Math.round(11 * sx));
-  if (c) ctx.drawImage(c, x + Math.floor((11 - w) / 2), y, w, 11);
-  else { rect(ctx, x, y, 11, 11, PAL.gold); }
+  ctx.drawImage(c, x + Math.floor((11 - w) / 2), y, w, 11);
   if (alpha !== 1) ctx.globalAlpha = 1;
 }
 
@@ -146,7 +146,7 @@ export function flyCoins(fx, x0, y0, x1, y1, { n = 3, seed = 9, delay = 0, onHit
         if (t < 0.22) { const k = t / 0.22, q = 1 - (1 - k) * (1 - k); x = x0 + ox * q; y = y0 - up * q; }
         else { const k = Math.min(1, (t - 0.22) / 0.33), q = k * k; const sx = x0 + ox, sy = y0 - up; x = sx + (x1 - sx) * q; y = sy + (y1 - sy) * q - Math.sin(k * Math.PI) * 10; }
         const spin = Math.abs(Math.cos(t * 14));
-        if (t >= 0.55) { const k = (t - 0.55) / 0.07; ctx.globalAlpha = 1 - k; rect(ctx, x1 - 1 - k * 4, y1 + 5, 3 + k * 8, 1, PAL.goldHi); rect(ctx, x1 + 5, y1 - 1 - k * 4, 1, 3 + k * 8, PAL.goldHi); ctx.globalAlpha = 1; return; }
+        if (t >= 0.55) { const k = (t - 0.55) / 0.07; ctx.globalAlpha = 1 - k; spark(ctx, x1 + 5.5, y1 + 5.5, 3 + k * 5, PAL.goldHi); ctx.globalAlpha = 1; return; }
         drawCoin(ctx, x - 5, y - 5, { sx: Math.max(0.25, spin) });
       },
     });
@@ -178,11 +178,10 @@ export function sheen(ctx, x, y, w, h, time, phase = 0) {
   const span = w + h, at = -10 + k * (span + 20);
   ctx.save();
   ctx.beginPath(); ctx.rect(Math.round(x) + 2, Math.round(y) + 2, Math.round(w) - 4, Math.round(h) - 4); ctx.clip();
-  for (let yy = 0; yy < h; yy += 2) {
-    const cx = x + at - yy;
-    ctx.globalAlpha = 0.35; rect(ctx, cx - 3, y + yy, 3, 2, PAL.goldHi);
-    ctx.globalAlpha = 0.85; rect(ctx, cx, y + yy, 7, 2, PAL.white);
-    ctx.globalAlpha = 0.5; rect(ctx, cx + 10, y + yy, 3, 2, PAL.white);
+  // 빗금 띠 셋(평행사변형): 금빛 앞 줄 · 흰 띠 · 흰 뒤 줄
+  for (const [o, bw, col, a] of [[-3, 3, PAL.goldHi, 0.35], [0, 7, PAL.white, 0.85], [10, 3, PAL.white, 0.5]]) {
+    const x1 = x + at + o;
+    ctx.globalAlpha = a; ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x1 + bw, y); ctx.lineTo(x1 + bw - h, y + h); ctx.lineTo(x1 - h, y + h); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
   }
   ctx.globalAlpha = 1;
   ctx.restore();

@@ -47,7 +47,7 @@ import { SOUL_BY_ID } from '../../data/souls.js';
 import { ANNOT, drawAnnot, annotSize, handTagRect, boardTagRect, offeredRow, drawMore } from '../annot.js';
 import { drawStars, starsW, starCount, STAR_N } from '../stars.js';
 import { capRoute, routeAt, bendDur } from '../fxroute.js';
-import { puff, screenFlash, sparkBurst, confetti, flyCoins, boldText, kickMoney, stepScale, seeded, CAP } from '../juice.js';
+import { puff, chip, screenFlash, sparkBurst, confetti, flyCoins, boldText, kickMoney, stepScale, seeded, CAP } from '../juice.js';
 import { noteStep, reviewGen, cloneBattle } from '../../sim/replay.js';
 import { openCombo, drawCombo, comboLand, comboClose, emberMark } from '../ignite.js';
 import { reviewOn, forkTitle, forkLine, forkScores, forkScoreLines, forkScoreRows, forkMarks, NO_PATH, THINKING } from '../review.js';
@@ -954,15 +954,15 @@ export class BattleScreen {
     const SHAPES = [[2, 2], [3, 2], [2, 3], [3, 3], [4, 2], [2, 1]];
     for (let i = 0; i < n; i++) {
       const c = chips[Math.floor(rnd() * chips.length)];
-      if (calm) { parts.push({ x: x + c.x, y: y + c.y, vx: (c.x - 8) * 6 + (rnd() - 0.5) * 30, vy: -40 - rnd() * 50, col: c.col, s: rnd() < 0.3 ? 2 : 1 }); continue; }
+      if (calm) { parts.push({ x: x + c.x, y: y + c.y, vx: (c.x - 8) * 6 + (rnd() - 0.5) * 30, vy: -40 - rnd() * 50, col: c.col, s: rnd() < 0.3 ? 2 : 1, a: rnd() * 6, spin: 0 }); continue; }
       const [w, h] = SHAPES[i % SHAPES.length];
-      parts.push({ x: x + c.x, y: y + c.y, vx: (c.x - 8) * 11 + (rnd() - 0.5) * 70, vy: -70 - rnd() * 80, col: c.col, s: w, h });
+      parts.push({ x: x + c.x, y: y + c.y, vx: (c.x - 8) * 11 + (rnd() - 0.5) * 70, vy: -70 - rnd() * 80, col: c.col, s: w + 0.5, h: h + 0.5, a: rnd() * 6, spin: (rnd() - 0.5) * 18 });
     }
     if (!calm) puff(this.fx, c0.x, c0.y - 8, { seed: sq * 13 + 5, power: Math.min(3, (this.view.chain ? this.view.chain.steps.length : 1) / 3) });
     this.fx.add({
       life: 0.7, layer: 1, parts,
       update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt; } },
-      draw: (ctx, e) => { const k = e.t / e.life; ctx.globalAlpha = calm ? Math.max(0, 1 - k) : k < 0.5 ? 1 : Math.max(0, (1 - k) / 0.5); for (const p of e.parts) rect(ctx, p.x, p.y, p.s, p.h || p.s, p.col); ctx.globalAlpha = 1; },
+      draw: (ctx, e) => { const k = e.t / e.life; ctx.globalAlpha = calm ? Math.max(0, 1 - k) : k < 0.5 ? 1 : Math.max(0, (1 - k) / 0.5); for (const p of e.parts) chip(ctx, p.x, p.y, p.s, p.h || p.s, p.col, p.a + p.spin * e.t); ctx.globalAlpha = 1; },
     });
   }
   // 잡을 때의 손맛(28절): 사슬이 길수록 큰 흔들림(그리기 변환만), 셋째 먹기부터 짧은 멈칫. 잡기 멈칫은 한 수에 STOP.impact까지(impactT), 멈칫 전체는 STOP.move까지
@@ -1105,13 +1105,13 @@ export class BattleScreen {
         const card = k < 8, c = card ? null : chips[Math.floor(rnd() * chips.length)];
         const x = card ? r.x + 2 + rnd() * (r.w - 4) : r.x + Math.floor((r.w - 16) / 2) + c.x;
         const y = card ? r.y + 2 + rnd() * (r.h - 4) : r.y + Math.floor((r.h - 22) / 2) + 1 + c.y;
-        parts.push({ x, y, vx: (x - (r.x + r.w / 2)) * 5 + (rnd() - 0.5) * 30, vy: -50 - rnd() * 60, col: card ? (rnd() < 0.5 ? PAL.light : PAL.cardHi) : c.col, s: rnd() < 0.35 ? 2 : 1 });
+        parts.push({ x, y, vx: (x - (r.x + r.w / 2)) * 5 + (rnd() - 0.5) * 30, vy: -50 - rnd() * 60, col: card ? (rnd() < 0.5 ? PAL.light : PAL.cardHi) : c.col, s: rnd() < 0.35 ? 2.5 : 1.5, a: rnd() * 6 });
       }
     }
     this.fx.add({
       life: 0.45, layer: 1, parts,
       update: (dt, e) => { for (const q of e.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 300 * dt; } },
-      draw: (ctx, e) => { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life); for (const q of e.parts) rect(ctx, q.x, q.y, q.s, q.s, q.col); ctx.globalAlpha = 1; },
+      draw: (ctx, e) => { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life); for (const q of e.parts) chip(ctx, q.x, q.y, q.s, q.s, q.col, q.a + e.t * 9); ctx.globalAlpha = 1; },
     });
   }
   // 탁월수 !!(CHM-43 시안 B1): 메이트 친 칸에서 청록 「!!」 딱지가 튀어나오고 빛살이 퍼진다. 판 가장자리 칸이면 딱지를 판 안쪽으로 뒤집는다.

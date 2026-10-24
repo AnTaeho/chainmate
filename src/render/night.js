@@ -4,6 +4,7 @@
 // 게임 캔버스는 (0, 0, 480, 270) 둘레를, 여백 판(backdrop.js)은 창 전체를 같은 함수로 칠한다 — 겹치는 곳은 같은 도트다.
 import { makeCanvas, context } from './surface.js';
 import { fitPiece, fitAt, pieceMask, drawMask, pieceCanvas, scaleOf } from './pieces3.js';
+import { INK, bake } from './vec.js';
 import { LOOK, snap } from './look.js';
 import { rect, text, fine, measure } from './gfx.js';
 import { PAL } from './palette.js';
@@ -12,7 +13,7 @@ import { openBox, closeBox } from './layoutlog.js';
 const W = 480, H = 270;
 const mod = (a, m) => ((a % m) + m) % m;
 
-// ── 멈춘 바탕: 하늘(도트 한 줄마다 한 빛깔) · 달. fillRect만 쓴다(여백 판 시험의 기록 캔버스가 도트마다 잰다)
+// ── 멈춘 바탕: 하늘(도트 한 줄마다 한 빛깔) fillRect만 쓴다(여백 판 시험의 기록 캔버스가 도트마다 잰다). 달은 벡터(drawNightLive)
 const SKY = [[0, [0x0a, 0x0c, 0x26]], [0.6, [0x1d, 0x22, 0x56]], [1, [0x0c, 0x0e, 0x24]]];
 export function skyColor(y) {
   const v = Math.max(0, Math.min(1, (y + 0.5) / H));
@@ -24,26 +25,32 @@ export function skyColor(y) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 export const MOON = { x: 380, y: 58, r: 28, halo: 64, craters: [[-9, -7, 4], [7, 5, 6], [-3, 12, 3], [12, -10, 3]] };
-// 도트 원: 중심은 도트 모서리(cx, cy), 도트 가운데가 반지름 안이면 칠한다(줄마다 한 번)
-function disc(g, x0, y0, cx, cy, r, col) {
-  g.fillStyle = col;
-  for (let y = Math.ceil(cy - r - 0.5); y <= Math.floor(cy + r - 0.5); y++) {
-    const d = y + 0.5 - cy, hw = Math.sqrt(Math.max(0, r * r - d * d));
-    const xa = Math.ceil(cx - hw - 0.5), xb = Math.floor(cx + hw - 0.5);
-    if (xb >= xa) g.fillRect(xa - x0, y - y0, xb - xa + 1, 1);
-  }
-}
 export function paintNight(g, x0, y0, w, h) {
   const top = SKY[0][1], bot = SKY[SKY.length - 1][1];
   // 위(y < 0)는 맨 위 빛깔, 아래(y ≥ 270)는 맨 아래 빛깔 그대로
   if (y0 < 0) { g.fillStyle = `rgb(${top.join(',')})`; g.fillRect(0, 0, w, Math.min(0, y0 + h) - y0); }
   for (let y = Math.max(0, y0); y < Math.min(H, y0 + h); y++) { g.fillStyle = skyColor(y); g.fillRect(0, y - y0, w, 1); }
   if (y0 + h > H) { g.fillStyle = `rgb(${bot.join(',')})`; g.fillRect(0, Math.max(H, y0) - y0, w, y0 + h - Math.max(H, y0)); }
-  const M = MOON;
-  disc(g, x0, y0, M.x, M.y, M.halo, 'rgba(255,240,200,0.07)');
-  disc(g, x0, y0, M.x, M.y, M.r, '#f3e7c4');
-  for (const [dx, dy, r] of M.craters) disc(g, x0, y0, M.x + dx, M.y + dy, r, '#dccfa8');
 }
+// 달(안 3 벡터): 달무리 + 크림 두 톤(왼쪽 빛 · 오른쪽 그늘) + 잉크 테 + 그늘진 분화구. 배율마다 한 번 굽는다
+function paintMoon(g) {
+  const M = MOON, c = M.halo;
+  const circle = (x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); };
+  circle(c, c, M.halo); g.fillStyle = 'rgba(255,240,200,0.07)'; g.fill();
+  circle(c, c, M.r); g.fillStyle = '#f3e7c4'; g.fill();
+  g.save(); circle(c, c, M.r); g.clip(); circle(c + M.r * 0.55, c + M.r * 0.2, M.r * 1.02); g.fillStyle = '#dccfa8'; g.fill();
+  for (const [dx, dy, r] of M.craters) { circle(c + dx, c + dy, r); g.fillStyle = '#c9b98e'; g.fill(); circle(c + dx - r * 0.25, c + dy - r * 0.25, r * 0.7); g.fillStyle = '#e4d6b0'; g.fill(); }
+  g.restore();
+  circle(c, c, M.r); g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke();
+}
+const moonImg = (n) => bake('moon', MOON.halo * 2, MOON.halo * 2, n, paintMoon);
+// 별 하나: 둥근 빛 점(굵은 별은 네 뿔 반짝). 5 × 5 상자, 배율마다 한 번
+const starImg = (big, n) => bake(`nstar${big ? 1 : 0}`, 5, 5, n, (g) => {
+  g.fillStyle = '#fff8e8';
+  if (big) { g.beginPath(); for (let i = 0; i < 8; i++) { const q = (i * Math.PI) / 4, d = i % 2 ? 0.55 : 2.3; (i ? g.lineTo : g.moveTo).call(g, 2.5 + Math.cos(q) * d, 2.5 + Math.sin(q) * d); } g.closePath(); g.fill(); return; }
+  g.globalAlpha = 0.35; g.beginPath(); g.arc(2.5, 2.5, 1.1, 0, Math.PI * 2); g.fill();
+  g.globalAlpha = 1; g.beginPath(); g.arc(2.5, 2.5, 0.6, 0, Math.PI * 2); g.fill();
+});
 
 // ── 별: 480 × 150 칸마다 70개. 게임 칸(0, 0)은 시안 그대로(i × 131, i × 47), 다른 칸은 칸 번호 씨앗. 위(y < 150)에만
 const STAR_W = 480, STAR_H = 150, STAR_N = 70;
@@ -104,9 +111,11 @@ function drawSil(g, kind, col, x, y, sc) {
 }
 // 움직이는 바탕: 별(tw로 반짝임) · 실루엣(t로 흐름). 세계 범위 그대로(흔들림은 부르는 쪽이 옮긴다)
 export function drawNightLive(g, x0, y0, w, h, t, tw) {
-  g.fillStyle = '#fff8e8';
-  for (const [x, y, ph] of starsIn(x0, y0, w, h)) { g.globalAlpha = starAlpha(tw, ph); g.fillRect(x - x0, y - y0, 1, 1); }
+  const n = scaleOf(g), small = starImg(false, n), big = starImg(true, n);
+  for (const [x, y, ph] of starsIn(x0, y0, w, h)) { g.globalAlpha = starAlpha(tw, ph); g.drawImage(Math.floor(ph * 10) % 6 === 0 ? big : small, x - x0 - 2, y - y0 - 2, 5, 5); }
   g.globalAlpha = 1;
+  const M = MOON, mr = M.halo;
+  if (M.x + mr > x0 && M.x - mr < x0 + w && M.y + mr > y0 && M.y - mr < y0 + h) g.drawImage(moonImg(n), M.x - mr - x0, M.y - mr - y0, mr * 2, mr * 2);
   for (const s of silhouettesIn(t, x0, y0, w, h)) drawSil(g, s.kind, SIL_LAYERS[s.layer][3], s.x - x0, s.y - y0, s.sc);
 }
 
