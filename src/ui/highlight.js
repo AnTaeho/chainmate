@@ -1,8 +1,7 @@
 // 하이라이트 카드(CHM-73): 끝난 판의 덱 기물과 격언을 그림 한 장으로. 400 × 225 칸에 그리고 3배(1200 × 675)로 내보낸다.
 // 칸 계산(highlightLayout)과 그리기(drawHighlight)가 같은 값을 쓴다 — 결과 화면 덮개(screens/highlight.js)와 내보낸 그림이 같은 그림이다.
-import { PAL } from '../render/palette.js';
-import { W, H, text, rect, frame, sprite, measure, short, fitNum } from '../render/gfx.js';
-import { feltCanvas } from '../render/texture.js';
+import { PAL, BASE_LOOK } from '../render/palette.js';
+import { text, rect, rrect, rframe, sprite, measure, short, fitNum } from '../render/gfx.js';
 import { makeCanvas, context } from '../render/surface.js';
 import { tierOf } from '../render/sprites.js';
 import { LOG, openBox, closeBox } from '../render/layoutlog.js';
@@ -93,13 +92,19 @@ export function highlightLayout(run, ox = 0, oy = 0) {
 export function drawHighlight(ctx, run, lay = highlightLayout(run)) {
   const { ox, oy, x, right, w, bag, grid } = lay;
   openBox('panel', ox, oy, CARD.w, CARD.h, 4, { name: '하이라이트 카드' });
-  // 두 겹 금테 + 천 바탕(화면이 쓰는 천 그림에서 잘라 쓴다)
-  rect(ctx, ox, oy, CARD.w, CARD.h, PAL.goldDk);
-  ctx.drawImage(feltCanvas(W + 16, H + 16), 0, 0, CARD.w - 2, CARD.h - 2, ox + 1, oy + 1, CARD.w - 2, CARD.h - 2);
-  frame(ctx, ox + 2, oy + 2, CARD.w - 4, CARD.h - 4, PAL.gold);
+  // 잉크 바탕 + 둥근 남색 판(바탕과 같은 −8도 띠 하나) + 안쪽 금빛 고리. 그림이 네모라 바깥 모서리는 잉크로 채운다
+  const [, mid, , band] = BASE_LOOK.bg;
+  rect(ctx, ox, oy, CARD.w, CARD.h, PAL.frameDk);
+  rrect(ctx, ox + 2, oy + 2, CARD.w - 4, CARD.h - 4, 8, mid);
+  ctx.save();
+  rrect(ctx, ox + 2, oy + 2, CARD.w - 4, CARD.h - 4, 8, mid); ctx.clip();
+  ctx.fillStyle = band; ctx.beginPath();
+  ctx.moveTo(ox, oy + 150); ctx.lineTo(ox + CARD.w, oy + 94); ctx.lineTo(ox + CARD.w, oy + 132); ctx.lineTo(ox, oy + 188); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  rframe(ctx, ox + 4, oy + 4, CARD.w - 8, CARD.h - 8, 6, PAL.gold, 1);
   text(ctx, '체인메이트', x, lay.logoY, PAL.gold, { bold: true, scale: 2 });
   text(ctx, SITE, right, lay.siteY, PAL.dim, { align: 'right' });
-  rect(ctx, x, lay.ruleY, w, 1, PAL.feltHi);
+  rect(ctx, x, lay.ruleY, w, 1, PAL.dimDk);
   if (lay.label) text(ctx, IGNITE_TITLE, x, lay.subY, PAL.dim);
   for (const j of lay.names) text(ctx, j.s, j.x, lay.subY, j.col, { bold: true });
   panel(ctx, bag.x, bag.y, bag.w, bag.h);
@@ -114,8 +119,8 @@ export function drawHighlight(ctx, run, lay = highlightLayout(run)) {
   if (grid.more) text(ctx, `+${grid.more.n}`, grid.more.x + (grid.more.w >> 1), grid.more.y + PAD_CARD + 1, PAL.dim, { align: 'center' });
   text(ctx, lay.tag.s, x, lay.tagY, lay.tag.col, { bold: lay.tag.col !== PAL.dim });
   text(ctx, lay.note, right, lay.tagY, PAL.dim, { align: 'right' });
-  text(ctx, lay.head, x, lay.big ? lay.bandY : lay.bandY + 6, PAL.ink, { bold: true, scale: lay.big ? 2 : 1, shadow: PAL.shadow });
-  text(ctx, lay.score, right, lay.bandY, PAL.gold, { bold: true, scale: 2, align: 'right', shadow: PAL.shadow });
+  text(ctx, lay.head, x, lay.big ? lay.bandY : lay.bandY + 6, PAL.ink, { bold: true, scale: lay.big ? 2 : 1 });
+  text(ctx, lay.score, right, lay.bandY, PAL.gold, { bold: true, scale: 2, align: 'right' });
   closeBox();
 }
 
