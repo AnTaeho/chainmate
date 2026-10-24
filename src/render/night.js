@@ -3,7 +3,8 @@
 // 그리기 함수는 모두 (g, x0, y0, w, h): 세계 좌표 [x0, x0 + w) × [y0, y0 + h)를 칠하고, g의 (0, 0) = 세계 (x0, y0).
 // 게임 캔버스는 (0, 0, 480, 270) 둘레를, 여백 판(backdrop.js)은 창 전체를 같은 함수로 칠한다 — 겹치는 곳은 같은 도트다.
 import { makeCanvas, context } from './surface.js';
-import { spritePixels, spritePixelsHi, spriteCanvas } from './sprites.js';
+import { spritePixels } from './sprites.js';
+import { fitPiece, fitAt, pieceMask, drawMask, pieceCanvas, scaleOf } from './pieces3.js';
 import { LOOK, snap } from './look.js';
 import { rect, text, fine, measure } from './gfx.js';
 import { PAL } from './palette.js';
@@ -144,37 +145,17 @@ export function skyScale(n = LOOK.n) {
   const p = Math.max(1, Math.round((2 * n) / 3));
   return { hi: true, u: p / n, px: p / n };
 }
-const maskCache = new Map();
-// 기물 모양(몸 · 테)을 한 빛깔로. grow: 네 이웃으로 한 칸 넓힌 빛 테(캔버스가 둘레 한 칸 크다)
-function maskCanvas(type, hi, col, grow) {
-  const key = `${type}${hi ? 2 : 1}${col}${grow ? 'g' : ''}`;
-  let c = maskCache.get(key);
-  if (c) return c;
-  const px = (hi ? spritePixelsHi(type) : spritePixels(type)) || spritePixels('P');
-  const k = hi ? 2 : 1, w = 16 * k, h = 22 * k, e = grow ? 1 : 0;
-  c = makeCanvas(w + 2 * e, h + 2 * e);
-  const g = context(c);
-  g.fillStyle = col;
-  for (const [x, y] of px) {
-    if (grow) { g.fillRect(x, y + 1, 1, 1); g.fillRect(x + 2, y + 1, 1, 1); g.fillRect(x + 1, y, 1, 1); g.fillRect(x + 1, y + 2, 1, 1); }
-    else g.fillRect(x, y, 1, 1);
-  }
-  maskCache.set(key, c);
-  return c;
-}
+// 기물 상자(32 × 44 그림 칸 크기)에 맞춘 벡터 기물(pieces3.js fitPiece)과 그 모양 한 빛깔(빛 테 · 흰 번쩍임)
+const boxOf = (sc, x, y) => fitAt(snap(x), snap(y), 32 * sc.u, 44 * sc.u);
 const ENEMY_RIM = '#9fd3e0', HERO_RIM = PAL.gold;
 function piece(g, sc, type, side, x, y, alpha = 1) {
-  const img = spriteCanvas(type, side, null, 0, sc.hi);
-  g.globalAlpha = alpha;
-  g.drawImage(img, snap(x), snap(y), 32 * sc.u, 44 * sc.u);
-  g.globalAlpha = 1;
+  fitPiece(g, type, side, snap(x), snap(y), 32 * sc.u, 44 * sc.u, { alpha });
 }
-function rim(g, sc, type, col, x, y, alpha) {
-  const img = maskCanvas(type, sc.hi, col, true);
-  g.globalAlpha = alpha;
-  g.drawImage(img, snap(x) - sc.px, snap(y) - sc.px, img.width * sc.px, img.height * sc.px);
-  g.globalAlpha = 1;
+function mask(g, sc, type, col, x, y, alpha, grow) {
+  const f = boxOf(sc, x, y), n = scaleOf(g);
+  drawMask(g, pieceMask(type, col, { w: f.w, n, grow: grow ? Math.max(1, Math.round(sc.px * n)) : 0 }), f.cx, f.cy, alpha);
 }
+function rim(g, sc, type, col, x, y, alpha) { mask(g, sc, type, col, x, y, alpha, true); }
 
 // 먹은 자리 하나: 먼지(떨어진 쿵) · 금빛 고리 · 도트 조각(먹힌 기물 그림 4×4 조각, 중력) · 불티 · 「×N」
 // keep: 「×N」이 넘지 않을 네모 { x0, x1, y1 }(부제) — 그 아래에서 튀는 높이만 줄인다(시간표 · 다른 자리는 그대로, CHM-48)
@@ -195,16 +176,15 @@ function drawHit(g, sc, h, keep = null) {
     g.globalAlpha = 1;
   }
   if (h.age < 1.1 && h.type) {
-    const im = spriteCanvas(h.type, 'b', null, 0, sc.hi);
-    // 조각 자리: 32×44 그림은 8 × 11 칸씩, 1배 16×22 그림은 4칸 · 줄 6 · 5 · 6 · 5
-    const cols = sc.hi ? [0, 8, 16, 24] : [0, 4, 8, 12], cw = sc.hi ? 8 : 4;
-    const rows = sc.hi ? [0, 11, 22, 33] : [0, 6, 11, 17], rh = sc.hi ? [11, 11, 11, 11] : [6, 5, 6, 5];
+    // 조각: 먹힌 기물 그림을 4 × 4 칸으로 잘라 흩는다
+    const f = boxOf(sc, h.x, h.y), im = pieceCanvas(h.type, 'b', { w: f.w, n: scaleOf(g) });
+    const sw = im.cv.width / 4, sh = im.cv.height / 4, dw = im.w / 4, dh = im.h / 4, x0 = f.cx - im.ox, y0 = f.cy - im.oy;
     const tt = h.age;
     g.globalAlpha = Math.max(0, 1 - tt / 1.1);
     for (let cy2 = 0; cy2 < 4; cy2++) for (let cx2 = 0; cx2 < 4; cx2++) {
       const id = cy2 * 4 + cx2, vx = (cx2 - 1.5) * 26 * p + Math.sin(id * 12.9) * 10, vy = -40 - (3 - cy2) * 12 + Math.cos(id * 7.3) * 10;
-      const x = h.x + cols[cx2] * sc.px + vx * tt, y = h.y + rows[cy2] * sc.px + vy * tt + 160 * tt * tt;
-      g.drawImage(im, cols[cx2], rows[cy2], cw, rh[cy2], snap(x), snap(y), cw * sc.px, rh[cy2] * sc.px);
+      const x = x0 + cx2 * dw + vx * tt, y = y0 + cy2 * dh + vy * tt + 160 * tt * tt;
+      g.drawImage(im.cv, cx2 * sw, cy2 * sh, sw, sh, snap(x), snap(y), dw, dh);
     }
     g.globalAlpha = 1;
   }
@@ -250,7 +230,7 @@ export function drawSky(g, st, sc = skyScale(), keep = null) {
     h.ghosts.forEach(([x, y], k) => piece(g, sc, h.t, 'w', x, y, 0.35 - k * 0.09));
     if (h.alpha > 0) {
       rim(g, sc, h.t, HERO_RIM, h.x, h.y, 0.9 * h.alpha);
-      if (h.white) { g.globalAlpha = h.alpha; g.drawImage(maskCanvas(h.t, sc.hi, '#ffffff', false), snap(h.x), snap(h.y), 32 * sc.u, 44 * sc.u); g.globalAlpha = 1; }
+      if (h.white) mask(g, sc, h.t, '#ffffff', h.x, h.y, h.alpha, false);
       else piece(g, sc, h.t, 'w', h.x, h.y, h.alpha);
     }
     for (const hit of st.hits) drawHit(g, sc, hit, keep);

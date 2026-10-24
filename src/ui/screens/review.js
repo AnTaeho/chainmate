@@ -4,8 +4,9 @@
 import { apply } from '../../sim/battle.js';
 import { cloneBattle } from '../../sim/replay.js';
 import { PAL } from '../../render/palette.js';
-import { text, rect, fitNum, measure, artOf } from '../../render/gfx.js';
-import { spriteCanvas, hiFor, SW, SH } from '../../render/sprites.js';
+import { text, rect, fitNum, measure } from '../../render/gfx.js';
+import { SW, SH } from '../../render/sprites.js';
+import { fitPiece } from '../../render/pieces3.js';
 import { BattleScreen, BX, S, LX, LW, RX } from './battle.js';
 import { PAD_BOX, LINE, BTN_S, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -112,7 +113,7 @@ export class ReviewScreen extends BattleScreen {
       drawAnnot(ctx, mark, LX + PX, ry + Math.floor((LINE - tag.h) / 2), tone);
       let x = LX + PX + tag.w + 3;
       if (!st) { text(ctx, '—', x, ty, PAL.dim); return; }
-      if (st.t) { ctx.drawImage(spriteCanvas(artOf(st.t), 'w', null, 0, hiFor(ctx, 0.5)), x, ry + 1, SW / 2, SH / 2); x += SW / 2 + 3; }
+      if (st.t) { fitPiece(ctx, st.t, 'w', x, ry + 1, SW / 2, SH / 2); x += SW / 2 + 3; }
       const g = fitNum(st.gain, 40);
       const gw = measure(g, true);
       fitText(ctx, st.label, x, ty, LX + LW - PX - gw - 4 - x, PAL.ink);

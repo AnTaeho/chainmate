@@ -6,7 +6,7 @@
 //   말하는 이는 내 편 킹(bubble): 상아 몸 · 금관 킹이 말풍선 머리에서 말하고, 말할 때 살짝 들썩이며 기쁠 때 금관이 반짝인다.
 import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, frame, lift, sprite, measure } from '../render/gfx.js';
-import { SPR, SW } from '../render/sprites.js';
+import { SW } from '../render/sprites.js';
 import { LOOK, live } from '../render/look.js';
 import { wrap } from '../render/text.js';
 import { L } from './lang.js';
@@ -179,8 +179,6 @@ export function drawCoach(ctx, app) {
 // ok가 있으면 「알겠어」(okLabel), skip이 있으면 「건너뛰기」 단추. joy면 금관이 반짝인다.
 export const KING_HEAD = 18;
 const KING_NAME = '킹';
-// 금관 자리(킹 스프라이트의 c 칸, 위 여덟 줄)
-const CROWN = (() => { const out = []; SPR.K.slice(0, 8).forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === 'c') out.push([i, j]); }); return out; })();
 // 말이 바뀐 때(들썩임은 말이 바뀐 뒤 잠깐)
 let talkSay = null, talkT0 = 0;
 // 단추 폭: 글에 맞춘다(글과 테 사이 4 이상)
@@ -205,9 +203,7 @@ export function drawKing(ctx, app, x, y, { joy = false } = {}) {
   const hop = !calm && t < 0.9 && Math.floor(t * 8) % 2 ? -1 : 0;
   sprite(ctx, 'K', 'w', x, y + hop);
   if (!joy) return;
-  // 기쁨: 금관 칸이 차례로 빛나고, 관 둘레에 반짝이 넷
-  const k = calm ? 0 : Math.floor(app.time * 10);
-  CROWN.forEach(([i, j], n) => { if (calm || (n + k) % 4 === 0) rect(ctx, x + i, y + hop + j, 1, 1, PAL.white); });
+  // 기쁨: 관 둘레에 반짝이 넷
   const stars = [[-3, 1], [SW + 1, 2], [-1, -3], [SW - 2, -3]];
   stars.forEach(([sx, sy], n) => {
     if (!calm && (Math.floor(app.time * 4) + n) % 2) return;
