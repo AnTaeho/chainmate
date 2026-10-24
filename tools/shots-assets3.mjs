@@ -192,6 +192,19 @@ for (const [w, h] of SIZES) {
     for (const tab of ['board', 'basic', 'fairy']) { const r = await region(page, `moves:tab:${tab}`); if (!r) continue; await click(page, `moves:tab:${tab}`); await away(page); await shot(page, tag, `moves-${tab}`); }
     await page.close();
   }
+  if (want('juice')) {
+    // 손맛: 부서지는 기물 조각 · 연기 · 반짝이 · 색종이 · 나는 동전을 한꺼번에 띄우고 도중을 찍는다
+    const page = await open(w, h);
+    await ev(page, () => { const a = window.__app; a.overlay = null; a.nextSeed = 11; a.newRun(); if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); const e = a.cmd({ type: 'play' }); a.go('battle', { events: e }); });
+    await away(page, 2600);
+    await ev(page, async () => {
+      const a = window.__app, s = a.screen, J = await import('/src/ui/juice.js');
+      s.shatter(36, 'Q', 'b'); s.shatter(27, 'N', 'g');
+      J.sparkBurst(a.fx, 60, 80, { n: 20 }); J.confetti(a.fx, 240, 120, { n: 40 }); J.flyCoins(a.fx, 200, 200, 60, 230, { n: 5 });
+    });
+    await page.waitForTimeout(140); await shot(page, tag, 'juice');
+    await page.close();
+  }
   if (want('title')) {
     const page = await open(w, h);
     await ev(page, () => window.__app.go('title')); await away(page, 1500); await shot(page, tag, 'title');
