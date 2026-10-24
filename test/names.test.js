@@ -5,7 +5,7 @@ import { NAMES, NAME_COUNT, nameText, randomName } from '../src/data/names.js';
 import { PIECES } from '../src/data/pieces.js';
 import { textWidth } from '../tools/fakedom.mjs';
 
-// 순위 줄의 이름 칸에 들어가는 가장 넓은 이름(IBM Plex Sans KR 12px 보통 굵기의 폭 표 — tools/fakedom.mjs)
+// 순위 줄의 이름 칸에 들어가는 가장 넓은 이름(Chainmate Sans KR 12px 보통 굵기의 폭 표 — tools/fakedom.mjs)
 const CAP = { ko: textWidth('호기심 많은 바다코끼리'), en: textWidth('Mischievous Hippopotamus') };
 const LISTS = [['ko', 'adj'], ['ko', 'animal'], ['en', 'adj'], ['en', 'animal']];
 

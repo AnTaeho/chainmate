@@ -6,10 +6,10 @@
    "bytes": 77836,
    "glyphs": 1031
   },
-  "assets/fonts/PlexSansKR-Medium.6ceeed79.woff2": {
-   "family": "IBM Plex Sans KR",
-   "sha256": "6ceeed79d376f05b407774d032f72db88333b9758bf9f73ad021122b22503e2f",
-   "bytes": 121664,
+  "assets/fonts/ChainmateSansKR-Medium.9da044d8.woff2": {
+   "family": "Chainmate Sans KR",
+   "sha256": "9da044d882ac708ccade1f381995de2f1fdff5c88cde1772cc9a31430f2b3416",
+   "bytes": 121672,
    "glyphs": 1068
   }
  },

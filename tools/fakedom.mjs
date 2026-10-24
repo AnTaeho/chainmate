@@ -1,5 +1,5 @@
 // 연기 시험용 가짜 DOM: 캔버스 컨텍스트는 그리기 호출을 세기만 한다(setTransform · translate · rotate · putImageData도 센다). 입력은 등록된 듣개에 직접 넣는다.
-// 글 폭은 실제 글꼴(굵게 Black Han Sans · 보통 IBM Plex Sans KR)의 글자 폭 표(tools/fonts/widths.json — 브라우저에서 잰 표, node tools/fontwidths.mjs)를 더한다 —
+// 글 폭은 실제 글꼴(굵게 Black Han Sans · 보통 Chainmate Sans KR)의 글자 폭 표(tools/fonts/widths.json — 브라우저에서 잰 표, node tools/fontwidths.mjs)를 더한다 —
 // 연기 시험의 「글 넘침」이 실제 화면과 맞게. 표는 1/1000 em(올림)이고 글꼴 크기(font의 px)를 곱한다. 짝 글자 사이 좁힘(커닝)은 빼서 실제보다 조금 넓거나 같다.
 import fs from 'node:fs';
 import { FACE } from '../src/render/type.js';

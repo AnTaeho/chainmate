@@ -1,5 +1,7 @@
 # 글꼴 줄이기(CHM-75 · 안 3 CHM-77): 원본 글꼴에서 쓰는 글자만 남긴 woff2를 assets/fonts/에 쓴다.
 # 글꼴 둘: Black Han Sans(굵은 글 — 숫자 · 제목 · 단추) · IBM Plex Sans KR Medium(보통 글 — 본문 · 효과 · 말풍선). 둘 다 SIL OFL 1.1.
+# Plex는 예약 글꼴 이름(Reserved Font Name "Plex")이 있어, 고친(줄이고 ‹ ›를 더한) 파일은 이름 표 · CSS 이름을 Chainmate Sans KR로 바꾼다(OFL 3항).
+# 바꾼 것과 원본은 assets/fonts/README.txt에 적는다(이 도구가 쓴다).
 # 원본은 google/fonts의 고정 커밋에서 curl로 받아 tools/fonts/src/(git 밖)에 두고 sha256을 맞춘다. 배포 · 앱에는 줄인 파일과 OFL만 든다.
 # 남기는 글자: 출력 ASCII + src/**/*.js · index.html · privacy.html · style.css · manifest.webmanifest의 모든 글자(KS X 1001 한글 전체는 넣지 않는다 —
 #   화면에 그리는 바깥 글은 아이디(a-z0-9_)와 목록에서 뽑는 순위 이름뿐이다). Plex KR에 없는 ‹ ›는 IBM Plex Sans(같은 500 굵기)에서 옮겨 넣는다.
@@ -11,7 +13,6 @@ import hashlib
 import json
 import pathlib
 import re
-import shutil
 import subprocess
 import sys
 
@@ -33,7 +34,10 @@ SOURCES = {
     'IBMPlexSans-VF.ttf': ('ibmplexsans/IBMPlexSans%5Bwdth,wght%5D.ttf', '3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3'),
 }
 # 내보낼 글꼴: (파일 이름 앞, CSS 글꼴 이름, 원본)
-FONTS = [('BlackHanSans', 'Black Han Sans', 'BlackHanSans-Regular.ttf'), ('PlexSansKR-Medium', 'IBM Plex Sans KR', 'IBMPlexSansKR-Medium.ttf')]
+FONTS = [('BlackHanSans', 'Black Han Sans', 'BlackHanSans-Regular.ttf'), ('ChainmateSansKR-Medium', 'Chainmate Sans KR', 'IBMPlexSansKR-Medium.ttf')]
+# 예약 이름을 쓰지 않는 새 이름(이름 표의 글꼴 이름 · 전체 이름 · PostScript 이름 · 고유 ID)
+RENAME = {'IBMPlexSansKR': 'ChainmateSansKR', 'IBM Plex Sans KR': 'Chainmate Sans KR'}
+RENAME_IDS = {1, 3, 4, 6, 16, 18, 21}
 BORROW = '‹›'  # Plex KR에 없어 IBM Plex Sans에서 옮기는 글자
 LICENSES = ['OFL-BlackHanSans.txt', 'OFL-IBMPlex.txt']
 
@@ -78,6 +82,37 @@ def borrow(font):
     font['glyf'].glyphOrder = order
 
 
+# 고친 글꼴의 이름 표: 글꼴을 가리키는 이름에서 예약 이름을 뺀다(저작권 · 라이선스 줄은 그대로)
+def rename(font):
+    for rec in font['name'].names:
+        if rec.nameID not in RENAME_IDS:
+            continue
+        v = rec.toUnicode()
+        for a, b in RENAME.items():
+            v = v.replace(a, b)
+        if 'Plex' in v:
+            sys.exit(f'이름 {rec.nameID}에 Plex가 남았다: {v}')
+        rec.string = v
+
+
+# 줄인 파일 곁의 알림(OFL 2항 · 3항: 라이선스를 함께 두고, 고친 것은 예약 이름을 쓰지 않는다)
+README = '''Fonts in this folder are subsets made by tools/fonts.py. Both are licensed under the SIL Open Font License 1.1.
+
+BlackHanSans.<hash>.woff2
+  Black Han Sans, Copyright 2015 The Black Han Sans Project Authors. Unchanged except for subsetting.
+  Source: https://github.com/google/fonts/blob/{commit}/ofl/blackhansans/BlackHanSans-Regular.ttf
+  License: OFL-BlackHanSans.txt
+
+ChainmateSansKR-Medium.<hash>.woff2  (font name: Chainmate Sans KR)
+  Modified from IBM Plex Sans KR Medium, Copyright 2017 IBM Corp. with Reserved Font Name "Plex".
+  Changes: subset to the characters the game uses; added the glyphs U+2039 and U+203A from IBM Plex Sans
+  (weight 500, width 100); renamed so the modified font does not use the Reserved Font Name.
+  Sources: https://github.com/google/fonts/blob/{commit}/ofl/ibmplexsanskr/IBMPlexSansKR-Medium.ttf
+           https://github.com/google/fonts/blob/{commit}/ofl/ibmplexsans/IBMPlexSans%5Bwdth,wght%5D.ttf
+  License: OFL-IBMPlex.txt
+'''
+
+
 def main():
     fetch()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -87,8 +122,9 @@ def main():
     css = (ROOT / 'style.css').read_text(encoding='utf-8')
     for stem, family, src in FONTS:
         font = TTFont(SRC_DIR / src, recalcTimestamp=False)
-        if stem.startswith('PlexSansKR'):
+        if src.startswith('IBMPlexSansKR'):
             borrow(font)
+            rename(font)
         have = {chr(c) for c in font.getBestCmap()}
         keep = want & have
         have_all[stem] = keep
@@ -117,11 +153,13 @@ def main():
         if n != 1:
             sys.exit(f'style.css에서 {stem}의 @font-face를 하나 찾지 못했다({n}개)')
         print(f'{rel}: {len(keep)}자 {len(data)} B')
+    # 라이선스 글은 줄 끝을 LF로(원본 OFL-IBMPlex.txt는 CRLF — 다시 돌려도 저장소 파일과 같은 바이트)
     for lic in LICENSES:
-        shutil.copyfile(SRC_DIR / lic, OUT_DIR / lic)
+        (OUT_DIR / lic).write_bytes((SRC_DIR / lic).read_bytes().replace(b'\r\n', b'\n'))
+    (OUT_DIR / 'README.txt').write_text(README.format(commit=COMMIT), encoding='utf-8')
     (ROOT / 'style.css').write_text(css, encoding='utf-8')
     # 덮은 글자 = 보통 글(Plex KR) 파일에 든 글자. 굵은 글은 없는 글자를 Plex KR로 넘긴다
-    covered = have_all['PlexSansKR-Medium']
+    covered = have_all['ChainmateSansKR-Medium']
     absent = want - covered
     glyphs = {
         'fonts': fonts,

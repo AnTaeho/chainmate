@@ -1,4 +1,4 @@
-// 글자: 벡터 글꼴 둘(src/render/type.js — 굵게 Black Han Sans · 보통 IBM Plex Sans KR)을 그리는 곳의 화소 배율(k)로 오프스크린에 그려 캐시한다.
+// 글자: 벡터 글꼴 둘(src/render/type.js — 굵게 Black Han Sans · 보통 Chainmate Sans KR — IBM Plex Sans KR을 줄인 것)을 그리는 곳의 화소 배율(k)로 오프스크린에 그려 캐시한다.
 // 논리 크기는 480×270 칸 그대로(12px), 그림만 k배라 N배 화면에서도 또렷하다. 알파를 자르지 않는다(가장자리가 부드럽다).
 // 글자 세로 자리 보정(docs/design-notes/layout.md 「글자 세로 자리 보정」): 기준선은 'alphabetic'(브라우저마다 같다)으로 두고,
 // 굵기마다 한 번 기준 글자 「가A」의 잉크 높이(measureText actualBoundingBox)를 재어 그 잉크를 글자 띠(text()의 y부터 INK_H줄) 가운데에 놓는다.
