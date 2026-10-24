@@ -4,7 +4,7 @@
 import { apply } from '../../sim/battle.js';
 import { cloneBattle } from '../../sim/replay.js';
 import { PAL } from '../../render/palette.js';
-import { text, rect, fitNum, measure } from '../../render/gfx.js';
+import { text, fitNum, measure } from '../../render/gfx.js';
 import { SW, SH } from '../../render/sprites.js';
 import { fitPiece } from '../../render/pieces3.js';
 import { BattleScreen, BX, S, LX, LW, RX } from './battle.js';
@@ -16,8 +16,11 @@ import { ANNOT, drawAnnot, annotSize } from '../annot.js';
 import { stepLabel } from '../review.js';
 
 const ALL = Array.from({ length: 64 }, (_, i) => i);
+// ◀ · ▶ 단추 그림: 4 × 9 칸의 채운 삼각형(벡터)
 const triangle = (dir) => (ctx, x, y, col) => {
-  for (let k = 0; k < 4; k++) rect(ctx, dir < 0 ? x + 3 - k : x + k, y - 1 + k, 1, 9 - k * 2, col);
+  const a = dir < 0 ? x + 4 : x, b = dir < 0 ? x : x + 4;
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.moveTo(a, y - 1); ctx.lineTo(b, y + 3.5); ctx.lineTo(a, y + 8); ctx.closePath(); ctx.fill();
 };
 
 export class ReviewScreen extends BattleScreen {

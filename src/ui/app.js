@@ -7,7 +7,7 @@ import { factionFor } from '../sim/run.js';
 import { FACTION_BY_ID, FACTIONS } from '../data/factions.js';
 import { createRun, applyRun, migrateRun } from '../sim/run.js';
 import { createDailyRun } from '../sim/daily.js';
-import { PAL, setTheme, addLook } from '../render/palette.js';
+import { PAL, setTheme, addLook, lightFill } from '../render/palette.js';
 import { W, H, text, box, rect, lift, fine, measure } from '../render/gfx.js';
 import { wrap, textGen } from '../render/text.js';
 import { LINE, BTN_S, LIST_GAP, inkY } from './frame.js';
@@ -29,6 +29,14 @@ import { createFields } from './textfield.js';
 import { VERSION, COMMIT } from '../version.js';
 import { SCREENS } from './screens/index.js';
 import { coachDown, updateGuide, drawCoach, coachPlan } from './coach.js';
+
+// 알림 알약(안 3): 알림 빛깔을 바탕으로 칠한 둥근 띠 + 잉크 테 + 아래 그림자 2. 붉은은 위험 단추 빛깔, 크림 글 빛깔은 크림 카드. 글 빛깔을 돌려준다
+const TOAST_R = 9;
+function toastPill(ctx, x, y, w, h, col) {
+  const red = col === PAL.red, fill = red ? PAL.btnRed : col === PAL.ink ? PAL.card : col;
+  box(ctx, x, y, w, h, fill, PAL.frameDk, { r: TOAST_R, drop: 2 });
+  return red ? PAL.btnRedInk : lightFill(fill) ? PAL.cardInk : PAL.ink;
+}
 import { foldSide } from './fold.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -474,9 +482,9 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
         bottom = y - LIST_GAP;
         app.toastRects.push({ x, y, w, h });
         ctx.globalAlpha = Math.max(0, Math.min(1, t.t * 8, (t.life - t.t) * 4));
-        openBox('edge', x, y, w, h, 1, { name: '알림' });
-        box(ctx, x, y, w, h, PAL.feltDk, t.col);
-        lines.forEach((l, k) => text(ctx, l, spot.cx, inkY(y, BTN_S) + k * LINE, t.col, { align: 'center', bold: true }));
+        openBox('edge', x, y, w, h, 1, { name: '알림', r: TOAST_R });
+        const ink = toastPill(ctx, x, y, w, h, t.col);
+        lines.forEach((l, k) => text(ctx, l, spot.cx, inkY(y, BTN_S) + k * LINE, ink, { align: 'center', bold: true }));
         closeBox();
         ctx.globalAlpha = 1;
       });
@@ -485,11 +493,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       app.toasts.forEach((t, i) => {
         const a = Math.min(1, t.t * 8, (t.life - t.t) * 4);
         ctx.globalAlpha = Math.max(0, a);
-        const w = Math.min(300, 16 + t.msg.length * 12);
-        const x = Math.floor((W - w) / 2), y = 6 + i * 20;
-        app.toastRects.push({ x, y, w, h: 17 });
-        box(ctx, x, y, w, 17, PAL.feltDk, t.col);
-        text(ctx, t.msg, W / 2, y + 2, t.col, { align: 'center', bold: true });
+        const w = Math.min(300, measure(t.msg, true) + 20);
+        const x = Math.floor((W - w) / 2), y = 6 + i * (BTN_S + 4);
+        app.toastRects.push({ x, y, w, h: BTN_S });
+        const ink = toastPill(ctx, x, y, w, BTN_S, t.col);
+        text(ctx, t.msg, W / 2, inkY(y, BTN_S), ink, { align: 'center', bold: true });
         ctx.globalAlpha = 1;
       });
       closeBox();
