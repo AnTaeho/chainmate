@@ -1213,23 +1213,33 @@ export class BattleScreen {
       },
     });
   }
-  // 굵은 테 이름표가 내 기물 위로 툭 튀어 올랐다(3배 → 2배) 사라진다. 기물을 따라가고, 늘 기물 위(윗줄이면 판 위 틈까지 올라가 다음 먹이를 가리지 않는다).
+  // 굵은 잉크 테 이름표가 내 기물 위로 툭 튀어 올랐다(2.2배 → 1.5배) 사라진다. 기물을 따라가고, 다음에 잡을 적 칸을 덮지 않는 쪽(위 · 왼쪽 · 오른쪽 · 아래)에 선다.
   // 새 이름표가 뜨면 앞 이름표는 곧바로 접는다(한 번에 하나)
   formName(sq, t) {
     const s = `${PIECE_NAME[t]}!`, calm = this.app.reducedMotion;
     for (const f of this.fx.list) if (f.formName && f.t < f.life - 0.1) f.t = f.life - 0.1;
     let at = this.center(sq);
+    // 피할 것: 새 모습으로 닿는 적(보이는 판) — 칸 바닥에서 기물 머리까지
+    const vb = this.view.board, targets = [];
+    try { for (const q of reach(vb, t, sq, 1)) if (vb[q] && !vb[q].mine) { const b = sqBox(q); targets.push({ x: b.x, y: b.y - PIECE_TOP, w: b.w, h: b.h + PIECE_TOP }); } } catch { /* 모르는 모습 */ }
+    const BASE = 1.5;
     this.fx.add({
       life: 0.95, layer: 1, formName: true,
       draw: (ctx, e) => {
         const now = this.pieceXY();
         if (now) at = now; else if (e.t < e.life - 0.12) e.t = e.life - 0.12; // 사슬이 끝나 기물이 판을 떠나면 곧 접는다
         const k = e.t / e.life;
-        const sc = calm ? 2 : stepScale(2 + Math.max(0, 1 - e.t / 0.14) * 1.2 + (e.t < 0.14 ? 0 : Math.max(0, 0.25 - (e.t - 0.14) * 2.5)));
-        const w = measure(s, true) * sc, h = 11 * sc;
+        const sc = calm ? BASE : BASE + Math.max(0, 1 - e.t / 0.14) * 0.7 + (e.t < 0.14 ? 0 : Math.max(0, 0.2 - (e.t - 0.14) * 2));
+        const w = measure(s, true) * sc, h = INK_H * sc;
         const rise = calm ? 0 : ease.out(Math.min(1, k * 1.6)) * 3;
-        let y = Math.max(1, at.y - PIECE_TOP - 3 - h - 3 - rise);
-        const x = Math.max(2 + w / 2, Math.min(W - 2 - w / 2, at.x));
+        // 자리 후보: 기물 머리 위 · 왼쪽 · 오른쪽 · 받침 아래. 다음 먹이 칸(bbox)과 덜 겹치는 첫 자리
+        const top = at.y - PIECE_TOP - 2 - h - rise, mid = at.y - PIECE_TOP / 2 - h / 2;
+        const cands = [[at.x, top], [at.x - 14 - w / 2, mid], [at.x + 14 + w / 2, mid], [at.x, at.y + 8]];
+        const hit = (cx, cy) => targets.reduce((u, b) => u + Math.max(0, Math.min(cx + w / 2, b.x + b.w) - Math.max(cx - w / 2, b.x)) * Math.max(0, Math.min(cy + h, b.y + b.h) - Math.max(cy, b.y)), 0);
+        let best = cands[0], bestHit = hit(...cands[0]);
+        for (const c of cands.slice(1)) { if (bestHit <= 0) break; const u = hit(...c); if (u < bestHit) { best = c; bestHit = u; } }
+        let y = Math.max(1, Math.min(270 - h - 1, best[1]));
+        const x = Math.max(2 + w / 2, Math.min(W - 2 - w / 2, best[0]));
         // 판 가운데 큰 글자(「프로모션」 · 「목표 달성」)가 떠 있으면 그 띠 밖으로 비킨다: 위에 자리가 있으면 위, 없으면 아래
         for (const f of this.fx.list) {
           const b = f.word && f.band;
@@ -1237,7 +1247,7 @@ export class BattleScreen {
           y = b.y0 - h - 4 >= 1 ? b.y0 - h - 4 : b.y1 + 4;
         }
         const fade = k > 0.7 ? (1 - k) / 0.3 : 1;
-        boldText(ctx, s, x, y - sc, e.t < 0.08 && !calm ? PAL.white : PAL.goldHi, { scale: sc, alpha: fade });
+        boldText(ctx, s, x, y, e.t < 0.08 && !calm ? PAL.white : PAL.goldHi, { scale: sc, alpha: fade, edgeW: 1 / sc + 0.4 });
       },
     });
   }

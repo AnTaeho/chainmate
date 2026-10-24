@@ -1,7 +1,7 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL, lightFill } from './palette.js';
 import { shade, softShadow, rpath, DROP } from './light.js';
-import { textImage, textWidth, inkBox, tinyText } from './text.js';
+import { textImage, edgeImage, textWidth, inkBox, tinyText } from './text.js';
 import { orbPaint, SW, SH } from './sprites.js';
 import { blitVec } from './vec.js';
 import { fitPiece, artOf } from './pieces3.js';
@@ -137,7 +137,7 @@ export function line(ctx, x0, y0, x1, y1, col) {
 // 글자 그림은 그리는 곳의 화소 배율(화면 N × scale)로 굽는다(text.js textImage)
 const resOf = (ctx) => { const t = ctx && ctx.getTransform ? ctx.getTransform() : null; return t && typeof t.a === 'number' ? Math.hypot(t.a, t.b) : LOOK.n; };
 // w: 글 폭을 따로 줄 때(한 줄을 조각으로 나눠 그리는 richText — 앞 글 전체로 잰 조각 폭)
-export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false, scale = 1, shadow = null, alpha = 1, w: fixW = null } = {}) {
+export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false, scale = 1, shadow = null, alpha = 1, w: fixW = null, edge = null, edgeW = 1 } = {}) {
   s = L(String(s));
   const k = resOf(ctx) * scale;
   const img = textImage(s, col, bold, k);
@@ -152,6 +152,11 @@ export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false
   if (shadow) {
     const sh = textImage(s, shadow, bold, k);
     ctx.drawImage(sh.c, dx + ox + scale, y + oy + scale, iw, ih);
+  }
+  // 테(edge): 둥근 이음 선으로 그은 글 그림을 밑에 깐다(edgeW는 글자 크기 1배 기준 논리 px)
+  if (edge) {
+    const e = edgeImage(s, edge, bold, k, edgeW);
+    ctx.drawImage(e.c, dx + e.left * scale, y + e.top * scale, e.cw * scale, e.h * scale);
   }
   ctx.drawImage(img.c, dx + ox, y + oy, iw, ih);
   if (alpha !== 1) ctx.globalAlpha = 1;

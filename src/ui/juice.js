@@ -153,15 +153,12 @@ export function flyCoins(fx, x0, y0, x1, y1, { n = 3, seed = 9, delay = 0, onHit
   }
 }
 
-// 굵은 테 글: 어두운 테 두 겹(1 · 2도트 여덟 방향) 위에 글. 큰 이름표 · 꽂히는 수
-export function boldText(ctx, s, x, y, col, { scale = 2, align = 'center', edge = PAL.shadow, alpha = 1 } = {}) {
+// 굵은 테 글: 잉크 테(글자 1배 기준 edgeW) 위에 굵은 글. 큰 이름표 · 꽂히는 수
+export function boldText(ctx, s, x, y, col, { scale = 2, align = 'center', edge = PAL.frameDk, alpha = 1, edgeW = 0.75 } = {}) {
   const w = measure(s, true) * scale;
   const lx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
-  if (alpha !== 1) ctx.globalAlpha = alpha;
-  const o = Math.max(1, Math.round(scale / 2));
-  for (const d of [o + 1, o]) for (const [dx, dy] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) text(ctx, s, lx + dx * d, y + dy * d, edge, { bold: true, scale });
-  text(ctx, s, lx, y, col, { bold: true, scale });
-  if (alpha !== 1) ctx.globalAlpha = 1;
+  // 굵은 글꼴 + 잉크 테 한 겹(둥근 이음 선을 한 번 구워 깐다 — 옛 여덟 방향 찍기는 벡터 글자 둘레가 흐린 네모 덩이가 됐다)
+  text(ctx, s, lx, y, col, { bold: true, scale, alpha, edge, edgeW });
   return w;
 }
 

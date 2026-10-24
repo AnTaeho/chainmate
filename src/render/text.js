@@ -118,6 +118,30 @@ export function textImage(s, col, bold = false, k = 1) {
   return hit;
 }
 
+// 글자 테 그림: 같은 글을 둥근 이음 선(굵기 ow 논리 px, 글 바깥으로 ow)으로 그은 것. 자리는 textImage와 같은 기준(left · top이 ow만큼 더 바깥)
+export function edgeImage(s, col, bold = false, k = 1, ow = 1) {
+  s = String(s);
+  k = Math.max(1, Math.min(8, Math.ceil(k - 1e-6)));
+  if (unready && fontReady(false) && fontReady(true)) clearTextCache();
+  const key = `e${ow}|${bold ? 1 : 0}${k}|${col}|${s}`;
+  let hit = CACHE.get(key);
+  if (hit) return hit;
+  const P = Math.ceil(ow) + 1, w = textWidth(s, bold), cw = w + PL + 2 + P * 2, h = HB + P * 2;
+  const c = makeCanvas(cw * k, h * k);
+  const ctx = context(c);
+  ctx.font = fontOf(bold, faceOf(bold).px * k);
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.lineWidth = ow * 2 * k; ctx.strokeStyle = col; ctx.fillStyle = col;
+  const bx = (PL + P) * k, by = Math.round((PT + P + baseOf(bold)) * k);
+  ctx.strokeText(s, bx, by); ctx.fillText(s, bx, by);
+  hit = { c, w, cw, h, k, left: -PL - P, top: -PT - P };
+  if (cachePx > CACHE_PX) { CACHE.clear(); cachePx = 0; }
+  cachePx += c.width * c.height;
+  CACHE.set(key, hit);
+  return hit;
+}
+
 // 줄 바꿈: 너비 w 안에서 낱말(띄어쓰기) 단위로, 낱말이 너무 길면 글자 단위로.
 // 효과를 잇는 「 · 」가 줄 끝 · 줄 머리에 걸리면 뺀다(줄 바꿈이 곧 나눔이다)
 // 문장부호(마침표 · 쉼표 · 가운뎃점 · 닫는 괄호 …)는 줄 머리에 두지 않는다 — 글자 단위로 끊을 때 앞 글자와 함께 내린다
