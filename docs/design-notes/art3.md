@@ -89,16 +89,16 @@
 - [x] `src/render/crests.js` — 세력 문장(8절)
 - [x] `src/render/icons.js` — 아이콘(7절 문양, `tools/icons.mjs` 홈 화면 아이콘은 벡터 킹)
 - [x] `src/render/dice.js` — 주사위(8절)
-- [ ] `src/render/texture.js` — (대국 판은 `board3.js boardImage`로 옮겼다 — 남은 쓰임 없음 확인 뒤 지운다) `boardCanvas` · `boardFrameCanvas` · `feltCanvas` · 3×5 좌표 글자
+- [ ] `src/render/texture.js` — 남은 것: 천 결(`feltCanvas` · 여백 판 `feltWeave`) · 판 가장자리 3×5 좌표 글자(`glyph`, 글자 단계). `boardCanvas` · `boardFrameCanvas`는 지웠다
 - [x] `src/ui/diagram.js` — 행마 그림(8절)
 - [x] `src/ui/envelope.js` — 꾸러미 봉투(8절)
 - [x] `src/ui/art.js` — 물건 그림 칸(7절)
-- [ ] `src/ui/juice.js` — 동전(`coinCanvas`) · 연기 · 조각 · 색종이
+- [x] `src/ui/juice.js` — 동전 · 연기 · 반짝이 · 색종이 · 조각(8절)
 - [x] `src/ui/stars.js` — 평가 별(8절)
 - [x] `src/ui/kinds.js` — 종류 딱지 문양(8절)
-- [ ] `src/ui/peek.js` — 관 선택 카드의 작은 판
-- [ ] `src/render/night.js` — 남은 것: 달 · 별 점. 먼 실루엣(8절) · 하늘 사슬의 기물 · 빛 테 · 흰 번쩍임 · 먹힌 조각은 벡터(`fitPiece` · `pieceMask`)
-- [ ] `src/ui/screens/title.js` — 로고(`bakeLogo`)
+- [x] `src/ui/peek.js` — 관 선택 카드의 작은 판 · 큰 판(8절)
+- [x] `src/render/night.js` — 달 · 별 · 먼 실루엣(8절) · 하늘 사슬의 기물 · 빛 테 · 흰 번쩍임 · 먹힌 조각은 벡터(`fitPiece` · `pieceMask`)
+- [x] `src/ui/screens/title.js` — 로고 빛깔(8절, 글자 모양은 4절 글꼴)
 
 **쓰는 곳**
 - [x] `src/render/gfx.js` `sprite` (기물 그리기 입구 → `pieces3.js` `fitPiece`). `soulSpark`는 그대로
@@ -157,3 +157,7 @@
 - **타이틀 먼 실루엣**(`night.js`): 16sc × 22sc 상자에 맞춘 벡터 기물 모양 한 빛깔(`pieceMask`). 게임 캔버스는 N배, 여백 판은 1배로 같은 자리에 굽는다.
 - **부서지는 조각**(`pieces3.js` `pieceChips`): 벡터 모양을 16 × 22 칸 가운데마다 재서 톤 빛깔(빛 · 그늘 · 새김 · 금 · 받침).
 - **홈 화면 아이콘**(`tools/icons.mjs`): Playwright로 남색 달무리 위 벡터 킹을 굽는다(`assets/icons/`).
+- **손맛**(`juice.js`): 연기는 둥근 덩이(잉크 테 덩이 위 흰 몸), 반짝이는 네 뿔, 색종이 · 부서지는 조각은 돌며 나는 조각(`chip`), 동전은 금 두 톤 + 잉크 테 + $(배율마다 한 번).
+- **판 보기**(`peek.js`): 작은 판은 잉크 테 · 종류 빛깔 둥근 말 · 금 점 킹 · 돌 벽 · 마름모 보석 · 점선 고리 증원 예고를 판 상태마다 한 번 굽는다. 안개는 빗금.
+- **달 · 별**(`night.js`): 달은 달무리 + 크림 두 톤 + 잉크 테 + 분화구, 별은 둥근 빛 점(여섯에 하나는 네 뿔 반짝). 멈춘 바탕은 하늘 띠만.
+- **로고**(`title.js`): 금 두 톤(위 빛 · 아래 그늘) + 잉크 남색 두께(오른쪽 아래로 세 칸).
