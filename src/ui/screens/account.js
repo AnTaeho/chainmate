@@ -4,10 +4,10 @@
 // 글자는 브라우저 입력 칸(app.fields — src/ui/textfield.js)으로 받는다. 값은 내는 순간에만 읽고 화면 상태에 두지 않는다.
 // 서버와 주고받는 것은 app.rank · app.cloud가 한다 — 화면은 열쇠를 모른다.
 import { PAL } from '../../render/palette.js';
-import { W, text, box, measure } from '../../render/gfx.js';
+import { W, text, box, slot, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
-import { pageHead, tabRow } from './common.js';
+import { pageHead, tabRow, headW, HEAD_BIG } from './common.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, BTN_S, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { L } from '../lang.js';
@@ -15,13 +15,12 @@ import { accountProps } from '../telemetry.js';
 import { USERNAME_FILTER } from '../textfield.js';
 import { gainText } from './link.js';
 
-const CARD_BG = PAL.deep;
 export const PRIVACY_URL = 'privacy.html';
 export const FIELD_H = 18, LABEL_W = 68, MSG_LINES = 2;
 // 탭 줄(기기 잇기 화면과 같이 쓴다)
 export const ACCOUNT_TABS = [['account', '아이디'], ['link', '기기 연결']];
 export function accountTabs(ctx, ui, app, cur) {
-  tabRow(ctx, ui, 'acct', ACCOUNT_TABS, cur, PAGE.titleX + measure('계정', true) + 10, 5, BTN_S, (id) => { if (id !== cur) { app.sfx('pick'); app.go(id); } });
+  tabRow(ctx, ui, 'acct', ACCOUNT_TABS, cur, PAGE.titleX + headW('계정') + 10, HEAD_BIG.mid - (BTN_S >> 1), BTN_S, (id) => { if (id !== cur) { app.sfx('pick'); app.go(id); } }, 20);
 }
 
 // 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다). 입력 칸은 위쪽 띠(y 110 위)에 둔다 — 폰 키보드가 올라와도 보이게
@@ -148,7 +147,7 @@ export class AccountScreen {
   // 입력 칸 하나: 캔버스에 이름표와 칸 바탕, 그 위에 브라우저 입력 칸
   cell(ctx, id, label, at, spec) {
     text(ctx, label, at.x - LABEL_W, textY(at.y, FIELD_H), PAL.ink);
-    box(ctx, at.x, at.y, at.w, at.h, CARD_BG, PAL.frameHi);
+    slot(ctx, at.x, at.y, at.w, at.h);
     this.app.fields.field(id, { ...at, label: L(label), ...spec });
   }
   // 상태 줄(두 줄까지): 붉은 것 · 금빛 것 + 합쳐진 것 한 줄
@@ -170,7 +169,7 @@ export class AccountScreen {
 
   draw(ctx, ui) {
     const app = this.app, lay = accountLayout();
-    pageHead(ctx, '계정');
+    pageHead(ctx, '계정', null, { big: true });
     accountTabs(ctx, ui, app, 'account');
     if (this.in()) this.drawIn(ctx, ui, lay); else this.drawOut(ctx, ui, lay);
     this.drawRight(ctx, ui, lay);

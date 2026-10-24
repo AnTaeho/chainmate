@@ -138,7 +138,7 @@ export function createFields({ doc = null, win = null, canvas = null, rot = () =
       const at = liftField(i, (win && win.innerWidth) || 320, safeTop());
       it.at = { left: at.left, top: at.top, width: at.width, height: at.height, rot: false, lift: true };
       s.left = px(at.left); s.top = px(at.top); s.width = px(at.width); s.height = px(at.height);
-      s.fontSize = px(at.font); s.transform = ''; s.borderWidth = '2px'; s.padding = '0 10px';
+      s.fontSize = px(at.font); s.transform = ''; s.borderWidth = '2px'; s.padding = '0 12px'; s.borderRadius = px(at.height / 2);
       ls.left = px(at.left); ls.top = px(at.labelTop); ls.fontSize = '14px';
       return;
     }
@@ -146,7 +146,8 @@ export function createFields({ doc = null, win = null, canvas = null, rot = () =
     it.at = { left: at.left, top: at.top, width: at.width, height: at.height, rot: at.rot, lift: false };
     s.left = px(at.left); s.top = px(at.top); s.width = px(at.width); s.height = px(at.height);
     s.fontSize = px(at.font); s.transform = at.rot ? 'rotate(90deg)' : '';
-    s.borderWidth = px(Math.max(1, Math.round(at.scale))); s.padding = `0 ${px(4 * at.scale)}`;
+    // 빈 자리(gfx.js slot)와 같은 알약: 둥근 끝 반지름 = 높이의 반(14까지)
+    s.borderWidth = px(Math.max(1, Math.round(at.scale))); s.padding = `0 ${px(7 * at.scale)}`; s.borderRadius = px(Math.min(14, Math.floor(it.spec.h / 2)) * at.scale);
     ls.left = ''; ls.top = ''; ls.fontSize = '';
   }
   // 창 크기 · 배율 · 회전 · 초점이 바뀌면 다시 놓는다(main.js refit · 초점 사건)

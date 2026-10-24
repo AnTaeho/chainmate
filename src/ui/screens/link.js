@@ -2,7 +2,7 @@
 //   왼쪽 「이 기기의 코드」: [코드 받기] → 큰 숫자 여덟 자리 + 남은 시간 막대. 오른쪽 「다른 기기의 코드 넣기」: 숫자 여덟 칸 + 숫자판(키보드 숫자 · Backspace · Enter도).
 //   아래 한 줄: 이어진 기기 수 · 마지막으로 맞춘 때 · [이 기기 떼기]. 서버와 주고받는 것은 app.rank · app.cloud가 한다 — 화면은 열쇠를 모른다.
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rect, measure } from '../../render/gfx.js';
+import { W, text, box, rrect, rframe, slot, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
 import { pageHead } from './common.js';
@@ -15,7 +15,6 @@ import { accountTabs } from './account.js';
 export const CODE_LEN = 8;
 export const POLL_SEC = 5;       // 코드를 띄운 동안 이어졌는지 묻는 간격
 export const JOIN_TRIES = 3;     // 이어진 뒤 그 기기의 기록을 당겨 보는 횟수
-const CARD_BG = PAL.deep;
 // 숫자판: 세 줄 × 네 칸(오른쪽 칸이 지우기 · 0 · 잇기)
 export const PAD_ROWS = [['1', '2', '3', 'del'], ['4', '5', '6', '0'], ['7', '8', '9', 'go']];
 
@@ -157,7 +156,7 @@ export class LinkScreen {
     this.drawnKey = this.clockKey();
     const app = this.app, lay = linkLayout(), P = PAD_BOX;
     // 계정(CHM-72)과 한 머리줄: 탭 「아이디」 · 「기기 잇기」
-    pageHead(ctx, '계정');
+    pageHead(ctx, '계정', null, { big: true });
     accountTabs(ctx, ui, app, 'link');
     this.drawMine(ctx, ui, lay);
     this.drawEntry(ctx, ui, lay);
@@ -198,11 +197,11 @@ export class LinkScreen {
     if (m.phase === 'code') {
       // 큰 숫자(두 배) + 남은 시간 막대
       const dw = CODE_BAR, dh = 34, dx = cx - (dw >> 1);
-      box(ctx, dx, y0, dw, dh, CARD_BG, PAL.gold);
+      box(ctx, dx, y0, dw, dh, PAL.slot, PAL.gold);
       text(ctx, codeText(m.code), cx, y0 + 6, PAL.goldHi, { align: 'center', bold: true, scale: 2 });
-      const k = codeLeft(m, app.cloud.now()), by = y0 + dh + 6;
-      rect(ctx, dx, by, dw, 3, PAL.feltHi);
-      rect(ctx, dx, by, Math.round(dw * k), 3, k < 0.2 ? PAL.red : PAL.gold);
+      const k = codeLeft(m, app.cloud.now()), by = y0 + dh + 6, kw = Math.round(dw * k);
+      rrect(ctx, dx, by, dw, 3, 1, PAL.slotEdge);
+      if (kw) rrect(ctx, dx, by, kw, 3, 1, k < 0.2 ? PAL.red : PAL.gold);
       say('다른 기기에서 이 코드를 입력하세요', by + 3 + 8, PAL.ink);
     } else if (m.phase === 'linked') {
       say('연결됐어요', y0 + 4, PAL.gold, true);
@@ -239,7 +238,8 @@ export class LinkScreen {
     // 숫자 여덟 칸(넷씩 띄운다). 다음에 들어갈 칸은 금빛 테
     lay.cells.forEach((c, i) => {
       const d = e.digits[i], next = e.phase === 'type' && i === e.digits.length;
-      box(ctx, c.x, c.y, c.w, c.h, CARD_BG, next ? PAL.gold : d ? PAL.frameHi : PAL.frameDk);
+      slot(ctx, c.x, c.y, c.w, c.h, { r: 4 });
+      if (next) rframe(ctx, c.x, c.y, c.w, c.h, 4, PAL.gold, 1);
       if (d) text(ctx, d, c.x + (c.w >> 1), inkY(c.y, c.h), PAL.goldHi, { align: 'center', bold: true });
     });
     if (e.phase === 'confirm' || e.phase === 'working') {

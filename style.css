@@ -32,8 +32,8 @@ canvas {
    body가 글 고르기를 막고 있어 칸에서만 푼다(안 풀면 아이폰에서 글 자리 표시가 안 뜬다) */
 .tf { position: fixed; left: 0; top: 0; width: 0; height: 0; margin: 0; padding: 0; z-index: 5; }
 .tf-in {
-  position: fixed; box-sizing: border-box; margin: 0; border: 1px solid #f3e6c8; border-radius: 0;
-  background: #0b0d22; color: #fff1b8; caret-color: #efbd55; outline: none;
+  position: fixed; box-sizing: border-box; margin: 0; border: 1px solid #3a4280; border-radius: 9px;
+  background: #161a44; color: #fff1b8; caret-color: #efbd55; outline: none;
   font-family: "IBM Plex Sans KR", sans-serif; font-weight: 500; line-height: 1; letter-spacing: 0;
   transform-origin: 0 0; -webkit-appearance: none; appearance: none;
   -webkit-user-select: text; user-select: text; touch-action: manipulation; -webkit-touch-callout: default;
@@ -41,7 +41,7 @@ canvas {
 .tf-in:focus { border-color: #efbd55; }
 .tf-in::selection { background: #efbd55; color: #2a1c08; }
 /* 비번 관리자가 채운 칸의 바탕을 게임 결로 */
-.tf-in:-webkit-autofill { -webkit-text-fill-color: #fff1b8; box-shadow: 0 0 0 1000px #0b0d22 inset; caret-color: #efbd55; }
+.tf-in:-webkit-autofill { -webkit-text-fill-color: #fff1b8; box-shadow: 0 0 0 1000px #161a44 inset; caret-color: #efbd55; }
 /* 이름표는 캔버스가 그린다 — 화면 읽기 프로그램에만 보인다 */
 .tf-label { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; color: #ece3cf; font-family: "IBM Plex Sans KR", sans-serif; }
 .tf-go { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
