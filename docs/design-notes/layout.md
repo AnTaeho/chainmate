@@ -56,7 +56,7 @@ x   8 ─ 120 │ 128 ────────────── 352 │ 360 ─
 | `GAP_IN` 묶음 안 틈 | 3 | 머릿말 → 제목, 이름표 → 목록 |
 | `GAP_GROUP` 묶음 사이 틈 | 8 | 제목 묶음 → 본문 → 칩 줄, 판넬과 판넬 사이, 카드 줄 → 단추 줄. 카드의 가로줄은 이 틈 가운데 |
 
-- **상자는 내용에 맞춘다(hug)**: 높이 = 안 여백 × 2 + 줄 높이의 합 + 묶음 틈. 글자의 **잉크**(Galmuri11 12px는 `text()`의 y부터 11줄, g · j · p · q · y · 쉼표는 2줄 더)를 줄 가운데에 놓는다(본문 줄 위 1 · 아래 2, 제목 줄 위 3 · 아래 4 — `textY`, 작은 칸은 `inkY`). 재는 쪽과 그리는 쪽이 같은 흐름(`frame.js` `flow`)을 쓴다. 화면은 잰 높이로 자리를 쌓는다(위에서부터 y += h + 묶음 틈, 아래 칸은 아래에서부터).
+- **상자는 내용에 맞춘다(hug)**: 높이 = 안 여백 × 2 + 줄 높이의 합 + 묶음 틈. 글자의 **잉크**(글자 띠 — `text()`의 y부터 11줄, g · j · p · q · y · 쉼표는 2줄 더. 실제 잉크 Plex 10.5줄 · Black Han Sans 9.1줄은 이 띠 가운데에 선다)를 줄 가운데에 놓는다(본문 줄 위 1 · 아래 2, 제목 줄 위 3 · 아래 4 — `textY`, 작은 칸은 `inkY`). 재는 쪽과 그리는 쪽이 같은 흐름(`frame.js` `flow`)을 쓴다. 화면은 잰 높이로 자리를 쌓는다(위에서부터 y += h + 묶음 틈, 아래 칸은 아래에서부터).
 - 한 줄 칸(격언 칸 · 두루마리 칸 · 도감 칸)은 본문 줄: 28 = 7 + 14 + 7. 도감 칸은 이름이 두 줄이면 42.
 - 한 줄의 카드는 가장 긴 카드의 높이로 맞추고, 칩 줄은 카드 아랫변에 붙인다. 효과 글은 「…」로 자르지 않는다.
 - 이름 한 줄 자리(격언 칸 · 좁은 두루마리 칸)는 `fitText`(굵게 → 보통 → 「…」). 효과 글은 이 자리에 쓰지 않는다.
@@ -66,9 +66,9 @@ x   8 ─ 120 │ 128 ────────────── 352 │ 360 ─
 - 토큰이 아닌 칸 크기: 시너지 칩 15(줄 17), 테 두른 시너지 칩 17(줄 19), 물건 카드 그림 22 × 26, 칩 안 가로 여백 3(`CHIP_PAD`), 세로로 잇는 같은 칸 사이 2(`LIST_GAP`), 값 × 배수 칸 22, 손 36.
 
 ## 3. 글자 크기 단계
-글꼴은 Galmuri11 12px 하나(도트라 줄일 수 없다). 단계는 크기(1배 · 2배) × 굵기 × 빛깔로만 나눈다.
+글꼴은 둘, 크기는 논리 12px 하나: 굵게 Black Han Sans · 보통 IBM Plex Sans KR Medium(`src/render/type.js`, 안 3 — `docs/design-notes/art3.md` 4절). 단계는 크기(1배 · 2배 · 3배) × 굵기(= 글꼴) × 빛깔로 나눈다.
 
-글꼴 파일은 쓰는 글자만 남긴 것이다(CHM-75): KS X 1001 한글 2,350 + 출력 ASCII + `src/**/*.js` · `index.html` · `privacy.html` · `style.css` · `manifest.webmanifest`의 모든 글자. 원본(Galmuri 2.403, SIL OFL 1.1)은 `tools/fonts/`(배포 · 앱에 안 든다). 화면에 처음 쓰는 글자(KS X 1001 밖 한글 · 기호)를 넣으면 `test/fonts.test.js`가 실패한다 — fonttools · brotli가 든 파이썬으로 `python tools/fonts.py`를 돌리면 이름에 내용 해시를 붙인 새 파일과 `style.css` · `tools/fonts/glyphs.json`이 바뀐다(이어서 `node tools/preload.mjs`). 굵기마다 파일 하나로 둔다 — `unicode-range`로 쪼개면 `src/render/text.js`의 `document.fonts.check`가 한글 조각이 오기 전에 준비됐다고 답해 대체 글꼴 그림이 캐시에 남는다. 화면에 그리는 바깥 글은 아이디(a-z0-9_)와 목록에서 뽑는 순위 이름뿐이라 이 글자 안에 든다.
+글꼴 파일은 쓰는 글자만 남긴 것이다(CHM-75 · 안 3): 출력 ASCII + `src/**/*.js` · `index.html` · `privacy.html` · `style.css` · `manifest.webmanifest`의 모든 글자(KS X 1001 한글 전체는 뺐다 — 화면에 그리는 바깥 글은 아이디(a-z0-9_)와 목록에서 뽑는 순위 이름뿐이다). 원본(google/fonts 고정 커밋, SIL OFL 1.1)은 `tools/fonts.py`가 받아 `tools/fonts/src/`(git 밖)에 둔다. 화면에 처음 쓰는 글자를 넣으면 `test/fonts.test.js`가 실패한다 — `uv run --no-project --with fonttools --with brotli python tools/fonts.py`를 돌리면 이름에 내용 해시를 붙인 새 파일과 `style.css` · `tools/fonts/glyphs.json`이 바뀐다(이어서 `node tools/preload.mjs` · `node tools/fontwidths.mjs`). 굵기마다 파일 하나로 둔다 — `unicode-range`로 쪼개면 `src/render/text.js`의 `document.fonts.check`가 한글 조각이 오기 전에 준비됐다고 답해 대체 글꼴 그림이 캐시에 남는다.
 
 배포에서는 `tools/stamp.mjs`(Vercel 빌드 명령)가 `style.css` · `src/…` 주소에 `v/<판본>/`을 붙여 1년 immutable로 내보낸다. 판본 style.css의 글꼴 주소는 `/assets/fonts/…`로 바꿔 preload와 같은 URL을 받게 한다. 로컬에서는 빌드가 없다. `/v/<아무 판본>/`을 지금 배포의 파일로 돌리므로, 배포 전에 연 탭이 뒤늦게 부르는 모듈은 새 코드다 — 늦게 부르는 것은 켤 때 `import()`하는 `src/audio/audio.js`(기대는 모듈 없음) 하나라 받아들인다. `import()`를 새로 늘리면 이 점을 본다.
 
@@ -152,7 +152,7 @@ x   8 ─ 120 │ 128 ────────────── 352 │ 360 ─
 - 묶음 안: 같은 x · 같은 폭 · 2px 틈.
 - 묶음이 화면 밖으로 나가지 않는다 · 가리킨 것을 덮지 않는다 · 누를 수 있는 다른 구역을 덮지 않는다.
 
-**글 넘침**(`src/render/layoutlog.js`): 그리는 쪽이 상자를 열고 닫으면(`openBox` · `closeBox`) 그 사이의 글이 그 상자에 묶인다. 글의 네모는 **실제 잉크**(`text()`의 y부터 11줄, 아래로 빠지는 글자는 2줄 더). 연기 시험은 프레임마다, `tools/shots-layout.mjs`는 장마다 잰다. 한국어 · 영어 둘 다.
+**글 넘침**(`src/render/layoutlog.js`): 그리는 쪽이 상자를 열고 닫으면(`openBox` · `closeBox`) 그 사이의 글이 그 상자에 묶인다. 글의 네모는 **글자 띠**(`text()`의 y부터 11줄 — 실제 잉크가 그 가운데, 아래로 빠지는 글자는 2줄 더). 연기 시험은 프레임마다, `tools/shots-layout.mjs`는 장마다 잰다. 한국어 · 영어 둘 다.
 
 | 상자 종류 | 재는 것 |
 |---|---|
@@ -450,7 +450,7 @@ hug하면 상점 · 금빛 꾸러미가 480 × 270에 들어가지 않아 글을
 - 검사: smoke 「점화 막간」 줄 — 열림 · 닫힘(누름 · Enter · 저절로), 판의 기록과 같음, 한 판에 두 번 0, 떠 있는 동안 다른 구역을 누르면 모두 막간 구역이 받음. 시험 `test/ignite.test.js`(규칙), 스크린샷 `tools/shots-ignite.mjs`.
 
 ## 21. 글자 세로 자리 보정(2026-10-06)
-- **글자 그림은 어느 브라우저에서나 같은 줄에 선다.** `textBaseline 'top'`이 가리키는 줄은 브라우저마다 다르다(Safari는 크로미움보다 2px 아래, 2배 글자는 4px). 그래서 `src/render/text.js`가 글꼴이 온 뒤 굵기마다 한 번 기준 글자 「가A」의 잉크 윗줄을 재어, 기대 자리(`INK_TOP`)와의 차이만큼 `fillText`의 y를 옮긴다. 크로미움에서는 보정이 0이다. 글꼴이 오기 전에 그린 글자 그림은 오는 순간 버린다. `clearTextCache`는 잰 값도 지운다.
+- **글자 그림은 어느 브라우저에서나 같은 줄에 선다.** `textBaseline 'top'`이 가리키는 줄은 브라우저마다 달라서(Safari는 크로미움보다 2px 아래) 기준선은 `alphabetic`으로 둔다. `src/render/text.js`가 글꼴이 온 뒤 굵기마다 한 번 기준 글자 「가A」의 잉크(`measureText` `actualBoundingBox`)를 재어 그 잉크를 글자 띠(11줄) 가운데에 놓는다(안 3, 2026-10-24 — 그 전에는 도트 글자 그림의 잉크 윗줄을 재어 옮겼다). 글꼴이 오기 전에 그린 글자 그림은 오는 순간 버린다. `clearTextCache`는 잰 값도 지운다.
 - **그림 칸 안의 큰 글자는 잉크로 가운데 맞춘다**: `gfx.js textMid(ctx, 글, x, 칸 위, 칸 높이, …)`가 잉크 상자(`text.js inkBox`)를 재어 위아래 여백을 같게 둔다(지금은 쓰는 곳이 없다).
 - 글자 색은 16진 색과 `hsl(h,s%,l%)`만 넘긴다(`palette.js rgb`가 읽는 꼴 — 다른 꼴은 검정이 된다). 시험 `test/textink.test.js`.
 

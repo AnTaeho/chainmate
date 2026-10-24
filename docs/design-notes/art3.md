@@ -43,9 +43,37 @@
 - 기물은 칸 가운데의 화면 y 차례(같으면 x)로 뒤에서 앞으로 그린다. 칸 위 표시(놓을 칸 · 노림 · 안개 · 길)는 모두 기물보다 먼저 바닥 층에 — 뒤 칸 기물이 앞 칸에 걸치기 때문이다. 움직이는 내 기물은 맨 위.
 - **고른 기울기(2026-10-24)**: 시안 그대로(세로 0.64, 칸 28 × 18)는 7관 붐비는 판(킹 둘레 여덟 + 벽)에서 앞 줄 기물이 뒷줄 기물 몸을 반 넘게 가렸다. 판 자리 높이가 남아(판 144 → 176) 세로를 0.786으로 세웠다 — 줄 사이가 18 → 22로 벌어져 뒷줄의 관 · 성가퀴 · 비숍 홈이 1배에서도 보인다. 폭은 그대로라 칸 수 · 기물 크기 · 다른 칸은 안 바뀐다. 마름모가 1 · 2 · 3배 모두 읽혀 `shallow`로 물러서지 않았다(찍은 그림 `node tools/shots-art3.mjs`).
 
-## 4. 글자(예정)
+## 4. 글자(2026-10-24)
 
-숫자는 Black Han Sans, 글은 IBM Plex Sans KR(500 · 700). 지금 도트 글꼴은 다음 단계까지 둔다. 크기 단계(논리 px, 시안 1920 ÷ 4): 이름표 · 본문 8 · 굵은 이름 9 · 작은 숫자 10 · 값 · 배수 28 · 점수 36.
+굵은 글(`bold: true` — 숫자 · 제목 · 단추 · 이름)은 **Black Han Sans**, 보통 글(본문 · 효과 · 말풍선 · 낱말 풀이)은 **IBM Plex Sans KR Medium(500)**. 한 곳 `src/render/type.js`(`FACE` · `fontOf`). 화면 코드는 그대로 `text(…, { bold, scale })`를 부른다.
+
+| 단계 | 글꼴 · 논리 px | 시안(1920 ÷ 4)과의 관계 |
+|---|---|---|
+| 본문 · 이름표 · 보조 | Plex 500 · 12 | 시안 7~7.5. 480 칸의 줄 14 · 단추 18 · 칩 15~17이 12px 글자 띠(11줄)에 맞춰 있어 줄이지 않았다 — 폰 2배에서 24 화소라 넉넉히 읽힌다 |
+| 이름 · 단추 · 수치 | Black Han Sans · 12 | 시안 7.5~12.5. 같은 크기에서 획 무게로 갈린다. 크게 쓸 곳은 `scale` |
+| 큰 제목 · 큰 수 | Black Han Sans · 24 · 36(`scale` 2 · 3) | 시안의 값 · 배수 28 · 점수 36 |
+
+- **같은 12px인 이유**: 화면 토큰(줄 · 단추 · 칩 · 안 여백 검사)이 Galmuri 12px의 잉크 11줄로 짜여 있다. Plex 12px의 「가A」 잉크는 10.5줄, Black Han Sans는 9.1줄이라 둘 다 글자 띠 11줄 안에 가운데로 선다 — 높이 토큰은 그대로 두고 글꼴만 바꿨다(넓어진 굵은 영어 때문에 고친 폭은 새기기 단추 62 · 숫자판 칸 50 · 계정 왼쪽 칸 232, 행마 단추 · 탭 줄은 글과 테 사이 4 · 3). 한글은 Galmuri보다 Plex 11% · BHS 15% 좁고, 영어는 Plex 15% 좁고 BHS는 비슷하거나 조금 넓다.
+- **그리기**(`src/render/text.js`): 글자 그림을 그리는 곳의 화소 배율 k(화면 N × `scale`, `ctx.getTransform`)로 굽고 알파를 자르지 않는다. 논리 크기 · 폭은 k와 상관없다. 기준선은 `alphabetic`, 굵기마다 한 번 「가A」의 잉크(`measureText` `actualBoundingBox`)를 재어 글자 띠(text()의 y부터 11줄) 가운데에 놓는다 — 못 재는 곳은 `FACE.ink`. 글꼴이 오기 전에는 폭 · 기준선 · 줄 바꿈을 캐시하지 않고 `loadingdone`에 비운다. 글자 그림 캐시는 화소 합 1,200만에서 비운다.
+- **Black Han Sans에 없는 기호**(· → … ★ ▼ 「」 등 37자)는 글꼴 줄 `"Black Han Sans", "IBM Plex Sans KR"`이 Plex로 넘긴다. Plex KR에도 없는 ‹ ›는 줄일 때 IBM Plex Sans(500)에서 옮겨 넣었다. 둘 다에 없는 글자(≈ ⊄ 紋章)는 주석에만 있다.
+- **낱말 조각 글**(`glossary.js` `richText`): 글꼴 폭이 소수라 조각마다 올림해 더하면 한 줄로 잰 폭보다 넓다 — 조각 자리 · 폭은 앞 글 전체로 잰다.
+- 굵게 안 들어갈 때 보통 굵기로 접는 곳이 늘었다(굵은 영어가 넓다): 건너뛰기 패 글(두 줄 넘으면) · 물건 카드 이름(낱말이 안 들어가면). smoke 「줄임」으로 센다(영어 1 → 10, 실패 아님).
+
+**글꼴 파일**(`assets/fonts/`, 배포 · 앱에 든다 — `stamp.mjs STATIC`의 `assets` · `desktop/collect.sh`가 통째로 옮긴다)
+
+| 파일 | 글자 | 크기 |
+|---|---|---|
+| `BlackHanSans.<해시>.woff2` | 1,037 | 78,264 B(76KB) |
+| `PlexSansKR-Medium.<해시>.woff2` | 1,074(‹ › 포함) | 122,216 B(119KB) |
+| `OFL-BlackHanSans.txt` · `OFL-IBMPlex.txt` | SIL OFL 1.1 | |
+
+합 200,480 B(196KB) — 옛 Galmuri 둘 87KB의 2.3배. 벡터 한글은 글자마다 윤곽이라 도트보다 무겁다. 글자 고르기별로 재 봤다: KS X 1001 2,350자 + 소스 434KB · 소스 전체 글자(주석 포함, 지금) 199KB · 문자열만(주석 빼기) 158KB. KS X 1001은 화면에 바깥 글이 아이디 · 목록 이름뿐이라 뺐고, 주석 빼기는 41KB를 더 줄이지만 JS 토큰 읽기가 줄이는 도구와 시험 양쪽에 들어가야 해 두지 않았다.
+
+**다시 만들기**
+1. 글꼴 줄이기: `uv run --no-project --with fonttools --with brotli python tools/fonts.py` — google/fonts 고정 커밋에서 원본을 `tools/fonts/src/`(git 밖)로 받아 sha256을 맞추고, 쓰는 글자만 남긴 woff2 · `style.css` @font-face · `tools/fonts/glyphs.json`을 쓴다. 같은 입력이면 같은 해시다.
+2. 미리 받기 줄: `node tools/preload.mjs`.
+3. 연기 시험 폭 표: `node tools/fontwidths.mjs` — 줄인 woff2를 Playwright 크로미움에 싣고 덮은 글자마다 굵게 · 보통 폭(1/1000 em, 올림)을 `tools/fonts/widths.json`에 쓴다(`tools/fakedom.mjs`가 읽는다). 「가A」 잉크가 `type.js FACE.ink`와 다르면 알린다.
+화면에 처음 쓰는 글자를 넣으면 `test/fonts.test.js`가 1을 하라고 실패한다. 글꼴 · 굵기 · 크기를 바꾸면 1 ~ 3을 차례로.
 
 ## 5. 빛깔 역할
 
@@ -65,6 +93,7 @@
 도트 그림 모듈과 그것을 쓰는 곳. 바꾼 줄은 `[x]`로 지운다.
 
 **모듈**
+- [x] `src/render/text.js` — Galmuri 도트 글자(12px · 알파 문턱값) → 벡터 글꼴 둘(4절)
 - [ ] `src/render/sprites.js` — 기물 16×22 마스크 · 톤(`TONE` · `ENG_TONE` · `TIER` · `THING_TONE`) · `spriteCanvas` · `outlineCanvas` · `spriteChips` · `tierSparkle` · `soulOrb` · `baked`
 - [ ] `src/render/sprites-hi.js` — 기물 32×44 마스크(`tools/sprites-hi.mjs`가 쓴다)
 - [ ] `src/render/fairy-sprites.js` — 특수 기물 마스크
@@ -83,7 +112,7 @@
 - [ ] `src/ui/kinds.js` — 종류 딱지 문양
 - [ ] `src/ui/peek.js` — 관 선택 카드의 작은 판
 - [ ] `src/render/night.js` — 타이틀 하늘 · 실루엣(`spritePixels`)
-- [ ] `src/ui/screens/title.js` — 로고(`bakeLogo`)
+- [ ] `src/ui/screens/title.js` — 로고(`bakeLogo`) — 글자는 Black Han Sans를 화면 배율로 굽게 바꿨다(4절). 금빛 3단 띠 · 그림자 모양은 그대로
 
 **쓰는 곳**
 - [ ] `src/render/gfx.js` `sprite` · `soulSpark` (기물 그리기 입구)

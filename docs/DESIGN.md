@@ -281,7 +281,7 @@ test/              node --test
 - 모든 무작위는 `rng`에서. 같은 시드 + 같은 선택 = 같은 결과.
 - 상태 변경은 명령 객체로만: `{ type: 'drop', handIndex, sq }`, `{ type: 'capture', sq }`, `{ type: 'discard', handIndices }`, `{ type: 'buy', slot }` … 봇과 화면이 같은 명령을 쓴다.
 - 내부 해상도 480×270, 정수배 확대 + 레터박스, `image-rendering: pixelated`.
-- 글자는 캔버스 안에서 Galmuri11 12px로 그린다(한글 포함). 알파를 문턱값으로 잘라 도트처럼 또렷하게.
+- 글자는 캔버스 안에서 벡터 글꼴 둘로 그린다: 굵게 Black Han Sans · 보통 IBM Plex Sans KR Medium, 둘 다 논리 12px. 화면 배율로 구워 매끈하게(`docs/design-notes/art3.md` 4절).
 - 기물 스프라이트 16×22, 칸 28px, 판 224px(가운데). 모양 마스크(`#` 몸, `d` 새김)에서 테두리·빛·그늘을 자동으로 만든다. 원형은 mockup의 `SPR`·`TONE`·`sprite()`.
 - 음악(`src/audio/audio.js`, WebAudio 합성): 대국 · 상점 · 타이틀은 밤의 체스 클럽 재즈(걷는 베이스 · 전자 피아노 · 붓 스네어 · 비브라폰), 마스터전만 명경기의 방 바로크(하프시코드 · 라단조 대위). 사슬이 길어질수록 층이 쌓인다. 들어 볼 파일은 `docs/media/music/`(`tools/render-music.mjs`).
 
