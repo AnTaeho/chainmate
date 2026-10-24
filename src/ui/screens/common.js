@@ -1,6 +1,6 @@
 // 틀 조각(docs/design-notes/layout.md 「틀 셋」): 멈춤 단추 · 판 밖 머리줄 · 판 틀의 왼쪽 칸.
 import { PAL } from '../../render/palette.js';
-import { W, text, rect, measure } from '../../render/gfx.js';
+import { W, text, rect, rrect, measure } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
 import { ANTES } from '../../sim/run.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
@@ -34,8 +34,9 @@ export function pauseButton(ctx, ui, app, x = PAUSE.x, y = PAUSE.y) {
     ui.region(id, r.x, r.y, r.w, r.h, { onClick: () => app.openOverlay('pause') });
   } else ui.region(id, x - 2, y - 2, 16, 14, { onClick: () => app.openOverlay('pause') });
   const col = ui.isHover(id) ? PAL.gold : PAL.dim;
-  if (need) { rect(ctx, x + 1, y + 1, 14, 2, col); rect(ctx, x + 1, y + 6, 14, 2, col); rect(ctx, x + 1, y + 11, 14, 2, col); return; }
-  rect(ctx, x + 1, y + 1, 10, 2, col); rect(ctx, x + 1, y + 5, 10, 2, col); rect(ctx, x + 1, y + 9, 10, 2, col);
+  // 둥근 끝 막대 셋(안 3 시안)
+  if (need) { for (const dy of [1, 6, 11]) rrect(ctx, x + 1, y + dy, 14, 2, 1, col); return; }
+  for (const dy of [1, 5, 9]) rrect(ctx, x + 1, y + dy, 10, 2, 1, col);
 }
 
 // 판 밖 틀의 머리줄: 왼쪽 제목(금빛 굵게) · 오른쪽 보조 글(흐림) · 가로줄.

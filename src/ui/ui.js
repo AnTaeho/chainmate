@@ -3,7 +3,7 @@
 import { richText } from './glossary.js';
 import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
-import { box, rect, rrect, text, frame, measure, lift } from '../render/gfx.js';
+import { box, rrect, rframe, text, measure, lift } from '../render/gfx.js';
 import { familyChips, chipRows, chipBlockH, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
 import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, EDGE_PAD, INK_H, flow, inkY } from './frame.js';
@@ -178,12 +178,13 @@ export const stepGlyph = (st) => (st === 'done' ? '■' : '□');
 function stepMark(ctx, st, x, y) {
   const my = y + 2;
   if (st === 'done') {
-    rect(ctx, x, my, 7, 7, PAL.goldDk);
-    for (const [dx, dy] of [[1, 3], [2, 4], [3, 5], [4, 4], [5, 3], [6, 2]]) rect(ctx, x + dx, my + dy, 1, 1, PAL.cardHi);
+    rrect(ctx, x, my, 7, 7, 2, PAL.goldDk);
+    ctx.beginPath(); ctx.moveTo(x + 1.8, my + 3.6); ctx.lineTo(x + 3, my + 5); ctx.lineTo(x + 5.4, my + 2);
+    ctx.strokeStyle = PAL.card; ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
     return;
   }
-  frame(ctx, x, my, 7, 7, STEP_INK[st]);
-  if (st === 'next') frame(ctx, x + 1, my + 1, 5, 5, PAL.goldDk);
+  rframe(ctx, x, my, 7, 7, 2, STEP_INK[st]);
+  if (st === 'next') rframe(ctx, x + 1, my + 1, 5, 5, 1, PAL.goldDk);
 }
 const isChips = (l) => !!(l && l.chips);
 // 말풍선 자리 재기: 재기와 그리기가 같은 흐름을 쓴다. 돌려주는 값 { h, title, diag, rows: [{ l, y }], cut }(y는 글 · 칩 윗변)

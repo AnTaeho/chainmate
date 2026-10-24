@@ -107,6 +107,11 @@ export function dots(ctx, x, y, w, h, col, step = 2, phase = 0) {
   for (let i = phase % step; i < h; i += step) { ctx.fillRect(x, y + i, 1, 1); ctx.fillRect(x + w - 1, y + i, 1, 1); }
 }
 
+// 둥근 빛 점(반짝이 · 불티 · 흩어지는 조각): 지름 d 상자(x, y)의 가운데
+export function dot(ctx, x, y, d, col) {
+  ctx.beginPath(); ctx.arc(x + d / 2, y + d / 2, d * 0.55, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill();
+}
+
 // 벡터 선(둥근 끝, 두께 t — 판 위 지나온 길처럼 계단지지 않아야 하는 선)
 export function seg(ctx, x0, y0, x1, y1, col, t = 1) {
   ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);

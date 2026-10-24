@@ -2,7 +2,7 @@
 import { richText } from './glossary.js';
 import { sheen } from './juice.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, rrect, text, frame, dots, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf } from '../render/gfx.js';
+import { box, rect, rrect, text, seg, dot, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
@@ -17,7 +17,7 @@ import { CHARTS, chartText } from '../data/charts.js';
 import { PIECE_NAME, PIECE_MOVE, FRAG_SOURCE } from './words.js';
 import { wrap, textGen } from '../render/text.js';
 import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
-import { shade, glow, flicker, unshaded } from '../render/light.js';
+import { shade, glow, flicker, unshaded, rpath } from '../render/light.js';
 import { live } from '../render/look.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
@@ -187,7 +187,7 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   if (legendary) {
     if (t) live();
     const k = Math.floor(t * 8) % 20;
-    if (k < 4) rect(ctx, x + 10 + k * 22, y + 2 + (k % 2) * 3, 1, 1, PAL.white);
+    if (k < 4) dot(ctx, x + 10 + k * 22, y + 2 + (k % 2) * 3, 1.4, PAL.white);
   }
   rarityTrim(ctx, info.rarity, x, y, w, h);
   editionShine(ctx, m.edition, x, y, w, h, t);
@@ -206,17 +206,23 @@ export function maximCard(ctx, m, x, y, w, h, { off = false, hot = false, lift =
   closeBox();
 }
 
+// 점선 둥근 테(드묾 등급 · 끌고 간 빈자리): 둥근 모서리를 따르는 짧은 줄
+export function dashRing(ctx, x, y, w, h, r, col) {
+  ctx.save();
+  rpath(ctx, x + 0.5, y + 0.5, w - 1, h - 1, Math.max(0, r - 0.5));
+  ctx.setLineDash([1.5, 1.5]); ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke();
+  ctx.restore();
+}
 // 등급별 테두리 무늬: 흔함 단색 · 드묾 점선 · 귀함 이중 테 · 전설 금박 모서리
 export function rarityTrim(ctx, rarity, x, y, w, h) {
   const col = RARITY[rarity] || PAL.dim, t = edgeW(w, h);
-  if (rarity === 'uncommon') dots(ctx, x + t, y + t, w - 2 * t, h - 2 * t, col, 2);
+  if (rarity === 'uncommon') dashRing(ctx, x + t, y + t, w - 2 * t, h - 2 * t, Math.max(0, radiusOf(w, h) - t), col);
   else if (rarity === 'rare') { edgeRing(ctx, x, y, w, h, t, col); if (h > 10) edgeRing(ctx, x, y, w, h, t + 2, col); }
   else if (rarity === 'legendary') {
+    // 금박 모서리: 둥근 모서리를 따라 휘는 금빛 꺾쇠(안쪽 짙은 금 한 겹)
     const n = Math.min(5, Math.floor(h / 3));
-    for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1], [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
-      for (let k = 0; k < n; k++) { rect(ctx, cx + sx * k, cy, 1, 1, k % 2 ? PAL.goldHi : PAL.gold); rect(ctx, cx, cy + sy * k, 1, 1, k % 2 ? PAL.goldHi : PAL.gold); }
-      rect(ctx, cx + sx, cy + sy, 1, 1, PAL.goldDk);
-    }
+    cornerTicks(ctx, x, y, w, h, PAL.gold, Math.max(1, n - 2));
+    cornerTicks(ctx, x + 1, y + 1, w - 2, h - 2, PAL.goldDk, Math.max(0, n - 4));
   }
 }
 
@@ -247,7 +253,7 @@ export function maximColumn(ctx, ui, run, x, y, w, hTotal, { idPrefix = 'maxim',
     const id = `${idPrefix}:${i}`;
     const r = ui.region(id, xx, yy, cw, h, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null, drag: drag ? true : false, onDrop: drag ? (mx, my) => drag(i, mx, my) : null });
     const dragging = ui.drag && ui.drag.region === r && ui.drag.moved;
-    if (dragging) { dots(ctx, xx, yy, cw, h, PAL.gold, 2); spots.push({ i, x: xx, y: yy, w: cw, h }); continue; }
+    if (dragging) { dashRing(ctx, xx, yy, cw, h, radiusOf(cw, h), PAL.gold); spots.push({ i, x: xx, y: yy, w: cw, h }); continue; }
     maximCard(ctx, m, xx, yy, cw, h, { narrow: cols === 2, off: offUids.includes(m.uid), hot: ui.isHover(id) || hotIndex === i, lift: ui.isHover(id) && (onClick || drag) ? 1 : 0, t: ui.time + i * 0.37 });
     spots.push({ i, x: xx, y: yy, w: cw, h });
   }
@@ -411,8 +417,10 @@ export function moneyText(ctx, n, x, y, align = 'left') {
 
 // 바꾸기 아이콘(돌아가는 화살)
 export function discardIcon(ctx, x, y, col) {
-  rect(ctx, x + 1, y, 5, 1, col); rect(ctx, x, y + 1, 1, 5, col); rect(ctx, x + 1, y + 6, 5, 1, col);
-  rect(ctx, x + 6, y + 4, 1, 2, col); rect(ctx, x + 5, y - 1, 1, 3, col); rect(ctx, x + 6, y, 1, 1, col);
+  // 벡터: 오른쪽 위가 트인 둥근 고리 + 끝의 화살촉(7 × 7)
+  ctx.beginPath(); ctx.arc(x + 3.5, y + 3.5, 2.9, -0.35 * Math.PI, 1.6 * Math.PI, false);
+  ctx.strokeStyle = col; ctx.lineWidth = 1.1; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 4.6, y - 0.6); ctx.lineTo(x + 7, y + 1.1); ctx.lineTo(x + 4.4, y + 2.2); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
 }
 
 // 패널: 모습의 상자 면 + 잉크 테 1 + 아래 그림자 2, 둥근 모서리(안 3 틀 문법 — layout.md 27절)
@@ -728,13 +736,13 @@ export function targetPanel(ctx, ui, run, what, p, x, y, w, { to = null, onConfi
     const old = lay.swap;
     ui.region(`${idPrefix}:swap`, x + P, y + P + 1, 22, 26, { tip: () => (what.kind === 'engraving' ? tipLines(`${engravingInfo(old).name} 각인`, engravingInfo(old).text) : tipLines(`${SOUL_BY_ID[old].name}의 혼`, SOUL_BY_ID[old].text)) });
     mark(old, x + P, y + P + 1);
-    for (let i = 0; i < 3; i++) { rect(ctx, x + P + 24 + i, y + P + 11 + i, 1, 1, PAL.gold); rect(ctx, x + P + 24 + i, y + P + 17 - i, 1, 1, PAL.gold); }
+    seg(ctx, x + P + 24, y + P + 11, x + P + 26.5, y + P + 14, PAL.gold, 1.2); seg(ctx, x + P + 26.5, y + P + 14, x + P + 24, y + P + 17, PAL.gold, 1.2);
     mark(what.id, x + P + 30, y + P + 1);
-    frame(ctx, x + P + 29, y + P, 24, 28, PAL.gold);
+    rframe(ctx, x + P + 29, y + P, 24, 28, radiusOf(24, 28), PAL.gold);
   } else if (p) {
     const after = lay.after;
     pieceCard(ctx, p, x + P, y + P, 20, 28, { tier: tierOf(chartLevel(run, p.t)), level: chartLevel(run, p.t) });
-    for (let i = 0; i < 3; i++) { rect(ctx, x + P + 24 + i, y + P + 11 + i, 1, 1, PAL.gold); rect(ctx, x + P + 24 + i, y + P + 17 - i, 1, 1, PAL.gold); }
+    seg(ctx, x + P + 24, y + P + 11, x + P + 26.5, y + P + 14, PAL.gold, 1.2); seg(ctx, x + P + 26.5, y + P + 14, x + P + 24, y + P + 17, PAL.gold, 1.2);
     pieceCard(ctx, after, x + P + 30, y + P, 20, 28, { tier: tierOf(chartLevel(run, after.t)), level: chartLevel(run, after.t), time: ui.time, selected: true });
   }
   for (const [l, ly] of lay.titles) text(ctx, l, x + lay.tx, y + ly, PAL.gold, { bold: true });
@@ -780,9 +788,7 @@ export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9, ste
     const n = (f.first ? 1 : 0) + (f.feat ? 1 : 0) + (f.gold ? 1 : 0);
     ui.region(`frag:${l.id}`, xx, y - 1, w - 1, 11, { tip: () => fragmentTip(run, l) });
     miniShard(ctx, xx, y + 2, ui.isHover(`frag:${l.id}`) ? PAL.goldHi : PAL.gold);
-    ctx.fillStyle = PAL.gold;
-    const DIG = { 1: ['010', '110', '010', '010', '111'], 2: ['110', '001', '010', '100', '111'], 3: ['110', '001', '010', '001', '110'] };
-    DIG[n].forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '1') ctx.fillRect(xx + 7 + i, y + 2 + j, 1, 1); });
+    digits(ctx, n, xx + 7, y + 2, PAL.gold);
     xx += w;
   }
   return list.length * w;

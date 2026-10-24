@@ -1,7 +1,7 @@
 // 전설 완성: 화면이 멈추고 → 그 명국의 마지막 수를 판 위에 다시 두고 → 금박 격언이 떨어져 여섯째 칸에 박힌다 + 전용 한 소절.
 // 누르거나 Enter면 끝 장면으로 건너뛴다.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, rframe, sprite, seg, radiusOf } from '../../render/gfx.js';
+import { W, H, text, box, rect, rframe, sprite, seg, radiusOf } from '../../render/gfx.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
@@ -97,7 +97,7 @@ export class LegendScreen {
       const pc = this.board(cur).get(moving[0]);
       const a = this.xy(moving[0]), b = this.xy(moving[1]);
       if (pc) mini(ctx, pc.t, pc.side, a.x + (b.x - a.x) * p, a.y + (b.y - a.y) * p);
-      if (p >= 1) frame(ctx, b.x, b.y, Q, Q, PAL.gold);
+      if (p >= 1) rframe(ctx, b.x, b.y, Q, Q, 3, PAL.gold);
     }
     if (done >= n && this.rp.end) {
       const mark = this.rp.end === 'mate' ? '#' : this.rp.end === 'check' ? '+' : '=Q';

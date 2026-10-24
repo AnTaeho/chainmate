@@ -4,7 +4,7 @@ import { sway, tiltHit } from '../sway.js';
 import { hint as coachHint } from '../coach.js';
 import { PAL, RARITY } from '../../render/palette.js';
 import { wrap } from '../../render/text.js';
-import { W, text, box, rect, rrect, measure, slot, radiusOf } from '../../render/gfx.js';
+import { W, text, box, rect, rrect, seg, dot, measure, slot, radiusOf } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
 import { unshaded, rpath } from '../../render/light.js';
 import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } from '../../sim/run.js';
@@ -88,7 +88,7 @@ export function growSparks(ctx, x, y, w, h, p) {
   ctx.globalAlpha = Math.max(0, a);
   for (let k = 0; k < 6; k++) {
     const sx = x + 2 + ((k * 7) % (w - 3)), sy = y + h - 4 - Math.round((p * 22 + (k % 3) * 5));
-    rect(ctx, sx, sy, 1, 2, k % 2 ? SEAL.chart[1] : PAL.white);
+    seg(ctx, sx + 0.5, sy + 0.5, sx + 0.5, sy + 1.5, k % 2 ? SEAL.chart[1] : PAL.white, 1);
   }
   ctx.globalAlpha = 1;
 }
@@ -102,7 +102,7 @@ export function growPillar(ctx, x, y, w, h, p) {
   ctx.globalAlpha = a;
   for (let k = 0; k < 6; k++) {
     const ang = k * 1.05 + p * 3, r = 4 + p * 14;
-    rect(ctx, Math.round(cx + Math.cos(ang) * r), Math.round(y + h / 2 + Math.sin(ang) * r * 0.8), 1, 1, PAL.goldHi);
+    dot(ctx, cx + Math.cos(ang) * r, y + h / 2 + Math.sin(ang) * r * 0.8, 1.4, PAL.goldHi);
   }
   ctx.globalAlpha = 1;
 }

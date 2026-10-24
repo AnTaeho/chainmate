@@ -3,11 +3,12 @@
 // 탭 · 아무 키면 닫히고, 앉은 뒤 2초면 저절로 닫힌다. 막간은 한 수 연출(seq) 밖이다. 뒤에는 왼쪽 칸에 불씨 아이콘이 남는다.
 // 판 상태는 읽기만 한다(기록은 규칙 run.js checkIgnite).
 import { PAL } from '../render/palette.js';
-import { text, rect, box, frame, line, sprite, num, short, measure, fine, W, H } from '../render/gfx.js';
+import { text, rect, rrect, rframe, box, seg, sprite, num, short, measure, fine, radiusOf, W, H } from '../render/gfx.js';
 import { glow } from '../render/light.js';
 import { openBox, closeBox, layerUp } from '../render/layoutlog.js';
 import { PAD_BOX, GAP_IN, GAP_GROUP, RIGHT, flow } from './frame.js';
 import { capRoute } from './fxroute.js';
+import { blitVec, shapePath } from '../render/vec.js';
 import { tipLines } from './parts.js';
 
 // 시간표(초): 길 긋기 0 ~ PATH, 카드 낙하 DROP ~ LAND, 앉은 뒤 STAY면 닫힘. 움직임 줄이기면 길 · 카드가 처음부터 다 보이고 STAY 뒤 닫힘
@@ -15,13 +16,15 @@ export const COMBO = { PATH: 0.9, DROP: 0.75, LAND: 1.0, STAY: 2.0 };
 export const comboLand = (calm) => (calm ? 0 : COMBO.LAND);
 export const comboClose = (calm) => comboLand(calm) + COMBO.STAY;
 
-// 불씨 아이콘 7 × 9(r 붉은 테 · g 금 · y 밝은 금) — 1배에서도 뭉개지지 않는 남는 표시
-const EMBER = ['...r...', '..rr...', '..rgr..', '.rggr.r', '.rgggrr', 'rggyggr', 'rgyyygr', 'rgyyygr', '.rrrrr.'];
-const EC = { r: PAL.red, g: PAL.gold, y: PAL.goldHi };
+// 불씨 아이콘 7 × 9: 붉은 테 불꽃 · 금 몸 · 밝은 금 속불(벡터 — 배율마다 한 번 굽는다)
 export const EMBER_W = 7, EMBER_H = 9;
-export function drawEmber(ctx, x, y) {
-  EMBER.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (EC[row[i]]) rect(ctx, x + i, y + j, 1, 1, EC[row[i]]); });
-}
+const FLAME = 'M3.5 0.3 C4.6 2 6.6 3.4 6.6 5.8 C6.6 7.6 5.2 8.7 3.5 8.7 C1.8 8.7 0.4 7.6 0.4 5.8 C0.4 4.2 1.6 3.4 2.2 2.2 C2.5 3.2 2.9 3.8 3.3 4 C3.2 2.8 3.2 1.4 3.5 0.3 Z';
+const CORE = 'M3.5 4.6 C4.2 5.5 5 6 5 7 C5 7.8 4.3 8.1 3.5 8.1 C2.7 8.1 2 7.8 2 7 C2 6 2.9 5.5 3.5 4.6 Z';
+const emberPaint = (g, k) => {
+  shapePath(g, FLAME); g.fillStyle = PAL.gold; g.fill(); g.strokeStyle = PAL.red; g.lineWidth = Math.max(0.9, 1 / k); g.lineJoin = 'round'; g.stroke();
+  shapePath(g, CORE); g.fillStyle = PAL.goldHi; g.fill();
+};
+export function drawEmber(ctx, x, y) { blitVec(ctx, 'ember', x, y, EMBER_W, EMBER_H, emberPaint); }
 // 가리키면 뜨는 짧은 말풍선: 「이 판의 콤비네이션」 + 「N 먹음 · 점수」(제목 줄과 한 줄 — 좁은 왼쪽 칸에서 「N 먹음」이 끊기지 않게)
 export const IGNITE_TITLE = '이 판의 콤비네이션';
 export const igniteLine = (ig) => `${ig.captures} 잡음 · ${num(ig.score)}`;
@@ -42,15 +45,15 @@ function capPts(c, ctr) {
   return { dotted: false, pts: capRoute(c).pts.map(ctr) };
 }
 const segLen = (pts) => { let n = 0; for (let i = 0; i + 1 < pts.length; i++) n += Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y); return n; };
-function thick(ctx, x0, y0, x1, y1, col) { line(ctx, x0, y0, x1, y1, col); line(ctx, x0 + 1, y0, x1 + 1, y1, col); line(ctx, x0, y0 + 1, x1, y1 + 1, col); }
 // 길을 q(0 ~ 1)만큼 긋는다
 function drawRoute(ctx, r, q) {
   let left = segLen(r.pts) * q;
   for (let i = 0; i + 1 < r.pts.length && left > 0; i++) {
     const a = r.pts[i], b = r.pts[i + 1], len = Math.hypot(b.x - a.x, b.y - a.y), k = Math.min(1, left / Math.max(1, len));
     const ex = a.x + (b.x - a.x) * k, ey = a.y + (b.y - a.y) * k;
-    if (r.dotted) { const n = Math.max(1, Math.floor((len * k) / 4)); for (let j = 0; j <= n; j += 2) { const u = j / n; rect(ctx, Math.round(a.x + (ex - a.x) * u), Math.round(a.y + (ey - a.y) * u), 2, 2, PAL.gold); } }
-    else thick(ctx, a.x, a.y, ex, ey, PAL.gold);
+    // 제자리 쏘기는 둥근 점 줄, 움직인 길은 굵은 벡터 선(둥근 끝)
+    if (r.dotted) { const n = Math.max(1, Math.floor((len * k) / 4)); for (let j = 0; j <= n; j += 2) { const u = j / n; ctx.beginPath(); ctx.arc(a.x + (ex - a.x) * u + 0.5, a.y + (ey - a.y) * u + 0.5, 1.1, 0, Math.PI * 2); ctx.fillStyle = PAL.gold; ctx.fill(); } }
+    else seg(ctx, a.x + 0.5, a.y + 0.5, ex + 0.5, ey + 0.5, PAL.gold, 2);
     left -= len;
   }
 }
@@ -95,10 +98,10 @@ export function drawCombo(ctx, g, { BX, BY, S, center }) {
     if (q > 0) drawRoute(ctx, capPts(c, ctr), q);
     if (q >= 1) marks.push({ sq: c.to, i: i + 1 });
   });
-  { const p = center(ig.drop); frame(ctx, p.x - 5, p.y - 5, 10, 10, PAL.goldHi, 2); }
+  { const p = center(ig.drop); rframe(ctx, p.x - 5, p.y - 5, 10, 10, 3, PAL.goldHi, 2); }
   for (const m of marks) {
     const p = center(m.sq);
-    rect(ctx, p.x - 3, p.y - 3, 6, 6, PAL.goldDk); rect(ctx, p.x - 2, p.y - 2, 4, 4, PAL.goldHi);
+    rrect(ctx, p.x - 3, p.y - 3, 6, 6, 3, PAL.goldDk); rrect(ctx, p.x - 2, p.y - 2, 4, 4, 2, PAL.goldHi);
     text(ctx, String(m.i), p.x - 11, p.y - 12, PAL.goldHi, { bold: true, shadow: PAL.shadow });
   }
   closeBox();
@@ -110,9 +113,8 @@ export function drawCombo(ctx, g, { BX, BY, S, center }) {
   const y1 = Math.round(BY + (W8 - L.CH) / 2), cy = Math.round(y1 - (1 - k * k) * 160);
   const draw = () => {
     openBox('panel', cx, cy, L.CW, L.CH, L.P, { name: '콤비네이션', loose: k < 1 });
-    rect(ctx, cx + 2, cy + 3, L.CW, L.CH, PAL.shadow);
     box(ctx, cx, cy, L.CW, L.CH, PAL.card, PAL.goldDk);
-    frame(ctx, cx + 2, cy + 2, L.CW - 4, L.CH - 4, PAL.gold);
+    rframe(ctx, cx + 2, cy + 2, L.CW - 4, L.CH - 4, radiusOf(L.CW, L.CH) - 2, PAL.gold);
     text(ctx, '이 판의', cx + L.P, cy + L.kick, PAL.cardDim);
     text(ctx, '콤비네이션', cx + L.P, cy + L.title, PAL.goldDk, { bold: true });
     // 거쳐 간 모습(앞에서 넷, 넘치면 「+N」)

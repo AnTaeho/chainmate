@@ -8,7 +8,7 @@ import { FACTION_BY_ID, FACTIONS } from '../data/factions.js';
 import { createRun, applyRun, migrateRun } from '../sim/run.js';
 import { createDailyRun } from '../sim/daily.js';
 import { PAL, setTheme, addLook, lightFill } from '../render/palette.js';
-import { W, H, text, box, rect, lift, fine, measure } from '../render/gfx.js';
+import { W, H, text, box, rect, dot, lift, fine, measure } from '../render/gfx.js';
 import { wrap, textGen } from '../render/text.js';
 import { LINE, BTN_S, LIST_GAP, inkY } from './frame.js';
 import { UI, tooltip, bigTooltip, tipHeight, tipTexts, fingerDots } from './ui.js';
@@ -358,10 +358,10 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
         const k = Math.min(1, e.t / 0.75);
         const q = k * k * (3 - 2 * k);
         const x = x0 + (x1 - x0) * q, y = y0 + (y1 - y0) * q - Math.sin(q * Math.PI) * 40;
-        for (let i = 1; i <= 4; i++) { const qq = Math.max(0, q - i * 0.04); c.globalAlpha = 0.5 - i * 0.1; rect(c, x0 + (x1 - x0) * qq, y0 + (y1 - y0) * qq - Math.sin(qq * Math.PI) * 40 + 2, 2, 2, PAL.goldHi); }
+        for (let i = 1; i <= 4; i++) { const qq = Math.max(0, q - i * 0.04); c.globalAlpha = 0.5 - i * 0.1; dot(c, x0 + (x1 - x0) * qq, y0 + (y1 - y0) * qq - Math.sin(qq * Math.PI) * 40 + 2, 2, PAL.goldHi); }
         c.globalAlpha = k >= 1 ? Math.max(0, 1 - (e.t - 0.75) / 0.15) : 1;
         miniShard(c, x - 2, y - 2);
-        if (k >= 1) { const r = (e.t - 0.75) * 60; for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; rect(c, x1 + Math.cos(a) * r, y1 + Math.sin(a) * r, 1, 1, PAL.goldHi); } }
+        if (k >= 1) { const r = (e.t - 0.75) * 60; for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; dot(c, x1 + Math.cos(a) * r, y1 + Math.sin(a) * r, 1.4, PAL.goldHi); } }
         c.globalAlpha = 1;
       },
     });

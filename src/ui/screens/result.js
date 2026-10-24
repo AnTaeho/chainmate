@@ -3,7 +3,7 @@
 // 해금(CHM-73, layout.md 26절): 다음 묶음까지의 막대 + 남은 관 한 줄, 이번 판에 묶음이 열렸으면 금빛 「N개 열렸어요」 단추(해금 화면이 그 묶음을 펼친 채 열린다).
 // quiet: 순위 화면에서 돌아올 때 — 소리를 다시 내지 않는다
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, rrect, sprite, num, short, fitNum, seg as line, measure, fine } from '../../render/gfx.js';
+import { W, H, text, box, rect, rframe, rrect, sprite, num, short, fitNum, seg as line, measure, fine } from '../../render/gfx.js';
 import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { button } from '../ui.js';
@@ -79,7 +79,7 @@ export class ResultScreen {
     const poly = (pts, col) => { for (let i = 0; i + 1 < pts.length; i++) { const a = mid(pts[i]), b = mid(pts[i + 1]); line(ctx, a.x, a.y, b.x, b.y, col); } };
     // 지나온 길(꺾인 길은 꺾은 칸을 거쳐) · 제자리 쏘기는 점선 대신 짧은 화살 줄
     for (const pts of st.trail) poly(pts, PAL.gold);
-    for (const [a0, b0] of st.shots) { const a = mid(a0), b = mid(b0); line(ctx, a.x, a.y, b.x, b.y, PAL.goldDk); frame(ctx, this.xy(b0).x, this.xy(b0).y, Q, Q, PAL.goldDk); }
+    for (const [a0, b0] of st.shots) { const a = mid(a0), b = mid(b0); line(ctx, a.x, a.y, b.x, b.y, PAL.goldDk); rframe(ctx, this.xy(b0).x, this.xy(b0).y, Q, Q, 3, PAL.goldDk); }
     let { x, y } = this.xy(st.pos);
     let moving = false;
     const cur = st.cur, rt = st.route;
@@ -103,7 +103,7 @@ export class ResultScreen {
     if (moving) fine(() => sprite(ctx, st.form, 'w', x, y - 6)); else sprite(ctx, st.form, 'w', x, y - 6);
     if (done >= n) {
       const e = this.xy(st.pos);
-      frame(ctx, e.x, e.y, Q, Q, r.reason === 'cut' ? PAL.red : PAL.gold);
+      rframe(ctx, e.x, e.y, Q, Q, 3, r.reason === 'cut' ? PAL.red : PAL.gold);
     }
   }
 

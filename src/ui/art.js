@@ -3,7 +3,7 @@
 // 격언 · 전설: 가족 빛깔 상자 + 가족 모양(밝은 그림자) + 문양(emblems.js). 각인 · 혼 · 전술 · 조각 · 도박 · 깨우기는 제 물건 그림.
 import { PAL } from '../render/palette.js';
 import { live } from '../render/look.js';
-import { rect } from '../render/gfx.js';
+import { rect, dot } from '../render/gfx.js';
 import { tierOf } from '../render/sprites.js';
 import { fitPiece } from '../render/pieces3.js';
 import { INK, blitVec } from '../render/vec.js';
@@ -196,8 +196,8 @@ export function itemArt(ctx, it, x, y, t = 0, run = null, { w = artW(it), h = AR
   // 움직이는 것은 정수 칸에: 혼의 도는 점 셋 · 깨우기의 귀 반짝임
   const cx = x + w / 2, cy = y + h / 2;
   if ((it.kind === 'soul' || it.kind === 'awaken') && t) live();
-  if (it.kind === 'soul') for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 6.5 - 1), Math.round(cy + Math.sin(q) * 6.5 - 1), 2, 2, PAL.white); }
-  if (it.kind === 'awaken') { const k = Math.floor(t * 4) % 2; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (!(((sx + sy) / 2 + k) & 1)) rect(ctx, cx + (sx > 0 ? 7 : -8), cy + (sy > 0 ? 7 : -8), 1, 1, PAL.goldHi); }
+  if (it.kind === 'soul') for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; dot(ctx, cx + Math.cos(q) * 6.5 - 1, cy + Math.sin(q) * 6.5 - 1, 2, PAL.white); }
+  if (it.kind === 'awaken') { const k = Math.floor(t * 4) % 2; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (!(((sx + sy) / 2 + k) & 1)) dot(ctx, cx + (sx > 0 ? 7 : -8) - 0.2, cy + (sy > 0 ? 7 : -8) - 0.2, 1.4, PAL.goldHi); }
   return w;
 }
 // 격언 칸 · 도감 칸의 작은 그림 칸(20 × 22): 진열 카드와 같은 그림

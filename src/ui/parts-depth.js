@@ -1,7 +1,7 @@
 // 깊이 층의 화면 조각: 시너지(옛 가족) 문양 · 칩 · 띠(켜진 시너지와 다음 문턱) · 문턱을 넘는 순간.
 import { PAL } from '../render/palette.js';
 import { live } from '../render/look.js';
-import { rect, text, box, frame, measure } from '../render/gfx.js';
+import { rrect, rframe, radiusOf, text, box, measure } from '../render/gfx.js';
 import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf, setName } from '../data/families.js';
 import { tipLines, optLine } from './parts.js';
 import { L } from './lang.js';
@@ -10,6 +10,7 @@ import { TRAIT_BY_ID } from '../data/traits.js';
 import { wrap } from '../render/text.js';
 import { CHIP_H, CHIP_ROW, FAM_H, FAM_ROW, CHIP_PAD, LIST_GAP, INK_H, inkY } from './frame.js';
 import { openBox, closeBox, logClip } from '../render/layoutlog.js';
+import { blitVec } from '../render/vec.js';
 
 // 5×5 문양
 const GLYPH = {
@@ -28,12 +29,31 @@ export function familyGlyph(ctx, id, x, y, col = null, scale = 1) {
   const rows = GLYPH[id];
   if (!rows) return;
   const c = col || FAMILY_BY_ID[id].col;
-  rows.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === '#') rect(ctx, x + i * scale, y + j * scale, scale, scale, c); });
+  blitVec(ctx, `fam:${id}:${c}`, x, y, 5 * scale, 5 * scale, maskPaint(rows, c, scale));
+}
+// 5×5 문양을 벡터로: 칸 가운데를 이웃 칸과 둥근 끝 선으로 잇고(대각선은 곧은 이웃이 없을 때만) 칸마다 둥근 점 — 도트 네모 대신 굵은 붓 그림
+export function maskPaint(rows, col, scale = 1) {
+  return (g) => {
+    const on = (i, j) => rows[j] && rows[j][i] === '#';
+    g.scale(scale, scale);
+    g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.15; g.lineCap = 'round';
+    g.beginPath();
+    for (let j = 0; j < rows.length; j++) for (let i = 0; i < 5; i++) {
+      if (!on(i, j)) continue;
+      const link = (di, dj) => { g.moveTo(i + 0.5, j + 0.5); g.lineTo(i + di + 0.5, j + dj + 0.5); };
+      if (on(i + 1, j)) link(1, 0);
+      if (on(i, j + 1)) link(0, 1);
+      if (on(i + 1, j + 1) && !on(i + 1, j) && !on(i, j + 1)) link(1, 1);
+      if (on(i - 1, j + 1) && !on(i - 1, j) && !on(i, j + 1)) link(-1, 1);
+    }
+    g.stroke();
+    for (let j = 0; j < rows.length; j++) for (let i = 0; i < 5; i++) if (on(i, j)) { g.beginPath(); g.arc(i + 0.5, j + 0.5, 0.6, 0, Math.PI * 2); g.fill(); }
+  };
 }
 // 문양 여럿을 나란히(상점 카드 귀퉁이)
 export function familyGlyphs(ctx, ids, x, y, { dark = true } = {}) {
   ids.forEach((id, k) => {
-    if (dark) rect(ctx, x + k * 8 - 1, y - 1, 7, 7, PAL.felt);
+    if (dark) rrect(ctx, x + k * 8 - 1, y - 1, 7, 7, 2, PAL.felt);
     familyGlyph(ctx, id, x + k * 8, y);
   });
 }
@@ -69,12 +89,12 @@ function moreMark(ctx, ui, idPrefix, hidden, n, x, y) {
 
 // 시너지 칩: 어두운 칸 안에 문양 + 「기사 +1」(카드가 시너지를 몇 개 채우는지). 너비를 돌려준다
 export const chipLabel = (id, add = 1) => `${FAMILY_BY_ID[id].name} +${add}`;
-// 칩(칠한 바탕 CHIP_H, 테 없음): 안 가로 여백 CHIP_PAD → 문양(5) → 3 → 글 → CHIP_PAD. 글은 위아래 EDGE_PAD 안(잉크 11 가운데)
+// 칩(칠한 둥근 바탕 CHIP_H, 테 없음): 안 가로 여백 CHIP_PAD → 문양(5) → 3 → 글 → CHIP_PAD. 글은 위아래 EDGE_PAD 안(잉크 11 가운데)
 export const chipW = (id) => CHIP_PAD + 5 + 3 + measure(chipLabel(id)) + CHIP_PAD;
 export function familyChip(ctx, id, x, y) {
   const w = chipW(id);
   openBox('edge', x, y, w, CHIP_H, 0, { name: `칩 ${id}` });
-  rect(ctx, x, y, w, CHIP_H, PAL.felt);
+  rrect(ctx, x, y, w, CHIP_H, Math.min(5, CHIP_H >> 1), PAL.felt);
   familyGlyph(ctx, id, x + CHIP_PAD, y + ((CHIP_H - 5) >> 1));
   text(ctx, chipLabel(id), x + CHIP_PAD + 8, inkY(y, CHIP_H), PAL.ink);
   closeBox();
@@ -155,8 +175,9 @@ export function familyStrip(ctx, ui, build, x, y, w, { time = 0, fx = null, max 
     openBox('edge', cx, cy, cw, FAM_H, 1, { name: `띠 ${f.id}` });
     box(ctx, cx, cy, cw, FAM_H, lv ? PAL.well : PAL.feltDk, lv ? f.col : PAL.frameDk);
     if (glow > 0) {
-      ctx.globalAlpha = glow * 0.6; rect(ctx, cx - 2, cy - 2, cw + 4, FAM_H + 4, f.col); ctx.globalAlpha = 1;
-      frame(ctx, cx - 1 - Math.round(glow * 2), cy - 1 - Math.round(glow * 2), cw + 2 + Math.round(glow * 4), FAM_H + 2 + Math.round(glow * 4), PAL.goldHi);
+      const g = Math.round(glow * 2);
+      ctx.globalAlpha = glow * 0.6; rrect(ctx, cx - 2, cy - 2, cw + 4, FAM_H + 4, radiusOf(cw + 4, FAM_H + 4), f.col); ctx.globalAlpha = 1;
+      rframe(ctx, cx - 1 - g, cy - 1 - g, cw + 2 + g * 2, FAM_H + 2 + g * 2, radiusOf(cw, FAM_H) + 1 + g, PAL.goldHi);
     }
     if (glyph) familyGlyph(ctx, f.id, cx + CHIP_PAD, cy + ((FAM_H - 5) >> 1), lv ? f.col : PAL.dim);
     text(ctx, labelOf(f), cx + CHIP_PAD + (glyph ? 8 : 0), inkY(cy, FAM_H), lv ? PAL.ink : PAL.dim);
@@ -188,7 +209,7 @@ export function familyList(ctx, ui, build, x, y, w, maxRows, { time = 0, fx = nu
     if (since < 1.2) live();
     openBox('edge', x, yy, w, FAM_H, 1, { name: `시너지 줄 ${f.id}` });
     box(ctx, x, yy, w, FAM_H, lv ? PAL.well : PAL.feltDk, ui.isHover(id) ? PAL.gold : lv ? f.col : PAL.frameDk);
-    if (glow > 0) { ctx.globalAlpha = glow * 0.6; rect(ctx, x - 2, yy - 2, w + 4, FAM_H + 4, f.col); ctx.globalAlpha = 1; }
+    if (glow > 0) { ctx.globalAlpha = glow * 0.6; rrect(ctx, x - 2, yy - 2, w + 4, FAM_H + 4, radiusOf(w + 4, FAM_H + 4), f.col); ctx.globalAlpha = 1; }
     familyGlyph(ctx, f.id, x + CHIP_PAD, yy + ((FAM_H - 5) >> 1), lv ? f.col : PAL.dim);
     const cnt = next ? `${n[f.id]}/${next}` : `${n[f.id]}`;
     const nx = x + CHIP_PAD + 8, room = w - CHIP_PAD * 2 - 8 - measure(cnt) - 4;
@@ -223,7 +244,7 @@ export function josekiBadges(ctx, ui, run, x, y) {
     ui.region(`joseki:${id}`, bx, y, 11, 11, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [{ chips: j.families }] : []) });
     box(ctx, bx, y, 11, 11, PAL.well, TIER_COL[j.tier]);
     if (j.families[0]) familyGlyph(ctx, j.families[0], bx + 3, y + 3, TIER_COL[j.tier]);
-    else rect(ctx, bx + 4, y + 4, 3, 3, TIER_COL[j.tier]);
+    else rrect(ctx, bx + 4, y + 4, 3, 3, 1.5, TIER_COL[j.tier]);
   });
   return (run.josekis || []).length * 12;
 }
@@ -240,6 +261,6 @@ export function traitMark(ctx, id, x, y) {
   const rows = TRAIT_GLYPH[id];
   const tr = TRAIT_BY_ID[id];
   if (!rows || !tr) return;
-  rect(ctx, x - 1, y - 1, 7, 7, PAL.deep);
-  rows.forEach((r, j) => { for (let i = 0; i < 5; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, tr.col); });
+  rrect(ctx, x - 1, y - 1, 7, 7, 2, PAL.deep);
+  blitVec(ctx, `trait:${id}:${tr.col}`, x, y, 5, 5, maskPaint(rows, tr.col));
 }

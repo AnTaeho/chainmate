@@ -6,7 +6,7 @@ import { makeCanvas, context } from './surface.js';
 import { fitPiece, fitAt, pieceMask, drawMask, pieceCanvas, scaleOf } from './pieces3.js';
 import { INK, bake } from './vec.js';
 import { LOOK, snap } from './look.js';
-import { rect, text, fine, measure } from './gfx.js';
+import { rect, dot, text, fine, measure } from './gfx.js';
 import { PAL } from './palette.js';
 import { openBox, closeBox } from './layoutlog.js';
 
@@ -221,11 +221,11 @@ export function drawSky(g, st, sc = skyScale(), keep = null) {
       rim(g, sc, e.t, ENEMY_RIM, e.x, e.y, 0.55);
       piece(g, sc, e.t, 'b', e.x, e.y);
     }
-    // 지나온 길: 4도트마다 금빛 점
+    // 지나온 길: 4칸마다 둥근 금빛 점
     g.globalAlpha = 0.45;
     for (const [x0, y0, x1, y1] of st.trail) {
       const L = Math.hypot(x1 - x0, y1 - y0), n = Math.max(1, L / 4);
-      for (let i = 0; i <= L / 4; i++) { const f = i / n; rect(g, x0 + (x1 - x0) * f + 10 * z, y0 + (y1 - y0) * f + 16 * z, 1, 1, PAL.gold); }
+      for (let i = 0; i <= L / 4; i++) { const f = i / n; dot(g, x0 + (x1 - x0) * f + 10 * z - 0.2, y0 + (y1 - y0) * f + 16 * z - 0.2, 1.4, PAL.gold); }
     }
     g.globalAlpha = 1;
     const h = st.hero;
