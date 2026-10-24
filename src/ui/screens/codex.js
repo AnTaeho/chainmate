@@ -15,7 +15,7 @@ import { tipLines, miniShard, moveTip, cardBase, wrapName, drawName, fragmentSte
 import { SOULS, soulPrice } from '../../data/souls.js';
 import { L } from '../lang.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
-import { pageHead, pageButtons, tabRow } from './common.js';
+import { pageHead, pageButtons, tabRow, headW, HEAD_BIG } from './common.js';
 import { PAGE, PAD_CARD, LIST_GAP, GAP_GROUP, LINE, textY, rowBoxH, BTN_S } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { lockTier, lockIcon } from '../unlockview.js';
@@ -76,11 +76,13 @@ export class CodexScreen {
   // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
   animating() { return false; }
   draw(ctx, ui) {
-    pageHead(ctx, '도감');
-    // 탭은 제목 오른쪽부터(영어 제목이 길어도 겹치지 않게)
-    const tx0 = Math.max(44, PAGE.titleX + measure('도감', true) + 8);
+    // 큰 제목 오른쪽 가운데 줄에 탭. 탭이 다 안 들어가면(영어 — 큰 「Almanac」 + 탭 일곱) 작은 제목 · 윗줄 탭(옛 머리줄)
+    const tabsW = TABS.reduce((n, [, label]) => n + Math.max(44, measure(label, true) + 8) + 4, -4);
+    const big = PAGE.titleX + headW('도감') + 10 + tabsW <= W - PAGE.titleX;
+    pageHead(ctx, '도감', null, { big });
+    const tx0 = big ? PAGE.titleX + headW('도감') + 10 : Math.max(44, PAGE.titleX + measure('도감', true) + 8);
     // 탭 폭은 이름마다 글에 맞춘다(common.js tabRow — 영어 「Masters」 · 「Opening」이 테에 붙지 않고 오른쪽 모은 수에 닿지 않게)
-    const tabEnd = tabRow(ctx, ui, 'codex', TABS, this.tab, tx0, 5, BTN_S, (id) => { this.tab = id; this.page = 0; this.app.sfx('pick'); });
+    const tabEnd = tabRow(ctx, ui, 'codex', TABS, this.tab, tx0, big ? HEAD_BIG.mid - (BTN_S >> 1) : 5, BTN_S, (id) => { this.tab = id; this.page = 0; this.app.sfx('pick'); });
     const list = this.entries();
     // 잠긴 칸: 아직 안 연 묶음의 것이고 본 적도 없다(특수 기물은 행마 보기에서 만난 적이 없다)
     const tier = this.app.records.unlockTier || 0, met = this.app.records.movesSeen || {};
@@ -91,7 +93,7 @@ export class CodexScreen {
     const seen = list.filter((e) => e.seen).length;
     // 모은 수: 머리줄 오른쪽. 탭이 거기까지 차면(영어 — 탭 일곱) 맨 아래 「돌아가기」 오른쪽으로
     const count = `${seen} / ${list.length}`;
-    if (tabEnd + 8 + measure(count) <= W - PAGE.titleX) text(ctx, count, W - PAGE.titleX, PAGE.titleY, PAL.dim, { align: 'right' });
+    if (tabEnd + 8 + measure(count) <= W - PAGE.titleX) text(ctx, count, W - PAGE.titleX, big ? HEAD_BIG.mid - 5 : PAGE.titleY, PAL.dim, { align: 'right' });
     else text(ctx, count, PAGE.titleX + 80 + 8 + UNLOCK_BTN + 8, PAGE.btnY + 3, PAL.dim);
     // 칸 이름은 두 줄까지(낱말 단위). 한 줄(row)의 높이는 그 줄에서 가장 긴 이름에 맞추고, 쪽은 본 칸(머리줄 아래 ~ 단추 줄 위 묶음 틈)에 들어가는 줄까지
     const lay = codexLayout(this.tab, list);

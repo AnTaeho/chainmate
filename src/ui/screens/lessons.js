@@ -130,7 +130,7 @@ export class LessonsScreen {
     const app = this.app, seen = seenOf(app);
     if (this.terms) return this.drawTerms(ctx, ui);
     const done = LESSONS.filter((L) => seen[L.id]).length, next = nextLesson(app);
-    pageHead(ctx, '튜토리얼', `${done}/${LESSONS.length}`);
+    pageHead(ctx, '튜토리얼', `${done}/${LESSONS.length}`, { big: true });
     const colW = 140, x0 = Math.floor((W - colW * 3 - 16) / 2);
     // 장 칸 쌓기: 장 이름(제목 줄) → 묶음 틈 → 수업 단추들(사이 GAP_GROUP) — 세 칸은 가장 긴 칸의 높이
     const groups = LESSON_GROUPS.map((g) => LESSONS.map((L, i) => ({ L, i })).filter((o) => o.L.group === g.id));
@@ -189,7 +189,7 @@ export class LessonsScreen {
   // 낱말 풀이: 카드 옆 낱말 상자와 같은 표(glossary.js TERMS)를 묶음 탭(대국 · 판 · 물건 · 모음)과 쪽으로
   drawTerms(ctx, ui) {
     // 판 밖 틀: 머리줄(제목 · 탭) + 본 칸 + 맨 아래 단추 줄(돌아가기 왼쪽 · 쪽 넘기기 오른쪽)
-    pageHead(ctx, '용어 사전');
+    pageHead(ctx, '용어 사전', null, { big: true });
     const tab = this.termTab || 'battle';
     const tw = 62;
     TERM_GROUPS.forEach(([id, name], k) => {
