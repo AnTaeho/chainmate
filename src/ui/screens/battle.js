@@ -2244,13 +2244,14 @@ export class BattleScreen {
     }
   }
   // 격언 칸(대국): 그림만 한 줄에 다섯(이름 · 효과 · 판본 · 잠듦은 가리키면 왼쪽 칸 설명에). 빈 칸은 빈 자리
-  // 격언 수(「격언 2/5」): 시너지 띠 줄 오른쪽 끝, 띠가 쓰고 남은 자리에 들어갈 때만(안 들어가면 「2/5」, 그래도 안 되면 뺀다)
+  // 격언 수(「격언 2/5」): 시너지 띠 줄 오른쪽 끝, 띠가 쓰고 남은 자리에 들어갈 때만
   maximCountLabel(ctx, ui, lay) {
     const run = this.run, n = maximCount(run), cap = maximCapacity(run);
     const used = ui.regions.filter((r) => r.id.startsWith('fam:') && r.y === lay.stripY).reduce((u, r) => Math.max(u, r.x + r.w), RX - 6);
     const room = RX + RW - (used + 6);
-    const s = [`격언 ${n}/${cap}`, `${n}/${cap}`].find((q) => measure(q) <= room);
-    if (!s) return;
+    // 「2/5」만 남기면 띠 끝 「+N」 · 시너지 칩 「4/6」과 섞여 읽혀서 이름까지 들어갈 때만
+    const s = `격언 ${n}/${cap}`;
+    if (measure(s) > room) return;
     const x = RX + RW - measure(s);
     ui.region('maxims:count', x, lay.stripY, measure(s), FAM_H, { tip: () => tipLines('격언', [`격언 칸 ${cap}개 중 ${n}개를 채웠어요`]) });
     text(ctx, s, RX + RW, inkY(lay.stripY, FAM_H), n >= cap ? PAL.gold : PAL.dim, { align: 'right' });
