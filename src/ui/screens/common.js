@@ -14,6 +14,7 @@ import { L as L_ } from '../lang.js';
 import { emberMark } from '../ignite.js';
 import { moneyShake } from '../juice.js';
 import { glowText } from '../../render/light.js';
+import { blitVec } from '../../render/vec.js';
 
 // 세력 빛깔을 짙은 판넬 위 글자로 읽히게 조금 밝힌다
 export function lightHue(hex, k = 0.25) {
@@ -114,10 +115,21 @@ export function drawFoot(ctx, ui, rows, name = '아래 칸') {
 const familyCount = (run) => Object.values(familyCounts(run)).filter((n) => n > 0).length;
 // 판 틀의 왼쪽 칸(대국 말고): 머리 칸(관 · 화면 이름) · 짜임 칸(시너지 · 정석) · 아래 칸(상금 · 덱).
 // 모두 가리키면 말풍선이 뜨는 것뿐이고 누를 것은 없다 — 이 칸이 판 틀의 설명 자리다(placement.js 'side').
-// 시계(밤샘 2 D1): 판의 목숨. 칸마다 작은 시계 판(9×9) — 남은 칸은 상아 판에 먹 바늘, 잃은 칸은 어둡게 꺼진다.
-// 잃는 순간(app.clockFx)에는 그 칸이 붉게 깜빡이며 금이 간다. 오른쪽 끝(x2)에 붙인다.
-// 시안(docs/shots/night2/draft-*): 1 시계 판(고름) · 2 숫자 「2 / 3」 · 3 수 · 희생(옛 버리기)과 같은 네모 구슬
-const DIAL = ['..#####..', '.#.....#.', '#...#...#', '#...#...#', '#...##..#', '#.......#', '#.......#', '.#.....#.', '..#####..'];
+// 시계(밤샘 2 D1): 판의 목숨. 칸마다 작은 둥근 시계 판(9×9 — 안 3 시안의 크림 판 · 잉크 테 · 바늘 둘), 잃은 칸은 빈 자리 빛깔로 꺼진다.
+// 잃는 순간(app.clockFx)에는 그 칸이 붉게 깜빡이며 금이 간다. 오른쪽 끝(x2)에 붙인다. 모양마다 한 번 굽는다(vec.js blitVec)
+const DIAL_FACE = { alive: [PAL.card, PAL.frameDk], lost: [PAL.slot, PAL.slotEdge], blink: [PAL.red, PAL.redDk] };
+function dialPaint(state, crack) {
+  return (g, k) => {
+    const [face, rim] = DIAL_FACE[state], lw = Math.max(1, 1 / k);
+    g.beginPath(); g.arc(4.5, 4.5, 4.5, 0, Math.PI * 2); g.fillStyle = rim; g.fill();
+    g.beginPath(); g.arc(4.5, 4.5, 4.5 - lw, 0, Math.PI * 2); g.fillStyle = face; g.fill();
+    if (state !== 'lost') {
+      g.strokeStyle = state === 'blink' ? PAL.white : PAL.frameDk; g.lineWidth = Math.max(1 / k, 0.9); g.lineCap = 'round';
+      g.beginPath(); g.moveTo(4.5, 2); g.lineTo(4.5, 4.5); g.lineTo(6.6, 4.5); g.stroke();
+    }
+    if (crack) { g.strokeStyle = PAL.red; g.lineWidth = Math.max(1 / k, 0.8); g.lineJoin = 'round'; g.beginPath(); g.moveTo(2, 1.6); g.lineTo(3.6, 3.8); g.lineTo(3, 5); g.lineTo(5.6, 7.6); g.stroke(); }
+  };
+}
 export function clockPips(ctx, run, x2, ty, time = 0, fx = null) {
   const max = run.clockMax || run.clock || 0;
   const step = 11;
@@ -127,15 +139,9 @@ export function clockPips(ctx, run, x2, ty, time = 0, fx = null) {
     const breaking = fx && fx.idx === i && fx.t < 2.0;
     if (breaking) live();
     const blink = breaking && Math.floor(fx.t * 10) % 2;
-    const rim = blink ? PAL.red : alive ? PAL.goldDk : PAL.frame;
-    const face = blink ? PAL.redDk : alive ? PAL.ink : PAL.feltDk;
-    DIAL.forEach((row, j) => { for (let k = 0; k < 9; k++) {
-      const inside = j > 0 && j < 8 && k > 0 && k < 8 && !(row[k] === '#' && (j === 0 || j === 8 || k === 0 || k === 8));
-      if ((j === 0 || j === 8 || k === 0 || k === 8 || (j === 1 && (k === 1 || k === 7)) || (j === 7 && (k === 1 || k === 7))) && row[k] === '#') rect(ctx, x + k, y + j, 1, 1, rim);
-      else if (inside && row[k] === '#') rect(ctx, x + k, y + j, 1, 1, alive || breaking ? PAL.frameDk : PAL.frame);
-      else if (inside && row[k] === '.' && !((j === 1 || j === 7) && (k === 1 || k === 7))) rect(ctx, x + k, y + j, 1, 1, face);
-    } });
-    if (breaking && fx.t > 0.5) { rect(ctx, x + 2, y + 2, 1, 1, PAL.red); rect(ctx, x + 3, y + 3, 1, 1, PAL.red); rect(ctx, x + 5, y + 5, 1, 1, PAL.red); rect(ctx, x + 6, y + 6, 1, 1, PAL.red); }
+    const state = blink ? 'blink' : alive || breaking ? 'alive' : 'lost';
+    const crack = !!(breaking && fx.t > 0.5);
+    blitVec(ctx, `dial:${state}:${crack ? 1 : 0}:${DIAL_FACE[state].join()}`, x, y, 9, 9, dialPaint(state, crack));
   }
 }
 export const clockTip = (run) => tipLines('시계', [`${run.clock} / ${run.clockMax || run.clock}`, '대국을 지면 한 칸을 잃고 다음 대국으로 가요', '다 잃으면 판이 끝나요']);
