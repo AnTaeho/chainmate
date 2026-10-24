@@ -32,8 +32,8 @@ export const TERMS = [
   B('drop', 'battle', '놓기', 'Drop', /놓[기는을으아았]\S*/, /\bdrop\w*/i, '적을 잡을 수 있는 안전한 빈칸에 손의 기물을 놓는다', 'Place a piece from your hand on a safe empty square with prey in reach'),
   B('chain', 'battle', '콤보', 'Chain', /콤보/, /\bchains?\b/i, '놓은 기물이 한 수 동안 적을 잇달아 잡는 것', 'Every take one dropped piece makes in a move'),
   // 값 · 배수: 글 안에서는 수가 붙은 꼴(「값 +20」 · 「배수 ×1.5」 — 카드에 색 칸으로 그린다)만 찾는다. 상자는 다른 낱말 뒤에(LATE)
-  T('value', 'battle', '값', 'Value', /(?<!상점 )값 [+×−][\d.]+/, /[+×−][\d.,]+ Value\b/, '점수의 바탕. 적을 잡을 때마다 그 적의 값이 흰 칸에 더해진다. 폰 10 · 나이트 30 · 룩 50 · 퀸 90', 'What the chain took, added up. Pawn 10 · knight 30 · rook 50 · queen 90'),
-  T('links', 'battle', '배수', 'Mult', /배수 [+×−][\d.]+/, /[+×−][\d.,]+ Mult\b/, '점수 = 값 × 배수. 잡을 때마다 1씩 오른다. 배수 +3은 금빛 칸에 3을 더하고, ×1.5는 금빛 칸을 1.5배로 만든다', '+1 with every take. Score = Value × Mult'),
+  T('value', 'battle', '값', 'Value', /(?<!상점 )값 [+×−][\d.]+/, /[+×−][\d.,]+ Value\b/, '점수의 바탕. 잡은 적의 값이 더해진다. 폰 10 · 나이트 30 · 룩 50 · 퀸 90', 'What the chain took, added up. Pawn 10 · knight 30 · rook 50 · queen 90'),
+  T('links', 'battle', '배수', 'Mult', /배수 [+×−][\d.]+/, /[+×−][\d.,]+ Mult\b/, '점수 = 값 × 배수. 잡을 때마다 1씩 오른다. +3은 더하고 ×1.5는 곱한다', '+1 with every take. Score = Value × Mult'),
   B('form', 'battle', '모습', 'Form', /모습/, /\bforms?\b/i, '내 기물이 지금 어떤 기물인지. 그 기물의 행마로 잡는다', 'What your piece is now. It takes with that move'),
   B('change', 'battle', '갈아입기', 'Change', /갈아입\S*/, /\bchanges? form\b/i, '적을 잡으면 그 적과 같은 기물이 된다', 'Take an enemy and become that piece'),
   T('threat', 'battle', '지키는 적', 'Guard', /지키는 적|지키던 적|지켜진 \S+/, /\bguard\w*/i, '방금 잡은 칸을 지키는 적. 다음엔 이 적을 잡아야 이어진다', 'An enemy guarding the square you just took. Take it next to keep going'),
