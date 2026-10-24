@@ -4,7 +4,7 @@
 //   args.open  펼친 채로 열 묶음(결과 화면의 「N개 열렸어요」 · 도감의 자물쇠 칸)
 //   args.from  돌아갈 곳 'codex' | 'result'  · args.back 돌아갈 화면에 넘길 것(도감의 탭 · 쪽)
 import { PAL } from '../../render/palette.js';
-import { W, text, rect, frame, measure } from '../../render/gfx.js';
+import { W, text, rrect, rframe, measure } from '../../render/gfx.js';
 import { button } from '../ui.js';
 import { panel } from '../parts.js';
 import { hint } from '../coach.js';
@@ -51,7 +51,7 @@ export class UnlocksScreen {
   animating() { return false; }
   draw(ctx, ui) {
     const st = unlockState(this.app.records);
-    pageHead(ctx, '해금', `돌파한 관 ${st.gates}`);
+    pageHead(ctx, '해금', `돌파한 관 ${st.gates}`, { big: true });
     this.drawPath(ctx, ui, st);
     if (this.sel == null) this.drawOverview(ctx, ui, st);
     else this.drawBundle(ctx, ui, st, this.sel);
@@ -60,19 +60,20 @@ export class UnlocksScreen {
   // 길과 마디: 지나온 몫은 금빛, 다음 칸까지는 온 만큼. 지금 자리는 마디 위 세모, 펼친 묶음은 마디 둘레 흰 테
   drawPath(ctx, ui, st) {
     const P = PATH, railY = P.nodeY + 3;
-    rect(ctx, cx(0), railY, cx(MAX_TIER) - cx(0), 2, PAL.frame);
-    rect(ctx, cx(0), railY, Math.round(cx(st.tier) - cx(0) + (st.next != null ? st.p * P.pitch : 0)), 2, PAL.gold);
+    rrect(ctx, cx(0), railY, cx(MAX_TIER) - cx(0), 2, 1, PAL.slotEdge);
+    rrect(ctx, cx(0), railY, Math.round(cx(st.tier) - cx(0) + (st.next != null ? st.p * P.pitch : 0)), 2, 1, PAL.gold);
     for (let t = 0; t <= MAX_TIER; t++) {
       const x = P.x + t * P.pitch, open = t <= st.tier, nx = cx(t) - P.node / 2;
       // 펼친 동안은 마디 둘레만, 길 보기에서는 그림 줄까지 한 구역
       const h = this.sel == null ? P.colY + P.rows * P.row - (P.nodeY - 10) : P.node + 14;
       ui.region(`unlocks:${t}`, x, P.nodeY - 10, P.cw, h, { onClick: () => this.select(t) });
-      rect(ctx, nx, P.nodeY, P.node, P.node, open ? PAL.gold : PAL.feltDk);
-      frame(ctx, nx, P.nodeY, P.node, P.node, open ? PAL.goldDk : t === st.next ? PAL.gold : PAL.frame);
-      if (open) rect(ctx, nx + 1, P.nodeY + 1, P.node - 2, 1, PAL.goldHi);
-      if (t === st.tier) for (let k = 0; k < 4; k++) rect(ctx, nx + k, P.nodeY - 7 + k, P.node - 2 * k, 1, PAL.goldHi);
-      if (t === this.sel) frame(ctx, nx - 2, P.nodeY - 2, P.node + 4, P.node + 4, PAL.white);
-      else if (this.sel != null && ui.isHover(`unlocks:${t}`)) frame(ctx, nx - 2, P.nodeY - 2, P.node + 4, P.node + 4, PAL.dim);
+      // 마디: 둥근 점(지나온 것은 금빛, 다음 것은 금빛 테), 지금 자리는 위에 금빛 세모
+      const nr = P.node / 2;
+      rrect(ctx, nx, P.nodeY, P.node, P.node, nr, open ? PAL.goldDk : t === st.next ? PAL.gold : PAL.slotEdge);
+      rrect(ctx, nx + 1, P.nodeY + 1, P.node - 2, P.node - 2, nr - 1, open ? PAL.gold : PAL.slot);
+      if (t === st.tier) { ctx.fillStyle = PAL.goldHi; ctx.beginPath(); ctx.moveTo(nx, P.nodeY - 7); ctx.lineTo(nx + P.node, P.nodeY - 7); ctx.lineTo(nx + nr, P.nodeY - 2); ctx.closePath(); ctx.fill(); }
+      if (t === this.sel) rframe(ctx, nx - 2, P.nodeY - 2, P.node + 4, P.node + 4, nr + 2, PAL.white, 1);
+      else if (this.sel != null && ui.isHover(`unlocks:${t}`)) rframe(ctx, nx - 2, P.nodeY - 2, P.node + 4, P.node + 4, nr + 2, PAL.dim, 1);
     }
   }
   // 길 보기: 칸마다 그림 줄(다섯까지), 다음 칸 아래 남은 관 수, 아래 칸에 가장 최근에 연 묶음 · 다음 묶음 · 막대
@@ -86,7 +87,7 @@ export class UnlocksScreen {
       else items.slice(0, P.rows).forEach((b, i) => miniArt(ctx, b, x, P.colY + i * P.row, open));
       const n = kinds ? kinds.length : Math.min(P.rows, items.length);
       const here = t === st.tier, next = t === st.next;
-      if (here || next || ui.isHover(`unlocks:${t}`)) frame(ctx, x - 1, P.colY - 1, P.cw + 2, n * P.row + 1, here ? PAL.goldHi : next ? PAL.goldDk : PAL.dim);
+      if (here || next || ui.isHover(`unlocks:${t}`)) rframe(ctx, x - 1, P.colY - 1, P.cw + 2, n * P.row + 1, 4, here ? PAL.goldHi : next ? PAL.gold : PAL.dim, 1);
     }
     if (st.next != null) {
       const s = st.left > 0 ? `관 ${st.left}개 더` : '다음 판에 열려요', tw = measure(s);

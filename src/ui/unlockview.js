@@ -1,7 +1,7 @@
 // 해금(CHM-73, docs/design-notes/layout.md 26절): 해금 화면 · 결과 화면 · 도감이 같이 쓰는 조각 — 묶음 · 진행 막대 · 카드 · 뒷면 · 작은 그림.
 // 단계와 문턱은 src/data/unlocks.js, 기록은 records.gates · records.unlockTier.
 import { PAL } from '../render/palette.js';
-import { rect, box, frame, text, measure } from '../render/gfx.js';
+import { rrect, box, slot, text, measure } from '../render/gfx.js';
 import { drawIcon } from '../render/icons.js';
 import { UNLOCK_TIERS, UNLOCK_KINDS, UNLOCK_GATES, unlockProgress, tierOf } from '../data/unlocks.js';
 import { MAXIMS } from '../data/maxims.js';
@@ -11,7 +11,7 @@ import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
 import { PIECE_NAME } from './words.js';
 import { KIND, kindGlyph, kindTab, TAB, TAB_GAP } from './kinds.js';
 import { CELL, maximArt, EMBLEM, itemArt } from './art.js';
-import { cardBase, itemCard, itemCardH, CARD_CHIP_ROWS } from './parts.js';
+import { cardBase, itemCard, itemCardH, CARD_CHIP_ROWS, edgeRing } from './parts.js';
 import { familyChips } from './parts-depth.js';
 import { josekiLayout } from './screens/draft.js';
 import { LINE, PAD_CARD, GAP_IN } from './frame.js';
@@ -52,13 +52,12 @@ export function lockLine(st, tier) {
 // 다음 묶음까지 한 줄(결과 화면 · 해금 화면 아래 칸)
 export const nextLine = (st) => (st.left > 0 ? `다음 해금까지 관 ${st.left}개` : '다음 판이 끝나면 열려요');
 
-// 얇은 진행 막대(높이 4): 어두운 홈에 금빛
+// 얇은 진행 막대(높이 4): 빈 자리 알약에 금빛 알약
 export const BAR_H = 4;
 export function progressBar(ctx, x, y, w, p) {
-  frame(ctx, x - 1, y - 1, w + 2, BAR_H + 2, PAL.frameDk);
-  rect(ctx, x, y, w, BAR_H, PAL.deep);
+  slot(ctx, x - 1, y - 1, w + 2, BAR_H + 2);
   const fw = Math.max(0, Math.min(w, Math.round(w * p)));
-  if (fw) { rect(ctx, x, y, fw, BAR_H, PAL.gold); rect(ctx, x, y, fw, 1, PAL.goldHi); }
+  if (fw) rrect(ctx, x, y, fw, BAR_H, Math.min(BAR_H / 2, fw / 2), PAL.gold);
 }
 
 // 자물쇠(12 × 12, icons.js lock): 도감의 잠긴 칸
@@ -76,7 +75,7 @@ function josekiCard(ctx, id, x, y, w, h) {
   kindTab(ctx, 'joseki', x + P, y + P);
   text(ctx, KIND_LABEL.joseki, x + P + TAB + TAB_GAP, y + lay.tier, PAL.cardDim);
   for (const [l, ly] of lay.names) text(ctx, l, x + P, y + ly, PAL.cardInk, { bold: true });
-  rect(ctx, x + P, y + lay.rule, lay.IW, 1, col);
+  rrect(ctx, x + P, y + lay.rule, lay.IW, 1, 0, col);
   for (const [l, ly] of lay.lines) text(ctx, l, x + P, y + ly, PAL.cardInk);
   if (lay.chips != null) familyChips(ctx, j.families, x + P, y + lay.chips + (h - lay.h), lay.IW, CARD_CHIP_ROWS);
   closeBox();
@@ -86,19 +85,15 @@ export function bundleCard(ctx, b, x, y, w, h, t = 0, ui = null) {
   if (b.kind === 'joseki') return josekiCard(ctx, b.id, x, y, w, h);
   itemCard(ctx, itemOf(b), x, y, w, h, { price: false, t, ui });
 }
-// 뒷면 카드: 어두운 카드에 종류 그림과 종류 이름만(이름 · 효과는 가린다). next면 금빛 테
+// 뒷면 카드: 깊은 남색 카드에 종류 그림과 종류 이름만(이름 · 효과는 가린다). next면 금빛 테
 export const BACK_W = 84, BACK_H = 96;
 export function backCard(ctx, kind, x, y, w, h, { next = false } = {}) {
   openBox('card', x, y, w, h, PAD_CARD, { name: `뒷면 ${kind}` });
-  box(ctx, x, y, w, h, PAL.well, next ? PAL.gold : PAL.frameDk);
-  frame(ctx, x + 2, y + 2, w - 4, h - 4, next ? PAL.goldDk : PAL.fogHi);
-  for (let j = y + 6; j < y + h - 6; j += 6) for (let i = x + 6 + ((j - y) % 12 ? 3 : 0); i < x + w - 6; i += 6) rect(ctx, i, j, 1, 1, PAL.fogHi);
+  box(ctx, x, y, w, h, PAL.slot, next ? PAL.gold : PAL.frameDk);
+  edgeRing(ctx, x, y, w, h, 3, next ? PAL.goldDk : PAL.slotEdge);
   const gy = y + Math.floor((h - TAB - GAP_IN - LINE) / 2), gx = x + Math.floor((w - TAB) / 2);
-  rect(ctx, gx - 3, gy - 3, TAB + 6, TAB + GAP_IN + LINE + 6, PAL.well);
-  rect(ctx, gx, gy, TAB, TAB, KIND[kind].bg);
+  rrect(ctx, gx, gy, TAB, TAB, 3, KIND[kind].bg);
   kindGlyph(ctx, kind, gx, gy, TAB, TAB);
-  const lw = measure(KIND_LABEL[kind]);
-  rect(ctx, x + Math.floor((w - lw) / 2) - 3, gy + TAB, lw + 6, GAP_IN + LINE + 3, PAL.well);
   text(ctx, KIND_LABEL[kind], x + Math.floor(w / 2), gy + TAB + GAP_IN + 1, PAL.dim, { align: 'center' });
   closeBox();
 }
@@ -108,18 +103,18 @@ export const MINI = { w: 20, h: 22 };
 // 열렸으면 그 물건의 그림, 잠겼으면 흐린 종류 그림
 export function miniArt(ctx, b, x, y, open) {
   if (!open) {
-    rect(ctx, x, y, MINI.w, MINI.h, PAL.well); frame(ctx, x, y, MINI.w, MINI.h, PAL.fogHi);
-    kindGlyph(ctx, b.kind, x, y, MINI.w, MINI.h, '#5f7168');
+    slot(ctx, x, y, MINI.w, MINI.h, { r: 3 });
+    kindGlyph(ctx, b.kind, x, y, MINI.w, MINI.h, PAL.dimDk);
     return;
   }
   if (b.kind === 'maxim') return maximArt(ctx, b.id, x, y);
   if (b.kind === 'piece' || b.kind === 'soul' || (b.kind === 'engraving' && EMBLEM[b.id])) { itemArt(ctx, itemOf(b), x, y, 0, null, MINI); return; }
-  rect(ctx, x, y, MINI.w, MINI.h, CELL.bg); rect(ctx, x + 1, y + 1, MINI.w - 2, 1, CELL.top);
+  rrect(ctx, x, y, MINI.w, MINI.h, 3, CELL.bg);
   if (b.kind === 'joseki') kindGlyph(ctx, 'joseki', x, y, MINI.w, MINI.h, TIER_COL[JOSEKI_BY_ID[b.id].tier]);
   else kindGlyph(ctx, b.kind, x, y, MINI.w, MINI.h);
 }
 // 종류만 보이는 칸(처음부터 열린 묶음처럼 수가 많을 때): 종류 그림
 export function kindCell(ctx, kind, x, y) {
-  rect(ctx, x, y, MINI.w, MINI.h, CELL.bg); rect(ctx, x + 1, y + 1, MINI.w - 2, 1, CELL.top);
+  rrect(ctx, x, y, MINI.w, MINI.h, 3, CELL.bg);
   kindGlyph(ctx, kind, x, y, MINI.w, MINI.h);
 }
