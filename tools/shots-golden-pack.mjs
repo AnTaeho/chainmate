@@ -68,7 +68,7 @@ async function boot(lang) {
   await ev((lang) => {
     localStorage.clear();
     localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang, speed: 2 }));
-    localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, runs: 3 }));
+    localStorage.setItem('chainmate.records.v1', JSON.stringify({ v: 1, runs: 3, tutorialAsked: true }));
   }, lang);
   await page.reload();
   for (let i = 0; i < 200 && !(await ev(() => !!(window.__app && window.__app.screen))); i++) await settle(50);

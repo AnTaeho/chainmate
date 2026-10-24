@@ -63,7 +63,7 @@ await page.goto(`http://localhost:${srv.address().port}/index.html`);
 await ev(() => {
   localStorage.clear();
   localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang: 'ko', speed: 1 }));
-  localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, runs: 3 }));
+  localStorage.setItem('chainmate.records.v1', JSON.stringify({ v: 1, runs: 3, tutorialAsked: true }));
 });
 await page.reload();
 await until(() => window.__app && window.__app.screen);

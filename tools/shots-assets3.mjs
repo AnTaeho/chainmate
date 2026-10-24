@@ -29,7 +29,7 @@ async function open(w, h, { coach = false } = {}) {
   await page.addInitScript(() => {
     localStorage.clear();
     localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang: 'ko', calm: false }));
-    localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, runs: 3, tutorialDone: true, tutorialAsked: true }));
+    localStorage.setItem('chainmate.records.v1', JSON.stringify({ v: 1, runs: 3, tutorialAsked: true }));
     window.__autoDraft = true;
   });
   await page.goto(`http://127.0.0.1:${PORT}/index.html`);

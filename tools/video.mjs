@@ -67,7 +67,7 @@ await page.goto(`${BASE}/index.html`);
 await page.evaluate(() => {
   localStorage.clear();
   localStorage.setItem('chainmate.settings.v1', JSON.stringify({ speed: 1 }));
-  localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, tutorialAsked: true, runs: 3 }));
+  localStorage.setItem('chainmate.records.v1', JSON.stringify({ v: 1, runs: 3, tutorialAsked: true }));
 });
 await page.reload();
 await page.waitForFunction(() => window.__app && window.__app.screen && window.__raf);

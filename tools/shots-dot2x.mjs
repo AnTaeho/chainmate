@@ -46,7 +46,7 @@ for (const sc of SCALES) {
   await page.addInitScript(() => {
     localStorage.clear();
     localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang: 'ko', coach: false, calm: true }));
-    localStorage.setItem('chainmate.records.v1', JSON.stringify({ lessonsDone: true, runs: 3, tutorialDone: true }));
+    localStorage.setItem('chainmate.records.v1', JSON.stringify({ v: 1, runs: 3, tutorialAsked: true }));
     window.__autoDraft = true;
   });
   await page.goto(`http://localhost:${port}/index.html`);
