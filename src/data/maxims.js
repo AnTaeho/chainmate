@@ -113,7 +113,7 @@ maxim('kings_neck', '왕의 목', '킹을 지키는 적을 잡으면 배수 +2 �
   onBoard(ctx) {
     const t = ctx.t;
     const open = [];
-    if (mateBlocked(t.chain)) { t.hints = { ...t.hints, openKings: open }; return; } // 지키던 적을 둘 잡은 콤보는 킹을 못 잡는다
+    if (mateBlocked(t.chain) && !(t.rules && t.rules.openKings)) { t.hints = { ...t.hints, openKings: open }; return; } // 지키던 적을 둘 잡은 콤보는 킹을 못 잡는다(오페라 openKings는 예외, chain.js와 같다)
     t.board.forEach((c, sq) => {
       if (c && !c.mine && c.t === 'K' && ctx.attackers(sq).length === 0) open.push(sq);
     });

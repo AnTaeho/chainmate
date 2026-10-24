@@ -79,3 +79,16 @@ test('왕의 목: 지키던 적을 둘 잡은 콤보 동안은 킹이 빛나지 
   refreshHints(b);
   assert.deepEqual(b.hints.openKings, [S('h8')]);
 });
+
+test('왕의 목: 오페라(openKings) 판에서는 지키던 적을 둘 잡아도 킹이 빛난다', () => {
+  const b = createBattle({ seed: 1, mods: [{ id: 'kings_neck' }] });
+  b.board = boardFrom({ h8: 'K', h1: 'R', a1: 'B', c4: 'P' });
+  b.rules = { ...b.rules, openKings: true };
+  startChain(b, { type: 'R', sq: S('d1') });
+  chainCapture(b, S('h1'));
+  b.chain.guardsTaken = 2;
+  b.board[S('a1')] = null;
+  refreshHints(b);
+  assert.deepEqual(b.hints.openKings, [S('h8')]);
+  assert.ok(chainCaptures(b).includes(S('h8')), '대국 규칙도 잡게 둔다');
+});
