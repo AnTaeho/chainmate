@@ -16,7 +16,7 @@ export class RecordsScreen {
   animating() { return false; }
   draw(ctx, ui) {
     const r = this.app.records;
-    pageHead(ctx, '기록');
+    pageHead(ctx, '기록', null, { big: true });
     const d = r.daily && r.daily.date === this.app.today() ? r.daily : null;
     const rows = [
       ['판', `${r.runs}`], ['이긴 판', `${r.wins}`], ['최고 도달', r.bestAnte ? `${r.bestAnte}관` : '-'],
@@ -29,7 +29,7 @@ export class RecordsScreen {
     ];
     // 목록 줄은 본문 줄(LINE), 본 칸 윗변부터
     rows.forEach(([a, b], i) => {
-      text(ctx, a, 40, textY(PAGE.bodyY + i * LINE), PAL.dim);
+      text(ctx, a, PAGE.titleX + 4, textY(PAGE.bodyY + i * LINE), PAL.dim);
       text(ctx, b, 240, textY(PAGE.bodyY + i * LINE), PAL.ink, { align: 'right', bold: true });
     });
     // 최고 한 수(hug): 이름표 · 점수 → 묶음 틈 → 사슬 모습(여덟씩 줄) → 묶음 안 틈 → 관

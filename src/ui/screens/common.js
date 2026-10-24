@@ -37,8 +37,16 @@ export function pauseButton(ctx, ui, app, x = PAUSE.x, y = PAUSE.y) {
   rect(ctx, x + 1, y + 1, 10, 2, col); rect(ctx, x + 1, y + 5, 10, 2, col); rect(ctx, x + 1, y + 9, 10, 2, col);
 }
 
-// 판 밖 틀의 머리줄: 왼쪽 제목(금빛 굵게) · 오른쪽 보조 글(흐림) · 가로줄
-export function pageHead(ctx, title, right = null) {
+// 판 밖 틀의 머리줄: 왼쪽 제목(금빛 굵게) · 오른쪽 보조 글(흐림) · 가로줄.
+// big: 안 3 큰 제목(크림 두 배 굵게, 가로줄 없음 — 보조 글 · 탭은 제목 가운데 줄에 맞춘다)
+export const HEAD_BIG = { y: 4, mid: 15 };
+export const headW = (title) => measure(title, true) * 2;
+export function pageHead(ctx, title, right = null, { big = false } = {}) {
+  if (big) {
+    text(ctx, title, PAGE.titleX, HEAD_BIG.y, PAL.ink, { bold: true, scale: 2 });
+    if (right != null) text(ctx, right, W - PAGE.titleX, HEAD_BIG.mid - 5, PAL.dim, { align: 'right' });
+    return;
+  }
   text(ctx, title, PAGE.titleX, PAGE.titleY, PAL.gold, { bold: true });
   if (right != null) text(ctx, right, W - PAGE.titleX, PAGE.titleY, PAL.dim, { align: 'right' });
   rect(ctx, 8, PAGE.ruleY, W - 16, 1, PAL.feltHi);
@@ -201,9 +209,10 @@ export function runSide(ctx, ui, app, title) {
 }
 
 // 탭 줄(도감 · 행마 보기): 이름마다 글에 맞춘 폭(글과 테 사이 3 — 굵은 글꼴이 테에 붙어 보이지 않게, 가장 좁아도 44), 사이 4, 고른 탭은 금빛. 끝난 x를 돌려준다
-export function tabRow(ctx, ui, prefix, tabs, cur, x, y, h, go) {
+// pad: 글 양옆 여백 합(기본 8 — 큰 제목 옆 탭은 알약 끝이 글에 붙지 않게 넓힌다)
+export function tabRow(ctx, ui, prefix, tabs, cur, x, y, h, go, pad = 8) {
   for (const [id, label] of tabs) {
-    const tw = Math.max(44, measure(label, true) + 8);
+    const tw = Math.max(44, measure(label, true) + pad);
     button(ctx, ui, `${prefix}:tab:${id}`, x, y, tw, h, label, { tone: cur === id ? 'gold' : 'plain', onClick: () => go(id) });
     x += tw + 4;
   }
