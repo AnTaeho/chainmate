@@ -4,7 +4,7 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, rrect, rframe, R_BIG, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
+import { W, H, text, box, rect, rrect, rframe, R_BIG, radiusOf, frame, dots, line, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
 import { SW, SH, tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { center as sqCenter, centerAt, projectSq, unproject, sqBox, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
 import { piece3, fitPiece, pieceCanvas, pieceChips, scaleOf, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
@@ -1172,7 +1172,8 @@ export class BattleScreen {
   // 점수 줄에 겹쳤다(CHM-67). 잉크 윗변을 머리 칸 아랫변 바로 밑에 두면 아래쪽(그림자까지)은 값 칸 윗테 · 안 여백에 걸치고 칸 안 수(VT)에는 닿지 않는다.
   // 상금은 아래 칸 상금 줄 위로 떠오른다(예전 그대로)
   pop(s, where, { col = null, delay = 0, dx = 0, align = 'center' } = {}) {
-    const lay = this.leftLayout(), vy = lay.val.y - GAP_GROUP;
+    // 안 3: 값 칸 위는 목표 막대라 몫은 값 칸 바로 아래 빈 자리에 머문다
+    const lay = this.leftLayout(), vy = lay.val.y + VAL_H + 2;
     const pos = where === 'value' ? { x: LX + 24 + dx, y: vy } : where === 'mult' ? { x: LX + 88 + dx, y: vy } : { x: LX + LW - 20, y: shardTo().y - 6 };
     const rise = where === 'money' ? 10 : 0;
     const c = col || (where === 'value' ? PAL.val : PAL.gold);
@@ -1502,7 +1503,7 @@ export class BattleScreen {
       if (m * tgt > maxV + 0.5) break;
       const tx = X + Math.round((Wd * m) / maxV * tgt) - 1;
       rect(ctx, tx, Y - 2, 2, Hh + 4, m === 1 ? (passed ? PAL.goldHi : PAL.white) : PAL.red);
-      if (m > 1) digits(ctx, `${m}`, tx - 2 * String(m).length, Y + Hh + 3, PAL.red);
+      if (m > 1) digits(ctx, `${m}`, tx - 2 * String(m).length, Y - 7, PAL.red);
     }
     if (hot && !this.app.reducedMotion) {
       motion();
@@ -1973,7 +1974,10 @@ export class BattleScreen {
     else if (spec.faction) { const fa = spec.faction; ui.region('faction', LX + 2, t0, LW - 4, LINE_TITLE, { tip: () => tipLines(fa.name, fa.habit.text) }); }
     // 「점수」 이름표(불씨 · 얻을 몫은 이 줄) → 큰 점수 · 오른쪽 「목표 / 150」
     const sl = lay.scoreLab, sy = lay.score;
-    this.sideSpot(ui, LX, sl - 1, LW, lay.bar.y + lay.bar.h + 6 - (sl - 1));
+    // 접기 몫은 가리킬 수 있는 것마다 따로(이름표 줄 · 큰 점수 · 막대) — 가리킨 것을 품은 큰 몫은 접기가 판넬 빛깔로 칠한다
+    this.sideSpot(ui, LX, sl - 1, LW, LINE);
+    this.sideSpot(ui, LX, sy, LW, INK_H * 3 + INK_DESC * 3);
+    this.sideSpot(ui, LX, lay.bar.y - 3, LW, lay.bar.h + 6);
     openBox('tile', LX, sl - 1, LW, sy + INK_H * 3 + INK_DESC * 3 - (sl - 1), 0, { name: '점수' });
     text(ctx, '점수', LX + PX, sl, PAL.dim);
     // 점화(CHM-67): 점수 이름표 옆에 불씨 — 가리키면 이 판의 콤비네이션. 규칙이 사슬 끝에 남기니 막간이 열리기 전(ignPending)에는 감춘다
@@ -2013,7 +2017,7 @@ export class BattleScreen {
     const gp = g ? g.p : 0;
     const dx = gp * 32;
     const VY = lay.val.y, TW = VAL_W, MX = LX + LW - VAL_W;
-    this.sideSpot(ui, LX, VY, LW, VAL_H + DROP);
+    this.sideSpot(ui, LX, VY, TW, VAL_H); this.sideSpot(ui, LX + TW, VY, MX - LX - TW, VAL_H); this.sideSpot(ui, MX, VY, TW, VAL_H);
     const t = app.time, uv = this.pulseAt('value', val, t), um = this.pulseAt('mult', mul, t);
     const punch = (u) => (app.reducedMotion ? 0 : Math.round(u * 3));
     {
@@ -2232,7 +2236,7 @@ export class BattleScreen {
       const col = i % MAXIM_ROW, row = Math.floor(i / MAXIM_ROW);
       const x = RX + Math.round((col * (RW - MAXC.w)) / (MAXIM_ROW - 1)), y = lay.maxY + row * (MAXC.h + LIST_GAP);
       const m = run.maxims[i];
-      if (!m) { slot(ctx, x, y, MAXC.w, MAXC.h); continue; }
+      if (!m) { slot(ctx, x, y, MAXC.w, MAXC.h, { r: radiusOf(MAXC.w, MAXC.h) }); continue; }
       const id = `maxim:${i}`;
       ui.region(id, x, y, MAXC.w, MAXC.h, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })) });
       maximCard(ctx, m, x, y, MAXC.w, MAXC.h, { narrow: true, off: off.includes(m.uid), hot: ui.isHover(id), t: ui.time + i * 0.37 });
@@ -2328,7 +2332,7 @@ export class BattleScreen {
     text(ctx, '다음', col.x, col.labelY, PAL.dim);
     col.slots.forEach((r, k) => {
       const p = next[k];
-      if (!p) { slot(ctx, r.x, r.y, r.w, r.h); return; }
+      if (!p) { slot(ctx, r.x, r.y, r.w, r.h, { r: radiusOf(r.w, r.h) }); return; }
       box(ctx, r.x, r.y, r.w, r.h, PAL.slot, PAL.slotEdge);
       fitPiece(ctx, p.t, 'w', r.x + 2, r.y + 2, r.w - 4, r.h - 4, { alpha: k === 0 ? 0.9 : 0.65, eng: p.eng ? p.eng.id : null, spark: false });
     });
