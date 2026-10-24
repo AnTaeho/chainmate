@@ -23,23 +23,23 @@ function stillCanvas() {
 }
 export const TITLE_SCENE = { key: 'title-night', paint: paintNight };
 
-// ── 로고: 금빛 3단 명암 + 어두운 그림자. 글자마다 따로 구워 정수 칸으로 오르내린다(회전 없음)
+// ── 로고(안 3): 금 두 톤(위 빛 · 아래 그늘) + 잉크 남색 두께(오른쪽 아래로 세 칸 밀어 쌓는다). 글자마다 따로 구워 정수 칸으로 오르내린다(회전 없음)
 function bakeLetter(s, sc) {
   const img = textImage(s, '#ffffff', true);
   const w = img.w * sc + 4, h = img.h * sc + 4;
   const c = makeCanvas(w, h), g = context(c);
   const put = (col, dx, dy) => { const t = textImage(s, col, true); g.drawImage(t.c, dx, dy, t.c.width * sc, t.h * sc); };
-  put('#1a0f05', 3, 3); put('#6b4410', 2, 2);
-  // 몸: 위 금빛 · 가운데 금 · 아래 짙은 금(글자 모양 안에만)
+  put('#0a0c22', 3, 3); put('#12153a', 2, 2); put('#12153a', 1, 1);
+  // 몸: 위 밝은 금 · 가운데 금 · 아래 그늘 금(글자 모양 안에만)
   const body = makeCanvas(w, h), b = context(body);
   const t = textImage(s, '#efbd55', true);
   b.drawImage(t.c, 0, 0, t.c.width * sc, t.h * sc);
   b.globalCompositeOperation = 'source-atop';
   const top = 3 * sc, mid = 7 * sc;
-  b.fillStyle = '#fff1b8'; b.fillRect(0, 0, w, top + sc);
-  b.fillStyle = '#efbd55'; b.fillRect(0, top + sc, w, mid - top);
-  b.fillStyle = '#c8902c'; b.fillRect(0, mid + sc, w, h);
-  b.fillStyle = '#efbd55'; b.fillRect(0, mid + sc * 3, w, h);
+  b.fillStyle = '#f9d77e'; b.fillRect(0, 0, w, top + sc);
+  b.fillStyle = '#f6be45'; b.fillRect(0, top + sc, w, mid - top);
+  b.fillStyle = '#d48b1c'; b.fillRect(0, mid + sc, w, h);
+  b.fillStyle = '#d48b1c'; b.fillRect(0, mid + sc * 3, w, h);
   g.drawImage(body, 0, 0);
   return c;
 }
