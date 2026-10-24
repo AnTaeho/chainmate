@@ -364,8 +364,8 @@ export class ShopScreen {
           itemCard(c, it, x, y, CARD_W, lay.cardH, { hover: hov && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok }, hold: true, tag: true, sheen: { time: ui.time, phase: i } });
           if (!it.sold && !ok) { c.globalAlpha = 0.35; rrect(c, x, y, CARD_W, lay.cardH, radiusOf(CARD_W, lay.cardH), PAL.shadow); c.globalAlpha = 1; }
           if (it.sold) return;
-          // 리본: 찜했거나 넘어온 카드는 위 테 안쪽에 금빛 띠
-          if (held || it.kept) rrect(c, x + 4, y + 1, CARD_W - 8, 2, 1, PAL.gold);
+          // 리본: 찜했거나 넘어온 카드는 위 테 위에 금빛 띠(그 아래 등급 줄은 가리지 않는다)
+          if (held || it.kept) rrect(c, x + 4, y - 1, CARD_W - 8, 3, 1.5, PAL.gold);
           bookmark(c, mark.x, mark.y, held, ui.isHover(hid));
         }, { hover: hov, press: hov && ui.press && (ui.press.id === id || ui.press.id === hid), tilt, pivot });
       });
