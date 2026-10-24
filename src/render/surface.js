@@ -14,8 +14,9 @@ export function makeCanvas(w, h) {
   return c;
 }
 
-export function context(c) {
-  const ctx = c.getContext('2d', { willReadFrequently: true });
+// read: 그림을 자주 되읽는 캔버스만(willReadFrequently — CPU 캔버스라 그려 붙일 때마다 올려 보낸다). 구운 그림은 GPU에 둔다
+export function context(c, { read = false } = {}) {
+  const ctx = c.getContext('2d', read ? { willReadFrequently: true } : undefined);
   ctx.imageSmoothingEnabled = false;
   return ctx;
 }

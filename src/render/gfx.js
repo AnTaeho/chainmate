@@ -1,7 +1,7 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL, lightFill } from './palette.js';
 import { shade, softShadow, rpath, DROP } from './light.js';
-import { textImage, edgeImage, textWidth, inkBox, tinyText } from './text.js';
+import { textImage, textWidth, inkBox, tinyText } from './text.js';
 import { orbPaint, SW, SH } from './sprites.js';
 import { blitVec } from './vec.js';
 import { fitPiece, artOf } from './pieces3.js';
@@ -140,7 +140,8 @@ const resOf = (ctx) => { const t = ctx && ctx.getTransform ? ctx.getTransform() 
 export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false, scale = 1, shadow = null, alpha = 1, w: fixW = null, edge = null, edgeW = 1 } = {}) {
   s = L(String(s));
   const k = resOf(ctx) * scale;
-  const img = textImage(s, col, bold, k);
+  // 테(edge): 둥근 이음 선으로 그은 테와 글을 한 그림으로 굽는다(edgeW는 글자 크기 1배 기준 논리 px)
+  const img = textImage(s, col, bold, k, edge, edgeW);
   const w = fixW ?? img.w * scale;
   let dx = x;
   if (align === 'center') dx = x - Math.floor(w / 2);
@@ -148,17 +149,11 @@ export function text(ctx, s, x, y, col = PAL.ink, { align = 'left', bold = false
   dx = R(dx); y = R(y);
   if (LOG.on && alpha > 0 && ctx.globalAlpha > 0) logText(s, Math.round(dx), Math.round(y), w, scale);
   if (alpha !== 1) ctx.globalAlpha = alpha;
-  const iw = img.cw * scale, ih = img.h * scale, ox = img.left * scale, oy = img.top * scale;
   if (shadow) {
     const sh = textImage(s, shadow, bold, k);
-    ctx.drawImage(sh.c, dx + ox + scale, y + oy + scale, iw, ih);
+    ctx.drawImage(sh.c, dx + sh.left * scale + scale, y + sh.top * scale + scale, sh.cw * scale, sh.h * scale);
   }
-  // 테(edge): 둥근 이음 선으로 그은 글 그림을 밑에 깐다(edgeW는 글자 크기 1배 기준 논리 px)
-  if (edge) {
-    const e = edgeImage(s, edge, bold, k, edgeW);
-    ctx.drawImage(e.c, dx + e.left * scale, y + e.top * scale, e.cw * scale, e.h * scale);
-  }
-  ctx.drawImage(img.c, dx + ox, y + oy, iw, ih);
+  ctx.drawImage(img.c, dx + img.left * scale, y + img.top * scale, img.cw * scale, img.h * scale);
   if (alpha !== 1) ctx.globalAlpha = 1;
   return w;
 }

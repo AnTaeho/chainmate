@@ -12,7 +12,22 @@ const PT = 2, PL = 1;       // 글자 그림의 위 · 왼쪽 여유(띠 위로 
 const HB = PT + INK_H + 5;  // 글자 그림 높이(논리 px): 여유 + 띠 + 아래로 빠지는 줄
 const CACHE = new Map();
 let cachePx = 0;
-const CACHE_PX = 12e6;      // 글자 그림 캐시의 화소 합 한도(차면 비운다)
+const CACHE_PX = 1.5e6;     // 글자 그림 캐시의 화소 합 한도(넘치면 가장 오래 안 쓴 그림부터 버린다)
+export const TEXT_STATS = { hit: 0, miss: 0 };
+export const textCachePx = () => cachePx;
+function cacheGet(key) {
+  const hit = CACHE.get(key);
+  if (hit) { CACHE.delete(key); CACHE.set(key, hit); TEXT_STATS.hit++; } else TEXT_STATS.miss++;
+  return hit;
+}
+function cachePut(key, hit) {
+  cachePx += hit.c.width * hit.c.height;
+  CACHE.set(key, hit);
+  for (const [k, v] of CACHE) {
+    if (cachePx <= CACHE_PX || k === key) break;
+    CACHE.delete(k); cachePx -= v.c.width * v.c.height;
+  }
+}
 let measurer = null;
 
 function measureCtx() {
@@ -97,48 +112,31 @@ export function inkBox(img) {
 }
 
 // 글자 그림: k = 그리는 곳의 화소 배율(화면 N × 확대). 돌려주는 것: c 캔버스(k배) · w 글 폭 · cw × h 그림의 논리 크기 · left · top 그림을 놓을 자리(text()의 x · y에서)
-export function textImage(s, col, bold = false, k = 1) {
+// edge: 테 빛깔 — 같은 글을 둥근 이음 선(굵기 ow 논리 px, 글 바깥으로 ow)으로 긋고 그 위에 글을 채운 그림 하나(left · top이 테만큼 더 바깥)
+export function textImage(s, col, bold = false, k = 1, edge = null, ow = 1) {
   s = String(s);
   k = Math.max(1, Math.min(8, Math.ceil(k - 1e-6)));
   if (unready && fontReady(false) && fontReady(true)) clearTextCache();
-  const key = `${bold ? 1 : 0}${k}|${col}|${s}`;
-  let hit = CACHE.get(key);
+  // 테 굵기는 기기 화소 반 칸 단위로(크기가 움직이며 굵기를 맞춰 부르는 이름표가 프레임마다 다시 굽지 않게)
+  if (edge) ow = Math.max(1, Math.round(ow * k * 2)) / (k * 2);
+  const key = `${bold ? 1 : 0}${k}|${col}|${edge ? `${edge}|${ow}|` : ''}${s}`;
+  let hit = cacheGet(key);
   if (hit) return hit;
-  const w = textWidth(s, bold), cw = w + PL + 2;
-  const c = makeCanvas(cw * k, HB * k);
-  const ctx = context(c);
-  ctx.font = fontOf(bold, faceOf(bold).px * k);
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = col;
-  ctx.fillText(s, PL * k, Math.round((PT + baseOf(bold)) * k));
-  hit = { c, w, cw, h: HB, k, left: -PL, top: -PT };
-  if (cachePx > CACHE_PX) { CACHE.clear(); cachePx = 0; }
-  cachePx += c.width * c.height;
-  CACHE.set(key, hit);
-  return hit;
-}
-
-// 글자 테 그림: 같은 글을 둥근 이음 선(굵기 ow 논리 px, 글 바깥으로 ow)으로 그은 것. 자리는 textImage와 같은 기준(left · top이 ow만큼 더 바깥)
-export function edgeImage(s, col, bold = false, k = 1, ow = 1) {
-  s = String(s);
-  k = Math.max(1, Math.min(8, Math.ceil(k - 1e-6)));
-  if (unready && fontReady(false) && fontReady(true)) clearTextCache();
-  const key = `e${ow}|${bold ? 1 : 0}${k}|${col}|${s}`;
-  let hit = CACHE.get(key);
-  if (hit) return hit;
-  const P = Math.ceil(ow) + 1, w = textWidth(s, bold), cw = w + PL + 2 + P * 2, h = HB + P * 2;
+  const P = edge ? Math.ceil(ow) + 1 : 0, w = textWidth(s, bold), cw = w + PL + 2 + P * 2, h = HB + P * 2;
   const c = makeCanvas(cw * k, h * k);
   const ctx = context(c);
   ctx.font = fontOf(bold, faceOf(bold).px * k);
   ctx.textBaseline = 'alphabetic';
-  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  ctx.lineWidth = ow * 2 * k; ctx.strokeStyle = col; ctx.fillStyle = col;
   const bx = (PL + P) * k, by = Math.round((PT + P + baseOf(bold)) * k);
-  ctx.strokeText(s, bx, by); ctx.fillText(s, bx, by);
+  if (edge) {
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.lineWidth = ow * 2 * k; ctx.strokeStyle = edge; ctx.fillStyle = edge;
+    ctx.strokeText(s, bx, by); ctx.fillText(s, bx, by);
+  }
+  ctx.fillStyle = col;
+  ctx.fillText(s, bx, by);
   hit = { c, w, cw, h, k, left: -PL - P, top: -PT - P };
-  if (cachePx > CACHE_PX) { CACHE.clear(); cachePx = 0; }
-  cachePx += c.width * c.height;
-  CACHE.set(key, hit);
+  cachePut(key, hit);
   return hit;
 }
 
