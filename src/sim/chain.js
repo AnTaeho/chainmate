@@ -111,9 +111,10 @@ export function chainCaptures(t) {
   return list;
 }
 
-// 외통 조건: s의 적이 지금 어느 적 킹을 지키나(킹 칸의 노림수 목록에 드나)
+// 외통 조건: s의 적이 지금 어느 적 킹을 지키나 — kingTakeable과 같게 내 모습으로 재고 내 칸은 비운 것으로 본다
 function guardsKing(t, s) {
-  const bo = boardOpts(t);
+  const c = t.chain;
+  const bo = { ...boardOpts(t), form: c.form, ignore: c.sq };
   for (let k = 0; k < 64; k++) { const x = t.board[k]; if (x && isEnemy(x) && x.t === 'K' && attackers(t.board, k, bo).includes(s)) return true; }
   return false;
 }
