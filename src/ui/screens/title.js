@@ -5,7 +5,8 @@
 import { hint, markSeen } from '../coach.js';
 import { inkY } from '../frame.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, rect, frame, measure } from '../../render/gfx.js';
+import { W, H, text, rect, rrect, rframe, box, measure } from '../../render/gfx.js';
+import { pillR } from '../ui.js';
 import { makeCanvas, context } from '../../render/surface.js';
 import { LOOK } from '../../render/look.js';
 import { textImage, textWidth, wrap, textGen, inkBox } from '../../render/text.js';
@@ -167,8 +168,9 @@ export class TitleScreen {
   drawNote(ctx) {
     if (!this.noteOn()) return;
     const { x, w, textX, link } = noteLayout();
-    openBox('edge', x, NOTE_Y, w, NOTE_H, 0, { name: '기록 알림' });
-    ctx.globalAlpha = 0.7; rect(ctx, x, NOTE_Y, w, NOTE_H, PAL.deep); ctx.globalAlpha = 1;
+    const r = pillR(w, NOTE_H, w - 16);
+    openBox('edge', x, NOTE_Y, w, NOTE_H, 0, { name: '기록 알림', r });
+    ctx.globalAlpha = 0.8; rrect(ctx, x, NOTE_Y, w, NOTE_H, r, PAL.deep); ctx.globalAlpha = 1;
     text(ctx, TELEMETRY_NOTE, textX, inkY(NOTE_Y, NOTE_H), PAL.ink);
     text(ctx, NOTE_LINK, link.x + 4, inkY(NOTE_Y, NOTE_H), PAL.gold, { bold: true });
     closeBox();
@@ -193,14 +195,14 @@ export class TitleScreen {
     const hx = W / 2 - HERO.w / 2, up = Math.round(Math.max(0, Math.sin(app.time * 3))) - pressed(hid);
     const hy = HERO.y - up;
     ui.region(hid, hx - 4, HERO.y - 5, HERO.w + 8, ROW.y - (HERO.y - 5), { onClick: hfn });
-    // 틀 문법(layout.md 27절): 금빛 바탕 + 짙은 테 2 + 단색 그림자(숨 쉬어도 그림자는 바닥에), 고르면 바깥 크림 테
-    rect(ctx, hx + 3, HERO.y + 3, HERO.w, HERO.h, PAL.drop);
-    if (this.sel === 0) frame(ctx, hx - 2, hy - 2, HERO.w + 4, HERO.h + 4, PAL.edge);
-    openBox('edge', hx, hy, HERO.w, HERO.h, 0, { name: '첫 화면 단추' });
-    rect(ctx, hx, hy, HERO.w, HERO.h, PAL.frameDk);
-    rect(ctx, hx + 2, hy + 2, HERO.w - 4, HERO.h - 4, PAL.gold);
-    rect(ctx, hx + 2, hy + 2, HERO.w - 4, 1, PAL.goldHi);
-    text(ctx, hlabel, W / 2, inkY(hy, HERO.h), PAL.linkInk, { align: 'center', bold: true });
+    // 금빛 알약(ui.js button과 같은 문법): 잉크 테 1 + 아래 잉크 그림자 3(숨 쉬어도 그림자는 바닥에), 고르면 바깥 크림 고리
+    const pr = pillR(HERO.w, HERO.h, measure(hlabel, true));
+    rrect(ctx, hx, HERO.y + 3, HERO.w, HERO.h, pr, PAL.drop);
+    if (this.sel === 0) rframe(ctx, hx - 3, hy - 3, HERO.w + 6, HERO.h + 6, pr + 3, PAL.edge, 1);
+    openBox('edge', hx, hy, HERO.w, HERO.h, 1, { name: '첫 화면 단추', r: pr });
+    rrect(ctx, hx, hy, HERO.w, HERO.h, pr, PAL.frameDk);
+    rrect(ctx, hx + 1, hy + 1, HERO.w - 2, HERO.h - 2, pr - 1, ui.isHover(hid) ? PAL.goldHi : PAL.gold);
+    text(ctx, hlabel, W / 2, inkY(hy, HERO.h), PAL.cardInk, { align: 'center', bold: true });
     closeBox();
     // 아이콘 줄: 같은 폭 칸, 칸마다 어두운 상자 + 도트 아이콘 + 이름(넘치면 낱말 단위 두 줄). 고른 칸은 한 칸 들리고 금빛 테
     const row = items.slice(1), n = row.length, CW = rowCw(n), x0 = Math.round(W / 2 - (n * CW) / 2);
@@ -212,11 +214,10 @@ export class TitleScreen {
       openBox('tile', rx, ROW.y, rw, rh, 0, { name: id });
       const lift = (on ? 1 : 0) - pressed(id);
       const bx = cx - ROW.box / 2, by = ROW.y + 2 - lift;
-      // 아이콘 칸: 상자 면 + 테 1(고르면 금빛) + 그림자 2. 기록 알림이 떠 있는 동안 설정 칸에 금빛 테가 깜박인다
+      // 아이콘 칸: 둥근 남색 칸(잉크 테), 고르면 바깥 금빛 고리. 기록 알림이 떠 있는 동안 설정 칸에 금빛 고리가 깜박인다
       const blink = id === 'title:settings' && this.noteOn() && (app.reducedMotion || Math.floor(app.time * 2) % 2 === 0);
-      rect(ctx, bx + 1, by + 1, ROW.box, ROW.boxH, PAL.drop);
-      rect(ctx, bx - 1, by - 1, ROW.box + 2, ROW.boxH + 2, on ? PAL.gold : blink ? PAL.goldHi : PAL.edge);
-      rect(ctx, bx, by, ROW.box, ROW.boxH, PAL.feltDk);
+      box(ctx, bx, by, ROW.box, ROW.boxH, PAL.feltDk, PAL.frameDk, { r: 5, drop: on ? 2 : 1 });
+      if (on || blink) rframe(ctx, bx - 2, by - 2, ROW.box + 4, ROW.boxH + 4, 7, on ? PAL.gold : PAL.goldHi, 1);
       drawIcon(ctx, ICON[id], cx - 6, by + 2);
       // 일곱 칸(폭 68)은 구역 폭을 다 쓴다 — 「오늘의 대국」(63)이 한 줄에 들어간다
       const lines = wrap(label, n > 6 ? rw : rw - 2);
