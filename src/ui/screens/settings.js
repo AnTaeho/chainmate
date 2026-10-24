@@ -26,7 +26,7 @@ export function nameRow(x, w, name) {
 export const linkShown = (app) => !!app.rank.allowed && !app.run;
 // 계정(CHM-72): 같은 자리의 단추가 계정 화면(탭 「아이디」 · 「기기 잇기」)을 연다
 export const LINK_LABEL = '계정';
-export const linkW = () => measure(LINK_LABEL, true) + 16;
+export const linkW = () => measure(LINK_LABEL, true) + 20;
 
 // 설정 상자의 가장 작은 폭(말마다): 큰 글자 · 언어 줄 오른쪽 반의 이름 + 다시 짓기, 움직임 줄이기 줄 오른쪽의 기록 보내기가 든다
 export const SET_W = { ko: 353, en: 400 };
@@ -42,7 +42,7 @@ export class SettingsScreen {
     const rowTops = Array.from({ length: 8 }, () => f.gap(GAP_GROUP).space(RH));
     const btnTop = f.gap(GAP_GROUP).space(18);
     // 맨 아래 단추 셋(글에 맞춘 폭, 글과 테 사이 2 이상 — 영어 「Export runs」). 상자 폭은 이름 줄 · 기록 보내기 줄이 쓰는 폭(SET_W) 이상
-    const lw = Math.max(64, measure('튜토리얼', true) + 8), ew = Math.max(72, measure('기록 내보내기', true) + 8), bw = 72;
+    const lw = Math.max(64, measure('튜토리얼', true) + 16), ew = Math.max(72, measure('기록 내보내기', true) + 16), bw = 72;
     const w = Math.max(SET_W[getLang()], lw + ew + bw + 8 * 2 + PAD_BOX * 2), h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
     openBox('panel', x, y, w, h, PAD_BOX, { name: '설정' });
     box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
@@ -93,8 +93,8 @@ export class SettingsScreen {
     }
     yy = row(6, '도움말 팁');
     button(ctx, ui, 'set:coach', x + 120, yy, 30, 18, s.coach === false ? '끔' : '켬', { onClick: () => set('coach', s.coach === false), tone: s.coach === false ? 'plain' : 'gold', grow: G });
-    // 글에 맞춘 폭(글과 테 사이 2 — 영어 「Show again」 · 「First Lessons」)
-    const rw = Math.max(78, measure('다시 보기', true) + 6);
+    // 글에 맞춘 폭(알약 끝이 글에 붙지 않게 양옆 9 — 영어 「Show again」)
+    const rw = Math.max(78, measure('다시 보기', true) + 18);
     button(ctx, ui, 'set:coachReset', x + w - PAD_BOX - rw, yy, rw, 18, '다시 보기', { onClick: () => { app.records.coachSeen = {}; app.saveRecords(); set('coach', true); app.toast('도움말 팁을 처음부터 다시 봐요', PAL.gold); }, grow: G });
     yy = row(7, '움직임 줄이기');
     button(ctx, ui, 'set:calm', x + 120, yy, 64, 18, s.calm ? '켬' : '끔', { onClick: () => set('calm', !s.calm), tone: s.calm ? 'gold' : 'plain', grow: G });
