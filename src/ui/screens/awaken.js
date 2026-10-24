@@ -3,7 +3,7 @@
 // 누르거나 Enter면 끝 장면으로 건너뛰고, 한 번 더 누르면 다음으로. 움직임 줄이기면 번쩍 · 흔들림 없이.
 // 시안 셋(가운데 막간 / 가로 띠 / 문양 빛기둥) 가운데 어느 기물이 깨어났는지 보이는 막간을 골랐다 — docs/shots/souls/draft-*-awaken
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, measure } from '../../render/gfx.js';
+import { W, H, text, box, rect, measure, seg } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
 import { PIECE_NAME } from '../words.js';
@@ -63,7 +63,13 @@ export class AwakenScreen {
     // 금이 번진다: 왼쪽 위에서 오른쪽 아래로 틈이 자란다
     if (!burst) {
       const n = Math.floor((t / BURST) * 14);
-      for (let i = 0; i < n; i++) rect(ctx, 2 + i + (i % 3 === 1 ? 1 : 0), 1 + Math.floor(i * 1.8), 1, 1, i % 2 ? this.s.col : PAL.ink);
+      if (n > 1) {
+        // 잉크 틈 위에 혼 빛깔 가는 금
+        const path = () => { ctx.beginPath(); for (let i = 0; i < n; i++) { const px = 2.5 + i + (i % 3 === 1 ? 1 : 0), py = 1.5 + i * 1.8; if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); } };
+        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        path(); ctx.strokeStyle = PAL.cardInk; ctx.lineWidth = 0.9; ctx.stroke();
+        path(); ctx.strokeStyle = this.s.col; ctx.lineWidth = 0.45; ctx.stroke();
+      }
     }
     ctx.restore();
     if (burst && !this.app.reducedMotion) {
@@ -73,7 +79,7 @@ export class AwakenScreen {
       ctx.globalAlpha = 1 - q;
       for (let i = 0; i < 16; i++) {
         const a = (i / 16) * Math.PI * 2 + t * 0.6, r0 = 14 * k * 0.6 + q * 30, r1 = r0 + 6 + q * 10;
-        for (let r = r0; r < r1; r += 2) rect(ctx, Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r * 0.8), 2, 2, i % 2 ? PAL.goldHi : PAL.gold);
+        seg(ctx, cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.8, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1 * 0.8, i % 2 ? PAL.goldHi : PAL.gold, 2);
       }
       ctx.globalAlpha = 1;
     }

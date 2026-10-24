@@ -112,6 +112,12 @@ export function dots(ctx, x, y, w, h, col, step = 2, phase = 0) {
   for (let i = phase % step; i < h; i += step) { ctx.fillRect(x, y + i, 1, 1); ctx.fillRect(x + w - 1, y + i, 1, 1); }
 }
 
+// 벡터 선(둥근 끝, 두께 t — 판 위 지나온 길처럼 계단지지 않아야 하는 선)
+export function seg(ctx, x0, y0, x1, y1, col, t = 1) {
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+  ctx.strokeStyle = col; ctx.lineWidth = t; ctx.lineCap = 'round'; ctx.stroke();
+}
+
 export function line(ctx, x0, y0, x1, y1, col) {
   x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
   ctx.fillStyle = col;

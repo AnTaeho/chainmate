@@ -1,11 +1,12 @@
 // 명인의 상자: 다섯 칸 릴이 돌다가 왼쪽부터 멈춘다. 불 켜진 칸(가운데부터)에 물건이 선다.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, sprite } from '../../render/gfx.js';
+import { W, H, text, box, rect, sprite, radiusOf } from '../../render/gfx.js';
+import { rpath } from '../../render/light.js';
 import { CHARTS } from '../../data/charts.js';
 import { ENGRAVING_BY_ID } from '../../data/engravings.js';
 import { button } from '../ui.js';
 import { PIECE_NAME } from '../words.js';
-import { shardIcon, awakenArt } from '../parts.js';
+import { shardIcon, awakenArt, edgeRing } from '../parts.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
 import { LINE, GAP_GROUP, textY } from '../frame.js';
 
@@ -20,8 +21,13 @@ export function chestItemText(it) {
   return '';
 }
 
+// 금화(지름 14): 잉크 테 · 금 몸 · 오른쪽 아래 그늘
+function coin(ctx, cx, cy) {
+  const disc = (r, col) => { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill(); };
+  disc(7, PAL.frameDk); disc(6, PAL.goldDk); ctx.beginPath(); ctx.arc(cx - 0.6, cy - 0.6, 5.2, 0, Math.PI * 2); ctx.fillStyle = PAL.gold; ctx.fill();
+}
 function drawItem(ctx, it, x, y) {
-  if (it.kind === 'money') { rect(ctx, x + 4, y + 4, 12, 12, PAL.gold); rect(ctx, x + 6, y + 6, 8, 8, PAL.goldDk); text(ctx, '$', x + 10, y + 3, PAL.goldHi, { align: 'center', bold: true }); }
+  if (it.kind === 'money') { coin(ctx, x + 10, y + 10); text(ctx, '$', x + 10, y + 4, PAL.cardInk, { align: 'center', bold: true }); }
   else if (it.kind === 'chart') sprite(ctx, it.form, 'b', x + 2, y - 2);
   else if (it.kind === 'engrave') sprite(ctx, it.piece, 'w', x + 2, y - 2, { eng: it.eng });
   else if (it.kind === 'piece') sprite(ctx, it.t, 'w', x + 2, y - 2);
@@ -70,14 +76,16 @@ export class ChestScreen {
         const k = Math.floor(this.t * 14 + i * 3);
         const it = SPIN[k % SPIN.length];
         const off = Math.floor((this.t * 14 * 16) % 16);
+        // 도는 그림은 칸 안쪽 둥근 모서리에서 잘린다(위 · 아래 여백 7)
+        ctx.save(); rpath(ctx, x + 1, y + 7, cw - 2, ch - 14, radiusOf(cw, ch) - 1); ctx.clip();
         ctx.globalAlpha = 0.6;
         drawItem(ctx, it, x + 18, y + 18 + off - 8);
         ctx.globalAlpha = 1;
-        rect(ctx, x + 1, y + 1, cw - 2, 6, PAL.feltDk); rect(ctx, x + 1, y + ch - 7, cw - 2, 6, PAL.feltDk);
+        ctx.restore();
       } else if (lit) {
         ui.region(`chest:cell:${i}`, x, y, cw, ch, { keys: [chestItemText(cell.item)] });
         drawItem(ctx, cell.item, x + 18, y + 16);
-        frame(ctx, x - 1, y - 1, cw + 2, ch + 2, PAL.gold);
+        edgeRing(ctx, x, y, cw, ch, -1, PAL.gold);
       } else {
         text(ctx, '·', x + cw / 2, y + 24, PAL.dimDk, { align: 'center', bold: true });
       }

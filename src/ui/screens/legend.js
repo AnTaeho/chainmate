@@ -1,11 +1,11 @@
 // 전설 완성: 화면이 멈추고 → 그 명국의 마지막 수를 판 위에 다시 두고 → 금박 격언이 떨어져 여섯째 칸에 박힌다 + 전용 한 소절.
 // 누르거나 Enter면 끝 장면으로 건너뛴다.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, sprite, line } from '../../render/gfx.js';
+import { W, H, text, box, rect, frame, rframe, sprite, seg, radiusOf } from '../../render/gfx.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
-import { maximCellH, maximCard, maximTip } from '../parts.js';
+import { maximCellH, maximCard, maximTip, edgeRing } from '../parts.js';
 import { REPLAYS, sqOf } from '../replays.js';
 import { LIST_GAP } from '../frame.js';
 
@@ -77,7 +77,7 @@ export class LegendScreen {
     const p = cur >= 0 ? Math.min(1, (t - cur * STEP) / 0.3) : 0;
     const at = this.board(done);
     // 지나온 수의 선
-    for (let i = 0; i < done; i++) { const a = this.xy(this.rp.moves[i][0]), b = this.xy(this.rp.moves[i][1]); line(ctx, a.x + 10, a.y + 10, b.x + 10, b.y + 10, PAL.gold); }
+    for (let i = 0; i < done; i++) { const a = this.xy(this.rp.moves[i][0]), b = this.xy(this.rp.moves[i][1]); seg(ctx, a.x + 10, a.y + 10, b.x + 10, b.y + 10, PAL.gold); }
     const moving = cur >= 0 ? this.rp.moves[cur] : null;
     for (const [sq, pc] of at) {
       if (moving && sq === moving[0]) continue;
@@ -134,13 +134,13 @@ export class LegendScreen {
     const slotY = lay.slot.y;
     const k = Math.max(0, Math.min(1, (t - this.tDrop) / 0.5));
     const y = Math.round(-40 + (slotY + 40) * (k * k));
-    if (k < 1) frame(ctx, RX, slotY, RW, h, PAL.goldDk);
+    if (k < 1) rframe(ctx, RX, slotY, RW, h, radiusOf(RW, h), PAL.goldDk);
     if (t >= this.tDrop) {
       maximCard(ctx, { id: this.id, uid: -1, edition: null }, RX, y, RW, h, { t: ui.time, overlay: k < 1 });
-      frame(ctx, RX - 1, y - 1, RW + 2, h + 2, PAL.gold);
+      edgeRing(ctx, RX, y, RW, h, -1, PAL.gold);
       if (k >= 1) {
         const r = (t - this.tDrop - 0.5) * 40;
-        if (r < 30) for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; rect(ctx, RX + RW / 2 + Math.cos(a) * (RW / 2 + r), slotY + h / 2 + Math.sin(a) * (h / 2 + r * 0.5), 2, 2, PAL.goldHi); }
+        if (r < 30) for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; ctx.beginPath(); ctx.arc(RX + RW / 2 + Math.cos(a) * (RW / 2 + r), slotY + h / 2 + Math.sin(a) * (h / 2 + r * 0.5), 1.2, 0, Math.PI * 2); ctx.fillStyle = PAL.goldHi; ctx.fill(); }
       }
     }
     button(ctx, ui, 'next', W / 2 - 40, H - 26, 80, 18, '계속', { onClick: () => this.next(), tone: t >= this.tDone ? 'gold' : 'plain' });

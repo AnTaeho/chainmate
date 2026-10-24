@@ -3,7 +3,7 @@
 // 해금(CHM-73, layout.md 26절): 다음 묶음까지의 막대 + 남은 관 한 줄, 이번 판에 묶음이 열렸으면 금빛 「N개 열렸어요」 단추(해금 화면이 그 묶음을 펼친 채 열린다).
 // quiet: 순위 화면에서 돌아올 때 — 소리를 다시 내지 않는다
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, sprite, num, short, fitNum, line, measure, fine } from '../../render/gfx.js';
+import { W, H, text, box, rect, frame, rrect, sprite, num, short, fitNum, seg as line, measure, fine } from '../../render/gfx.js';
 import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { button } from '../ui.js';
@@ -87,7 +87,7 @@ export class ResultScreen {
       if (rt.kind === 'shot') {
         // 화살: 제자리에서 먹을 칸까지 날아간다
         const a = mid(cur.from), b = mid(cur.to);
-        fine(() => { const hx = lerp(a.x, b.x, p), hy = lerp(a.y, b.y, p); line(ctx, a.x, a.y, hx, hy, PAL.goldHi); rect(ctx, hx - 1, hy - 1, 2, 2, PAL.white); });
+        fine(() => { const hx = lerp(a.x, b.x, p), hy = lerp(a.y, b.y, p); line(ctx, a.x, a.y, hx, hy, PAL.goldHi); ctx.beginPath(); ctx.arc(hx, hy, 1.3, 0, Math.PI * 2); ctx.fillStyle = PAL.white; ctx.fill(); });
       } else if (rt.kind === 'bend') {
         const at = routeAt(rt.pts, p), a = this.xy(rt.pts[at.i]), b = this.xy(rt.pts[at.i + 1]);
         x = lerp(a.x, b.x, at.k); y = lerp(a.y, b.y, at.k); moving = true;
@@ -212,7 +212,7 @@ export class ResultScreen {
         text(ctx, l.name, x + P + 8, yl, run.legends.includes(l.id) ? PAL.gold : PAL.ink);
         for (let k = 0; k < 3; k++) {
           if (k < n) shardIcon(ctx, 236 + k * 22, yl - 1, PAL.gold, PAL.goldDk);
-          else rect(ctx, 238 + k * 22, yl + 4, 10, 6, PAL.frame);
+          else rrect(ctx, 238 + k * 22, yl + 4, 10, 6, 3, PAL.frame);
         }
       });
     }
