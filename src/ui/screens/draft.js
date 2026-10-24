@@ -4,7 +4,7 @@ import { live as motion } from '../../render/look.js';
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, frame } from '../../render/gfx.js';
+import { W, H, text, box, rect, rrect, frame } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows, chipBlockH } from '../parts-depth.js';
@@ -78,7 +78,7 @@ export class DraftScreen {
       ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
       const hov = ui.isHover(uid) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
-      if (p < 0.5) { box(ctx, xx, y, nw, CH, PAL.fogHi, PAL.frameDk); if (nw > 30) rect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, TIER_COL[j.tier]); return; }
+      if (p < 0.5) { box(ctx, xx, y, nw, CH, PAL.fogHi, PAL.frameDk); if (nw > 30) { rrect(ctx, xx + Math.floor(nw / 2) - 9, y + CH / 2 - 9, 18, 18, 9, PAL.frameDk); rrect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, 8, TIER_COL[j.tier]); } return; }
       if (j.tier === 'rainbow') motion();
       const col = j.tier === 'rainbow' ? `hsl(${Math.floor(time * 120 + i * 60) % 360},70%,70%)` : TIER_COL[j.tier];
       const picked = this.chosen && this.chosen.i === i;
@@ -103,7 +103,7 @@ export class DraftScreen {
       for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } });
       if (lay.chips != null) familyChips(ctx, j.families, x + P, y + lay.chips + (CH - lay.h), lay.IW, CARD_CHIP_ROWS);
       closeBox();
-      if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rect(ctx, x, y, CW, CH, PAL.white); ctx.globalAlpha = 1; }
+      if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rrect(ctx, x, y, CW, CH, 4, PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     }
   }

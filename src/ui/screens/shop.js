@@ -1,18 +1,18 @@
 // 상점: 진열 2 + 꾸러미 2 + 다시 진열 + 다음 대국. 오른쪽 격언 칸(끌어서 순서 바꾸기 · 눌러 팔기), 두루마리 칸(눌러 쓰기),
 // 아래 덱(눌러 승급 · 빼기).
-import { sway } from '../sway.js';
+import { sway, tiltHit } from '../sway.js';
 import { hint as coachHint } from '../coach.js';
 import { PAL, RARITY } from '../../render/palette.js';
 import { wrap } from '../../render/text.js';
-import { W, text, box, rect, frame, measure, slot } from '../../render/gfx.js';
+import { W, text, box, rect, rrect, measure, slot, radiusOf } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
-import { unshaded } from '../../render/light.js';
+import { unshaded, rpath } from '../../render/light.js';
 import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } from '../../sim/run.js';
 import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { button, growHit } from '../ui.js';
-import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, itemArt, chartLevel, SEAL, targetOk, isSwap, rarityLine, HOLD_MARK, itemName, itemCardLayout } from '../parts.js';
+import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, edgeRing, itemArt, chartLevel, SEAL, targetOk, isSwap, rarityLine, HOLD_MARK, itemName, itemCardLayout } from '../parts.js';
 import { EDITION_BY_ID } from '../../data/editions.js';
 import { chartForm } from '../../data/pieces.js';
 import { tierOf, ENG_EDGE } from '../../render/sprites.js';
@@ -33,6 +33,10 @@ const RX = RIGHT.x, RW = RIGHT.w;
 // 판 틀(docs/design-notes/layout.md 「상점」): 가운데 칸 위 띠에 「진열」 이름표 · 다시 진열 · 다음 대국, 그 아래로 진열 카드 줄(hug) →
 // 꾸러미 줄(hug) → 덱(남는 높이). 오른쪽 칸은 격언 칸 → 두루마리(아래에서부터). 묶음 사이 GAP_GROUP
 const CARD_W = CARD.w, BAR_Y = 2, BAR_H = BTN_S, BOTTOM = 270 - 2, BAG_MIN = 28;
+// 진열 카드 기울기(라디안, 1.2도): 높이 160 카드의 아래 모서리가 3 비켜 두 카드 사이 8에 들어간다
+const HANG = 0.021;
+// (x, y)를 pivot 둘레로 돌리면 얼마나 옮겨지나
+const turn = (x, y, a, [px, py]) => { const c = Math.cos(a), s = Math.sin(a); return [px + (x - px) * c - (y - py) * s - x, py + (x - px) * s + (y - py) * c - y]; };
 
 // 덱 줄: 작은 기물 카드들. pick(p)이 있으면 누를 수 있다.
 // flash: { id, p } 각인을 막 새긴 기물(0.3초 반짝)
@@ -72,7 +76,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     }
     pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick && ok ? 1 : 0, selected: selectedId === p.id, hover: hov && ok, dim: !ok, tier: tierOf(level), level, glow: gl, time: ui.time + i, flash: fl });
     if (growing) { if (grow.big || grow.from == null) growPillar(ctx, px, py, cw, ch, grow.p); else growSparks(ctx, px, py, cw, ch, grow.p); }
-    if (glow && pick && ok) { live(); const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; frame(ctx, px - 1, py - 1, cw + 2, ch + 2, PAL.gold); ctx.globalAlpha = 1; }
+    if (glow && pick && ok) { live(); const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; edgeRing(ctx, px, py, cw, ch, -1, PAL.gold); ctx.globalAlpha = 1; }
   });
 }
 
@@ -126,9 +130,12 @@ export function consumableCard(ctx, c, x, y, w, h, hover, { names = true } = {})
   // 두루마리 칸은 LIST_GAP으로 잇는 목록 — 그림자 없이(그림자가 칸 사이 틈을 메운다)
   unshaded(() => cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge }));
   const name = scrollName(c);
+  // 띠는 카드 안쪽 둥근 모서리를 따라 자른다
+  ctx.save(); rpath(ctx, x + 1, y + 1, w - 2, h - 2, radiusOf(w, h) - 1); ctx.clip();
   kindBand(ctx, c.kind, x + 1, y + 1, h - 2);
   // 혼 두루마리: 띠 오른끝(문양 옆 빈 줄)에 겹쳐 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙) — 이름과 한 칸 띄운다
-  if (c.kind === 'soul') rect(ctx, x + BAND, y + 2, 2, h - 4, RARITY[SOUL_BY_ID[c.id].rarity]);
+  if (c.kind === 'soul') rrect(ctx, x + BAND, y + 2, 2, h - 4, 1, RARITY[SOUL_BY_ID[c.id].rarity]);
+  ctx.restore();
   const bx = x + 1 + BAND + 2; // 띠(와 등급 막대) 뒤 글 · 그림이 서는 왼끝
   const ay = y + Math.floor((h - SCROLL_ART.h) / 2);
   if (narrow && names) { const nx = bx, nw = scrollNameRoom(w); fitText(ctx, name, nx + Math.floor(nw / 2), y + textY(P), nw, PAL.cardInk, { align: 'center' }); closeBox(); return; }
@@ -145,6 +152,8 @@ function scrollArt(ctx, c, ax, ay) { itemArt(ctx, c, ax, ay, 0, null, SCROLL_ART
 // 꾸러미 칸 쌓기(재기와 그리기가 같이 쓴다): 왼쪽 봉투(ENV), 오른쪽 이름 → 값(두 줄, 봉투 높이 가운데).
 // 봉투 속 「무엇 셋 중 하나」는 가리키면 왼쪽 칸 설명에(packTip)
 const ENV = { w: 28, h: 22 };
+// 넓은 칸의 봉투(상자 없이 그리므로 자리보다 크게) · 봉투 기울기
+const ENV_BIG = { w: 40, h: 30 }, ENV_TILT = 0.07;
 const PACK_INSIDE = { piece: '기물 셋 중 하나', chart: '기보 셋 중 하나', engraving: '각인 셋 중 하나', golden: '판본 격언 셋 중 하나' };
 export const packTip = (pk) => tipLines(PACK_NAME[pk.kind], PACK_INSIDE[pk.kind] || '');
 const PACK_GAP = 4;
@@ -155,6 +164,9 @@ const packEnv = (w) => w >= 100;
 const ENV_S = { w: 24, h: 20 };
 // 꾸러미 칸이 넷(건너뛰기 패 「꾸러미 칸 +1」에 금빛 꾸러미가 붙은 상점, CHM-58 — 폭 53)이면 봉투를 더 작게(ENV_XS) 해서 값 자리를 남긴다
 const ENV_XS = { w: 14, h: 12 };
+// 상자 없이 그리는 넷 칸의 봉투(값 위) · 셋 칸에서 이름이 봉투 옆에 다 들어가는가
+const ENV_STACK = { w: 20, h: 15 };
+const packSide = (w, names, packs) => !packEnv(w) && names && packs.every((q) => measure(packShortName(q), true) <= w - ENV_S.w - 4);
 export function packCellLayout(pk, w, { names = true } = {}) {
   const P = PAD_CARD, env = packEnv(w), small = !env && !names;
   // 아주 좁은 칸(넷)의 작은 봉투 칸은 봉투를 위에, 값을 그 아래 가운데에(stack) — 옆에 두면 「Free」가 안 들어간다
@@ -178,17 +190,18 @@ export const consumableTip = (c) => (c.kind === 'evolve' || c.kind === 'tactic' 
 // 리본(위 테 금빛 띠) = 이 상점에서 찜했거나 지난 상점에서 넘어온 카드, 채운 책갈피 = 다음 상점까지 맡아 둔 카드(run.hold).
 // 넘어온 카드(kept)는 리본에 빈 책갈피로 선다 — 다시 누르면 채워져 그다음 상점에도 남는다
 const isHeld = (run, i) => !!run.hold && run.hold.slot === i;
-const HOLD_ROWS = [
-  'EEEEEEEEE',
-  'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFHFFFFFE', 'EFFFFFFFE', 'EFFFFFFFE',
-  'EFFFEFFFE',
-  'EFFE.EFFE',
-  'EFE...EFE',
-  'EE.....EE',
-];
+// 책갈피(HOLD_MARK 9 × 14): 아래가 갈라진 리본. 채우면 금빛, 비면 카드 빛깔에 흐린 테(가리키면 금빛 테)
 export function bookmark(ctx, bx, by, filled, hover = false) {
-  const col = { E: filled ? PAL.goldDk : hover ? PAL.gold : PAL.cardDim, F: filled ? PAL.gold : PAL.card, H: filled ? PAL.goldHi : PAL.card };
-  HOLD_ROWS.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') rect(ctx, bx + i, by + j, 1, 1, col[row[i]]); });
+  const { w, h } = HOLD_MARK;
+  ctx.beginPath();
+  ctx.moveTo(bx, by); ctx.lineTo(bx + w, by); ctx.lineTo(bx + w, by + h); ctx.lineTo(bx + w / 2, by + h - 4); ctx.lineTo(bx, by + h); ctx.closePath();
+  ctx.fillStyle = filled ? PAL.gold : PAL.card; ctx.fill();
+  ctx.lineWidth = 1; ctx.lineJoin = 'round';
+  ctx.strokeStyle = filled ? PAL.goldDk : hover ? PAL.gold : PAL.cardDim;
+  ctx.beginPath();
+  ctx.moveTo(bx + 0.5, by); ctx.lineTo(bx + 0.5, by + h - 1); ctx.lineTo(bx + w / 2, by + h - 4.5); ctx.lineTo(bx + w - 0.5, by + h - 1); ctx.lineTo(bx + w - 0.5, by);
+  ctx.stroke();
+  if (filled) rect(ctx, bx + 2, by + 1, 1, h - 6, PAL.goldHi);
 }
 // 책갈피 자리(카드 안): 값 글 왼쪽에 gap 띄우고, 위 테에서 한 칸 아래부터 늘어진다
 export function holdMarkAt(it, x, y, w) {
@@ -331,27 +344,30 @@ export class ShopScreen {
       });
       bagY = TOP + th + GAP_GROUP;
     } else {
-      // 진열 카드는 효과를 다 적는다(가리키지 않아도 읽힌다). 두 카드는 긴 쪽 높이에 맞춘다
+      // 진열 카드는 효과를 다 적는다(가리키지 않아도 읽힌다). 두 카드는 긴 쪽 높이에 맞춘다.
+      // 걸린 카드(시안 p3): 안쪽 윗모서리에 걸려 바깥쪽이 조금 처진다 — 위 띠 단추 쪽으로는 솟지 않는다. 누르는 구역은 기운 모양(tiltHit)
       shop.display.forEach((it, i) => {
         const x = CX + i * (CARD_W + 8), y = TOP, id = `shop:buy:${i}`;
+        const tilt = i % 2 ? HANG : -HANG, pivot = i % 2 ? [x, y] : [x + CARD_W, y];
         const ok = canBuy(run, it);
-        ui.region(id, x, y, CARD_W, lay.cardH, { enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => withHoldLine(itemExtraTip(it), run, it, i), keys: () => itemKeys(it), preview: true });
-        // 찜 책갈피: 카드 구역 뒤에 적어 카드보다 먼저 눌린다(살 돈이 모자란 카드도 찜할 수 있다)
+        const th = tiltHit(x, y, CARD_W, lay.cardH, tilt, pivot);
+        ui.region(id, th.x, th.y, th.w, th.h, { hit: th.hit, enabled: ok, onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), tip: () => withHoldLine(itemExtraTip(it), run, it, i), keys: () => itemKeys(it), preview: true });
+        // 찜 책갈피: 카드 구역 뒤에 적어 카드보다 먼저 눌린다(살 돈이 모자란 카드도 찜할 수 있다). 누르는 자리는 기운 만큼 옮긴다
         const held = isHeld(run, i), mark = holdMarkAt(it, x, y, CARD_W), hid = `shop:hold:${i}`;
         if (!it.sold) {
-          const g = holdHit(ui, mark);
-          ui.region(hid, g.x, g.y, g.w, g.h, { onClick: () => this.act({ type: 'hold', slot: i }, 'pick'), tip: () => tipLines(held ? '찜함' : '찜', held ? '다음 상점에도 그대로 남아요' : it.kept ? '지난 상점에서 찜한 카드예요. 다시 찜하면 다음 상점에도 남아요' : '다음 상점까지 남겨 둬요', 130) });
+          const g = holdHit(ui, mark), mc = turn(mark.x + HOLD_MARK.w / 2, mark.y + HOLD_MARK.h / 2, tilt, pivot);
+          ui.region(hid, Math.round(g.x + mc[0]), Math.round(g.y + mc[1]), g.w, g.h, { onClick: () => this.act({ type: 'hold', slot: i }, 'pick'), tip: () => tipLines(held ? '찜함' : '찜', held ? '다음 상점에도 그대로 남아요' : it.kept ? '지난 상점에서 찜한 카드예요. 다시 찜하면 다음 상점에도 남아요' : '다음 상점까지 남겨 둬요', 130) });
         }
         // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
         const hov = (ui.isHover(id) && ok) || ui.isHover(hid);
         sway(ctx, ui.time, `${id}:${it.kind}:${it.id || it.form || it.t || ''}`, x, y, CARD_W, lay.cardH, (c) => {
-          itemCard(c, it, x, y, CARD_W, lay.cardH, { hover: hov && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok }, hold: true, sheen: { time: ui.time, phase: i } });
-          if (!it.sold && !ok) { c.globalAlpha = 0.35; rect(c, x, y, CARD_W, lay.cardH, PAL.shadow); c.globalAlpha = 1; }
+          itemCard(c, it, x, y, CARD_W, lay.cardH, { hover: hov && ok, sold: it.sold, t: ui.time + i, run, ui, under: { onClick: () => this.act({ type: 'buy', slot: i }, 'coin'), enabled: ok }, hold: true, tag: true, sheen: { time: ui.time, phase: i } });
+          if (!it.sold && !ok) { c.globalAlpha = 0.35; rrect(c, x, y, CARD_W, lay.cardH, radiusOf(CARD_W, lay.cardH), PAL.shadow); c.globalAlpha = 1; }
           if (it.sold) return;
-          // 리본: 찜했거나 넘어온 카드는 위 테에 금빛 띠
-          if (held || it.kept) { rect(c, x + 1, y - 1, CARD_W - 2, 3, PAL.gold); rect(c, x + 1, y - 1, CARD_W - 2, 1, PAL.goldHi); }
+          // 리본: 찜했거나 넘어온 카드는 위 테 위에 금빛 띠(그 아래 등급 줄은 가리지 않는다)
+          if (held || it.kept) rrect(c, x + 4, y - 1, CARD_W - 8, 3, 1.5, PAL.gold);
           bookmark(c, mark.x, mark.y, held, ui.isHover(hid));
-        }, { hover: hov, press: hov && ui.press && (ui.press.id === id || ui.press.id === hid) });
+        }, { hover: hov, press: hov && ui.press && (ui.press.id === id || ui.press.id === hid), tilt, pivot });
       });
       // 꾸러미: 진열 아래 칸 둘(금빛 꾸러미가 붙으면 셋)
       shop.packs.forEach((pk, i) => {
@@ -359,10 +375,7 @@ export class ShopScreen {
         const ok = !pk.sold && run.money >= pk.price;
         ui.region(id, x, y, pw, lay.packH, { enabled: ok, onClick: () => this.act({ type: 'buyPack', slot: i }, 'pack'), tip: () => packTip(pk), preview: true });
         const hov = ui.isHover(id) && ok;
-        sway(ctx, ui.time, `${id}:${pk.kind}`, x, y, pw, lay.packH, (c) => {
-          this.packCard(c, pk, x, y, pw, lay.packH, hov, packRowNames(shop.packs, pw));
-          if (!pk.sold && !ok) { c.globalAlpha = 0.35; rect(c, x, y, pw, lay.packH, PAL.shadow); c.globalAlpha = 1; }
-        }, { hover: hov, press: hov && ui.press && ui.press.id === id, amt: 0.6 });
+        this.packCard(ctx, ui, pk, x, y, pw, lay.packH, hov, packRowNames(shop.packs, pw), { ok, i, press: hov && ui.press && ui.press.id === id, packs: shop.packs });
       });
     }
     // 덱(가운데 아래 — 남는 높이). 수는 왼쪽 칸 「덱」.
@@ -422,32 +435,45 @@ export class ShopScreen {
     }
   }
 
-  // 꾸러미 칸: 왼쪽 봉투, 오른쪽 이름 → 값(packCellLayout). 봉투 속은 가리키면(packTip)
-  packCard(ctx, pk, x, y, w, h, hover, names = true) {
-    const lay = packCellLayout(pk, w, { names });
-    openBox('card', x, y, w, h, PAD_CARD, { name: `팩 ${pk.kind}` });
-    box(ctx, x, y, w, h, PAL.feltDk, hover ? PAL.gold : PAL.frameDk);
-    const P = PAD_CARD;
+  // 꾸러미 칸: 왼쪽 봉투, 오른쪽 이름 → 값(packCellLayout). 봉투 속은 가리키면(packTip).
+  // 시안 p3: 상자 없이 기운 봉투만(가리키면 봉투가 들리고 이름이 금빛). 넓은 칸은 봉투를 자리보다 크게(ENV_BIG) 칸 높이 가운데에
+  packCard(ctx, ui, pk, x, y, w, h, hover, names = true, { ok = true, i = 0, press = false, packs = [pk] } = {}) {
+    const lay = { ...packCellLayout(pk, w, { names }) };
+    // 넓은 칸은 테가 없어 글이 칸 오른끝까지 쓴다(봉투 오른쪽 4 뒤부터 — 영어 「Engraving」 63이 굵게 들어간다)
+    if (lay.env != null && !lay.small) { lay.tx = ENV_BIG.w + 4; lay.tw = w - lay.tx; }
+    // 좁은 칸(셋)도 줄의 이름이 다 들어가면 작은 봉투를 왼쪽에(side), 아주 좁은 칸(넷)은 봉투를 조금 키워 값 위에
+    const side = lay.env == null && packSide(w, names, packs);
+    if (side) { lay.tx = ENV_S.w + 4; lay.tw = w - lay.tx; lay.env = Math.floor((h - ENV_S.h) / 2); lay.small = false; }
+    openBox('tile', x, y, w, h, 0, { name: `팩 ${pk.kind}` });
+    const P = PAD_CARD, tilt = (i % 2 ? 1 : -1) * ENV_TILT;
+    if (!ok) ctx.globalAlpha = pk.sold ? 0.3 : 0.5;
     // 연 꾸러미는 작은 봉투 칸이어도 봉투 없이 칸 가운데 「열었다」(봉투 오른쪽 34에 영어 「Opened」가 안 들어간다)
-    if (lay.env != null && !(pk.sold && lay.small)) envelope(ctx, lay.stack ? x + ((w - lay.es.w) >> 1) : x + P, y + lay.env, lay.small ? lay.es.w : ENV.w, lay.small ? lay.es.h : ENV.h, pk.kind, { hover });
+    if (lay.env != null && !(pk.sold && lay.small)) {
+      const big = !lay.small && !side, es = side ? ENV_S : lay.stack ? ENV_STACK : lay.es, ew = big ? ENV_BIG.w : es.w, eh = big ? ENV_BIG.h : es.h;
+      const ex = big || side ? x : lay.stack ? x + ((w - ew) >> 1) : x + P, ey = big ? y + Math.floor((h - eh) / 2) : lay.stack ? y + 3 : y + lay.env;
+      const a = ctx.globalAlpha;
+      sway(ctx, ui.time, `shop:pack:${i}:${pk.kind}`, ex, ey, ew, eh, (c) => { c.globalAlpha = a; envelope(c, ex, ey, ew, eh, pk.kind, { hover }); }, { hover, press, amt: 1, tilt, shadow: big });
+      ctx.globalAlpha = a;
+    }
     if (pk.sold) {
-      ctx.globalAlpha = 0.7; rect(ctx, x + 1, y + 1, w - 2, h - 2, PAL.feltDk); ctx.globalAlpha = 1;
+      ctx.globalAlpha = 1;
       // 봉투가 있으면 글 칸(봉투 오른쪽) 가운데 — 영어 「Opened」가 봉투에 걸치지 않게
       text(ctx, '열림', lay.small ? x + Math.floor(w / 2) : x + lay.tx + Math.floor(lay.tw / 2), inkY(y, h), PAL.dim, { align: 'center', bold: true });
       closeBox();
       return;
     }
+    const price = pk.price ? `$${pk.price}` : '공짜';
     // 작은 봉투 칸: 이름 없이 봉투 오른쪽에 값 한 줄(칸 높이 가운데)
     if (lay.small) {
-      if (lay.stack) text(ctx, pk.price ? `$${pk.price}` : '공짜', x + Math.floor(w / 2), y + lay.price, PAL.gold, { bold: true, align: 'center' });
-      else text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, inkY(y, h), PAL.gold, { bold: true });
-      closeBox();
-      return;
+      if (lay.stack) text(ctx, price, x + Math.floor(w / 2), y + lay.price, PAL.gold, { bold: true, align: 'center' });
+      else text(ctx, price, x + lay.tx, inkY(y, h), PAL.gold, { bold: true });
+    } else {
+      // 좁은 칸(셋 · 넷)은 작은 봉투를 값 줄 오른쪽에(이름 줄은 폭을 다 쓴다)
+      if (lay.env == null) envelope(ctx, x + w - P - ENV_XS.w, y + lay.price - ((LINE - 11) >> 1) + 1, ENV_XS.w, ENV_XS.h, pk.kind, { hover });
+      fitText(ctx, packShortName(pk), x + lay.tx, y + lay.name, lay.tw, hover ? PAL.gold : PAL.ink);
+      text(ctx, price, x + lay.tx, y + lay.price, PAL.gold, { bold: true });
     }
-    // 좁은 칸(셋 · 넷)은 작은 봉투를 값 줄 오른쪽에(이름 줄은 폭을 다 쓴다)
-    if (lay.env == null) envelope(ctx, x + w - P - ENV_XS.w, y + lay.price - ((LINE - 11) >> 1) + 1, ENV_XS.w, ENV_XS.h, pk.kind, { hover });
-    fitText(ctx, packShortName(pk), x + lay.tx, y + lay.name, lay.tw, PAL.ink);
-    text(ctx, pk.price ? `$${pk.price}` : '공짜', x + lay.tx, y + lay.price, PAL.gold, { bold: true });
+    ctx.globalAlpha = 1;
     closeBox();
   }
 

@@ -36,9 +36,10 @@ export function glowText(ctx, x, y, w, h, col, a = 0.5, spread = 8) {
   const pa = ctx.globalAlpha;
   ctx.globalCompositeOperation = 'lighter';
   ctx.globalAlpha = pa * Math.min(1, a);
+  const sm0 = ctx.imageSmoothingEnabled;
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(blob(col), x - spread, y - spread, w + spread * 2, h + spread * 2);
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = sm0; // 기운 카드(sway tilt)처럼 켜 둔 곳이면 켠 채로
   ctx.globalAlpha = pa;
   ctx.globalCompositeOperation = typeof prev === 'string' ? prev : 'source-over';
 }
@@ -51,12 +52,13 @@ export function glow(ctx, x, y, w, h, col, a = 0.5, spread = 6) {
   const pa = ctx.globalAlpha;
   ctx.globalCompositeOperation = 'lighter';
   ctx.globalAlpha = pa * Math.min(1, a);
+  const sm0 = ctx.imageSmoothingEnabled;
   ctx.imageSmoothingEnabled = true;
   const c = blob(col), s = spread;
   const X = [x - s, x, x + w], Y = [y - s, y, y + h], Wd = [s, w, s], Ht = [s, h, s];
   const SX = [0, HB - 0.5, HB], SW = [HB, 1, HB];
   for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) ctx.drawImage(c, SX[i], SX[j], SW[i], SW[j], X[i], Y[j], Wd[i], Ht[j]);
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = sm0; // 기운 카드(sway tilt)처럼 켜 둔 곳이면 켠 채로
   ctx.globalAlpha = pa;
   ctx.globalCompositeOperation = typeof prev === 'string' ? prev : 'source-over';
 }
@@ -115,6 +117,7 @@ export function softShadow(ctx, x, y, w, h) {
   const n = Math.max(1, LOOK.n), c = softCanvas(n), S = c.width, H2 = S / 2, k = KS * 2; // 원본의 반(논리 2 × KS)
   const pa = ctx.globalAlpha;
   ctx.globalAlpha = pa * Math.min(1, LOOK.shadow / 0.45);
+  const sm0 = ctx.imageSmoothingEnabled;
   ctx.imageSmoothingEnabled = true;
   const X = [x - KS, x + KS, x + w - KS], Y = [y - KS, y + KS, y + h - KS];
   const iw = Math.max(0, w - 2 * KS), ih = Math.max(0, h - 2 * KS);
@@ -125,7 +128,7 @@ export function softShadow(ctx, x, y, w, h) {
   if (h < 2 * KS) { Ht[0] = Ht[2] = h / 2 + KS; Y[2] = y + h / 2; }
   const SY = [0, H2 - 0.5, h < 2 * KS ? S - (Ht[2] / k) * H2 : H2], SH = [h < 2 * KS ? (Ht[0] / k) * H2 : H2, 1, h < 2 * KS ? (Ht[2] / k) * H2 : H2];
   for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) if (Wd[i] > 0 && Ht[j] > 0) ctx.drawImage(c, SX[i] * 1, SY[j], SW[i], SH[j], X[i], Y[j], Wd[i], Ht[j]);
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = sm0; // 기운 카드(sway tilt)처럼 켜 둔 곳이면 켠 채로
   ctx.globalAlpha = pa;
 }
 
@@ -197,7 +200,8 @@ export function flowLayer(ctx, time, tint, x, y, w, h) {
     paintFlow(flowImg.data, FW, FH, 0, 0, 0, tint, 1);
     g.putImageData(flowImg, 0, 0);
   }
+  const sm0 = ctx.imageSmoothingEnabled;
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(flowCv, x, y, w, h);
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = sm0; // 기운 카드(sway tilt)처럼 켜 둔 곳이면 켠 채로
 }
