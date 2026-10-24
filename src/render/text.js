@@ -210,3 +210,19 @@ function wrapRaw(s, w, bold) {
   }
   return out;
 }
+
+// 작은 글자(딱지 숫자 · 판 좌표 · 기보 수): 글꼴 글자를 대문자 · 숫자 잉크 높이 h로 (cx, cy)에 가운데 놓는다. 그리는 곳에 바로 써서 어느 배율에서나 또렷하고,
+// 글 기록(layoutlog)에 들지 않는다 — 옛 3 × 5 · 7줄 도트 글자 자리에 선 그림 안 글자라서. 돌려주는 값은 폭(논리 px)
+export function tinyText(ctx, s, cx, cy, h, col, { bold = true, align = 'center' } = {}) {
+  s = String(s);
+  const f = faceOf(bold), px = (f.px * h) / f.ink[0];
+  ctx.save();
+  ctx.font = fontOf(bold, px);
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = align;
+  ctx.fillStyle = col;
+  ctx.fillText(s, cx, cy + h / 2);
+  const m = ctx.measureText(s);
+  ctx.restore();
+  return m && typeof m.width === 'number' ? m.width : 0;
+}
