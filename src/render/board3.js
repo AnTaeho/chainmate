@@ -4,6 +4,7 @@ import { PAL } from './palette.js';
 import { makeCanvas, context } from './surface.js';
 import { LOOK, snap } from './look.js';
 import { glyph } from './texture.js';
+import { textGen } from './text.js';
 
 // rot: 판을 돌린 각(도), tilt: 세로 눌림(칸 높이 / 칸 폭)
 export const VIEWS = {
@@ -132,10 +133,10 @@ const SIDE_L = '#2e367a', SIDE_R = '#1f255c', INK = '#12153a';
 const boardCache = new Map();
 export function boardImage(n = LOOK.n) {
   const g = geo();
-  const key = `${g.name}|${n}|${PAL.light}|${PAL.dark}`;
+  const key = `${g.name}|${n}|${PAL.light}|${PAL.dark}|${textGen()}`; // 글꼴이 오면(textGen) 좌표 글자를 다시 굽는다
   let c = boardCache.get(key);
   if (c) return c;
-  const b = g.bounds, pad = 12;
+  const b = g.bounds, pad = 22;
   const x0 = b.x - pad, y0 = b.y - pad, w = b.w + pad * 2, h = b.h + pad * 2 + DEPTH + 8;
   const cv = makeCanvas(w * n, h * n), x = context(cv);
   x.imageSmoothingEnabled = true;
@@ -156,14 +157,27 @@ export function boardImage(n = LOOK.n) {
   }
   poly(rim); x.fillStyle = PAL.light; x.fill(); x.strokeStyle = INK; x.lineWidth = 1; x.stroke();
   for (let sq = 0; sq < 64; sq++) fillSq(x, sq, ((sq & 7) + (sq >> 3)) % 2 ? PAL.light : PAL.dark);
-  // 좌표: 판 밖 가장자리(a~h는 1단 바깥, 1~8은 a줄 바깥) — 3×5 글자를 정수 자리에
-  x.fillStyle = PAL.dim;
-  for (let f = 0; f < 8; f++) { const p = g.at(f + 0.5, -0.75); glyph(x, 'abcdefgh'[f], Math.round(p.x - 1), Math.round(p.y - 2)); }
-  for (let r = 0; r < 8; r++) { const p = g.at(-0.75, r + 0.5); glyph(x, String(r + 1), Math.round(p.x - 1), Math.round(p.y - 2)); }
+  // 좌표: 판 밖 가장자리(a~h는 1단 바깥 — 앞쪽이라 기물이 안 덮는다, 1~8은 a줄 바깥 — a줄 기물 머리보다 위로 비켜 rankOut만큼). 흐린 빛깔로 조용히
+  x.fillStyle = PAL.dim; x.globalAlpha = 0.8;
+  for (let f = 0; f < 8; f++) { const p = g.at(f + 0.5, -0.75); glyph(x, 'abcdefgh'[f], p.x - 1.5, p.y - 2.5); }
+  for (let r = 0; r < 8; r++) { const p = g.at(-rankOut(g, r), r + 0.5); glyph(x, String(r + 1), p.x - 1.5, p.y - 2.5); }
+  x.globalAlpha = 1;
   c = { cv, x: x0, y: y0, w, h };
   if (boardCache.size > 12) boardCache.clear();
   boardCache.set(key, c);
   return c;
+}
+// r단 좌표(1~8)가 a줄 바깥으로 나가는 칸 수: 글자(높이 6, 폭 5) 상자가 a줄 어느 칸의 기물(칸 가운데 ±11, 위로 PIECE_UP)과도 안 겹치는 가장 가까운 거리.
+// 1은 앞 칸 기물이 없어 0.75(왼쪽 칸 배수 칸 옆으로 나가지 않는다)
+export function rankOut(g = geo(), r = 7) {
+  for (let d = 0.75; d < 2.5; d += 0.05) {
+    const clear = [...Array(8).keys()].every((k) => {
+      const p = g.at(-d, r + 0.5), c = g.at(0.5, k + 0.5);
+      return Math.abs(p.x - c.x) > 11 + 3 || p.y + 3 < c.y - PIECE_UP - 1 || p.y - 3 > c.y + 3;
+    });
+    if (clear) return d;
+  }
+  return 1.5;
 }
 export function drawBoardImage(ctx, n = LOOK.n) {
   const b = boardImage(n);
