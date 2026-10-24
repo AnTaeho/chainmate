@@ -241,7 +241,9 @@ export class LessonScreen extends BattleScreen {
   // 오른쪽 칸 위 이름표 줄(멈춤 단추 왼쪽): 「건너뛰기」(처음 켬 덮개에서 왔을 때) 또는 「목록」 · 「행마」(대국과 같은 자리)
   drawTopRow(ctx, ui) {
     // 대국과 같은 「행마」 단추(폭 · 손가락 구역): 왼쪽은 「건너뛰기」 · 「목록」이 붙어 있어 넓히지 않는다
-    const mw = measure('행마', true) + 14, mx = PAUSE.x - 4 - mw;
+    // 왼쪽 단추가 글 + 10을 지키는 만큼만 넓힌다(영어 「Skip」 · 「Moves」)
+    const tw = measure('행마', true), lw = measure(this.skipLabel, true) + 10;
+    const mw = Math.max(tw + 10, Math.min(tw + 14, PAUSE.x - 4 - 4 - RX - lw)), mx = PAUSE.x - 4 - mw;
     button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { u: Infinity, d: Math.max(0, TOP - 1 - (2 + BTN_S)) } });
     button(ctx, ui, 'lesson:skip', RX, 2, mx - 4 - RX, BTN_S, this.skipLabel, { onClick: () => this.skipAll() });
   }
