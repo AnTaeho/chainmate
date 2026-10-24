@@ -4,7 +4,7 @@
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rect, fitNum, frame, measure } from '../../render/gfx.js';
+import { W, text, box, rect, rrect, rframe, fitNum, measure } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
 import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
@@ -14,7 +14,7 @@ import { button } from '../ui.js';
 import { KIND_NAME, PACK_NAME, josa } from '../words.js';
 import { drawIcon, drawIconLight } from '../../render/icons.js';
 import { kindTab } from '../kinds.js';
-import { envelope } from '../parts.js';
+import { envelope, edgeRing } from '../parts.js';
 import { L } from '../lang.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, GAP_IN, GAP_GROUP, flow, BTN_S } from '../frame.js';
@@ -29,14 +29,21 @@ import { previewBattle } from '../../sim/run.js';
 import { miniBoard, bigBoard, peekSize, PEEK } from '../peek.js';
 
 
-// 마지막 관(대가)의 왕관 9×7
-const CROWN = ['#...#...#', '##..#..##', '##.###.##', '#########', '#########', '.........', '#########'];
+// 마지막 관(대가)의 왕관 9×7: 세 뾰족 끝 · 몸 · 띠(벡터, 잉크 테 없이 한 빛깔)
+const CROWN = { w: 9, h: 7 };
+function crown(ctx, x, y, col) {
+  ctx.beginPath();
+  ctx.moveTo(x, y); ctx.lineTo(x + 2.5, y + 2.6); ctx.lineTo(x + 4.5, y - 0.4); ctx.lineTo(x + 6.5, y + 2.6); ctx.lineTo(x + 9, y);
+  ctx.lineTo(x + 9, y + 5); ctx.lineTo(x, y + 5); ctx.closePath();
+  ctx.fillStyle = col; ctx.fill();
+  rrect(ctx, x, y + 6, 9, 1.4, 0.7, col);
+}
 
 // 판의 길: 1관~8관 구슬, 8관은 왕관. 지난 관은 금빛, 지금 관은 밝게 숨 쉬고, 남은 관은 흐리게
 export function antePath(ctx, ui, run, cx, y, time) {
   if (run.endless) { text(ctx, `끝없는 대국 ${run.ante}관`, cx, y, PAL.gold, { align: 'center', bold: true }); return; }
   const label = `${run.ante}관 / ${ANTES}관`;
-  const step = 14, pw = 8, cw = CROWN[0].length;
+  const step = 14, pw = 8, cw = CROWN.w;
   const trackW = (ANTES - 1) * step + cw;
   const lw = measure(label, true);
   const x0 = Math.round(cx - (lw + 10 + trackW) / 2);
@@ -50,8 +57,8 @@ export function antePath(ctx, ui, run, cx, y, time) {
     const done = a < run.ante, cur = a === run.ante;
     if (a === ANTES) {
       const col = done ? PAL.gold : cur ? PAL.red : PAL.redDk;
-      if (cur) { ctx.globalAlpha = 0.35 + 0.35 * pulse; rect(ctx, x - 2, py - 3, cw + 4, CROWN.length + 4, PAL.red); ctx.globalAlpha = 1; }
-      CROWN.forEach((row, j) => { for (let k = 0; k < cw; k++) if (row[k] === '#') rect(ctx, x + k, py - 1 + j, 1, 1, col); });
+      if (cur) { ctx.globalAlpha = 0.35 + 0.35 * pulse; rrect(ctx, x - 2, py - 3, cw + 4, CROWN.h + 4, 3, PAL.red); ctx.globalAlpha = 1; }
+      crown(ctx, x, py - 1, col);
       continue;
     }
     // 다음 관: 구슬 대신 그 세력의 문장(상점에서 대비하게 — 설계서 「순서」)
@@ -65,7 +72,7 @@ export function antePath(ctx, ui, run, cx, y, time) {
     if (done) box(ctx, x, py, pw, pw, PAL.gold, PAL.goldDk);
     else if (cur) {
       box(ctx, x, py, pw, pw, PAL.goldHi, PAL.gold);
-      ctx.globalAlpha = 0.3 + 0.5 * pulse; frame(ctx, x - 2, py - 2, pw + 4, pw + 4, PAL.goldHi); ctx.globalAlpha = 1;
+      ctx.globalAlpha = 0.3 + 0.5 * pulse; rframe(ctx, x - 2, py - 2, pw + 4, pw + 4, 4, PAL.goldHi); ctx.globalAlpha = 1;
     } else box(ctx, x, py, pw, pw, PAL.feltDk, PAL.dimDk);
   }
   const fm = MASTER_BY_ID[FINAL_MASTER];
@@ -104,7 +111,10 @@ export function tagIcon(ctx, tag, x, y, sc = 1) {
   else if (k === 'light') drawIconLight(ctx, id, 0, 0);
   else if (k === 'tab') kindTab(ctx, id, -1, -1);
   // 꾸러미 칸 +1: 봉투 오른쪽 위에 금빛 「+」
-  else if (k === 'slot') { rect(ctx, 8, 0, 4, 4, PAL.feltDk); rect(ctx, 9, 1, 3, 1, PAL.goldHi); rect(ctx, 10, 0, 1, 3, PAL.goldHi); }
+  else if (k === 'slot') {
+    ctx.beginPath(); ctx.arc(10, 2, 2.6, 0, Math.PI * 2); ctx.fillStyle = PAL.frameDk; ctx.fill();
+    ctx.fillStyle = PAL.goldHi; ctx.fillRect(8.5, 1.5, 3, 1); ctx.fillRect(9.5, 0.5, 1, 3);
+  }
   ctx.restore();
 }
 
@@ -263,9 +273,10 @@ export class SelectScreen {
       const past = i < run.blind;
       const log = run.log.find((l) => l.ante === run.ante && l.blind === i);
       const edge = cur ? (master ? PAL.red : PAL.gold) : PAL.frameDk;
-      if (cur) frame(ctx, x - 1, y - 1, w + 2, h + 2, edge);
       openBox('card', x, y, w, h, PAD_CARD, { name: `대국 카드 ${i}` });
       box(ctx, x, y, w, h, cur ? PAL.feltDk : PAL.well, edge);
+      // 지금 대국: 바깥에 한 겹 더(둥근 모서리를 따라)
+      if (cur) edgeRing(ctx, x, y, w, h, -1, edge);
       const ink = cur ? PAL.ink : PAL.dim;
       const P = PAD_CARD;
       fitText(ctx, KIND_NAME[info.kind], x + P, y + lay.kind, w - P * 2, master ? PAL.red : cur ? PAL.gold : PAL.dim);
