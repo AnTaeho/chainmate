@@ -80,45 +80,80 @@
 도트 그림 모듈과 그것을 쓰는 곳. 바꾼 줄은 `[x]`로 지운다.
 
 **모듈**
-- [ ] `src/render/sprites.js` — 남은 것: 체스 여섯 16×22 마스크(`SPR` · `spritePixels` — 타이틀 하늘 실루엣 · `tools/icons.mjs` · 조각 빛깔 자리) · 톤 표(`TONE` · `ENG_TONE` · `TIER` — 벡터 톤이 읽는다) · `tierSparkle` · `soulOrb` · `baked` · `hiFor`. 지운 것: `spriteCanvas` · `outlineCanvas` · `spriteChips` · `THING_TONE` · 두 배 화소 목록
+- [ ] `src/render/sprites.js` — 남은 것: 톤 표(`TONE` · `ENG_TONE` · `TIER` — 벡터 톤이 읽는다) · 작은 반 도트 반짝임(`tierSparkle` · `soulOrb`, `baked` · `hiFor`). 지운 것: `spriteCanvas` · `outlineCanvas` · `spriteChips` · `THING_TONE` · 두 배 화소 목록 · 체스 여섯 16×22 마스크(`SPR` · `spritePixels` — 실루엣 · 홈 화면 아이콘 · 조각이 벡터 모양을 쓴다)
 - [x] `src/render/sprites-hi.js` — 기물 32×44 마스크(지웠다, `tools/sprites-hi.mjs`도)
 - [x] `src/render/fairy-sprites.js` — 특수 기물 마스크(지웠다 → `pieces3.js` `SHAPE`)
-- [ ] `src/render/art-hi.js` — 격언 · 문양 · 문장 · 각인 재료 · 전술 · 조각 두 배 마스크(`tools/art-hi.mjs`)
-- [ ] `src/render/art16.js` — 물약 · 룰렛 1배 그림
-- [ ] `src/render/portraits.js` — 마스터 초상 64×64
-- [ ] `src/render/crests.js` — 세력 문장
-- [ ] `src/render/icons.js` — 아이콘(`tools/icons.mjs` 홈 화면 아이콘)
-- [ ] `src/render/dice.js` — 주사위
+- [x] `src/render/art-hi.js` — 두 배 마스크 모두(지웠다, `tools/art-hi.mjs` · `test/art-hi.test.js`도)
+- [x] `src/render/art16.js` — 그림 칸 1배 원본(지웠다 → `emblems.js` 문양 · `art.js` 물건 그림)
+- [x] `src/render/portraits.js` — 마스터 초상(8절)
+- [x] `src/render/crests.js` — 세력 문장(8절)
+- [x] `src/render/icons.js` — 아이콘(7절 문양, `tools/icons.mjs` 홈 화면 아이콘은 벡터 킹)
+- [x] `src/render/dice.js` — 주사위(8절)
 - [ ] `src/render/texture.js` — (대국 판은 `board3.js boardImage`로 옮겼다 — 남은 쓰임 없음 확인 뒤 지운다) `boardCanvas` · `boardFrameCanvas` · `feltCanvas` · 3×5 좌표 글자
-- [ ] `src/ui/diagram.js` — 행마 그림(4 px 칸)
-- [ ] `src/ui/envelope.js` — 꾸러미 봉투
-- [ ] `src/ui/art.js` — 물건 그림 칸(`itemArt` · `engravingEmblem` · `soulEmblem` · `awakenArt` · 격언 그림). 기물 · 기보 · 진화 칸의 기물은 벡터, `pieceBox`는 지웠다
+- [x] `src/ui/diagram.js` — 행마 그림(8절)
+- [x] `src/ui/envelope.js` — 꾸러미 봉투(8절)
+- [x] `src/ui/art.js` — 물건 그림 칸(7절)
 - [ ] `src/ui/juice.js` — 동전(`coinCanvas`) · 연기 · 조각 · 색종이
-- [ ] `src/ui/stars.js` — 평가 별
-- [ ] `src/ui/kinds.js` — 종류 딱지 문양
+- [x] `src/ui/stars.js` — 평가 별(8절)
+- [x] `src/ui/kinds.js` — 종류 딱지 문양(8절)
 - [ ] `src/ui/peek.js` — 관 선택 카드의 작은 판
-- [ ] `src/render/night.js` — 타이틀 하늘 · 먼 실루엣(`spritePixels`). 하늘 사슬의 기물 · 빛 테 · 흰 번쩍임 · 먹힌 조각은 벡터(`fitPiece` · `pieceMask`)
+- [ ] `src/render/night.js` — 남은 것: 달 · 별 점. 먼 실루엣(8절) · 하늘 사슬의 기물 · 빛 테 · 흰 번쩍임 · 먹힌 조각은 벡터(`fitPiece` · `pieceMask`)
 - [ ] `src/ui/screens/title.js` — 로고(`bakeLogo`)
 
 **쓰는 곳**
 - [x] `src/render/gfx.js` `sprite` (기물 그리기 입구 → `pieces3.js` `fitPiece`). `soulSpark`는 그대로
 - [x] `src/ui/screens/battle.js` 판 위 — 판 · 체스 기물 여섯 · 증원 그림자 · 미리 보기 · 부서짐 · 쓰러지는 킹 · 판 위 연출(2단계)
 - [x] `src/ui/screens/battle.js` 판 위 특수 기물 · 벽 · 보석 · 문 · 증원 그림자, 판 밖 손 카드 · 먹으면 판넬 · 사슬 칸 · 바친 기물 줄(3단계)
-- [ ] `src/ui/screens/battle.js` 초상 · 문장 · 강 · 발판 · 고속도로 점(도트 그대로)
+- [ ] `src/ui/screens/battle.js` — 남은 것: 강 · 발판 · 고속도로 점. 초상 · 문장 · 평가 별 · 전술 칸은 벡터
 - [x] `src/ui/screens/lesson.js` · `review.js` (대국 화면을 물려받는다 · 복기 줄 기물)
 - [x] `src/ui/ignite.js` — 콤비네이션 길 · 카드 기물
 - [x] `src/ui/marks.js` — 판 위 표시 · 화살표
 - [x] `src/ui/annot.js` — 판 위 !! · ? 딱지 자리
-- [ ] `src/ui/parts.js` — 기물 카드 · 덱 칸의 기물은 벡터(`gfx.sprite`). 남은 것: 진열 카드 틀 · 격언 칸 · 봉투 · 행마 그림
-- [ ] `src/ui/ui.js` — 말풍선 행마 그림
+- [ ] `src/ui/parts.js` — 남은 것: 진열 카드 틀. 기물 카드 · 덱 칸 · 격언 칸 · 봉투 · 행마 그림은 벡터
+- [x] `src/ui/ui.js` — 말풍선 행마 그림
 - [ ] `src/ui/coach.js` — 도움말 그림(킹 말풍선 기물은 벡터, 도트 금관 반짝임은 뺐다)
 - [ ] `src/ui/highlight.js` · `screens/highlight.js` — 하이라이트 카드(화면 = 내보내는 그림). 카드의 기물은 벡터, 나머지는 도트
-- [ ] `src/ui/unlockview.js` — 해금 칸 그림 · 자물쇠
-- [ ] `src/ui/screens/shop.js` · `pack.js` · `chest.js` · `legend.js` · `reward.js` · `result.js` · `records.js` · `setup.js` · `moves.js` · `codex.js` · `select.js` · `settings.js` · `title.js` — 이 화면들의 기물(`gfx.sprite` · `itemArt`)은 벡터. 남은 것: 아이콘 · 문장 · 초상 · 격언 그림 · 주사위 · 행마 그림
+- [x] `src/ui/unlockview.js` — 해금 칸 그림 · 자물쇠
+- [x] `src/ui/screens/shop.js` · `pack.js` · `chest.js` · `legend.js` · `reward.js` · `result.js` · `records.js` · `setup.js` · `moves.js` · `codex.js` · `select.js` · `settings.js` · `title.js` — 기물 · 아이콘 · 문장 · 초상 · 그림 칸 · 주사위 · 행마 그림이 벡터(화면 틀 · 글자는 다음 단계)
 - [ ] `src/ui/app.js` · `src/render/backdrop.js` — 바탕(`feltCanvas`)
 
 **시험 · 도구**
 - [x] `test/sprites-hi.test.js` → `test/pieces3.test.js`(모든 기물에 모양 · 판 밖 상자 맞춤 · 1배 오프스크린 · 조각 · 사물)
-- [ ] `test/art-hi.test.js` · `test/annot.test.js` · `test/light.test.js`
+- [x] `test/art-hi.test.js`(지웠다) → `test/art.test.js` · `test/crests-portraits3.test.js` · `test/assets3-ui.test.js`(그림마다 있고, 크기 · 배율마다 구운 그림 하나)
+- [ ] `test/annot.test.js` · `test/light.test.js`
 - [x] `tools/sprites-hi.mjs`(지웠다) · `tools/shots.mjs` 기물 시트(`fitPiece`)
-- [ ] `tools/art-hi.mjs` · `tools/icons.mjs` · `tools/shots-dot2x.mjs` · `tools/shots-factions.mjs` · `tools/shots-shop-art.mjs` · `tools/smoke.mjs`(그림 검사)
+- [x] `tools/art-hi.mjs` · `tools/shots-shop-art.mjs`(도트 잉크를 재던 도구 — 지웠다) · `tools/icons.mjs`(Playwright로 벡터 킹을 굽는다) · 찍는 도구 `tools/shots-assets3.mjs`
+- [ ] `tools/shots-dot2x.mjs` · `tools/shots-factions.mjs` · `tools/smoke.mjs`(그림 검사)
+
+## 7. 문양 문법(격언 · 전설 · 물건 그림 칸)
+
+물건 그림 칸(`src/ui/art.js` `itemArt`, 22 × 26 · 격언 칸 20 × 22 · 두루마리 칸 18 × 22)은 그림 상자 하나다. 그림을 수백 장 따로 그리지 않고, 격언은 **가족 상자 + 가족 모양 + 문양** 셋으로 짓는다.
+
+- **가족**: 격언의 동사(`data/maxims.js` `verb`)가 정한다. 상자 면 빛깔과 뒤 모양(상자보다 밝은 한 빛깔, 테 없음)이 가족마다 다르다.
+  | 가족 | 동사 | 상자 | 뒤 모양 |
+  |---|---|---|---|
+  | 시작 | 놓기 · 수 | 세이지 `#6c8f76` | 원 |
+  | 잡기 | 잡기 | 자두 `#7a5f86` | 방패 |
+  | 갈아입기 | 갈아입기 | 청록 `#467f80` | 마름모 |
+  | 왕관 | 프로모션 · 체크메이트 | 남보라 `#535a9c` | 깃발(위가 뾰족한 오각) |
+  | 끊김 | 끊김 · 희생 | 포도주 `#8a4f58` | 팔각 |
+  | 판 | 덱 · 증원 · 지키는 적 · 각인 · 기보 · 혼 · 격언 · 콤보 | 잿빛 남색 `#5f6d85` | 네모 |
+  | 전설 | (전설 다섯) | 흙금 `#7d6238` | 꽃잎 별 |
+- **문양**(`src/render/emblems.js` `MOTIF`): 24 × 24 설계 상자에 붓(`pen`)으로 그린다. 몸은 크림 두 톤(왼쪽 빛 · 오른쪽 그늘) + 잉크 테(설계 1.5, 기기 화소 1 밑으로 안 가늘어진다). 붓의 낱개: 받침 없는 기물(`pieceGlyph` — 판 위 기물과 같은 모양) · 적 폰(남색) · 화살 · 둥근 화살 · 꺾쇠 · 왕관 · 동전 · 사슬 고리 · 작은 판 · 별 · 반짝 · 과녁 · 발자국. 대부분 한두 낱개로 끝난다(폰의 행진 = 폰 + 금 화살 둘, 퀸 사냥 = 적 퀸 + 붉은 과녁).
+- **빛깔**: 금은 배수 · 상금 · 왕관, 붉은은 끊김 · 노림 · 희생, 하늘은 쓰지 않는다(5절). 적은 남색 기물(받침 빛깔 규칙과 같다). 상자 · 뒤 모양은 규칙 빛깔을 쓰지 않는다(`test/art.test.js`).
+- **같은 문양 두 자리**: 아이콘(`icons.js`, 12 × 12 — 문양만)과 그림 칸(가족 상자 위). 크림 몸 + 잉크 테라 밝은 카드 · 어두운 칸 어디서나 읽혀 옛 「밝게 칠한 판」(`drawIconLight`)은 같은 그림이다. 첫 화면 메뉴 여덟 · 자물쇠도 같은 붓.
+- **다른 종류**: 상자 면은 종류 빛깔을 낮춘 것(각인 `#73485f` · 혼 `#25414d` · 전술 `#8a6440` · 도박 `#7d4560` · 조각 · 깨우기 `#3d427a`). 각인은 재료 하나(금화 · 은판 · 상아 · 흑단 · 유리 · 깃 · 청동 종 · 철 덩이 · 벌레 든 호박 · 비취 고리 · 산호 · 대리석 — 기물은 그리지 않는다), 혼은 제 빛깔 고리 + 흰 문양(`SOUL_GLYPH`), 전술은 눈송이 · 수 구슬 더하기 · 손짓과 적 폰 넷, 조각은 판 무늬 새긴 금빛 조각, 도박은 도는 빛깔(24 걸음)의 물약 · 룰렛, 깨우기는 금 간 금빛 구슬. 기물 · 기보 · 진화 칸은 세력 모습 칸(`CELL`)에 벡터 기물 그대로.
+- **굽기**: (종류, id, 도박 빛깔, 칸 크기, 배율 N)마다 한 번(`vec.js` `blitVec`). 혼의 도는 점 · 깨우기 반짝임만 그릴 때 정수 칸에 따로.
+
+## 8. 작은 그림들
+
+- **문장**(`crests.js`): 24 설계 상자, 세력 빛깔 두 톤(그늘 28% 짙게 · 빛 60% 밝게) + 쇠 · 나무 빛깔 + 잉크 테. 아직 안 만난 세력은 한 빛깔(`dim`). 12 × scale 자리에 굽는다.
+- **초상**(`portraits.js`): 64 설계 상자의 흉상 — 옷 두 톤(`LOOK` robe · robeHi) · 피부 두 톤(머리 가운데에서 자른다) · 잉크 테에 마스터마다 표 하나(철벽 투구 · 안개 두건과 청록 눈 · 거울 반쪽 은빛 얼굴 · 모래시계와 흰 수염 · 큰 주먹 · 입에 댄 손가락 · 흉터와 붉은 눈 · 금관과 긴 수염).
+- **주사위**(`dice.js`): 단추 글 빛깔의 둥근 네모에 눈 다섯을 뚫는다(1배는 네모 눈).
+- **종류 문양**(`kinds.js`): 24 설계 상자의 한 빛깔 문양 열하나(책 · 공책 · 끌 · 불꽃 · 겹 꺾쇠 · 번개 · 병 · 폰 · 눈 · 깃발 · 깨진 조각). 마스크 `g`는 정체 기록으로만 남는다.
+- **봉투**(`envelope.js`): 크림 종이 몸 + 종류 빛깔 두 톤 덮개 + 덮개 끝의 둥근 밀랍 도장(종류 문양). 여는 걸음(갈라짐 0 ~ 0.4 · 젖힘 0.4 ~ 1)마다 굽는다. 도장이 기기 화소 10 밑이면 문양을 뺀다.
+- **행마 그림**(`diagram.js`): 34 정사각 판 그대로(마름모는 칸이 2 화소라 룩 · 비숍 줄이 안 읽힌다). 크림 · 세력 어두운 칸, 잉크 테, d4는 금 칸, 갈 칸은 금 점, 막는 기물은 남색 원(잡을 수 있으면 흰 점).
+- **평가 별**(`stars.js`): 9 × 9 칸을 채운 다섯 뿔 별 한 빛깔.
+- **타이틀 먼 실루엣**(`night.js`): 16sc × 22sc 상자에 맞춘 벡터 기물 모양 한 빛깔(`pieceMask`). 게임 캔버스는 N배, 여백 판은 1배로 같은 자리에 굽는다.
+- **부서지는 조각**(`pieces3.js` `pieceChips`): 벡터 모양을 16 × 22 칸 가운데마다 재서 톤 빛깔(빛 · 그늘 · 새김 · 금 · 받침).
+- **홈 화면 아이콘**(`tools/icons.mjs`): Playwright로 남색 달무리 위 벡터 킹을 굽는다(`assets/icons/`).
