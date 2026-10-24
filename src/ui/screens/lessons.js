@@ -1,7 +1,7 @@
 // 튜토리얼 목록: 장 셋(기초 · 대국 · 판), 끝낸 수업에 표, 아래 큰 단추 「이어서」(안 끝낸 첫 수업부터 차례로). 누르면 그 수업 하나.
 // 흐름(처음 켬 덮개 「튜토리얼부터」 · 「이어서」 → 수업을 차례로 → 끝 카드 「새 판」)과 수업 「상점과 시너지」(연습용 판 위에서 따라 하는 길)도 여기서.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, slot } from '../../render/gfx.js';
+import { W, H, text, box, rect } from '../../render/gfx.js';
 import { button } from '../ui.js';
 import { createRun } from '../../sim/run.js';
 import { createRng, fork } from '../../sim/rng.js';
@@ -110,6 +110,18 @@ export function startLessonShop(app, i) {
   ], () => lessonDone(app, i));
 }
 
+// 16 × 16 번호 원(벡터): 잉크 원, 끝냈으면 금빛 속 + 잉크 표
+function numberDisc(ctx, x, y, done) {
+  const cx = x + 8, cy = y + 8;
+  ctx.fillStyle = PAL.frameDk;
+  ctx.beginPath(); ctx.ellipse(cx, cy, 8, 8, 0, 0, Math.PI * 2); ctx.fill();
+  if (!done) return;
+  ctx.fillStyle = PAL.gold;
+  ctx.beginPath(); ctx.ellipse(cx, cy, 7, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 4.5, y + 8.5); ctx.lineTo(x + 7, y + 11); ctx.lineTo(x + 11.5, y + 5.5);
+  ctx.save(); ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = PAL.frameDk; ctx.stroke(); ctx.restore();
+}
+
 export class LessonsScreen {
   constructor(app, { end = false } = {}) { this.app = app; this.end = end; }
   // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(끝 카드의 킹은 kingNote가 live()로 알린다)
@@ -139,15 +151,14 @@ export class LessonsScreen {
         const y = f.space(LESSON_BTN), id = `lessons:${i}`;
         const ok = !!seen[L.id];
         button(ctx, ui, id, x + PAD_BOX, y, colW - PAD_BOX * 2, LESSON_BTN, '', { onClick: () => openLesson(app, i, 'list') });
-        // 번호 칸(움푹): 끝낸 수업은 금빛 표, 다음 수업은 금빛 번호
+        // 번호 원: 끝낸 수업은 금빛 원에 잉크 표, 아니면 잉크 원에 번호(다음 수업은 금빛)
         const sx = x + PAD_BOX + 4, sy = y + 8;
-        slot(ctx, sx, sy, 16, 16);
-        if (ok) { rect(ctx, sx + 3, sy + 8, 2, 2, PAL.gold); rect(ctx, sx + 5, sy + 10, 2, 2, PAL.gold); for (let q = 0; q < 4; q++) rect(ctx, sx + 7 + q * 2, sy + 8 - q * 2, 2, 2, PAL.gold); }
-        else text(ctx, `${i + 1}`, sx + 8, textY(sy, 16), i === next ? PAL.gold : PAL.dim, { bold: true, align: 'center' });
+        numberDisc(ctx, sx, sy, ok);
+        if (!ok) text(ctx, `${i + 1}`, sx + 8, textY(sy, 16), i === next ? PAL.gold : PAL.ink, { bold: true, align: 'center' });
         // 수업 이름은 두 줄까지(낱말 단위) — 단추 32에 두 줄(14 × 2)이 테와 2씩 띄워 들어간다
         const nx = sx + 22, nw = x + colW - PAD_BOX - 4 - nx, nm = wrapName(L.title, nw, { bold: false });
         const ys = nm && nm.lines.length > 1 ? nm.lines.map((_, q) => y + textY(((LESSON_BTN - nm.lines.length * LINE) >> 1) + q * LINE)) : [y + textY(0, LESSON_BTN) + 1];
-        drawName(ctx, L.title, nm, nx, ys, nw, ok ? PAL.dim : PAL.ink, { bold: false });
+        drawName(ctx, L.title, nm, nx, ys, nw, ok ? PAL.cardDim : PAL.cardInk, { bold: false });
       });
       closeBox();
     });

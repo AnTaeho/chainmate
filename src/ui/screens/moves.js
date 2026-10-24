@@ -3,10 +3,10 @@
 // 카드마다 행마 그림 · 기물 · 이름 · 행마 글. 처음 보는 특수 기물은 「새로」(본 것은 records.movesSeen), 판에 있는 기물은 금빛 테(「이 판」).
 // 네 장이 넘으면 쪽을 넘긴다(쪽마다 고르게 — 아홉은 3 · 3 · 3).
 import { PAL } from '../../render/palette.js';
-import { W, text, box, frame, sprite, measure } from '../../render/gfx.js';
+import { W, text, box, sprite, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { button } from '../ui.js';
-import { fitText } from '../parts.js';
+import { fitText, cardBase } from '../parts.js';
 import { moveDiagram, hasDiagram, DIAG_SIZE } from '../diagram.js';
 import { PIECES, FAIRIES } from '../../data/pieces.js';
 import { PIECE_NAME, PIECE_MOVE } from '../words.js';
@@ -115,16 +115,16 @@ export class MovesScreen {
   card(ctx, it, cx, cy, CW, CH) {
     const P = PAD_CARD, board = this.tab === 'board' && it.board;
     openBox('card', cx, cy, CW, CH, P, { name: `행마 ${it.t}` });
-    box(ctx, cx, cy, CW, CH, PAL.well, board ? PAL.gold : PAL.frameDk);
-    if (board) frame(ctx, cx + 1, cy + 1, CW - 2, CH - 2, PAL.goldDk);
+    // 크림 카드(판 위에 있는 기물은 금빛 안쪽 테)
+    cardBase(ctx, cx, cy, CW, CH, { edge: board ? PAL.gold : null, double: board });
     const dir = this.tab === 'board' && !it.hand ? -1 : 1;
     moveDiagram(ctx, it.t, cx + P, cy + P, { dir });
     sprite(ctx, it.t, dir > 0 ? 'w' : 'b', cx + P + ((DIAG_SIZE - 16) >> 1), cy + P + DIAG_SIZE + 2);
     const tx = cx + P + DIAG_SIZE + NAME_GAP, tw = cx + CW - P - tx;
     const nw = it.fresh ? measure('새로', true) + 6 : 0;
-    if (it.fresh) text(ctx, '새로', cx + CW - P - measure('새로', true), textY(cy + P), PAL.gold, { bold: true });
-    fitText(ctx, PIECE_NAME[it.t], tx, textY(cy + P), tw - nw, it.fairy ? PAL.gold : PAL.ink);
-    wrap(PIECE_MOVE[it.t], tw).slice(0, MOVE_LINES).forEach((s, k) => text(ctx, s, tx, textY(cy + P + LINE + 2 + k * LINE), PAL.ink));
+    if (it.fresh) text(ctx, '새로', cx + CW - P - measure('새로', true), textY(cy + P), PAL.goldDk, { bold: true });
+    fitText(ctx, PIECE_NAME[it.t], tx, textY(cy + P), tw - nw, it.fairy ? PAL.goldDk : PAL.cardInk);
+    wrap(PIECE_MOVE[it.t], tw).slice(0, MOVE_LINES).forEach((s, k) => text(ctx, s, tx, textY(cy + P + LINE + 2 + k * LINE), PAL.cardInk));
     closeBox();
   }
   key(k) {

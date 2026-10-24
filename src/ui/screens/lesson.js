@@ -2,7 +2,7 @@
 // 대국 화면을 그대로 쓰고, 누를 곳만 걸음(lessons.js steps)으로 좁힌다. 규칙은 실제 sim.
 import { richText } from '../glossary.js';
 import { PAL } from '../../render/palette.js';
-import { text, rect, frame, measure } from '../../render/gfx.js';
+import { text, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { apply } from '../../sim/battle.js';
 import { previewDrop } from '../../sim/solver.js';
@@ -10,7 +10,7 @@ import { BattleScreen, BX, S, LX, LW, RX, RW, sqCenter } from './battle.js';
 import { strokeSq } from '../../render/board3.js';
 import { PAD_BOX, TOP, PAUSE, BTN_S } from '../frame.js';
 import { button } from '../ui.js';
-import { kingNoteLayout, kingNote } from '../coach.js';
+import { kingNoteLayout, kingNote, pointRing } from '../coach.js';
 import { LESSONS, LESSON_GROUPS, lessonBattle, lessonSq } from '../lessons.js';
 import { lerp } from '../anim.js';
 import { live as motion, beat } from '../../render/look.js';
@@ -225,7 +225,7 @@ export class LessonScreen extends BattleScreen {
     if (this.phase === 'play' && st && !this.busy) {
       const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : st.moves ? 'btn:moves' : null;
       const r = id && ui.regions.find((x) => x.id === id);
-      if (r) { motion(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); frame(ctx, r.x - 2, r.y - 2 + (st.pick != null ? 4 : 0), r.w + 4, st.pick != null ? 40 : r.h + 4, PAL.goldHi, 1); ctx.globalAlpha = 1; }
+      if (r) { motion(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6); pointRing(ctx, st.pick != null ? { x: r.x, y: r.y + 4, w: r.w, h: 36 } : r, PAL.goldHi, 2); ctx.globalAlpha = 1; }
     }
   }
   // 오른쪽 칸 위 이름표 줄(멈춤 단추 왼쪽): 「건너뛰기」(처음 켬 덮개에서 왔을 때) 또는 「목록」 · 「행마」(대국과 같은 자리)
@@ -247,14 +247,23 @@ export class LessonScreen extends BattleScreen {
       target: this.L.target < 99999 ? `${this.L.target}` : '체크메이트',
     };
   }
-  // 흐린 도트 손가락(1배에서도 보이게 테두리 · 흰 몸)
+  // 흐린 손가락(화살 모양 벡터 — 잉크 테 · 흰 몸). 누르는 순간 둥근 고리가 퍼진다
   drawFinger(ctx) {
     const { x, y } = this.demo.at;
-    const px = Math.round(x), py = Math.round(y) + (this.demo.press > 0 ? 1 : 0);
-    const F = ['#.....', '##....', '#o#...', '#oo#..', '#ooo#.', '#oooo#', '#oo###', '#o#o#.', '##.#o#', '....##'];
+    const px = Math.round(x) + 0.5, py = Math.round(y) + 0.5 + (this.demo.press > 0 ? 1 : 0);
+    const P = [[0, 0], [0, 9.5], [2.3, 7.4], [3.8, 10.6], [5.4, 9.9], [3.9, 6.8], [6.8, 6.6]];
+    ctx.save();
     ctx.globalAlpha = 0.9;
-    F.forEach((row, j) => { for (let i = 0; i < row.length; i++) { const c = row[i]; if (c !== '.') rect(ctx, px + i, py + j, 1, 1, c === '#' ? PAL.shadow : PAL.white); } });
-    if (this.demo.press > 0) { ctx.globalAlpha = this.demo.press * 2; frame(ctx, px - 5, py - 5, 11, 11, PAL.white); }
-    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    P.forEach(([dx, dy], k) => (k ? ctx.lineTo(px + dx, py + dy) : ctx.moveTo(px + dx, py + dy)));
+    ctx.closePath();
+    ctx.fillStyle = PAL.white; ctx.fill();
+    ctx.lineJoin = 'round'; ctx.lineWidth = 1; ctx.strokeStyle = PAL.frameDk; ctx.stroke();
+    if (this.demo.press > 0) {
+      ctx.globalAlpha = Math.min(1, this.demo.press * 2);
+      ctx.beginPath(); ctx.ellipse(px, py, 5.5, 5.5, 0, 0, Math.PI * 2);
+      ctx.lineWidth = 1.2; ctx.strokeStyle = PAL.white; ctx.stroke();
+    }
+    ctx.restore();
   }
 }

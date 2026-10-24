@@ -1,7 +1,7 @@
 // 도감: 격언 · 기물 · 혼 · 세력(우두머리 명인 포함) · 명국 · 오프닝 · 판본. 본 것만 채워지고 나머지는 「?」. 명국은 모은 조각 수까지.
 // 아직 안 연 묶음의 격언 · 특수 기물 · 혼은 「?」 대신 자물쇠 칸 — 누르면 해금 화면이 그 묶음을 펼친다(CHM-73). 본 적이 있으면(오늘의 대국 등) 잠겨 있어도 채워진다.
 import { PAL, RARITY, EDITION_TINT } from '../../render/palette.js';
-import { W, H, text, box, rect, frame, sprite, measure, slot } from '../../render/gfx.js';
+import { W, text, rrect, rframe, sprite, measure, slot, slotR, radiusOf } from '../../render/gfx.js';
 import { PIECES } from '../../data/pieces.js';
 import { PIECE_NAME, PIECE_MOVE } from '../words.js';
 import { MAXIMS } from '../../data/maxims.js';
@@ -107,7 +107,7 @@ export class CodexScreen {
       openBox('card', x, y, cw, ch, P, { name: `도감 ${e.id}` });
       if (e.lock) {
         slot(ctx, x, y, cw, ch);
-        if (ui.isHover(id)) frame(ctx, x, y, cw, ch, PAL.gold);
+        if (ui.isHover(id)) rframe(ctx, x, y, cw, ch, slotR(cw, ch), PAL.gold);
         lockIcon(ctx, x + Math.floor((cw - 12) / 2), y + Math.floor((ch - 12) / 2), ui.isHover(id) ? 1 : 0.7);
         closeBox();
         continue;
@@ -118,9 +118,10 @@ export class CodexScreen {
         closeBox();
         continue;
       }
-      cardBase(ctx, x, y, cw, ch, { fill: e.done ? '#f6d98a' : PAL.card, hover: ui.isHover(id) });
-      if (e.awake) { frame(ctx, x + 1, y + 1, cw - 2, ch - 2, PAL.gold); frame(ctx, x + 2, y + 2, cw - 4, ch - 4, PAL.goldDk); }
-      rect(ctx, x + 1, y + 2, 2, ch - 3, e.col);
+      cardBase(ctx, x, y, cw, ch, { fill: e.done ? '#f6d98a' : PAL.card, hover: ui.isHover(id), edge: e.awake ? PAL.gold : null, double: e.awake });
+      // 왼쪽 등급 막대: 둥근 모서리 안쪽에 선 작은 알약
+      const rr = radiusOf(cw, ch);
+      rrect(ctx, x + (e.awake ? 4 : 2), y + rr, 2, ch - rr * 2, 1, e.col);
       // 이름(두 줄까지)은 칸 가운데 높이에, 오른쪽 그림(아이콘 12 · 기물 16 · 조각 셋)은 오른쪽 안 여백 안
       const nm = c.name, top = (ch - (nm ? nm.lines.length : 1) * LINE) >> 1;
       drawName(ctx, e.name, nm, x + P, [0, 1].map((k) => y + textY(top + k * LINE)), c.nameW, PAL.cardInk);
