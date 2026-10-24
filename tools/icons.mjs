@@ -1,70 +1,64 @@
-// 홈 화면 아이콘(PWA · iOS): 펠트 위 상아 킹 도트 그림을 PNG로 굽는다. 저장소 의존성 없이 node zlib로 PNG를 쓴다.
+// 홈 화면 아이콘(PWA · iOS): 펠트 위 벡터 킹(src/render/pieces3.js pieceCanvas)을 PNG로 굽는다.
 //   node tools/icons.mjs → assets/icons/icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png(180)
 //   node tools/icons.mjs --desktop → desktop/icon-1024.png(데스크톱 앱 아이콘 원본, `cargo tauri icon`에 넣는다)
-// 그림은 도트 격자(32 또는 36 · 64칸)에 그리고 칸마다 정수 화소로 늘린다(흐림 없음).
+// 브라우저(Playwright, 저장소 의존성 밖 전역)에서 게임과 같은 그리기로 굽는다 — 작은 정적 서버를 잠깐 띄운다.
+import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import zlib from 'node:zlib';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { spritePixels, TONE } from '../src/render/sprites.js';
-import { feltWeave, FELT_WEAVE } from '../src/render/texture.js';
-import { PAL, rgb } from '../src/render/palette.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'assets/icons');
 
-// 킹 빛깔: 상아(w) + 금관(c*)
-const GOLD = { cf: '#eaa92c', ch: '#ffe79a', cs: '#b27414', co: '#5a3a0c', cd: '#b27414', cx: '#eaa92c' };
-const kingCol = (t) => (t.startsWith('c') ? GOLD[t] || GOLD.cf : TONE.w[t] || TONE.w.f);
+async function loadPlaywright() {
+  if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
+  try { return await import('playwright'); } catch { /* 전역 */ }
+  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
+}
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const srv = http.createServer((req, res) => {
+  const u = decodeURIComponent(req.url.split('?')[0]);
+  if (u === '/') { res.writeHead(200, { 'content-type': 'text/html' }); res.end('<!doctype html><meta charset="utf-8"><body></body>'); return; }
+  const p = path.join(ROOT, u);
+  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
+  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
+  fs.createReadStream(p).pipe(res);
+});
+await new Promise((ok) => srv.listen(0, '127.0.0.1', ok));
+const { chromium } = await loadPlaywright();
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto(`http://127.0.0.1:${srv.address().port}/`);
 
-// dots: 격자 칸 수, k: 킹 한 도트가 몇 칸인가
-function art(dots, k) {
-  const g = Array.from({ length: dots }, (_, y) => Array.from({ length: dots }, (_, x) => [rgb(PAL.felt), ...FELT_WEAVE.slice(1).map(rgb)][feltWeave(x, y)]));
-  const cx = dots / 2, cy = dots / 2;
-  // 뒤 달무리: 가운데가 조금 밝은 둥근 판(도트 계단)
-  for (let y = 0; y < dots; y++) for (let x = 0; x < dots; x++) {
-    const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / (dots / 2);
-    if (d < 0.78) g[y][x] = rgb(d < 0.62 ? '#2c4540' : PAL.feltHi);
-  }
-  const W = 16 * k, H = 22 * k;
-  const ox = Math.round(cx - W / 2), oy = Math.round(cy - H / 2) + Math.round(k / 2);
-  // 발밑 그림자
-  for (let i = 3 * k; i < 13 * k; i++) for (let j = 0; j < k; j++) { const y = oy + H - k + j; if (g[y]) g[y][ox + i] = rgb('#101a17'); }
-  for (const [i, j, t] of spritePixels('K')) {
-    const c = rgb(kingCol(t));
-    for (let a = 0; a < k; a++) for (let b = 0; b < k; b++) g[oy + j * k + b][ox + i * k + a] = c;
-  }
-  return g;
+// size: 한 변 화소, fit: 킹 상자 높이 / 한 변(가려 자르는 아이콘은 가운데 80% 원 안에 들게 작게)
+async function bake(size, fit) {
+  const url = await page.evaluate(async ({ size, fit }) => {
+    const [{ pieceCanvas, fitAt }, { PAL }] = await Promise.all([import('/src/render/pieces3.js'), import('/src/render/palette.js')]);
+    const c = document.createElement('canvas'); c.width = size; c.height = size;
+    const g = c.getContext('2d');
+    g.fillStyle = PAL.felt; g.fillRect(0, 0, size, size);
+    // 뒤 달무리: 가운데가 조금 밝은 둥근 판 + 잉크 고리
+    const r = size * 0.4;
+    g.beginPath(); g.arc(size / 2, size / 2, r, 0, Math.PI * 2); g.fillStyle = PAL.feltDk; g.fill();
+    g.beginPath(); g.arc(size / 2, size / 2, r * 0.8, 0, Math.PI * 2); g.fillStyle = '#2f3672'; g.fill();
+    // 킹: 16 × 22 비율 상자를 가운데에(받침 아래가 상자 아래)
+    const bh = size * fit, bw = (bh * 16) / 22, bx = (size - bw) / 2, by = (size - bh) / 2 + size * 0.02;
+    const f = fitAt(bx, by, bw, bh), k = pieceCanvas('K', 'w', { n: 1, w: f.w });
+    g.imageSmoothingEnabled = true;
+    g.drawImage(k.cv, f.cx - k.ox, f.cy - k.oy, k.w, k.h);
+    return c.toDataURL('image/png');
+  }, { size, fit });
+  return Buffer.from(url.split(',')[1], 'base64');
 }
 
-function png(grid, px) {
-  const n = grid.length * px;
-  const raw = Buffer.alloc((n * 3 + 1) * n);
-  for (let y = 0; y < n; y++) {
-    raw[y * (n * 3 + 1)] = 0;
-    for (let x = 0; x < n; x++) { const c = grid[Math.floor(y / px)][Math.floor(x / px)]; raw.set(c, y * (n * 3 + 1) + 1 + x * 3); }
-  }
-  const crcT = Array.from({ length: 256 }, (_, i) => { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
-  const crc = (b) => { let c = 0xffffffff; for (const v of b) c = crcT[(c ^ v) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
-  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(n, 0); ihdr.writeUInt32BE(n, 4); ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
-  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
-}
-
-// 데스크톱 앱(.icns): 같은 그림을 1024로. 웹 아이콘은 건드리지 않는다
+const write = (file, buf, size) => { fs.writeFileSync(file, buf); console.log('구움', path.relative(ROOT, file), `${size}×${size}`); };
 if (process.argv.includes('--desktop')) {
-  const file = path.join(ROOT, 'desktop/icon-1024.png');
-  fs.writeFileSync(file, png(art(32, 1), 32));
-  console.log('구움', path.relative(ROOT, file), '1024×1024');
-  process.exit(0);
+  // 데스크톱 앱(.icns): 같은 그림을 1024로. 웹 아이콘은 건드리지 않는다
+  write(path.join(ROOT, 'desktop/icon-1024.png'), await bake(1024, 0.68), 1024);
+} else {
+  fs.mkdirSync(OUT, { recursive: true });
+  for (const [name, size, fit] of [['icon-192.png', 192, 0.68], ['icon-512.png', 512, 0.68], ['apple-touch-icon.png', 180, 0.66], ['icon-maskable-512.png', 512, 0.5]]) write(path.join(OUT, name), await bake(size, fit), size);
 }
-
-fs.mkdirSync(OUT, { recursive: true });
-const out = [
-  ['icon-192.png', art(32, 1), 6],
-  ['icon-512.png', art(32, 1), 16],
-  ['apple-touch-icon.png', art(36, 1), 5],
-  // 가려 자르는 아이콘(maskable): 가운데 80% 원 안에 들게 격자를 넓힌다
-  ['icon-maskable-512.png', art(64, 2), 8],
-];
-for (const [name, grid, px] of out) { fs.writeFileSync(path.join(OUT, name), png(grid, px)); console.log('구움', name, `${grid.length * px}×${grid.length * px}`); }
+await browser.close();
+srv.close();

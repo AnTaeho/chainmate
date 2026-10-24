@@ -3,7 +3,6 @@
 // 그리기 함수는 모두 (g, x0, y0, w, h): 세계 좌표 [x0, x0 + w) × [y0, y0 + h)를 칠하고, g의 (0, 0) = 세계 (x0, y0).
 // 게임 캔버스는 (0, 0, 480, 270) 둘레를, 여백 판(backdrop.js)은 창 전체를 같은 함수로 칠한다 — 겹치는 곳은 같은 도트다.
 import { makeCanvas, context } from './surface.js';
-import { spritePixels } from './sprites.js';
 import { fitPiece, fitAt, pieceMask, drawMask, pieceCanvas, scaleOf } from './pieces3.js';
 import { LOOK, snap } from './look.js';
 import { rect, text, fine, measure } from './gfx.js';
@@ -97,24 +96,18 @@ export function silhouettesIn(t, x0, y0, w, h) {
   });
   return out;
 }
-const silCache = new Map();
-function silCanvas(kind, col) {
-  const key = `${kind}${col}`;
-  let c = silCache.get(key);
-  if (c) return c;
-  c = makeCanvas(16, 22);
-  const g = context(c);
-  g.fillStyle = col;
-  for (const [x, y] of spritePixels(kind)) g.fillRect(x, y, 1, 1);
-  silCache.set(key, c);
-  return c;
+// 실루엣 한 빛깔: 16sc × 22sc 상자에 맞춘 벡터 기물 모양(pieces3.js pieceMask — 크기 · 빛깔 · 배율마다 한 번 굽는다).
+// 게임 캔버스(N배)와 여백 판(1배)이 같은 상자 · 같은 자리에 제 배율로 그린다
+function drawSil(g, kind, col, x, y, sc) {
+  const f = fitAt(x, y, 16 * sc, 22 * sc);
+  drawMask(g, pieceMask(kind, col, { w: f.w, n: scaleOf(g) }), f.cx, f.cy);
 }
 // 움직이는 바탕: 별(tw로 반짝임) · 실루엣(t로 흐름). 세계 범위 그대로(흔들림은 부르는 쪽이 옮긴다)
 export function drawNightLive(g, x0, y0, w, h, t, tw) {
   g.fillStyle = '#fff8e8';
   for (const [x, y, ph] of starsIn(x0, y0, w, h)) { g.globalAlpha = starAlpha(tw, ph); g.fillRect(x - x0, y - y0, 1, 1); }
   g.globalAlpha = 1;
-  for (const s of silhouettesIn(t, x0, y0, w, h)) g.drawImage(silCanvas(s.kind, SIL_LAYERS[s.layer][3]), s.x - x0, s.y - y0, 16 * s.sc, 22 * s.sc);
+  for (const s of silhouettesIn(t, x0, y0, w, h)) drawSil(g, s.kind, SIL_LAYERS[s.layer][3], s.x - x0, s.y - y0, s.sc);
 }
 
 // ── 가장자리 어둡기: 게임 가운데(240, 135)에서 107도트까지 0, 300도트에서 0.5(그 밖은 0.5). 한 번 구워 늘 같은 자리에(흔들리지 않는다)
