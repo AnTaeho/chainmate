@@ -4,7 +4,7 @@ import { sheen } from './juice.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
 import { box, rect, text, frame, dots, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf } from '../render/gfx.js';
 import { button } from './ui.js';
-import { ENG_EDGE, tierOf, hiFor } from '../render/sprites.js';
+import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
 import { PIECES, chartForm } from '../data/pieces.js';
 import { SOUL_BY_ID, RARITY_NAME, isCracked, CRACK } from '../data/souls.js';
@@ -25,7 +25,7 @@ import { openBox, closeBox, logClip, LOG } from '../render/layoutlog.js';
 import { kindTab, TAB, TAB_GAP } from './kinds.js';
 import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
-export { maximArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, SHARD_ROWS, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
+export { maximArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
 
 // 카드 모서리를 따라 안쪽 k에 그리는 둥근 테(k < 0이면 바깥)
 export const edgeRing = (ctx, x, y, w, h, k, col, t = 1) => rframe(ctx, x + k, y + k, w - 2 * k, h - 2 * k, Math.max(0, radiusOf(w, h) - k), col, t);

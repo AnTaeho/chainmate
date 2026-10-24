@@ -4,11 +4,14 @@
 import { PAL } from './palette.js';
 import { makeCanvas, context } from './surface.js';
 import { LOOK } from './look.js';
-import { TONE, ENG_TONE, TIER, spritePixels, tierSparkle } from './sprites.js';
+import { TONE, ENG_TONE, TIER, tierSparkle } from './sprites.js';
 import { soulSpark, place } from './gfx.js';
 import { SOUL_BY_ID } from '../data/souls.js';
 import { PIECES } from '../data/pieces.js';
 import { THINGS, drawThing, drawThingFit } from './board3.js';
+import { trace, shapePath, two as twoTone, scaleOf } from './vec.js';
+
+export { scaleOf };
 
 export const INK = '#12153a';
 export const P3 = { w: 22 };                // 판 위 기물 폭(논리 px). 높이는 × 140 / 120
@@ -68,49 +71,26 @@ const SHAPE = {
 export const SHAPES = new Set(Object.keys(SHAPE));
 const CROSS = 'M56 6 L64 6 L64 16 L72 16 L72 24 L64 24 L64 38 L56 38 L56 24 L48 24 L48 16 L56 16 Z';
 
-// 경로 글 → 캔버스 경로(이미 beginPath한 위에 더한다)
-function trace(x, d) {
-  const t = d.match(/[MLCZ]|-?\d+(?:\.\d+)?/g);
-  let i = 0, cmd = null;
-  const n = () => Number(t[i++]);
-  while (i < t.length) {
-    if (/[MLCZ]/.test(t[i])) cmd = t[i++];
-    if (cmd === 'M') x.moveTo(n(), n());
-    else if (cmd === 'L') x.lineTo(n(), n());
-    else if (cmd === 'C') x.bezierCurveTo(n(), n(), n(), n(), n(), n());
-    else if (cmd === 'Z') x.closePath();
-  }
-}
-function shapePath(x, sh) {
-  x.beginPath();
-  const list = Array.isArray(sh) && typeof sh[0] === 'number' ? [sh] : Array.isArray(sh) ? sh : [sh];
-  for (const p of list) {
-    if (typeof p === 'string') trace(x, p);
-    else { const r = p[4] || 0; x.moveTo(p[0] + p[2] * Math.cos(r), p[1] + p[2] * Math.sin(r)); x.ellipse(p[0], p[1], p[2], p[3], r, 0, Math.PI * 2); x.closePath(); }
-  }
-}
 // 몸 하나: 빛 → 오른쪽 그늘(x 62부터 자른다) → 테
-function two(x, sh, fc, line, lw) {
-  shapePath(x, sh); x.fillStyle = fc.fill; x.fill();
-  x.save(); x.beginPath(); x.rect(62, -10, 70, 160); x.clip(); shapePath(x, sh); x.fillStyle = fc.shade; x.fill(); x.restore();
-  shapePath(x, sh); x.strokeStyle = line; x.lineWidth = lw; x.lineJoin = 'round'; x.stroke();
-}
+const two = (x, sh, fc, line, lw) => twoTone(x, sh, fc.fill, fc.shade, 62, line, lw);
 const disc = (x, cx, cy, r, fill, line, lw) => { x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fillStyle = fill; x.fill(); if (line) { x.strokeStyle = line; x.lineWidth = lw; x.stroke(); } };
 
 // k: 원본 한 단위의 기기 화소. 선은 기기 화소 1 밑으로 가늘어지지 않는다(작은 손 카드 · 도감 칸에서도 테가 남는다).
 // 작은 그림(받침 폭 < 기기 화소 16)은 고리 · 빛 줄을 빼고 새김을 굵게 — 몇 화소 안에서 뭉개지지 않게
-function paint(x, t, C, tier, k) {
+function paint(x, t, C, tier, k, bare = false, lwBody = 0) {
   const S0 = SHAPE[t] || SHAPE.P;
   const small = 88 * k < 16;
   const lw = (v, min = 1) => Math.max(v, min / k);
-  const LB = lw(LW.body), LBASE = lw(LW.base, 0.75), LRING = lw(LW.ring, 0.75), LGEM = lw(LW.gem, 0.75);
+  const LB = lwBody ? Math.max(lwBody, 1 / k) : lw(LW.body), LBASE = lw(LW.base, 0.75), LRING = lw(LW.ring, 0.75), LGEM = lw(LW.gem, 0.75);
   // 받침: 아래 타원(옆면) → 옆 띠 → 윗면 → 고리. 기보 단계는 옆면 빛깔
   const side = tier ? TIER[tier].d : C.base.side;
   const ell = (cy, rx, ry) => { x.beginPath(); x.ellipse(60, cy, rx, ry, 0, 0, Math.PI * 2); };
+  if (!bare) {
   ell(128, 44, 12); x.fillStyle = side; x.fill(); x.strokeStyle = C.line; x.lineWidth = LBASE; x.stroke();
   x.fillStyle = side; x.fillRect(16, 120, 88, 8);
   ell(120, 44, 12); x.fillStyle = C.base.top; x.fill(); x.strokeStyle = C.line; x.lineWidth = LBASE; x.stroke();
   if (!small) { ell(120, 34, 8); x.strokeStyle = C.ring; x.lineWidth = LRING; x.stroke(); }
+  }
   const crownC = (C.crown) || C;
   const body = () => { two(x, S0.body, C, C.line, LB); if (S0.top) two(x, S0.top, S0.crown ? crownC : C, C.line, LB); };
   if (C.glass) x.globalAlpha = 0.88;
@@ -137,6 +117,16 @@ function paint(x, t, C, tier, k) {
   if (tier >= 2 && S0.gem) disc(x, S0.gem[0], S0.gem[1], 5.5, tier === 3 ? '#efbd55' : '#dfe6ec', ink, LGEM);
 }
 
+// 받침 없는 실루엣(격언 그림 · 아이콘 · 행마 그림): 굽는 캔버스 g에 바로, 몸 바닥 가운데 (cx, by) · 높이 h(g 단위).
+// n: g 한 단위의 기기 화소, lw: 테 굵기(g 단위, 0이면 판 위 기물과 같은 비율)
+export function pieceGlyph(g, t, side, cx, by, h, n = 1, lw = 0) {
+  if (!SHAPE[t]) t = artOf(t);
+  const s = h / 112;
+  g.save(); g.translate(cx, by); g.scale(s, s); g.translate(-60, -120);
+  paint(g, t, toneOf(side), 0, s * n, true, lw / s);
+  g.restore();
+}
+
 // 한 번 굽기: 열쇠 = 모양 · 편 · 각인 · 기보 단계 · 고리 빛깔 · 크기 · 배율. w: 120 상자의 논리 폭(판 위 22)
 const CACHE = new Map();
 export function pieceCanvas(t, side = 'w', { eng = null, tier = 0, n = LOOK.n, w = P3.w } = {}) {
@@ -159,12 +149,6 @@ export function pieceCanvas(t, side = 'w', { eng = null, tier = 0, n = LOOK.n, w
 }
 // 그림이 없는 id(뺀 기물이 data에 남은 동안)는 바탕 기물(기보 모습), 그것도 없으면 폰
 export const artOf = (t) => (SHAPE[t] || THINGS.has(t) ? t : (PIECES[t] && SHAPE[PIECES[t].chart]) ? PIECES[t].chart : 'P');
-// 그리는 곳의 실제 배율(뒷면 N × 그리기 변환) — 정수로 굽는다
-export function scaleOf(ctx) {
-  const m = ctx && ctx.getTransform ? ctx.getTransform() : null;
-  const a = m && typeof m.a === 'number' ? Math.hypot(m.a, m.b) : LOOK.n;
-  return Math.max(1, Math.min(6, Math.round(a)));
-}
 // 굽은 그림 하나를 받침 가운데 (cx, cy)에 붙인다. hx: 가로 배율(뒤집힘)
 function blit(ctx, c, cx, cy, alpha, hx) {
   const a0 = ctx.globalAlpha;
@@ -230,12 +214,58 @@ export function drawMask(ctx, m, cx, cy, alpha = 1) { blit(ctx, m, cx, cy, alpha
 // 받침 가운데에서 기물 꼭대기까지(이름표 · 동전 · 금빛 빛이 기댄다)
 export const PIECE_TOP = Math.round((BASE.y - 6) * S); // 22
 
-// 부서질 조각의 빛깔 점(16 × 22 자리): 체스 여섯은 그 마스크, 특수 기물은 바탕 기물의 마스크에 벡터 톤 빛깔
-// (빛 · 몸 → 몸, 그늘 → 그늘, 새김 · 테 → 테, 금 자리 → 금). 사물은 제 빛깔 덩이
+// 부서질 조각의 빛깔 점(16 × 22 자리): 벡터 모양(fitPiece와 같은 맞춤)을 칸 가운데마다 재서 톤 빛깔
+// (빛 → 몸, x 62 오른쪽 → 그늘, 새김 · 눈 → 테, 관 · 금 조각 → 금, 받침 → 받침 빛깔). 사물은 제 빛깔 덩이
 const THING_CHIPS = {
   X: { box: [2, 8, 12, 12], cols: ['#9aa6a1', '#6f7a76', '#4e5754'] },
   J: { box: [4, 9, 8, 7], cols: ['#e8fffc', '#6fd8e6', '#2f9fb0'] },
 };
+// 경로 글 · 타원 → 다각형(곡선은 여덟 토막). 안팎은 짝홀 규칙
+function polys(sh) {
+  const list = Array.isArray(sh) && typeof sh[0] === 'number' ? [sh] : Array.isArray(sh) ? sh : [sh], out = [];
+  for (const p of list) {
+    if (typeof p !== 'string') {
+      const [cx, cy, rx, ry, r = 0] = p, pts = [];
+      for (let i = 0; i < 24; i++) { const q = (i / 24) * Math.PI * 2, ex = rx * Math.cos(q), ey = ry * Math.sin(q); pts.push([cx + ex * Math.cos(r) - ey * Math.sin(r), cy + ex * Math.sin(r) + ey * Math.cos(r)]); }
+      out.push(pts); continue;
+    }
+    const t = p.match(/[MLCZ]|-?\d+(?:\.\d+)?/g);
+    let i = 0, cmd = null, cur = null;
+    const n = () => Number(t[i++]);
+    while (i < t.length) {
+      if (/[MLCZ]/.test(t[i])) cmd = t[i++];
+      if (cmd === 'M') { cur = [[n(), n()]]; out.push(cur); }
+      else if (cmd === 'L') cur.push([n(), n()]);
+      else if (cmd === 'C') {
+        const [x0, y0] = cur[cur.length - 1], a = [n(), n()], b = [n(), n()], e = [n(), n()];
+        for (let k = 1; k <= 8; k++) { const u = k / 8, v = 1 - u; cur.push([v * v * v * x0 + 3 * v * v * u * a[0] + 3 * v * u * u * b[0] + u * u * u * e[0], v * v * v * y0 + 3 * v * v * u * a[1] + 3 * v * u * u * b[1] + u * u * u * e[1]]); }
+      }
+    }
+  }
+  return out;
+}
+function inside(ps, x, y) {
+  let c = false;
+  for (const pts of ps) for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+const CHIP_GEO = new Map();
+function chipGeo(t) {
+  let g = CHIP_GEO.get(t);
+  if (g) return g;
+  const S0 = SHAPE[t];
+  g = {
+    body: polys(S0.body), top: S0.top ? polys(S0.top) : null, crownTop: !!S0.crown,
+    parts: (S0.parts || []).map((q) => ({ ps: polys(q.d), gold: !!q.gold, crown: !!q.crown })),
+    ink: [...(S0.cuts || []).map(polys), ...(S0.eyes || []).map(([x, y, r]) => polys([x, y, r, r]))],
+    gems: (S0.gems || []).map(([x, y]) => polys([x, y, 6, 6])), cross: S0.cross ? polys(CROSS) : null,
+  };
+  CHIP_GEO.set(t, g);
+  return g;
+}
 export function pieceChips(t, side, eng = null) {
   t = artOf(t);
   const th = THING_CHIPS[t];
@@ -244,8 +274,26 @@ export function pieceChips(t, side, eng = null) {
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) out.push({ x, y, col: th.cols[(x * 7 + y * 3) % 3] });
     return out;
   }
-  const C = toneOf(side, eng), base = STANDARD.has(t) ? t : (PIECES[t] && STANDARD.has(PIECES[t].chart) ? PIECES[t].chart : 'P');
-  const px = spritePixels(base) || [];
-  const col = (k) => (k[0] === 'c' ? GOLD.fill : k === 's' ? C.shade : k === 'd' ? C.line : C.fill);
-  return px.filter(([, , k]) => k !== 'o' && k !== 'go').map(([x, y, k]) => ({ x, y, col: col(k) }));
+  const C = toneOf(side, eng), G = chipGeo(t), crownC = C.crown || C;
+  const { cx, cy, w } = fitAt(0, 0, 16, 22), s = w / 120, out = [];
+  const tone = (fc, x) => (x >= 62 ? fc.shade : fc.fill);
+  for (let y = 0; y < 22; y++) for (let x = 0; x < 16; x++) {
+    const X = BASE.x + (x + 0.5 - cx) / s, Y = BASE.y + (y + 0.5 - cy) / s;
+    let col = null;
+    if (G.cross && inside(G.cross, X, Y)) col = GOLD.fill;
+    else if (G.ink.some((ps) => inside(ps, X, Y))) col = C.line;
+    else if (G.gems.some((ps) => inside(ps, X, Y))) col = C.crown ? C.crown.fill : C.fill;
+    else {
+      const part = G.parts.find((q) => inside(q.ps, X, Y));
+      if (part) col = tone(part.gold ? GOLD : part.crown ? crownC : C, X);
+      else if (G.top && inside(G.top, X, Y)) col = tone(G.crownTop ? crownC : C, X);
+      else if (inside(G.body, X, Y)) col = tone(C, X);
+      else if (Math.abs(X - 60) <= 44 && Y >= 108 && Y <= 140) {
+        const top = ((X - 60) / 44) ** 2 + ((Y - 120) / 12) ** 2 <= 1, low = ((X - 60) / 44) ** 2 + ((Y - 128) / 12) ** 2 <= 1;
+        if (top) col = C.base.top; else if (low || (Y >= 120 && Y <= 128)) col = C.base.side;
+      }
+    }
+    if (col) out.push({ x, y, col });
+  }
+  return out;
 }

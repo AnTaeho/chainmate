@@ -7,8 +7,7 @@ import { GRADES, gradeOf, OLD_GRADE_MARK } from '../src/sim/chain.js';
 import { LEGENDS } from '../src/data/legends.js';
 import { emptyRecords, loadRecords, UNLOCKS } from '../src/ui/records.js';
 import { KEYS } from '../src/ui/save.js';
-import { starCount, starsW, STAR_ROWS, STAR_COL } from '../src/ui/stars.js';
-import { STAR_HI, STAR_HI4 } from '../src/render/art-hi.js';
+import { starCount, starsW, STAR_PTS, STAR_COL } from '../src/ui/stars.js';
 
 const P = (t, id) => ({ t, id, eng: null });
 // 판(런)의 첫 대국을 탁월수 장면으로: 킹 하나(e5), 손 Q R P P, 주머니 맨 위 N — 퀸을 바치고 뽑은 나이트로 킹을 먹는다
@@ -112,12 +111,11 @@ test('사슬 평가 별: 3 ★ · 5 ★★ · 8 ★★★ · 12 ∞ · 화면 �
   assert.deepEqual(Object.keys(STAR_COL), ['★', '★★', '★★★']);
   assert.equal(new Set(Object.values(STAR_COL)).size, 3);
   assert.equal(starsW(3, 4), 3 * 9 * 4 + 2 * 4);
-  // 두 배 도트: 18×18 · 36×36, 1배 별의 칠한 칸은 두 배 그림에서도 칠해져 있다(모양을 지킨다)
-  assert.deepEqual([STAR_HI.length, STAR_HI[0].length, STAR_HI4.length, STAR_HI4[0].length], [18, 18, 36, 36]);
-  STAR_ROWS.forEach((r, j) => [...r].forEach((ch, i) => {
-    const sub = [STAR_HI[2 * j][2 * i], STAR_HI[2 * j][2 * i + 1], STAR_HI[2 * j + 1][2 * i], STAR_HI[2 * j + 1][2 * i + 1]].filter((x) => x === '#').length;
-    assert.ok(ch === '#' ? sub >= 2 : sub <= 2, `별 (${i}, ${j})`);
-  }));
+  // 벡터 별: 뿔 다섯이 9 × 9 칸 안을 거의 채운다
+  assert.equal(STAR_PTS.length, 10);
+  const xs = STAR_PTS.map(([x]) => x), ys = STAR_PTS.map(([, y]) => y);
+  assert.ok(Math.min(...xs) >= 0 && Math.max(...xs) <= 9 && Math.min(...ys) >= 0 && Math.max(...ys) <= 9);
+  assert.ok(Math.max(...xs) - Math.min(...xs) > 8.5 && Math.max(...ys) - Math.min(...ys) > 8.5);
 });
 
 test('옛 기록: 「!」 · 「!!」 · 「!!!」 열쇠를 별로 옮긴다(둘 다 있으면 더한다) · 해금 과제가 옛 기록을 센다', () => {

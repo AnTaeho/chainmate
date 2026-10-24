@@ -1,14 +1,11 @@
-// 꾸러미 봉투(CHM-69, docs/design-notes/layout.md 「종류 표시」): 종류마다 통째로 그린 봉투 — 덮개 빛깔(나무 · 청록 · 자주 · 금)과 덮개에 눌러 찍은 종류 문양.
-// 폭 · 높이 · 열림(open 0 → 1)을 받는 그림 하나를 상점 칸 · 작은 표 · 여는 연출 · 건너뛰기 패가 같이 쓴다. 화면 배율 2 이상이면 반 칸 도트로 굽는다.
+// 꾸러미 봉투(CHM-69, docs/design-notes/layout.md 「종류 표시」 · art3.md 안 3): 크림 종이 몸 + 종류 빛깔 두 톤 덮개 + 잉크 테, 덮개 끝에 종류 문양을 찍은 둥근 밀랍 도장.
+// 폭 · 높이 · 열림(open 0 → 1)을 받는 그림 하나를 상점 칸 · 작은 표 · 여는 연출 · 건너뛰기 패가 같이 쓴다. (종류, 크기, 열림 걸음, 가리킴, 배율 N)마다 한 번 굽는다.
 import { PAL } from '../render/palette.js';
 import { place } from '../render/gfx.js';
-import { makeCanvas, context } from '../render/surface.js';
-import { hiFor } from '../render/sprites.js';
-import { KIND_HI } from '../render/art-hi.js';
-import { inkBox } from '../render/ink.js';
-import { KIND, PACK_KIND } from './kinds.js';
+import { bake, scaleOf, INK } from '../render/vec.js';
+import { PACK_KIND, glyphCanvas } from './kinds.js';
 
-// 몸 종이 · 종이 그늘 · 덮개 · 덮개 테와 찍힌 문양 · 눌린 자국의 밝은 줄
+// 몸 종이 · 종이 그늘 · 덮개 · 덮개 그늘과 도장 문양 · 도장 · 젖힌 덮개 안쪽
 export const ENV_COL = {
   piece: { body: '#efe3c7', bodyDk: '#cdbd98', flap: '#a88860', dk: '#6b5132', hi: '#d8c4a4' },
   chart: { body: '#efe3c7', bodyDk: '#cdbd98', flap: '#3f8f86', dk: '#1d4a45', hi: '#8fd3c6' },
@@ -19,80 +16,81 @@ export const ENV_RISE = 12; // 젖혀진 덮개가 봉투 위로 솟는 높이
 export const ENV_TEAR = 3;  // 덮개가 갈라지는 틈(반 폭)
 const STEPS = 20;           // 열림을 끊는 걸음(구운 그림 수)
 
-// 봉투 모양(도트 단위): u 테 · e 덮개 테 굵기 · fe 덮개 끝 줄(덮개 안 높이가 짝수 — 문양이 한가운데 서게) · st 곧은 덮개 끝 · tip 덮개 끝 반 폭
-export function envShape(W, H, u) {
-  const e = Math.max(1, Math.round(W / 56)), f0 = Math.round(H * 0.68), fe = f0 + ((f0 - e - u) % 2), st = Math.round(H * 0.18), tip = Math.round(W * 0.18);
-  return { e, fe, st, tip, half: (y) => (y < st ? W / 2 - u : Math.round(W / 2 - u - ((y - st) / (fe - st)) * (W / 2 - u - tip))) };
-}
-// 덮개에 찍는 문양: 잉크 10 × n 도트가 덮개 높이의 0.84 안인 가장 큰 것. n = 1은 1배 마스크, 2 이상은 반 칸 마스크를 n / 2배. 안 들어가면 null(빈 덮개)
-export function envGlyph(kind, W, H, u) {
-  const k = PACK_KIND[kind] || 'piece', S = envShape(W, H, u);
-  let n = Math.floor(((S.fe - u) * 0.84) / 10);
-  if (n < 1) return null;
-  if (n > 1) n -= n % 2;
-  const rows = n === 1 ? KIND[k].g : KIND_HI[k], m = n === 1 ? 1 : n / 2, b = inkBox(rows);
-  return { rows, m, b, x: Math.floor((W - b.w * m) / 2) - b.x * m, y: u + Math.floor((S.fe - S.e - u - b.h * m) / 2) - b.y * m };
+const mix = (a, b, t) => {
+  const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const A = p(a), B = p(b);
+  return `#${A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
+};
+// 봉투 모양(논리 단위): 덮개 끝 y · 도장 반지름 · 테 굵기
+export function envShape(W, H) {
+  const fe = Math.round(H * 0.62 * 2) / 2;
+  const r = Math.min(W, H) * 0.2;
+  const lw = W >= 60 ? 1.4 : W >= 24 ? 1 : 0.8;
+  return { fe, r, lw, seal: fe - r * 0.15 };
 }
 
-function paint(g, W, H, u, kind, open, hover, ox, oy) {
-  const F = ENV_COL[kind] || ENV_COL.piece, S = envShape(W, H, u), { e, fe } = S, mid = W / 2;
-  const R = (x, y, w, h, c) => { if (w > 0 && h > 0) { g.fillStyle = c; g.fillRect(ox + x, oy + y, w, h); } };
-  R(0, 0, W, H, hover ? PAL.white : PAL.frameDk); R(u, u, W - 2 * u, H - 2 * u, F.body); R(u, H - 2 * u, W - 2 * u, u, F.bodyDk);
-  // 아래 접힌 두 날개: 두 귀에서 가운데로
-  const slope = (H * 0.6) / W;
-  for (let i = 0; i < mid - u; i++) { const yy = H - 2 * u - Math.round(i * slope); R(u + i, yy, e + 1, e, F.bodyDk); R(W - u - i - e - 1, yy, e + 1, e, F.bodyDk); }
-  if (kind === 'golden' && W >= 40) for (const [fx, fy] of [[0.11, 0.77], [0.86, 0.77], [0.18, 0.55], [0.8, 0.59]]) { const x = Math.round(W * fx), y = Math.round(H * fy); R(x, y - e, e, 3 * e, F.hi); R(x - e, y, 3 * e, e, F.hi); }
-  // 덮개: 0~0.4 끝에서부터 갈라지고, 0.4~1 위로 젖혀진다
+// 둥근 네모 경로
+function rr(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r); g.lineTo(x + w, y + h - r);
+  g.quadraticCurveTo(x + w, y + h, x + w - r, y + h); g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r); g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.closePath();
+}
+
+function paint(g, W, H, n, kind, open, hover) {
+  const F = ENV_COL[kind] || ENV_COL.piece, S = envShape(W, H), mid = W / 2;
+  const line = hover ? PAL.white : INK, lw = Math.max(S.lw, 1 / n) * (hover ? 1.3 : 1), cr = Math.min(2, W / 12);
   const crack = Math.min(1, open / 0.4), flap = Math.max(0, (open - 0.4) / 0.6);
-  const tear = crack > 0.3 ? Math.round(crack * ENV_TEAR * u) : 0;
-  const tipY = Math.round(fe + (-ENV_RISE * u - fe) * flap);
-  const rows = []; // 줄마다 [반 폭, 가운데 틈]
-  if (tipY > u) {
-    for (let y = u; y < tipY; y++) {
-      const p = (y - u) / (tipY - u), half = S.half(u + p * (fe - u)), gap = Math.round(tear * p);
-      rows[y] = [half, gap];
-      R(mid - half, y, half - gap, 1, F.flap); R(mid + gap, y, half - gap, 1, F.flap);
-      R(mid - half, y, e, 1, F.dk); R(mid + half - e, y, e, 1, F.dk);
-      if (gap) { R(mid - gap - e, y, e, 1, F.dk); R(mid + gap, y, e, 1, F.dk); }
-    }
-    const [half, gap] = rows[tipY - 1];
-    R(mid - half, tipY - e, half - gap, e, F.dk); R(mid + gap, tipY - e, half - gap, e, F.dk);
-    R(u, u, W - 2 * u, 1, F.hi);
-  } else {
-    // 젖혀진 덮개의 안쪽(밝은 종이)과 벌어진 입
-    R(u, u, W - 2 * u, e, F.dk);
-    for (let y = tipY; y < 0; y++) {
-      const p = (0 - y) / (0 - tipY), half = S.half(u + p * (fe - u)), gap = Math.round(tear * p);
-      R(mid - half, y, half - gap, 1, F.hi); R(mid + gap, y, half - gap, 1, F.hi);
-      R(mid - half, y, e, 1, F.dk); R(mid + half - e, y, e, 1, F.dk);
-    }
-    const half = S.half(fe);
-    R(mid - half, tipY, half - tear, e, F.dk); R(mid + tear, tipY, half - tear, e, F.dk);
+  const tear = crack > 0.3 ? crack * ENV_TEAR * Math.min(1, W / 40) : 0;
+  const tipY = S.fe + (-ENV_RISE - S.fe) * flap;
+  const ins = lw / 2;
+  // 젖혀진 덮개(봉투 위로 솟은 안쪽 종이)는 몸 뒤에
+  if (tipY < 0) {
+    g.beginPath(); g.moveTo(ins, ins + 0.5); g.lineTo(mid, tipY + ins); g.lineTo(W - ins, ins + 0.5); g.closePath();
+    g.fillStyle = F.hi; g.fill(); g.strokeStyle = line; g.lineWidth = lw; g.lineJoin = 'round'; g.stroke();
   }
-  // 눌러 찍은 문양: 밝은 눌린 자국 위에 짙은 문양. 갈라지면 두 쪽이 틈만큼 벌어지고, 덮개 밖은 그리지 않는다
-  const G = flap < 0.3 ? envGlyph(kind, W, H, u) : null;
-  if (!G) return;
-  const dot = (x, y, c, a) => {
-    const side = x + G.m / 2 < mid ? -1 : 1, r = rows[y];
-    if (!r) return;
-    const xx = x + side * r[1];
-    if (Math.abs(xx + (side < 0 ? 0 : G.m) - mid) > r[0] - e || y + G.m > tipY - e) return;
-    g.globalAlpha = a; R(xx, y, G.m, G.m, c); g.globalAlpha = 1;
-  };
-  for (const [dy, c, a] of [[G.m, F.hi, 0.55], [0, F.dk, 1]]) G.rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] !== '.') dot(G.x + i * G.m, G.y + j * G.m + dy, c, a); });
+  // 몸: 빛(왼쪽) · 그늘(오른쪽 0.42) · 아래 접힌 두 날개 줄
+  rr(g, ins, ins, W - lw, H - lw, cr); g.fillStyle = F.body; g.fill();
+  g.save(); rr(g, ins, ins, W - lw, H - lw, cr); g.clip();
+  g.fillStyle = mix(F.body, F.bodyDk, 0.4); g.fillRect(W * 0.58, 0, W, H);
+  g.beginPath(); g.moveTo(0, H); g.lineTo(mid, H * 0.5); g.lineTo(W, H); g.strokeStyle = F.bodyDk; g.lineWidth = Math.max(lw * 0.7, 1 / n); g.stroke();
+  if (kind === 'golden' && W >= 24) {
+    g.fillStyle = F.hi;
+    for (const [fx, fy] of [[0.12, 0.8], [0.86, 0.8], [0.2, 0.58], [0.8, 0.62]]) {
+      const x = W * fx, y = H * fy, s = W / 40;
+      g.beginPath(); g.moveTo(x, y - 2 * s); g.lineTo(x + 0.6 * s, y - 0.6 * s); g.lineTo(x + 2 * s, y); g.lineTo(x + 0.6 * s, y + 0.6 * s); g.lineTo(x, y + 2 * s); g.lineTo(x - 0.6 * s, y + 0.6 * s); g.lineTo(x - 2 * s, y); g.lineTo(x - 0.6 * s, y - 0.6 * s); g.closePath(); g.fill();
+    }
+  }
+  if (tipY < 0) { g.fillStyle = mix(F.flap, INK, 0.45); g.fillRect(0, 0, W, Math.max(1.5, H * 0.09)); }
+  g.restore();
+  rr(g, ins, ins, W - lw, H - lw, cr); g.strokeStyle = line; g.lineWidth = lw; g.lineJoin = 'round'; g.stroke();
+  if (tipY < 0) return;
+  // 덮개: 위 모서리에 걸린 두 쪽(갈라지면 끝에서부터 틈만큼 벌어진다). 왼쪽 빛 · 오른쪽 그늘
+  const halves = [[-1, F.flap], [1, mix(F.flap, F.dk, 0.35)]];
+  const half = (side) => { const tx = mid + side * tear; g.beginPath(); g.moveTo(side < 0 ? ins : W - ins, ins); g.lineTo(mid, ins); g.lineTo(tx, tipY); g.closePath(); };
+  for (const [side, col] of halves) { half(side); g.fillStyle = col; g.fill(); }
+  g.strokeStyle = line; g.lineWidth = lw; g.lineJoin = 'round';
+  if (tear) for (const [side] of halves) { half(side); g.stroke(); }
+  else { g.beginPath(); g.moveTo(ins, ins); g.lineTo(mid, tipY); g.lineTo(W - ins, ins); g.stroke(); }
+  // 도장: 덮개 끝에 걸친 둥근 밀랍(쪽마다 잘라 틈만큼 옮긴다) — 덮개가 젖히기 시작하면 감춘다
+  if (flap < 0.3 && S.r * n >= 3) for (const [side] of halves) {
+    const sy = S.seal * (tipY / S.fe), sx = mid + side * tear * (sy / S.fe);
+    g.save(); g.beginPath(); g.rect(side < 0 ? sx - 4 * W : sx, -4 * H, 4 * W, 8 * H); g.clip();
+    g.beginPath(); g.arc(sx, sy, S.r, 0, Math.PI * 2); g.fillStyle = F.hi; g.fill();
+    g.save(); g.beginPath(); g.rect(sx + S.r * 0.15, sy - S.r * 2, S.r * 2, S.r * 4); g.clip();
+    g.beginPath(); g.arc(sx, sy, S.r, 0, Math.PI * 2); g.fillStyle = mix(F.hi, F.flap, 0.45); g.fill(); g.restore();
+    if (S.r * 2 * n >= 10) {
+      const gs = S.r * 1.3;
+      g.drawImage(glyphCanvas(PACK_KIND[kind] || 'piece', F.dk, Math.round(gs * 4) / 4, n), sx - gs / 2, sy - gs / 2, gs, gs);
+    }
+    g.beginPath(); g.arc(sx, sy, S.r, 0, Math.PI * 2); g.strokeStyle = line; g.lineWidth = Math.max(lw * 0.85, 1 / n); g.stroke();
+    if (tear) { g.beginPath(); g.moveTo(sx, sy - S.r); g.lineTo(sx, sy + S.r); g.stroke(); }
+    g.restore();
+  }
 }
 
-const BAKED = new Map();
 // 봉투를 (x, y)에 w × h로. open 0 = 닫힘, 0.4 = 덮개가 갈라짐, 1 = 덮개가 젖혀짐
 export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}) {
-  const u = hiFor(ctx) ? 2 : 1, q = Math.round(Math.max(0, Math.min(1, open)) * STEPS);
+  const n = scaleOf(ctx), q = Math.round(Math.max(0, Math.min(1, open)) * STEPS);
   const top = q ? ENV_RISE : 0;
-  const key = `${kind}:${w}x${h}:${u}:${q}:${hover ? 1 : 0}`;
-  let c = BAKED.get(key);
-  if (!c) {
-    c = makeCanvas(w * u, (h + top) * u);
-    paint(context(c), w * u, h * u, u, kind, q / STEPS, hover, 0, top * u);
-    BAKED.set(key, c);
-  }
+  const c = bake(`env:${kind}:${q}:${hover ? 1 : 0}`, w, h + top, n, (g) => { g.translate(0, top); paint(g, w, h, n, kind, q / STEPS, hover); });
   ctx.drawImage(c, place(x), place(y - top), w, h + top);
 }

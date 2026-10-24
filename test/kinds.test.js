@@ -15,7 +15,7 @@ before(async () => {
 after(async () => { const { setCanvasFactory } = await import('../src/render/surface.js'); setCanvasFactory(null); });
 
 // 픽셀을 적어 두는 가짜 그리기 판
-const recorder = () => { const px = []; return { px, fillStyle: '', globalAlpha: 1, fillRect(x, y, w, h) { px.push({ x, y, w, h, c: this.fillStyle }); } }; };
+const recorder = () => { const px = []; return { px, fillStyle: '', globalAlpha: 1, fillRect(x, y, w, h) { px.push({ x, y, w, h, c: this.fillStyle }); }, drawImage(c, x, y, w, h) { px.push({ x, y, w, h, c: 'img' }); } }; };
 
 test('종류 딱지: 진열 · 꾸러미 · 두루마리에 나오는 모든 종류가 문양 · 빛깔을 가진다', () => {
   const shown = new Set([
@@ -56,7 +56,7 @@ test('종류 딱지 · 띠: 정한 네모 밖에 그리지 않는다', () => {
     const c = recorder();
     K.kindTab(c, k, 10, 20);
     assert.ok(c.px.every((p) => p.x >= 10 && p.y >= 20 && p.x + p.w <= 10 + K.TAB && p.y + p.h <= 20 + K.TAB), `${k} 딱지`);
-    assert.ok(c.px.some((p) => p.c === K.KIND[k].col) && c.px.some((p) => p.c === K.KIND[k].bg), `${k} 딱지 빛깔`);
+    assert.ok(c.px.some((p) => p.c === 'img') && c.px.some((p) => p.c === K.KIND[k].bg), `${k} 딱지 문양 · 바탕`);
     const b = recorder();
     K.kindBand(b, k, 10, 20, 26);
     assert.ok(b.px.every((p) => p.x >= 10 && p.y >= 20 && p.x + p.w <= 10 + K.BAND && p.y + p.h <= 20 + 26), `${k} 띠`);

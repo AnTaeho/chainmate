@@ -1,13 +1,10 @@
 // 사슬 평가 별(CHM-47): 먹은 수 3 · 5 · 8에 ★ · ★★ · ★★★, 12는 ∞(글자 그대로).
-// 체스 주석(!? · !!)은 희생 · 탁월수만 쓰므로 사슬 평가는 별 도트 그림으로 찍는다. 빛깔은 단계마다 하양 · 금 · 빨강.
-// 별 하나는 9 × 9 도트(px배). 화면 배율 2 이상(hiFor)이면 두 배 도트 그림(art-hi.js STAR_HI · STAR_HI4)을 같은 자리에.
-import { rect, place } from '../render/gfx.js';
-import { baked, hiFor } from '../render/sprites.js';
-import { STAR_HI, STAR_HI4 } from '../render/art-hi.js';
+// 체스 주석(!? · !!)은 희생 · 탁월수만 쓰므로 사슬 평가는 별 그림으로 찍는다. 빛깔은 단계마다 하양 · 금 · 빨강.
+// 별 하나는 9 × 9 칸(px배)에 선 다섯 뿔 벡터 별(안 3) — (빛깔, 크기, 배율 N)마다 한 번 굽는다.
+import { blitVec } from '../render/vec.js';
 import { PAL } from '../render/palette.js';
 
-export const STAR_ROWS = ['....#....', '....#....', '...###...', '#########', '.#######.', '..#####..', '..##.##..', '.##...##.', '##.....##'];
-export const STAR_N = STAR_ROWS.length;
+export const STAR_N = 9;
 
 // 평가 표기 → 별 수(∞ · 모르는 것은 0)와 빛깔
 export const starCount = (mark) => (/^★+$/.test(mark || '') ? mark.length : 0);
@@ -16,17 +13,19 @@ export const STAR_COL = { '★': PAL.white, '★★': PAL.gold, '★★★': PAL
 // 별 n개 줄의 폭: 별 9px씩, 사이 px
 export const starsW = (n, px = 1) => (n > 0 ? n * STAR_N * px + (n - 1) * px : 0);
 
+// 뿔 다섯(안 반지름 0.45), 9 칸 상자를 꽉 채운다
+export const STAR_PTS = Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 2.15 : 4.72; return [4.5 + Math.cos(a) * r, 4.95 + Math.sin(a) * r]; });
 function star(ctx, x, y, px, col) {
-  if (hiFor(ctx)) {
-    const rows = px >= 2 ? STAR_HI4 : STAR_HI;
-    ctx.drawImage(baked(`star:${rows.length}:${col}`, rows, { '#': [col, 1] }), place(x), place(y), STAR_N * px, STAR_N * px);
-    return;
-  }
-  STAR_ROWS.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] === '#') rect(ctx, x + i * px, y + j * px, px, px, col); });
+  const s = STAR_N * px;
+  blitVec(ctx, `star:${col}`, x, y, s, s, (g) => {
+    const k = s / STAR_N;
+    g.beginPath(); STAR_PTS.forEach(([sx, sy], i) => (i ? g.lineTo(sx * k, sy * k) : g.moveTo(sx * k, sy * k))); g.closePath();
+    g.fillStyle = col; g.fill();
+  });
 }
 
-// 별 n개를 (x, y) 왼쪽 위부터. shadow가 있으면 오른쪽 아래로 반 도트 그림자. 돌려주는 값은 폭
-// ring: 별 둘레 한 도트 테(네 방향으로 한 도트씩 민 별을 그 빛깔로 먼저). 하양 ★이 밝은 빛 번짐에 묻히지 않게(CHM-48)
+// 별 n개를 (x, y) 왼쪽 위부터. shadow가 있으면 오른쪽 아래로 반 칸 그림자. 돌려주는 값은 폭
+// ring: 별 둘레 한 칸 테(네 방향으로 한 칸씩 민 별을 그 빛깔로 먼저). 하양 ★이 밝은 빛 번짐에 묻히지 않게(CHM-48)
 export function drawStars(ctx, n, x, y, col, { px = 1, shadow = null, alpha = 1, ring = null } = {}) {
   if (n <= 0) return 0;
   const step = STAR_N * px + px;
