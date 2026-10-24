@@ -1,8 +1,8 @@
 // 물건 종류 표시(CHM-37, docs/design-notes/layout.md 「종류 표시」): 종류마다 문양 하나(12×12 마스크, 잉크 10×10 안)와 빛깔 둘(밝은 문양 · 짙은 바탕).
 // 종류 빛깔은 늘 짙은 바탕 위 밝은 문양으로만 쓴다 — 얇은 선으로 쓰는 등급 · 판본 · 혼/각인 테와 다른 층이다.
-// 카드 · 꾸러미 봉투는 딱지(kindTab, 14×14), 두루마리 칸은 왼쪽 띠(kindBand). 종류 빛깔과 문양은 이 표 한 곳에만 둔다.
+// 카드는 남색 알약 딱지(kindTab, 높이 14), 두루마리 칸은 왼쪽 띠(kindBand). 종류 빛깔과 문양은 이 표 한 곳에만 둔다.
 // 문양은 안 3 벡터(docs/design-notes/art3.md): 12×12 자리(잉크 10×10)에 한 빛깔 굵은 모양, 빈 곳은 뚫는다. g(12×12 마스크)는 문양의 원본 기록이다.
-import { rect, place } from '../render/gfx.js';
+import { rect, rrect, place } from '../render/gfx.js';
 import { bake, scaleOf, trace } from '../render/vec.js';
 
 // 혼은 드묾 등급(#6fb3c8)과 갈리게 흰 청백(KIND_SOUL). 혼마다의 빛깔(src/data/souls.js col)은 혼 하나하나의 것이라 그대로 둔다
@@ -72,11 +72,13 @@ export function glyphCanvas(kind, col, size = 12, n = 1) {
 export function kindGlyph(ctx, kind, x, y, cw, ch, col = KIND[kind].col) {
   ctx.drawImage(glyphCanvas(kind, col, 12, scaleOf(ctx)), place(x + Math.floor((cw - 12) / 2)), place(y + Math.floor((ch - 12) / 2)), 12, 12);
 }
-// 딱지: 짙은 바탕 14×14에 밝은 문양(잉크 가운데)
-export function kindTab(ctx, kind, x, y) {
+// 딱지(안 3 시안): 남색 알약(높이 14, 폭 w — 기본은 동그라미) 왼쪽 14×14에 종류 빛깔 문양. 머릿말 글을 알약 안에 쓰는 곳은 w를 글 끝까지 넓힌다(tabW)
+export const TAB_FILL = '#262c5f';
+export const tabW = (labelW) => TAB + TAB_GAP + labelW + 4;
+export function kindTab(ctx, kind, x, y, w = TAB) {
   const K = KIND[kind];
   if (!K) return;
-  rect(ctx, x, y, TAB, TAB, K.bg);
+  rrect(ctx, x, y, w, TAB, TAB / 2, TAB_FILL);
   kindGlyph(ctx, kind, x, y, TAB, TAB);
 }
 // 두루마리 칸 왼쪽 띠: 폭 BAND, 높이 h를 종류 바탕으로 칠하고 문양을 잉크 가운데

@@ -22,7 +22,7 @@ import { live } from '../render/look.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
 import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox, logClip, LOG } from '../render/layoutlog.js';
-import { kindTab, TAB, TAB_GAP } from './kinds.js';
+import { kindTab, tabW, TAB, TAB_GAP } from './kinds.js';
 import { blitVec } from '../render/vec.js';
 import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
@@ -344,12 +344,15 @@ function mixHex(a, b, k) {
   const [x, y] = [p(a), p(b)];
   return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * k)).join(',')})`;
 }
-// 네 모서리 꺾쇠
+// 네 모서리 꺾쇠: 둥근 모서리를 따라 휘는 짧은 선(벡터 — 안쪽 테 모서리와 같은 결). n: 곧은 끝 길이
 export function cornerTicks(ctx, x, y, w, h, col, n = 2) {
-  rect(ctx, x, y, n, 1, col); rect(ctx, x, y, 1, n, col);
-  rect(ctx, x + w - n, y, n, 1, col); rect(ctx, x + w - 1, y, 1, n, col);
-  rect(ctx, x, y + h - 1, n, 1, col); rect(ctx, x, y + h - n, 1, n, col);
-  rect(ctx, x + w - n, y + h - 1, n, 1, col); rect(ctx, x + w - 1, y + h - n, 1, n, col);
+  const r = 2, a = 0.5, x2 = x + w - a, y2 = y + h - a, x1 = x + a, y1 = y + a;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1 + r + n); ctx.arcTo(x1, y1, x1 + r, y1, r); ctx.lineTo(x1 + r + n, y1);
+  ctx.moveTo(x2 - r - n, y1); ctx.arcTo(x2, y1, x2, y1 + r, r); ctx.lineTo(x2, y1 + r + n);
+  ctx.moveTo(x2, y2 - r - n); ctx.arcTo(x2, y2, x2 - r, y2, r); ctx.lineTo(x2 - r - n, y2);
+  ctx.moveTo(x1 + r + n, y2); ctx.arcTo(x1, y2, x1, y2 - r, r); ctx.lineTo(x1, y2 - r - n);
+  ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
 }
 // 혼 등급(흔함 · 드묾 · 귀함): 격언 등급 테와 같은 빛깔(palette RARITY). 혼 깃든 기물은 그 혼의 등급
 export const soulRarity = (it) => (it.kind === 'soul' ? SOUL_BY_ID[it.id].rarity : it.kind === 'piece' && it.soul ? SOUL_BY_ID[it.soul].rarity : null);
@@ -570,6 +573,8 @@ export function itemCardLayout(it, w, { run = null, price = true, hold = false }
   // 첫 줄은 값 옆(IW − priceW), 둘째 줄부터는 값 아래라 딱지 뒤 끝까지(IW − 딱지). 낱말 단위로만 줄을 바꾼다 —
   // 첫 낱말이 값 옆에 안 들어가면 첫 줄을 비우고 둘째 줄에(영어 「Awakening」 66 > 60, CHM-42: 글자 단위로 「Awakenin / g」가 됐었다)
   out.kinds = wrapHead(kind, IW - priceW, IW - TAB - TAB_GAP).map((l) => [l, f.line()]);
+  // 머릿말이 한 줄이면 딱지 알약을 글 끝까지 넓혀 글을 알약 안에 쓴다(값 앞 틈 2까지만)
+  out.pillW = out.kinds.length === 1 && out.kinds[0][0] ? Math.min(tabW(measure(out.kinds[0][0])), TAB + TAB_GAP + IW - priceW + 1) : TAB;
   f.gap(GAP_IN);
   const nx = artW(it) + 4, nw = IW - nx - (PAD_CARD > 4 ? 0 : 0);
   out.nameX = P + nx;
@@ -632,8 +637,9 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (hover) edgeRing(ctx, x, y, w, h, 0, PAL.gold);
   const lay = itemCardLayout(it, w, { run, price, hold });
   const P = PAD_CARD;
-  kindTab(ctx, it.kind, x + P, y + lay.tabY);
-  for (const [l, ly] of lay.kinds) if (l) text(ctx, l, x + lay.kindX, y + ly, lay.kindCol);
+  kindTab(ctx, it.kind, x + P, y + lay.tabY, lay.pillW);
+  const inPill = lay.pillW > TAB;
+  for (const [l, ly] of lay.kinds) if (l) text(ctx, l, x + lay.kindX, y + ly, inPill ? (it.edition ? PAL.gold : PAL.ink) : lay.kindCol);
   const showPrice = price && it.price != null && !sold;
   if (showPrice && tag) priceTag(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1]);
   else if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });

@@ -51,12 +51,19 @@ test('종류 딱지: 문양끼리 · 빛깔끼리 갈린다, 혼은 드묾 등�
   assert.ok(dist(K.KIND_SOUL, RARITY.uncommon) > 100, `혼 ${K.KIND_SOUL} · 드묾 ${RARITY.uncommon} 거리 ${dist(K.KIND_SOUL, RARITY.uncommon).toFixed(0)}`);
 });
 
+const pathRecorder = () => {
+  const r = recorder(); r.fills = []; r.pts = [];
+  Object.assign(r, { beginPath() {}, closePath() {}, moveTo(x, y) { r.pts.push([x, y]); }, lineTo(x, y) { r.pts.push([x, y]); }, arcTo(x1, y1, x2, y2) { r.pts.push([x1, y1], [x2, y2]); }, fill() { r.fills.push(r.fillStyle); } });
+  return r;
+};
 test('종류 딱지 · 띠: 정한 네모 밖에 그리지 않는다', () => {
   for (const k of Object.keys(K.KIND)) {
-    const c = recorder();
-    K.kindTab(c, k, 10, 20);
-    assert.ok(c.px.every((p) => p.x >= 10 && p.y >= 20 && p.x + p.w <= 10 + K.TAB && p.y + p.h <= 20 + K.TAB), `${k} 딱지`);
-    assert.ok(c.px.some((p) => p.c === 'img') && c.px.some((p) => p.c === K.KIND[k].bg), `${k} 딱지 문양 · 바탕`);
+    // 딱지는 남색 알약(둥근 경로) + 왼쪽 14×14 자리의 문양 그림
+    const c = pathRecorder();
+    K.kindTab(c, k, 10, 20, 40);
+    assert.ok(c.px.every((p) => p.x >= 10 && p.y >= 20 && p.x + p.w <= 10 + K.TAB && p.y + p.h <= 20 + K.TAB), `${k} 딱지 문양`);
+    assert.ok(c.px.some((p) => p.c === 'img') && c.fills.includes(K.TAB_FILL), `${k} 딱지 문양 · 바탕`);
+    assert.ok(c.pts.every(([x, y]) => x >= 10 && y >= 20 && x <= 50 && y <= 20 + K.TAB), `${k} 알약이 정한 폭 안`);
     const b = recorder();
     K.kindBand(b, k, 10, 20, 26);
     assert.ok(b.px.every((p) => p.x >= 10 && p.y >= 20 && p.x + p.w <= 10 + K.BAND && p.y + p.h <= 20 + 26), `${k} 띠`);
