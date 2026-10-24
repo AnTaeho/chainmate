@@ -6,7 +6,7 @@ import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, rrect, rframe, R_BIG, radiusOf, frame, line, seg, dot, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
 import { SW, SH, tierOf, ENG_EDGE } from '../../render/sprites.js';
-import { center as sqCenter, centerAt, projectSq, unproject, sqBox, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
+import { center as sqCenter, centerAt, projectSq, unproject, sqBox, hitBox, picker, thingTop, THINGS, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
 import { piece3, fitPiece, pieceCanvas, pieceChips, scaleOf, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
@@ -62,8 +62,8 @@ export const REVIEW_SLICE_MS = 12, REVIEW_WALL = 3;
 // 판 자리(bbox): BX · BY에서 S × 8 네모. 칸 자리는 투영(src/render/board3.js — 안 3 마름모)이 정한다
 export const S = 28, BX = 128, BY = 14; // 목표 막대가 왼쪽 칸으로 가서(안 3) 판을 위로 올렸다. 위 14줄은 수업 · 복기 제목 줄
 export { sqCenter };
-// 게임 좌표 → 판 칸(판 밖이면 -1)
-export const sqAt = (x, y) => { const sq = unproject(x, y); return sq == null ? -1 : sq; };
+// 게임 좌표 → 판 칸(판 밖이면 -1). pick: 그린 판의 누르기(board3.js picker — 기물 몸이 그 칸), 없으면 마름모만
+export const sqAt = (x, y, pick = null) => { const sq = pick ? pick(x, y) : unproject(x, y); return sq == null ? -1 : sq; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
 // 대국이 끝난 뒤 막간 화면(afterSeq → app.flow): 날던 동전 · 명국 조각이 이어 난다
 const AFTER = new Set(['reward', 'chest', 'awaken', 'legend']);
@@ -1328,9 +1328,9 @@ export class BattleScreen {
 
   // 판 위 표시(오른쪽 누르기 · 끌기, marks.js). 왼쪽으로 판을 누르거나 수를 두면 지운다
   get marks() { return this._marks || (this._marks = new Marks()); }
-  rightDown(x, y) { this.marks.down(sqAt(x, y)); }
-  rightUp(x, y) { this.marks.up(sqAt(x, y)); }
-  pointerDown(x, y) { if (this.combo) return; this.idleT = 0; if (x != null && sqAt(x, y) >= 0) this.marks.clear(); }
+  rightDown(x, y) { this.marks.down(sqAt(x, y, this.pick)); }
+  rightUp(x, y) { this.marks.up(sqAt(x, y, this.pick)); }
+  pointerDown(x, y) { if (this.combo) return; this.idleT = 0; if (x != null && sqAt(x, y, this.pick) >= 0) this.marks.clear(); }
   // 손이 들썩일 때(한동안 아무것도 들지 않으면 — drawRight)
   nudging() { const b = this.live(); return !!(b && b.status === 'play' && !this.busy && !this.sel.length && this.idleT > 2.5); }
   // 그릴 때만 그린다: 연출 · 띠 · 도장 · 불꽃 · 복기 셈 동안, 그리고 손 들썩임이 막 켜지거나 꺼질 때. 시간 따라 바뀌는 그림은 그릴 때 live · beat를 부른다
@@ -1558,6 +1558,12 @@ export class BattleScreen {
     // 증원 그림자: 이번 수 뒤(k 0) · 그다음 수 뒤(k 1)
     const ghosts = new Map();
     visibleIncoming(b).forEach((wave, k) => { for (const r of wave || []) if (!v.board[r.sq] && !isHidden(b, r.sq) && !ghosts.has(r.sq)) ghosts.set(r.sq, { t: r.t, k }); });
+    // 누르기: 아래 기물 층에서 그리는 기물 · 사물이 선 칸은 그 몸도 가진다(증원 그림자는 바닥)
+    const pick = (this.pick = picker((sq) => {
+      const c = v.board[sq];
+      if (!c || (isHidden(b, sq) && !c.mine) || (c.mine && v.mover)) return 0;
+      return THINGS.has(c.t) ? thingTop(c.t) : PIECE_UP;
+    }));
     this.drawBoardThings(ctx, b.rules, time);
     // ── 바닥(칸 위 표시): 기물보다 먼저 — 마름모 판에서는 뒤 칸 기물이 앞 칸에 걸치므로 칸 표시는 모두 이 층에서
     for (let sq = 0; sq < 64; sq++) {
@@ -1594,9 +1600,9 @@ export class BattleScreen {
       const tipOpt = tip ? sqTip(tip[0], tip[1], diag) : null;
       // 낱말 상자: 말풍선 제목이 곧 낱말인 것(증원 · 지키는 적 · 특성 · 벽 · 보석 · 특수 기물)
       if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, shut && { id: 'mate' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }, shut && { skip: 'threat' }].filter(Boolean); // 「지키던 적」에 응수 낱말 상자를 붙이지 않고 체크메이트 풀이를 띄운다
-      // 누르는 구역: 칸 bbox + 마름모 판정(이웃 칸 bbox가 겹친다)
-      const bx = sqBox(sq);
-      ui.region(id, bx.x, bx.y, bx.w, bx.h, { hit: (x, y) => unproject(x, y) === sq, onClick: () => this.clickSq(sq), ...tipOpt });
+      // 누르는 구역: 마름모 + 몸 높이 상자, 판정은 그린 판의 누르기(앞 기물 몸 → 바닥 마름모)
+      const bx = hitBox(sq);
+      ui.region(id, bx.x, bx.y, bx.w, bx.h, { hit: (x, y) => pick(x, y) === sq, onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
         motion();
         const pulse = 0.22 + 0.12 * Math.sin(time * 5);
@@ -1719,7 +1725,7 @@ export class BattleScreen {
       for (const s of v.cut.attackers) { const a = this.bodyOf(s); seg(ctx, a.x, a.y, c.x, c.y, PAL.red); }
     }
     // 판 위 화살표(오른쪽으로 끌어 그은 것): 기물 위에 반투명. 끄는 중이면 가리킨 칸까지 흐리게
-    const mk = this.marks, to = mk.from >= 0 ? sqAt(ui.mouse.x, ui.mouse.y) : -1;
+    const mk = this.marks, to = mk.from >= 0 ? sqAt(ui.mouse.x, ui.mouse.y, this.pick) : -1;
     drawMarkArrows(ctx, mk, centerAt, to >= 0 && to !== mk.from ? { from: mk.from, to } : null);
   }
   // 증원 그림자: 그 적 빛깔로 흐리게(속이 비친다) + 붉은 ▼(흔들린다). 두 수 앞은 더 흐리게

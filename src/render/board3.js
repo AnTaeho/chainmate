@@ -82,8 +82,33 @@ export function unproject(x, y) {
   if (!(f >= 0 && f < 8 && r >= 0 && r < 8)) return null;
   return Math.floor(r) * 8 + Math.floor(f);
 }
-// 칸 bbox(누르는 구역 — 가운데가 칸 가운데)
+// 칸 bbox(마름모만)
 export const sqBox = (sq) => projectSq(sq).box;
+
+// ── 누르기: 기물 · 사물이 선 칸은 그 몸 상자(가운데 ±BODY_W, 위로 몸 높이, 아래로 BODY_DOWN)도 가진다.
+// 기물은 모든 바닥 위에 그리니 몸이 바닥을 이기고, 몸끼리는 앞(그리는 차례 뒤)이 이긴다. 빈 칸은 마름모
+export const BODY_W = 11, BODY_DOWN = 2;
+// 사물의 몸 높이: 벽은 들인 윗면 꼭짓점까지, 보석은 윗면 띠까지
+export function thingTop(t, g = geo()) { return t === 'X' ? Math.ceil(WALL.h + g.hh * WALL.inset) : 15; }
+// topOf(sq) → 그 칸 몸 높이(0이면 빈 칸). 돌려주는 것: (x, y) → 칸(판 밖이면 null)
+export function picker(topOf) {
+  const g = geo(), tops = new Array(64), cx = new Array(64), cy = new Array(64);
+  for (let sq = 0; sq < 64; sq++) { const c = center(sq); tops[sq] = topOf(sq) || 0; cx[sq] = c.x; cy[sq] = c.y; }
+  return (x, y) => {
+    for (let i = 63; i >= 0; i--) {
+      const sq = g.order[i], h = tops[sq];
+      if (h && x >= cx[sq] - BODY_W && x < cx[sq] + BODY_W && y >= cy[sq] - h && y < cy[sq] + BODY_DOWN) return sq;
+    }
+    return unproject(x, y);
+  };
+}
+// 칸 누르는 구역의 bbox: 마름모 + 가장 큰 몸(PIECE_UP). 기물 유무와 상관없이 같은 상자라, 가운데(가운데에서 위로 반 칸쯤)는
+// 앞 칸 기물에 가리지 않아 늘 그 칸이다 — 연기 시험 · 찍기 도구의 bbox 가운데 누르기
+export function hitBox(sq) {
+  const g = geo(), c = center(sq);
+  const x = Math.floor(c.x - g.hw), y = Math.floor(c.y - PIECE_UP);
+  return { x, y, w: Math.ceil(c.x + g.hw) - x, h: Math.ceil(c.y + g.hh) - y };
+}
 // 뒤에서 앞 차례(칸 가운데의 화면 y, 같으면 x)
 export const order = () => geo().order;
 // 판 테두리 bbox(칸만)
