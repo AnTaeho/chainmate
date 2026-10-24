@@ -4,7 +4,7 @@
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rrect, rframe, slot, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
-import { button } from '../ui.js';
+import { button, pillR } from '../ui.js';
 import { pageHead } from './common.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, BTN_S, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -15,6 +15,14 @@ import { accountTabs } from './account.js';
 export const CODE_LEN = 8;
 export const POLL_SEC = 5;       // 코드를 띄운 동안 이어졌는지 묻는 간격
 export const JOIN_TRIES = 3;     // 이어진 뒤 그 기기의 기록을 당겨 보는 횟수
+// 지우기 그림(7 칸 자리, 왼쪽으로 뾰족한 판 안에 ×)
+const backIcon = (ctx, x, y, col) => {
+  ctx.save();
+  ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - 2, y + 3); ctx.lineTo(x + 1.5, y - 0.5); ctx.lineTo(x + 9, y - 0.5); ctx.lineTo(x + 9, y + 6.5); ctx.lineTo(x + 1.5, y + 6.5); ctx.closePath();
+  ctx.moveTo(x + 3.5, y + 1); ctx.lineTo(x + 6.5, y + 5); ctx.moveTo(x + 6.5, y + 1); ctx.lineTo(x + 3.5, y + 5); ctx.stroke();
+  ctx.restore();
+};
 // 숫자판: 세 줄 × 네 칸(오른쪽 칸이 지우기 · 0 · 잇기)
 export const PAD_ROWS = [['1', '2', '3', 'del'], ['4', '5', '6', '0'], ['7', '8', '9', 'go']];
 
@@ -256,9 +264,11 @@ export class LinkScreen {
     if (e.fail) text(ctx, REDEEM_FAIL[e.fail] || REDEEM_FAIL.unreached, cx, textY(lay.msgY), PAL.red, { align: 'center' });
     const full = e.digits.length === CODE_LEN;
     for (const k of lay.keys) {
-      const label = k.k === 'del' ? '지우기' : k.k === 'go' ? '연결' : k.k;
+      // 「지우기」가 알약 안에 안 들어가면(영어 Delete) 지우기 그림만
+      const del = k.k === 'del', bare = del && pillR(k.w, k.h, measure('지우기', true)) < (k.h >> 2);
+      const label = del ? (bare ? '' : '지우기') : k.k === 'go' ? '연결' : k.k;
       const on = k.k === 'del' ? !!e.digits : k.k === 'go' ? full : !full;
-      button(ctx, ui, `link:key:${k.k}`, k.x, k.y, k.w, k.h, label, { tone: k.k === 'go' && full ? 'gold' : 'plain', enabled: on, onClick: () => this.press(k.k), grow: lay.grow });
+      button(ctx, ui, `link:key:${k.k}`, k.x, k.y, k.w, k.h, label, { tone: k.k === 'go' && full ? 'gold' : 'plain', enabled: on, onClick: () => this.press(k.k), grow: lay.grow, ...(bare ? { icon: backIcon } : {}) });
     }
     closeBox();
   }
