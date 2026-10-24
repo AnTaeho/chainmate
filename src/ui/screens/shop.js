@@ -74,7 +74,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
       fl = Math.max(fl, Math.max(0, 1 - Math.abs(g - GROW_TURN) / 0.22) * (grow.big ? 1 : 0.75));
       gl = g < GROW_TURN ? 0 : 1 - (g - GROW_TURN) / (1 - GROW_TURN);
     }
-    pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick && ok ? 1 : 0, selected: selectedId === p.id, hover: hov && ok, dim: !ok, tier: tierOf(level), level, glow: gl, time: ui.time + i, flash: fl });
+    pieceCard(ctx, p, px, py, cw, ch, { lift: hov && pick && ok ? 1 : 0, selected: selectedId === p.id, hover: hov && ok, dim: !ok, tier: tierOf(level), level, glow: gl, time: ui.time + i, flash: fl, slot: true });
     if (growing) { if (grow.big || grow.from == null) growPillar(ctx, px, py, cw, ch, grow.p); else growSparks(ctx, px, py, cw, ch, grow.p); }
     if (glow && pick && ok) { live(); const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; edgeRing(ctx, px, py, cw, ch, -1, PAL.gold); ctx.globalAlpha = 1; }
   });

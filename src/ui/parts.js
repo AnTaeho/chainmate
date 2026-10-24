@@ -282,11 +282,12 @@ export const maximGridH = (run, cols, gapY) => { const rows = Math.ceil(maximSlo
 export const ENG_FILL = { ivory: '#f7efdb', glass: '#bfe0e6', gold: '#f3d27a', ebony: '#6b5a52', silver: '#d8dee6', feather: '#e8e0f0' };
 // 기보 수준: 이 기물 모습의 기보(이형은 바탕 체스 모습의 기보를 따른다 — scoring.js 'charts')
 export const chartLevel = (run, t) => (run && run.charts ? run.charts[chartForm(t)] || 0 : 0);
-// level: 기보 수준(1 이상이면 오른쪽 위 구석에 청록 표 — 동빛 단계는 1배에서 톤만으로 안 읽힌다) · glow: 표가 빛난다(0~1, 기보를 얻는 순간)
-export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hover = false, dim = false, alpha = 1, tier = 0, level = 0, glow = 0, time = null, flash = 0 } = {}) {
+// slot: 덱 칸 모습 · level: 기보 수준(1 이상이면 오른쪽 위 구석에 청록 표 — 동빛 단계는 1배에서 톤만으로 안 읽힌다) · glow: 표가 빛난다(0~1, 기보를 얻는 순간)
+export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hover = false, dim = false, alpha = 1, tier = 0, level = 0, glow = 0, time = null, flash = 0, slot = false } = {}) {
   const yy = y - lift;
   if (alpha !== 1) ctx.globalAlpha = alpha;
-  box(ctx, x, yy, w, h, PAL.light, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk);
+  // slot: 덱 칸(안 3 시안 — 상자 면 빛깔 칸 위 크림 기물). 기본은 크림 카드(손 카드 · 미리 보기)
+  box(ctx, x, yy, w, h, slot ? PAL.feltDk : PAL.light, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk, slot ? { drop: 2 } : undefined);
   if (selected) edgeRing(ctx, x, yy, w, h, -1, PAL.gold);
   if (p.eng && ENG_EDGE[p.eng.id]) { edgeRing(ctx, x, yy, w, h, 1, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
   sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null });
