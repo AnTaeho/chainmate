@@ -29,7 +29,7 @@ async function open(w, h) {
   await page.goto(`http://127.0.0.1:${PORT}/index.html`);
   await page.evaluate(() => {
     localStorage.clear();
-    localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang: 'ko', speed: 1, crt: false }));
+    localStorage.setItem('chainmate.settings.v1', JSON.stringify({ lang: 'ko', speed: 1 }));
     localStorage.setItem('chainmate.records.v1', JSON.stringify({ v: 1, runs: 3, tutorialAsked: true }));
   });
   await page.reload();

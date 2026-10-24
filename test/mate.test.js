@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { table } from './helpers/chain.js';
-import { parseSq as S, sqName, boardFrom } from '../src/sim/board.js';
+import { parseSq as S, sqName, boardFrom, kingTakeable } from '../src/sim/board.js';
 import { createBattle, refreshHints } from '../src/sim/battle.js';
 import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
 import { MATE } from '../src/sim/tuning.js';
@@ -78,4 +78,38 @@ test('왕의 목: 지키던 적을 둘 잡은 콤보 동안은 킹이 빛나지 
   b.chain.guardsTaken = 1;
   refreshHints(b);
   assert.deepEqual(b.hints.openKings, [S('h8')]);
+});
+
+test('광대가 지키던 킹: 광대를 잡으면 지키던 적으로 센다(kingTakeable과 같은 모습)', () => {
+  // h4 광대는 룩 모습으로 h8 킹에 닿는다. d4 룩이 h4를 잡는다
+  const t = table({ h8: 'K', h4: 'M' });
+  startChain(t, { type: 'R', sq: S('d4') });
+  assert.equal(kingTakeable(t.board, S('h8'), S('d4'), { form: 'R' }), false, '화면 규칙도 광대가 지킨다고 본다');
+  chainCapture(t, S('h4'));
+  assert.equal(t.chain.guardsTaken, 1);
+});
+
+test('내 기물 칸 너머에서 지키던 룩도 kingTakeable처럼 센다', () => {
+  // h4 내 룩 뒤 h1 룩이 h8 킹을 지킨다(내 칸은 비운 것으로 본다) → h1 · a1 비숍을 잡으면 둘
+  const t = table({ h8: 'K', h1: 'R', a1: 'B' });
+  startChain(t, { type: 'R', sq: S('h4') });
+  assert.equal(kingTakeable(t.board, S('h8'), S('h4'), { form: 'R' }), false);
+  chainCapture(t, S('h1'));
+  assert.equal(t.chain.guardsTaken, 1);
+  chainCapture(t, S('a1'));
+  assert.equal(t.chain.guardsTaken, 2);
+  assert.ok(!chainCaptures(t).includes(S('h8')), '지키던 적을 둘 잡았다');
+});
+
+test('왕의 목: 오페라(openKings) 판에서는 지키던 적을 둘 잡아도 킹이 빛난다', () => {
+  const b = createBattle({ seed: 1, mods: [{ id: 'kings_neck' }] });
+  b.board = boardFrom({ h8: 'K', h1: 'R', a1: 'B', c4: 'P' });
+  b.rules = { ...b.rules, openKings: true };
+  startChain(b, { type: 'R', sq: S('d1') });
+  chainCapture(b, S('h1'));
+  b.chain.guardsTaken = 2;
+  b.board[S('a1')] = null;
+  refreshHints(b);
+  assert.deepEqual(b.hints.openKings, [S('h8')]);
+  assert.ok(chainCaptures(b).includes(S('h8')), '대국 규칙도 잡게 둔다');
 });
