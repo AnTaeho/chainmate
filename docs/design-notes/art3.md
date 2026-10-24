@@ -78,11 +78,11 @@
 
 | 파일 | 글자 | 크기 |
 |---|---|---|
-| `BlackHanSans.<해시>.woff2` | 1,037 | 78,264 B(76KB) |
-| `PlexSansKR-Medium.<해시>.woff2` | 1,074(‹ › 포함) | 122,216 B(119KB) |
+| `BlackHanSans.<해시>.woff2` | 1,031 | 77,836 B(76KB) |
+| `PlexSansKR-Medium.<해시>.woff2` | 1,068(‹ › 포함) | 121,664 B(119KB) |
 | `OFL-BlackHanSans.txt` · `OFL-IBMPlex.txt` | SIL OFL 1.1 | |
 
-합 200,480 B(196KB) — 옛 Galmuri 둘 87KB의 2.3배. 벡터 한글은 글자마다 윤곽이라 도트보다 무겁다. 글자 고르기별로 재 봤다: KS X 1001 2,350자 + 소스 434KB · 소스 전체 글자(주석 포함, 지금) 199KB · 문자열만(주석 빼기) 158KB. KS X 1001은 화면에 바깥 글이 아이디 · 목록 이름뿐이라 뺐고, 주석 빼기는 41KB를 더 줄이지만 JS 토큰 읽기가 줄이는 도구와 시험 양쪽에 들어가야 해 두지 않았다.
+합 199,500 B(195KB) — 옛 Galmuri 둘 87KB의 2.3배. 벡터 한글은 글자마다 윤곽이라 도트보다 무겁다. 글자 고르기별로 재 봤다: KS X 1001 2,350자 + 소스 434KB · 소스 전체 글자(주석 포함, 지금) 199KB · 문자열만(주석 빼기) 158KB. KS X 1001은 화면에 바깥 글이 아이디 · 목록 이름뿐이라 뺐고, 주석 빼기는 41KB를 더 줄이지만 JS 토큰 읽기가 줄이는 도구와 시험 양쪽에 들어가야 해 두지 않았다.
 
 **다시 만들기**
 1. 글꼴 줄이기: `uv run --no-project --with fonttools --with brotli python tools/fonts.py` — google/fonts 고정 커밋에서 원본을 `tools/fonts/src/`(git 밖)로 받아 sha256을 맞추고, 쓰는 글자만 남긴 woff2 · `style.css` @font-face · `tools/fonts/glyphs.json`을 쓴다. 같은 입력이면 같은 해시다.
@@ -146,15 +146,15 @@
 - [x] `src/render/gfx.js` `sprite` (기물 그리기 입구 → `pieces3.js` `fitPiece`). `soulSpark`는 그대로
 - [x] `src/ui/screens/battle.js` 판 위 — 판 · 체스 기물 여섯 · 증원 그림자 · 미리 보기 · 부서짐 · 쓰러지는 킹 · 판 위 연출(2단계)
 - [x] `src/ui/screens/battle.js` 판 위 특수 기물 · 벽 · 보석 · 문 · 증원 그림자, 판 밖 손 카드 · 먹으면 판넬 · 사슬 칸 · 바친 기물 줄(3단계)
-- [ ] `src/ui/screens/battle.js` — 남은 것: 강 · 발판 · 고속도로 점. 초상 · 문장 · 평가 별 · 전술 칸은 벡터
+- [x] `src/ui/screens/battle.js` — 강(두 겹 물결 선) · 발판 귀퉁이 · 고속도로(둥근 점선) · 미리 보기 길(둥근 점) · 노림수(벡터 끊긴 선) · 빗금 · 퍼지는 고리 · 함정 · 횃불 · 다시 놓기 · 새 사물 그림 · 모습 이름표(잉크 테 글꼴)까지 벡터. 수 · 희생 구슬은 둥근 그림
 - [x] `src/ui/screens/lesson.js` · `review.js` (대국 화면을 물려받는다 · 복기 줄 기물)
 - [x] `src/ui/ignite.js` — 콤비네이션 길 · 카드 기물
 - [x] `src/ui/marks.js` — 판 위 표시 · 화살표
 - [x] `src/ui/annot.js` — 판 위 !! · ? 딱지 자리
 - [x] `src/ui/parts.js` — 진열 카드 틀 · 기물 카드 · 덱 칸(상자 면 빛깔 칸, `pieceCard` `slot`) · 격언 칸 · 봉투 · 행마 그림 · 종류 딱지(남색 알약) · 모서리 꺾쇠 · 혼의 금 · 각성 빛 · 기보 수 표 · 등급 무늬가 벡터
 - [x] `src/ui/ui.js` — 말풍선 행마 그림
-- [ ] `src/ui/coach.js` — 도움말 그림(킹 말풍선 기물은 벡터, 도트 금관 반짝임은 뺐다)
-- [ ] `src/ui/highlight.js` · `screens/highlight.js` — 하이라이트 카드(화면 = 내보내는 그림). 카드의 기물은 벡터, 나머지는 도트
+- [x] `src/ui/coach.js` — 도움말 그림(킹 말풍선 기물은 벡터, 도트 금관 반짝임은 뺐다)
+- [x] `src/ui/highlight.js` · `screens/highlight.js` — 하이라이트 카드(화면 = 내보내는 그림). 둥근 남색 판 + 안쪽 금빛 고리, 기물 벡터
 - [x] `src/ui/unlockview.js` — 해금 칸 그림 · 자물쇠
 - [x] `src/ui/screens/common.js` 시계 칸(둥근 시계 판) · 멈춤 막대, `parts-depth.js` 시너지 · 적 특성 문양(붓 그림 `maskPaint`) · 칩, `ignite.js` 불씨 · 콤비네이션 길, `ui.js` 걸음 표, `kinds.js` 종류 딱지 — 벡터
 - [x] `src/ui/screens/shop.js` · `pack.js` · `chest.js` · `legend.js` · `reward.js` · `result.js` · `records.js` · `setup.js` · `moves.js` · `codex.js` · `select.js` · `settings.js` · `title.js` — 기물 · 아이콘 · 문장 · 초상 · 그림 칸 · 주사위 · 행마 그림이 벡터(화면 틀 · 글자는 다음 단계)
@@ -164,10 +164,27 @@
 - [x] `test/sprites-hi.test.js` → `test/pieces3.test.js`(모든 기물에 모양 · 판 밖 상자 맞춤 · 1배 오프스크린 · 조각 · 사물)
 - [x] `test/art-hi.test.js`(지웠다) → `test/art.test.js` · `test/crests-portraits3.test.js` · `test/assets3-ui.test.js`(그림마다 있고, 크기 · 배율마다 구운 그림 하나)
 - [x] `test/annot.test.js`(딱지 겹침을 네모 셈으로 · 둥근 칸 · 글꼴 글자를 그려도 던지지 않는다)
-- [ ] `test/light.test.js`
+- [x] `test/light.test.js` — 빛 · 그림자 셈만 잰다(도트 전용 없음, 그대로)
 - [x] `tools/sprites-hi.mjs`(지웠다) · `tools/shots.mjs` 기물 시트(`fitPiece`)
 - [x] `tools/art-hi.mjs` · `tools/shots-shop-art.mjs`(도트 잉크를 재던 도구 — 지웠다) · `tools/icons.mjs`(Playwright로 벡터 킹을 굽는다) · 찍는 도구 `tools/shots-assets3.mjs`
-- [ ] `tools/shots-dot2x.mjs` · `tools/shots-factions.mjs` · `tools/smoke.mjs`(그림 검사)
+- [x] `tools/shots-dot2x.mjs` · `tools/shots-factions.mjs` · `tools/smoke.mjs`(그림 검사) — 벡터 그림에서도 그대로 돈다(찍기 도구 기록은 `v: 1`로 심는다)
+
+## 마무리(2026-10-24)
+
+art3(대국 배치)를 art3-base에 합친 뒤 남은 도트 · 자리 문제를 고쳤다.
+
+- **모습 이름표**(「폰!」): 여덟 방향 찍기 두 겹 → `text(…, { edge })` 둥근 잉크 테 한 겹(굽는 `edgeImage`). 1.5배(튈 때 2.2), 다음 먹이를 덜 덮는 쪽에. `boldText`를 쓰는 꽂힌 점수 · 흘러가는 수 · 보상 합도 같은 결.
+- **판 좌표**: 구운 판 열쇠에 `textGen`(글꼴이 오면 다시 굽기). 1~8은 a줄 기물 머리 밖(`rankOut`), 흐림 0.8.
+- **값 · 배수 낱말 풀이**: 큰 칸 아래 자리(대국 123 · 두 줄 제목 수업 105)에 맞춰 한국어 풀이를 98로 줄였다(「…」 잘림 6 → 0).
+- **손 카드 구역**: 카드 온 폭을 왼쪽부터 쌓아 위 카드가 겹친 곳을 가져간다. 손가락 기기는 바깥 카드를 빈 자리로, 모두 아래 · 위로 넓힌다.
+- **기운 그림**: 부채꼴 손 · 쓰러지는 킹 · 전설 화면의 쓰러지는 킹은 부드러운 늘이기로(꺼져 있으면 구운 그림이 줄마다 어긋났다).
+- **굽는 배율**: `vec.js scaleOf` 상한 6 → 12(각성 막간 카드 3배 × N 3).
+- **수업**: 누를 손 카드 테가 부채 카드 자리 · 크기 · 기울기를 따른다. 「행마」는 대국과 같은 폭(왼쪽 단추가 글 + 10을 지킬 만큼)과 손가락 구역.
+
+**남은 것**
+- 손 카드 일곱 장부터 가운데 카드 폭(걸음 28 · 여덟 24)이 폰 가로의 44pt(29~32도트)에 못 미친다 — 부채 펼침 자리(`fanLeft`)를 넓히거나 카드를 줄여야 한다.
+- 영어 상점 왼쪽 칸은 레퍼토리 이름이 두 줄이면 시너지 줄이 「+5」만 남는다.
+- 영어 「Sacrifice」 단추는 글 + 7 폭이라 테에 가깝다(다시 두기 화면이 같은 폭으로 「건너뛰기」를 놓아 다음 수 단추와 붙어 있어 넓히지 못했다).
 
 ## 7. 문양 문법(격언 · 전설 · 물건 그림 칸)
 
