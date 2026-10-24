@@ -87,7 +87,7 @@ export class LegendScreen {
       const gold = this.rp.end === 'promote' && done >= n && pc.t === 'P' && sqOf(sq).r === 7;
       if (falling) {
         const k = Math.min(1, (t - n * STEP) / 0.5);
-        ctx.save(); ctx.translate(x + 10, y + Q); ctx.rotate(k * k * Math.PI / 2); ctx.globalAlpha = 1 - k * 0.4;
+        ctx.save(); ctx.translate(x + 10, y + Q); ctx.rotate(k * k * Math.PI / 2); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 1 - k * 0.4;
         ctx.scale(MK, MK); sprite(ctx, 'K', pc.side, -8, -21); ctx.restore(); ctx.globalAlpha = 1;
         continue;
       }

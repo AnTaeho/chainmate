@@ -1271,6 +1271,7 @@ export class BattleScreen {
         ctx.globalAlpha = e.t < 0.7 ? 1 : Math.max(0, 1 - (e.t - 0.7) / 0.3);
         ctx.translate(x + 6, y);
         ctx.rotate(ang);
+        ctx.imageSmoothingEnabled = true; // 쓰러지는 킹(구운 그림을 돌린다)
         const c = pieceCanvas('K', 'b');
         ctx.drawImage(c.cv, -6 - c.ox, -c.oy, c.w, c.h);
         ctx.restore();
@@ -2278,7 +2279,7 @@ export class BattleScreen {
     if (p.eng && ENG_EDGE[p.eng.id]) edgeRing(c, x, y, w, h, 1, ENG_EDGE[p.eng.id]);
     const nm = L(PIECE_NAME[p.t] || ''), vw = Math.min(w, vis), room = vw - 4;
     const bold = measure(nm, true) <= room, show = bold || measure(nm) <= room;
-    fitPiece(c, p.t, 'w', x + 3, y + 3, w - 6, h - 17, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null, awake: !!p.awake });
+    fitPiece(c, p.t, 'w', x + 3, y + 3, w - 6, h - 19, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null, awake: !!p.awake });
     if (show) text(c, nm, x + Math.floor(vw / 2), y + h - 14, dim ? PAL.cardDim : PAL.cardInk, { align: 'center', bold });
     if (level > 0) chartBadge(c, level, x + w - 3, y + 3, { dim });
     if (p.soul && (p.awake || isCracked(p))) soulMark(c, p, x, y, w, h, time, dim);
@@ -2347,6 +2348,7 @@ export class BattleScreen {
         // 기울임: 카드 아래쪽 가운데(카드 높이의 1.2배 아래)를 축으로 돌린다 — 그리기 변환만, 구역 · 기록은 기울이지 않은 네모
         const px = x + w / 2, py = y - lift + hr.h * 1.2;
         c.save(); c.translate(px, py); c.rotate(hr.rot); c.translate(-px, -py);
+        c.imageSmoothingEnabled = true; // 기운 카드에 붙이는 구운 기물 · 글 그림이 최근접 늘이기로 줄줄이 어긋나지 않게(restore가 되돌린다)
         try {
           this.handCard(c, p, x, y - lift, w, hr.h, { selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(level), level, time: app.time + i, alpha: dk < 1 ? dk : 1, loose: dk < 1, vis });
           // !? 흥미로운 수: 희생으로 새로 뽑은 기물(이것으로 시작한 다음 사슬이 체크메이트면 탁월수). 기보 표가 있으면 왼쪽 위
