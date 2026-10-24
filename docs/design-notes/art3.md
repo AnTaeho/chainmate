@@ -109,7 +109,7 @@
 
 **모듈**
 - [x] `src/render/text.js` — Galmuri 도트 글자(12px · 알파 문턱값) → 벡터 글꼴 둘(4절)
-- [ ] `src/render/sprites.js` — 남은 것: 톤 표(`TONE` · `ENG_TONE` · `TIER` — 벡터 톤이 읽는다) · 작은 반 도트 반짝임(`tierSparkle` · `soulOrb`, `baked` · `hiFor`). 지운 것: `spriteCanvas` · `outlineCanvas` · `spriteChips` · `THING_TONE` · 두 배 화소 목록 · 체스 여섯 16×22 마스크(`SPR` · `spritePixels` — 실루엣 · 홈 화면 아이콘 · 조각이 벡터 모양을 쓴다)
+- [x] `src/render/sprites.js` — 톤 표(`TONE` · `ENG_TONE` · `TIER` — 벡터 톤이 읽는다)와 벡터 반짝임만 남았다: 금 기운 `tierSparkle`(네 뿔 반짝 · 둥근 빛 점) · 혼 기운 `orbPaint`(달무리 구슬), 그리는 곳의 배율로 굽는다(각성 막간 3배에서도 또렷). 반 도트 `baked` · `hiFor` · `soulOrb`는 지웠다. 앞서 지운 것: `spriteCanvas` · `outlineCanvas` · `spriteChips` · `THING_TONE` · 두 배 화소 목록 · 체스 여섯 16×22 마스크(`SPR` · `spritePixels` — 실루엣 · 홈 화면 아이콘 · 조각이 벡터 모양을 쓴다)
 - [x] `src/render/sprites-hi.js` — 기물 32×44 마스크(지웠다, `tools/sprites-hi.mjs`도)
 - [x] `src/render/fairy-sprites.js` — 특수 기물 마스크(지웠다 → `pieces3.js` `SHAPE`)
 - [x] `src/render/art-hi.js` — 두 배 마스크 모두(지웠다, `tools/art-hi.mjs` · `test/art-hi.test.js`도)
@@ -118,7 +118,7 @@
 - [x] `src/render/crests.js` — 세력 문장(8절)
 - [x] `src/render/icons.js` — 아이콘(7절 문양, `tools/icons.mjs` 홈 화면 아이콘은 벡터 킹)
 - [x] `src/render/dice.js` — 주사위(8절)
-- [ ] `src/render/texture.js` — 남은 것: 천 결(`feltCanvas` · 여백 판 `feltWeave`) · 판 가장자리 3×5 좌표 글자(`glyph`, 글자 단계). `boardCanvas` · `boardFrameCanvas`는 지웠다
+- [x] `src/render/texture.js` — 판 가장자리 좌표 글자 `glyph`만 남았다: 이름 · 인자 그대로 옛 3×5 자리 가운데에 굵은 글꼴(잉크 높이 6, `text.js tinyText`). 천 결(`feltCanvas` · `feltWeave` · `gfx felt`) · `boardCanvas` · `boardFrameCanvas`는 지웠다
 - [x] `src/ui/diagram.js` — 행마 그림(8절)
 - [x] `src/ui/envelope.js` — 꾸러미 봉투(8절)
 - [x] `src/ui/art.js` — 물건 그림 칸(7절)
@@ -138,18 +138,20 @@
 - [x] `src/ui/ignite.js` — 콤비네이션 길 · 카드 기물
 - [x] `src/ui/marks.js` — 판 위 표시 · 화살표
 - [x] `src/ui/annot.js` — 판 위 !! · ? 딱지 자리
-- [ ] `src/ui/parts.js` — 남은 것: 진열 카드 틀. 기물 카드 · 덱 칸 · 격언 칸 · 봉투 · 행마 그림은 벡터
+- [x] `src/ui/parts.js` — 진열 카드 틀 · 기물 카드 · 덱 칸(상자 면 빛깔 칸, `pieceCard` `slot`) · 격언 칸 · 봉투 · 행마 그림 · 종류 딱지(남색 알약) · 모서리 꺾쇠 · 혼의 금 · 각성 빛 · 기보 수 표 · 등급 무늬가 벡터
 - [x] `src/ui/ui.js` — 말풍선 행마 그림
 - [ ] `src/ui/coach.js` — 도움말 그림(킹 말풍선 기물은 벡터, 도트 금관 반짝임은 뺐다)
 - [ ] `src/ui/highlight.js` · `screens/highlight.js` — 하이라이트 카드(화면 = 내보내는 그림). 카드의 기물은 벡터, 나머지는 도트
 - [x] `src/ui/unlockview.js` — 해금 칸 그림 · 자물쇠
+- [x] `src/ui/screens/common.js` 시계 칸(둥근 시계 판) · 멈춤 막대, `parts-depth.js` 시너지 · 적 특성 문양(붓 그림 `maskPaint`) · 칩, `ignite.js` 불씨 · 콤비네이션 길, `ui.js` 걸음 표, `kinds.js` 종류 딱지 — 벡터
 - [x] `src/ui/screens/shop.js` · `pack.js` · `chest.js` · `legend.js` · `reward.js` · `result.js` · `records.js` · `setup.js` · `moves.js` · `codex.js` · `select.js` · `settings.js` · `title.js` — 기물 · 아이콘 · 문장 · 초상 · 그림 칸 · 주사위 · 행마 그림이 벡터(화면 틀 · 글자는 다음 단계)
-- [ ] `src/ui/app.js` · `src/render/backdrop.js` — 바탕(`feltCanvas`)
+- [x] `src/ui/app.js` · `src/render/backdrop.js` — 바탕은 모습마다 한 번 굽는 남색 빛 + 띠(`palette.js bgOf`), 조각 불티는 둥근 점. `feltCanvas`는 지웠다
 
 **시험 · 도구**
 - [x] `test/sprites-hi.test.js` → `test/pieces3.test.js`(모든 기물에 모양 · 판 밖 상자 맞춤 · 1배 오프스크린 · 조각 · 사물)
 - [x] `test/art-hi.test.js`(지웠다) → `test/art.test.js` · `test/crests-portraits3.test.js` · `test/assets3-ui.test.js`(그림마다 있고, 크기 · 배율마다 구운 그림 하나)
-- [ ] `test/annot.test.js` · `test/light.test.js`
+- [x] `test/annot.test.js`(딱지 겹침을 네모 셈으로 · 둥근 칸 · 글꼴 글자를 그려도 던지지 않는다)
+- [ ] `test/light.test.js`
 - [x] `tools/sprites-hi.mjs`(지웠다) · `tools/shots.mjs` 기물 시트(`fitPiece`)
 - [x] `tools/art-hi.mjs` · `tools/shots-shop-art.mjs`(도트 잉크를 재던 도구 — 지웠다) · `tools/icons.mjs`(Playwright로 벡터 킹을 굽는다) · 찍는 도구 `tools/shots-assets3.mjs`
 - [ ] `tools/shots-dot2x.mjs` · `tools/shots-factions.mjs` · `tools/smoke.mjs`(그림 검사)
