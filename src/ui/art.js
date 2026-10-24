@@ -1,251 +1,247 @@
-// 물건 그림(CHM-69, docs/design-notes/layout.md 「종류 표시」): 진열 카드 · 뒤집히는 카드 · 두루마리 칸이 같은 그림 칸을 쓴다.
-// 그림 칸은 어두운 칸 하나(22×26, 진화만 44×26, 두루마리 칸은 18×22)이고 그림은 잉크 상자가 칸 가운데에 오게 놓는다(render/ink.js).
-// 화면 배율 2 이상(hiFor): 칸을 반 칸 캔버스(두 배)에 구워 정수 칸에 놓는다 — 반 칸 자리에 따로 그리면 N = 3에서 번진다.
-// 1배 화면: 옛 1배 그림을 잉크 가운데로(물약 · 룰렛은 옛 그림이 글자였어서 16×16 원본).
+// 물건 그림 칸(CHM-69, docs/design-notes/layout.md 「종류 표시」 · art3.md 7절): 진열 카드 · 뒤집히는 카드 · 두루마리 칸이 같은 그림 칸을 쓴다.
+// 칸은 그림 상자 하나(22×26, 진화만 44×26, 두루마리 칸은 18×22)이고 안 3 벡터 그림을 (물건, 칸 크기, 배율 N)마다 한 번 굽고 붙인다.
+// 격언 · 전설: 가족 빛깔 상자 + 가족 모양(밝은 그림자) + 문양(emblems.js). 각인 · 혼 · 전술 · 조각 · 도박 · 깨우기는 제 물건 그림.
 import { PAL } from '../render/palette.js';
 import { live } from '../render/look.js';
-import { rect, frame, place } from '../render/gfx.js';
-import { makeCanvas, context } from '../render/surface.js';
-import { baked, hiFor, tierOf } from '../render/sprites.js';
+import { rect } from '../render/gfx.js';
+import { tierOf } from '../render/sprites.js';
 import { fitPiece } from '../render/pieces3.js';
-import { TACTIC_HI, SHARD_HI, MAXIM_ART, EMBLEM_ART, TACTIC_ART, SOUL_ART, SHARD_ART, POTION_ART, ROULETTE_ART, AWAKEN_ART } from '../render/art-hi.js';
-import { POTION16, ROULETTE16 } from '../render/art16.js';
-import { ICON_ROWS, drawIconLight } from '../render/icons.js';
-import { ART, inkBox, centre } from '../render/ink.js';
+import { INK, blitVec } from '../render/vec.js';
+import { pen, drawMotif } from '../render/emblems.js';
+import { ART } from '../render/ink.js';
 import { SOUL_BY_ID } from '../data/souls.js';
+import { MAXIM_BY_ID } from '../data/maxims.js';
+import { LEGEND_BY_ID } from '../data/legends.js';
 import { chartForm } from '../data/pieces.js';
 
-// 그림 칸 바탕과 윗줄 한 줄 빛: 그릴 때마다 PAL에서 읽는다(윗줄 빛은 관 세력 모습을 따른다 — setTheme)
+// 기물 · 기보 칸 바탕과 윗줄 한 줄 빛: 그릴 때마다 PAL에서 읽는다(관 세력 모습을 따른다 — setTheme)
 export const CELL = { get bg() { return PAL.felt; }, get top() { return PAL.fogHi; } };
 // 기보 = 「이 모습일 때」: 네 귀 꺾쇠
 export const CHART_TICK = '#8fd3c6';
 
-// 각인 그림: 기물 없이 재료 하나(금화 · 은판 · 상아 조각 · 흑단 나뭇조각 · 유리 조각 · 깃털). 16×16 도트 — 1배 화면의 그림(빛깔 c는 두 배 그림도 쓴다).
-// 각인은 덱의 어느 기물에나 새기므로 기물을 그리지 않는다(나이트를 그리면 나이트에만 붙는 것처럼 보였다).
+// ── 문양 문법(art3.md 7절): 격언의 동사가 가족을 정하고, 가족이 상자 빛깔과 뒤 모양을 정한다
+// 상자 [면, 밝은 윗줄, 짙은 아랫줄], 뒤 모양(halo)은 면보다 밝은 한 빛깔 — 금 · 붉은 · 하늘(규칙 빛깔)은 쓰지 않는다
+export const FAMILY = {
+  start: { verbs: ['놓기', '수'], box: '#6c8f76', halo: '#86a98f', shape: 'circle' },
+  capture: { verbs: ['잡기'], box: '#7a5f86', halo: '#937a9f', shape: 'shield' },
+  change: { verbs: ['갈아입기'], box: '#467f80', halo: '#5f9897', shape: 'diamond' },
+  crown: { verbs: ['프로모션', '체크메이트'], box: '#535a9c', halo: '#6c73b4', shape: 'banner' },
+  break: { verbs: ['끊김', '희생'], box: '#8a4f58', halo: '#a2676f', shape: 'octagon' },
+  board: { verbs: [], box: '#5f6d85', halo: '#77869e', shape: 'square' },
+  legend: { verbs: [], box: '#7d6238', halo: '#977a4c', shape: 'rosette' },
+};
+export function familyOf(id) {
+  if (LEGEND_BY_ID[id]) return 'legend';
+  const m = MAXIM_BY_ID[id];
+  if (!m) return 'board';
+  for (const [k, f] of Object.entries(FAMILY)) if (f.verbs.includes(m.verb)) return k;
+  return 'board';
+}
+// 다른 종류의 상자 면(종류 빛깔을 낮춘 것)
+const KIND_BOX = { engraving: '#73485f', soul: '#25414d', tactic: '#8a6440', fragment: '#3d427a', gamble: '#7d4560', awaken: '#3d427a' };
+
+// 각인 재료 빛깔(몸 · 그늘 · 빛). 각인은 덱의 어느 기물에나 새기므로 기물을 그리지 않는다
 export const EMBLEM = {
-  gold: { c: { o: '#6b4410', m: '#c8902c', h: '#efbd55', w: '#fff1b8' }, g: ['.....oooooo.....', '...oommmmmmoo...', '..ommhhhhhhmmo..', '.omhhwwhhhhhhmo.', '.omhwwhhhhhhhmo.', 'omhhhhmmmmhhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhmhhhhmhhhmo', 'omhhhhmmmmhhhhmo', '.omhhhhhhhhhhmo.', '.omhhhhhhhhhhmo.', '..ommhhhhhhmmo..', '...oommmmmmoo...', '.....oooooo.....'] },
-  silver: { c: { o: '#4a5560', m: '#9aa6b0', h: '#d8dee6', w: '#ffffff' }, g: ['................', '................', '..oooooooooooo..', '.ohhhhhhhhhhhmo.', '.ohwwhhhhhhhhmo.', '.ohwhhhhhhhhhmo.', '.ohhhhhwhhhhhmo.', '.ohhhhwhhhhhhmo.', '.ohhhwhhhhhhhmo.', '.ohhhhhhhhhwhmo.', '.ohhhhhhhhwhhmo.', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '................', '................', '................'] },
-  ivory: { c: { o: '#8a6a4a', m: '#d8c4a4', h: '#f7efdb', w: '#ffffff' }, g: ['..........oo....', '.........ohho...', '........ohwho...', '.......ohwhho...', '......ohwhhmo...', '.....ohhhhmo....', '....ohhhhmo.....', '...ohhhhmo......', '..ohhhhmo.......', '..ohhhmo........', '.ohhhmo.........', '.ohhmmo.........', '.ohmmo..........', '..oooo..........', '................', '................'] },
-  ebony: { c: { o: '#1e1612', m: '#3e2f28', h: '#6b5a52', w: '#c8902c' }, g: ['................', '................', '...ooooooooo....', '..ohhmhhhhhmoo..', '..ohmhhhmhhhhmo.', '.ohhmhhhmhhhhmo.', '.ohmhhhhmhhhhhmo', '.ommmhhhhmmhhhmo', '.ohhhmmhhhhmmmmo', '.ohhhhhmhhhhhhmo', '..ohhhhmhhhwhmo.', '..ommmmmmmmmmo..', '...oooooooooo...', '................', '................', '................'] },
-  glass: { c: { o: '#3f7f8a', m: '#6fb8c4', h: '#bfe0e6', w: '#ffffff' }, g: ['.......o........', '......owo.......', '......owho......', '.....owhho......', '.....owhhho.....', '....owhhhho.....', '....owhhhhmo....', '...owhhhhhmo....', '...owhhhhhhmo...', '..owhhhhhhhmo...', '..owhhhhhhhhmo..', '.owhhhhhhhhhmo..', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '................', '................'] },
-  feather: { c: { o: '#3a6a60', m: '#6fd1bf', h: '#e8e0f0', w: '#ffffff' }, g: ['...........ooo..', '.........oohhmo.', '........ohhhhmo.', '.......ohhhhmo..', '......ohhwhmo...', '.....ohhwhmo....', '....ohhwhmo.....', '....ohwhmo......', '...ohwhmo.......', '...owhmo........', '..owmo..........', '..omo...........', '.oo.............', 'o...............', '................', '................'] },
-  // 밤샘 2: 청동 종 · 철 덩이 · 벌레 든 호박 · 비취 고리 · 산호 가지 · 결 있는 대리석
-  bronze: { c: { o: '#5a3414', m: '#a0602a', h: '#d08a48', w: '#f0c090' }, g: ['.......oo.......', '......ommo......', '.....ohhhmo.....', '....ohwhhhmo....', '....ohwhhhmo....', '...ohwhhhhhmo...', '...ohhhhhhhmo...', '...ohhhhhhhmo...', '..ohhhhhhhhhmo..', '..ohhhhhhhhhmo..', '.ohhhhhhhhhhhmo.', '.ommmmmmmmmmmmo.', '..oooooooooooo..', '.......oo.......', '......omo.......', '.......o........'] },
-  iron: { c: { o: '#2a2e33', m: '#555c63', h: '#8a9299', w: '#c8d0d6' }, g: ['................', '................', '................', '....oooooooo....', '...ohhwhhhhmo...', '..ohhwhhhhhhmo..', '.ohhhhhhhhhhhmo.', 'ommmmmmmmmmmmmmo', 'ommmmmmmmmmmmmmo', '.oooooooooooooo.', '................', '................', '................', '................', '................', '................'] },
-  amber: { c: { o: '#6a3a08', m: '#c87a14', h: '#f0a830', w: '#ffe0a0' }, g: ['.......oo.......', '......ohho......', '.....ohwhho.....', '.....owhhho.....', '....owhhhhmo....', '...ohwhhhhhmo...', '...owhhoohhmo...', '..ohhhoooohhmo..', '..ohhhhoohhhmo..', '..ohhhhhhhhhmo..', '..ohhhhhhhhhmo..', '...ohhhhhhhmo...', '....ommmmmmo....', '.....oooooo.....', '................', '................'] },
-  jade: { c: { o: '#1e5a3a', m: '#3f9a60', h: '#7fd09a', w: '#d0ffe0' }, g: ['.....oooooo.....', '...oohhhhhhoo...', '..ohhwwhhhhhmo..', '.ohwwhhhhhhhhmo.', '.ohwhhooooohhmo.', 'ohhhho....ohhhmo', 'ohhho......ohhmo', 'ohhho......ohhmo', 'ohhho......ohhmo', 'ohhhho....ohhhmo', '.ohhhhooooohhmo.', '.ohhhhhhhhhhhmo.', '..ommhhhhhhmmo..', '...oommmmmmoo...', '.....oooooo.....', '................'] },
-  coral: { c: { o: '#7a2a2a', m: '#d05a50', h: '#f08878', w: '#ffd0c8' }, g: ['..o.....o....o..', '.oho...oho..oho.', '.oho...oho..oho.', '.ohho..oho.ohho.', '..oho..ohooho...', '..ohhooohhhmo...', '...ohhhhhhmo....', '....ohhhhmo.....', '.....ohhmo......', '.....ohhmo......', '.....ohhmo......', '....ohhhhmo.....', '...ommmmmmmo....', '...ooooooooo....', '................', '................'] },
-  marble: { c: { o: '#3a3a4a', m: '#7a70a8', h: '#e8e4f8', w: '#ffffff' }, g: ['................', '................', '.oooooooooooooo.', '.ohhhhhhhmhhhho.', '.ohwhhhhmhhhhho.', '.ohhhhhmhhhhhho.', '.ohhhhmhhhhhhmo.', '.ohhhhhmmhhhhmo.', '.ohhhhhhhmhhhmo.', '.ohhmhhhhhmhhmo.', '.ohhhmmhhhhhhmo.', '.ommmmmmmmmmmmo.', '.oooooooooooooo.', '................', '................', '................'] },
+  gold: { c: ['#f6be45', '#d48b1c', '#fff1b8'] }, silver: { c: ['#e4eaf0', '#a9b6c1', '#ffffff'] }, ivory: { c: ['#f7efdb', '#d8c4a4', '#ffffff'] },
+  ebony: { c: ['#6b5a52', '#3e2f28', '#c8902c'] }, glass: { c: ['#cdeef3', '#7fc3cf', '#ffffff'] }, feather: { c: ['#efe8f4', '#6fd1bf', '#ffffff'] },
+  bronze: { c: ['#d08a48', '#a0602a', '#f0c090'] }, iron: { c: ['#8a9299', '#555c63', '#c8d0d6'] }, amber: { c: ['#f0a830', '#c87a14', '#ffe0a0'] },
+  jade: { c: ['#7fd09a', '#3f9a60', '#d0ffe0'] }, coral: { c: ['#f08878', '#d05a50', '#ffd0c8'] }, marble: { c: ['#ece8f8', '#b0a8d0', '#ffffff'] },
 };
-// 옛 1배 재료 그림(16×16 자리). 화면 배율 2 이상의 그림 칸은 itemArt가 art16.js 그림으로 그린다
-export function engravingEmblem(ctx, id, x, y, { sq = true } = {}) {
-  if (sq) { rect(ctx, x, y, 22, 26, CELL.bg); rect(ctx, x + 1, y + 1, 20, 1, CELL.top); }
-  const e = EMBLEM[id];
-  if (!e) return;
-  e.g.forEach((r, j) => { for (let i = 0; i < 16; i++) { const k = r[i]; if (k !== '.') rect(ctx, x + 3 + i, y + 5 + j, 1, 1, e.c[k]); } });
-}
-// 혼 그림(1배 화면): 기물 없이 혼의 빛깔로 도는 기운(혼도 덱의 어느 기물에나 깃든다)
-export function soulEmblem(ctx, id, x, y, t = 0, { sq = true } = {}) {
-  const s = SOUL_BY_ID[id];
-  if (t) live();
-  if (sq) rect(ctx, x, y, 22, 26, CELL.bg);
-  const cx = x + 11, cy = y + 13;
-  for (let r = 8; r >= 2; r -= 2) { ctx.globalAlpha = 0.18 + (8 - r) * 0.06; for (let a = 0; a < 24; a++) { const q = (a / 24) * Math.PI * 2; rect(ctx, Math.round(cx + Math.cos(q) * r), Math.round(cy + Math.sin(q) * r), 1, 1, s.col); } }
-  ctx.globalAlpha = 1;
-  for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 6), Math.round(cy + Math.sin(q) * 6), 2, 2, s.col); }
-  // 가운데 문양(5×5): 혼이 열여섯이 되어 빛깔만으로는 갈리지 않는다(밤샘 2)
-  const g = SOUL_GLYPH[id];
-  if (g) { rect(ctx, cx - 3, cy - 3, 7, 7, PAL.felt); g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, cx - 2 + i, cy - 2 + j, 1, 1, PAL.white); }); }
-  else rect(ctx, cx - 1, cy - 1, 3, 3, PAL.white);
-}
-// 작은 혼 표(9×9): 혼 빛깔 바탕에 가운데 문양(도감 칸처럼 좁은 곳)
-export function soulGlyph(ctx, id, x, y) {
-  const s = SOUL_BY_ID[id];
-  rect(ctx, x, y, 9, 9, PAL.felt);
-  frame(ctx, x, y, 9, 9, s.col);
-  const g = SOUL_GLYPH[id];
-  if (g) g.forEach((row, j) => { for (let i = 0; i < 5; i++) if (row[i] === '#') rect(ctx, x + 2 + i, y + 2 + j, 1, 1, PAL.white); });
-}
-export const SOUL_GLYPH = {
-  absorb: ['.###.', '#...#', '#.###', '#....', '.####'], echo: ['..#..', '.#.#.', '#.#.#', '.#.#.', '..#..'],
-  transcend: ['..#..', '.###.', '#.#.#', '..#..', '..#..'], hunger: ['#.#.#', '#.#.#', '#####', '..#..', '..#..'],
-  hunter: ['..#..', '.###.', '##.##', '.###.', '..#..'], martyr: ['..#..', '#####', '..#..', '..#..', '..#..'],
-  crown: ['##...', '###..', '####.', '#....', '#....'], shade: ['#...#', '.###.', '.....', '.###.', '#...#'],
-  inherit: ['#####', '#...#', '#.#.#', '..#..', '.###.'], relay: ['#....', '.#...', '..###', '...#.', '....#'],
-  retro: ['#...#', '#...#', '.#.#.', '.#.#.', '..#..'], duel: ['#...#', '##.##', '.###.', '##.##', '#...#'],
-  reaper: ['.###.', '#.#.#', '#####', '.#.#.', '.....'], spring: ['#####', '...#.', '..#..', '.#...', '#####'],
-  homing: ['.###.', '#...#', '#.#..', '..##.', '.###.'], ripple: ['.#.#.', '#...#', '..#..', '#...#', '.#.#.'],
+const MATERIAL = {
+  gold: (p, [l]) => { p.coin(12, 12, 9.5, [l, '#d48b1c']); p.crown(12, 14.5, 7, 4.5, ['#fff1b8', '#efbd55']); },
+  silver: (p, c) => { p.g.save(); p.g.translate(12, 12); p.g.rotate(-0.25); p.rect(-8.5, -6.5, 17, 13, c, 2); p.stroke('M-5.5 -3.5 L-1.5 -3.5 M-5.5 -0.5 L-3 -0.5', c[2], 1.6); p.g.restore(); },
+  ivory: (p, c) => { p.shape('M18 2.5 C21.5 8 19 17 9 21.5 C6 22.8 3.6 21 5 19 C11 15.5 15 10 15 3.5 C15.5 1.8 17 1.5 18 2.5 Z', c); p.stroke('M7.5 18.5 L9.5 20.5 M11 16 L13 18 M13.8 12.5 L15.8 14', INK, 1); },
+  ebony: (p, c) => { p.poly([[3, 7], [19, 4], [21.5, 16], [5.5, 20]], c); p.stroke('M6 9.5 C10 9 13 11 19 8 M6.8 13 C11 12.5 13 15 19.8 12 M7.5 16.5 C11 16 14 18 20.5 15.5', '#2a1e18', 1.1); p.spark(19, 5, 2.8, ['#efbd55', '#c8902c']); },
+  glass: (p, c) => { p.poly([[12, 1.5], [19.5, 9], [15.5, 22.5], [8.5, 22.5], [4.5, 9]], c); p.stroke('M12 1.5 L12 22.5 M4.5 9 L19.5 9', '#5aa9b6', 1); p.stroke('M7.5 10.5 L9.5 18', '#ffffff', 1.4); },
+  feather: (p, c) => { p.shape('M19.5 2 C22 9 17 17 8 19.5 C7 15 9.5 6 19.5 2 Z', c); p.stroke('M20 2.5 C15 9 10 15 3 22', INK, 1.4); p.stroke('M12 12 L17 10.5 M10 15 L14.5 15', '#4fa894', 1); },
+  bronze: (p, c) => { p.shape('M12 2.5 C17 2.5 18 7.5 18 12 C18 15 20 17 21 18.5 L3 18.5 C4 17 6 15 6 12 C6 7.5 7 2.5 12 2.5 Z', c); p.disc(12, 20.5, 2.4, c); p.rect(10.5, 0.8, 3, 2.4, c, 1); p.stroke('M8 9 C8 6.5 9 5 10.5 4.6', c[2], 1.4); },
+  iron: (p, c) => { p.poly([[2, 18], [6, 8], [18, 8], [22, 18]], c); p.poly([[6, 8], [18, 8], [16.5, 5], [7.5, 5]], [c[2], c[0]]); p.stroke('M6 15 L10 15', c[2], 1.3); },
+  amber: (p, c) => { p.shape('M12 1.5 C17 7 20.5 11 20.5 15.5 C20.5 20 16.5 22.5 12 22.5 C7.5 22.5 3.5 20 3.5 15.5 C3.5 11 7 7 12 1.5 Z', c); p.shape([12, 15.5, 2.6, 3.6], '#6a3a08', { lw: 0 }); p.stroke('M9 13 L15 18 M15 13 L9 18', '#6a3a08', 1); p.stroke('M7.5 12 C7.5 10 8.5 8.5 10 7.5', c[2], 1.5); },
+  jade: (p, c) => { p.ring(12, 12, 7, 5, c[0]); p.g.beginPath(); p.g.arc(12, 12, 7, Math.PI * 0.1, Math.PI * 0.9); p.g.strokeStyle = c[1]; p.g.lineWidth = 5; p.g.stroke(); p.stroke('M7.5 9 C8.5 7 10 6 12 5.8', c[2], 1.4); },
+  coral: (p, c) => { p.band('M12 22 L12 13 M12 16 L6 9 L5 3 M6 9 L3 7 M12 13 L17 7 L19 2 M17 7 L21 6.5 M12 13 L11 5', c[0], 2.6); },
+  marble: (p, c) => { p.rect(3, 4, 18, 16, c, 1.5); p.stroke('M5 8 C8 9 9 13 13 13 C16 13 16 17 19.5 18 M12 13 C13 10 16 9 19 9', c[1], 1.2); },
 };
-
-export function awakenArt(ctx, x, y, t = 0, { sq = true } = {}) {
-  if (t) live();
-  if (sq) rect(ctx, x, y, 22, 26, CELL.bg);
-  const cx = x + 11, cy = y + 13;
-  for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) { const d = i * i + j * j; if (d <= 25) rect(ctx, cx + i, cy + j, 1, 1, d > 16 ? PAL.goldDk : i + j < -3 ? PAL.goldHi : PAL.gold); }
-  for (const [i, j] of [[-1, -5], [0, -4], [0, -3], [1, -2], [1, -1], [0, 0], [1, 1], [2, 2], [2, 3]]) rect(ctx, cx + i, cy + j, 1, 1, PAL.ink);
-  const k = Math.floor(t * 4) % 4;
-  for (let r = 0; r < 4; r++) { const q = (r * Math.PI) / 2 + Math.PI / 4; const d = 7 + ((k + r) % 2); rect(ctx, Math.round(cx + Math.cos(q) * d), Math.round(cy + Math.sin(q) * d), 1, 1, PAL.goldHi); }
-}
-// 명국 조각 모양(금빛 깨진 판 조각) 16×14 — 작은 자리(금빛 꾸러미 건너뛰기 줄 · 마스터의 상자 · 결과)와 1배 그림 칸
-export const SHARD_ROWS = ['..####..', '.######.', '########', '#######.', '.#####..', '..###...', '...#....'];
-export function shardIcon(ctx, x, y, col = PAL.gold, dk = PAL.goldDk) {
-  // 화면 배율 2 이상: 두 번 다듬은 32×28 반 도트 조각(art-hi.js, CHM-39 2단계)을 같은 16×14 자리에
-  if (hiFor(ctx)) { ctx.drawImage(baked(`shard:${col}:${dk}`, SHARD_HI, { c: [col, 1], h: [PAL.goldHi, 1], d: [dk, 1] }), place(x), place(y), 16, 14); return; }
-  const rows = SHARD_ROWS;
-  rows.forEach((r, j) => { for (let i = 0; i < 8; i++) if (r[i] === '#') rect(ctx, x + i * 2, y + j * 2, 2, 2, (i + j) % 4 === 0 ? PAL.goldHi : j > 3 ? dk : col); });
-}
-
-
-// 전술 그림 16×11: 빙결 = 눈송이 · 재장전 = 수 구슬 더하기 · 도발 = 손짓하는 폰 — 작은 자리(대국 손 줄)와 1배 그림 칸
-export const TACTIC_G = {
-  freeze: ['.......#........', '...#...#...#....', '....#..#..#.....', '.....#.#.#......', '......###.......', '.#############..', '......###.......', '.....#.#.#......', '....#..#..#.....', '...#...#...#....', '.......#........'],
-  reload: ['................', '..##########....', '..#........#....', '..##########....', '................', '.......##.......', '.......##.......', '....########....', '....########....', '.......##.......', '.......##.......'],
-  taunt: ['......##........', '.....####....#..', '.....####...#...', '......##...#....', '....######......', '......##........', '......##........', '.....####.......', '....######......', '...########.....', '................'],
+// 혼 문양(고리 가운데): 흰 선
+const SOUL_MARK = {
+  absorb: 'M14.5 12 C14.5 15 9.5 15 9.5 12 C9.5 9 15.5 8.5 16 12 C16.5 16.5 8 17.5 8 12 C8 7 13 6.5 13.5 9',
+  echo: 'M9 8 C11 10 11 14 9 16 M12 6.5 C15 9.5 15 14.5 12 17.5 M15 5 C19 9 19 15 15 19',
+  transcend: 'M12 18 L12 7 M8 10.5 L12 6.5 L16 10.5 M8.5 18 L15.5 18',
+  hunger: 'M8.5 6.5 L8.5 11 C8.5 13 15.5 13 15.5 11 L15.5 6.5 M12 6.5 L12 18',
+  hunter: 'M12 5.5 L18.5 12 L12 18.5 L5.5 12 Z M12 10.5 L12 13.5',
+  martyr: 'M12 5 L12 19 M7.5 9.5 L16.5 9.5',
+  crown: 'M8.5 18.5 L8.5 5.5 L16.5 9 L8.5 12.5',
+  shade: 'M6.5 10 C9 13 15 13 17.5 10 M8.5 15 L15.5 15',
+  inherit: 'M7.5 6.5 L16.5 6.5 C16.5 11 14 12.5 12 12.5 C10 12.5 7.5 11 7.5 6.5 M12 12.5 L12 17 M9 18 L15 18',
+  relay: 'M6 7 L11 12 L9 14 L15 18 M12.5 18.2 L15.4 18.2 L15.2 15.2',
+  retro: 'M7 6.5 L12 17.5 L17 6.5',
+  duel: 'M7 7 L17 17 M17 7 L7 17 M6.5 10.5 L10.5 6.5 M13.5 6.5 L17.5 10.5',
+  reaper: 'M7 18 L14 6 M14 6 C17 6.5 19 9 18.5 12 C17 9.5 15.5 8.5 13 8.6',
+  spring: 'M7 7 L17 7 L7 17 L17 17',
+  homing: 'M16.5 9.5 C15 6 9.5 5.5 7.5 9 C5.5 12.5 7.5 17.5 12 17.5 C14.5 17.5 16 16 16.7 14 M17 6 L16.5 9.5 L13 9.2',
+  ripple: 'M12 12 L12 12.1 M8.5 9 C7 11 7 13 8.5 15 M15.5 9 C17 11 17 13 15.5 15 M6 6.5 C3 10 3 14 6 17.5 M18 6.5 C21 10 21 14 18 17.5',
+};
+export const SOUL_GLYPH = SOUL_MARK;
+const TACTIC = {
+  freeze: (p) => { for (let i = 0; i < 3; i++) { const a = (i * Math.PI) / 3; const dx = Math.cos(a) * 10, dy = Math.sin(a) * 10; p.band(`M${12 - dx} ${12 - dy} L${12 + dx} ${12 + dy}`, '#bfe6f0', 2.2); for (const s of [1, -1]) { const bx = 12 + s * dx * 0.62, by = 12 + s * dy * 0.62, q = a + (s > 0 ? 0 : Math.PI); p.stroke(`M${bx + Math.cos(q + 2.4) * 3.4} ${by + Math.sin(q + 2.4) * 3.4} L${bx} ${by} L${bx + Math.cos(q - 2.4) * 3.4} ${by + Math.sin(q - 2.4) * 3.4}`, '#bfe6f0', 1.4); } } p.disc(12, 12, 2.4, '#e8f8fc'); },
+  reload: (p) => { for (let i = 0; i < 3; i++) p.disc(5 + i * 5, 6, 2.4, 'gold'); p.band('M12 11 L12 22 M6.5 16.5 L17.5 16.5', 'gold', 3); },
+  taunt: (p) => {
+    // 손짓하는 손 + 나타나는 적 폰 넷
+    for (const [x, h] of [[4, 9], [9.5, 10], [15, 10], [20.5, 9]]) p.foe(x, 23.5, h);
+    p.shape('M5.5 13.5 L5.5 5.5 C5.5 2.8 12.5 2.8 12.5 5.5 L12.5 8.5 L14.6 6.6 C15.8 5.6 17.6 7 16.5 8.4 L12.6 13.2 C11.4 15 6.6 15 5.5 13.5 Z', ['#f0c48e', '#d89a5e']);
+    p.stroke('M7.8 4.5 L7.8 8.5 M10.2 4.5 L10.2 8.5', INK, 1.1);
+    p.stroke('M17.5 2.5 C19 3.5 19 6 17.5 7 M20 1 C22.5 3 22.5 6.5 20 8.5', '#f0a060', 1.5);
+  },
 };
 export const TACTIC_COL = { freeze: '#9fd3e0', reload: '#efbd55', taunt: '#df8a45' };
-export function tacticIcon(ctx, id, x, y) {
-  const G = TACTIC_G[id] || [];
-  const col = TACTIC_COL[id] || '#ffffff';
-  // 화면 배율 2 이상: 32×22 반 도트 그림(art-hi.js, CHM-39 2단계)을 같은 16×11 자리에
-  if (TACTIC_HI[id] && hiFor(ctx)) { ctx.drawImage(baked(`tactic:${id}`, TACTIC_HI[id], { '#': [col, 1] }), place(x), place(y), 16, 11); return; }
-  G.forEach((r, j) => { for (let i = 0; i < 16; i++) if (r[i] === '#') rect(ctx, x + i, y + j, 1, 1, col); });
+export const TACTIC_G = TACTIC;
+// 명경기 조각: 금빛 깨진 판 조각(판 무늬 새김)
+function shard(p) {
+  p.poly([[3, 6], [11, 2.5], [20.5, 5], [21, 13], [15.5, 15], [17, 21.5], [9, 21], [4, 15]], 'gold');
+  p.g.save(); p.g.beginPath(); p.g.moveTo(3, 6); [[11, 2.5], [20.5, 5], [21, 13], [15.5, 15], [17, 21.5], [9, 21], [4, 15]].forEach(([x, y]) => p.g.lineTo(x, y)); p.g.closePath(); p.g.clip();
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if ((i + j) % 2) p.flat(`M${2 + i * 5.2} ${2 + j * 5.2} L${7.2 + i * 5.2} ${2 + j * 5.2} L${7.2 + i * 5.2} ${7.2 + j * 5.2} L${2 + i * 5.2} ${7.2 + j * 5.2} Z`, '#d48b1c');
+  p.g.restore();
+  p.outline('M3 6 L11 2.5 L20.5 5 L21 13 L15.5 15 L17 21.5 L9 21 L4 15 Z');
+  p.stroke('M5.5 8 L10.5 5.5', '#fff1b8', 1.4);
+}
+const potion = (hue) => (p) => {
+  p.shape('M9.5 7 L9.5 10 C5 11.5 3.5 14.5 3.5 17 C3.5 20.5 7 22.5 12 22.5 C17 22.5 20.5 20.5 20.5 17 C20.5 14.5 19 11.5 14.5 10 L14.5 7 Z', ['#dff2f5', '#a9d6de']);
+  p.shape('M4.8 16 C7 14.5 17 14.5 19.2 16 C19.5 19.5 16.5 21.3 12 21.3 C7.5 21.3 4.5 19.5 4.8 16 Z', [`hsl(${hue},70%,62%)`, `hsl(${hue},62%,48%)`], { lw: 0 });
+  p.rect(8.5, 3, 7, 4.2, '#b07a44', 1); p.stroke('M7 13.5 C6.2 15 6 16 6.2 17', '#ffffff', 1.4);
+};
+const roulette = (hue) => (p) => {
+  p.disc(12, 12, 10.5, 'gold');
+  for (let i = 0; i < 8; i++) { const a0 = (i / 8) * Math.PI * 2, a1 = ((i + 1) / 8) * Math.PI * 2; p.g.beginPath(); p.g.moveTo(12, 12); p.g.arc(12, 12, 8, a0, a1); p.g.closePath(); p.g.fillStyle = i % 2 ? `hsl(${hue},70%,62%)` : PAL.deep; p.g.fill(); }
+  p.ring(12, 12, 8, 0.01, INK); p.disc(12, 12, 2.6, ['#fff1b8', '#efbd55']); p.disc(16.5, 6.5, 1.6, ['#fff8e8', '#ffffff']);
+};
+function awaken(p) {
+  p.disc(12, 12, 9, 'gold'); p.stroke('M8.5 6 C9.5 4.8 11 4.2 12.5 4.2', '#fff1b8', 1.6);
+  p.stroke('M11 3.5 L12.5 7.5 L10.5 10.5 L13.5 13.5 L12 17 L14 20.5', INK, 1.3);
 }
 
-// ── 그림 칸
-// 격언 그림 빛깔(어두운 칸 위): art16.js MAXIM16의 문자
-export const MAXIM_COL = { '#': '#fff1b8', d: '#b79c68', k: '#2a1c10', g: '#d9a23a', o: '#8a5f1c', r: '#c94a37', w: '#ffffff', s: '#9fb0bc', p: '#a77ad6', b: '#6f9ad8', G: '#7fb85f' };
-const SHARD_COL = { c: PAL.gold, h: PAL.goldHi, d: PAL.goldDk };
-const AWAKEN_COL = { D: PAL.goldDk, g: PAL.gold, h: PAL.goldHi, get k() { return CELL.bg; } };
+// 그림 상자 뒤 모양(가족 표): 상자 가운데 (cx, cy), 반지름 r
+function haloPath(shape, cx, cy, r) {
+  const ring = (n, rot = -Math.PI / 2, k = 1) => Array.from({ length: n }, (_, i) => { const a = rot + (i / n) * Math.PI * 2, q = i % 2 && k !== 1 ? r * k : r; return [cx + Math.cos(a) * q, cy + Math.sin(a) * q]; });
+  const P = (pts) => `M${pts.map(([x, y]) => `${x} ${y}`).join(' L')} Z`;
+  if (shape === 'circle') return [cx, cy, r, r];
+  if (shape === 'diamond') return P(ring(4));
+  if (shape === 'octagon') return P(ring(8, -Math.PI / 8));
+  if (shape === 'rosette') return P(ring(16, -Math.PI / 2, 0.82));
+  if (shape === 'square') { const s = r * 0.86; return P([[cx - s, cy - s], [cx + s, cy - s], [cx + s, cy + s], [cx - s, cy + s]]); }
+  if (shape === 'shield') return `M${cx - r * 0.9} ${cy - r * 0.85} L${cx + r * 0.9} ${cy - r * 0.85} L${cx + r * 0.9} ${cy - r * 0.05} C${cx + r * 0.9} ${cy + r * 0.55} ${cx + r * 0.35} ${cy + r * 0.85} ${cx} ${cy + r * 1.05} C${cx - r * 0.35} ${cy + r * 0.85} ${cx - r * 0.9} ${cy + r * 0.55} ${cx - r * 0.9} ${cy - r * 0.05} Z`;
+  if (shape === 'banner') return P([[cx - r * 0.82, cy + r * 0.95], [cx - r * 0.82, cy - r * 0.35], [cx, cy - r * 1.02], [cx + r * 0.82, cy - r * 0.35], [cx + r * 0.82, cy + r * 0.95]]);
+  return [cx, cy, r, r];
+}
+// 상자: 면 + 윗줄 빛 + 아랫줄 그늘(1 논리 칸)
+function boxBg(g, w, h, face) {
+  g.fillStyle = face; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,0.16)'; g.fillRect(1, 1, w - 2, 1);
+  g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, h - 1, w, 1);
+}
+// 그림 크기: 칸 안 여백 2 · 높이 여백 3
+const motifSize = (w, h) => Math.min(w - 3, h - 5, 19);
+
+// 칸 하나 그리기(굽는 쪽): 종류마다
+function paintCell(g, n, it, w, h, hue) {
+  const S = motifSize(w, h), ox = (w - S) / 2, oy = (h - S) / 2;
+  const sub = (fn) => { const s = S / 24; g.save(); g.translate(ox, oy); g.scale(s, s); fn(pen(g, s * n)); g.restore(); };
+  if (it.kind === 'maxim') {
+    const F = FAMILY[familyOf(it.id)];
+    boxBg(g, w, h, F.box);
+    const sh = haloPath(F.shape, w / 2, h / 2, Math.min(w, h) / 2 - 0.5);
+    const p = pen(g, n); p.flat(sh, F.halo);
+    drawMotif(g, it.id, ox, oy, S, n);
+    return;
+  }
+  boxBg(g, w, h, KIND_BOX[it.kind] || PAL.felt);
+  if (it.kind === 'engraving') { const e = EMBLEM[it.id]; if (e) sub((p) => MATERIAL[it.id](p, e.c)); }
+  else if (it.kind === 'soul') {
+    const c = SOUL_BY_ID[it.id] ? SOUL_BY_ID[it.id].col : '#ffffff';
+    sub((p) => {
+      p.g.globalAlpha = 0.28; p.dot(12, 12, 9.5, c); p.g.globalAlpha = 1;
+      p.ring(12, 12, 9.6, 2.6, c); p.disc(12, 12, 6.6, [KIND_BOX.soul, KIND_BOX.soul]);
+      if (SOUL_MARK[it.id]) { g.save(); g.translate(12, 12); g.scale(0.7, 0.7); g.translate(-12, -12); p.stroke(SOUL_MARK[it.id], '#ffffff', 2.4); g.restore(); }
+    });
+  } else if (it.kind === 'tactic') { if (TACTIC[it.id]) sub(TACTIC[it.id]); }
+  else if (it.kind === 'fragment') sub(shard);
+  else if (it.kind === 'gamble') sub(it.id === 'roulette' ? roulette(hue) : potion(hue));
+  else if (it.kind === 'awaken') sub(awaken);
+}
+
 // 도박의 도는 빛깔: 한 바퀴를 스물넷으로 끊는다(구운 칸을 그만큼만 둔다)
 const gambleHue = (t) => { if (t) live(); return (Math.floor((t * 200) / 15) * 15) % 360; };
-const gambleCols = (id, hue) => (id === 'roulette'
-  ? { R: '#efbd55', A: `hsl(${hue},70%,62%)`, B: PAL.deep, H: '#fff1b8', n: '#fff8e8' }
-  : { c: '#b07a44', o: '#bfe0e6', h: '#ffffff', l: `hsl(${hue},70%,62%)` });
-// 혼: 굵은 고리(지름 16) + 안쪽 흐린 기운 + 가운데 문양(14×14 반 칸). R 고리 · a b 기운 · k 칸 바탕 · # 문양
-const SOUL_ROWS = new Map();
-export function soulRows(id) {
-  if (SOUL_ROWS.has(id)) return SOUL_ROWS.get(id);
-  const g = Array.from({ length: 32 }, () => Array(32).fill('.'));
-  for (let j = -16; j < 16; j++) for (let i = -16; i < 16; i++) {
-    const d = Math.hypot(i + 0.5, j + 0.5);
-    if (d <= 16 && d > 13.6) g[j + 16][i + 16] = 'R';
-    else if (d <= 13.6 && d > 7) g[j + 16][i + 16] = (i + j) & 1 ? 'a' : 'b';
-  }
-  for (let j = 8; j < 24; j++) for (let i = 8; i < 24; i++) g[j][i] = 'k';
-  const m = SOUL_ART[id] || ['....', '.##.', '.##.', '....'];
-  const o = centre(32, 32, inkBox(m));
-  m.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (r[i] !== '.') g[o.y + j][o.x + i] = '#'; });
-  const rows = g.map((r) => r.join(''));
-  SOUL_ROWS.set(id, rows);
-  return rows;
-}
-const soulCols = (id) => { const c = SOUL_BY_ID[id] ? SOUL_BY_ID[id].col : '#ffffff'; return { R: c, a: [c, 0.3], b: [c, 0.12], k: CELL.bg, '#': PAL.white }; };
-
-// 마스크로 그리는 종류의 반 칸 그림과 빛깔({ rows, cols }). 기물 · 기보 · 진화는 null(스프라이트로 그린다). t는 도박의 도는 빛깔
-export function artMask(it, t = 0) {
-  if (it.kind === 'maxim') return MAXIM_ART[it.id] ? { rows: MAXIM_ART[it.id], cols: MAXIM_COL } : null;
-  if (it.kind === 'engraving') return EMBLEM_ART[it.id] ? { rows: EMBLEM_ART[it.id], cols: EMBLEM[it.id].c } : null;
-  if (it.kind === 'tactic') return TACTIC_ART[it.id] ? { rows: TACTIC_ART[it.id], cols: { '#': TACTIC_COL[it.id] || '#ffffff' } } : null;
-  if (it.kind === 'fragment') return { rows: SHARD_ART, cols: SHARD_COL };
-  if (it.kind === 'gamble') return { rows: it.id === 'roulette' ? ROULETTE_ART : POTION_ART, cols: gambleCols(it.id, gambleHue(t)) };
-  if (it.kind === 'awaken') return { rows: AWAKEN_ART, cols: AWAKEN_COL };
-  if (it.kind === 'soul') return { rows: soulRows(it.id), cols: soulCols(it.id) };
-  return null;
-}
 export const artW = (it) => (it.kind === 'evolve' ? ART.w * 2 : ART.w);
 
-const BAKED = new Map();
-function bake(key, w2, h2, paint) {
-  key += `|${CELL.bg}|${CELL.top}`; // 칸 빛깔이 바뀌면(세력 모습) 새로 굽는다
-  let c = BAKED.get(key);
-  if (c) return c;
-  c = makeCanvas(w2, h2);
-  const g = context(c);
-  g.imageSmoothingEnabled = false;
-  g.fillStyle = CELL.bg; g.fillRect(0, 0, w2, h2);
-  g.fillStyle = CELL.top; g.fillRect(2, 2, w2 - 4, 2);
-  paint(g);
-  BAKED.set(key, c);
-  return c;
-}
-// 마스크를 (ox, oy)부터 도트 하나씩. 빛깔은 '#rrggbb' · 'hsl(…)' 또는 [빛깔, 알파]
-function stamp(g, rows, cols, ox, oy) {
-  rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) { const c = cols[r[i]]; if (!c) continue; if (typeof c === 'string') g.fillStyle = c; else { g.fillStyle = c[0]; g.globalAlpha = c[1]; } g.fillRect(ox + i, oy + j, 1, 1); g.globalAlpha = 1; } });
-}
-// 네 귀 꺾쇠(u = 도트 한 변: 반 칸 캔버스 2, 화면 1)
-function ticks(fill, w, h, u) {
-  for (const [cx, cy, sx, sy] of [[u, u, 1, 1], [w - u, u, -1, 1], [u, h - u, 1, -1], [w - u, h - u, -1, -1]]) {
-    fill(sx > 0 ? cx : cx - 4 * u, sy > 0 ? cy : cy - u, 4 * u, u);
-    fill(sx > 0 ? cx : cx - u, sy > 0 ? cy : cy - 4 * u, u, 4 * u);
+// 네 귀 꺾쇠
+function ticks(ctx, x, y, w, h, col) {
+  for (const [cx, cy, sx, sy] of [[1, 1, 1, 1], [w - 1, 1, -1, 1], [1, h - 1, 1, -1], [w - 1, h - 1, -1, -1]]) {
+    rect(ctx, x + (sx > 0 ? cx : cx - 4), y + (sy > 0 ? cy : cy - 1), 4, 1, col);
+    rect(ctx, x + (sx > 0 ? cx : cx - 1), y + (sy > 0 ? cy : cy - 4), 1, 4, col);
   }
 }
 // 물건 그림 칸을 (x, y)에 그린다. 칸 크기는 w × h(진열 카드 22×26 · 진화 44×26 · 두루마리 칸 18×22). 돌려주는 값: 칸 폭
 export function itemArt(ctx, it, x, y, t = 0, run = null, { w = artW(it), h = ART.h } = {}) {
-  const hi = hiFor(ctx);
   const tier = it.kind === 'piece' ? (run ? tierOf(run.charts[chartForm(it.t)]) : 0) : it.kind === 'chart' ? tierOf((run ? run.charts[it.form] || 0 : 0) + 1) : 0;
   const type = it.kind === 'piece' ? it.t : it.kind === 'chart' ? it.form : null;
-  if (it.kind === 'evolve') { evolveCell(ctx, x, y, w, h, hi); return w; }
+  if (it.kind === 'evolve') { evolveCell(ctx, x, y, w, h); return w; }
   if (type) {
     // 기물 · 기보: 16 × 22 상자(가로 가운데, 발밑 줄은 칸 아래에서 (h − 22) / 2)에 벡터 기물. 금 기운 · 혼 기운은 그 상자에
     rect(ctx, x, y, w, h, CELL.bg); rect(ctx, x + 1, y + 1, w - 2, 1, CELL.top);
-    if (it.kind === 'chart') ticks((a, c, d, e) => rect(ctx, x + a, y + c, d, e, CHART_TICK), w, h, 1);
+    if (it.kind === 'chart') ticks(ctx, x, y, w, h, CHART_TICK);
     const px = x + Math.floor((w - 16) / 2), py = y + Math.floor((h - 22) / 2);
     fitPiece(ctx, type, 'w', px, py, 16, 22, { tier, time: t, soul: it.kind === 'piece' ? it.soul || null : null });
     return w;
   }
-  const m = hi ? artMask(it, t) : null;
-  if (m) {
-    const hue = it.kind === 'gamble' ? `:${gambleHue(t)}` : '';
-    ctx.drawImage(bake(`m:${it.kind}:${it.id || ''}${hue}:${w}x${h}`, w * 2, h * 2, (g) => { const o = centre(w * 2, h * 2, inkBox(m.rows)); stamp(g, m.rows, m.cols, o.x, o.y); }), place(x), place(y), w, h);
-  } else {
-    rect(ctx, x, y, w, h, CELL.bg); rect(ctx, x + 1, y + 1, w - 2, 1, CELL.top);
-    loArt(ctx, it, x, y, w, h, t);
-  }
-  // 움직이는 것은 정수 칸에: 혼의 도는 점 셋 · 깨우기의 귀 반짝임(구슬 상자 안쪽)
+  const hue = it.kind === 'gamble' ? gambleHue(t) : 0;
+  blitVec(ctx, `art:${it.kind}:${it.id || ''}:${hue}`, x, y, w, h, (g, n) => paintCell(g, n, it, w, h, hue));
+  // 움직이는 것은 정수 칸에: 혼의 도는 점 셋 · 깨우기의 귀 반짝임
   const cx = x + w / 2, cy = y + h / 2;
-  if ((it.kind === 'soul' || it.kind === 'awaken') && hi && t) live();
-  if (it.kind === 'soul' && hi) for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 5.25 - 1), Math.round(cy + Math.sin(q) * 5.25 - 1), 2, 2, PAL.white); }
-  if (it.kind === 'awaken' && hi) { const k = Math.floor(t * 4) % 2; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (!(((sx + sy) / 2 + k) & 1)) rect(ctx, cx + (sx > 0 ? 7 : -8), cy + (sy > 0 ? 7 : -8), 1, 1, PAL.goldHi); }
+  if ((it.kind === 'soul' || it.kind === 'awaken') && t) live();
+  if (it.kind === 'soul') for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; rect(ctx, Math.round(cx + Math.cos(q) * 6.5 - 1), Math.round(cy + Math.sin(q) * 6.5 - 1), 2, 2, PAL.white); }
+  if (it.kind === 'awaken') { const k = Math.floor(t * 4) % 2; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (!(((sx + sy) / 2 + k) & 1)) rect(ctx, cx + (sx > 0 ? 7 : -8), cy + (sy > 0 ? 7 : -8), 1, 1, PAL.goldHi); }
   return w;
 }
-// 격언 칸 · 도감 칸의 작은 그림 칸(20 × 22): 진열 카드와 같은 그림을 밝은 카드 위 어두운 받침에. 1배 화면은 옛 아이콘
+// 격언 칸 · 도감 칸의 작은 그림 칸(20 × 22): 진열 카드와 같은 그림
 export const MAXIM_CELL = { w: 20, h: 22, gap: 3, inset: 3 };
 export function maximArt(ctx, id, x, y, alpha = 1) {
   if (alpha !== 1) ctx.globalAlpha = alpha;
   itemArt(ctx, { kind: 'maxim', id }, x, y, 0, null, MAXIM_CELL);
   if (alpha !== 1) ctx.globalAlpha = 1;
 }
-// 1배 화면: 옛 그림을 잉크 가운데로
-function loRows(ctx, rows, cols, x, y, w, h) {
-  const b = inkBox(rows);
-  if (!b) return;
-  const o = centre(w, h, b);
-  rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) { const c = cols[r[i]]; if (c) rect(ctx, x + o.x + i, y + o.y + j, 1, 1, c); } });
+// 옛 이름: 각인 · 혼 · 깨우기 그림 칸(22 × 26). sq가 거짓이면 같은 그림을 상자 없이 — 지금은 늘 상자째
+export const engravingEmblem = (ctx, id, x, y) => itemArt(ctx, { kind: 'engraving', id }, x, y);
+export const soulEmblem = (ctx, id, x, y, t = 0) => itemArt(ctx, { kind: 'soul', id }, x, y, t);
+export const awakenArt = (ctx, x, y, t = 0) => itemArt(ctx, { kind: 'awaken' }, x, y, t);
+// 작은 혼 표(9×9): 혼 빛깔 고리에 흰 문양(도감 칸처럼 좁은 곳)
+export function soulGlyph(ctx, id, x, y) {
+  const s = SOUL_BY_ID[id];
+  if (!s) return;
+  blitVec(ctx, `soulglyph:${id}`, x, y, 9, 9, (g, n) => {
+    const k = 9 / 24; g.save(); g.scale(k, k);
+    const p = pen(g, k * n);
+    p.disc(12, 12, 10.5, [PAL.felt, PAL.felt], { lw: 0 }); p.ring(12, 12, 9.5, 3, s.col);
+    if (SOUL_MARK[id]) { g.translate(12, 12); g.scale(0.62, 0.62); g.translate(-12, -12); p.stroke(SOUL_MARK[id], '#ffffff', 3.4); }
+    g.restore();
+  });
 }
-function loArt(ctx, it, x, y, w, h, t) {
-  const ox = x + Math.floor((w - 22) / 2), oy = y + Math.floor((h - 26) / 2);
-  if (it.kind === 'maxim') { const rows = ICON_ROWS[it.id]; if (rows) { const o = centre(w, h, inkBox(rows)); drawIconLight(ctx, it.id, x + o.x, y + o.y); } }
-  else if (it.kind === 'engraving') { if (EMBLEM[it.id]) loRows(ctx, EMBLEM[it.id].g, EMBLEM[it.id].c, x, y, w, h); }
-  else if (it.kind === 'tactic') loRows(ctx, TACTIC_G[it.id] || [], { '#': TACTIC_COL[it.id] || '#ffffff' }, x, y, w, h);
-  else if (it.kind === 'fragment') shardIcon(ctx, x + Math.floor((w - 16) / 2), y + Math.floor((h - 14) / 2));
-  else if (it.kind === 'gamble') loRows(ctx, it.id === 'roulette' ? ROULETTE16 : POTION16, gambleCols(it.id, gambleHue(t)), x, y, w, h);
-  else if (it.kind === 'awaken') awakenArt(ctx, ox, oy, t, { sq: false });
-  else if (it.kind === 'soul') soulEmblem(ctx, it.id, ox, oy, t, { sq: false });
+// 명경기 조각 16×14 — 작은 자리(금빛 꾸러미 건너뛰기 줄 · 마스터의 상자 · 결과)
+export function shardIcon(ctx, x, y) {
+  blitVec(ctx, 'shard', x, y, 16, 14, (g, n) => { const k = 14 / 24; g.save(); g.translate(1.5, 0); g.scale(k, k); shard(pen(g, k * n)); g.restore(); });
+}
+// 전술 그림 16×11(대국 손 줄의 작은 칸)
+export function tacticIcon(ctx, id, x, y) {
+  if (!TACTIC[id]) return;
+  blitVec(ctx, `tactic:${id}`, x, y, 16, 11, (g, n) => { const k = 11 / 24; g.save(); g.translate(8 - 12 * k, 0); g.scale(k, k); TACTIC[id](pen(g, k * n)); g.restore(); });
 }
 // 진화: 넓은 칸에 나이트 ›› 낙타(전후 두 그림 + 가운데 겹 꺾쇠). 좁은 칸(두루마리 칸)은 겹 꺾쇠만
-function evolveCell(ctx, x, y, w, h, hi) {
+function evolveCell(ctx, x, y, w, h) {
   const wide = w >= 40, py = y + Math.floor((h - 22) / 2);
-  if (hi) {
-    ctx.drawImage(bake(`evolve:${w}x${h}`, w * 2, h * 2, (g) => {
-      g.fillStyle = PAL.gold;
-      const k = wide ? 1 : 2; // 좁은 칸은 화살을 두 배로
-      for (const ox of [-6, 0]) for (let i = 0; i < 5; i++) { g.fillRect(w + (ox + i) * k, h + (-5 + i) * k, 2 * k, k); g.fillRect(w + (ox + i) * k, h + (4 - i) * k, 2 * k, k); }
-    }), place(x), place(y), w, h);
-  } else {
-    rect(ctx, x, y, w, h, CELL.bg); rect(ctx, x + 1, y + 1, w - 2, 1, CELL.top);
-    const cx = x + Math.floor(w / 2), cy = y + Math.floor(h / 2);
-    for (const ox of [-3, 0]) for (let i = 0; i < 3; i++) { rect(ctx, cx + ox + i, cy - 3 + i, 1, 1, PAL.gold); rect(ctx, cx + ox + i, cy + 2 - i, 1, 1, PAL.gold); }
-  }
+  blitVec(ctx, `evolve:${CELL.bg}:${CELL.top}`, x, y, w, h, (g, n) => {
+    g.fillStyle = CELL.bg; g.fillRect(0, 0, w, h); g.fillStyle = CELL.top; g.fillRect(1, 1, w - 2, 1);
+    const k = wide ? 0.42 : 0.6, s = 24 * k;
+    g.save(); g.translate(w / 2 - s / 2, h / 2 - s / 2); g.scale(k, k);
+    const p = pen(g, k * n); p.chevron(8, 12, 9, 13, 'gold', 3.2, 'right'); p.chevron(16, 12, 9, 13, 'gold', 3.2, 'right');
+    g.restore();
+  });
   if (wide) {
     fitPiece(ctx, 'N', 'w', x + 2, py, 16, 22);
     fitPiece(ctx, 'L', 'w', x + w - 2 - 16, py, 16, 22, { tier: 1 });

@@ -1,17 +1,16 @@
-// 그림 칸(CHM-69, layout.md 「종류 표시」): 격언 · 각인 · 전술 · 조각 · 도박 · 깨우기 · 혼 그림의 잉크 상자가 과녁(폭 14~18 · 높이 16~20) 안이고
-// 칸 가운데에 선다. 마스크에서 바로 잰다(render/ink.js) — 화면에서 잰 값은 tools/shots-shop-art.mjs.
+// 물건 그림 칸(CHM-69 · 안 3, docs/design-notes/art3.md 7절 「문양 문법」): 격언 · 전설은 가족 상자 + 가족 모양 + 문양, 각인 · 혼 · 전술 · 조각 · 도박 · 깨우기는
+// 제 물건 그림. 모든 물건이 그림을 갖고, (물건, 칸 크기, 배율 N)마다 한 번 구운 그림 하나를 정수 칸에 붙인다.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { inkBox, centre, margins, inTarget, ART, TARGET, GLYPH } from '../src/render/ink.js';
-import * as A16 from '../src/render/art16.js';
-import * as HI from '../src/render/art-hi.js';
+import fs from 'node:fs';
+import { inkBox, centre, margins, GLYPH } from '../src/render/ink.js';
 import { MAXIMS } from '../src/data/maxims.js';
 import { LEGENDS } from '../src/data/legends.js';
 import { ENGRAVINGS } from '../src/data/engravings.js';
 import { TACTICS } from '../src/data/tactics.js';
 import { SOULS } from '../src/data/souls.js';
 
-let dom, art, kinds;
+let dom, art, kinds, emblems, icons;
 before(async () => {
   const { makeFakeDom } = await import('../tools/fakedom.mjs');
   const { setCanvasFactory } = await import('../src/render/surface.js');
@@ -20,8 +19,29 @@ before(async () => {
   setCanvasFactory(() => dom.document.createElement('canvas'));
   art = await import('../src/ui/art.js');
   kinds = await import('../src/ui/kinds.js');
+  emblems = await import('../src/render/emblems.js');
+  icons = await import('../src/render/icons.js');
 });
 after(() => { delete globalThis.document; delete globalThis.window; });
+
+function rec(scale) {
+  const calls = [];
+  const base = { globalAlpha: 1, imageSmoothingEnabled: false, fillStyle: '#000', getTransform: () => ({ a: scale, b: 0, c: 0, d: scale, e: 0, f: 0 }) };
+  const ctx = new Proxy(base, {
+    get(t, k) { if (k in t) return t[k]; return (...a) => { calls.push([k, ...a]); }; },
+    set(t, k, v) { t[k] = v; return true; },
+  });
+  return { ctx, calls };
+}
+const images = (calls) => calls.filter((c) => c[0] === 'drawImage');
+
+// 그림 칸에 서는 모든 물건(기물 · 기보 · 진화 밖)
+const allItems = () => [
+  ...MAXIMS.map((m) => ({ kind: 'maxim', id: m.id })), ...LEGENDS.map((l) => ({ kind: 'maxim', id: l.id })),
+  ...ENGRAVINGS.map((e) => ({ kind: 'engraving', id: e.id })), ...TACTICS.map((x) => ({ kind: 'tactic', id: x.id })),
+  ...SOULS.map((s) => ({ kind: 'soul', id: s.id })),
+  { kind: 'fragment', legend: 'immortal' }, { kind: 'gamble', id: 'potion' }, { kind: 'gamble', id: 'roulette' }, { kind: 'awaken' },
+];
 
 test('잉크 상자: 마스크에서 바로 재고, 가운데 놓으면 네 여백이 같다', () => {
   const b = inkBox(['.....', '..##.', '..#..', '.....']);
@@ -31,63 +51,61 @@ test('잉크 상자: 마스크에서 바로 재고, 가운데 놓으면 네 여�
   assert.deepEqual(margins(8, 8, b), { L: 3, R: 3, T: 3, B: 3, dx: 0, dy: 0 });
 });
 
-// 그림 칸에 서는 모든 물건(마스크로 그리는 종류)
-const allItems = () => [
-  ...MAXIMS.map((m) => ({ kind: 'maxim', id: m.id })), ...LEGENDS.map((l) => ({ kind: 'maxim', id: l.id })),
-  ...ENGRAVINGS.map((e) => ({ kind: 'engraving', id: e.id })), ...TACTICS.map((x) => ({ kind: 'tactic', id: x.id })),
-  ...SOULS.map((s) => ({ kind: 'soul', id: s.id })),
-  { kind: 'fragment', legend: 'immortal' }, { kind: 'gamble', id: 'potion' }, { kind: 'gamble', id: 'roulette' }, { kind: 'awaken' },
-];
-
-test('그림 원본: 격언 75 · 각인 12 · 전술 3이 빠짐없이 있고 줄 길이가 고르다', () => {
+test('문양: 격언 70 · 전설 5가 모두 문양을 갖고 아이콘과 같은 문양이다, 첫 화면 메뉴 여덟 · 자물쇠도', () => {
   assert.equal(MAXIMS.length + LEGENDS.length, 75);
-  assert.deepEqual(Object.keys(A16.MAXIM16).sort(), [...MAXIMS, ...LEGENDS].map((m) => m.id).sort());
-  assert.deepEqual(Object.keys(A16.EMBLEM16).sort(), ENGRAVINGS.map((e) => e.id).sort());
-  assert.deepEqual(Object.keys(A16.TACTIC16).sort(), TACTICS.map((x) => x.id).sort());
-  assert.deepEqual(Object.keys(A16.SOUL7).sort(), SOULS.map((s) => s.id).sort());
-  const sets = { ...A16.MAXIM16, ...A16.EMBLEM16, ...A16.TACTIC16, ...A16.SOUL7, SHARD16: A16.SHARD16, POTION16: A16.POTION16, ROULETTE16: A16.ROULETTE16, AWAKEN16: A16.AWAKEN16 };
-  for (const [k, rows] of Object.entries(sets)) assert.ok(rows.every((r) => r.length === rows[0].length), `${k} 줄 길이`);
-  for (const [k, rows] of Object.entries(A16.MAXIM16)) for (const ch of rows.join('')) assert.ok(ch === '.' || art.MAXIM_COL[ch], `${k} 낯선 문자 ${ch}`);
+  for (const id of [...MAXIMS, ...LEGENDS].map((m) => m.id)) assert.ok(emblems.MOTIF[id], id);
+  for (const id of ['menu_continue', 'menu_new', 'menu_lesson', 'menu_daily', 'menu_codex', 'menu_records', 'menu_settings', 'menu_rank', 'lock']) assert.ok(icons.ICON_IDS.includes(id), id);
+  assert.deepEqual([...icons.ICON_IDS].sort(), Object.keys(emblems.MOTIF).sort());
 });
 
-test('반 칸 그림: 원본의 두 배 크기, 원본 도트가 제 2×2 자리에 남는다(잉크 상자 = 원본의 두 배)', () => {
-  const pairs = [
-    ...Object.keys(A16.MAXIM16).map((k) => [k, A16.MAXIM16[k], HI.MAXIM_ART[k]]), ...Object.keys(A16.EMBLEM16).map((k) => [k, A16.EMBLEM16[k], HI.EMBLEM_ART[k]]),
-    ...Object.keys(A16.TACTIC16).map((k) => [k, A16.TACTIC16[k], HI.TACTIC_ART[k]]), ...Object.keys(A16.SOUL7).map((k) => [k, A16.SOUL7[k], HI.SOUL_ART[k]]),
-    ['shard', A16.SHARD16, HI.SHARD_ART], ['potion', A16.POTION16, HI.POTION_ART], ['roulette', A16.ROULETTE16, HI.ROULETTE_ART], ['awaken', A16.AWAKEN16, HI.AWAKEN_ART],
-  ];
-  for (const [k, lo, hi] of pairs) {
-    assert.ok(hi, `${k} 반 칸 그림 없음 — node tools/art-hi.mjs`);
-    assert.deepEqual([hi.length, hi[0].length], [lo.length * 2, lo[0].length * 2], `${k} 크기`);
-    const a = inkBox(lo), b = inkBox(hi);
-    assert.deepEqual(b, { x: a.x * 2, y: a.y * 2, w: a.w * 2, h: a.h * 2 }, `${k} 잉크 상자`);
+test('문양 문법: 동사마다 가족 하나, 가족마다 상자 빛깔 · 뒤 모양이 다르고 규칙 빛깔(금 · 붉은 · 하늘)을 쓰지 않는다', () => {
+  const RULE = ['#efbd55', '#f6be45', '#df5a45', '#ef6a52', '#6fb3c8'];
+  for (const m of MAXIMS) assert.ok(art.FAMILY[art.familyOf(m.id)], m.id);
+  for (const l of LEGENDS) assert.equal(art.familyOf(l.id), 'legend');
+  const fams = Object.values(art.FAMILY);
+  assert.equal(new Set(fams.map((f) => f.box)).size, fams.length);
+  assert.equal(new Set(fams.map((f) => f.shape)).size, fams.length);
+  for (const f of fams) for (const c of [f.box, f.halo]) assert.ok(!RULE.includes(c.toLowerCase()), c);
+  // 동사 하나는 가족 하나에만
+  const verbs = fams.flatMap((f) => f.verbs);
+  assert.equal(new Set(verbs).size, verbs.length);
+});
+
+test('그림 칸: 모든 물건이 칸 크기마다 구운 그림 하나를 정수 칸에(N배 캔버스), 같은 물건 · 크기 · 배율이면 한 번만 굽는다', () => {
+  for (const it of allItems()) for (const n of [1, 2, 3]) for (const [w, h] of [[22, 26], [20, 22], [18, 22]]) {
+    const { ctx, calls } = rec(n);
+    art.itemArt(ctx, it, 10.4, 20.6, 0, null, { w, h });
+    const im = images(calls);
+    assert.ok(im.length >= 1, `${it.kind} ${it.id || ''}`);
+    const [, cv, x, y, iw, ih] = im[0];
+    assert.deepEqual([x, y, iw, ih], [10, 21, w, h], `${it.kind} ${it.id || ''} 자리`);
+    assert.deepEqual([cv.width, cv.height], [w * n, h * n], `${it.kind} ${it.id || ''} N${n}`);
+    const again = rec(n); art.itemArt(again.ctx, it, 0, 0, 0, null, { w, h });
+    assert.equal(images(again.calls)[0][1], cv, '다시 굽지 않는다');
   }
 });
 
-test('그림 칸: 모든 격언 · 각인 · 전술 · 혼 · 조각 · 도박 · 깨우기의 잉크가 과녁 안이고 칸 가운데(벗어남 0)', () => {
-  const out = [];
-  for (const it of allItems()) {
-    const m = art.artMask(it);
-    assert.ok(m, `${it.kind} ${it.id || ''} 그림 없음`);
-    const b = inkBox(m.rows);
-    const name = `${it.kind} ${it.id || ''} 잉크 ${b.w / 2}×${b.h / 2}`;
-    if (!inTarget(b, 2)) out.push(name);
-    const g = margins(ART.w * 2, ART.h * 2, b);
-    assert.deepEqual([g.dx, g.dy], [0, 0], `${name} 벗어남`);
-    assert.ok(g.L >= 4 && g.T >= 6, `${name} 여백`);
-    // 빛깔표에 없는 문자는 그려지지 않는다
-    for (const ch of new Set(m.rows.join(''))) assert.ok(ch === '.' || m.cols[ch], `${name} 문자 ${ch}`);
+test('작은 그림: 아이콘 12 · 혼 표 9 · 조각 16×14 · 전술 16×11이 그 자리에 구운 그림 하나', () => {
+  for (const n of [1, 2, 3]) {
+    const cases = [
+      [(c) => icons.drawIcon(c, 'chivalry', 3, 4), [3, 4, 12, 12]],
+      [(c) => art.soulGlyph(c, 'echo', 3, 4), [3, 4, 9, 9]],
+      [(c) => art.shardIcon(c, 3, 4), [3, 4, 16, 14]],
+      [(c) => art.tacticIcon(c, 'freeze', 3, 4), [3, 4, 16, 11]],
+    ];
+    for (const [fn, want] of cases) {
+      const { ctx, calls } = rec(n); fn(ctx);
+      const im = images(calls);
+      assert.equal(im.length, 1);
+      assert.deepEqual(im[0].slice(2), want);
+      assert.deepEqual([im[0][1].width, im[0][1].height], [want[2] * n, want[3] * n]);
+      assert.ok(!calls.some((c) => c[0] === 'fillRect'), '도트 fillRect 없음');
+    }
   }
-  assert.deepEqual(out, [], `과녁(폭 ${TARGET.w} · 높이 ${TARGET.h}) 밖`);
 });
 
-test('두루마리 칸(18×22)에도 서는 그림: 각인 · 전술 · 혼 · 깨우기는 폭 16 · 높이 20 안', () => {
-  for (const it of allItems().filter((x) => ['engraving', 'tactic', 'soul', 'awaken'].includes(x.kind))) {
-    const b = inkBox(art.artMask(it).rows);
-    assert.ok(b.w <= 32 && b.h <= 40, `${it.kind} ${it.id || ''} ${b.w / 2}×${b.h / 2}`);
-    const g = margins(36, 44, b);
-    assert.deepEqual([g.dx, g.dy], [0, 0]);
-  }
+test('Path2D를 쓰지 않는다(연기 시험의 가짜 캔버스에 없다)', () => {
+  for (const f of ['src/render/vec.js', 'src/render/emblems.js', 'src/ui/art.js', 'src/render/icons.js', 'src/ui/stars.js']) assert.ok(!/Path2D/.test(fs.readFileSync(f, 'utf8').replace(/\/\/.*$/gm, '')), f);
 });
 
 test('종류 문양: 열한 종류(레퍼토리 깃발까지, CHM-73) 모두 잉크 10×10 안', () => {
@@ -95,8 +113,6 @@ test('종류 문양: 열한 종류(레퍼토리 깃발까지, CHM-73) 모두 잉
   for (const [k, v] of Object.entries(kinds.KIND)) {
     const b = inkBox(v.g);
     assert.ok(b.w <= GLYPH && b.h <= GLYPH, `${k} ${b.w}×${b.h}`);
-    const hb = inkBox(HI.KIND_HI[k]);
-    assert.deepEqual([hb.w, hb.h], [b.w * 2, b.h * 2], `${k} 반 칸 문양`);
   }
 });
 
@@ -104,26 +120,6 @@ test('종류 딱지 · 띠: 문양 잉크가 딱지(14×14) · 띠(14×26) 한�
   for (const [k, v] of Object.entries(kinds.KIND)) {
     const b = inkBox(v.g);
     for (const [w, h] of [[kinds.TAB, kinds.TAB], [kinds.BAND, 26]]) { const g = margins(w, h, b); assert.deepEqual([g.dx, g.dy], [0, 0], `${k} ${w}×${h} 왼 ${g.L} 오른 ${g.R} 위 ${g.T} 아래 ${g.B}`); }
-  }
-});
-
-test('꾸러미 봉투: 덮개에 찍는 문양이 덮개 한가운데 · 덮개 안, 아주 작은 봉투(1배 12×10)는 빈 덮개', async () => {
-  const env = await import('../src/ui/envelope.js');
-  // [폭, 높이, 도트 배율, 문양 잉크 한 변(도트)]: 상점 칸 · 좁은 칸 · 아주 좁은 칸 · 건너뛰기 패 · 여는 연출
-  const sizes = [[28, 22, 2, 20], [28, 22, 1, 10], [24, 20, 2, 20], [24, 20, 1, 10], [14, 12, 2, 10], [12, 10, 2, 10], [96, 66, 2, 60], [96, 66, 1, 20]];
-  for (const kind of ['piece', 'chart', 'engraving', 'golden']) {
-    assert.ok(env.ENV_COL[kind], kind);
-    for (const [w, h, u, ink] of sizes) {
-      const W = w * u, H = h * u, G = env.envGlyph(kind, W, H, u), S = env.envShape(W, H, u), name = `${kind} ${w}×${h} ×${u}`;
-      assert.ok(G, `${name} 문양 없음`);
-      const bw = G.b.w * G.m, bh = G.b.h * G.m, L = G.x + G.b.x * G.m, T = G.y + G.b.y * G.m;
-      assert.ok(Math.max(bw, bh) === ink, `${name} 잉크 ${bw}×${bh}`);
-      assert.equal(L, W - L - bw, `${name} 가로`);
-      assert.equal(T - u, S.fe - S.e - (T + bh), `${name} 세로`);
-      // 문양 맨 아랫줄이 그 줄의 덮개 폭 안
-      assert.ok(bw / 2 <= S.half(T + bh - 1) - S.e, `${name} 덮개 밖`);
-    }
-    assert.equal(env.envGlyph(kind, 12, 10, 1), null);
   }
 });
 

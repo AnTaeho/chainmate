@@ -1,29 +1,22 @@
 // 화면 쪽 순수 데이터(그림 마스크 · 명국 재생 · 문구)의 모양 검사. DOM 없이 돈다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ICON_IDS } from '../src/render/icons.js';
-import { SPR, SW, SH } from '../src/render/sprites.js';
+import { ICON_IDS, ICON } from '../src/render/icons.js';
+import { SW, SH } from '../src/render/sprites.js';
+import { SHAPES } from '../src/render/pieces3.js';
 import { REPLAYS, sqOf } from '../src/ui/replays.js';
 import { MAXIMS } from '../src/data/maxims.js';
 import { LEGENDS } from '../src/data/legends.js';
 import fs from 'node:fs';
 
-test('격언 · 전설 아이콘은 모두 있고 12×12', () => {
-  const src = fs.readFileSync(new URL('../src/render/icons.js', import.meta.url), 'utf8');
+test('격언 · 전설 아이콘은 모두 있다(벡터 문양, 12×12 자리)', () => {
   for (const id of [...MAXIMS.map((m) => m.id), ...LEGENDS.map((l) => l.id)]) assert.ok(ICON_IDS.includes(id), id);
-  const body = src.slice(src.indexOf('const I = {'), src.indexOf('};', src.indexOf('const I = {')));
-  for (const m of body.matchAll(/(\w+): \[([^\]]+)\]/g)) {
-    const rows = [...m[2].matchAll(/'([^']*)'/g)].map((x) => x[1]);
-    assert.equal(rows.length, 12, m[1]);
-    for (const r of rows) assert.equal(r.length, 12, `${m[1]} ${r}`);
-  }
+  assert.equal(ICON, 12);
 });
 
-test('기물 스프라이트는 16×22', () => {
-  for (const [k, rows] of Object.entries(SPR)) {
-    assert.equal(rows.length, SH, k);
-    for (const r of rows) assert.equal(r.length, SW, k);
-  }
+test('판 밖 기물 상자는 16×22, 체스 여섯 모두 벡터 모양이 있다', () => {
+  assert.deepEqual([SW, SH], [16, 22]);
+  for (const k of ['P', 'N', 'B', 'R', 'Q', 'K']) assert.ok(SHAPES.has(k), k);
 });
 
 test('명국 재생: 명국마다 있고, 수의 출발 칸에 기물이 있다', () => {
