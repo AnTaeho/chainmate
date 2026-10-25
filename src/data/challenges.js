@@ -25,7 +25,7 @@ export const CHALLENGES = [
   { id: 'guards', weight: 1, param: () => ({ n: 2 }), check: (h, ch) => (h.forced || 0) >= ch.n, text: () => '한 콤보에서 지키는 적을 둘 잡는다' },
   // 프로모션
   { id: 'promote', weight: 1, param: () => ({}), check: (h) => (h.promotions || 0) >= 1, text: () => '콤보 중에 프로모션한다' },
-  // 체크메이트 — 무게 0(뽑지 않는다): 쫓는 봇도 3~6%만 이뤘다(외통은 이미 대국을 끝내고 상금 +3을 준다). 보고서 「버린 안」
+  // 체크메이트 — 무게 0(뽑지 않는다): 도전을 노리는 봇도 3~6%만 이뤘다(외통은 이미 대국을 끝내고 상금 +3을 준다). 보고서 「버린 안」
   { id: 'mate', weight: 0, param: () => ({}), check: (h) => (h.mates || 0) >= 1, text: () => '킹을 잡아 체크메이트한다' },
   // 사냥: 같은 종류를 셋 잇달아
   { id: 'same', weight: 1, param: () => ({}), check: (h) => RUN3.test(h.caps || ''), text: () => '같은 종류의 적을 셋 잇달아 잡는다' },

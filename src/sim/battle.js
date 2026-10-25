@@ -219,7 +219,7 @@ function newBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, t
   // 대국 도전(src/data/challenges.js): { id, n?, form?, reward, done } — 콤보가 끝날 때마다 endMove가 판정한다. 없으면 붙지 않은 대국
   if (challenge) b.challenge = { ...challenge, done: false };
   // 숙적(tuning.js NEMESIS): 판(런)이 넘긴 지금 숙적(cur, 없으면 null). 판(런) 밖의 대국(수업 · 시험)은 nemesis를 넘기지 않아 이 칸이 없다.
-  //   placed: 이 판에 표시된 적이 섰나 · taken: 잡은 단(0 = 못 잡음) · ups: 또 끊어 오른 단 수 · born: 이 대국에서 새로 숙적이 된 적 { t, sq }
+  //   placed: 이 판에 표시된 적이 놓였나 · taken: 잡은 단(0 = 못 잡음) · ups: 또 끊어 오른 단 수 · born: 이 대국에서 새로 숙적이 된 적 { t, sq }
   if (nemesis !== undefined && NEMESIS.on) b.nem = { cur: nemesis ? { t: nemesis.t, lv: nemesis.lv } : null, placed: false, taken: 0, ups: 0, born: null };
   runHook(b, 'onBattleStart', {}, []);
   b.movesLeft = b.rules.moves;
