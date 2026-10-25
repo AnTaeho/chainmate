@@ -237,6 +237,11 @@ export const EVENT_MAP = {
   legend: (e) => ['legend_done', { id: e.legend }],
   awaken: (e) => ['awaken', { soul: e.soul }],
   clockLost: (e) => ['clock_lost', { ante: e.ante, blind: e.blind, clock: e.clock }],
+  // 대국 도전 · 숙적(docs/reports/goty.md)
+  challenge: (e, c) => ['challenge_done', { ante: c.before.ante, blind: c.before.blind, id: e.id, move: e.move }],
+  nemesisNew: (e) => ['nemesis_new', { ante: e.ante, blind: e.blind, piece: e.piece }],
+  nemesis: (e, c) => (e.kind === 'up' ? ['nemesis_up', { ante: c.before.ante, blind: c.before.blind, piece: e.piece, lv: e.lv }] : null),
+  nemesisGone: (e, c) => ['nemesis_taken', { ante: c.before.ante, blind: c.before.blind, piece: e.piece, lv: e.lv, won: !!e.won }],
 };
 
 const round2 = (x) => Math.round(x * 100) / 100;
@@ -246,6 +251,9 @@ export function battleEndProps(b) {
     ante: b.ante, blind: b.blind, kind: b.kind, won: !!b.won, reason: b.reason === 'score' ? 'target' : b.reason,
     ratio: b.target ? round2(b.score / b.target) : null,
     moves_used: b.moves, first_move_win: !!b.won && b.moves === 1, sacrifices: b.discarded || 0,
+    // 대국 도전(붙지 않은 대국은 null) · 이 대국에 다시 나온 숙적의 단(없으면 0)
+    challenge: b.challenge ? b.challenge.id : null, challenge_done: !!(b.challenge && b.challenge.done),
+    nemesis: b.nemesis && b.nemesis.placed ? b.nemesis.lv : 0,
   };
 }
 

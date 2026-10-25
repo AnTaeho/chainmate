@@ -12,7 +12,8 @@
 //   lost    끝.
 import { renameOldPieces } from './oldsave.js';
 import { createRng, fork, int, next, shuffle } from './rng.js';
-import { boardFilter } from './tuning.js';
+import { boardFilter, NEMESIS } from './tuning.js';
+import { drawChallenge } from '../data/challenges.js';
 import { parseSq } from './board.js';
 import { createBattle, battleLayout, battleRules, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
 import { isCracked } from '../data/souls.js';
@@ -218,8 +219,18 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
     faction,
     master,
     tag: kind === 'master' ? null : tagFor(run, ante, blind),
+    challenge: challengeFor(run, ante, blind),
   };
 }
+
+// 대국 도전(src/data/challenges.js): 판 시드 · 관 · 대국으로 정해진다(관 선택에 미리 보인다 — 건너뛰면 그 도전도 없다).
+// 수업 판(scratch)에는 붙지 않는다. 붙지 않는 대국(마스터전 · tuning.js CHALLENGE.on 끔)은 null
+export function challengeFor(run, ante = run.ante, blind = run.blind) {
+  if (run.scratch) return null;
+  return drawChallenge(fork(root(run), `challenge:${ante}:${blind}`), ante, KINDS[blind]);
+}
+// 숙적을 대국에 넘기나: 판(런)의 대국이면 지금 숙적(없으면 null), 수업 판 · tuning.js NEMESIS.on 끔이면 넘기지 않는다(undefined)
+const nemesisOpt = (run) => (run.scratch || !NEMESIS.on ? undefined : run.nemesis ? { t: run.nemesis.t, lv: run.nemesis.lv } : null);
 
 // draft: false면 정석 드래프트 없이(깊이 E 이전 규칙 — 시험 · 하네스 비교용)
 // unlockTier: 해금 단계(src/data/unlocks.js). 주지 않으면 잠금 없이 전부 열린 판
@@ -264,6 +275,7 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
     pack: null,
     last: null,               // 마지막 대국 결과와 보상 내역(화면용)
     log: [],                  // 대국마다 한 줄(하네스 · 결과 화면용)
+    nemesis: null,            // 숙적(tuning.js NEMESIS): { t(종류), lv(단 1~3), ante, blind(숙적이 된 대국) } 또는 null. 옛 저장엔 없다(= 없음)
   };
   // 해금: 열린 목록을 판에 싣고(저장 · 재생에 그대로), 대국에는 규칙 깃발 rules.pieces로 넘긴다
   if (unlockTier != null) { run.unlocked = unlockedAt(unlockTier); run.rules.pieces = [...run.unlocked.pieces]; }
@@ -341,6 +353,8 @@ export function battleOpts(run, blind = run.blind) {
       goldenChance: pityChance(awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance, 'golden', pityOf(run, 'golden')), // 연줄(CHM-68)
       golden: null,
       filter: run.scratch ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
+      challenge: info.challenge,
+      nemesis: nemesisOpt(run),
     },
   };
 }
@@ -458,9 +472,27 @@ function endBattle(run, events) {
     took,
     jd,
   };
+  // 대국 도전: 뽑힌 도전과 이루었나(이루면 이기든 지든 상금 — 이긴 대국은 보상 내역 challenge 칸으로)
+  const ch = b.challenge || null;
+  if (ch) row.challenge = { id: ch.id, ...(ch.n != null ? { n: ch.n } : {}), ...(ch.form ? { form: ch.form } : {}), done: !!ch.done, ...(ch.done ? { move: ch.move } : {}) };
+  const chMoney = ch && ch.done ? ch.reward : 0;
+  // 숙적: 이 대국에 선 숙적 · 잡았나 · 또 끊어 올랐나 · 새로 생겼나를 줄에 남기고 판(런)에 옮긴다
+  if (b.nem) {
+    const n = b.nem;
+    row.nemesis = { lv: n.cur ? run.nemesis.lv : 0, t: n.cur ? n.cur.t : null, placed: n.placed, taken: n.taken, ups: n.ups, born: n.born ? n.born.t : null };
+    if (n.taken) {
+      events.push({ type: 'nemesisGone', piece: run.nemesis.t, lv: n.taken, won });
+      run.nemesis = null;
+    } else if (n.cur && n.ups) run.nemesis.lv = n.cur.lv;
+    if (n.born && !run.nemesis) {
+      run.nemesis = { t: n.born.t, lv: 1, ante: run.ante, blind: run.blind };
+      events.push({ type: 'nemesisNew', piece: n.born.t, ante: run.ante, blind: run.blind });
+    }
+  }
   run.log.push(row);
   if (!won) {
     run.last = { ...row, reward: null };
+    if (chMoney) { run.money += chMoney; run.last.challengeMoney = chMoney; events.push({ type: 'money', src: 'challenge', money: chMoney }); }
     // 시계 한 칸을 잃는다. 남은 칸이 있으면 다음 대국으로(8관 명인은 같은 대국을 새 판으로), 다 쓰면 판이 끝난다
     if (run.clock != null && run.clock > 0) {
       run.clock--;
@@ -490,8 +522,9 @@ function endBattle(run, events) {
     mate: mate ? REWARD.mate : 0,
     overflow: REWARD.overflow[b.overflow] || 0,
     earned: b.money,
+    challenge: chMoney,
   };
-  reward.total = reward.base + reward.moves + reward.interest + reward.mate + reward.overflow + reward.earned;
+  reward.total = reward.base + reward.moves + reward.interest + reward.mate + reward.overflow + reward.earned + reward.challenge;
   run.money += reward.total;
   run.last = { ...row, reward };
   events.push({ type: 'reward', ...reward });

@@ -15,7 +15,7 @@ import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
 import { UP, ABSORB } from '../data/souls.js';
 import { brilliantMult } from '../data/sacrifice.js';
-import { MATE, mateBlocked } from './tuning.js';
+import { MATE, mateBlocked, NEMESIS } from './tuning.js';
 
 const NO_OPTS = {};
 // 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
@@ -165,6 +165,7 @@ export function chainCapture(t, sq, legal = false) {
   // 1. 기본: 값 += 먹힌 기물 값, 배수 += 1
   c.value += PIECES[target.t].value;
   c.mult += 1;
+  if (target.nem) takeNemesis(c, target, sq, events);
   // 금빛 적: 값을 한 번 더 받는다. 판(런)이 대국 뒤 금빛 꾸러미 · 조각으로 바꾼다
   if (target.gold) {
     c.golden++;
@@ -255,6 +256,14 @@ export function chainCapture(t, sq, legal = false) {
   return events;
 }
 
+// 숙적(판(런)이 뒤 대국에 표시해 둔 적, x.nem = 단)을 잡았다: 단마다 상금(대국을 이기면 함께 받는다). 판(런)이 대국 뒤 숙적을 지운다
+function takeNemesis(c, x, sq, events) {
+  const money = NEMESIS.bounty[Math.min(NEMESIS.bounty.length, x.nem) - 1] || 0;
+  c.nemTaken = x.nem;
+  c.money = (c.money || 0) + money;
+  events.push({ type: 'nemesis', kind: 'taken', sq, piece: x.t, lv: x.nem, money });
+}
+
 // 폭약: 둘레 여덟 칸의 적(킹 · 벽 빼고)을 함께 먹은 것으로(값 · 배수 +1씩). 폭약이 폭약을 터뜨리면 이어진다
 function blast(t, sq, events) {
   const c = t.chain, board = t.board;
@@ -265,6 +274,7 @@ function blast(t, sq, events) {
     if (!x || x.mine || x.t === 'K' || x.t === 'X') continue;
     board[s] = null;
     events.push({ type: 'pierce', sq: s, piece: x.t, gold: !!x.gold, src: 'bomb' });
+    if (x.nem) takeNemesis(c, x, s, events);
     c.value += PIECES[x.t].value;
     c.mult += 1;
     events.push({ type: 'score', src: 'bomb', value: PIECES[x.t].value, mult: 1 });
@@ -293,6 +303,7 @@ function powder(t, sq, at, target, events) {
     board[s] = null;
     const v = PIECES[x.t].value;
     events.push({ type: 'pierce', sq: s, piece: x.t, gold: !!x.gold, src: 'powder' });
+    if (x.nem) takeNemesis(c, x, s, events);
     c.value += v;
     c.mult += 1;
     events.push({ type: 'score', src: 'powder', value: v, mult: 1 });
@@ -371,6 +382,7 @@ function resolveReply(t, events) {
     c.cuts++;
     const cancelled = runHook(t, 'onCut', { sq: c.sq, attackers: threats.slice() }, events);
     if (!cancelled) {
+      c.cutBy = threats.slice(); // 숙적: 끊은 적(대국이 콤보 끝에 읽는다)
       events.push({ type: 'cut', sq: c.sq, attackers: threats.slice() });
       stop(t, 'cut', events);
       return;
@@ -454,6 +466,8 @@ export function chainSummary(c, move = 0) {
     captures: c.captures.length, transforms: c.transforms, promotions: c.promotions, forced: c.forcedReplies,
     caps: c.captures.map((x) => x.piece).join(''), took: c.captures.map((x) => x.form).join(''), cuts: c.cuts, mates: c.mates, golden: c.golden,
     refills: c.refills, redrops: c.redrops, move,
+    // 대국 도전(src/data/challenges.js): 거친 모습 수(떨군 모습 포함) · 끝난 모습
+    forms: c.forms.length, end: c.form,
     // 하네스용(CHM-56): 광대 모습의 먹기마다 a = 붙은 칸이라서만 · m = 그 적의 행마로
     ...(c.captures.some((x) => x.form === 'M') ? { jm: c.captures.filter((x) => x.form === 'M').map((x) => (x.move === 'K' && mimicOf(x.piece) !== 'K' ? 'a' : 'm')).join('') } : {}),
     ...(c.soul ? { soul: c.soul.id.replace(/^soul:/, '') } : {}),

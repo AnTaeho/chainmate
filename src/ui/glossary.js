@@ -46,6 +46,9 @@ export const TERMS = [
   B('swap', 'battle', '희생', 'Sacrifice', /희생(?! 시너지)/, /\bsacrific(?:e|es|ed)\b(?! synergy)/i, '손의 기물 하나를 내주고 새로 뽑는다. 그 기물은 이번 대국에 돌아오지 않는다', 'Give up a piece in hand and draw anew. It stays out for this match'),
   T('brilliant', 'battle', '탁월수', 'Brilliant', /탁월수/, /\bBrilliant\b/, '희생하고 새로 뽑은 기물로 곧바로 체크메이트. 희생한 기물이 무거울수록 배수가 크게 곱해진다. 명경기 조각도 하나 얻는다', 'Checkmate at once with the piece a sacrifice drew. The heavier the piece you gave up, the bigger the Mult. Also earns a Classic Fragment'),
   B('goal', 'battle', '목표', 'Target', null, null, '대국을 이기는 점수', 'The score that wins the match'),
+  // 대국 도전 · 숙적(docs/reports/goty.md). 「도전」은 「판」 풀이의 「한 도전.」에 걸리지 않게 뒤 글자를 본다
+  T('challenge', 'battle', '도전', 'Challenge', /도전(?=$|[\s을이은의]|에서)/, /\bchallenges?\b/i, '대국마다 붙는 과제. 콤보 하나로 이루면 상금 +2. 이기는 데는 필요 없다', 'One task per match. Do it in a single chain for +$2. Not needed to win'),
+  T('nemesis', 'battle', '숙적', 'Nemesis', /숙적/, /\bnemes(?:is|es)\b/i, '내 콤보를 끊은 적. 뒤 대국에 다시 나온다. 잡으면 상금, 또 끊으면 세진다', 'The enemy that broke your chain. It returns in later matches. Take it for $; it grows if it breaks you again'),
   // ── 판
   T('run', 'run', '판', 'Run', null, null, '1관부터 8관까지의 한 도전. 지면 처음부터', 'One attempt from Hall 1 to Hall 8. Lose it and start over'),
   T('hall', 'run', '관', 'Hall', null, null, '연습 대국 · 정식 대국 · 마스터전. 8관까지', 'A practice, a rated and a master match. Eight halls in all'),

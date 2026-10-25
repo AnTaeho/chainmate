@@ -19,3 +19,11 @@ export const reboardOn = () => !!BOARD_TUNING.reboard;
 export const MATE = { guardLimit: 1 };
 // 이 콤보로는 킹을 못 잡나(규칙 chain.js chainCaptures · 화면 표시가 같이 쓴다)
 export const mateBlocked = (c) => !!c && !c.done && c.guardsTaken > MATE.guardLimit;
+
+// 대국 도전(src/data/challenges.js, 보고서 docs/reports/goty.md). on: 끄면 도전이 붙지 않는다(옛 판과 같은 판) ·
+// kinds: 도전이 붙는 대국 종류(마스터전은 마스터 규칙이 그 자리를 쓴다) · reward: 이루면 대국이 끝날 때 받는 상금
+export const CHALLENGE = { on: true, kinds: ['practice', 'official'], reward: 2 };
+// 숙적(보고서 docs/reports/goty.md). 내 콤보를 끊은 적이 판의 숙적이 되어 뒤 대국에 표시를 달고 다시 나온다.
+//   on: 끄면 숙적이 생기지 않는다(옛 판과 같은 판) · max: 또 끊으면 오르는 단의 끝 · traits: 단마다 붙는 특성(방패 · 파수꾼, src/data/traits.js) ·
+//   bounty: 단마다 잡으면 받는 상금(대국을 이기면 함께 받는다)
+export const NEMESIS = { on: true, max: 3, traits: ['shield', 'fort', 'fort'], bounty: [2, 3, 4] };

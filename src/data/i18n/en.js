@@ -6,6 +6,15 @@
 // 팩 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 // 효과 글: 「Condition: effect」, 수치는 +20 Value · ×2 Mult · +$2 · +1 Move. Value · Mult · Target은 늘 대문자, 다른 낱말과 기물 이름은 문장 안에서 소문자.
 export const EN = {
+  // 대국 도전 · 숙적(docs/reports/goty.md, src/data/challenges.js · nemesis.js)
+  '도전': 'Challenge', '도전 성공': 'Challenge done', '도전을 이뤘어요': 'Challenge done', '이기는 데는 필요 없어요': "You don't need it to win",
+  '건너뛰면 이 도전도 사라져요': 'Skipping drops this challenge too', '도전 상금': 'Challenge purse',
+  '한 콤보에서 지키는 적을 둘 잡는다': 'Take two guards in one chain', '콤보 중에 프로모션한다': 'Promote during a chain',
+  '킹을 잡아 체크메이트한다': 'Take the king for checkmate', '같은 종류의 적을 셋 잇달아 잡는다': 'Take three of the same kind in a row',
+  '숙적': 'Nemesis', '이 적이 숙적이 됐어요': 'This enemy is now your nemesis', '숙적이 돌아왔어요': 'Your nemesis is back',
+  '숙적이 더 세졌어요': 'Your nemesis grew stronger', '숙적을 잡았어요': 'Nemesis taken', '또 끊기면 더 세진다': 'Grows if it breaks you again',
+  '대국마다 도전이 하나 붙어. 콤보 하나로 해내면 상금을 받아': 'Each match has a challenge. Pull it off in one chain for extra $',
+  '내 콤보를 끊은 적은 숙적이 돼. 다시 나오면 잡아서 갚아 줘': 'An enemy that breaks your chain becomes your nemesis. Take it when it comes back',
   // 하이라이트 카드(CHM-73): 결과 화면 단추 · 덮개 · 카드
   '하이라이트': 'Highlight', '그림 저장': 'Save image', '공유': 'Share', '닫기': 'Close',
   '그림을 저장했어요': 'Image saved', '저장하지 못했어요': "Couldn't save it", '공유하지 못했어요': "Couldn't share it",
@@ -547,6 +556,12 @@ const KIND = { '연습 대국': 'Practice', '정식 대국': 'Rated', 마스터�
 // 틀: 숫자나 이름이 끼는 글. fn(m, tr) — tr로 끼인 말을 다시 옮긴다.
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
+  // 대국 도전 · 숙적(docs/reports/goty.md)
+  [/^이루면: 상금 \+(\d+)$/, (m) => `Pull it off: +$${m[1]}`],
+  [/^잡으면: 상금 \+(\d+)$/, (m) => `Take it: +$${m[1]}`],
+  [/^한 콤보에서 모습 (\d+)가지를 거친다$/, (m) => `Pass through ${m[1]} forms in one chain`],
+  [/^한 콤보에 (\d+)번 잡는다$/, (m) => `Take ${m[1]} times in one chain`],
+  [/^(폰|나이트|비숍|룩|퀸) 모습으로 콤보를 끝낸다$/, (m, tr) => `End a chain as a ${tr(m[1]).toLowerCase()}`],
   // 하이라이트 카드(CHM-73)
   [/^(\d+)관 돌파$/, (m) => `Hall ${m[1]} cleared`],
   [/^(\d+)관 도달$/, (m) => `Reached Hall ${m[1]}`],

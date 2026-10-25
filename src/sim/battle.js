@@ -3,7 +3,7 @@
 //   { type: 'drop', handIndex, sq }  { type: 'capture', sq }  { type: 'redrop', sq }  { type: 'discard', handIndices }  { type: 'reboard' }
 // 'discard'는 화면 낱말 「희생」(CHM-35)이다. 코드 id · discardsLeft · discardsUsed · discarded는 옛 저장과 맞추려고 그대로 둔다.
 import { createRng, fork, int, next, shuffle } from './rng.js';
-import { dropSquares, fileOf, rankOf, reach } from './board.js';
+import { dropSquares, fileOf, rankOf, reach, isEnemy } from './board.js';
 import { startChain, chainCapture, chainCaptures, chainRedrop, chainRedrops, chainSummary, boardOpts, markFairy } from './chain.js';
 import { runHook, getModifier, forkSpec, forkSpecs } from './scoring.js';
 import { bestMove } from './solver.js';
@@ -12,7 +12,8 @@ import { openTypes } from './unlock.js';
 import { pieceSoul, CRACK } from '../data/souls.js';
 import { PIECES } from '../data/pieces.js';
 import { thaw } from '../data/tactics.js';
-import { reboardOn } from './tuning.js';
+import { reboardOn, NEMESIS } from './tuning.js';
+import { challengeMet } from '../data/challenges.js';
 
 export { enemyCount, kingGuards, reinforceCount, enemyWeights, kingDefended } from './setup.js';
 
@@ -155,6 +156,7 @@ export function createBattle(opts = {}) {
   if (opts.layout) useLayout(b, opts.layout);
   else layBoard(b, b.rng.board, fork(root, 'filter'));
   layGold(b, root, opts);
+  if (b.nem) placeNemesis(b, fork(root, 'nemesis'));
   runHook(b, 'onSetup', {}, []);
   telegraph(b);
   markFairy(b);
@@ -182,7 +184,7 @@ function layGold(b, root, { golden = null, goldenChance = GOLDEN.chance } = {}) 
   if (golden ?? next(gr) < goldenChance) placeGold(b, gr);
 }
 
-function newBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [], filter = 0 } = {}) {
+function newBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, target = null, rules = {}, mods = [], filter = 0, challenge = null, nemesis } = {}) {
   const root = createRng(seed);
   const b = {
     v: 1,
@@ -214,6 +216,11 @@ function newBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, t
     golden: 0,         // 이번 대국에서 먹은 금빛 적 수
     overflow: 0,       // 목표를 넘긴 층(0 · 1 · 2 · 5 · 10)
   };
+  // 대국 도전(src/data/challenges.js): { id, n?, form?, reward, done } — 콤보가 끝날 때마다 endMove가 판정한다. 없으면 붙지 않은 대국
+  if (challenge) b.challenge = { ...challenge, done: false };
+  // 숙적(tuning.js NEMESIS): 판(런)이 넘긴 지금 숙적(cur, 없으면 null). 판(런) 밖의 대국(수업 · 시험)은 nemesis를 넘기지 않아 이 칸이 없다.
+  //   placed: 이 판에 표시된 적이 섰나 · taken: 잡은 단(0 = 못 잡음) · ups: 또 끊어 오른 단 수 · born: 이 대국에서 새로 숙적이 된 적 { t, sq }
+  if (nemesis !== undefined && NEMESIS.on) b.nem = { cur: nemesis ? { t: nemesis.t, lv: nemesis.lv } : null, placed: false, taken: 0, ups: 0, born: null };
   runHook(b, 'onBattleStart', {}, []);
   b.movesLeft = b.rules.moves;
   b.discardsLeft = b.rules.discards;
@@ -247,6 +254,57 @@ function layBoard(b, rng, pickRng) {
   cands.splice(worst, 1);
   b.board = cands[int(pickRng, cands.length)].board;
 }
+// 숙적이 다시 나온다: 판에 같은 종류의 적(킹 · 벽 · 보석 · 금빛 적 빼고)이 있으면 그중 하나에 표시(nem = 단)와 단의 특성을 단다.
+// 판은 지어 둔 그대로(판 보기와 같은 판) — 적을 더하거나 바꾸지 않는다. 같은 종류가 없으면 이 대국에는 나오지 않는다.
+// 특성 때문에 첫 손으로 놓을 곳이 사라지면 그 후보는 건너뛰고, 모두 그러면 특성 없이 표시만 단다.
+function placeNemesis(b, r) {
+  const cur = b.nem.cur;
+  b.nem.placed = false;
+  if (!cur) return;
+  const cand = [];
+  b.board.forEach((c, sq) => { if (c && isEnemy(c) && c.t === cur.t && c.t !== 'K' && !c.gold) cand.push(sq); });
+  if (!cand.length) return;
+  shuffle(r, cand);
+  const trait = NEMESIS.traits[Math.min(NEMESIS.traits.length, cur.lv) - 1] || null;
+  for (const withTrait of trait ? [true, false] : [false]) {
+    for (const sq of cand) {
+      const c = b.board[sq], old = c.trait;
+      c.nem = cur.lv;
+      if (withTrait) c.trait = trait;
+      if (!withTrait || hasLegalDrop(b)) { b.nem.placed = true; b.nem.sq = sq; return; }
+      delete c.nem;
+      if (old) c.trait = old; else delete c.trait;
+    }
+  }
+}
+// 숙적: 끝난 콤보 c가 끊겼으면 끊은 적을 본다. 표시된 숙적이 끊었으면 단이 오르고(NEMESIS.max까지), 숙적이 없으면(또는 이 대국에서 잡았으면)
+// 끊은 적 가운데 값이 가장 큰 적(같으면 칸 번호가 작은 적, 킹 · 벽 · 보석 빼고)이 새 숙적이 된다(대국마다 하나). 판(런)이 대국 뒤 옮긴다
+function nemesisCut(b, c, events) {
+  const n = b.nem;
+  if (c.nemTaken) n.taken = c.nemTaken;
+  if (!c.cutBy) return;
+  const live = n.cur && !n.taken;
+  if (live) {
+    const sq = c.cutBy.find((s) => b.board[s] && b.board[s].nem);
+    if (sq != null && n.cur.lv < NEMESIS.max) {
+      n.cur.lv++;
+      n.ups++;
+      events.push({ type: 'nemesis', kind: 'up', sq, piece: b.board[sq].t, lv: n.cur.lv });
+    }
+    return;
+  }
+  if (n.born) return;
+  let best = -1;
+  for (const s of c.cutBy) {
+    const x = b.board[s];
+    if (!x || !isEnemy(x) || x.t === 'K' || x.t === 'X' || x.t === 'J') continue;
+    if (best < 0 || PIECES[x.t].value > PIECES[b.board[best].t].value || (PIECES[x.t].value === PIECES[b.board[best].t].value && s < best)) best = s;
+  }
+  if (best < 0) return;
+  n.born = { t: b.board[best].t, sq: best };
+  events.push({ type: 'nemesis', kind: 'new', sq: best, piece: b.board[best].t, lv: 1 });
+}
+
 function placeGold(b, gr) {
   const cand = [];
   b.board.forEach((c, sq) => { if (c && c.t !== 'K' && c.t !== 'X' && c.t !== 'J') cand.push(sq); });
@@ -263,6 +321,7 @@ export function reboard(b, events = []) {
   const r = fork(createRng((b.seed ?? 1) >>> 0), `reboard:${b.reboards}`);
   layBoard(b, fork(r, 'board'), fork(r, 'filter'));
   if (hadGold) placeGold(b, fork(r, 'gold'));
+  if (b.nem) placeNemesis(b, fork(r, 'nemesis'));
   runHook(b, 'onSetup', {}, events);
   b.incomingNext = null;
   b.revealed = [];
@@ -453,7 +512,16 @@ function endMove(b, events) {
   if (c.pact) (b.exiled || (b.exiled = [])).push(b.chainPiece.id);
   if (c.throne) (b.crowned || (b.crowned = [])).push(b.chainPiece.id);
   if (c.traitors) (b.traitors || (b.traitors = [])).push(...c.traitors);
-  b.history.push(chainSummary(c, b.movesUsed - 1));
+  const h = chainSummary(c, b.movesUsed - 1);
+  b.history.push(h);
+  // 대국 도전: 이 콤보 하나가 이루었나(대국마다 한 번)
+  const ch = b.challenge;
+  if (ch && !ch.done && challengeMet(ch, h)) {
+    ch.done = true;
+    ch.move = b.movesUsed - 1;
+    events.push({ type: 'challenge', id: ch.id, reward: ch.reward, move: ch.move });
+  }
+  if (b.nem) nemesisCut(b, c, events);
   // 탁월수 !!: 판(런)이 기록 칸에 옮긴다
   if (c.brilliant) (b.brilliants || (b.brilliants = [])).push({ ...c.brilliant, score: c.score, move: b.movesUsed - 1 });
   b.offering = null; // 희생은 바로 다음 수 하나만 기다린다
