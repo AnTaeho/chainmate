@@ -632,8 +632,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const avoid = ui.regions.filter((r) => r !== h && r.onClick && r.enabled && !r.cell && !inAnchor(r));
     // 덮지 않으면 좋은 것(판 밖 틀): 다른 카드 · 칸(말풍선이 뜨는 구역) · 꺼진 단추
     const soft = mode === 'below' ? ui.regions.filter((r) => r !== h && (r.tip || r.keys || r.cell || (r.onClick && !r.enabled)) && !inAnchor(r)) : [];
-    let lay = placeNotes(mode, anchor, hs, { W, H, avoid, soft });
+    // 옆에 세울 때 폭을 좁히면 그 폭으로 다시 잰다
+    const remeasure = (sw) => [...(tip ? [tipHeight(tip, sw)] : []), ...ids.map((id) => keyHeight(id, sw))];
+    let lay = placeNotes(mode, anchor, hs, { W, H, avoid, soft, remeasure });
     if (!lay) return null;
+    if (lay.hs) hs.splice(0, hs.length, ...lay.hs);
     // 말풍선 하나도 그 자리에 다 안 들어가면 자리의 높이로 자른다(「…」로 마친다) — 잘린 높이로 다시 놓는다
     let clip = Infinity;
     const full = hs[0];

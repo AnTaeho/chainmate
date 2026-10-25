@@ -593,6 +593,7 @@ export function itemCardLayout(it, w, { run = null, price = true, hold = false }
   out.nameThin = !!(nm && nm.thin);
   out.names = nm ? nm.lines : wrap(itemNameOf(it), nw, true);
   out.nameSrc = itemNameOf(it);
+  out.nameW = nw;
   const nameH = out.names.length * LINE_TITLE;
   const headH = Math.max(ART_H, nameH);
   const headTop = f.space(headH);
@@ -654,7 +655,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (showPrice && tag) priceTag(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1]);
   else if (showPrice) text(ctx, `$${it.price}`, x + w - P, y + lay.kinds[0][1], PAL.goldDk, { align: 'right', bold: true });
   itemArt(ctx, it, x + P, y + lay.art, t, run);
-  if (lay.nameThin) logClip('thin', L(lay.nameSrc), L(lay.nameSrc), lay.IW);
+  if (lay.nameThin) logClip('thin', L(lay.nameSrc), L(lay.nameSrc), lay.nameW);
   lay.names.forEach((l, k) => text(ctx, l, x + lay.nameX, y + lay.nameYs[k], PAL.cardInk, { bold: !lay.nameThin }));
   rect(ctx, x + P, y + lay.rule, lay.IW, 1, edge || PAL.cardDim);
   for (const [l, c, ly] of lay.lines) { if (c === PAL.cardInk) richText(ctx, l, x + P, y + ly, c, { ui: sold ? null : ui, under }); else text(ctx, l, x + P, y + ly, c); }
