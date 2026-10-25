@@ -92,7 +92,8 @@ export class SetupScreen {
       const unlock = UNLOCKS.find((u) => u.id === id);
       // 잠긴 오프닝은 카드가 해금 과제를 적는다(말풍선 없음)
       const choose = () => { this.opening = id; this.app.sfx('pick'); }, sid = `setup:stamp:${id}`;
-      ui.region(rid, x, y, w, h, { enabled: open, onClick: choose });
+      // cell: 카드 다섯이 한 격자(도감 칸과 같다) — 도장 말풍선이 옆 카드를 덮어도 된다
+      ui.region(rid, x, y, w, h, { enabled: open, onClick: choose, cell: true });
       openBox('card', x, y, w, h, PAD_CARD, { name: `오프닝 ${id}` });
       // 열린 오프닝은 크림 카드(고르면 바깥 금빛 고리 2), 잠긴 오프닝은 빈 자리
       if (!open) {

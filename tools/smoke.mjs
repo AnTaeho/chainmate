@@ -2417,7 +2417,7 @@ console.log(`  화면별: ${[...cov.by].map(([k, b]) => `${k} ${b.hit}/${b.n}(�
 if (cov.ex.length) console.log('  덮은 곳: ' + cov.ex.slice(0, VERBOSE ? 400 : 12).join('\n    '));
 // 피할 수 없는 곳(docs/design-notes/layout.md 「설명 자리 규칙」): 도감 격자는 칸이 본 칸을 채워 바로 아래 · 위 어디든 이웃 칸을 덮는다(덜 덮는 자리를 고른다).
 // 그 밖에서 다른 글을 덮거나, 어디서든 가리킨 것의 글 · 처음 안내가 덮으면 실패
-const COVER_OK = new Set(['codex']);
+const COVER_OK = new Set(['codex', 'setup']); // 판 밖 격자: 머리줄 아래가 모두 카드 · 단추라 말풍선이 다른 카드를 덮는다
 const covBad = [...cov.by].filter(([k, b]) => b.hit && !COVER_OK.has(k));
 if (covBad.length || cov.self || cov.hintHit) { console.log(`설명이 다른 글을 덮었다: ${covBad.map(([k, b]) => `${k} ${b.hit}`).join(' · ') || '-'} · 가리킨 것의 글 ${cov.self} · 처음 안내 ${cov.hintHit}`); fail = true; }
 console.log(`시너지 +N 말풍선: ${moreSeen.n}번(${[...moreSeen.screens].join(' ')}) · 시너지 여섯 이상 대국 ${moreSeen.battle6} · 어긋남 ${moreSeen.bad.length}${moreSeen.bad.length ? `: ${moreSeen.bad.slice(0, 6).join(' | ')}` : ''}`);
