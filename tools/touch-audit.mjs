@@ -1,5 +1,5 @@
 // 손가락 · 마우스 견주기: 실제 WebKit(손가락 흉내)으로 화면마다 누를 수 있는 구역을 모두 눌러, 같은 게임 자리를 마우스로 누른 결과와 견준다.
-//   node tools/touch-audit.mjs [--only title,shop,…] [--configs land-int,land-fill,port-int,port-fill] [--per 4] [--json out.json] [--no-drift]
+//   node tools/touch-audit.mjs [--only title,shop,…] [--configs land-int,land-fill,port-int,port-fill] [--per 4] [--json out.json] [--no-drift] [--engine webkit|chromium]
 // 견주는 것(구역마다, 마우스 그림 네모 기준):
 //   map    진짜 손가락 누름(page.touchscreen.tap)이 게임 좌표로 바르게 옮겨지나(±1 도트 — WebKit 손가락 좌표는 정수 CSS 화소)
 //   steal  그림 안 자리(가운데 · 네 변 2 도트 안)를 손가락이 누르면 마우스와 다른 구역이 잡히나(손가락 구역 넓히기가 이웃을 덮는다)
@@ -112,8 +112,13 @@ const INIT = () => {
   };
 };
 
+// 브라우저: WebKit이 없으면(클라우드 — 내려받기가 막힌 곳) 손가락을 흉내 내는 Chromium(hasTouch)으로. --engine으로 고를 수 있다
 const pw = await loadPlaywright();
-const browser = await pw.webkit.launch();
+const ENGINE = opt('--engine', null);
+let browser = null;
+for (const e of ENGINE ? [ENGINE] : ['webkit', 'chromium']) {
+  try { browser = await pw[e].launch(); console.log(`# 브라우저 ${e}`); break; } catch (err) { if (ENGINE) throw err; }
+}
 
 async function openPage(cfg, { touch }) {
   const ctx = await browser.newContext({ viewport: { width: cfg.w, height: cfg.h }, deviceScaleFactor: 3, hasTouch: touch, ...(touch ? { userAgent: UA } : {}) });
