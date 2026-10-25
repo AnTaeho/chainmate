@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { boardFrom, parseSq as S } from '../src/sim/board.js';
 import { createBattle, apply } from '../src/sim/battle.js';
 import { createRun, applyRun, challengeFor, blindInfo, KINDS } from '../src/sim/run.js';
-import { CHALLENGES, CHALLENGE_BY_ID, challengeMet, challengeText, drawChallenge, CHALLENGE_TEXT } from '../src/data/challenges.js';
+import { CHALLENGES, CHALLENGE_BY_ID, challengeMet, challengeText, challengeShort, challengeProgress, challengeSticks, drawChallenge, CHALLENGE_TEXT } from '../src/data/challenges.js';
 import { NEMESIS_TEXT, nemesisTrait, nemesisBounty } from '../src/data/nemesis.js';
 import { CHALLENGE, NEMESIS } from '../src/sim/tuning.js';
 import { createRng } from '../src/sim/rng.js';
@@ -262,5 +262,28 @@ test('영어: 도전 · 숙적 화면 글이 모두 옮겨진다', async () => {
     HINTS.challenge, HINTS.nemesis,
   ];
   assert.ok(texts.every(Boolean));
+  assert.deepEqual(missing(texts), []);
+});
+
+test('화면 도우미: 콤보 중 진행은 셀 수 있는 도전만 · 끝 모습 도전만 콤보 중에 채워도 이룬 것이 아니다 · 짧은 이름표', () => {
+  assert.deepEqual(challengeProgress({ id: 'take', n: 4 }, { captures: 2 }), { have: 2, need: 4 });
+  assert.deepEqual(challengeProgress({ id: 'take', n: 4 }, { captures: 6 }), { have: 4, need: 4 }, '넘쳐도 n까지');
+  assert.deepEqual(challengeProgress({ id: 'forms', n: 5 }, null), { have: 0, need: 5 }, '콤보가 없으면 0');
+  assert.deepEqual(challengeProgress({ id: 'guards', n: 2 }, { forced: 1 }), { have: 1, need: 2 });
+  for (const id of ['end', 'promote', 'mate', 'same']) assert.equal(challengeProgress({ id, form: 'N' }, { captures: 3 }), null, id);
+  assert.deepEqual(CHALLENGES.filter((c) => !challengeSticks({ id: c.id })).map((c) => c.id), ['end']);
+  assert.equal(challengeShort({ id: 'end', form: 'N' }), '나이트로 끝내기');
+  assert.equal(challengeShort({ id: 'end', form: 'B' }), '비숍으로 끝내기');
+  assert.equal(challengeShort({ id: 'end', form: 'R' }), '룩으로 끝내기');
+  for (const c of CHALLENGES) assert.ok(challengeShort({ id: c.id, n: 4, form: 'N' }), c.id);
+});
+
+test('영어: 짧은 이름표도 모두 옮겨진다', async () => {
+  const { missing } = await import('../src/ui/lang.js');
+  const texts = [
+    ...[4, 5].map((n) => challengeShort({ id: 'forms', n })), ...[4, 5, 6, 7, 8].map((n) => challengeShort({ id: 'take', n })),
+    ...['N', 'B', 'R'].map((form) => challengeShort({ id: 'end', form })),
+    ...['guards', 'promote', 'mate', 'same'].map((id) => challengeShort({ id, n: 2 })),
+  ];
   assert.deepEqual(missing(texts), []);
 });

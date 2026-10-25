@@ -2,6 +2,7 @@
 // 이기는 데는 필요 없고, 이루면 대국이 끝날 때 상금을 받는다. 판정은 끝난 콤보 요약(chain.js chainSummary) 하나로만 —
 // 대국(battle.js endMove)과 봇의 줄 평가(tools/bot.mjs chaseRank)가 같은 check를 쓴다.
 //   id · weight(뽑힐 무게) · bonus(어려운 도전의 상금 덤, CHALLENGE.reward에 더한다) · param(관, 난수, 세력) → 수치 칸 · check(h, ch) · text(ch) 화면 글(효과 글 「~다」)
+//   화면만 쓰는 칸: short(ch) 좁은 자리의 이름표 · count(h) 콤보 중 진행 수(셀 수 있는 도전) · sticks: false(콤보 중에 맞아도 끝날 때 다시 본다)
 // 대국 상태에 남는 것은 { id, n?, form?, reward, done }(JSON 왕복 안전). 규칙 코드는 이 표를 id로 찾을 뿐 id마다 갈리지 않는다.
 import { int, next } from '../sim/rng.js';
 import { CHALLENGE } from '../sim/tuning.js';
@@ -13,22 +14,24 @@ export { CHALLENGE };
 const END_FORMS = ['N', 'B', 'R'];
 // 같은 글자 셋이 잇달아(같은 종류를 셋 잇달아 잡음)
 const RUN3 = /(.)\1\1/;
+// 「나이트로」 · 「비숍으로」 · 「룩으로」(받침이 없거나 ㄹ이면 「로」)
+const withRo = (w) => { const c = w.charCodeAt(w.length - 1) - 0xac00, j = c >= 0 && c <= 11171 ? c % 28 : 0; return w + (j === 0 || j === 8 ? '로' : '으로'); };
 
 export const CHALLENGES = [
   // 갈아입기: 떨군 모습까지 세어 서로 다른 모습 n가지
-  { id: 'forms', weight: 1, param: (ante) => ({ n: ante >= 4 ? 5 : 4 }), check: (h, ch) => (h.forms || 0) >= ch.n, text: (ch) => `한 콤보에서 모습 ${ch.n}가지를 거친다` },
+  { id: 'forms', weight: 1, param: (ante) => ({ n: ante >= 4 ? 5 : 4 }), check: (h, ch) => (h.forms || 0) >= ch.n, count: (h) => h.forms || 0, text: (ch) => `한 콤보에서 모습 ${ch.n}가지를 거친다`, short: (ch) => `모습 ${ch.n}가지 거치기` },
   // 잡기: 한 콤보에 n번(관이 오르면 하나씩)
-  { id: 'take', weight: 1, param: (ante) => ({ n: 4 + Math.floor((ante - 1) / 2) }), check: (h, ch) => h.captures >= ch.n, text: (ch) => `한 콤보에 ${ch.n}번 잡는다` },
-  // 갈아입기: 콤보가 끝날 때의 모습(둘 이상 잡은 콤보)
-  { id: 'end', weight: 1, param: (ante, r) => ({ form: END_FORMS[int(r, END_FORMS.length)] }), check: (h, ch) => h.captures >= 2 && h.end === ch.form, text: (ch) => `${PIECES[ch.form].name} 모습으로 콤보를 끝낸다` },
+  { id: 'take', weight: 1, param: (ante) => ({ n: 4 + Math.floor((ante - 1) / 2) }), check: (h, ch) => h.captures >= ch.n, count: (h) => h.captures || 0, text: (ch) => `한 콤보에 ${ch.n}번 잡는다`, short: (ch) => `한 콤보에 ${ch.n}번 잡기` },
+  // 갈아입기: 콤보가 끝날 때의 모습(둘 이상 잡은 콤보) — 콤보 중에 맞아도 끝날 때의 모습만 센다(sticks: false)
+  { id: 'end', weight: 1, param: (ante, r) => ({ form: END_FORMS[int(r, END_FORMS.length)] }), check: (h, ch) => h.captures >= 2 && h.end === ch.form, sticks: false, text: (ch) => `${PIECES[ch.form].name} 모습으로 콤보를 끝낸다`, short: (ch) => `${withRo(PIECES[ch.form].name)} 끝내기` },
   // 응수: 지키는 적을 잡은 수(forcedReplies)
-  { id: 'guards', weight: 1, param: () => ({ n: 2 }), check: (h, ch) => (h.forced || 0) >= ch.n, text: () => '한 콤보에서 지키는 적을 둘 잡는다' },
+  { id: 'guards', weight: 1, param: () => ({ n: 2 }), check: (h, ch) => (h.forced || 0) >= ch.n, count: (h) => h.forced || 0, text: () => '한 콤보에서 지키는 적을 둘 잡는다', short: () => '지키는 적 둘 잡기' },
   // 프로모션
-  { id: 'promote', weight: 1, param: () => ({}), check: (h) => (h.promotions || 0) >= 1, text: () => '콤보 중에 프로모션한다' },
+  { id: 'promote', weight: 1, param: () => ({}), check: (h) => (h.promotions || 0) >= 1, text: () => '콤보 중에 프로모션한다', short: () => '콤보 중 프로모션' },
   // 체크메이트 — 무게 0(뽑지 않는다): 도전을 노리는 봇도 3~6%만 이뤘다(외통은 이미 대국을 끝내고 상금 +3을 준다). 보고서 「버린 안」
-  { id: 'mate', weight: 0, param: () => ({}), check: (h) => (h.mates || 0) >= 1, text: () => '킹을 잡아 체크메이트한다' },
+  { id: 'mate', weight: 0, param: () => ({}), check: (h) => (h.mates || 0) >= 1, text: () => '킹을 잡아 체크메이트한다', short: () => '킹 잡기' },
   // 사냥: 같은 종류를 셋 잇달아
-  { id: 'same', weight: 1, param: () => ({}), check: (h) => RUN3.test(h.caps || ''), text: () => '같은 종류의 적을 셋 잇달아 잡는다' },
+  { id: 'same', weight: 1, param: () => ({}), check: (h) => RUN3.test(h.caps || ''), text: () => '같은 종류의 적을 셋 잇달아 잡는다', short: () => '같은 종류 셋 잇달아' },
 ];
 export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGES.map((c) => [c.id, c]));
 
@@ -46,6 +49,16 @@ export function drawChallenge(r, ante, kind) {
 export const challengeMet = (ch, h) => !!(ch && h && CHALLENGE_BY_ID[ch.id] && CHALLENGE_BY_ID[ch.id].check(h, ch));
 // 화면 글(효과 글 「~다」)
 export const challengeText = (ch) => (ch && CHALLENGE_BY_ID[ch.id] ? CHALLENGE_BY_ID[ch.id].text(ch) : '');
+// 좁은 자리의 이름표(명사형 — 대국 화면 왼쪽 칸 · 관 선택 카드). 온 글은 challengeText
+export const challengeShort = (ch) => (ch && CHALLENGE_BY_ID[ch.id] ? CHALLENGE_BY_ID[ch.id].short(ch) : '');
+// 콤보 중 진행(화면 — 셀 수 있는 도전만): h는 chainSummary 꼴(콤보 중이면 그 순간까지). { have, need } 또는 null
+export function challengeProgress(ch, h) {
+  const c = ch && CHALLENGE_BY_ID[ch.id];
+  if (!c || !c.count) return null;
+  return { have: Math.min(ch.n, c.count(h || {})), need: ch.n };
+}
+// 콤보 중에 조건이 맞으면 그 콤보가 끝날 때 이룬 것이 되나(끝 모습 도전은 끝날 때의 모습만 센다)
+export const challengeSticks = (ch) => !!(ch && CHALLENGE_BY_ID[ch.id] && CHALLENGE_BY_ID[ch.id].sticks !== false);
 
 // 화면 글(UI가 쓸 것 — 영어는 src/data/i18n/en.js). 이름표는 명사형, 알림 「~해요」, 효과 글 「조건: 효과」
 export const CHALLENGE_TEXT = {
