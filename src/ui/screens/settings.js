@@ -21,12 +21,12 @@ export const LINK_LABEL = '계정';
 export const linkW = () => btnW(LINK_LABEL);
 
 // 묶음 줄: 이름표 왼쪽, 단추는 칸의 이름표 열 끝(가장 긴 이름표 + 16 — 표 규칙). 줄 18, 줄 사이 4, 묶음 사이 12
-// ± 단추: 둘 + 숫자 칸이 홑단추 폭과 같게(묶음 안 단추 끝이 한 줄로 선다)
+// ± 단추: 둘 + 숫자 칸이 단추 하나의 폭과 같게(묶음 안 단추 끝이 한 줄로 선다)
 export const stepBtnW = () => Math.floor((togW() - NUM_W - IN * 2) / 2);
 const NUM_W = 24;                          // ± 사이 숫자 칸
 const ROW = BTN_H, IN = SP.s, SEC = SP.l;
 const SPEEDS = [1, 2, 4];
-// 단추 열의 홑단추(켬 · 끔 · 언어 · 다시 보기 · 이름 바꾸기)는 모두 같은 폭(가장 넓은 글)
+// 단추 열의 단추 하나짜리 줄(켬 · 끔 · 언어 · 다시 보기 · 이름 바꾸기)는 모두 같은 폭(가장 넓은 글)
 export const togW = () => Math.max(...['켬', '끔', '한국어', 'English', '다시 보기'].map((s) => btnW(s)), btnW('이름 바꾸기', { icon: true }));
 const speedW = () => rowWidth(SPEEDS.map((v) => ({ label: `×${v}` })), { gap: IN, min: 0 }).w;
 const stepW = () => stepBtnW() * 2 + NUM_W + IN * 2;
