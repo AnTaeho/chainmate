@@ -7,7 +7,7 @@
 //          명인별 통과율, 많이 산 격언과 산 판의 승률, 관별 최고 한 수, 판당 ms.
 //          2b: 불멸의 기보(전설 완성률 · 조각 · 명국별 · 전설 판 승률), 황금 기물, 명인의 상자, 판본, 사슬 평가, 넘친 목표 층.
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRun, B, targetFor, REWARD, CHEST, TAGS, igniteKey } from '../src/sim/run.js';
@@ -61,6 +61,8 @@ function parseArgs(argv) {
     else if (k === '--peek-skip') a.peekSkip = Number(argv[++i]);      // 판 읽기가 이 값보다 낮으면 건너뛴다
     else if (k === '--peek-alt') a.peekAlt = true;                     // 건너뛴 판을 복사본에서 두어 이겼을지(대체 승률)
     else if (k === '--peek-nodes') a.peekNodes = Number(argv[++i]);    // 판 읽기 풀이기 마디(기물 하나마다)
+    else if (k === '--from') a.from = Number(argv[++i]);                // 판 차례 i를 이만큼 밀어 시작(긴 하네스를 나눠 돌린다 — 같은 seed면 --from 0 --runs 100 · --from 100 --runs 100 …이 --runs 200과 같은 판)
+    else if (k === '--merge') a.merge = argv[++i].split(',');            // 나눠 돌린 dump들을 합쳐 표를 다시 낸다(판을 두지 않는다, 판당 ms는 0)
     else if (k === '--dump') a.dump = argv[++i];                       // 판별 결과 전부(ms 빼고, seed 순)를 JSON으로 — 손질 전후 결정성 비교(CHM-44)
     else if (k === '--json') a.json = argv[++i];                       // 수치를 JSON으로도(밤샘 2 보고서 · 아티팩트용)                          // 정석 드래프트 없이(깊이 E 이전)
     else if (k === '--build') a.build = true;                           // 빌드 단면(CHM-65): 관이 끝날 때마다 짜임 · 상금 흐름 · 힘 비율을 남겨 「빌드」 절을 더한다(tools/build.mjs)
@@ -133,7 +135,15 @@ if (!isMainThread) {
   parentPort.postMessage(out);
 } else {
   const args = parseArgs(process.argv.slice(2));
-  const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + i * 7919) >>> 0);
+  if (args.merge) {
+    const parts = args.merge.map((f) => JSON.parse(readFileSync(f, 'utf8')));
+    const rows = parts.flatMap((d) => d.runs).sort((x, y) => x.seed - y.seed);
+    args.timeouts = parts.flatMap((d) => d.timeouts || []).sort((x, y) => x - y);
+    if (args.dump) { mkdirSync(dirname(args.dump), { recursive: true }); writeFileSync(args.dump, JSON.stringify({ timeouts: args.timeouts, runs: rows }) + '\n'); }
+    report(rows.map((r) => ({ ...r, ms: 0 })), args, 0);
+    process.exit(0);
+  }
+  const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + ((args.from || 0) + i) * 7919) >>> 0);
   const t0 = performance.now();
   // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
   const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, unlock: args.unlock, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, build: args.build };
