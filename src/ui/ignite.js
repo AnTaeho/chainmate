@@ -5,6 +5,7 @@
 import { PAL } from '../render/palette.js';
 import { text, rect, rrect, rframe, box, seg, sprite, num, short, measure, fine, radiusOf, W, H } from '../render/gfx.js';
 import { glow } from '../render/light.js';
+import { DEPTH } from '../render/board3.js';
 import { openBox, closeBox, layerUp } from '../render/layoutlog.js';
 import { PAD_BOX, GAP_IN, GAP_GROUP, RIGHT, flow } from './frame.js';
 import { capRoute } from './fxroute.js';
@@ -81,13 +82,13 @@ export function comboCard(ig) {
   return { P, CW, CH: f.y + P, kick, title, row, rule, caps, vm, sc, vmY, scY, nShow, more: steps.length - nShow };
 }
 
-// 막간 그리기. geo = { BX, BY, S, center } — center(sq)는 칸 가운데(판 투영, board3.js). 판 위 길 · 번호는 재지 않는 상자(움직이는 것), 카드는 판넬 상자로 잰다(앉은 뒤)
-export function drawCombo(ctx, g, { BX, BY, S, center }) {
+// 막간 그리기. geo = { BX, BY, S, center, board } — center(sq)는 칸 가운데(판 투영, board3.js), board는 판 칸 bbox(어둡게 덮는 자리). 판 위 길 · 번호는 재지 않는 상자(움직이는 것), 카드는 판넬 상자로 잰다(앉은 뒤)
+export function drawCombo(ctx, g, { BX, BY, S, center, board = null }) {
   const ig = g.data, t = g.t, W8 = S * 8, calm = g.calm;
   layerUp(); // 덮개처럼: 밑 화면(격언 칸 · 손)과는 상자 겹침을 재지 않는다
   const fade = calm ? 1 : Math.min(1, t / 0.2);
   ctx.globalAlpha = fade * 0.45; rect(ctx, 0, 0, W, H, PAL.shadow);
-  ctx.globalAlpha = fade * 0.45; rect(ctx, BX, BY, W8, W8, PAL.shadow); ctx.globalAlpha = 1;
+  { const d = board || { x: BX, y: BY, w: W8, h: W8 }; ctx.globalAlpha = fade * 0.45; rect(ctx, d.x - 4, d.y - 4, d.w + 8, d.h + 8 + DEPTH, PAL.shadow); ctx.globalAlpha = 1; }
   // 사슬의 길: 먹은 차례대로 이어진다. 먹은 칸에 차례 숫자
   const ctr = (sq) => { const p = center(sq); return { x: p.x - 1, y: p.y - 1 }; };
   const n = ig.path.length, upto = calm ? n : Math.min(n, (t / COMBO.PATH) * n);

@@ -63,8 +63,8 @@ test('!! 딱지: 판 64칸 어디서든 판 자리 안 — 판 자리 밖으로 
     const b = projectSq(sq).box;
     assert.ok(cross(r, { x: b.x, y: b.y - PIECE_UP, w: b.w, h: b.h + PIECE_UP }), `칸 ${sq}: 딱지가 메이트 친 칸(기물 기둥)에 걸친다`);
   }
-  // 마름모 판의 오른쪽 꼭짓점 h8은 왼쪽으로 뒤집힌다
-  assert.ok(boardTagRect(63).flipX);
+  // 정면 판의 h8(오른쪽 위 구석)은 뒤집지 않아도 판 자리 안에 든다
+  assert.ok(!boardTagRect(63).flipX && !boardTagRect(63).flipY);
 });
 
 test('바친 기물 줄: 다 들어가면 모두, 모자라면 앞에서부터 + 「+N」, 늘 자리 안', () => {

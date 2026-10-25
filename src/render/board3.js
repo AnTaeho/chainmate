@@ -1,18 +1,19 @@
 // 대국 판의 투영(안 3, docs/design-notes/art3.md 3절): 칸 (f, r)과 화면 자리를 잇는다. 화면은 이 모듈의 project · unproject · 칸 경로 · 뒤에서 앞 차례만 쓴다.
-// 손잡이는 VIEW.name 하나(diamond · shallow · flat) — 바꾸면 판 · 누르기 · 연출이 같이 따라간다. DOM 없이 돈다(연기 시험의 가짜 캔버스).
+// 손잡이는 VIEW.name 하나(diamond · shallow · flat, 지금은 정면 shallow) — 바꾸면 판 · 누르기 · 연출이 같이 따라간다. DOM 없이 돈다(연기 시험의 가짜 캔버스).
 import { PAL } from './palette.js';
 import { makeCanvas, context } from './surface.js';
 import { LOOK, snap } from './look.js';
 import { glyph } from './texture.js';
 import { textGen } from './text.js';
 
-// rot: 판을 돌린 각(도), tilt: 세로 눌림(칸 높이 / 칸 폭)
+// rot: 판을 돌린 각(도), tilt: 세로 눌림(칸 높이 / 칸 폭). 정면 판의 w: 판 폭(왼쪽 단 좌표 몫을 남긴다), bottom: 판 · 좌표가 내려올 수 있는 y(손 부채 위),
+// rank: 단 좌표가 a줄 밖으로 나가는 칸 수(정면 판은 기물이 a줄 밖을 안 덮는다). tilt를 0.7 아래로 내리면 칸 높이가 PIECE_UP보다 너무 낮아 hitBox 가운데가 뒤 칸에 걸린다
 export const VIEWS = {
   diamond: { rot: 45, tilt: 0.786 },
-  shallow: { rot: 0, tilt: 0.75 },
+  shallow: { rot: 0, tilt: 0.72, w: 200, bottom: 206, rank: 0.45 },
   flat: { rot: 0, tilt: 1 },
 };
-export const VIEW = { name: 'diamond' };
+export const VIEW = { name: 'shallow' };
 // 판이 들어갈 자리(대국 화면의 판 자리 — battle.js BX · BY · S × 8과 같다)
 export const AREA = { x: 128, y: 14, w: 224, h: 224 };
 export const DEPTH = 5;     // 판 두께
@@ -24,13 +25,13 @@ export function setView(name) { if (!VIEWS[name]) throw new Error(`view ${name}`
 export function geo() { if (!G || G.name !== VIEW.name) G = build(VIEW.name); return G; }
 
 function build(name) {
-  const { rot, tilt } = VIEWS[name];
+  const { rot, tilt, w: bw, bottom: yMax = AREA.y + AREA.h } = VIEWS[name];
   const a = (rot * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
   // 판 폭(8칸)이 자리 폭에 맞게: 반 칸 걸음을 정수로 둬 칸 가운데가 정수 자리에 선다
   const span = 8 * (Math.abs(c) + Math.abs(s));
   // 폭에 맞추되, 높이(판 + 솟는 기물 + 두께 · 좌표)가 자리를 넘으면 높이에 맞춘다(정면 판)
-  const room = AREA.h - PIECE_UP - DEPTH - 8;
-  const u = Math.min(AREA.w / span, room / ((Math.abs(s) + Math.abs(c)) * tilt * 7.5));
+  const room = yMax - AREA.y - PIECE_UP - DEPTH - 8;
+  const u = Math.min((bw || AREA.w) / span, room / ((Math.abs(s) + Math.abs(c)) * tilt * 7.5));
   const ef = { x: Math.round(u * c * 2) / 2, y: Math.round(u * s * tilt * 2) / 2 };
   const er = { x: Math.round(u * s * 2) / 2, y: -Math.round(u * c * tilt * 2) / 2 };
   // 판 모서리(단위 원점) → 자리 안 가운데. 위로 솟는 기물(PIECE_UP)과 아래 두께 · 좌표 글자를 넣어 세로 가운데
@@ -42,7 +43,7 @@ function build(name) {
   for (let f = 0; f < 8; f++) for (let r = 0; r < 8; r++) cy.push(raw(f + 0.5, r + 0.5).y);
   const top = Math.min(minY, Math.min(...cy) - PIECE_UP), bottom = maxY + DEPTH + 8;
   const ox = Math.round(AREA.x + AREA.w / 2 - (minX + maxX) / 2);
-  const oy = Math.round(AREA.y + AREA.h / 2 - (top + bottom) / 2);
+  const oy = Math.round((AREA.y + yMax) / 2 - (top + bottom) / 2);
   const det = ef.x * er.y - ef.y * er.x;
   const g = { name, ef, er, ox, oy, det };
   g.at = (f, r) => ({ x: ox + f * ef.x + r * er.x, y: oy + f * ef.y + r * er.y });
@@ -82,11 +83,11 @@ export function unproject(x, y) {
   if (!(f >= 0 && f < 8 && r >= 0 && r < 8)) return null;
   return Math.floor(r) * 8 + Math.floor(f);
 }
-// 칸 bbox(마름모만)
+// 칸 bbox(바닥 칸만)
 export const sqBox = (sq) => projectSq(sq).box;
 
 // ── 누르기: 기물 · 사물이 선 칸은 그 몸 상자(가운데 ±BODY_W, 위로 몸 높이, 아래로 BODY_DOWN)도 가진다.
-// 기물은 모든 바닥 위에 그리니 몸이 바닥을 이기고, 몸끼리는 앞(그리는 차례 뒤)이 이긴다. 빈 칸은 마름모
+// 기물은 모든 바닥 위에 그리니 몸이 바닥을 이기고, 몸끼리는 앞(그리는 차례 뒤)이 이긴다. 빈 칸은 바닥 칸
 export const BODY_W = 11, BODY_DOWN = 2;
 // 사물의 몸 높이: 벽은 들인 윗면 꼭짓점까지, 보석은 윗면 띠까지
 export function thingTop(t, g = geo()) { return t === 'X' ? Math.ceil(WALL.h + g.hh * WALL.inset) : 15; }
@@ -102,7 +103,7 @@ export function picker(topOf) {
     return unproject(x, y);
   };
 }
-// 칸 누르는 구역의 bbox: 마름모 + 가장 큰 몸(PIECE_UP). 기물 유무와 상관없이 같은 상자라, 가운데(가운데에서 위로 반 칸쯤)는
+// 칸 누르는 구역의 bbox: 바닥 칸 + 가장 큰 몸(PIECE_UP). 기물 유무와 상관없이 같은 상자라, 가운데(가운데에서 위로 반 칸쯤)는
 // 앞 칸 기물에 가리지 않아 늘 그 칸이다 — 연기 시험 · 찍기 도구의 bbox 가운데 누르기
 export function hitBox(sq) {
   const g = geo(), c = center(sq);
@@ -114,7 +115,7 @@ export const order = () => geo().order;
 // 판 테두리 bbox(칸만)
 export const bounds = () => geo().bounds;
 
-// 칸 경로: inset만큼 가운데 쪽으로 줄인 사각(마름모). 경로만 만든다
+// 칸 경로: inset만큼 가운데 쪽으로 줄인 사각(투영한 칸). 경로만 만든다
 export function sqPath(ctx, sq, inset = 0) {
   const g = geo(), f = sq & 7, r = sq >> 3;
   const k = Math.max(0, 0.5 - inset / (2 * g.hw));
@@ -195,7 +196,7 @@ export function boardImage(n = LOOK.n) {
 // r단 좌표(1~8)가 a줄 바깥으로 나가는 칸 수: 글자(높이 6, 폭 5) 상자가 a줄 어느 칸의 기물(칸 가운데 ±11, 위로 PIECE_UP)과도 안 겹치는 가장 가까운 거리.
 // 1은 앞 칸 기물이 없어 0.75(왼쪽 칸 배수 칸 옆으로 나가지 않는다)
 export function rankOut(g = geo(), r = 7) {
-  for (let d = 0.75; d < 2.5; d += 0.05) {
+  for (let d = VIEWS[g.name].rank ?? 0.75; d < 2.5; d += 0.05) {
     const clear = [...Array(8).keys()].every((k) => {
       const p = g.at(-d, r + 0.5), c = g.at(0.5, k + 0.5);
       return Math.abs(p.x - c.x) > 11 + 3 || p.y + 3 < c.y - PIECE_UP - 1 || p.y - 3 > c.y + 3;
@@ -209,7 +210,7 @@ export function drawBoardImage(ctx, n = LOOK.n) {
   ctx.drawImage(b.cv, b.x, b.y, b.w, b.h);
 }
 
-// ── 판 위 사물(벽 · 보석): 칸 마름모에서 세운 벡터 그림. 모든 칸이 같은 모양이라 (사물, 크기, 배율, 손잡이)마다 한 번 굽고 칸 가운데에 붙인다
+// ── 판 위 사물(벽 · 보석): 투영한 칸에서 세운 벡터 그림. 모든 칸이 같은 모양이라 (사물, 크기, 배율, 손잡이)마다 한 번 굽고 칸 가운데에 붙인다
 export const THINGS = new Set(['X', 'J']);
 const WALL = { top: '#a9b3ae', inner: '#8c9792', left: '#77827d', right: '#535d59', mortar: '#3a423f', h: 7, inset: 0.84 };
 const GEM = { light: '#6fd8e6', dark: '#2f9fb0', table: '#bff3f8', facet: '#1f7280', hi: '#ffffff' };

@@ -39,7 +39,7 @@ export class UI {
     for (let i = list.length - 1; i >= 0; i--) {
       const r = list[i];
       if (r.passive) continue;
-      // hit: 네모(bbox) 안에서 모양을 더 가린다(마름모 판 칸 — board3.js unproject)
+      // hit: 네모(bbox) 안에서 모양을 더 가린다(투영한 판 칸 — board3.js unproject)
       if (x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h && (!r.hit || r.hit(x, y))) return r;
     }
     return null;

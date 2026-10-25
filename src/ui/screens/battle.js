@@ -59,10 +59,10 @@ const NOTE_ROOM = 266; // 설명 묶음이 쓸 수 있는 높이(화면 270 - �
 // REVIEW_WALL초를 넘기면(느린 기기) 카드 없이 지금 흐름대로 넘어간다(그 대국의 기록은 unknown)
 export const REVIEW_SLICE_MS = 12, REVIEW_WALL = 3;
 
-// 판 자리(bbox): BX · BY에서 S × 8 네모. 칸 자리는 투영(src/render/board3.js — 안 3 마름모)이 정한다
+// 판 자리(bbox): BX · BY에서 S × 8 네모. 칸 자리는 투영(src/render/board3.js — 정면 판)이 정한다
 export const S = 28, BX = 128, BY = 14; // 목표 막대가 왼쪽 칸으로 가서(안 3) 판을 위로 올렸다. 위 14줄은 수업 · 복기 제목 줄
 export { sqCenter };
-// 게임 좌표 → 판 칸(판 밖이면 -1). pick: 그린 판의 누르기(board3.js picker — 기물 몸이 그 칸), 없으면 마름모만
+// 게임 좌표 → 판 칸(판 밖이면 -1). pick: 그린 판의 누르기(board3.js picker — 기물 몸이 그 칸), 없으면 바닥 칸만
 export const sqAt = (x, y, pick = null) => { const sq = pick ? pick(x, y) : unproject(x, y); return sq == null ? -1 : sq; };
 export const LX = 8, LW = 112, RX = 360, RW = 112;
 // 대국이 끝난 뒤 막간 화면(afterSeq → app.flow): 날던 동전 · 명국 조각이 이어 난다
@@ -77,10 +77,11 @@ export function nextColumn(lay, fanX = RX) {
 }
 // 손 부채(안 3): 카드 폭 · 높이 · 걸음(겹침) · 고른 카드 들림 · 카드마다 기울기(도)
 export const HAND = { w: 42, h: 48, hLesson: 40, step: 44, lift: 6, deg: 4 };
-// 판 오른쪽 아래 변(h1 꼭짓점 → h8 꼭짓점) 밑에 카드 윗변 y가 들어가는 가장 왼쪽 x(두께 · 기울기 몫 6을 더 둔다)
+// 카드 윗변 y가 판 밑에 들어가는 가장 왼쪽 x(두께 · 기울기 몫 6을 더 둔다). 정면 판은 판 아래 띠 전체, 「다음」 칸이 판 자리 왼끝 안에 남게
 export function fanLeft(y) {
   const g = boardGeo(), B = g.at(8, 0), R = g.at(8, 8), lim = y - DEPTH - 6;
-  if (lim >= B.y) return BX;
+  if (lim >= B.y) return BX + NEXT_COL.w * 2 + NEXT_COL.gap + NEXT_COL.sep;
+  if (R.x === B.x) return Math.ceil(B.x) + 2;
   return Math.ceil(B.x + ((lim - B.y) * (R.x - B.x)) / (R.y - B.y));
 }
 // 오른쪽 칸 격언 칸(그림만) · 콤보 칸 · 왼쪽 칸 줄의 크기
@@ -186,7 +187,7 @@ function gateArch(ctx, x, y, size, glow) {
 const WATER = '#4fa6c6'; // 물수제비가 튕긴 칸의 물방울 · 고리(나뭇결 위에서도 보이게 하늘빛보다 진하게)
 const FALL = 0.2, FALL_PX = 14; // 증원이 위에서 떨어지는 시간(×1) · 높이
 
-// 판 위 함정(정석): 칸 안의 어두운 구덩이 + 네 꼭짓점 말뚝(마름모 칸)
+// 판 위 함정(정석): 칸 안의 어두운 구덩이 + 네 꼭짓점 말뚝(투영한 칸)
 function trapSq(ctx, sq) {
   ctx.globalAlpha = 0.55; fillSq(ctx, sq, '#1a1512', 5); ctx.globalAlpha = 1;
   strokeSq(ctx, sq, '#c0c8d0', 1, 5);
@@ -202,7 +203,7 @@ function moveDur(form, from, to, stay = false) {
 }
 // 움직이는 기물의 자리(p 0→1): 나이트는 긴 다리 → 짧은 다리, 작은 포물선
 const isLine = (a, b) => { const df = (b & 7) - (a & 7), dr = (b >> 3) - (a >> 3); return df === 0 || dr === 0 || Math.abs(df) === Math.abs(dr); };
-// 자리는 판 칸 단위(f, r)로 잇고 투영한다 — 꺾는 자리가 마름모 판에서도 칸을 따른다. 돌려주는 자리는 칸 가운데(받침 가운데)
+// 자리는 판 칸 단위(f, r)로 잇고 투영한다 — 꺾는 자리가 정면 판에서도 칸을 따른다. 돌려주는 자리는 칸 가운데(받침 가운데)
 const fr = (sq) => ({ f: sq & 7, r: sq >> 3 });
 const along = (a, c, k) => centerAt(lerp(a.f, c.f, k), lerp(a.r, c.r, k));
 export function moverXY(form, from, to, p) {
@@ -1373,7 +1374,7 @@ export class BattleScreen {
     if (this.rv) this.drawReview(ctx, ui);
     // 점화 막간: 화면을 덮는 구역 하나가 모든 누르기를 받아 막간을 닫는다(밑의 단추 · 칸은 눌리지 않는다)
     if (this.combo) {
-      drawCombo(ctx, this.combo, { BX, BY, S, center: sqCenter });
+      drawCombo(ctx, this.combo, { BX, BY, S, center: sqCenter, board: boardGeo().bounds });
       ui.region('ignite', 0, 0, W, H, { onClick: () => this.closeCombo() });
     }
     // 마스터 등장: 온 화면을 덮는 구역 하나가 누르기를 받아 넘긴다
@@ -1565,7 +1566,7 @@ export class BattleScreen {
       return THINGS.has(c.t) ? thingTop(c.t) : PIECE_UP;
     }));
     this.drawBoardThings(ctx, b.rules, time);
-    // ── 바닥(칸 위 표시): 기물보다 먼저 — 마름모 판에서는 뒤 칸 기물이 앞 칸에 걸치므로 칸 표시는 모두 이 층에서
+    // ── 바닥(칸 위 표시): 기물보다 먼저 — 정면 판에서도 뒤 칸 기물이 앞 칸에 걸치므로 칸 표시는 모두 이 층에서
     for (let sq = 0; sq < 64; sq++) {
       const r = sq >> 3;
       if (isHidden(b, sq)) {
@@ -1600,7 +1601,7 @@ export class BattleScreen {
       const tipOpt = tip ? sqTip(tip[0], tip[1], diag) : null;
       // 낱말 상자: 말풍선 제목이 곧 낱말인 것(증원 · 지키는 적 · 특성 · 벽 · 보석 · 특수 기물)
       if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, shut && { id: 'mate' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }, shut && { skip: 'threat' }].filter(Boolean); // 「지키던 적」에 응수 낱말 상자를 붙이지 않고 체크메이트 풀이를 띄운다
-      // 누르는 구역: 마름모 + 몸 높이 상자, 판정은 그린 판의 누르기(앞 기물 몸 → 바닥 마름모)
+      // 누르는 구역: 칸 + 몸 높이 상자, 판정은 그린 판의 누르기(앞 기물 몸 → 바닥 칸)
       const bx = hitBox(sq);
       ui.region(id, bx.x, bx.y, bx.w, bx.h, { hit: (x, y) => pick(x, y) === sq, onClick: () => this.clickSq(sq), ...tipOpt });
       if (tset.has(sq) && t.kind !== 'capture') {
@@ -1625,7 +1626,7 @@ export class BattleScreen {
       if (t.kind === 'capture' && tset.has(sq) && ui.isHover(id)) strokeSq(ctx, sq, PAL.white, 1);
     }
     drawMarkSquares(ctx, this.marks, fillSq);
-    // 증원 그림자의 바닥: 붉은 점선 마름모(두 수 앞은 흐린 점선)
+    // 증원 그림자의 바닥: 붉은 점선 칸(두 수 앞은 흐린 점선)
     for (const [sq, g] of ghosts) strokeSq(ctx, sq, g.k ? PAL.dimDk : PAL.red, 1, 2, g.k ? [1, 2] : [3, 2]);
     // 사슬 길
     if (v.chain) {
@@ -2171,7 +2172,7 @@ export class BattleScreen {
     return tipLines('희생', body);
   }
   // 오른쪽 칸 쌓기(안 3 시안 p3): 위 줄(콤보 수 · 행마 · 정석 표 · 멈춤) → 콤보 칸(고리로 잇는 알약 칸, 남는 높이만큼 다섯까지) → 시너지 띠 →
-  // 격언 칸(그림만, 한 줄에 다섯) → 손 이름표 줄(손 · 묘수 · 다시 놓기 · 희생) → 부채꼴 손(판 오른쪽 아래 빈 세모까지 왼쪽으로 펼친다)
+  // 격언 칸(그림만, 한 줄에 다섯) → 손 이름표 줄(손 · 묘수 · 다시 놓기 · 희생) → 부채꼴 손(판 밑으로 왼쪽까지 펼친다)
   rightLayout(run = this && this.run) {
     // 수업(판 없음)은 킹의 말이 오른쪽 칸 위를 길게 쓰므로 손 카드를 조금 낮춘다(격언 · 시너지 · 콤보 칸이 없다)
     const HAND_H = run ? HAND.h : HAND.hLesson, ROW_H = BTN_S;
@@ -2201,7 +2202,7 @@ export class BattleScreen {
     return { label, tactics: tactics.map((i, k) => ({ i, x: x0 + k * step })), rb: rb ? x0 + tactics.length * step : null };
   }
   // 손 카드 i의 자리(n장일 때) — 부채꼴: 오른쪽 끝(오른쪽 칸 끝)에 붙여 왼쪽으로 펼치고, 가운데에서 멀수록 기울고 조금 내려앉는다.
-  // 왼쪽 끝은 판 오른쪽 아래 변 밑(빈 세모 — fanLeft)까지. 희생 연출(흩어지는 카드)도 같은 셈을 쓴다. rot: 기울기(라디안), 구역은 기울이지 않은 네모
+  // 왼쪽 끝은 판 밑(fanLeft)까지. 희생 연출(흩어지는 카드)도 같은 셈을 쓴다. rot: 기울기(라디안), 구역은 기울이지 않은 네모
   handRect(i, n, lay = this.rightLayout(this.run)) {
     n = Math.max(1, n);
     const w = HAND.w, h = lay.HAND_H, right = RX + RW - 1;

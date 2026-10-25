@@ -1751,9 +1751,9 @@ const brillSeen = { sac: 0, deal: 0, tag: 0, hint: 0, row: 0, gone: 0, fx: 0, fl
       measureSeq(s);
       brillSeen.sec = s.seq.total;
       if (((app.stats && app.stats.brilliantFx) || 0) > fx0) brillSeen.fx++; else bad('탁월수 「!!」가 뜨지 않았다');
-      // h8은 판 자리 가장자리 칸(마름모 판에서는 오른쪽 꼭짓점): 딱지가 뒤집혀 판 자리(board3.js AREA) 안에 들어야 한다
+      // h8은 판 오른쪽 위 구석 칸: 딱지가 (뒤집든 말든) 판 자리(board3.js AREA) 안에 들어야 한다
       const tg = s.lastBrilliantTag, A = LL3.AREA;
-      if (tg && (tg.flipX || tg.flipY) && tg.x >= A.x && tg.y >= A.y && tg.x + tg.w <= A.x + A.w && tg.y + tg.h <= A.y + A.h) brillSeen.flip++; else bad(`h8 「!!」가 판 안쪽으로 뒤집히지 않았다(${JSON.stringify(tg)})`);
+      if (tg && tg.x >= A.x && tg.y >= A.y && tg.x + tg.w <= A.x + A.w && tg.y + tg.h <= A.y + A.h) brillSeen.flip++; else bad(`h8 「!!」가 판 자리 밖으로 나갔다(${JSON.stringify(tg)})`);
       if (sawMult) brillSeen.mult++; else bad('배수 칸에 「×2」가 붙지 않았다');
       if ((app.records.brilliants || 0) === recBefore + 1 && app.records.bestBrilliant) brillSeen.record++; else bad('기록에 탁월수가 남지 않았다');
     }
@@ -2307,7 +2307,7 @@ if (paths.bad.length) { console.log(`처음 켬 경로 어긋남: ${paths.bad.jo
 console.log(`새기기 미리 보기: 두루마리 ${previewSeen.scroll} · 꾸러미 ${previewSeen.pack}`);
 console.log(`혼 각성: 금 ${awakeSeen.crack} · 금 글 ${awakeSeen.toast} · 처음 안내 ${awakeSeen.hint} · 금 없는 기물 못 고름 ${awakeSeen.skip} · 미리 보기 ${awakeSeen.preview} · 막간 ${awakeSeen.screen} · 상점으로 ${awakeSeen.back} · 상자 칸 ${awakeSeen.chest}${awakeSeen.bad.length ? ` · 어긋남: ${awakeSeen.bad.join(' | ')}` : ''}`);
 if (awakeSeen.bad.length || !awakeSeen.crack || !awakeSeen.screen || !awakeSeen.back || !awakeSeen.chest) { console.log('혼에 금이 가고 깨어나는 걸음이 어긋났다'); fail = true; }
-console.log(`탁월수: 희생 ${brillSeen.sac} · 새 카드 ${brillSeen.deal} · !? ${brillSeen.tag} · 바친 줄 ${brillSeen.row} · 처음 안내 ${brillSeen.hint} · 둔 뒤 !? 사라짐 ${brillSeen.gone} · !! ${brillSeen.fx} · 가장자리 뒤집기 ${brillSeen.flip} · ×N ${brillSeen.mult} · 기록 ${brillSeen.record} · 명경기 조각 ${brillSeen.frag} · 연출 ${brillSeen.sec.toFixed(2)}s${brillSeen.bad.length ? ` · 어긋남: ${brillSeen.bad.join(' | ')}` : ''}`);
+console.log(`탁월수: 희생 ${brillSeen.sac} · 새 카드 ${brillSeen.deal} · !? ${brillSeen.tag} · 바친 줄 ${brillSeen.row} · 처음 안내 ${brillSeen.hint} · 둔 뒤 !? 사라짐 ${brillSeen.gone} · !! ${brillSeen.fx} · 가장자리 딱지 ${brillSeen.flip} · ×N ${brillSeen.mult} · 기록 ${brillSeen.record} · 명경기 조각 ${brillSeen.frag} · 연출 ${brillSeen.sec.toFixed(2)}s${brillSeen.bad.length ? ` · 어긋남: ${brillSeen.bad.join(' | ')}` : ''}`);
 if (brillSeen.bad.length || !brillSeen.fx || !brillSeen.record || !brillSeen.frag) { console.log('희생 → 탁월수 걸음이 어긋났다'); fail = true; }
 console.log(`특수 기물: 까마귀 앉는 칸 ${fairySeen.land} · 길 ${fairySeen.path} · 넘기 ${fairySeen.hops} · 기록 ${fairySeen.gone} · 화약병 터짐 ${fairySeen.blast} · 빈 칸 ${fairySeen.board} · 꺾쇠 꺾음 ${fairySeen.bend} · 물수제비 튕김 ${fairySeen.bounce} · 꺾인 길 ${fairySeen.trail} · 연출 ${fairySeen.sec.map((x) => x.toFixed(2) + 's').join(' / ')}${fairySeen.bad.length ? ` · 어긋남: ${fairySeen.bad.join(' | ')}` : ''}`);
 if (fairySeen.bad.length || !fairySeen.land || !fairySeen.blast || !fairySeen.bend || !fairySeen.bounce) { console.log('새 특수 기물 걸음이 어긋났다'); fail = true; }
