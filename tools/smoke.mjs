@@ -106,9 +106,41 @@ function clipCheck() {
     clips.by.get(sc)[c.kind]++;
   }
 }
+// 통일 규칙(layout.md 29절) 기계 검사 — 아직 실패시키지 않고 세어 목록을 찍는다(화면 단계가 줄인다).
+// 단추 높이: button() · 첫 화면 큰 단추의 높이가 BTN_H(18)가 아니면 어긴 것. 허용은 첫 화면 큰 단추 26 · 수업 「시작」 26뿐
+const BTN_STD = 18, BTN_HERO = 26;
+const BTN_OK = [
+  { why: '첫 화면 큰 단추', ok: (b) => b.name === '첫 화면 단추' && b.h === BTN_HERO },
+  { why: '수업 「시작」', ok: (b) => b.name === '단추 lessons:go' && b.h === BTN_HERO },
+];
+// 제목 자리: 판 밖 화면은 pageHead 큰 머리가 (12, 4)에 있어야 한다(29절 제목 자리 1)
+const PAGE_SCREENS = ['settings', 'records', 'codex', 'rank', 'account', 'link', 'unlocks', 'lessons', 'setup'];
+const rule29 = { btn: new Map(), head: new Map() };
+function rule29Check() {
+  const sc = screen();
+  for (const b of LL.LOG.boxes) {
+    if (b.kind !== 'edge' || b.loose || !(b.name.startsWith('단추 ') || b.name === '첫 화면 단추')) continue;
+    if (b.h === BTN_STD || BTN_OK.some((q) => q.ok(b))) continue;
+    const key = `${sc} ${b.name.replace(/^단추 /, '').replace(/\d+/g, '#')} h${b.h}`;
+    rule29.btn.set(key, (rule29.btn.get(key) || 0) + 1);
+  }
+  if (!PAGE_SCREENS.includes(sc)) return;
+  const at = rule29.head.get(sc) || { ok: 0, bad: 0, seen: null };
+  const h = LL.LOG.heads.find((q) => q.layer === LL.LOG.layer);
+  if (h && h.x === 12 && h.y === 4) at.ok++;
+  else {
+    at.bad++;
+    if (!at.seen) {
+      const big = LL.LOG.texts.find((q) => q.scale >= 2 && q.layer === LL.LOG.layer);
+      at.seen = h ? `머리 「${h.s}」 (${h.x},${h.y})` : big ? `두 배 글 「${big.s}」 (${big.x},${big.y})` : '큰 머리 없음';
+    }
+  }
+  rule29.head.set(sc, at);
+}
 function flowCheck() {
   if (!app) return;
   clipCheck();
+  rule29Check();
   flow.frames++;
   const held = heldOf();
   for (const q of LL.checkLayout()) {
@@ -2366,6 +2398,14 @@ if (clipBad.length) { console.log(`허용 목록 밖에서 글이 잘렸다(「�
 console.log(`글 검사: 넘침 ${flowN} · 잘린 글 …${clipCut} · 글자 끊김 ${clipChar} · 줄임 ${clipThin}(허용 ${clipOk.length} · 보류 ${clipHeldL.length} · 목록 밖 ${clipBad.length}) · 잰 프레임 ${flow.frames}`);
 console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held + clipHeldL.length}(${[...Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`), ...(clipHeldL.length ? [`잘린 글 ${clipHeldL.length} — 실패시키지 않음`] : [])].join(' · ') || '없음'})`);
 if (flow.held) fail = true;
+{
+  const btnBad = [...rule29.btn].sort();
+  const headBad = [...rule29.head].filter(([, v]) => v.bad > 0);
+  console.log(`통일 규칙 단추 높이: 어긴 단추 ${btnBad.length}가지(허용 ${BTN_OK.map((q) => q.why).join(' · ')}) — 아직 실패시키지 않음`);
+  if (btnBad.length) console.log('  ' + btnBad.map(([k, n]) => `${k} ×${n}`).join('\n  '));
+  console.log(`통일 규칙 제목 자리: 판 밖 화면 ${rule29.head.size}곳 중 (12, 4) 큰 머리가 아닌 곳 ${headBad.length} — 아직 실패시키지 않음`);
+  if (headBad.length) console.log('  ' + headBad.map(([k, v]) => `${k}: ${v.seen} · 프레임 ${v.bad}/${v.ok + v.bad}`).join('\n  '));
+}
 if (flowN) { console.log('넘친 곳: ' + [...flow.seen].filter(([, w]) => w !== 'held').map(([k]) => k).slice(0, VERBOSE ? 5000 : 40).join('\n  ')); fail = true; }
 if (VERBOSE && flow.held) console.log('보류 화면에서 넘친 곳: ' + [...flow.seen].filter(([, w]) => w === 'held').map(([k]) => k).slice(0, 60).join('\n  '));
 console.log(`기록 보내기: ${telSent.n}건 · 첫 화면 알림 ${telNote.shown ? '뜸' : '안 뜸'} · 누르면 사라짐 ${telNote.gone ? '확인' : '못 함'} · 다시 안 뜸 ${telNote.again ? '확인' : '못 함'} · 끄면 안 뜸 ${telNote.off ? '확인' : '못 함'}`);
