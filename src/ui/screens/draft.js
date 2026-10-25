@@ -10,7 +10,7 @@ import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows, chipBlockH } from '../parts-depth.js';
 import { cardBase, tipLines, CARD_CHIP_ROWS, danStamp, stampTip, STAMP } from '../parts.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, SP, LINE, flow } from '../frame.js';
+import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, SP, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 const TIER_NAME = { silver: '은', gold: '금', rainbow: '무지개' };
@@ -105,14 +105,14 @@ export class DraftScreen {
       const lay = josekiLayout(j), P = PAD_CARD;
       openBox('card', x, y, CW, CH, P, { name: `레퍼토리 ${id}` });
       text(ctx, TIER_NAME[j.tier], x + P, y + lay.tier, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
-      // 도장: 이 레퍼토리로 이긴 가장 높은 레이팅(등급 줄 오른끝)
-      const won = (this.app.records.josekiDan || {})[id];
-      if (won != null) danStamp(ctx, x + CW - P, y + P + ((LINE - STAMP.h) >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.pick(i), preview: true });
       for (const [l, ly] of lay.names) text(ctx, l, x + P, y + ly, PAL.cardInk, { bold: true });
       rect(ctx, x + P, y + lay.rule, lay.IW, 1, col);
       for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } });
       if (lay.chips != null) familyChips(ctx, j.families, x + P, y + lay.chips + (CH - lay.h), lay.IW, CARD_CHIP_ROWS);
       closeBox();
+      // 도장: 이 레퍼토리로 이긴 가장 높은 레이팅 — 새 판 오프닝 카드처럼 윗변에 반쯤 걸친 스티커(오른쪽 안 4). 등급 줄 오른끝은 영어 「Rainbow」와 겹친다
+      const won = (this.app.records.josekiDan || {})[id];
+      if (won != null) danStamp(ctx, x + CW - SP.s, y - (STAMP.h >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.pick(i), preview: true });
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rrect(ctx, x, y, CW, CH, radiusOf(CW, CH), PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     }
