@@ -61,7 +61,7 @@ export class UI {
     return r;
   }
   // 손가락 자리 고치기(app.pointer가 down · up 앞에 부른다 — 화면의 pointerDown도 고친 자리를 받는다). 마우스면 그대로.
-  // down: 아무 구역도 없는 자리를 누르면, 손가락 크기(finger)로 넓혔을 때 그 자리를 덮는 가장 가까운 구역 안으로 붙인다(빈 자리만 — 다른 구역을 뺏지 않는다)
+  // down: 아무 구역도 없는 자리를 누르면, 손가락 크기(finger)로 넓혔을 때 그 자리를 덮는 가장 가까운 구역 안으로 붙인다(빈 자리만 — 다른 구역 위의 누름은 그대로)
   // up: 누른 구역에서 손가락이 떼며 조금 밀려도(손가락 크기 + TAP_SLOP 안) 누른 구역 안으로 되돌린다(끌기는 그대로)
   snap(kind, x, y) {
     if (!this.touch || !this.finger) return [x, y];
