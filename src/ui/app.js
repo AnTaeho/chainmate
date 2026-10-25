@@ -42,6 +42,8 @@ function toastPill(ctx, x, y, w, h, col) {
 import { foldSide } from './fold.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
+// 기록을 바로 저장하는 사건(업적이 읽는 한 콤보 끝 · 상자 · 넘침 포함)
+const SAVE_ON = new Set(['win', 'grade', 'legend', 'end', 'chest', 'overflow']);
 for (const f of FACTIONS) addLook(f.id, f.look);
 // 판 밖 화면: 판이 있어도 남색 기본 모습
 const OUTSIDE = new Set(['title', 'settings', 'setup', 'codex', 'records', 'lessons', 'lesson', 'rank', 'link', 'account', 'unlocks']);
@@ -326,7 +328,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const before = app.fresh.length;
     observe(app.records, app.run, ev, app.fresh);
     noteFeats(app.records, app.run, ev, bat, chain);
-    if (app.fresh.length !== before || ev.some((e) => e.type === 'win' || e.type === 'grade' || e.type === 'legend')) app.saveRecords();
+    if (app.fresh.length !== before || ev.some((e) => SAVE_ON.has(e.type))) app.saveRecords();
     // 판이 끝난 그 명령에서 기록 · 해금을 적는다 — 판 저장은 위 save()가 이미 지웠으니 결과 화면 전에 닫혀도 잃지 않게
     const ended = prev && prev.phase !== run.phase && (run.phase === 'won' || run.phase === 'lost');
     if (ended) app.finishRun();

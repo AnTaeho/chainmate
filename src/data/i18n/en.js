@@ -224,7 +224,7 @@ export const EN = {
   '만 점': '10K Move', '백만 점': 'Million Move', '억 점': '100M Move', '열 배': 'Tenfold',
   '첫 관문': 'First Gate', '반환점': 'Halfway', '첫 마스터': 'First Master', '마스터 여덟': 'All Masters', '다섯 칸 상자': 'Full Chest',
   '기원의 주인': 'Champion', '다섯 오프닝': 'Five Openings', '끝없는 밤': 'Endless Night', '오늘의 승자': "Today's Victor",
-  '명경기 다섯': 'All Classics', '시너지 완성': 'Full Synergy', '열 가지 시너지': 'Every Synergy',
+  '명경기 다섯': 'All Classics', '시너지 완성': 'Full Synergy', '열 가지 시너지': 'Full Set',
   '킹의 행차': "King's March", '폰의 진군': 'Pawn Storm', '오목': 'Five in a Row',
   '한 수에 적 셋을 잡는다': 'Take 3 in one move', '한 수에 적 다섯을 잡는다': 'Take 5 in one move',
   '한 수에 적 여덟을 잡는다': 'Take 8 in one move', '한 수에 적 열둘을 잡는다': 'Take 12 in one move',
@@ -576,6 +576,8 @@ const KIND = { '연습 대국': 'Practice', '정식 대국': 'Rated', 마스터�
 // 틀: 숫자나 이름이 끼는 글. fn(m, tr) — tr로 끼인 말을 다시 옮긴다.
 // 쪼개기 전에 먼저 보는 틀(좁은 자리에 맞게 줄인 꼴)
 export const PRE = [
+  // 업적 알림 「업적 · 이름」: 쪼개기 전에(탭 이름 「업적」은 복수 Achievements)
+  [/^업적 · (.+)$/, (m, tr) => `Achievement · ${tr(m[1])}`],
   // 하이라이트 카드(CHM-73)
   [/^(\d+)관 돌파$/, (m) => `Hall ${m[1]} cleared`],
   [/^(\d+)관 도달$/, (m) => `Reached Hall ${m[1]}`],

@@ -1307,3 +1307,28 @@ test('해금 화면: 길 21칸 · 모든 묶음의 카드 높이 · 쪽 나누�
   assert.equal(V.lockLine({ gates: 8, next: 2 }, 4), `관을 ${UNLOCK_GATES[4] - 8}개 더 돌파하면 열려요`);
   assert.equal(V.nextLine({ left: 0 }), '다음 판이 끝나면 열려요');
 });
+
+// 업적 탭(layout.md 30절): 세 칸 격자, 칸 높이는 하나, 이름 줄(메달 · 이름 · N/M)과 조건 줄이 칸 안, 쪽은 단추 줄 위
+test('업적 격자: 칸 높이 하나 · 이름 줄과 조건이 칸 안(한국어 · 영어) · 다섯 쪽 안 · 단추 줄 위', async () => {
+  const { frame, text } = M;
+  const rec = await import('../src/ui/screens/records.js');
+  const { ACHIEVEMENTS } = await import('../src/data/achievements.js');
+  const P = frame.PAD_CARD, room = frame.PAGE.btnY - frame.GAP_GROUP;
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    const lay = rec.achvLayout(), cells = lay.pages.flat();
+    assert.equal(cells.length, ACHIEVEMENTS.length, lang);
+    assert.ok(lay.pages.length <= 5, `${lang} 쪽 ${lay.pages.length}`);
+    assert.ok(3 * lay.cw + 2 * rec.ACHV_GRID.gap <= 456, `${lang} 격자 폭`);
+    for (const c of cells) {
+      const a = ACHIEVEMENTS[c.i];
+      assert.ok(c.cond.length <= 2, `${lang} ${a.id} 조건 ${c.cond.length}줄`);
+      for (const l of c.cond) assert.ok(text.textWidth(l) <= lay.cw - P * 2, `${lang} ${a.id} 「${l}」`);
+      const prog = a.need > 1 ? text.textWidth(`${a.need}/${a.need}`, true) + frame.SP.s : 0;
+      const nameW = text.textWidth(a.name, true);
+      assert.ok(rec.ACHV_GRID.medal + frame.SP.s + nameW + prog <= lay.cw - P * 2, `${lang} ${a.id} 이름 줄 ${nameW}`);
+      assert.ok(c.y + lay.h <= room, `${lang} ${a.id} 칸 아래 ${c.y + lay.h} > ${room}`);
+    }
+  }
+  M.lang.setLang('ko');
+});
