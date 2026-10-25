@@ -213,6 +213,24 @@ test('대국 도전 띠: 모든 도전 · 진행 · 도장이 판 폭 − 8 안(
   M.lang.setLang('ko');
 });
 
+test('대국 도전: 이긴 수에서 이룬 도전은 금빛 알림 없이(끝난 대국은 live()가 null) — 이어지거나 진 수에서만 알림', () => {
+  const proto = M.battle.BattleScreen.prototype;
+  const run = (events, live) => {
+    const toasts = [], pops = [];
+    const fake = { view: {}, app: { time: 0 }, live: () => live, snd() {}, toast: (m) => toasts.push(m), pop: (m) => pops.push(m) };
+    proto.challengeDone.call(fake, { type: 'challenge', reward: 2 }, events);
+    return { toasts, pops, done: fake.view.chDone };
+  };
+  const won = run([{ type: 'challenge' }, { type: 'win', reason: 'score' }], null);
+  assert.deepEqual(won.toasts, [], '이긴 수: 알림 없음');
+  assert.equal(won.pops.length, 1);
+  assert.ok(won.done);
+  const lost = run([{ type: 'challenge' }, { type: 'lose' }], null);
+  assert.equal(lost.toasts.length, 1, '진 수: 알림');
+  assert.equal(lost.pops.length, 0, '진 수: 몫은 money 사건이 띄운다');
+  assert.equal(run([{ type: 'challenge' }], { status: 'play' }).toasts.length, 1, '이어지는 수: 알림');
+});
+
 test('수업 할 일: 모든 걸음 글이 손 이름표 줄 위에 들어간다', () => {
   const lay = M.battle.BattleScreen.prototype.rightLayout.call({});
   for (const lang of LANGS) {

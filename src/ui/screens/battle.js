@@ -737,7 +737,7 @@ export class BattleScreen {
         }); break;
         case 'end': this.endSteps(e); break;
         // 대국 도전(사슬 끝 뒤 · 승패 앞): 금빛 알림 · 「도전 성공」 도장 · 상금 몫. 도장을 볼 짧은 틈(긴 수 뒤쪽에서는 다른 걸음처럼 줄어든다)
-        case 'challenge': add(0.3, { begin: () => this.challengeDone(e) }); break;
+        case 'challenge': add(0.3, { begin: () => this.challengeDone(e, events) }); break;
         case 'overflow': add(0.08, {
           begin: () => {
             const big = { 1: 1, 2: 2, 5: 3, 10: 4 }[e.tier] || 1;
@@ -830,9 +830,11 @@ export class BattleScreen {
     if (!v.chMet && challengeSticks(ch) && challengeMet(ch, h)) { v.chMet = true; this.chFlash = this.app.time; this.snd('chart'); }
   }
   // 이룬 순간: 도장 · 반짝 · 소리 · 상금 몫(상금 줄 위). 진 대국은 뒤따르는 money 사건이 동전과 함께 몫을 띄운다.
-  // 금빛 알림은 대국이 이어지거나 진 수에서만 — 이긴 수는 곧바로 보상 상자의 「도전 상금」 줄이 말한다(알림이 상자 제목을 덮었다)
-  challengeDone(e) {
-    const v = this.view, b = this.live(), st = b ? b.status : null;
+  // 금빛 알림은 대국이 이어지거나 진 수에서만 — 이긴 수는 곧바로 보상 상자의 「도전 상금」 줄이 말한다(알림이 상자 제목을 덮었다).
+  // 승패는 같은 수의 사건(win · lose)으로 가린다 — 끝난 대국은 판에서 빠져 live()가 null이다
+  challengeDone(e, events = []) {
+    const v = this.view, b = this.live();
+    const st = events.some((x) => x.type === 'win') ? 'won' : events.some((x) => x.type === 'lose') ? 'lost' : b ? b.status : null;
     v.chDone = true; v.chMet = false;
     this.chFlash = this.app.time;
     this.snd('fragment');
