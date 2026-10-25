@@ -1,5 +1,6 @@
 // 업적 · 도장 스크린샷: 기록 「업적」 탭(폰 844×390, 한국어 · 영어) · 업적 알림(대국, 하나 · 둘째) · 도장(새 판 · 레퍼토리 · 도감 오프닝 · 말풍선, 1440×810).
-//   node tools/shots-achv.mjs [--out docs/shots/achv]
+// band: 도전 띠 자리를 빌린 업적 알림 → 수를 두면 걷히고 띠가 돌아온다. cover: 보상 상자 위 업적 알림(보상 줄 셋 · 일곱 — 상자 위 · 왼쪽 빈 칸)
+//   node tools/shots-achv.mjs [--out docs/shots/achv] [--only records,stamp,band,cover] [--size 1440x810,844x390] [--lang ko,en]
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,6 +11,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const OUT = path.resolve(ROOT, opt('--out', 'docs/shots/achv'));
+const ONLY = opt('--only', '') ? opt('--only', '').split(',') : null;
+const want = (k) => !ONLY || ONLY.includes(k);
+const SIZES = opt('--size', '1440x810,844x390').split(',').map((s) => s.split('x').map(Number));
+const LANGS = opt('--lang', 'ko,en').split(',');
 
 async function loadPlaywright() {
   try { return await import('playwright'); } catch { /* 전역 */ }
@@ -85,7 +90,7 @@ async function battleToasts(page, tag) {
   await shot(page, `toast-battle${tag}-2`);
 }
 
-for (const lang of ['ko', 'en']) {
+for (const lang of want('records') ? ['ko', 'en'] : []) {
   const page = await open({ w: 844, h: 390, lang });
   await page.evaluate(() => window.__app.go('records', { tab: 'achv' }));
   await shot(page, `achv-${lang}-1`);
@@ -96,7 +101,7 @@ for (const lang of ['ko', 'en']) {
   await page.close();
 }
 
-{
+if (want('stamp')) {
   const page = await open({ w: 1440, h: 810, lang: 'ko' });
   await battleToasts(page, '');
   await page.evaluate(() => { const a = window.__app; a.toasts.length = 0; a.toTitle(); a.go('setup'); });
@@ -118,7 +123,7 @@ for (const lang of ['ko', 'en']) {
   await shot(page, 'stamp-draft-tip', { keep: true });
   await page.close();
 }
-{
+if (want('stamp')) {
   const page = await open({ w: 1440, h: 810, lang: 'en' });
   await battleToasts(page, '-en');
   await page.evaluate(() => { const a = window.__app; a.toasts.length = 0; a.toTitle(); a.go('setup'); });
@@ -135,6 +140,66 @@ for (const lang of ['ko', 'en']) {
   await page.waitForTimeout(1600);
   await shot(page, 'stamp-draft-en');
   await page.close();
+}
+
+// 도전 띠가 있는 대국(10번 판 연습 대국): 업적 알림이 띠 자리에 → 수를 두면(바빠지면) 걷히고 띠가 돌아온다
+const idle = (page) => page.waitForFunction(() => { const s = window.__app.screen; return s.view && !s.busy && !s.banner && !s.intro; }, null, { timeout: 20000 });
+const bestLine = (page) => page.evaluate(async () => {
+  const { bestMove, lineCommands } = await import('/src/sim/solver.js');
+  const r = bestMove(window.__app.run.battle);
+  return [{ type: 'drop', handIndex: r.handIndex, sq: r.sq }, ...lineCommands(r.line)];
+});
+async function battle10(page) {
+  await page.evaluate(() => {
+    const a = window.__app; a.newRun({ seed: 10 });
+    if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
+    const e0 = a.cmd({ type: 'play' });
+    a.go('battle', { events: e0 });
+  });
+  await idle(page);
+}
+for (const [w, h] of SIZES) for (const lang of LANGS) {
+  const tag = `${lang}-${w}`;
+  if (want('band')) {
+    const page = await open({ w, h, lang });
+    await battle10(page);
+    await page.evaluate(() => { window.__app.achvQueue.push('combo8'); });
+    await page.waitForFunction(() => window.__app.toasts.some((t) => t.achv && t.t > 0.3), null, { timeout: 20000 });
+    await shot(page, `band-toast-${tag}`);
+    const line = await bestLine(page);
+    await page.evaluate((c) => window.__app.screen.send(c), line[0]);
+    await page.waitForTimeout(150);
+    console.log('수를 둔 뒤 업적 알림', await page.evaluate(() => window.__app.toasts.filter((t) => t.achv).length), '바쁨', await page.evaluate(() => !!window.__app.screen.busy));
+    await shot(page, `band-after-${tag}`);
+    await page.close();
+  }
+  if (want('cover')) {
+    // 이기는 마지막 수 앞에 업적 셋을 줄 세운다 — 보상 상자에서 하나씩
+    const page = await open({ w, h, lang });
+    await battle10(page);
+    const line = await bestLine(page);
+    for (const c of line.slice(0, -1)) { await page.evaluate((c) => window.__app.screen.send(c), c); await idle(page); }
+    await page.evaluate(() => { window.__app.achvQueue.push('combo8', 'forms5', 'mate1'); });
+    await page.evaluate((c) => window.__app.screen.send(c), line[line.length - 1]);
+    await page.waitForFunction(() => window.__app.screen.constructor.name === 'RewardScreen', null, { timeout: 20000 });
+    await page.waitForFunction(() => window.__app.toasts.some((t) => t.achv && t.t > 0.3), null, { timeout: 20000 });
+    await shot(page, `cover-reward-${tag}-1`);
+    await page.waitForFunction(() => window.__app.toasts.some((t) => t.achv && t.t > 0.3) && window.__app.achvQueue.length === 1, null, { timeout: 20000 });
+    await shot(page, `cover-reward-${tag}-2`);
+    // 보상 줄 일곱(가장 높은 상자): 상자 위가 좁으면 왼쪽 빈 칸에 접어서
+    await page.evaluate(() => {
+      const a = window.__app; a.toasts.length = 0; a.achvQueue.length = 0;
+      a.run.last.overflow = 3;
+      a.go('reward', { reward: { base: 3, moves: 4, interest: 2, mate: 3, overflow: 6, challenge: 2, earned: 5, total: 25 }, events: [] });
+      a.achvQueue.push('forms5');
+    });
+    // 상자 왼쪽 빈 칸도 좁으면(영어 넓은 상자) 다음 화면까지 기다린다
+    const shown = await page.waitForFunction(() => window.__app.toasts.some((t) => t.achv && t.t > 0.3), null, { timeout: 6000 }).then(() => true, () => false);
+    console.log('줄 일곱 보상의 업적 알림', shown ? '뜸' : '기다림', await page.evaluate(() => JSON.stringify(window.__app.screen.coverBox())));
+    await page.waitForTimeout(1200);
+    await shot(page, `cover-reward7-${tag}`);
+    await page.close();
+  }
 }
 
 console.log(`예외 ${errors.length}${errors.length ? ` ${errors.join(' | ')}` : ''}`);
