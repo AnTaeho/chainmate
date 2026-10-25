@@ -1,25 +1,30 @@
 // 전설 완성: 화면이 멈추고 → 그 명국의 마지막 수를 판 위에 다시 두고 → 금박 격언이 떨어져 여섯째 칸에 박힌다 + 전용 한 소절.
 // 누르거나 Enter면 끝 장면으로 건너뛴다.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, rframe, sprite, seg, radiusOf } from '../../render/gfx.js';
+import { W, H, text, box, rect, rframe, sprite, seg, slot, R_SM } from '../../render/gfx.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { wrap } from '../../render/text.js';
-import { button } from '../ui.js';
 import { maximCellH, maximCard, maximTip, edgeRing } from '../parts.js';
 import { REPLAYS, sqOf } from '../replays.js';
-import { LIST_GAP } from '../frame.js';
+import { LIST_GAP, LINE, SP, flow } from '../frame.js';
+import { interlude, interludeLayout, INTER } from './common.js';
 
-const Q = 20, MX = 24, MY = 58; // 작은 판: 칸 20px
-// 작은 판의 기물은 칸(20px) 안에 들게 줄여 그린다(16×22 → 14×19)
-const MK = 19 / 22;
-const mini = (ctx, t, side, x, y) => sprite(ctx, t, side, x + 2, y - 2, { sx: MK, sy: MK });
+// 막간 상자: 화면 끝 여백 SP.m 안 온 폭 · 온 높이. 본문(판 · 이야기 · 격언 칸)은 제목과 「계속」 사이
+const BOX = { x: SP.m, y: SP.m, w: W - SP.m * 2, h: H - SP.m * 2 };
+const BODY_H = BOX.h - (interludeLayout(1).h - 1);
+const BODY = { x: BOX.x + INTER.pad, y: BOX.y + interludeLayout(1).bodyY, w: BOX.w - INTER.pad * 2, h: BODY_H };
+// 작은 판: 칸 18px, 테 4 — 본문 높이 가운데
+const Q = 18, FR = SP.s, MX = BODY.x + FR, MY = BODY.y + ((BODY.h - Q * 8) >> 1);
+// 작은 판의 기물은 칸(18px) 안에 들게 줄여 그린다(16×22 → 13×17)
+const MK = 17 / 22;
+const mini = (ctx, t, side, x, y) => sprite(ctx, t, side, x + 1, y - 4, { sx: MK, sy: MK });
 const STEP = 0.6, T_FREEZE = 0.5;
 
-// 오른쪽 격언 칸 자리: 제목(2배, 아래 끝 ≈ 44) 밑 y 50부터 「계속」(y 244) 위 238까지.
+// 오른쪽 격언 칸 자리: 판 윗변부터 상자 안 아랫변까지(「계속」은 가운데라 겹치지 않는다).
 // 가진 격언은 칸이 다 들어가면 한 줄(이름 한 줄 칸), 안 들어가면 2 · 3 · 4줄로 나란히(아이콘만 — maximColumn과 같다).
 // 새 전설 칸은 늘 맨 아래 폭 112 한 줄(이름이 보인다). 아이콘(24)이 들어가는 칸 폭은 4줄(26)까지라
 // 가진 격언 20개(4줄 × 5칸)까지 화면 안이다 — 격언 칸 5 + 흑요 10 + 다른 전설 4 = 19가 규칙상 넉넉한 최대.
-export const LEGEND_RX = 356, LEGEND_RW = 112, LEGEND_TOP = 50, LEGEND_BOT = H - 32;
+export const LEGEND_RW = 112, LEGEND_RX = BODY.x + BODY.w - LEGEND_RW, LEGEND_TOP = MY - FR, LEGEND_BOT = BOX.y + BOX.h - INTER.pad;
 export function legendSlots(nOthers) {
   const h = maximCellH(), step = h + LIST_GAP;
   const fitRows = Math.max(0, Math.floor((LEGEND_BOT - LEGEND_TOP - h) / step));
@@ -69,7 +74,7 @@ export class LegendScreen {
   xy(name) { const { f, r } = sqOf(name); return { x: MX + f * Q, y: MY + (7 - r) * Q }; }
   drawReplay(ctx) {
     const t = this.t - T_FREEZE;
-    box(ctx, MX - 4, MY - 4, Q * 8 + 8, Q * 8 + 8, PAL.frame, PAL.frameDk);
+    box(ctx, MX - FR, MY - FR, Q * 8 + FR * 2, Q * 8 + FR * 2, PAL.frame, PAL.frameDk);
     for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) rect(ctx, MX + f * Q, MY + r * Q, Q, Q, (r + f) % 2 ? PAL.dark : PAL.light);
     const n = this.rp.moves.length;
     const done = Math.max(0, Math.min(n, Math.floor(t / STEP)));
@@ -77,7 +82,7 @@ export class LegendScreen {
     const p = cur >= 0 ? Math.min(1, (t - cur * STEP) / 0.3) : 0;
     const at = this.board(done);
     // 지나온 수의 선
-    for (let i = 0; i < done; i++) { const a = this.xy(this.rp.moves[i][0]), b = this.xy(this.rp.moves[i][1]); seg(ctx, a.x + 10, a.y + 10, b.x + 10, b.y + 10, PAL.gold); }
+    for (let i = 0; i < done; i++) { const a = this.xy(this.rp.moves[i][0]), b = this.xy(this.rp.moves[i][1]); seg(ctx, a.x + Q / 2, a.y + Q / 2, b.x + Q / 2, b.y + Q / 2, PAL.gold); }
     const moving = cur >= 0 ? this.rp.moves[cur] : null;
     for (const [sq, pc] of at) {
       if (moving && sq === moving[0]) continue;
@@ -87,7 +92,7 @@ export class LegendScreen {
       const gold = this.rp.end === 'promote' && done >= n && pc.t === 'P' && sqOf(sq).r === 7;
       if (falling) {
         const k = Math.min(1, (t - n * STEP) / 0.5);
-        ctx.save(); ctx.translate(x + 10, y + Q); ctx.rotate(k * k * Math.PI / 2); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 1 - k * 0.4;
+        ctx.save(); ctx.translate(x + Q / 2, y + Q); ctx.rotate(k * k * Math.PI / 2); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = 1 - k * 0.4;
         ctx.scale(MK, MK); sprite(ctx, 'K', pc.side, -8, -21); ctx.restore(); ctx.globalAlpha = 1;
         continue;
       }
@@ -97,30 +102,39 @@ export class LegendScreen {
       const pc = this.board(cur).get(moving[0]);
       const a = this.xy(moving[0]), b = this.xy(moving[1]);
       if (pc) mini(ctx, pc.t, pc.side, a.x + (b.x - a.x) * p, a.y + (b.y - a.y) * p);
-      if (p >= 1) rframe(ctx, b.x, b.y, Q, Q, 3, PAL.gold);
+      if (p >= 1) rframe(ctx, b.x, b.y, Q, Q, R_SM, PAL.gold);
     }
     if (done >= n && this.rp.end) {
       const mark = this.rp.end === 'mate' ? '#' : this.rp.end === 'check' ? '+' : '=Q';
-      text(ctx, mark, MX + Q * 8 - 4, MY + 2, PAL.gold, { align: 'right', bold: true, scale: 2, shadow: PAL.shadow });
+      text(ctx, mark, MX + Q * 8 - SP.s, MY + SP.xs, PAL.gold, { align: 'right', bold: true, scale: 2, shadow: PAL.shadow });
     }
   }
+  // 가운데 이야기 칸: 판 오른쪽 SP.l부터 격언 칸 왼쪽 SP.l까지
+  storyCol() { const x0 = MX + Q * 8 + FR + INTER.pad, x1 = LEGEND_RX - INTER.pad; return { cx: (x0 + x1) >> 1, w: x1 - x0 }; }
   draw(ctx, ui) {
     const l = this.l, t = this.t;
-    // 멈춤: 금빛 번쩍(여백 판도 같이)
+    // 멈춤: 금빛 번쩍(여백 판도 같이) — 상자 둘레에
     const fl = this.surroundFlash();
     if (fl) { ctx.globalAlpha = fl.a; rect(ctx, 0, 0, W, H, fl.col); ctx.globalAlpha = 1; }
-    text(ctx, '불멸의 기보', W / 2, 8, PAL.goldDk, { align: 'center', bold: true });
-    text(ctx, l.name, W / 2, 22, PAL.gold, { align: 'center', bold: true, scale: 2, shadow: PAL.shadow });
+    interlude(ctx, ui, BOX.x, BOX.y, BOX.w, BODY_H, () => this.drawBody(ctx, ui), {
+      title: l.name, titleCol: PAL.gold, name: '전설',
+      buttons: [{ id: 'next', label: '계속', tone: t >= this.tDone ? 'gold' : 'plain', onClick: () => this.next() }],
+    });
+  }
+  drawBody(ctx, ui) {
+    const l = this.l, t = this.t;
     this.drawReplay(ctx);
-    // 가운데: 해 · 이야기 · 전설 효과(떨어진 뒤)
-    const cx = 268;
-    if (l.year) text(ctx, String(l.year), cx, 62, PAL.dim, { align: 'center' });
-    wrap(l.story, 150).forEach((s, i) => text(ctx, s, cx, 78 + i * 13, PAL.ink, { align: 'center' }));
+    // 가운데: 「불멸의 기보 · 해」(보조) → 이야기 → 큰 덩이 틈 → 전설 효과(떨어진 뒤)
+    const { cx, w } = this.storyCol(), f = flow(MY - FR);
+    text(ctx, l.year ? `불멸의 기보 · ${l.year}` : '불멸의 기보', cx, f.line(), PAL.dim, { align: 'center' });
+    f.gap(SP.s);
+    wrap(l.story, w).forEach((s) => text(ctx, s, cx, f.line(), PAL.ink, { align: 'center' }));
+    f.gap(INTER.gap);
     if (t >= this.tDrop + 0.4) {
       const a = Math.min(1, (t - this.tDrop - 0.4) / 0.4);
-      wrap(l.text, 150).forEach((s, i) => text(ctx, s, cx, 138 + i * 13, PAL.gold, { align: 'center', alpha: a }));
+      wrap(l.text, w).forEach((s) => text(ctx, s, cx, f.line(), PAL.gold, { align: 'center', alpha: a }));
     }
-    // 오른쪽: 격언 칸. 금박 격언이 위에서 떨어져 여섯째 칸에 박힌다
+    // 오른쪽: 격언 칸. 금박 격언이 위에서 떨어져 맨 아래 빈 칸에 박힌다
     const run = this.app.run;
     const RX = LEGEND_RX, RW = LEGEND_RW;
     const maxims = run ? run.maxims.filter((m) => m.id !== this.id) : [];
@@ -134,7 +148,7 @@ export class LegendScreen {
     const slotY = lay.slot.y;
     const k = Math.max(0, Math.min(1, (t - this.tDrop) / 0.5));
     const y = Math.round(-40 + (slotY + 40) * (k * k));
-    if (k < 1) rframe(ctx, RX, slotY, RW, h, radiusOf(RW, h), PAL.goldDk);
+    if (k < 1) slot(ctx, RX, slotY, RW, h);
     if (t >= this.tDrop) {
       maximCard(ctx, { id: this.id, uid: -1, edition: null }, RX, y, RW, h, { t: ui.time, overlay: k < 1 });
       edgeRing(ctx, RX, y, RW, h, -1, PAL.gold);
@@ -143,7 +157,6 @@ export class LegendScreen {
         if (r < 30) for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; ctx.beginPath(); ctx.arc(RX + RW / 2 + Math.cos(a) * (RW / 2 + r), slotY + h / 2 + Math.sin(a) * (h / 2 + r * 0.5), 1.2, 0, Math.PI * 2); ctx.fillStyle = PAL.goldHi; ctx.fill(); }
       }
     }
-    button(ctx, ui, 'next', W / 2 - 40, H - 26, 80, 18, '계속', { onClick: () => this.next(), tone: t >= this.tDone ? 'gold' : 'plain' });
   }
   // 화면 전체 번쩍임 — 게임 캔버스와 여백 판(main.js)이 같이 쓴다
   surroundFlash() { return this.t < T_FREEZE ? { col: PAL.goldHi, a: 0.5 * (1 - this.t / T_FREEZE) } : null; }
