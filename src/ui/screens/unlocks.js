@@ -5,21 +5,24 @@
 //   args.from  돌아갈 곳 'codex' | 'result'  · args.back 돌아갈 화면에 넘길 것(도감의 탭 · 쪽)
 import { PAL } from '../../render/palette.js';
 import { W, text, rrect, rframe, measure } from '../../render/gfx.js';
-import { button } from '../ui.js';
 import { panel } from '../parts.js';
 import { hint } from '../coach.js';
-import { pageHead, pageButtons } from './common.js';
-import { PAGE, PAD_BOX, LINE, GAP_GROUP, textY } from '../frame.js';
+import { pageHead, pageButtons, bottomBar } from './common.js';
+import { PAGE, PAD_BOX, LINE, GAP_GROUP, SP, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { MAX_TIER } from '../../data/unlocks.js';
 import { unlockState, bundle, bundleNames, bundleKinds, bundleCard, bundleCardH, backCard, BACK_W, BACK_H, miniArt, kindCell, MINI, progressBar, BAR_H, lockLine, nextLine } from '../unlockview.js';
 
-// 길: 21칸(칸 20 · 사이 2) — 9 + 21 × 22 − 2 = 469
-export const PATH = { x: 9, pitch: 22, cw: MINI.w, nodeY: 40, node: 8, colY: 52, row: MINI.h + 1, rows: 5 };
-const LEFT_Y = PATH.colY + PATH.rows * PATH.row + 6;   // 다음 칸 아래 한 줄
-const PANEL = { x: 8, y: 190, w: W - 16 };
-// 펼친 묶음: 카드 폭 108(상점 진열 카드와 같은 폭 — 88이면 효과 글이 200까지 길어진다) · 한 쪽에 넷까지
-export const CARDS = { y: 54, w: 108, gap: 8, per: 4, maxH: PAGE.btnY - GAP_GROUP - 54 };
+// 길: 21칸(칸 20 · 사이 2 — 폭 460, 화면 가운데). 마디는 본 칸 윗변 + 8(위에 지금 자리 세모 7), 그림 줄은 마디 아래 4
+const PATH_W = (MAX_TIER + 1) * 22 - SP.xs;
+const NODE_Y = PAGE.bodyY + SP.m, NODE = 8;
+export const PATH = { x: Math.floor((W - PATH_W) / 2), pitch: 22, cw: MINI.w, nodeY: NODE_Y, node: NODE, colY: NODE_Y + NODE + SP.s, row: MINI.h + 1, rows: 5 };
+const LEFT_Y = PATH.colY + PATH.rows * PATH.row - 1 + SP.s;   // 다음 칸 아래 한 줄(그림 줄 끝 + 4)
+// 아래 칸(두 줄): 판 밖 왼쪽 선 12, 맨 아래 단추 줄 위 12
+export const PANEL = { x: PAGE.titleX, w: W - PAGE.titleX * 2, h: PAD_BOX * 2 + LINE * 2, get y() { return PAGE.btnY - SP.l - this.h; } };
+// 펼친 묶음: 카드 폭 108(상점 진열 카드와 같은 폭 — 88이면 효과 글이 200까지 길어진다) · 한 쪽에 넷까지. 카드 줄은 마디 아래 12
+const CARDS_Y = NODE_Y + NODE + SP.l;
+export const CARDS = { y: CARDS_Y, w: 108, gap: SP.m, per: 4, maxH: PAGE.btnY - GAP_GROUP - CARDS_Y };
 const cx = (t) => PATH.x + t * PATH.pitch + PATH.cw / 2;
 // 쪽 나누기: 넷이 넘으면 쪽마다 고르게(다섯은 3 · 2)
 export function bundlePages(n) {
@@ -55,7 +58,7 @@ export class UnlocksScreen {
     this.drawPath(ctx, ui, st);
     if (this.sel == null) this.drawOverview(ctx, ui, st);
     else this.drawBundle(ctx, ui, st, this.sel);
-    button(ctx, ui, 'unlocks:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.leave() });
+    bottomBar(ctx, ui, { back: { id: 'unlocks:back', onClick: () => this.leave() } });
   }
   // 길과 마디: 지나온 몫은 금빛, 다음 칸까지는 온 만큼. 지금 자리는 마디 위 세모, 펼친 묶음은 마디 둘레 흰 테
   drawPath(ctx, ui, st) {
@@ -94,8 +97,8 @@ export class UnlocksScreen {
       text(ctx, s, Math.max(PAGE.titleX, Math.min(W - PAGE.titleX - tw, Math.round(cx(st.next) - tw / 2))), LEFT_Y, PAL.gold);
     }
     // 아래 칸(두 줄): 이름표 칸은 두 이름표 중 긴 쪽에 맞춘다
-    const { x: px, y: py, w: pw } = PANEL, ph = PAD_BOX * 2 + LINE * 2, lx = px + PAD_BOX, rx = px + pw - PAD_BOX;
-    const head = st.tier ? '최근에 연 것' : '처음부터', vx = lx + Math.max(measure(head), measure('다음')) + 10;
+    const { x: px, y: py, w: pw, h: ph } = PANEL, lx = px + PAD_BOX, rx = px + pw - PAD_BOX;
+    const head = st.tier ? '최근에 연 것' : '처음부터', vx = lx + Math.max(measure(head), measure('다음')) + SP.xl;
     openBox('panel', px, py, pw, ph, PAD_BOX, { name: '해금 아래 칸' });
     panel(ctx, px, py, pw, ph);
     const y1 = textY(py + PAD_BOX), y2 = y1 + LINE;
@@ -110,8 +113,8 @@ export class UnlocksScreen {
       text(ctx, kinds, vx, y2, PAL.ink);
       text(ctx, s, rx, y2, PAL.gold, { align: 'right' });
       // 막대는 종류 글과 남은 관 글 사이에 남는 만큼(96까지)
-      const bx0 = vx + measure(kinds) + 12, bw = Math.min(96, rx - tw - 8 - bx0);
-      if (bw >= 32) progressBar(ctx, rx - tw - 8 - bw, y2 + Math.floor((11 - BAR_H) / 2), bw, st.p);
+      const bx0 = vx + measure(kinds) + SP.l, bw = Math.min(96, rx - tw - SP.m - bx0);
+      if (bw >= 32) progressBar(ctx, rx - tw - SP.m - bw, y2 + Math.floor((11 - BAR_H) / 2), bw, st.p);
     }
     closeBox();
     // 처음 한 번: 지금 자리의 마디를 가리킨다(말풍선이 아래 칸의 글을 덮지 않게 마디만)
@@ -131,7 +134,7 @@ export class UnlocksScreen {
       if (open) bundleCard(ctx, b, x, CARDS.y, w, h, this.app.time, ui);
       else backCard(ctx, b.kind, x, CARDS.y, w, h, { next: t === st.next });
     });
-    if (!open) text(ctx, lockLine(st, t), W / 2, CARDS.y + h + GAP_GROUP + 1, t === st.next ? PAL.gold : PAL.dim, { align: 'center' });
+    if (!open) text(ctx, lockLine(st, t), W / 2, textY(CARDS.y + h + SP.m), t === st.next ? PAL.gold : PAL.dim, { align: 'center' });
     if (pages > 1) pageButtons(ctx, ui, 'unlocks', page, pages, (p) => { this.page = p; });
   }
   key(k) {

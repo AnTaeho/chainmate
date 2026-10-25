@@ -1269,7 +1269,7 @@ test('해금 화면: 길 21칸 · 모든 묶음의 카드 높이 · 쪽 나누�
   const V = M.unlockview, { MAX_TIER, UNLOCK_GATES } = M.unlockData, { PAGE, GAP_GROUP, PAD_BOX } = M.frame;
   assert.equal(MAX_TIER, 20);
   assert.ok(PATH.x >= 8 && PATH.x + MAX_TIER * PATH.pitch + PATH.cw <= 480 - 8, '길이 화면 폭 안');
-  assert.ok(PATH.colY + PATH.rows * PATH.row + 6 + 14 <= 190, '그림 줄 · 남은 관 줄이 아래 칸 위');
+  assert.ok(PATH.colY + PATH.rows * PATH.row - 1 + 4 + 14 <= M.unlocks.PANEL.y, '그림 줄 · 남은 관 줄이 아래 칸 위');
   assert.ok(190 + PAD_BOX * 2 + 28 <= PAGE.btnY - 2, '아래 칸이 단추 줄 위');
   assert.deepEqual([1, 4, 5, 8, 41].map((n) => { const { pages, per } = bundlePages(n); return [pages, per]; }), [[1, 1], [1, 4], [2, 3], [2, 4], [11, 4]]);
   assert.ok(CARDS.per * CARDS.w + (CARDS.per - 1) * CARDS.gap <= 480 - 16, '카드 넷이 한 줄에');
