@@ -240,9 +240,13 @@ const edges = (r) => { const [cx, cy] = center(r); const i = Math.min(2, Math.fl
 const KEYS = ['scr', 'ov', 'phase', 'money', 'run', 'st', 'ovst', 'prev', 'tapSq', 'tip', 'keys', 'toasts', 'guide'];
 const diff = (a, b, keys = KEYS) => keys.filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
 // 두 쪽의 기준(누르기 전) 상태가 다른 칸(화면 칸 해시 · 판 해시 — 손가락 판은 구역을 넓혀 화면 칸이 다르다)은 값 대신 「누름으로 바뀌었나」를 견준다
+// 해시 칸(run · st · ovst)은 늘 「바뀌었나」만 견준다 — 새 판은 씨앗이 매번 달라 값이 같을 수 없다. 알림 수는 늘어난 수를 견준다
+const HASHED = new Set(['run', 'st', 'ovst']);
 const rel = (mb, m, tb, t, keys = KEYS) => keys.filter((k) => {
   const same = (x, y) => JSON.stringify(x[k]) === JSON.stringify(y[k]);
-  return same(mb, tb) ? !same(m, t) : same(mb, m) !== same(tb, t);
+  if (k === 'toasts') return m[k] - mb[k] !== t[k] - tb[k];
+  if (HASHED.has(k) || !same(mb, tb)) return same(mb, m) !== same(tb, t);
+  return !same(m, t);
 });
 
 // ── 마우스 기준(손가락 없는 창 734×343): 장면마다 구역 · 가리킴 · 누름 결과
