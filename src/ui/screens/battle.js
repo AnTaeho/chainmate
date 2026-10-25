@@ -4,7 +4,7 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, rrect, rframe, R_SM, R_LG, radiusOf, frame, line, seg, dot, sprite, num, digits, DIGIT_H, measure, short, fitNum, fine, slot, selectGlow } from '../../render/gfx.js';
+import { W, H, text, box, rect, rrect, rframe, R_SM, R_LG, radiusOf, frame, line, seg, dot, sprite, num, digits, DIGIT_H, measure, short, fitNum, fine, slot, selectGlow, inner, innerFrame } from '../../render/gfx.js';
 import { SW, SH, tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { center as sqCenter, centerAt, projectSq, unproject, sqBox, hitBox, picker, thingTop, THINGS, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
 import { piece3, fitPiece, pieceCanvas, pieceChips, scaleOf, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
@@ -2043,7 +2043,7 @@ export class BattleScreen {
   brillTag(ctx, x, y, w) {
     const T = ANNOT.teal, mark = `×${Number(this.view.brill.x.toFixed(2))}`, sz = annotSize(mark);
     rframe(ctx, x, y, w, VAL_H, R_LG, T.fill);
-    rframe(ctx, x + 1, y + 1, w - 2, VAL_H - 2, R_LG - 1, T.edge);
+    innerFrame(ctx, x, y, w, VAL_H, R_LG - 1, T.edge);
     drawAnnot(ctx, mark, x + w - sz.w + 4, y - 7, T);
   }
   // 수가 오른 순간부터 스러지는 빛 세기(1 → 0, 0.45초). 움직임 줄이기에도 남는다(한 번 밝아지는 것은 떨림이 아니다)
@@ -2081,7 +2081,7 @@ export class BattleScreen {
       openBox('edge', px, ky, pillW, lay.kick.h, 1, { name: '이기면', r: pr });
       rrect(ctx, px, ky + 2, pillW, lay.kick.h, pr, PAL.drop);
       rrect(ctx, px, ky, pillW, lay.kick.h, pr, PAL.frameDk);
-      rrect(ctx, px + 1, ky + 1, pillW - 2, lay.kick.h - 2, pr - 1, PAL.gold);
+      inner(ctx, px, ky, pillW, lay.kick.h, pr - 1, PAL.gold);
       text(ctx, spec.right, px + 6, kt, PAL.cardInk, { bold: true });
       closeBox();
     }
@@ -2311,8 +2311,8 @@ export class BattleScreen {
       const x0 = right - n * step + (step - d);
       for (let i = 0; i < n; i++) {
         const x = x0 + i * step, y = ty + Math.floor((INK_H - d) / 2);
-        if (i < left) { rrect(ctx, x, y + 1, d, d, d / 2, PAL.drop); rrect(ctx, x, y, d, d, d / 2, PAL.frameDk); rrect(ctx, x + 1, y + 1, d - 2, d - 2, (d - 2) / 2, col); }
-        else { rrect(ctx, x, y, d, d, d / 2, PAL.slotEdge); rrect(ctx, x + 1, y + 1, d - 2, d - 2, (d - 2) / 2, PAL.slot); }
+        if (i < left) { rrect(ctx, x, y + 1, d, d, d / 2, PAL.drop); rrect(ctx, x, y, d, d, d / 2, PAL.frameDk); inner(ctx, x, y, d, d, (d - 2) / 2, col); }
+        else { rrect(ctx, x, y, d, d, d / 2, PAL.slotEdge); inner(ctx, x, y, d, d, (d - 2) / 2, PAL.slot); }
       }
       return x0;
     };
@@ -2595,7 +2595,7 @@ export class BattleScreen {
       rrect(ctx, bx, by, bw, bh, R_LG, PAL.shadow);
       ctx.globalAlpha = Math.max(0, a);
       rframe(ctx, bx, by, bw, bh, R_LG, PAL.frameDk);
-      if (bn.master) rframe(ctx, bx + 1, by + 1, bw - 2, bh - 2, R_LG - 1, PAL.red);
+      if (bn.master) innerFrame(ctx, bx, by, bw, bh, R_LG - 1, PAL.red);
       if (bn.master) {
         // 초상이 오른쪽에서 미끄러져 들어온다(64×64)
         const k = Math.min(1, bt / 0.35);

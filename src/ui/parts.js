@@ -2,7 +2,7 @@
 import { richText } from './glossary.js';
 import { sheen } from './juice.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, rrect, text, seg, dot, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf, R_SM, selectGlow } from '../render/gfx.js';
+import { box, rect, rrect, text, seg, dot, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf, R_SM, selectGlow, inner } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
@@ -546,7 +546,7 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   if (it.kind === 'chart' && run) { const lv = run.charts[it.form] || 0; text(ctx, `${lv} › ${lv + 1}`, cx, ay + 30 + lines.length * LINE, PAL.cardDim, { align: 'center' }); }
   if (it.kind === 'maxim' && it.edition) text(ctx, EDITION_BY_ID[it.edition].name, cx, y + h - 28, PAL.goldDk, { align: 'center' });
   if (sold) {
-    ctx.globalAlpha = 0.7; rrect(ctx, x + 1, y + 1, w - 2, h - 2, radiusOf(w, h) - 1, PAL.feltDk); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.7; inner(ctx, x, y, w, h, radiusOf(w, h) - 1, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '구매함', cx, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
   } else if (price && it.price != null) {
     text(ctx, `$${it.price}`, cx, y + h - 15, PAL.goldDk, { align: 'center', bold: true });
@@ -662,7 +662,7 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   if (lay.fams.length) familyChips(ctx, lay.fams, x + P, y + lay.chips + (h - lay.h), lay.IW, CARD_CHIP_ROWS);
   if (shine && !sold && (rar === 'rare' || rar === 'legendary' || it.kind === 'fragment')) sheen(ctx, x, y, w, h, shine.time, shine.phase);
   if (sold) {
-    ctx.globalAlpha = 0.7; rrect(ctx, x + 1, y + 1, w - 2, h - 2, radiusOf(w, h) - 1, PAL.feltDk); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 0.7; inner(ctx, x, y, w, h, radiusOf(w, h) - 1, PAL.feltDk); ctx.globalAlpha = 1;
     text(ctx, '구매함', x + w / 2, y + h / 2 - 6, PAL.dim, { align: 'center', bold: true });
   }
   closeBox();
@@ -675,7 +675,7 @@ export function priceTag(ctx, label, x2, ty) {
   openBox('edge', x, y, w, TAG.h, 1, { name: '값표', r });
   rrect(ctx, x, y + 2, w, TAG.h, r, PAL.drop);
   rrect(ctx, x, y, w, TAG.h, r, PAL.frameDk);
-  rrect(ctx, x + 1, y + 1, w - 2, TAG.h - 2, r - 1, PAL.gold);
+  inner(ctx, x, y, w, TAG.h, r - 1, PAL.gold);
   text(ctx, label, x + TAG.padX, ty, PAL.cardInk, { bold: true });
   closeBox();
 }

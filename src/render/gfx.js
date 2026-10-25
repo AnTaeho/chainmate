@@ -65,6 +65,10 @@ export function rrect(ctx, x, y, w, h, r, col) {
 // 둥근 테만(두께 t): 바깥 둥근 판에서 안쪽 둥근 판을 비운다(evenodd)
 export function rframe(ctx, x, y, w, h, r, col, t = 1) {
   x = R(x); y = R(y); w = span(x, w); h = span(y, h);
+  frameAt(ctx, x, y, w, h, r, col, t);
+}
+// 기기 화소에 맞춘 자리(x, y, w, h)에 둥근 테를 그린다(rframe · innerFrame)
+function frameAt(ctx, x, y, w, h, r, col, t) {
   if (w <= 0 || h <= 0) return;
   // 소수 배율: 테 두께도 기기 화소 정수(round(t × N))로 — 테가 반 화소에 걸려 흐리거나 굵기가 들쭉날쭉하지 않게
   if (frac()) t = Math.max(1, Math.round(t * LOOK.n)) / LOOK.n;
@@ -90,13 +94,30 @@ export function box(ctx, x, y, w, h, fill, edge = PAL.frameDk, { r = radiusOf(w,
   rrect(ctx, x, y, w, h, r, edgeOf(fill, edge));
   inner(ctx, x, y, w, h, Math.max(0, r - 1), fill);
 }
-// 테 1 안쪽 판: 소수 배율이면 바깥 판의 기기 화소 네 변에서 round(N) 화소씩 들인다(테가 어느 상자 · 어느 변에서나 같은 굵기)
+// 테 1 안쪽 판: 소수 배율이면 바깥 판의 기기 화소 네 변에서 round(N) 화소씩 들인다(테가 어느 상자 · 어느 변에서나 같은 굵기).
+// 테 안을 칠하는 것(안 판 · 덮는 막 · 테 안 둘째 테 · 안쪽 자르기)은 모두 이 자리를 쓴다 — x + 1로 들이면 꽉 채움에서 테가 3 · 4 화소로 갈린다
+function innerRect(x, y, w, h) {
+  const X = R(x), Y = R(y), T = Math.max(1, Math.round(LOOK.n)) / LOOK.n;
+  return [X + T, Y + T, span(X, w) - 2 * T, span(Y, h) - 2 * T];
+}
 export function inner(ctx, x, y, w, h, r, col) {
   if (!frac()) { rrect(ctx, x + 1, y + 1, w - 2, h - 2, r, col); return; }
-  const X = R(x), Y = R(y), W = span(X, w), H = span(Y, h), T = Math.max(1, Math.round(LOOK.n)) / LOOK.n;
-  if (W - 2 * T <= 0 || H - 2 * T <= 0) return;
+  const [X, Y, W, H] = innerRect(x, y, w, h);
+  if (W <= 0 || H <= 0) return;
   ctx.fillStyle = col;
-  if (r > 0) { rpath(ctx, X + T, Y + T, W - 2 * T, H - 2 * T, r); ctx.fill(); } else ctx.fillRect(X + T, Y + T, W - 2 * T, H - 2 * T);
+  if (r > 0) { rpath(ctx, X, Y, W, H, r); ctx.fill(); } else ctx.fillRect(X, Y, W, H);
+}
+// 테 안쪽 판의 둥근 길(자르기용 — ctx.clip 앞에)
+export function innerPath(ctx, x, y, w, h, r) {
+  if (!frac()) { const X = R(x + 1), Y = R(y + 1); rpath(ctx, X, Y, span(X, w - 2), span(Y, h - 2), r); return; }
+  const [X, Y, W, H] = innerRect(x, y, w, h);
+  rpath(ctx, X, Y, Math.max(0, W), Math.max(0, H), r);
+}
+// 테 안쪽에 겹치는 둘째 테(두께 t)
+export function innerFrame(ctx, x, y, w, h, r, col, t = 1) {
+  if (!frac()) { rframe(ctx, x + 1, y + 1, w - 2, h - 2, r, col, t); return; }
+  const [X, Y, W, H] = innerRect(x, y, w, h);
+  frameAt(ctx, X, Y, W, H, r, col, t);
 }
 
 // 뜨는 설명(말풍선 · 낱말 상자 · 처음 안내)의 받침: 흐린 그림자 + 바깥 잉크 테 1 + 아래 잉크 그림자 2(둥근 판).

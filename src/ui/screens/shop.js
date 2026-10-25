@@ -4,9 +4,9 @@ import { sway, tiltHit } from '../sway.js';
 import { hint as coachHint } from '../coach.js';
 import { PAL, RARITY } from '../../render/palette.js';
 import { wrap } from '../../render/text.js';
-import { W, text, box, rect, rrect, seg, dot, measure, slot, radiusOf } from '../../render/gfx.js';
+import { W, text, box, rect, rrect, seg, dot, measure, slot, radiusOf, innerPath } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
-import { unshaded, rpath } from '../../render/light.js';
+import { unshaded } from '../../render/light.js';
 import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } from '../../sim/run.js';
 import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
@@ -133,7 +133,7 @@ export function consumableCard(ctx, c, x, y, w, h, hover, { names = true } = {})
   unshaded(() => cardBase(ctx, x, y, w, h, { fill: c.kind === 'chart' ? '#e8dcc0' : PAL.card, hover, edge }));
   const name = scrollName(c);
   // 띠는 카드 안쪽 둥근 모서리를 따라 자른다
-  ctx.save(); rpath(ctx, x + 1, y + 1, w - 2, h - 2, radiusOf(w, h) - 1); ctx.clip();
+  ctx.save(); innerPath(ctx, x, y, w, h, radiusOf(w, h) - 1); ctx.clip();
   kindBand(ctx, c.kind, x + 1, y + 1, h - 2);
   // 혼 두루마리: 띠 오른끝(문양 옆 빈 줄)에 겹쳐 등급 빛깔 막대(격언 칸의 등급 막대와 같은 규칙) — 이름과 한 칸 띄운다
   if (c.kind === 'soul') rrect(ctx, x + BAND, y + 2, 2, h - 4, 1, RARITY[SOUL_BY_ID[c.id].rarity]);

@@ -4,7 +4,7 @@
 //   args.open  펼친 채로 열 묶음(결과 화면의 「N개 열렸어요」 · 도감의 자물쇠 칸)
 //   args.from  돌아갈 곳 'codex' | 'result'  · args.back 돌아갈 화면에 넘길 것(도감의 탭 · 쪽)
 import { PAL } from '../../render/palette.js';
-import { W, text, rrect, rframe, measure } from '../../render/gfx.js';
+import { W, text, rrect, rframe, measure, inner } from '../../render/gfx.js';
 import { panel } from '../parts.js';
 import { hint } from '../coach.js';
 import { pageHead, pageButtons, bottomBar } from './common.js';
@@ -73,7 +73,7 @@ export class UnlocksScreen {
       // 마디: 둥근 점(지나온 것은 금빛, 다음 것은 금빛 테), 지금 자리는 위에 금빛 세모
       const nr = P.node / 2;
       rrect(ctx, nx, P.nodeY, P.node, P.node, nr, open ? PAL.goldDk : t === st.next ? PAL.gold : PAL.slotEdge);
-      rrect(ctx, nx + 1, P.nodeY + 1, P.node - 2, P.node - 2, nr - 1, open ? PAL.gold : PAL.slot);
+      inner(ctx, nx, P.nodeY, P.node, P.node, nr - 1, open ? PAL.gold : PAL.slot);
       if (t === st.tier) { ctx.fillStyle = PAL.goldHi; ctx.beginPath(); ctx.moveTo(nx, P.nodeY - 7); ctx.lineTo(nx + P.node, P.nodeY - 7); ctx.lineTo(nx + nr, P.nodeY - 2); ctx.closePath(); ctx.fill(); }
       if (t === this.sel) rframe(ctx, nx - 2, P.nodeY - 2, P.node + 4, P.node + 4, nr + 2, PAL.white, 1);
       else if (this.sel != null && ui.isHover(`unlocks:${t}`)) rframe(ctx, nx - 2, P.nodeY - 2, P.node + 4, P.node + 4, nr + 2, PAL.dim, 1);
