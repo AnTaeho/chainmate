@@ -10,6 +10,9 @@ import { createFields, keyboardLift } from './ui/textfield.js';
 import { VERSION } from './version.js';
 import { fontOf } from './render/type.js';
 
+// 첫 화면 앞에서 글꼴 · 소리 모듈을 기다리는 가장 긴 시간(ms)
+export const BOOT_WAIT = { fonts: 3000, audio: 4000 };
+const WAITED = Symbol('waited');
 export async function boot(env = {}) {
   const win = env.window || globalThis.window;
   // 저장소를 읽기만 해도 던지는 곳(쿠키 막음 · 샌드박스 iframe): 한 번만 읽고, 못 읽으면 저장 없이 돈다
@@ -139,15 +142,24 @@ export async function boot(env = {}) {
   win.addEventListener('pageshow', () => later(60));
   if (win.visualViewport && win.visualViewport.addEventListener) win.visualViewport.addEventListener('resize', () => later());
 
-  try {
-    await Promise.all([doc.fonts.load(fontOf(false), '가A'), doc.fonts.load(fontOf(true), '가A')]);
-  } catch { /* 글꼴이 없어도 돈다 */ }
+  // 글꼴 · 소리 모듈은 기다리되 끝없이 기다리지 않는다: 망이 멈추면 fonts.load · import가 몇 분씩 안 돌아와 첫 화면이 비었다.
+  // 늦게 온 글꼴은 text.js가 글 캐시를 비우고(loadingdone) 여기서 한 번 다시 그린다. 늦게 온 소리는 그때 붙인다
+  const within = (p, ms) => new Promise((ok) => {
+    const set = win.setTimeout ? win.setTimeout.bind(win) : setTimeout, clear = win.clearTimeout ? win.clearTimeout.bind(win) : clearTimeout;
+    const t = set(() => ok(WAITED), ms);
+    p.then((v) => { clear(t); ok(v); });
+  });
+  const fontsP = (async () => {
+    try { await Promise.all([doc.fonts.load(fontOf(false), '가A'), doc.fonts.load(fontOf(true), '가A')]); } catch { /* 글꼴이 없어도 돈다 */ }
+  })();
+  if ((await within(fontsP, BOOT_WAIT.fonts)) === WAITED) fontsP.then(() => { if (app) app.invalidate(); });
 
-  let audio = null;
-  try {
-    const mod = await import('./audio/audio.js');
-    audio = mod.createAudio(win);
-  } catch { audio = null; }
+  const audioP = import('./audio/audio.js').then((mod) => mod.createAudio(win)).catch(() => null);
+  let audio = await within(audioP, BOOT_WAIT.audio);
+  if (audio === WAITED) {
+    audio = null;
+    audioP.then((a) => { if (a && app) { app.audio = a; a.apply(app.settings); } });
+  }
 
   const reduced = media('(prefers-reduced-motion: reduce)');
   const now = () => (win.performance || globalThis.performance).now();
@@ -235,8 +247,9 @@ export async function boot(env = {}) {
   win.addEventListener('pagehide', () => { tel.flushNow(); cloud.hidden(); });
   // 숨으면 소리를 쉬고(돌던 때만), 다시 보이면 잇고 한 번 그린다
   if (doc.addEventListener) doc.addEventListener('visibilitychange', () => {
-    if (doc.visibilityState === 'hidden') { tel.flushNow(); cloud.hidden(); if (audio && audio.suspend) audio.suspend(); }
-    else { if (audio && audio.resume) audio.resume(); app.invalidate(); }
+    const au = app.audio;
+    if (doc.visibilityState === 'hidden') { tel.flushNow(); cloud.hidden(); if (au && au.suspend) au.suspend(); }
+    else { if (au && au.resume) au.resume(); app.invalidate(); }
   });
   // GPU가 캔버스를 잃었다 되찾으면 빈 캔버스다
   if (canvas.addEventListener) canvas.addEventListener('contextrestored', () => app.invalidate());
