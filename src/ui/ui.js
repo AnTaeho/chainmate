@@ -3,7 +3,7 @@
 import { richText } from './glossary.js';
 import { moveDiagram, DIAG_SIZE, DIAG_W } from './diagram.js';
 import { PAL } from '../render/palette.js';
-import { box, rect, rrect, rframe, text, measure, lift } from '../render/gfx.js';
+import { box, rect, rrect, rframe, text, measure, lift, inner } from '../render/gfx.js';
 import { familyChips, chipRows, chipBlockH, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
 import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, EDGE_PAD, INK_H, flow, inkY, BTN_H, BTN_MIN, BTN_PAD, SP } from './frame.js';
@@ -141,7 +141,7 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
   if (LOG.on) logFrame(Math.round(x), Math.round(y + oy), Math.round(w), Math.round(h));
   if (d > 0) rrect(ctx, x, y + oy + d, w, h, pr, PAL.drop);
   rrect(ctx, x, y + oy, w, h, pr, hov ? (tone === 'gold' ? PAL.goldDk : PAL.gold) : !enabled ? PAL.slotEdge : PAL.frameDk);
-  rrect(ctx, x + 1, y + 1 + oy, w - 2, h - 2, Math.max(0, pr - 1), hov && tone === 'gold' ? PAL.goldHi : fill);
+  inner(ctx, x, y + oy, w, h, Math.max(0, pr - 1), hov && tone === 'gold' ? PAL.goldHi : fill);
   const tw = tw0;
   let tx = x + Math.floor((w - tw) / 2);
   const ty = inkY(y, h) + oy;

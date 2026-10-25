@@ -1,6 +1,16 @@
 // 화면 맞춤(docs/design-notes/layout.md 「화면 맞춤」): 480×270을 기기 화소의 정수 K배로 키우고, 남는 가장자리는 여백 판이 채운다.
 // DOM을 모른다(main.js가 창 크기 · dpr · 안전 영역을 넘긴다). test/fit.test.js가 여러 창 × dpr로 잰다.
 export const GW = 480, GH = 270;
+// 꽉 채움의 배율 칸: 480 · 270의 최대공약수 30 — K = m / 30이면 캔버스가 기기 화소 16m × 9m(정수)
+export const FILL_STEP = 30;
+// 꽉 채움 뒷면 배율 상한: 5(뒷면 2400×1350까지). 4로 두면 폰 dpr 3(K 4.1 ~ 4.4)이 j = 2로 떨어져 뒷면이 정수 배율의 반이 된다
+export const FILL_CAP = 5;
+// 꽉 채움의 뒷면 배율: K ≤ cap이면 K 그대로, 넘으면 K / j(정수 j로 나눠 cap 안에)
+export function fillBack(k, cap = FILL_CAP) {
+  if (!(k > cap)) return { n: k, j: 1 };
+  const j = Math.ceil(k / cap - 1e-9);
+  return { n: k / j, j };
+}
 
 // 뒷면 캔버스 배율 N(빛과 움직임): K를 나누는 2~4 중 가장 큰 것, 없으면 min(K, 4).
 // N이 K를 나누지 못해도(K = 5 · 7) 도트 하나는 기기 화소 K×K로 고르다 — 도트 경계(N의 배수)가 늘 기기 화소 경계(K의 배수)에 떨어진다.
@@ -26,15 +36,17 @@ export function backScale(k) {
 //           이때 canvas · pad는 돌린 틀(폭 = 창 높이, 높이 = 창 폭) 안의 자리다. 틀을 돌리는 것은 main.js(stageTransform)
 //   frame   { width, height } 캔버스 · 여백 판이 놓이는 틀의 CSS 크기(돌리지 않으면 full 그대로, 돌리면 가로 · 세로를 바꾼 것)
 // 돌리는 기준: 손가락 기기 + 세로 + 도트 하나가 1 CSS 화소 미만(K / dpr < 1 — 12px 글이 12px보다 작다). 아이패드 세로 · 좁은 데스크톱 창은 그대로
-export function chooseFit({ vw, vh, dpr = 1, inset = null, coarse = false, full = null }) {
+// fill: 꽉 채움 — K를 정수 대신 1/FILL_STEP 칸의 소수로 고른다(480K × 270K가 기기 화소 정수). 뒷면 캔버스는 기기 화소 그대로(n = K),
+//   K가 cap을 넘으면 K / j(j = 가장 작은 정수, K / j ≤ cap)로 그려 CSS가 정수 j배로 키운다. 그때 pad는 { s, dev }로 뒷면 해상도를 준다
+export function chooseFit({ vw, vh, dpr = 1, inset = null, coarse = false, full = null, fill = false, cap = FILL_CAP }) {
   dpr = dpr > 0 ? dpr : 1;
   const fw = Math.max(vw, full && full.width > 0 ? full.width : 0), fh = Math.max(vh, full && full.height > 0 ? full.height : 0);
-  const flat = place({ fw, fh, vis: { x: 0, y: 0, w: vw, h: vh }, dpr, inset });
+  const flat = place({ fw, fh, vis: { x: 0, y: 0, w: vw, h: vh }, dpr, inset, fill, cap });
   if (!(coarse && vh > vw && flat.css < 1)) return { ...flat, rot: false, frame: { width: fw, height: fh } };
   // 시계 방향 90도: 돌린 틀의 위 = 창의 오른쪽, 오른쪽 = 창 아래, 아래 = 창 왼쪽, 왼쪽 = 창 위. 틀 (u, v) → 창 (fw - v, u)
   // 보이는 창(창 x 0 ~ vw, y 0 ~ vh)은 틀에서 u 0 ~ vh, v fw - vw ~ fw — 창 아래 띠(fh > vh)는 틀의 오른쪽 끝에 남는다
   const ri = inset ? { top: inset.right || 0, right: inset.bottom || 0, bottom: inset.left || 0, left: inset.top || 0 } : null;
-  return { ...place({ fw: fh, fh: fw, vis: { x: 0, y: fw - vw, w: vh, h: vw }, dpr, inset: ri }), rot: true, frame: { width: fh, height: fw } };
+  return { ...place({ fw: fh, fh: fw, vis: { x: 0, y: fw - vw, w: vh, h: vw }, dpr, inset: ri, fill, cap }), rot: true, frame: { width: fh, height: fw } };
 }
 
 // 돌린 틀을 창에 얹는 CSS transform(transform-origin 0 0). 틀 (u, v) → 창 (vw - v, u). vw = 창 폭 전체(full)
@@ -56,7 +68,7 @@ export function toClient(gx, gy, rect, rot = false) {
 }
 
 // 틀 fw × fh(CSS) 안에서 보이는 사각형 vis와 안전 영역 안쪽이 겹치는 곳에 캔버스를 앉힌다. 여백 판은 틀 전체를 덮는다
-function place({ fw, fh, vis, dpr, inset }) {
+function place({ fw, fh, vis, dpr, inset, fill = false, cap = FILL_CAP }) {
   const iL = inset ? inset.left || 0 : 0, iR = inset ? inset.right || 0 : 0, iT = inset ? inset.top || 0 : 0, iB = inset ? inset.bottom || 0 : 0;
   const L = Math.max(vis.x, iL), T = Math.max(vis.y, iT);
   const R = Math.min(vis.x + vis.w, fw - iR), B = Math.min(vis.y + vis.h, fh - iB);
@@ -64,6 +76,10 @@ function place({ fw, fh, vis, dpr, inset }) {
   const aw = Math.max(1, Math.round((R - L) * dpr)), ah = Math.max(1, Math.round((B - T) * dpr));
   let k = Math.floor(Math.min(aw / GW, ah / GH));
   if (k < 1) k = Math.min(aw / GW, ah / GH);
+  else if (fill) {
+    const kf = Math.floor(Math.min(aw / GW, ah / GH) * FILL_STEP + 1e-9) / FILL_STEP;
+    if (kf > k) return placeFill({ fw, fh, dpr, L, T, aw, ah, vwD, vhD, k: kf, cap });
+  }
   const n = backScale(k);
   const wD = GW * k, hD = GH * k;
   const leftD = Math.round(L * dpr) + Math.floor((aw - wD) / 2);
@@ -77,3 +93,27 @@ function place({ fw, fh, vis, dpr, inset }) {
   const css = k / dpr;
   return { k, n, css, canvas, pad };
 }
+
+// 꽉 채움: 뒷면 캔버스(480n × 270n)가 기기 화소와 1:1(또는 정수 j배)로 붙게 자리를 고른다.
+// 캔버스 왼쪽 위는 기기 화소 정수이면서 j의 배수, dpr이 정수면 dpr의 배수(CSS 화소 정수 — WebKit이 1/64 CSS 화소로 자리를 깎아도 안 밀린다).
+// 여백 판도 같은 배율(뒷면 해상도)로 창 전체를 칠한다: pad.s = 여백 판 화소 / 도트, pad.dev = 캔버스 크기 · 도트 (0, 0)이 놓일 화소 자리
+function placeFill({ fw, fh, dpr, L, T, aw, ah, vwD, vhD, k, cap }) {
+  let { j } = fillBack(k, cap);
+  // j배로 키우면 캔버스 기기 화소(16m × 9m)가 j로 나눠 떨어져야 뒷면이 정수다 — m을 j의 배수로 내린다
+  if (j > 1) k = (Math.floor((k * FILL_STEP) / j + 1e-9) * j) / FILL_STEP;
+  const n = k / j;
+  const wD = Math.round(GW * k), hD = Math.round(GH * k);
+  const q = Number.isInteger(dpr) ? lcm(dpr, j) : j;
+  const al = (v) => Math.floor(v / q) * q;
+  const leftD = al(Math.round(L * dpr) + Math.floor((aw - wD) / 2));
+  const topD = al(Math.round(T * dpr) + Math.floor((ah - hD) / 2));
+  const canvas = { left: leftD / dpr, top: topD / dpr, width: wD / dpr, height: hD / dpr };
+  const ox = Math.max(0, Math.ceil(leftD / k)), oy = Math.max(0, Math.ceil(topD / k));
+  const cols = ox + GW + Math.max(0, Math.ceil((vwD - leftD - wD) / k));
+  const rows = oy + GH + Math.max(0, Math.ceil((vhD - topD - hD) / k));
+  // 여백 판 캔버스: 틀 전체를 뒷면 해상도로(기기 화소 / j). 도트 (ox, oy) = 게임 (0, 0)이 캔버스 화소 (leftD / j, topD / j)
+  const dev = { w: Math.ceil(vwD / j), h: Math.ceil(vhD / j), tx: leftD / j - ox * n, ty: topD / j - oy * n };
+  const pad = { cols, rows, ox, oy, s: n, dev, left: 0, top: 0, width: (dev.w * j) / dpr, height: (dev.h * j) / dpr };
+  return { k, n, css: k / dpr, canvas, pad, fill: true };
+}
+function lcm(a, b) { const g = (x, y) => (y ? g(y, x % y) : x); return (a * b) / g(a, b); }

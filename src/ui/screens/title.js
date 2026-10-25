@@ -9,6 +9,7 @@ import { W, H, text, rect, rrect, rframe, box, measure, selectRing, R_SM } from 
 import { pillR } from '../ui.js';
 import { makeCanvas, context } from '../../render/surface.js';
 import { LOOK } from '../../render/look.js';
+import { put } from '../../render/vec.js';
 import { textImage, textWidth, wrap, textGen, inkBox } from '../../render/text.js';
 import { drawIcon } from '../../render/icons.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -184,7 +185,7 @@ export class TitleScreen {
     const lx = Math.min(Math.round(W / 2 - logo.w / 2), MOON.x - MOON.r - SP.m - logo.w), t = this.app.time;
     for (const { c, x, i, w, h, dy } of logo.letters) {
       const bob = calm ? 0 : Math.round(Math.sin(t * 2.2 + i * 0.8) * 2);
-      ctx.drawImage(c, lx + x, LOGO_Y + bob + dy, w, h);
+      put(ctx, c, logo.n, lx + x, LOGO_Y + bob + dy, w, h);
     }
   }
   drawMenu(ctx, ui) {

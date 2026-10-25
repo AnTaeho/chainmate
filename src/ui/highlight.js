@@ -3,6 +3,7 @@
 import { PAL, BASE_LOOK } from '../render/palette.js';
 import { text, rect, rrect, rframe, sprite, measure, short, fitNum } from '../render/gfx.js';
 import { makeCanvas, context } from '../render/surface.js';
+import { LOOK } from '../render/look.js';
 import { tierOf } from '../render/sprites.js';
 import { LOG, openBox, closeBox } from '../render/layoutlog.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../data/josekis.js';
@@ -127,8 +128,11 @@ export function drawHighlight(ctx, run, lay = highlightLayout(run)) {
 // 내보낼 그림: 화면과 따로 둔 1200 × 675 캔버스. 글 넘침 기록기는 이 그림을 적지 않는다
 export function highlightCanvas(run) {
   const c = makeCanvas(CARD.w * CARD.scale, CARD.h * CARD.scale), ctx = context(c), on = LOG.on;
+  // 꽉 채움(화면 배율이 소수)이어도 내보낼 그림은 제 배율(정수)의 칸에 맞춘다
+  const n0 = LOOK.n;
   LOG.on = false;
-  try { ctx.scale(CARD.scale, CARD.scale); drawHighlight(ctx, run); } finally { LOG.on = on; }
+  if (!Number.isInteger(n0)) LOOK.n = CARD.scale;
+  try { ctx.scale(CARD.scale, CARD.scale); drawHighlight(ctx, run); } finally { LOG.on = on; LOOK.n = n0; }
   return c;
 }
 // PNG 덩이(Promise<Blob | null>). 캔버스가 PNG를 못 만들면 null

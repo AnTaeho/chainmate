@@ -19,6 +19,9 @@ const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] :
 const [VW, VH] = opt('--scale', '1440x810').split('x').map(Number);
 const ONLY = opt('--only', null);
 const PORT = Number(opt('--port', 8793));
+// --fit fill: 꽉 채움 배율(주소 ?fit=fill — src/main.js)로 돈다
+const FIT = opt('--fit', null);
+let fitShown = false;
 
 async function loadPlaywright() {
   if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
@@ -108,9 +111,10 @@ async function openPage({ reducedMotion = 'no-preference', lang = 'ko', fresh = 
     localStorage.clear();
     localStorage.setItem('chainmate.settings.v1', JSON.stringify({ volume: 0, music: 0, lang, telemetry: false }));
   }, { lang, rank });
-  await page.goto(`http://127.0.0.1:${PORT}/index.html`);
+  await page.goto(`http://127.0.0.1:${PORT}/index.html${FIT ? `?fit=${FIT}` : ''}`);
   if (rank) await page.evaluate(async (today) => { const m = await import('/src/main.js'); m.boot({ rankBase: '', today: () => today }); }, TODAY);
   await page.waitForFunction(() => window.__app && window.__raf);
+  if (FIT && !fitShown) { fitShown = true; console.log('# 맞춤', FIT, await page.evaluate(() => `K ${window.__fit.k} · 뒷면 ${window.__app.canvas.width}×${window.__app.canvas.height}`)); }
   await page.evaluate((fresh) => {
     const a = window.__app;
     a.alwaysDraw = true; // 늘 그리되 판단은 셈한다

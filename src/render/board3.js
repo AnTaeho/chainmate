@@ -2,7 +2,8 @@
 // 손잡이는 VIEW.name 하나(diamond · shallow · flat, 지금은 네모 칸 flat) — 바꾸면 판 · 누르기 · 연출이 같이 따라간다. DOM 없이 돈다(연기 시험의 가짜 캔버스).
 import { PAL } from './palette.js';
 import { makeCanvas, context } from './surface.js';
-import { LOOK, snap } from './look.js';
+import { LOOK, snap, frac } from './look.js';
+import { scaleOf, put } from './vec.js';
 import { glyph } from './texture.js';
 import { textGen } from './text.js';
 
@@ -122,10 +123,17 @@ export function sqPath(ctx, sq, inset = 0) {
   const g = geo(), f = sq & 7, r = sq >> 3;
   const k = Math.max(0, 0.5 - inset / (2 * g.hw));
   const p = [g.at(f + 0.5 - k, r + 0.5 - k), g.at(f + 0.5 + k, r + 0.5 - k), g.at(f + 0.5 + k, r + 0.5 + k), g.at(f + 0.5 - k, r + 0.5 + k)];
+  if (frac()) devSnap(ctx, p);
   ctx.beginPath();
   ctx.moveTo(p[0].x, p[0].y);
   for (let i = 1; i < 4; i++) ctx.lineTo(p[i].x, p[i].y);
   ctx.closePath();
+}
+// 꽉 채움(소수 배율): 네모 칸 꼭짓점을 그리는 곳의 화소에 맞춘다 — 칸 변이 반 화소에 걸리면 이웃 칸 사이에 옅은 이음선이 비친다
+function devSnap(ctx, p) {
+  const m = ctx && ctx.getTransform ? ctx.getTransform() : null;
+  if (!m || m.b || m.c || !m.a || !m.d) return;
+  for (const q of p) { q.x = (Math.round(m.a * q.x + m.e) - m.e) / m.a; q.y = (Math.round(m.d * q.y + m.f) - m.f) / m.d; }
 }
 export function fillSq(ctx, sq, col, inset = 0) { sqPath(ctx, sq, inset); ctx.fillStyle = col; ctx.fill(); }
 // 테(선 굵기 w, 논리 px): 선이 칸 안쪽에 서게 반 굵기만큼 더 들인다
@@ -165,8 +173,9 @@ export function boardImage(n = LOOK.n) {
   let c = boardCache.get(key);
   if (c) return c;
   const b = g.bounds, pad = 22;
-  const x0 = b.x - pad, y0 = b.y - pad, w = b.w + pad * 2, h = b.h + pad * 2 + DEPTH + 8;
-  const cv = makeCanvas(w * n, h * n), x = context(cv);
+  // 소수 배율이면 그림 왼쪽 위를 그 배율의 화소 자리에(붙일 때 화소가 어긋나지 않게)
+  const x0 = frac() ? Math.floor((b.x - pad) * n) / n : b.x - pad, y0 = frac() ? Math.floor((b.y - pad) * n) / n : b.y - pad, w = b.w + pad * 2, h = b.h + pad * 2 + DEPTH + 8;
+  const cv = makeCanvas(Math.ceil(w * n), Math.ceil(h * n)), x = context(cv);
   x.imageSmoothingEnabled = true;
   x.setTransform(n, 0, 0, n, -x0 * n, -y0 * n);
   const rim = [g.at(-RIM, -RIM), g.at(8 + RIM, -RIM), g.at(8 + RIM, 8 + RIM), g.at(-RIM, 8 + RIM)];
@@ -209,7 +218,7 @@ export function rankOut(g = geo(), r = 7) {
 }
 export function drawBoardImage(ctx, n = LOOK.n) {
   const b = boardImage(n);
-  ctx.drawImage(b.cv, b.x, b.y, b.w, b.h);
+  put(ctx, b.cv, n, b.x, b.y, b.w, b.h);
 }
 
 // ── 판 위 사물(벽 · 보석): 투영한 칸에서 세운 벡터 그림. 모든 칸이 같은 모양이라 (사물, 크기, 배율, 손잡이)마다 한 번 굽고 칸 가운데에 붙인다
@@ -234,7 +243,7 @@ export function thingImage(t, n = LOOK.n, f = 1) {
     : { x0: -9 * f, x1: 9 * f, y0: -15 * f, y1: 4 * f };
   const pad = 2, x0 = Math.floor(box.x0) - pad, y0 = Math.floor(box.y0) - pad;
   const w = Math.ceil(box.x1) + pad - x0, h = Math.ceil(box.y1) + pad - y0;
-  const cv = makeCanvas(w * n, h * n), x = context(cv);
+  const cv = makeCanvas(Math.ceil(w * n), Math.ceil(h * n)), x = context(cv);
   x.imageSmoothingEnabled = true;
   x.setTransform(n, 0, 0, n, -x0 * n, -y0 * n);
   const lw = Math.max(1 / n, 0.9 * f);
@@ -281,8 +290,8 @@ export function thingImage(t, n = LOOK.n, f = 1) {
   thingCache.set(key, c);
   return c;
 }
-// 그리는 곳의 배율(정수): vec.js scaleOf와 같이 12배까지(각성 막간 카드 3배 × N 3 = 9)
-const nOf = (ctx) => { const m = ctx && ctx.getTransform ? ctx.getTransform() : null; const a = m && typeof m.a === 'number' ? Math.hypot(m.a, m.b) : LOOK.n; return Math.max(1, Math.min(12, Math.round(a))); };
+// 그리는 곳의 배율: vec.js scaleOf와 같다(정수, 12배까지 — 각성 막간 카드 3배 × N 3 = 9. 꽉 채움이면 소수)
+const nOf = (ctx) => scaleOf(ctx);
 // 판 위: 칸 가운데 (cx, cy)에
 export function drawThing(ctx, t, cx, cy, alpha = 1) { drawThing2(ctx, thingImage(t, nOf(ctx)), cx, cy, alpha); }
 // 판 밖: 기물 크기(120 상자 논리 폭 w120)에 맞춘 사물을 가운데 cx, 아래 by에

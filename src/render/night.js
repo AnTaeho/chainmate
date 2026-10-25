@@ -4,8 +4,8 @@
 // 게임 캔버스는 (0, 0, 480, 270) 둘레를, 여백 판(backdrop.js)은 창 전체를 같은 함수로 칠한다 — 겹치는 곳은 같은 도트다.
 import { makeCanvas, context } from './surface.js';
 import { fitPiece, fitAt, pieceMask, drawMask, pieceCanvas, scaleOf } from './pieces3.js';
-import { INK, bake } from './vec.js';
-import { LOOK, snap } from './look.js';
+import { INK, bake, put } from './vec.js';
+import { LOOK, snap, frac } from './look.js';
 import { rect, dot, text, fine, measure } from './gfx.js';
 import { PAL } from './palette.js';
 import { openBox, closeBox } from './layoutlog.js';
@@ -29,7 +29,9 @@ export function paintNight(g, x0, y0, w, h) {
   const top = SKY[0][1], bot = SKY[SKY.length - 1][1];
   // 위(y < 0)는 맨 위 빛깔, 아래(y ≥ 270)는 맨 아래 빛깔 그대로
   if (y0 < 0) { g.fillStyle = `rgb(${top.join(',')})`; g.fillRect(0, 0, w, Math.min(0, y0 + h) - y0); }
-  for (let y = Math.max(0, y0); y < Math.min(H, y0 + h); y++) { g.fillStyle = skyColor(y); g.fillRect(0, y - y0, w, 1); }
+  // 꽉 채움(소수 배율로 칠하는 여백 판)이면 줄마다 한 줄 겹쳐 칠한다 — 반 화소에 걸린 줄 경계가 어두운 이음선으로 비치지 않게(다음 줄 · 아래 칠이 덮는다)
+  const hh = frac() ? 2 : 1;
+  for (let y = Math.max(0, y0); y < Math.min(H, y0 + h); y++) { g.fillStyle = skyColor(y); g.fillRect(0, y - y0, w, hh); }
   if (y0 + h > H) { g.fillStyle = `rgb(${bot.join(',')})`; g.fillRect(0, Math.max(H, y0) - y0, w, y0 + h - Math.max(H, y0)); }
 }
 // 달(안 3 벡터): 달무리 + 크림 두 톤(왼쪽 빛 · 오른쪽 그늘) + 잉크 테 + 그늘진 분화구. 배율마다 한 번 굽는다
@@ -115,7 +117,7 @@ export function drawNightLive(g, x0, y0, w, h, t, tw) {
   for (const [x, y, ph] of starsIn(x0, y0, w, h)) { g.globalAlpha = starAlpha(tw, ph); g.drawImage(Math.floor(ph * 10) % 6 === 0 ? big : small, x - x0 - 2, y - y0 - 2, 5, 5); }
   g.globalAlpha = 1;
   const M = MOON, mr = M.halo;
-  if (M.x + mr > x0 && M.x - mr < x0 + w && M.y + mr > y0 && M.y - mr < y0 + h) g.drawImage(moonImg(n), M.x - mr - x0, M.y - mr - y0, mr * 2, mr * 2);
+  if (M.x + mr > x0 && M.x - mr < x0 + w && M.y + mr > y0 && M.y - mr < y0 + h) put(g, moonImg(n), n, M.x - mr - x0, M.y - mr - y0, mr * 2, mr * 2);
   for (const s of silhouettesIn(t, x0, y0, w, h)) drawSil(g, s.kind, SIL_LAYERS[s.layer][3], s.x - x0, s.y - y0, s.sc);
 }
 

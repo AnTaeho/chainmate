@@ -15,5 +15,11 @@ export const beat = (t, rate, phase = 0) => {
   return k;
 };
 
-// 1/N 칸에 맞춘다(N = 1이면 정수 칸)
-export const snap = (v) => Math.round(v * LOOK.n) / LOOK.n;
+// 1/N 칸에 맞춘다(N = 1이면 정수 칸). 꽉 채움(N이 소수)이면 1/N 칸이 곧 기기 화소다
+// (소수 배율의 반 칸 자리는 부동소수 잡음으로 위아래가 갈리지 않게 늘 위로 — 테 1이 3 · 4 화소로 갈리지 않는다)
+export const snap = (v) => (Number.isInteger(LOOK.n) ? Math.round(v * LOOK.n) : Math.round(v * LOOK.n + 1e-6)) / LOOK.n;
+// 꽉 채움(layout.md 「화면 맞춤」): 뒷면 배율이 소수면 멈춘 자리도 정수 칸에 둔 뒤 기기 화소에 맞춘다. 정수 배율이면 Math.round 그대로
+export const frac = () => !Number.isInteger(LOOK.n);
+export const grid = (v) => (Number.isInteger(LOOK.n) ? Math.round(v) : snap(Math.round(v)));
+// 칸 하나(x0, 너비 w): 정수 배율이면 Math.round(w), 소수면 오른쪽 끝도 기기 화소에 맞춘 너비(1 논리 px 테는 어디서나 같은 기기 화소 수)
+export const span = (x0, w) => (Number.isInteger(LOOK.n) ? Math.round(w) : snap(x0 + Math.round(w)) - x0);
