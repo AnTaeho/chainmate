@@ -46,7 +46,9 @@
 | `lesson_start` ★ · `lesson_done` ★ | `id`(`src/ui/lessons.js` 수업) |
 | `run_start` | `dan` · `opening` · `daily` |
 | `run_end` | `row`(`runRow` 한 줄 통째 — 열쇠는 `human-runs.md`) + `won` · `end`(win · lose · quit · endless) · `ante` · `blind` · `dan` · `opening` · `daily` · `josekis[]` · `maxims[]` · `legends[]` · `families_max` · `skips` · `holds` · `ignite_at` · `brilliants` · `battles` · `duration_s` |
-| `battle_end` | `ante` · `blind` · `kind` · `won` · `reason`(mate · target · gomoku · moves · stuck) · `ratio` · `moves_used` · `first_move_win` · `sacrifices` |
+| `battle_end` | `ante` · `blind` · `kind` · `won` · `reason`(mate · target · gomoku · moves · stuck) · `ratio` · `moves_used` · `first_move_win` · `sacrifices` · `challenge`(대국 도전 id, 붙지 않은 대국은 null) · `challenge_done` · `nemesis`(이 대국에 다시 나온 숙적의 단, 없으면 0) |
+| `challenge_done` | `ante` · `blind` · `id`(`src/data/challenges.js`) · `move`(몇째 수에, 0부터) — 도전을 이룬 콤보가 끝날 때 |
+| `nemesis_new` · `nemesis_up` · `nemesis_taken` | `ante` · `blind` · `piece` / + `lv`(오른 단) / + `lv`(잡은 단) · `won`(그 대국을 이겼나 — 현상금은 이긴 대국에만) — 숙적이 생길 때 · 또 끊어 단이 오를 때 · 잡혀 사라질 때(`docs/reports/goty.md`) |
 | `draft_pick` | `ante` · `offered[]` · `picked` |
 | `shop_buy` | `ante` · `kind` · `id` · `price` · `held` |
 | `shop_leave` | `ante` · `money_left` · `bought` · `rerolls` · `shown[{kind,id}]` |
