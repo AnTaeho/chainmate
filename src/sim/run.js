@@ -53,7 +53,8 @@ import { openPool } from './unlock.js';
 // 외통 조건(한 콤보에서 지키던 적 둘이면 킹을 못 잡는다) 뒤 smart 35.0 → 25.7%, 잃은 승리가 6~8관에 몰려
 //   6~8관만 ×0.85 → 300판 34.7%(×0.88 32.7%) · random 1.0 · none 0.0 · 단 8 10.7%. 앞 값 [150, 690, 4928, 14291, 61600, 271040, 527296, 1108800] — docs/reports/mate.md
 // CHM-78: 시너지 문턱 2 · 4 · 5와 4 · 5 효과를 키운 뒤 smart가 올라 5~8관 ×1.15. 앞 값 [150, 690, 4928, 14291, 61600, 230384, 448202, 942480] — docs/reports/families.md
-export const B = [150, 690, 4928, 14291, 70840, 264942, 515432, 1083852];
+// 대국 도전(쫓는 봇, 숙적 끔) 뒤 smart 36.3 → 38.0%(300판)이라 2~8관 ×1.05. 앞 값 [150, 690, 4928, 14291, 70840, 264942, 515432, 1083852] — docs/reports/goty.md
+export const B = [150, 725, 5174, 15006, 74382, 278189, 541204, 1138045];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;

@@ -15,6 +15,8 @@ import { playRun } from '../tools/shopbot.mjs';
 import { CHASE, chaseRank, stepBattle } from '../tools/bot.mjs';
 import { finishBattle } from './helpers/run.js';
 
+// 숙적은 기본으로 꺼 두었다(tuning.js NEMESIS.on) — 규칙 길은 켜고 시험한다(시험 파일마다 따로 도는 프로세스)
+NEMESIS.on = true;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const sum = (o) => ({ captures: 0, forced: 0, promotions: 0, mates: 0, caps: '', forms: 1, end: 'P', ...o });
 // 판을 갈아 끼운 대국(손 R 하나) — 첫 수 R a1 → a5를 잡는다

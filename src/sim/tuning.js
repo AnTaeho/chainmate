@@ -26,4 +26,5 @@ export const CHALLENGE = { on: true, kinds: ['practice', 'official'], reward: 2 
 // 숙적(보고서 docs/reports/goty.md). 내 콤보를 끊은 적이 판의 숙적이 되어 뒤 대국에 표시를 달고 다시 나온다.
 //   on: 끄면 숙적이 생기지 않는다(옛 판과 같은 판) · max: 또 끊으면 오르는 단의 끝 · traits: 단마다 붙는 특성(방패 · 파수꾼, src/data/traits.js) ·
 //   bounty: 단마다 잡으면 받는 상금(대국을 이기면 함께 받는다)
-export const NEMESIS = { on: true, max: 3, traits: ['shield', 'fort', 'fort'], bounty: [1, 2, 3] };
+// 꺼 둔다: 판 승률을 현상금만큼(+2.7%p, 300판) 올릴 뿐 숙적이 선 대국과 안 선 대국의 승률이 같았다(87.1 · 86.0%) — docs/reports/goty.md
+export const NEMESIS = { on: false, max: 3, traits: ['shield', 'fort', 'fort'], bounty: [1, 2, 3] };
