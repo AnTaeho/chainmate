@@ -20,6 +20,7 @@ const SIZES = {
   hd: { w: 1280, h: 720, dpr: 1, engine: 'chromium' },
   fhd: { w: 1920, h: 950, dpr: 1, engine: 'chromium' },
   fhd2: { w: 1920, h: 950, dpr: 2, engine: 'chromium' },
+  win125: { w: 1366, h: 700, dpr: 1.25, engine: 'chromium' },
 };
 const WANT = opt('--sizes', 'iphone,hd,fhd').split(',');
 const SCENES = new Set(opt('--scenes', 'title,select,battle,shop,achv').split(','));
