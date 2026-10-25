@@ -86,3 +86,5 @@ node tools/drawcheck.mjs                  # 그리기를 바꿨으면, 따로
 - `npm test`: `# tests 915 · # pass 915 · # fail 0`
 - smoke en: `잘린 글 9(… 4 · 줄임 5 · 글자 끊김 0) · 허용 4 · 보류 0 · 목록 밖 0 — en` · `자리 규칙: 가리킨 것 1328(판 틀 1258 · 판 밖 70, 화면 10) · 어�…` · 글 넘침 0 · 계정 흐름 모두 확인 · `p99 16.75ms` → SMOKE FAIL(p99만)
 - smoke ko: `잘린 글 1(… 1 · 줄임 0 · 글자 끊김 0) · 허용 1 · 보류 0 · 목록 밖 0 — ko` · 글 넘침 0 · 계정 흐름 모두 확인 · `p99 16.96ms` → SMOKE FAIL(p99만)
+- `node tools/drawcheck.mjs`: `합계: 프레임 23031 · 건너뜀 4738 (21%) · 어김 0`
+- `node tools/drawcheck.mjs --scale 1280x720 --fit fill`: `합계: 프레임 23032 · 건너뜀 4737 (21%) · 어김 0`
