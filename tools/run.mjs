@@ -28,7 +28,7 @@ import { MASTER_BY_ID } from '../src/data/masters.js';
 import { FACTIONS, FACTION_BY_ID } from '../src/data/factions.js';
 import { LEGENDS, LEGEND_BY_ID } from '../src/data/legends.js';
 import { EDITIONS } from '../src/data/editions.js';
-import { familyCounts, FAMILIES } from '../src/data/families.js';
+import { familyCounts, FAMILIES, THRESHOLDS as FAM_T } from '../src/data/families.js';
 import { PIECES, FAIRIES } from '../src/data/pieces.js';
 
 function parseArgs(argv) {
@@ -628,9 +628,9 @@ function beatsReport(R, { pc, f, f2, table, pctile }) {
   console.log('드문 층: 보임 = 진열 · 꾸러미에 판본 격언 · 첫 조각 카드, 판에 금빛 적 / 얻음 = 사건. 간격 = 나온 대국에서 다음 나온 대국까지(대국 수)');
   table(['층', '안 나온 판', '판당 나온 대국', '처음 p10', 'p50', 'p90', '간격 수', '간격 p10', 'p50', 'p90'], rareRows);
 
-  // 시너지 문턱 2 · 4 · 6: 처음 넘은 관 분포, 넘은 판 · 못 넘은 판의 판 승률
+  // 시너지 문턱(THRESHOLDS): 처음 넘은 관 분포, 넘은 판 · 못 넘은 판의 판 승률
   const famRows = [];
-  for (const t of [2, 4, 6]) {
+  for (const t of FAM_T) {
     const yes = X.filter((x) => x.b.fam[t]), nope = X.filter((x) => !x.b.fam[t]);
     const at = {}; for (const x of yes) at[x.b.fam[t].ante] = (at[x.b.fam[t].ante] || 0) + 1;
     famRows.push([String(t), `${yes.length} ${pc(yes.length / X.length)}`, pc(win(yes)), pc(win(nope)), Object.entries(at).sort((a, b) => a[0] - b[0]).map(([a, v]) => `${a}관 ${v}`).join(' · ') || '-']);
