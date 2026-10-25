@@ -139,13 +139,27 @@ function rule29Check() {
   }
   rule29.head.set(sc, at);
 }
+// 판 밖 머리줄: 큰 제목과 같은 층의 상자 밖 글(오른쪽 보조 글)이 제목 오른쪽 8 안에 들어오면 넘친 것 — checkLayout은 상자 밖 글끼리를 재지 않는다
+function headCross() {
+  const out = [];
+  for (const h of LL.LOG.heads) {
+    const ht = LL.LOG.texts.find((q) => q.scale >= 2 && q.layer === h.layer && q.x === h.x && q.y === h.y);
+    if (!ht) continue;
+    const r = { x: ht.x, y: ht.y, w: ht.w + 8, h: ht.h + ht.d };
+    for (const t of LL.LOG.texts) {
+      if (t === ht || t.layer !== h.layer || t.box || !t.s.trim()) continue;
+      if (t.x < r.x + r.w && t.x + t.w > r.x && t.y < r.y + r.h && t.y + t.h + t.d > r.y) out.push({ what: 'text', msg: `「${t.s}」 (${t.x},${t.y} ${t.w}) 머리 「${h.s}」 오른쪽 8 안` });
+    }
+  }
+  return out;
+}
 function flowCheck() {
   if (!app) return;
   clipCheck();
   rule29Check();
   flow.frames++;
   const held = heldOf();
-  for (const q of LL.checkLayout()) {
+  for (const q of [...LL.checkLayout(), ...headCross()]) {
     const key = `${screen()}${held ? `(${held})` : ''} ${q.msg}`;
     if (flow.seen.has(key)) continue;
     flow.seen.set(key, held ? 'held' : q.what);
@@ -1246,6 +1260,21 @@ click('lessons:back');
 if (app.records.runs < RUNS) throw new Error('records did not count runs');
 app.records.unlocked.openings = ['standard', 'london', 'sicilian', 'queens_gambit', 'rook_endgame'];
 app.records.unlocked.dan = 8;
+// 새 판 최악 꼴: 오프닝 다섯 · 도장 다섯 · 레이팅 2400(더하는 규칙이 가장 길다) — 영어에서 규칙 둘째 줄이 「뒤로」와 겹쳤다.
+// 오프닝 넷(머리줄 오른쪽에 다음 오프닝 글 — 영어에서 큰 제목과 겹쳤다)도 같이. 넘침은 pump마다 flowCheck가, 도장 말풍선은 notesCheck가 잰다
+const setupSeen = { frames: 0 };
+{
+  const rec = app.records, keep = JSON.stringify({ o: rec.openingDan || {}, u: rec.unlocked.openings, d: rec.lastDan });
+  rec.openingDan = Object.fromEntries(rec.unlocked.openings.map((id) => [id, 8]));
+  for (const four of [false, true]) {
+    if (four) rec.unlocked.openings = rec.unlocked.openings.filter((id) => id !== 'rook_endgame');
+    click('title:new');
+    for (const d of [8, 7, 3, 0]) { click(`setup:dan:${d}`); pump(2); setupSeen.frames++; notesCheck(); }
+    click('setup:back');
+  }
+  const k = JSON.parse(keep);
+  rec.openingDan = k.o; rec.unlocked.openings = k.u; rec.lastDan = k.d;
+}
 results.push(await playOne(SEED + 50, { opening: 'sicilian', dan: 3 }));
 // 오늘의 대국은 전부 열린 판이라, 해금이 낮은 기록에서는 처음 보는 격언 · 혼 · 명경기 조각으로 도감 알림이 뜨고 순위 카드가 그 줄에 자리를 내준다.
 // 아래 순위 흐름은 카드의 내 줄을 재므로 도감을 채워 두고 둔다
@@ -1474,6 +1503,13 @@ click('next');
     if (app.run.phase !== 'shop' || !app.run.maxims.some((m) => m.id === 'memory')) goldSeen.bad.push('자리가 생긴 뒤 격언을 곧바로 받지 못했다');
   }
   scene((r) => { r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; app.go('draft'); });
+  // 레퍼토리 도장(카드 윗변 스티커 · 들림과 같이 움직인다): 셋 모두 2400
+  {
+    const keep = JSON.stringify(app.records.josekiDan || {});
+    app.records.josekiDan = { martyr_vow: 8, knight_oath: 8, highway: 8 };
+    scene((r) => { r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; app.go('draft'); });
+    app.records.josekiDan = JSON.parse(keep);
+  }
   scene((r) => { r.factions[0] = 'hunters'; app.cmd({ type: 'skip' }); app.cmd({ type: 'skip' }); app.goPhase(); });
   scene((r) => { r.ante = 5; r.blind = 0; app.cmd({ type: 'play' }); app.go('battle', { events: [] }); pump(200); });
   // 사람이 보낸 대국 화면(2026-09-28 「글자 삐져나가는 거」): 격언 다섯(귀함 겹테 · 은박 점선 · 흔함) · 판본 · 시너지 넷 · 손 넷 — 격언 칸 · 칩 · 단추의 글이 테에 닿지 않는지.
@@ -2412,6 +2448,8 @@ if (clipBad.length) { console.log(`허용 목록 밖에서 글이 잘렸다(「�
 console.log(`글 검사: 넘침 ${flowN} · 잘린 글 …${clipCut} · 글자 끊김 ${clipChar} · 줄임 ${clipThin}(허용 ${clipOk.length} · 보류 ${clipHeldL.length} · 목록 밖 ${clipBad.length}) · 잰 프레임 ${flow.frames}`);
 console.log(`글 넘침 ${flowN}(글이 상자 밖 ${flow.text} · 테에 붙음 ${flow.pad} · 상자 겹침 ${flow.overlap} · 화면 밖 ${flow.screen}) · 잰 프레임 ${flow.frames} · 보류 ${flow.held + clipHeldL.length}(${[...Object.entries(flow.heldBy).map(([k, n]) => `${HELD[k]} ${n}`), ...(clipHeldL.length ? [`잘린 글 ${clipHeldL.length} — 실패시키지 않음`] : [])].join(' · ') || '없음'})`);
 if (flow.held) fail = true;
+console.log(`새 판 최악 꼴(오프닝 다섯 · 넷 × 도장 × 레이팅 2400 · 2200 · 1400 · 800): ${setupSeen.frames}장면`);
+if (setupSeen.frames < 8) { console.log('새 판 최악 꼴을 다 돌지 못했다'); fail = true; }
 {
   const btnBad = [...rule29.btn].sort();
   const headBad = [...rule29.head].filter(([, v]) => v.bad > 0);
