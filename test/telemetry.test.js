@@ -270,7 +270,7 @@ test('명령 길: 레퍼토리 · 대국 끝 · 상점 사기 · 떠나기 · �
   const b = of('battle_end');
   assert.ok(b.length >= 3);
   for (const x of b) {
-    assert.deepEqual(Object.keys(x).sort(), ['ante', 'blind', 'first_move_win', 'kind', 'moves_used', 'ratio', 'reason', 'sacrifices', 'won'].sort());
+    assert.deepEqual(Object.keys(x).sort(), ['ante', 'blind', 'challenge', 'challenge_done', 'first_move_win', 'kind', 'moves_used', 'nemesis', 'ratio', 'reason', 'sacrifices', 'won'].sort());
     assert.ok(['mate', 'target', 'gomoku', 'moves', 'stuck'].includes(x.reason), x.reason);
     assert.equal(x.ratio, Math.round(x.ratio * 100) / 100);
     assert.equal(x.first_move_win, x.won && x.moves_used === 1);
