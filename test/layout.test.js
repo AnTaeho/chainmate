@@ -194,6 +194,25 @@ test('관 선택: 세력 띠 · 카드 셋(1~7관 명인 · 8관 대가)이 본 
   }
 });
 
+test('대국 도전 띠: 모든 도전 · 진행 · 도장이 판 폭 − 8 안(온 글이 안 들어가면 짧은 이름표) — 한국어 · 영어', async () => {
+  const { CHALLENGES } = await import('../src/data/challenges.js');
+  const { measure } = await import('../src/render/gfx.js');
+  const proto = M.battle.BattleScreen.prototype, room = M.battle.S * 8 - 8;
+  const params = (id) => (id === 'forms' ? [4, 5].map((n) => ({ n })) : id === 'take' ? [4, 5, 6, 7, 8].map((n) => ({ n })) : id === 'end' ? ['N', 'B', 'R'].map((form) => ({ form })) : [{ n: 2 }]);
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const c of CHALLENGES) for (const p of params(c.id)) for (const done of [false, true]) {
+      const ch = { id: c.id, ...p, reward: 2, done };
+      const prog = c.count ? { have: 8, need: p.n } : null;
+      const self = { src: { kind: 'run' }, run: {}, rv: null, busy: true, b: { challenge: ch }, view: { chDone: done, chProg: prog }, chStampW: proto.chStampW, chPreview: () => null };
+      const B = proto.chBand.call(self);
+      assert.ok(B.w <= room, `${lang} ${c.id} ${JSON.stringify(p)} ${done ? '도장' : ''} ${B.w} > ${room}`);
+      if (!done) assert.ok(measure(B.body) > 0, `${lang} ${c.id} 조건이 빠졌다`);
+    }
+  }
+  M.lang.setLang('ko');
+});
+
 test('수업 할 일: 모든 걸음 글이 손 이름표 줄 위에 들어간다', () => {
   const lay = M.battle.BattleScreen.prototype.rightLayout.call({});
   for (const lang of LANGS) {

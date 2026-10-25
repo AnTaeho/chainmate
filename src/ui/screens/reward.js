@@ -1,4 +1,4 @@
-// 대국 승리: 보상이 한 줄씩(기본 · 남은 수 · 적립 · 외통 · 넘친 목표 · 대국 중 번 상금) 쌓인다.
+// 대국 승리: 보상이 한 줄씩(기본 · 남은 수 · 적립 · 외통 · 넘친 목표 · 도전 상금 · 대국 중 번 상금) 쌓인다.
 import { PAL } from '../../render/palette.js';
 import { W, text, rect, rrect, num, measure, R_SM } from '../../render/gfx.js';
 import { LINE, GAP_GROUP, SP, BTN_H, flow, inkY } from '../frame.js';
@@ -6,6 +6,7 @@ import { openBox, closeBox } from '../../render/layoutlog.js';
 import { flyCoins, boldText, stepScale, CAP } from '../juice.js';
 import { live } from '../../render/look.js';
 import { interlude, interludeLayout, INTER } from './common.js';
+import { CHALLENGE_TEXT } from '../../data/challenges.js';
 
 // 이름 · 수치가 섞인 한 줄: 조각 [글, 굵게?, 빛깔]을 이어 그린다(이름 보통 · 수치 굵게 — 29절). align: left | center | right
 const segW = (segs) => segs.reduce((n, [s, b]) => n + measure(s, b), 0);
@@ -28,6 +29,7 @@ export class RewardScreen {
     if (r.interest) this.lines.push(['이자', r.interest]);
     if (r.mate) this.lines.push(['체크메이트', r.mate]);
     if (r.overflow) this.lines.push(['목표 초과', r.overflow, `×${last.overflow}`]);
+    if (r.challenge) this.lines.push([CHALLENGE_TEXT.purse, r.challenge]);
     if (r.earned) this.lines.push(['대국 중 얻은 상금', r.earned]);
     this.total = r.total;
     this.gold = events.some((e) => e.type === 'goldenPack');

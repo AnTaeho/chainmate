@@ -8,8 +8,9 @@ import { W, H, text, box, rect, rrect, rframe, R_SM, R_LG, radiusOf, frame, line
 import { SW, SH, tierOf, ENG_EDGE } from '../../render/sprites.js';
 import { center as sqCenter, centerAt, projectSq, unproject, sqBox, hitBox, picker, thingTop, THINGS, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
 import { piece3, fitPiece, pieceCanvas, pieceChips, scaleOf, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
-import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws } from '../../sim/battle.js';
-import { chainCaptures, chainRedrops } from '../../sim/chain.js';
+import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws, apply } from '../../sim/battle.js';
+import { chainCaptures, chainRedrops, chainSummary } from '../../sim/chain.js';
+import { challengeText, challengeShort, challengeProgress, challengeSticks, challengeMet, CHALLENGE_TEXT } from '../../data/challenges.js';
 import { mateBlocked } from '../../sim/tuning.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
@@ -36,7 +37,7 @@ import { SIDE_W, NOTE_GAP } from '../placement.js';
 import { pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel, maximCard, maximTip, edgeRing, chartBadge, soulMark, fragmentStrip } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton, shardTo, hasClock, clockPips, clockTip, SIDE } from './common.js';
-import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, CHIP_PAD, flow, textY, inkY, BTN_S, INK_H, SP } from '../frame.js';
+import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, CHIP_H, CHIP_PAD, flow, textY, inkY, BTN_S, INK_H, SP } from '../frame.js';
 import { INK_DESC } from '../../render/layoutlog.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { drawPortrait } from '../../render/portraits.js';
@@ -411,9 +412,15 @@ export class BattleScreen {
         cut: false, eng: c.engraving ? c.engraving.id : null, soul: c.soul ? c.soul.id.replace('soul:', '') : null, awake: !!(c.soul && c.soul.data && c.soul.data.awake), absorbed: c.absorbed ? c.absorbed.slice() : null,
       };
     } else v.chain = null;
+    // 대국 도전: 이뤘나 · 지금 콤보의 진행은 규칙 상태에서 읽는다(연출 중에는 play가 사건 차례대로 옮긴다)
+    const ch = b.challenge, h = c && !c.done ? chainSummary(c) : null;
+    v.chDone = !!(ch && ch.done);
+    v.chProg = ch ? challengeProgress(ch, h) : null;
+    v.chMet = !!(ch && h && !v.chDone && challengeSticks(ch) && challengeMet(ch, h));
     this.targets = null;
     this.drops = null;
     this.pvCache = new Map();
+    this.pvNow = null;
     this.tapSq = null;
     this.kbIdx = null;
     this.sel = this.sel.filter((i) => i < v.hand.length);
@@ -574,6 +581,8 @@ export class BattleScreen {
       else if (e.type === 'score') merged.push({ type: 'scoreGroup', list: [e] });
       else merged.push(e);
     }
+    // 대국 도전: 이 수 뒤의 콤보 요약. 진행 수는 이 수의 마지막 잡기(잡기가 없으면 놓기) 걸음에서 옮긴다
+    const chPost = this.challengePost(events), lastCap = merged.filter((e) => e.type === 'capture').pop() || null;
     for (const e of merged) {
       label = e.type;
       switch (e.type) {
@@ -583,6 +592,7 @@ export class BattleScreen {
             v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], bends: [], forced: null, awaiting: null, cut: false, eng: this.dropEng || null, soul: this.dropSoul || null, awake: this.dropAwake || false };
             v.dropIn = { sq: e.sq, p: 0 };
             this.snd('drop');
+            if (!lastCap) this.chStep(chPost);
           },
           tick: (p) => { v.dropIn.p = p; },
           done: () => { v.dropIn = null; },
@@ -638,6 +648,7 @@ export class BattleScreen {
               c.capPop = `+${e.value}`;
               if (!broke) this.snd('capture', c.path.length - 1);
               this.impact(c.steps.length - 1);
+              if (e === lastCap) this.chStep(chPost);
             },
           });
         } break;
@@ -717,6 +728,8 @@ export class BattleScreen {
           begin: () => { if (v.chain) { v.board[v.chain.sq] = null; v.chain.awaiting = e.squares.slice(); } this.word('한 번 더 놓기', PAL.gold, 1); },
         }); break;
         case 'end': this.endSteps(e); break;
+        // 대국 도전(사슬 끝 뒤 · 승패 앞): 금빛 알림 · 「도전 성공」 도장 · 상금 몫. 도장을 볼 짧은 틈(긴 수 뒤쪽에서는 다른 걸음처럼 줄어든다)
+        case 'challenge': add(0.3, { begin: () => this.challengeDone(e) }); break;
         case 'overflow': add(0.08, {
           begin: () => {
             const big = { 1: 1, 2: 2, 5: 3, 10: 4 }[e.tier] || 1;
@@ -794,6 +807,31 @@ export class BattleScreen {
     add(0, { done: () => this.afterSeq() });
   }
 
+  // 대국 도전: 이 수를 둔 뒤의 콤보 요약(규칙 상태 — 콤보가 이어지면 그 순간까지, 끝났으면 대국 기록의 마지막 줄)
+  challengePost(events) {
+    const b = this.live(), ch = b && b.challenge;
+    if (!this.run || !ch || this.view.chDone) return null;
+    if (b.chain && !b.chain.done) return chainSummary(b.chain);
+    return events.some((e) => e.type === 'end') && b.history.length ? b.history[b.history.length - 1] : null;
+  }
+  // 진행 수를 옮기고, 콤보 중에 조건이 채워지는 순간 한 번 반짝 + 짧은 소리(끝 모습 도전은 끝날 때만 센다)
+  chStep(h) {
+    const v = this.view, ch = this.b.challenge;
+    if (!h || !ch || v.chDone) return;
+    v.chProg = challengeProgress(ch, h);
+    if (!v.chMet && challengeSticks(ch) && challengeMet(ch, h)) { v.chMet = true; this.chFlash = this.app.time; this.snd('chart'); }
+  }
+  // 이룬 순간: 도장 · 반짝 · 소리 · 상금 몫(상금 줄 위). 진 대국은 뒤따르는 money 사건이 동전과 함께 몫을 띄운다.
+  // 금빛 알림은 대국이 이어지거나 진 수에서만 — 이긴 수는 곧바로 보상 상자의 「도전 상금」 줄이 말한다(알림이 상자 제목을 덮었다)
+  challengeDone(e) {
+    const v = this.view, b = this.live(), st = b ? b.status : null;
+    v.chDone = true; v.chMet = false;
+    this.chFlash = this.app.time;
+    this.snd('fragment');
+    if (st !== 'won') this.toast(CHALLENGE_TEXT.toast, PAL.gold, 2.4);
+    if (st !== 'lost') this.pop(`$${e.reward}`, 'money');
+  }
+
   endSteps(e) {
     const app = this.app, v = this.view;
     const add = (d, o) => { this.moveT = (this.moveT || 0) + d; return this.seq.add({ dur: d, label: 'end', ...o }); };
@@ -831,6 +869,8 @@ export class BattleScreen {
         v.gather = null;
         v.chain = null;
         v.cut = null;
+        // 콤보가 끝나면 도전 진행은 처음부터(이룬 도전은 뒤따르는 challenge 걸음이 도장으로 바꾼다)
+        { const ch = this.b.challenge; v.chProg = ch ? challengeProgress(ch, null) : null; v.chMet = false; }
         if (this.glow) this.glow.fading = true;
         if (this.bRef) { v.movesLeft = this.bRef.movesLeft; }
       },
@@ -1394,7 +1434,10 @@ export class BattleScreen {
 
   // ── 그리기
   draw(ctx, ui) {
+    const band = this.drawChallenge(ctx);
     this.drawBoard(ctx, ui);
+    // 도전 띠 구역은 판 칸 구역 뒤에 쌓는다(뒷줄 칸 구역이 기물 머리만큼 띠 아래쪽으로 올라온다 — 나중 구역이 먼저 눌린다)
+    if (band) ui.region('challenge', band.x, band.y, band.w, band.h, { tip: () => this.chTip(band.ch), keys: [{ id: 'challenge' }] });
     this.drawLeft(ctx, ui);
     this.drawRight(ctx, ui);
     this.drawOver(ctx);
@@ -1468,6 +1511,8 @@ export class BattleScreen {
     // 탁월수: 희생으로 새로 뽑은 기물의 「!?」 딱지가 처음 뜬 순간(CHM-43)
     const nb = v.hand.findIndex((p) => (v.drawn || []).includes(p.id));
     if (nb >= 0) hint(app, 'brilliant', `hand:${nb}`);
+    // 대국 도전: 처음 도전이 붙은 대국에서 판 위 띠를 가리킨다
+    if (this.chBand()) hint(app, 'challenge', 'challenge');
     const ghost = (b.incoming || []).find((r) => !v.board[r.sq] && !isHidden(b, r.sq));
     if (ghost) hint(app, 'incoming', `sq:${ghost.sq}`);
     const find = (f) => v.board.findIndex((c, sq) => c && !c.mine && !isHidden(b, sq) && f(c));
@@ -2162,6 +2207,91 @@ export class BattleScreen {
     });
     closeBox();
   }
+  // ── 대국 도전 띠(layout.md 31절): 판 위 가운데 한 줄 — 「도전」 칩 · 조건(온 글이 안 들어가면 짧은 이름표) · 오른끝 진행 「2/4」(셀 수 없는 도전은 「+$2」).
+  // 이루면 칩이 「도전 성공」 도장으로, 조건은 흐리게. 기물 뒤에 그린다(뒷줄 기물 머리가 띠 위로 솟는다). 복기 · 다시 두기는 그 자리가 제목 띠라 그리지 않는다
+  // 말풍선: 온 조건 · 상금(「이기는 데는 필요 없다」는 옆 낱말 상자가 말한다)
+  chTip(ch) { return tipLines('도전', [challengeText(ch), CHALLENGE_TEXT.reward(ch.reward)]); }
+  // 반짝 세기(1 → 0): 콤보 중에 조건이 채워진 순간 · 이룬 순간부터 0.8초
+  chGlow() {
+    const k = this.chFlash != null ? (this.app.time - this.chFlash) / 0.8 : 9;
+    if (k >= 0 && k < 1) { motion(); return (1 - k) * (1 - k); }
+    return 0;
+  }
+  chStampW() { return measure(CHALLENGE_TEXT.done, true) + SP.s * 2; }
+  // 「도전 성공」 도장: 칠한 금빛 칩(높이 15 · R_SM — 보상의 「목표 ×N」 · 레퍼토리 도장과 같은 꼴). 폭을 돌려준다
+  chStamp(ctx, x, y) {
+    const w = this.chStampW();
+    rrect(ctx, x, y, w, CHIP_H, R_SM, PAL.gold);
+    text(ctx, CHALLENGE_TEXT.done, x + SP.s, inkY(y, CHIP_H), PAL.cardInk, { bold: true });
+    return w;
+  }
+  // 띠의 자리 · 글(그리기와 처음 안내가 같이 쓴다). 붙은 도전이 없거나 그리지 않는 화면이면 null
+  chBand() {
+    const ch = this.src.kind === 'run' && !this.rv && this.run ? this.b.challenge : null;
+    if (!ch) return null;
+    const v = this.view, done = !!v.chDone, prog = v.chProg;
+    const pv = !done && !this.busy ? this.chPreview() : null;
+    const shownProg = pv && pv.prog ? pv.prog : prog;
+    const chipW = measure(CHALLENGE_TEXT.name, true) + SP.s * 2, lead = done ? this.chStampW() : chipW, room = S * 8 - SP.s * 2;
+    const wOf = (s, t) => SP.xs + lead + (s ? SP.s + measure(s) : 0) + (t ? measure(t, true) + SP.m : 0) + SP.m;
+    // 오른끝: 진행(셀 수 있는 도전) 또는 상금 몫. 고르는 차례: 온 조건 → 짧은 이름표 → 상금 몫 빼기(말풍선이 말한다) → (이룬 뒤 도장이 넓은 영어) 도장만
+    const prog0 = shownProg ? `${shownProg.have}/${shownProg.need}` : '', rw = `+$${ch.reward}`;
+    const cands = done ? [[challengeText(ch), ''], [challengeShort(ch), ''], ['', '']]
+      : shownProg ? [[challengeText(ch), prog0], [challengeShort(ch), prog0]]
+        : [[challengeText(ch), rw], [challengeShort(ch), rw], [challengeShort(ch), '']];
+    const [body, tail] = cands.find(([s, t]) => wOf(s, t) <= room) || cands[cands.length - 1];
+    const w = wOf(body, tail);
+    // 띠 높이: 칠한 칩(15) + 위아래 SP.xs. 윗변 1 — 칩 글이 화면 윗변에서 4 이상(29절 제목 자리 4)
+    return { ch, done, pv, tail, chipW, body, x: BX + Math.round((S * 8 - w) / 2), y: 1, w, h: CHIP_H + SP.xs * 2 };
+  }
+  // 미리 보기(겨눈 잡기): 이 수로 진행이 오르거나 도전을 채우면 띠에 미리 보인다. 대국 복사본에 그 잡기를 두어 잰다(원래 대국은 그대로)
+  chPreview() {
+    const pv = this.pvNow, b = this.live();
+    if (!pv || pv.kind !== 'capture' || !b || !b.challenge || b.challenge.done) return null;
+    if (pv.chal === undefined) {
+      let r = null;
+      try {
+        const u = cloneBattle(b), ch = b.challenge;
+        apply(u, { type: 'capture', sq: pv.sq });
+        const live = u.chain && !u.chain.done, h = live ? chainSummary(u.chain) : u.history[u.history.length - 1];
+        r = { prog: challengeProgress(ch, h), met: !!(u.challenge && u.challenge.done) || (live && challengeSticks(ch) && challengeMet(ch, h)) };
+      } catch { r = null; }
+      pv.chal = r;
+    }
+    return pv.chal;
+  }
+  // 그린 띠를 돌려준다(누르는 구역은 판 칸 구역 뒤에 — draw)
+  drawChallenge(ctx) {
+    const B = this.chBand();
+    if (!B) return null;
+    const app = this.app, v = this.view, { done, pv, x, y, w, h } = B;
+    const met = !!v.chMet, gl = this.chGlow(), want = !!(pv && pv.met);
+    // 진행 수가 오른 순간 한 번 밝아진다(점수 칸과 같은 0.45초)
+    const up = v.chProg ? this.pulseAt('chal', v.chProg.have, app.time) : 0;
+    openBox('panel', x, y, w, h, 1, { name: '도전 띠' });
+    if (gl > 0.01) glow(ctx, x, y, w, h, PAL.gold, 0.7 * gl, 8);
+    if (want) { motion(); glow(ctx, x, y, w, h, PAL.gold, 0.25 + 0.2 * Math.sin(app.time * 6), 6); }
+    rrect(ctx, x, y + 2, w, h, R_SM, PAL.drop);
+    box(ctx, x, y, w, h, PAL.feltDk, done || met || want ? PAL.gold : PAL.frameDk, { r: R_SM });
+    let cx = x + SP.xs;
+    if (done) cx += this.chStamp(ctx, cx, y + SP.xs) + SP.s;
+    else {
+      rrect(ctx, cx, y + SP.xs, B.chipW, CHIP_H, R_SM, PAL.gold);
+      text(ctx, CHALLENGE_TEXT.name, cx + SP.s, inkY(y + SP.xs, CHIP_H), PAL.cardInk, { bold: true });
+      cx += B.chipW + SP.s;
+    }
+    const ty = inkY(y, h);
+    if (B.body) text(ctx, B.body, cx, ty, done ? PAL.dim : PAL.ink);
+    if (B.tail) {
+      const tx = x + w - SP.m, tw = measure(B.tail, true);
+      const col = want || met ? PAL.gold : v.chProg && v.chProg.have ? PAL.ink : v.chProg ? PAL.dim : PAL.gold;
+      const a = (met ? 0.35 : 0) + 0.6 * Math.max(gl, up);
+      if (a > 0.01) glowText(ctx, tx - tw, ty, tw, INK_H, PAL.gold, a, 6);
+      text(ctx, B.tail, tx, ty, col, { align: 'right', bold: true, alpha: want ? 0.65 + 0.35 * Math.sin(app.time * 6) : 1 });
+    }
+    closeBox();
+    return B;
+  }
   // 아래 칸 줄(판넬 없이): 수 · 희생(둥근 구슬) → 시계 → 상금 → 덱. 이름표는 왼쪽, 값은 오른쪽 끝
   drawFootRows(ctx, ui, lay = this.leftLayout()) {
     const app = this.app, v = this.view, run = this.run;
@@ -2482,7 +2612,12 @@ export class BattleScreen {
       glowText(ctx, BX + 200 - mw, BY + 4, mw, mh, st.col || PAL.goldHi, fade * (k < 0.15 ? 0.9 : 0.55), 14);
       // 하양 ★은 어두운 테 한 도트 — 1배에서 가장 밝은 빛 번짐에 묻혔다(CHM-48)
       if (n) drawStars(ctx, n, BX + 200 - mw, BY + 4, col, { px, shadow: PAL.shadow, alpha: fade, ring: st.col === PAL.white ? PAL.shadow : null });
-      else text(ctx, st.mark, BX + 200, BY + 4, col, { align: 'right', bold: true, scale: sc, shadow: PAL.shadow, alpha: fade });
+      else {
+        // 찍혔다 스러지는 연출이라 재지 않는다(판 위 도전 띠에 아래 끝이 걸친다)
+        openBox('fx', BX + 200 - mw, BY + 4, mw, mh, 0, { loose: true, name: '평가 도장' });
+        text(ctx, st.mark, BX + 200, BY + 4, col, { align: 'right', bold: true, scale: sc, shadow: PAL.shadow, alpha: fade });
+        closeBox();
+      }
     }
   }
 
