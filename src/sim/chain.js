@@ -88,7 +88,7 @@ export function chainCaptures(t) {
   if (!c || c.done || c.awaiting) return [];
   const bo = c.captures.length ? boardOpts(t) : { ...boardOpts(t), first: true };
   let list = captures(t.board, c.form, c.sq, bo);
-  // 「변신」 문턱 6: 지나온 모습 전부의 행마로(한 번)
+  // 「변신」 문턱 5: 지나온 모습 전부의 행마로(한 번)
   if (c.flags.union) for (const f of c.forms) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
   // 흡수: 먹은 행마가 더해진다(모습은 그대로)
   if (c.absorbed) for (const f of c.absorbed) for (const s of captures(t.board, f, c.sq, bo)) if (!list.includes(s)) list.push(s);
