@@ -921,9 +921,12 @@ export function applyRun(run, cmd) {
       need('shop');
       const pk = run.shop.packs[cmd.slot];
       if (!pk || pk.sold) throw new Error('no pack');
+      if (run.money < pk.price) throw new Error('not enough money');
+      // 굴림이 실패해도 돈 · 팔림 표시가 남지 않게 먼저 굴린다(굴림 차례는 그대로)
+      const options = rollPackOptions(run, pk.kind);
       pay(run, pk.price);
       pk.sold = true;
-      run.pack = { kind: pk.kind, options: rollPackOptions(run, pk.kind) };
+      run.pack = { kind: pk.kind, options };
       run.phase = 'pack';
       events.push({ type: 'packOpen', kind: pk.kind, options: clone(run.pack.options) });
       break;
