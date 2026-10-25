@@ -3,7 +3,7 @@
 // 빛은 글자 뒤 층에만 깐다: 글자 · 도트 그림은 늘 그 위에 네모 도트로 다시 그려져 번지지 않는다.
 import { makeCanvas, context } from './surface.js';
 import { rgb, PAL, lookOf, bgOf } from './palette.js';
-import { LOOK, snap, live } from './look.js';
+import { LOOK, snap, live, grid, span, frac } from './look.js';
 
 // ── 빛 번짐: 가운데가 밝고 가장자리로 스러지는 둥근 빛(32×32, 빛깔마다 한 번). 네모 뒤에 아홉 조각으로 늘려 깐다
 //   (네모 안은 고르게 밝고, 네모 밖 spread 폭에서 스러진다 — 길쭉한 글 줄에도 둥글게 번진다)
@@ -89,7 +89,9 @@ export function shade(ctx, x, y, w, h, d = DROP, { r = 4, soft = false } = {}) {
   x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
   if (soft) softShadow(ctx, x, y + d + 1, w, h);
   ctx.fillStyle = PAL.drop;
-  rpath(ctx, x, y + d, w, h, r);
+  // 꽉 채움(소수 배율): 그림자 판의 네 변도 기기 화소에 맞춘다
+  if (frac()) { const X = grid(x), Y = grid(y + d); rpath(ctx, X, Y, span(X, w), span(Y, h), r); }
+  else rpath(ctx, x, y + d, w, h, r);
   ctx.fill();
 }
 // 흐린 그림자: 가우스로 흐린 네모(시그마 3)를 가로 · 세로 곱으로 한 번 굽는다(화면 배율 N마다). 9조각으로 늘려 깐다
@@ -99,7 +101,7 @@ const erf = (x) => { const t = 1 / (1 + 0.3275911 * Math.abs(x)); const y = 1 - 
 function softCanvas(n) {
   let c = softs.get(n);
   if (c) return c;
-  const S = 4 * KS * n; // 한 변: 흐림 2 + 네모 2(가운데에서 자른다)
+  const S = Math.ceil(4 * KS * n); // 한 변: 흐림 2 + 네모 2(가운데에서 자른다)
   c = makeCanvas(S, S);
   const g = context(c);
   const img = g.getImageData(0, 0, S, S);

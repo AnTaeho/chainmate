@@ -3,7 +3,7 @@
 // 카드는 남색 알약 딱지(kindTab, 높이 14), 두루마리 칸은 왼쪽 띠(kindBand). 종류 빛깔과 문양은 이 표 한 곳에만 둔다.
 // 문양은 안 3 벡터(docs/design-notes/art3.md): 12×12 자리(잉크 10×10)에 한 빛깔 굵은 모양, 빈 곳은 뚫는다. g(12×12 마스크)는 문양의 원본 기록이다.
 import { rect, rrect, place } from '../render/gfx.js';
-import { bake, scaleOf, trace } from '../render/vec.js';
+import { bake, scaleOf, trace, put } from '../render/vec.js';
 
 // 혼은 드묾 등급(#6fb3c8)과 갈리게 흰 청백(KIND_SOUL). 혼마다의 빛깔(src/data/souls.js col)은 혼 하나하나의 것이라 그대로 둔다
 export const KIND_SOUL = '#e4f4fa';
@@ -70,7 +70,8 @@ export function glyphCanvas(kind, col, size = 12, n = 1) {
 }
 // 문양을 칸(cw × ch) 가운데 12×12 자리에(구운 그림 하나)
 export function kindGlyph(ctx, kind, x, y, cw, ch, col = KIND[kind].col) {
-  ctx.drawImage(glyphCanvas(kind, col, 12, scaleOf(ctx)), place(x + Math.floor((cw - 12) / 2)), place(y + Math.floor((ch - 12) / 2)), 12, 12);
+  const n = scaleOf(ctx);
+  put(ctx, glyphCanvas(kind, col, 12, n), n, place(x + Math.floor((cw - 12) / 2)), place(y + Math.floor((ch - 12) / 2)), 12, 12);
 }
 // 딱지(안 3 시안): 남색 알약(높이 14, 폭 w — 기본은 동그라미) 왼쪽 14×14에 종류 빛깔 문양. 머릿말 글을 알약 안에 쓰는 곳은 w를 글 끝까지 넓힌다(tabW)
 export const TAB_FILL = '#262c5f';

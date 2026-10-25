@@ -5,7 +5,7 @@
 import { reach, boardFrom } from '../sim/board.js';
 import { place } from '../render/gfx.js';
 import { PAL } from '../render/palette.js';
-import { bake, scaleOf, INK } from '../render/vec.js';
+import { bake, scaleOf, INK, put } from '../render/vec.js';
 
 export const DIAG_CELL = 4;
 export const DIAG_SIZE = 8 * DIAG_CELL + 2;   // 테 포함 34px
@@ -40,7 +40,7 @@ export function moveDiagram(ctx, t, x, y, { dir = 1 } = {}) {
   if (!hasDiagram(t)) return;
   const n = scaleOf(ctx);
   const c = bake(`diag:${t}:${dir}:${PAL.dark}`, DIAG_SIZE, DIAG_SIZE, n, (g) => paint(g, t, dir, n));
-  ctx.drawImage(c, place(x), place(y), DIAG_SIZE, DIAG_SIZE);
+  put(ctx, c, n, place(x), place(y), DIAG_SIZE, DIAG_SIZE);
 }
 function paint(g, t, dir, n) {
   const { reach: rs, blocks } = plan(t, dir);

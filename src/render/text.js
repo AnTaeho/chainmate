@@ -6,6 +6,7 @@ import { makeCanvas, context } from './surface.js';
 import { L, getLang } from '../ui/lang.js';
 import { LOG, logClip } from './layoutlog.js';
 import { INK_H, faceOf, fontOf } from './type.js';
+import { frac } from './look.js';
 
 export const FONT_PX = 12;
 const PT = 2, PL = 1;       // 글자 그림의 위 · 왼쪽 여유(띠 위로 솟는 글자 · 왼쪽으로 튀어나온 획)
@@ -115,7 +116,9 @@ export function inkBox(img) {
 // edge: 테 빛깔 — 같은 글을 둥근 이음 선(굵기 ow 논리 px, 글 바깥으로 ow)으로 긋고 그 위에 글을 채운 그림 하나(left · top이 테만큼 더 바깥)
 export function textImage(s, col, bold = false, k = 1, edge = null, ow = 1) {
   s = String(s);
-  k = Math.max(1, Math.min(12, Math.ceil(k - 1e-6)));
+  // 꽉 채움(뒷면 배율이 소수): 그 배율 그대로 굽고 1:1로 붙인다 — 올림한 그림을 줄여 붙이면 가장 가까운 화소 고르기라 줄이 빠진다
+  const fr = frac() && Math.abs(k - Math.round(k)) > 1e-6;
+  k = fr ? Math.max(1, Math.min(12, Math.round(k * 1000) / 1000)) : Math.max(1, Math.min(12, Math.ceil(k - 1e-6)));
   if (unready && fontReady(false) && fontReady(true)) clearTextCache();
   // 테 굵기는 기기 화소 반 칸 단위로(크기가 움직이며 굵기를 맞춰 부르는 이름표가 프레임마다 다시 굽지 않게)
   if (edge) ow = Math.max(1, Math.round(ow * k * 2)) / (k * 2);
@@ -123,11 +126,13 @@ export function textImage(s, col, bold = false, k = 1, edge = null, ow = 1) {
   let hit = cacheGet(key);
   if (hit) return hit;
   const P = edge ? Math.ceil(ow) + 1 : 0, w = textWidth(s, bold), cw = w + PL + 2 + P * 2, h = HB + P * 2;
-  const c = makeCanvas(cw * k, h * k);
+  // 소수 배율이면 그림 왼쪽 · 위 끝을 기기 화소 정수 자리에 둔다(붙일 때 글 자리 x · y가 기기 화소면 그림도 그렇다)
+  const c = fr ? makeCanvas(Math.ceil(cw * k), Math.ceil(h * k)) : makeCanvas(cw * k, h * k);
   const ctx = context(c);
   ctx.font = fontOf(bold, faceOf(bold).px * k);
   ctx.textBaseline = 'alphabetic';
-  const bx = (PL + P) * k, by = Math.round((PT + P + baseOf(bold)) * k);
+  const bx = fr ? Math.round((PL + P) * k) : (PL + P) * k, by = Math.round((PT + P + baseOf(bold)) * k);
+  const ty = fr ? Math.round((PT + P) * k) : (PT + P) * k;
   if (edge) {
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.lineWidth = ow * 2 * k; ctx.strokeStyle = edge; ctx.fillStyle = edge;
@@ -135,7 +140,7 @@ export function textImage(s, col, bold = false, k = 1, edge = null, ow = 1) {
   }
   ctx.fillStyle = col;
   ctx.fillText(s, bx, by);
-  hit = { c, w, cw, h, k, left: -PL - P, top: -PT - P };
+  hit = fr ? { c, w, cw: c.width / k, h: c.height / k, k, left: -bx / k, top: -ty / k } : { c, w, cw, h, k, left: -PL - P, top: -PT - P };
   cachePut(key, hit);
   return hit;
 }

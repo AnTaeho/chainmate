@@ -1,7 +1,7 @@
 // 안 3 벡터 그림의 공용 붓(docs/design-notes/art3.md): 경로 글(M L Q C Z) · 두 톤(왼쪽 빛 · 오른쪽 그늘) + 잉크 테 · N배 한 번 굽기.
 // Path2D는 쓰지 않는다(연기 시험의 가짜 캔버스에 없다). 그림은 (열쇠, 크기, 배율 N)마다 한 번 굽고 그릴 때는 붙이기 한 번.
 import { makeCanvas, context } from './surface.js';
-import { LOOK } from './look.js';
+import { LOOK, frac } from './look.js';
 import { place } from './gfx.js';
 
 export const INK = '#12153a';
@@ -50,11 +50,18 @@ export function line(x, d, col, lw) {
   x.beginPath(); trace(x, d); x.strokeStyle = col; x.lineWidth = lw; x.lineCap = 'round'; x.lineJoin = 'round'; x.stroke();
 }
 
-// 그리는 곳의 실제 배율(뒷면 N × 그리기 변환) — 정수로 굽는다. 12배까지(각성 막간 카드는 3배 × N 3 = 9)
+// 그리는 곳의 실제 배율(뒷면 N × 그리기 변환) — 정수로 굽는다. 12배까지(각성 막간 카드는 3배 × N 3 = 9).
+// 꽉 채움(뒷면 배율이 소수)이면 그 배율 그대로(1/1000로 맞춰 열쇠가 흔들리지 않게)
 export function scaleOf(ctx) {
   const m = ctx && ctx.getTransform ? ctx.getTransform() : null;
   const a = m && typeof m.a === 'number' ? Math.hypot(m.a, m.b) : LOOK.n;
+  if (frac()) return Math.max(1, Math.min(12, Math.round(a * 1000) / 1000));
   return Math.max(1, Math.min(12, Math.round(a)));
+}
+// 구운 캔버스 c(배율 n)를 (x, y)에 논리 크기 w × h로. 소수 배율이면 캔버스 화소 그대로(c.width / n) 붙인다 — 올림한 캔버스를 w × h로 줄이면 화소가 빠진다
+export function put(ctx, c, n, x, y, w, h) {
+  if (frac() && !Number.isInteger(n)) ctx.drawImage(c, x, y, c.width / n, c.height / n);
+  else ctx.drawImage(c, x, y, w, h);
 }
 // 한 번 굽기: w × h 논리 크기를 N배 캔버스에. paint(g, k)는 논리 좌표로 그린다(k = N, 선 바닥 1 / k)
 const CACHE = new Map();
@@ -73,10 +80,10 @@ export function bake(key, w, h, n, paint) {
 }
 // 구운 그림을 (x, y)에 w × h로. 정수 칸에 놓는다(N = 3에서 번지지 않게 — fine 안이면 1/N 칸)
 export function blitVec(ctx, key, x, y, w, h, paint, alpha = 1) {
-  const c = bake(key, w, h, scaleOf(ctx), paint);
+  const n = scaleOf(ctx), c = bake(key, w, h, n, paint);
   const a0 = ctx.globalAlpha;
   if (alpha !== 1) ctx.globalAlpha = a0 * alpha;
-  ctx.drawImage(c, place(x), place(y), w, h);
+  put(ctx, c, n, place(x), place(y), w, h);
   if (alpha !== 1) ctx.globalAlpha = a0;
   return c;
 }

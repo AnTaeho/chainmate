@@ -2,7 +2,7 @@
 // 폭 · 높이 · 열림(open 0 → 1)을 받는 그림 하나를 상점 칸 · 작은 표 · 여는 연출 · 건너뛰기 패가 같이 쓴다. (종류, 크기, 열림 걸음, 가리킴, 배율 N)마다 한 번 굽는다.
 import { PAL } from '../render/palette.js';
 import { place } from '../render/gfx.js';
-import { bake, scaleOf, INK } from '../render/vec.js';
+import { bake, scaleOf, INK, put } from '../render/vec.js';
 import { PACK_KIND, glyphCanvas } from './kinds.js';
 
 // 몸 종이 · 종이 그늘 · 덮개 · 덮개 그늘과 도장 문양 · 도장 · 젖힌 덮개 안쪽
@@ -92,5 +92,5 @@ export function envelope(ctx, x, y, w, h, kind, { open = 0, hover = false } = {}
   const n = scaleOf(ctx), q = Math.round(Math.max(0, Math.min(1, open)) * STEPS);
   const top = q ? ENV_RISE : 0;
   const c = bake(`env:${kind}:${q}:${hover ? 1 : 0}`, w, h + top, n, (g) => { g.translate(0, top); paint(g, w, h, n, kind, q / STEPS, hover); });
-  ctx.drawImage(c, place(x), place(y - top), w, h + top);
+  put(ctx, c, n, place(x), place(y - top), w, h + top);
 }
