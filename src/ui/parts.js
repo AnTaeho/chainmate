@@ -806,7 +806,8 @@ export const stampTip = (name, dan) => tipLines(name, `이긴 가장 높은 레�
 export function danStamp(ctx, x2, y, dan, hit = null) {
   const s = stampText(dan), w = stampW(dan), x = x2 - w;
   if (hit) hit.ui.region(hit.id, x, y, w, STAMP.h, { tip: hit.tip, onClick: hit.onClick, preview: hit.preview });
-  openBox('edge', x, y, w, STAMP.h, 1, { name: '도장' });
+  // 칠한 칩(테 없음 — familyChip과 같은 안 여백 0), 카드 윗변에 걸쳐 뜨는 스티커(overlay)
+  openBox('edge', x, y, w, STAMP.h, 0, { name: '도장', overlay: true });
   rrect(ctx, x, y, w, STAMP.h, R_SM, PAL.gold);
   laurelMark(ctx, x + STAMP.pad, y + ((STAMP.h - STAMP.mark) >> 1), STAMP.mark);
   text(ctx, s, x + STAMP.pad + STAMP.mark + STAMP.gap, inkY(y, STAMP.h), PAL.cardInk, { bold: true });
