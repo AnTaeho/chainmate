@@ -53,6 +53,8 @@ const rankApi = fakeApi({ build: 'smoke', now: () => Date.parse(`${DATE}T12:00:0
 await seedBoard(rankApi, DATE, demoRows(24));
 await seedBoard(rankApi, shiftDate(DATE, -1), demoRows(13));
 const netSettle = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
+// 계정 화면의 비번 해시(scrypt)는 스레드 풀에서 돈다 — 틱만 세면 바쁜 기기에서 덜 끝난다. 계정 화면이 바쁘지 않을 때까지(2초 안) 기다린다
+const acctSettle = async (S, n = 60) => { await netSettle(n); for (let i = 0; i < 400 && S.screen && S.screen.busy; i++) await new Promise((r) => setTimeout(r, 5)); await netSettle(12); };
 dom.window.fetch = async (url, init) => { if (String(url).startsWith('/api/')) return rankApi.fetch(url, init); telSent.n++; return { ok: true }; };
 dom.window.navigator = { sendBeacon: () => { telSent.n++; return true; } };
 const { boot } = await import('../src/main.js');
@@ -2273,26 +2275,26 @@ const acctSeen = { made: 0, fields: 0, keys: 0, name: '', same: 0, records: '', 
   dom.key('Escape'); pump(1);
   if (screen() === 'account' && A.fields.focused() == null && dom.inputs().length === 2) acctSeen.keys = 1; else bad(`입력 칸에 초점이 있는데 게임이 키를 받았다(${screen()})`);
   dom.type('user', USER); dom.type('pass', PW);
-  click('acct:signup'); await netSettle(40); pump(2);
+  click('acct:signup'); await acctSettle(A, 40); pump(2);
   if (A.screen.in() && drew('계정을 만들었어요') && LL.LOG.texts.some((q) => q.s === USER) && dom.inputs().length === 0) acctSeen.made = 1; else bad(`계정을 만들지 못했다(${A.screen.msg && A.screen.msg.text})`);
   await A.cloud.push(); await netSettle(24);
   acctSeen.name = A.rank.player() ? A.rank.player().name : '';
   // B: 설정 → 계정 → [들어오기] → 같은 이름 · 기록
   clickB('title:settings'); clickB('set:link'); frameB(2);
   domB.type('user', USER); domB.type('pass', PW);
-  clickB('acct:login'); await netSettle(60); frameB(3);
+  clickB('acct:login'); await acctSettle(B, 60); frameB(3);
   const cells = (a) => Object.values(a.records.codex).reduce((n, k) => n + Object.values(k).filter(Boolean).length, 0);
   acctSeen.records = `판 ${B.records.runs} · 도감 ${cells(B)}칸 · 도달한 관 ${B.records.bestAnte}`;
   if (B.screen.in() && B.rank.player() && B.rank.player().name === acctSeen.name && B.records.runs === A.records.runs && cells(B) === cells(A) && B.records.bestAnte === 5 && drew('로그인했어요')) acctSeen.same = 1; else bad(`들어온 기기가 같은 이름 · 기록이 되지 않았다(${B.screen.msg && B.screen.msg.text} · ${acctSeen.records})`);
   // B: 비번 바꾸기
   clickB('acct:password'); frameB(1);
   domB.type('cur', PW); domB.type('next', PW2);
-  clickB('acct:yes'); await netSettle(40); frameB(2);
+  clickB('acct:yes'); await acctSettle(B, 40); frameB(2);
   if (B.screen.mode == null && drew('비밀번호를 바꿨어요') && domB.inputs().length === 0) acctSeen.changed = 1; else bad(`비번을 바꾸지 못했다(${B.screen.msg && B.screen.msg.text})`);
   // B: 나가기 → 확인 → 이 기기의 기록이 비고, 계정(A)에는 남는다
   clickB('acct:logout'); frameB(1);
   if (B.screen.mode !== 'logout' || !B.ui.regions.some((q) => q.id === 'acct:no')) bad('나가기 확인이 뜨지 않았다');
-  clickB('acct:yes'); await netSettle(60); frameB(2);
+  clickB('acct:yes'); await acctSettle(B, 60); frameB(2);
   if (!B.screen.in() && B.records.runs === 0 && cells(B) === 1 && !domB.store.get('chainmate.run.v1') && drew('로그아웃했어요')) acctSeen.out = 1; else bad(`나간 뒤에도 기기에 기록이 남았다(판 ${B.records.runs} · 도감 ${cells(B)}칸)`);
   await A.cloud.open(); await netSettle(24);
   const acct = await A.rank.accountLoad();
@@ -2302,7 +2304,7 @@ const acctSeen = { made: 0, fields: 0, keys: 0, name: '', same: 0, records: '', 
   click('acct:delete'); pump(1); click('acct:yes'); pump(1);
   if (dom.inputs().length !== 1) bad('지우기 둘째 확인에 비번 칸이 없다');
   dom.type('del', PW2);
-  click('acct:yes'); await netSettle(60); pump(2);
+  click('acct:yes'); await acctSettle(A, 60); pump(2);
   if (!A.screen.in() && rankApi.store.accounts.size === 0 && A.records.runs === 0 && drew('계정을 삭제했어요')) acctSeen.gone = 1; else bad(`계정을 지우지 못했다(${A.screen.msg && A.screen.msg.text} · 계정 ${rankApi.store.accounts.size})`);
   click('acct:back'); pump(2);
   if (screen() !== 'title') bad(`계정에서 돌아가기 → ${screen()}`);
