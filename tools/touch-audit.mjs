@@ -1,10 +1,12 @@
 // 손가락 · 마우스 견주기: 실제 WebKit(손가락 흉내)으로 화면마다 누를 수 있는 구역을 모두 눌러, 같은 게임 자리를 마우스로 누른 결과와 견준다.
-//   node tools/touch-audit.mjs [--only title,shop,…] [--configs land-int,land-fill,port-int,port-fill] [--per 4] [--json out.json] [--no-drift] [--engine webkit|chromium]
+//   node tools/touch-audit.mjs [--only title,shop,…] [--configs land-int,land-fill,port-int,port-fill] [--per 4] [--json out.json] [--no-drift] [--no-edge] [--engine webkit|chromium]
 // 견주는 것(구역마다, 마우스 그림 네모 기준):
 //   map    진짜 손가락 누름(page.touchscreen.tap)이 게임 좌표로 바르게 옮겨지나(±1 도트 — WebKit 손가락 좌표는 정수 CSS 화소)
 //   steal  그림 안 자리(가운데 · 네 변 2 도트 안)를 손가락이 누르면 마우스와 다른 구역이 잡히나(손가락 구역 넓히기가 이웃을 덮는다)
 //   tap    가운데 한 번 누름 뒤 상태(화면 · 덮개 · 판 · 고른 것 · 말풍선)가 마우스 누름과 같은가. 미리 보기 구역은 두 번째 누름을 마우스와 견준다
 //   drift  누른 채 6 · 4 CSS 화소 밀었다 떼도 같은가(손가락은 떼며 미끄러진다)
+//   near   손가락보다 작은 구역의 바로 바깥(2 도트 밖 빈 자리)을 눌러도 가운데 누름과 같은가
+//   slip   그런 구역 가운데를 눌러 구역 오른쪽 3 도트 밖(빈 자리)에서 떼도 같은가
 //   tip    마우스로 가리키면 뜨는 말풍선 · 낱말 상자가 손가락 누름 뒤에도 뜨나
 //   edge   누를 수 있는 단추가 창 끝에서 몇 CSS 화소인가(iOS 몸짓 띠 20 미만)
 // 손가락은 #stage에 touchstart · touchmove · touchend를 직접 보낸다(WebKit은 Touch 생성자가 없다 — main.js가 읽는 칸만 담는다). 사이에 프레임을 돈다.
@@ -22,6 +24,7 @@ const ONLY = opt('--only', null);
 const PER = Number(opt('--per', 4)); // 같은 꼴 id(숫자만 다른 것)는 몇 개까지 누르나
 const JSON_OUT = opt('--json', null);
 const DRIFT = !args.includes('--no-drift');
+const EDGE = !args.includes('--no-edge'); // near · slip(작은 구역 바깥 누름 · 밀려 뗌)
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
 // 손가락 판: 아이폰 사파리 가로(734×343) · 세로(393×659, 돌려 그린다), 둘 다 dpr 3. edge만: 아이폰 17 사파리 가로(안전 영역 · 주소창 펼침)
 const CONFIGS = {
@@ -325,14 +328,15 @@ async function touchRun(cfg, cfgName, sc, ref) {
   for (const r of ref.tg) {
     const m = ref.sig[r.id];
     const [gx, gy] = center(r);
-    const tap = async (dcx = 0, dcy = 0) => {
+    const tapAt = async (sx, sy, dcx = 0, dcy = 0) => {
       await page.evaluate(([x, y, dx, dy]) => {
         window.__touch('touchstart', x + 0.5, y + 0.5); window.__step(2);
         if (dx || dy) { window.__touch('touchmove', x + 0.5, y + 0.5, dx / 2, dy / 2); window.__step(1); window.__touch('touchmove', x + 0.5, y + 0.5, dx, dy); window.__step(1); }
         window.__touch('touchend', x + 0.5, y + 0.5, dx, dy); window.__step(8);
-      }, [gx, gy, dcx, dcy]);
+      }, [sx, sy, dcx, dcy]);
       return page.evaluate(() => window.__sig());
     };
+    const tap = (dcx = 0, dcy = 0) => tapAt(gx, gy, dcx, dcy);
     await enter(page, sc);
     const tb = await page.evaluate(() => window.__sig());
     const t1 = await tap();
@@ -350,6 +354,30 @@ async function touchRun(cfg, cfgName, sc, ref) {
         const exp = t1;
         const ddd = rel(tb, exp, db, d1);
         if (ddd.length) rows.push({ kind: 'drift', id: r.id, detail: `6·4 CSS 화소 밀고 뗌: ${ddd.map((k) => `${k} 기대 ${JSON.stringify(exp[k])} / ${JSON.stringify(d1[k])}`).join(' · ')}` });
+      }
+      // near · slip: 손가락보다 작은 구역 바로 바깥 빈 자리를 누르거나, 가운데를 눌러 구역 오른쪽 3 도트 밖에서 떼도 가운데 누름과 같아야 한다(UI.snap)
+      // 손가락 판의 구역(넓힌 것이면 넓힌 자리)이 손가락보다 작은 쪽이 있을 때만. 바깥 자리는 그 구역 밖이면서 손가락 판에서 아무 구역도 없는 곳
+      const box0 = regs.find((q) => q.id === r.id) || r;
+      if (EDGE && r.en && (box0.w * fit.css < 44 || box0.h * fit.css < 44)) {
+        const [bx, by] = center(box0);
+        const cand = [[box0.x - 2, by], [box0.x + box0.w + 1, by], [bx, box0.y - 2], [bx, box0.y + box0.h + 1]].filter((q) => q[0] >= 0 && q[1] >= 0 && q[0] < 480 && q[1] < 270);
+        const slipAt = [box0.x + box0.w + 3, gy];
+        const ch = await page.evaluate((p) => window.__hits(p), [...cand, slipAt]);
+        const np = cand.find((q, j) => ch[j] == null) || null;
+        if (np) {
+          await leave(page, sc); await enter(page, sc);
+          const nb = await page.evaluate(() => window.__sig());
+          const n1 = await tapAt(np[0], np[1]);
+          const dn = rel(tb, t1, nb, n1);
+          if (dn.length) rows.push({ kind: 'near', id: r.id, detail: `그림 밖 (${np[0]},${np[1]}) 누름: ${dn.map((k) => `${k} 기대 ${JSON.stringify(t1[k])} / ${JSON.stringify(n1[k])}`).join(' · ')}` });
+        }
+        if (ch[cand.length] == null && slipAt[0] < 480) {
+          await leave(page, sc); await enter(page, sc);
+          const sb = await page.evaluate(() => window.__sig());
+          const s1 = await tap((slipAt[0] - gx) * fit.css, 0);
+          const ds = rel(tb, t1, sb, s1);
+          if (ds.length) rows.push({ kind: 'slip', id: r.id, detail: `구역 오른쪽 3 도트 밖에서 뗌: ${ds.map((k) => `${k} 기대 ${JSON.stringify(t1[k])} / ${JSON.stringify(s1[k])}`).join(' · ')}` });
+        }
       }
     }
     // tip: 마우스로 가리키면 뜨는 설명이 손가락 한 번 뒤에도 뜨나(누름으로 화면이 바뀐 것은 뺀다)
