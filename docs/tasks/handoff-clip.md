@@ -45,3 +45,38 @@ node tools/smoke.mjs --lang en --verbose  # en
 node tools/drawcheck.mjs                  # 그리기를 바꿨으면, 따로
 ```
 결정 시안용 스크린샷 스크립트는 `tools/shots-fragment-tip.mjs`를 본떠 도감 `codex:evergreen` · `codex:opera` · `codex:century`(en)를 가리켜 찍는다.
+
+## 결과(2026-10-25, `claude/clip-finish`)
+| 커밋 | 내용 |
+|---|---|
+| 02e179a · 5f2ba56 | smoke · `test/accountui.test.js` 계정 흐름이 비번 해시(scrypt, 스레드 풀)가 끝날 때까지 기다린다. 틱만 세던 대기라 4코어 클라우드에서는 혼자 돌려도 늘 떨어졌다 |
+| 2d6cc85 | `placement.js` 'below': 위 · 아래 어디에도 다 안 들어갈 때(clip 직전)만 가리킨 것 옆(오른쪽 +3, 안 되면 왼쪽 −3). 그 쪽 자리가 176보다 좁으면 150(`NOTE_MIN_W`)까지 좁혀 `remeasure`로 다시 잰다. 세로는 가리킨 것의 윗변, 누를 것을 덮으면 가리킨 것과 겹치는 데까지 올린다. smoke 자리 검사에 `beside-right` · `beside-left`, `test/render.test.js`에 넷 |
+| f968574 | `battle.js` `headSpec`: 굵게 「세력 · 종류」 → 굵게 「세력 · 짧은 종류」 → **굵게 세력 이름만** → 보통 굵기 「세력 · 종류」 |
+| 88f8a12 | `layout.md` 5절 표 · 잘린 글 검사 · 머리 칸 줄 |
+
+### 고른 것 · 버린 것(시안 `docs/shots/clip/`, before = 고치기 전)
+- **도감 명경기 말풍선** — `before-en-codex-*` · `after-en-codex-*`.
+  - 고른 안: 옆에 세우기. 왼쪽 열(Immortal · Evergreen)은 오른쪽 176, 오른쪽 열(Century)은 왼쪽 176, 가운데 열(Opera · March of Eight)은 양옆이 176에 모자라 오른쪽 160. 다섯 모두 조각 세 줄까지 다 뜬다. 도감은 `COVER_OK`라 이웃 칸을 덮는 것은 괜찮고, 가리킨 칸은 그대로 보인다.
+  - 버린 안 ①(before): 위 · 아래 넓은 쪽에서 자르기 — 조각 줄(「Second · Third」)이 「…」로 사라진다. 도감에서 그 줄이 곧 할 일이다.
+  - 버린 안 ②: 폭 176만 허용 — 가운데 열 둘이 그대로 잘린다(−3에 그침).
+  - 버린 안 ③: 아래 · 위에서 가로로 밀어 단추를 피하기 — Opera는 풀리지만 March of Eight(아래 122 · 위 95)은 못 푼다. 화살 없는 말풍선이 가리킨 칸과 어긋난 x에 떠 무엇을 말하는지 흐리다.
+  - 에버그린 첫 시도(윗변 · 아랫변 맞춤 두 자리만)는 탭 · 「뒤로」 줄에 막혀 잘렸다 — 가리킨 것과 겹치는 데까지 1px씩 올리는 것으로 바꿨다.
+- **대국 이름** — `before-en-battle-head-crop@3x` 「Peasants · Rated」(보통 굵기) · `after-en-battle-head-crop@3x` 「Peasants」(굵게).
+  - 고른 안: 세력 이름만 굵게. 왼쪽 칸 제목 줄이 다른 화면 제목과 같은 굵기로 또렷하고, 「Win $3」(연습 $2)가 바로 위에서 종류를 말한다. 가리키면 세력 버릇 말풍선은 그대로.
+  - 버린 안(before): 보통 굵기 「세력 · Rated」 — 제목이 점수 이름표보다 흐려 보이고 줄임으로 센다.
+  - ko는 「농민군 · 정식 대국」이 굵게 들어가 바뀌지 않는다.
+
+### 잘린 글 수(smoke 원문)
+```
+잘린 글 9(… 4 · 줄임 5 · 글자 끊김 0) · 허용 4 · 보류 0 · 목록 밖 0 — en
+잘린 글 1(… 1 · 줄임 0 · 글자 끊김 0) · 허용 1 · 보류 0 · 목록 밖 0 — ko
+```
+남은 en 9: 명경기 이름 「…」 4(격언 칸 98 — 실제 이름을 지킨다) · 줄임 Pilgrimage · Vanguard · Rainbow · Obsidian · The Opera Game(이름 · 칸 폭 — 그대로). ko 1: 상점 「사냥 시너지 8」(`families.js` 효과 글 — 손대지 않음).
+
+### 검증(원문)
+- `npm test`: `# tests 905 · # pass 905 · # fail 0`(계정 시험 대기를 고친 뒤 — 고치기 전에는 `test/accountui.test.js` 둘이 혼자 돌려도 `# fail 2`)
+- `node tools/drawcheck.mjs`: `합계: 프레임 23032 · 건너뜀 4738 (21%) · 어김 0`
+- `node tools/drawcheck.mjs --scale 1280x720 --fit fill`: `합계: 프레임 23031 · 건너뜀 4738 (21%) · 어김 0`
+- smoke en: `자리 규칙: 가리킨 것 1329(판 틀 1258 · 판 밖 71, 화면 10) · 어김 0 · … · 누를 것 덮음 0 · 안 뜸 0 · … · 잘림(…) 0` · `글 넘침 0(…) · 잰 프레임 48426` · `한 수 연출(×1, 멈칫 포함) … 최대 3.94s`
+- smoke ko: `자리 규칙: 가리킨 것 1362 · 어김 0 · … · 잘림(…) 1 (shop fam 1)` · `글 넘침 0(…) · 잰 프레임 48483`
+- **smoke 둘 다 `SMOKE FAIL`, 까닭은 「프레임 p99가 16ms를 넘는다」 하나뿐**: en `p99 16.96ms`(혼자 다시 돌림, 부하 2), ko `p99 17.40ms`. 같은 기기에서 고치기 전 코드(`handoff/clip` + smoke 계정 대기만)도 `p99 16.95ms`로 FAIL — 이 4코어 클라우드 기기의 바닥값이다. 넘겨받는 사람의 기기에서 `SMOKE OK`를 다시 확인해야 한다.
