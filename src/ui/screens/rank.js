@@ -152,10 +152,10 @@ export function cardCols(rows, names, x, w) {
   const reachOf = [reachText, reachShort].find((f) => nameEnd + 6 <= reachR - Math.max(0, ...rows.map((r) => measure(f(r))))) || null;
   return { rank: x + P + 4, name: nameX, reach: reachOf ? reachR : null, reachOf, score: scoreR, scoreRoom: (i) => scoreR - (nameX + measure(names[i], true) + 6) };
 }
-export function drawRankCard(ctx, ui, app, card, x, y, w) {
+export function drawRankCard(ctx, ui, app, card, x, y, w, { fill = CARD_BG } = {}) {
   const P = PAD_BOX, { st, phase, rows, h } = card;
   openBox('panel', x, y, w, h, P, { name: '순위 카드' });
-  box(ctx, x, y, w, h, CARD_BG, phase === 'ok' ? PAL.gold : PAL.frameHi);
+  box(ctx, x, y, w, h, fill, phase === 'ok' ? PAL.gold : PAL.frameHi);
   if (phase === 'unreached') { text(ctx, '순위를 불러오지 못했어요', x + P, textY(y + P), PAL.dim); closeBox(); return; }
   if (phase === 'stale') { STALE_LINES.forEach((s, i) => text(ctx, s, x + P, textY(y + P + i * LINE), i ? PAL.dim : PAL.ink)); closeBox(); return; }
   const hy = inkY(y + P, BTN_S);
