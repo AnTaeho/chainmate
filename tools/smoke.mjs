@@ -112,6 +112,7 @@ const BTN_STD = 18, BTN_HERO = 26;
 const BTN_OK = [
   { why: '첫 화면 큰 단추', ok: (b) => b.name === '첫 화면 단추' && b.h === BTN_HERO },
   { why: '수업 「시작」', ok: (b) => b.name === '단추 lessons:go' && b.h === BTN_HERO },
+  { why: '기기 잇기 숫자판', ok: (b) => b.name.startsWith('단추 link:key:') && b.h === BTN_HERO },
 ];
 // 제목 자리: 판 밖 화면은 pageHead 큰 머리가 (12, 4)에 있어야 한다(29절 제목 자리 1)
 const PAGE_SCREENS = ['settings', 'records', 'codex', 'rank', 'account', 'link', 'unlocks', 'lessons', 'setup'];
