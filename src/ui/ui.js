@@ -6,7 +6,7 @@ import { PAL } from '../render/palette.js';
 import { box, rrect, rframe, text, measure, lift } from '../render/gfx.js';
 import { familyChips, chipRows, chipBlockH, chipText } from './parts-depth.js';
 import { wrap } from '../render/text.js';
-import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, EDGE_PAD, INK_H, flow, inkY } from './frame.js';
+import { PAD_BOX, LINE, GAP_IN, GAP_GROUP, EDGE_PAD, INK_H, flow, inkY, BTN_H, BTN_MIN, BTN_PAD, SP } from './frame.js';
 import { openBox, closeBox, logClip, LOG, logFrame, arcInset } from '../render/layoutlog.js';
 
 export class UI {
@@ -113,7 +113,12 @@ export function pillR(w, h, tw) {
   for (let r = Math.floor(h / 2); r > 0; r--) if (Math.max(arcInset(r, top), arcInset(r, bot)) <= slack - 0.5) return r;
   return 0;
 }
+// 글에 맞춘 단추 폭(29절): 글 + 양쪽 BTN_PAD(12), 가장 좁아도 min(BTN_MIN 64). icon이면 아이콘 자리(10)를 더한다
+export const btnW = (label, { icon = false, min = BTN_MIN } = {}) => Math.max(min, (label ? measure(label, true) : 0) + (icon ? 10 : 0) + BTN_PAD * 2);
+// w · h를 null로 주면 w는 btnW(글), h는 BTN_H
 export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null, grow = null } = {}) {
+  if (w == null) w = btnW(label, { icon: !!icon });
+  if (h == null) h = BTN_H;
   const g = grow && ui.finger ? growHit(x, y, w, h, ui.finger, grow) : { x, y, w, h };
   const r = ui.region(id, g.x, g.y, g.w, g.h, { enabled, onClick, ...(tip ? { tip } : {}) });
   const hov = enabled && ui.isHover(id);
@@ -144,6 +149,29 @@ export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick
   if (label) text(ctx, label, tx, ty, ink, { bold: true });
   closeBox();
   return r;
+}
+
+// 단추 한 줄(29절): 모두 같은 폭(가장 넓은 글의 btnW — w로 정할 수 있다), 사이 gap(8). anchor: x가 줄의 왼끝 left · 가운데 center · 오른끝 right.
+// items: [{ id, label, onClick, tone, enabled, icon, tip, grow }]. 돌려주는 값 { x, w(줄 폭), bw(단추 폭), rects }
+export function rowWidth(items, { gap = SP.m, w = null, min = BTN_MIN } = {}) {
+  const bw = w ?? Math.max(0, ...items.map((it) => btnW(it.label, { icon: !!it.icon, min })));
+  return { bw, w: items.length ? items.length * bw + (items.length - 1) * gap : 0 };
+}
+export function buttonRow(ctx, ui, items, x, y, { anchor = 'left', gap = SP.m, w = null, h = BTN_H, min = BTN_MIN } = {}) {
+  const { bw, w: total } = rowWidth(items, { gap, w, min });
+  const x0 = anchor === 'center' ? x - Math.floor(total / 2) : anchor === 'right' ? x - total : x;
+  const rects = items.map((it, i) => {
+    const bx = x0 + i * (bw + gap);
+    const { id, label, ...opts } = it;
+    button(ctx, ui, id, bx, y, bw, h, label, opts);
+    return { id, x: bx, y, w: bw, h };
+  });
+  return { x: x0, w: total, bw, rects };
+}
+// 토글 무리(켬 · 끔 · ×1 · 한국어 — 29절): 같은 폭, 고른 것은 금빛. options [[값, 글]], 단추 id는 `${prefix}:${값}`. 사이 gap(4)
+export function toggleGroup(ctx, ui, prefix, options, cur, x, y, go, { anchor = 'left', gap = SP.s, w = null, h = BTN_H, min = BTN_MIN, enabled = true } = {}) {
+  const items = options.map(([v, label]) => ({ id: `${prefix}:${v}`, label, tone: cur === v ? 'gold' : 'plain', enabled, onClick: () => go(v) }));
+  return buttonRow(ctx, ui, items, x, y, { anchor, gap, w, h, min });
 }
 
 // 말풍선 내용을 폭 w에 맞춘 줄들. 말풍선은 만들 때 폭을 모른다(자리 규칙이 폭을 정한다 — placement.js):

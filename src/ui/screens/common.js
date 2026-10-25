@@ -1,15 +1,15 @@
 // 틀 조각(docs/design-notes/layout.md 「틀 셋」): 멈춤 단추 · 판 밖 머리줄 · 판 틀의 왼쪽 칸.
 import { PAL } from '../../render/palette.js';
-import { W, text, rect, rrect, measure } from '../../render/gfx.js';
+import { W, text, rect, rrect, measure, box, R_LG } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
 import { ANTES } from '../../sim/run.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { panel, tipLines, optLine, fragmentStrip, wrapName, drawName } from '../parts.js';
-import { button, fingerDots, growHit } from '../ui.js';
+import { button, fingerDots, growHit, btnW, buttonRow, toggleGroup, rowWidth } from '../ui.js';
 import { familyList, familyMore } from '../parts-depth.js';
 import { familyCounts } from '../../data/families.js';
-import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, flow, rowSpan } from '../frame.js';
-import { openBox, closeBox, logClip } from '../../render/layoutlog.js';
+import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, BTN_H, SP, flow, rowSpan } from '../frame.js';
+import { openBox, closeBox, logClip, logHead } from '../../render/layoutlog.js';
 import { L as L_ } from '../lang.js';
 import { emberMark } from '../ignite.js';
 import { moneyShake } from '../juice.js';
@@ -39,19 +39,79 @@ export function pauseButton(ctx, ui, app, x = PAUSE.x, y = PAUSE.y) {
   for (const dy of [1, 5, 9]) rrect(ctx, x + 1, y + dy, 10, 2, 1, col);
 }
 
-// 판 밖 틀의 머리줄: 왼쪽 제목(금빛 굵게) · 오른쪽 보조 글(흐림) · 가로줄.
-// big: 안 3 큰 제목(크림 두 배 굵게, 가로줄 없음 — 보조 글 · 탭은 제목 가운데 줄에 맞춘다)
-export const HEAD_BIG = { y: 4, mid: 15 };
+// 판 밖 틀의 머리줄(29절 제목 자리 1): 큰 제목(크림 두 배 굵게, (12, 4)) · 탭은 제목 오른쪽 8 · 보조 글은 오른쪽 끝(W − 12, 흐림).
+// big 없이 부르면 옛 작은 머리줄(금빛 1배 + 가로줄) — 화면 단계에서 모두 big으로 옮긴다.
+// tabs: { ui, prefix, list: [[id, 글]], cur, go, min } — 같은 폭 알약(toggleGroup), 단추 id는 `${prefix}:tab:${id}`. 돌려주는 값 { tabEnd }(탭 오른끝, 없으면 제목 끝)
+export const HEAD_BIG = { x: PAGE.titleX, y: 4, mid: 15, gap: SP.m };
+HEAD_BIG.tabY = HEAD_BIG.mid - (BTN_H >> 1);
 export const headW = (title) => measure(title, true) * 2;
-export function pageHead(ctx, title, right = null, { big = false } = {}) {
+export const headTabX = (title) => HEAD_BIG.x + headW(title) + HEAD_BIG.gap;
+export function pageHead(ctx, title, right = null, { big = false, tabs = null } = {}) {
   if (big) {
-    text(ctx, title, PAGE.titleX, HEAD_BIG.y, PAL.ink, { bold: true, scale: 2 });
+    logHead(title, HEAD_BIG.x, HEAD_BIG.y);
+    text(ctx, title, HEAD_BIG.x, HEAD_BIG.y, PAL.ink, { bold: true, scale: 2 });
+    let tabEnd = HEAD_BIG.x + headW(title);
+    if (tabs) {
+      const row = toggleGroup(ctx, tabs.ui, `${tabs.prefix}:tab`, tabs.list, tabs.cur, headTabX(title), HEAD_BIG.tabY, tabs.go, { min: tabs.min ?? 0 });
+      tabEnd = row.x + row.w;
+    }
     if (right != null) text(ctx, right, W - PAGE.titleX, HEAD_BIG.mid - 5, PAL.dim, { align: 'right' });
-    return;
+    return { tabEnd };
   }
   text(ctx, title, PAGE.titleX, PAGE.titleY, PAL.gold, { bold: true });
   if (right != null) text(ctx, right, W - PAGE.titleX, PAGE.titleY, PAL.dim, { align: 'right' });
   rect(ctx, 8, PAGE.ruleY, W - 16, 1, PAL.feltHi);
+  return { tabEnd: PAGE.titleX + measure(title, true) };
+}
+// 머리줄 탭 줄 폭(제목 옆에 들어가는지 미리 잴 때)
+export const headTabsW = (list, min = 0) => rowWidth(list.map(([, label]) => ({ label })), { gap: SP.s, min }).w;
+
+// 판 밖 틀의 맨 아래 단추 줄(29절): 「뒤로」 (12, 244) 폭 80, 주 단추는 오른쪽 끝(W − 12 − 폭), 그 사이 단추(extras)는 「뒤로」 오른쪽 8부터 같은 폭 · 사이 8.
+// 단추마다 { id, label, onClick, tone, enabled, tip }. back의 label을 안 주면 「뒤로」. 돌려주는 값 { back, primary, extras }(네모)
+export function bottomBar(ctx, ui, { back = null, primary = null, extras = [] } = {}) {
+  const y = PAGE.btnY, out = { back: null, primary: null, extras: [] };
+  if (back) {
+    const { id, label = '뒤로', ...o } = back;
+    button(ctx, ui, id, PAGE.titleX, y, PAGE.backW, BTN_H, label, o);
+    out.back = { x: PAGE.titleX, y, w: PAGE.backW, h: BTN_H };
+  }
+  if (primary) {
+    const { id, label, w, ...o } = primary;
+    const pw = w ?? btnW(label, { icon: !!o.icon });
+    const px = W - PAGE.titleX - pw;
+    button(ctx, ui, id, px, y, pw, BTN_H, label, o);
+    out.primary = { x: px, y, w: pw, h: BTN_H };
+  }
+  if (extras.length) out.extras = buttonRow(ctx, ui, extras, PAGE.titleX + (back ? PAGE.backW + PAGE.gap : 0), y).rects;
+  return out;
+}
+
+// 막간 상자(29절 제목 자리 3 — 보상 · 결과 · 상자 · 전설 · 각성 · 멈춤): 안 위 12에 두 배 제목 가운데(줄 28),
+// 본문은 제목 아래 12, 단추 줄은 안 아래 12에 가운데 한 줄(같은 폭 · 사이 8). bodyH: 본문 높이, buttons: 단추가 있는지
+export const INTER = { pad: SP.l, titleH: 28, gap: SP.l };
+export function interludeLayout(bodyH, { title = true, buttons = true } = {}) {
+  const P = INTER.pad;
+  let y = P;
+  const titleY = title ? y + ((INTER.titleH - 22) >> 1) : null;
+  if (title) y += INTER.titleH + INTER.gap;
+  const bodyY = y;
+  y += bodyH;
+  const btnY = buttons ? y + (bodyH > 0 ? INTER.gap : 0) : null;
+  if (buttons) y = btnY + BTN_H;
+  return { titleY, bodyY, btnY, h: y + P };
+}
+// 막간 상자를 (x, y) 폭 w로 그린다(높이는 interludeLayout으로). body(ctx, x, y, w)가 본문을 그린다(안 여백 pad 안쪽 폭).
+// opts: { title, titleCol(기본 크림 — 이기고 지는 막간만 금빛 · 붉은), fill, edge, buttons: [{ id, label, ... }], name }
+export function interlude(ctx, ui, x, y, w, bodyH, body = null, { title = null, titleCol = PAL.ink, fill = PAL.feltDk, edge = PAL.frameDk, buttons = [], name = '막간 상자' } = {}) {
+  const lay = interludeLayout(bodyH, { title: !!title, buttons: buttons.length > 0 });
+  const P = INTER.pad;
+  openBox('panel', x, y, w, lay.h, P, { name });
+  box(ctx, x, y, w, lay.h, fill, edge, { r: R_LG });
+  if (title) text(ctx, title, x + Math.floor(w / 2), y + lay.titleY, titleCol, { align: 'center', bold: true, scale: 2 });
+  if (body) body(ctx, x + P, y + lay.bodyY, w - P * 2);
+  if (buttons.length) buttonRow(ctx, ui, buttons, x + Math.floor(w / 2), y + lay.btnY, { anchor: 'center' });
+  closeBox();
+  return { x, y, w, h: lay.h, ...lay };
 }
 
 // 관 줄(머리 칸 첫 줄): 「3/8관」 · 끝없는 대국은 「9관」
