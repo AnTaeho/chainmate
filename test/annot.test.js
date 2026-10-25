@@ -13,6 +13,7 @@ before(async () => {
     battle: await import('../src/ui/screens/battle.js'),
     board3: await import('../src/render/board3.js'),
     gfx: await import('../src/render/gfx.js'),
+    ui: await import('../src/ui/ui.js'),
     lang: await import('../src/ui/lang.js'),
     run: await import('../src/sim/run.js'),
   };
@@ -87,20 +88,20 @@ test('바친 기물 줄: 다 들어가면 모두, 모자라면 앞에서부터 +
   assert.ok(many.fits && many.more >= 10, JSON.stringify(many));
 });
 
-test('희생 단추: 한국어는 아이콘 + 「희생」 62, 영어 「Sacrifice」는 아이콘 없이 글에 맞춘 폭 — 테와 글 사이 2 이상', () => {
+test('희생 단추: 폭 62 알약 + 아이콘, 이름이 안 들어가는 영어는 「Sac」 — 테와 글 사이 2 이상, 손 이름표 줄이 단추 앞에 든다', () => {
   const { discardButton } = M.battle;
-  M.lang.setLang('ko');
-  assert.deepEqual(discardButton(), { w: 62, icon: true });
-  M.lang.setLang('en');
-  const b = discardButton(), tw = M.gfx.measure('희생', true);
-  assert.equal(M.lang.L('희생'), 'Sacrifice');
-  assert.equal(b.icon, false);
-  assert.ok(b.w >= tw + 1 * 2 + 2 * 2 + 1, `폭 ${b.w} · 글 ${tw}`);
-  // 손 이름표 줄(CHM-40)은 넓어진 단추를 뺀 자리에 맞춘다
-  const run = M.run.createRun({ seed: 1, draft: false });
-  run.consumables = [{ kind: 'tactic', id: run.consumables[0] ? run.consumables[0].id : 'fork' }];
-  const row = M.battle.BattleScreen.prototype.handRowLayout.call({ run, canReboard: () => true });
-  const last = row.rb != null ? row.rb + 15 : row.tactics.length ? row.tactics[row.tactics.length - 1].x + 15 : M.battle.RX;
-  assert.ok(last <= M.battle.RX + M.battle.RW - b.w - 3, `손 줄 끝 ${last}`);
+  const { pillR } = M.ui;
+  for (const [lang, label] of [['ko', '희생'], ['en', 'Sac']]) {
+    M.lang.setLang(lang);
+    const b = discardButton(), tw = M.gfx.measure(b.label, true) + 10;
+    assert.deepEqual(b, { w: 62, icon: true, label });
+    assert.ok(pillR(b.w, 18, tw) >= 8, `${lang}: 알약 모서리 ${pillR(b.w, 18, tw)}`);
+    // 손 이름표 줄(CHM-40)은 단추를 뺀 자리에 맞춘다
+    const run = M.run.createRun({ seed: 1, draft: false });
+    run.consumables = [{ kind: 'tactic', id: run.consumables[0] ? run.consumables[0].id : 'fork' }];
+    const row = M.battle.BattleScreen.prototype.handRowLayout.call({ run, canReboard: () => true });
+    const last = row.rb != null ? row.rb + 15 : row.tactics.length ? row.tactics[row.tactics.length - 1].x + 15 : M.battle.RX;
+    assert.ok(last <= M.battle.RX + M.battle.RW - b.w - 2, `손 줄 끝 ${last}`);
+  }
   M.lang.setLang('ko');
 });

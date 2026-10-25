@@ -4,9 +4,9 @@
 import { hint } from '../coach.js';
 import { PIECES } from '../../data/pieces.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, rrect, rframe, R_BIG, radiusOf, frame, line, seg, dot, sprite, num, digits, measure, short, fitNum, fine, slot } from '../../render/gfx.js';
+import { W, H, text, box, rect, rrect, rframe, R_SM, R_LG, radiusOf, frame, line, seg, dot, sprite, num, digits, DIGIT_H, measure, short, fitNum, fine, slot, selectGlow } from '../../render/gfx.js';
 import { SW, SH, tierOf, ENG_EDGE } from '../../render/sprites.js';
-import { center as sqCenter, centerAt, projectSq, unproject, sqBox, hitBox, picker, thingTop, THINGS, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, boardPath, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
+import { center as sqCenter, centerAt, projectSq, unproject, sqBox, hitBox, picker, thingTop, THINGS, order as sqOrder, fillSq, strokeSq, clipSq, ringSq, drawBoardImage, geo as boardGeo, PIECE_UP, RIM, DEPTH } from '../../render/board3.js';
 import { piece3, fitPiece, pieceCanvas, pieceChips, scaleOf, PIECE_TOP, INK as INK3 } from '../../render/pieces3.js';
 import { dropSquaresFor, visibleIncoming, isHidden, overflowTier, OVERFLOW_TIERS, canReboard, nextDraws } from '../../sim/battle.js';
 import { chainCaptures, chainRedrops } from '../../sim/chain.js';
@@ -14,9 +14,9 @@ import { mateBlocked } from '../../sim/tuning.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
 import { FAMILY_BY_ID, maximFamilies } from '../../data/families.js';
-import { familyStrip, josekiBadges, traitMark } from '../parts-depth.js';
+import { familyStrip, familyGlyph, traitMark } from '../parts-depth.js';
 import { TRAIT_BY_ID } from '../../data/traits.js';
-import { JOSEKI_BY_ID } from '../../data/josekis.js';
+import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
@@ -30,13 +30,13 @@ import { Seq, ease, lerp } from '../anim.js';
 import { sway } from '../sway.js';
 import { glow, glowText, groundShadow, flicker } from '../../render/light.js';
 import { live as motion, beat } from '../../render/look.js';
-import { button, tipHeight, growHit, pillR } from '../ui.js';
+import { button, tipHeight, growHit, pillR, btnW, TIP_SEP } from '../ui.js';
 import { keyHeight } from '../glossary.js';
 import { SIDE_W, NOTE_GAP } from '../placement.js';
 import { pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel, maximCard, maximTip, edgeRing, chartBadge, soulMark, fragmentStrip } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton, shardTo, hasClock, clockPips, clockTip, SIDE } from './common.js';
-import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, flow, textY, inkY, BTN_S, INK_H } from '../frame.js';
+import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, CHIP_PAD, flow, textY, inkY, BTN_S, INK_H, SP } from '../frame.js';
 import { INK_DESC } from '../../render/layoutlog.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { drawPortrait } from '../../render/portraits.js';
@@ -68,15 +68,18 @@ export const LX = 8, LW = 112, RX = 360, RW = 112;
 // 대국이 끝난 뒤 막간 화면(afterSeq → app.flow): 날던 동전 · 명국 조각이 이어 난다
 const AFTER = new Set(['reward', 'chest', 'awaken', 'legend']);
 // 다음 수(CHM-60, docs/design-notes/agency.md A): 덱 맨 앞 둘을 손 부채 왼쪽 아래 작은 칸 둘에(왼쪽이 먼저, 흐리게), 위에 「다음」 이름표.
-// fanX: 손 부채의 왼끝(handRect(0).x) — 그 왼쪽 틈 6에 붙인다
-export const NEXT_COL = { w: 16, h: 22, gap: 3, sep: 6 };
+// fanX: 손 부채의 왼끝(기운 첫 카드의 왼끝 — fanEdge) — 그 왼쪽 틈 sep에 붙인다. 밑변은 화면 끝 여백 8
+export const NEXT_COL = { w: 16, h: 22, gap: SP.s, sep: SP.s };
 export function nextColumn(lay, fanX = RX) {
   const { w, h, gap, sep } = NEXT_COL, cw = w * 2 + gap;
-  const x = fanX - sep - cw, y = 270 - 4 - h;
+  const x = fanX - sep - cw, y = 270 - SP.m - h;
   return { x, y, w: cw, h, labelY: y - LINE + 1, slots: [0, 1].map((k) => ({ x: x + k * (w + gap), y, w, h })) };
 }
-// 손 부채(안 3): 카드 폭 · 높이 · 걸음(겹침) · 고른 카드 들림 · 카드마다 기울기(도)
-export const HAND = { w: 42, h: 48, hLesson: 40, step: 44, lift: 6, deg: 4 };
+// 손 부채(안 3): 카드 폭 · 높이 · 걸음(겹침) · 고른 카드 들림 · 카드마다 기울기(도) · 바깥 카드 기울기 한도(도) · 바깥 카드 내려앉음 한도
+// 카드가 여섯 장을 넘으면 바깥 카드가 화면 밖(오른쪽 · 아래)으로 나가지 않게 기울기 · 내려앉음을 한도 안에서 나눈다
+export const HAND = { w: 42, h: 48, hLesson: 40, step: 44, lift: 6, deg: 4, maxDeg: 8, sag: 3 };
+// 카드를 아래쪽 가운데(높이 1.2배 아래) 축으로 rot만큼 돌렸을 때 윗모서리가 기울기 없는 카드 밖으로 나가는 가로 몫
+const fanOver = (w, h, rot) => Math.max(0, Math.ceil((w / 2) * Math.cos(rot) + h * 1.2 * Math.sin(rot) - w / 2));
 // 카드 윗변 y가 판 밑에 들어가는 가장 왼쪽 x(두께 · 기울기 몫 6을 더 둔다). 정면 판은 판 아래 띠 전체, 「다음」 칸이 판 자리 왼끝 안에 남게
 export function fanLeft(y) {
   const g = boardGeo(), B = g.at(8, 0), R = g.at(8, 8), lim = y - DEPTH - 6;
@@ -86,14 +89,27 @@ export function fanLeft(y) {
 }
 // 오른쪽 칸 격언 칸(그림만) · 콤보 칸 · 왼쪽 칸 줄의 크기
 export const MAXC = { w: 21, h: 26 }, MAXIM_ROW = 5;
-export const COMBO = { top: 39, h: 18, gap: 3, max: 5 };
+export const COMBO = { top: 39, h: 18, gap: SP.xs, max: 5 };
 const ROW_L = 17, PX = 4, VAL_W = 47;
 const maximSlotsOf = (run) => Math.max(maximCapacity(run) + run.maxims.filter((m) => m.legendary).length, run.maxims.length);
-// 손 이름표 줄 오른쪽 희생 단추: 아이콘 + 이름이 62 안에 들어가면 그대로. 안 들어가면(영어 「Sacrifice」 굵게 57) 아이콘을 빼고
-// 이름에 맞춘 폭(테 1 + 틈 2 양쪽 — 단추 글 안 여백 검사). 손 이름표 줄(handRowLayout)은 이 폭을 뺀 자리를 쓴다(CHM-40)
+// 손 이름표 줄 오른쪽 희생 단추: 폭 62(btnW의 가장 좁은 폭 64를 2 줄였다 — 묘수 둘 · 다시 놓기 · 단추가 112에 들어가게), 아이콘 + 이름.
+// 이름이 알약 안에 안 들어가면(영어 「Sacrifice」 굵게 58) 체스 말 「Sac」(희생을 줄인 말)로 — 알약 모양 · 아이콘 · 「손」 이름표를 지킨다.
+// 손 이름표 줄(handRowLayout)은 이 폭을 뺀 자리를 쓴다(CHM-40)
+export const SAC_W = 62, SAC_SHORT = 'Sac';
 export function discardButton() {
-  const tw = measure('희생', true);
-  return tw + 10 + 6 <= 62 ? { w: 62, icon: true } : { w: Math.max(62, tw + 7), icon: false };
+  const label = btnW('희생', { icon: true, min: 0 }) <= SAC_W ? '희생' : SAC_SHORT;
+  return { w: SAC_W, icon: true, label };
+}
+// 정석 표(오른쪽 위 줄, 행마 단추 오른쪽): 등급 빛깔로 칠한 작은 칸(모서리 R_SM · 잉크 테) 안에 짙은 시너지 문양. 가리키면 정석 풀이
+const JOSEKI_TILE = 11; // 셋이 행마 단추 · 두 배 콤보 수와 위 줄에 같이 들어가는 크기
+function josekiTiles(ctx, ui, run, x, y) {
+  (run.josekis || []).forEach((id, k) => {
+    const j = JOSEKI_BY_ID[id], bx = x + k * (JOSEKI_TILE + SP.xs), col = TIER_COL[j.tier];
+    ui.region(`joseki:${id}`, bx, y, JOSEKI_TILE, JOSEKI_TILE, { tip: () => tipLines(j.name, [j.text, j.more], 150, j.families.length ? [{ chips: j.families }] : []) });
+    box(ctx, bx, y, JOSEKI_TILE, JOSEKI_TILE, col, PAL.frameDk, { r: R_SM });
+    if (j.families[0]) familyGlyph(ctx, j.families[0], bx + ((JOSEKI_TILE - 5) >> 1) + 0.5, y + ((JOSEKI_TILE - 5) >> 1) + 0.5, PAL.cardInk);
+    else dot(ctx, bx + JOSEKI_TILE / 2 - 1.5, y + JOSEKI_TILE / 2 - 1.5, 3, PAL.cardInk);
+  });
 }
 const BAR_TIERS = OVERFLOW_TIERS; // 목표 막대의 눈금(목표 ×1 · ×2 · ×5 · ×10) = 넘친 층
 // 대국 왼쪽 칸(안 3): 값 × 배수 큰 칸 높이(이름표 줄 + 두 배 수)
@@ -135,6 +151,14 @@ function torchMark(ctx, x, y, time) {
   seg(ctx, x + 2.5, y + 5, x + 2.5, y + 7.5, '#8c6a3a', 1.2);
   const flame = (h, w, col) => { ctx.beginPath(); ctx.moveTo(x + 2.5 - k * 0.4, y + 5 - h); ctx.quadraticCurveTo(x + 2.5 + w, y + 3.5, x + 2.5, y + 5); ctx.quadraticCurveTo(x + 2.5 - w, y + 3.5, x + 2.5 - k * 0.4, y + 5 - h); ctx.fillStyle = col; ctx.fill(); };
   flame(5.2, 2.6, '#df8a45'); flame(4.4, 1.9, '#efbd55'); flame(3, 1, '#fff1b8');
+}
+// 판 둘레 빛(사슬 평가 · 넘친 고리)의 길: 판 테(RIM) 밖 px, 모서리는 둥글게(R_LG + px — 29절 큰 것 모서리를 바깥으로 넓힌 꼴)
+function rimPath(ctx, px) {
+  const g = boardGeo(), e = RIM + px / (2 * g.hw), r = R_LG + px;
+  const p = [g.at(-e, -e), g.at(8 + e, -e), g.at(8 + e, 8 + e), g.at(-e, 8 + e)];
+  ctx.beginPath(); ctx.moveTo((p[3].x + p[0].x) / 2, (p[3].y + p[0].y) / 2);
+  for (let i = 0; i < 4; i++) { const q = p[(i + 1) % 4]; ctx.arcTo(p[i].x, p[i].y, q.x, q.y, r); }
+  ctx.closePath();
 }
 // 점선(미리 보기의 길): step 간격 둥근 점
 function dotLine(ctx, x0, y0, x1, y1, col, step = 3) {
@@ -1313,8 +1337,8 @@ export class BattleScreen {
       const k = f.t / f.life;
       const col = f.tier >= 10 && k < 0.3 ? PAL.white : k < 0.35 ? PAL.goldHi : k < 0.7 ? PAL.gold : PAL.red;
       ctx.globalAlpha = 1 - k * 0.6;
-      const s = k < 0.4 ? (f.tier >= 5 ? 3 : 2) : 1;
-      rect(ctx, f.x + Math.sin((f.t + f.x) * 12) * 1.5, f.y + f.vy * f.t, s, s + (k < 0.3 ? 1 : 0), col);
+      const d = k < 0.4 ? (f.tier >= 5 ? 3 : 2) : 1.2; // 둥근 불티(29절 — 네모 낱알 없음)
+      dot(ctx, f.x + Math.sin((f.t + f.x) * 12) * 1.5, f.y + f.vy * f.t, d, col);
     }
     ctx.globalAlpha = 1;
   }
@@ -1391,8 +1415,8 @@ export class BattleScreen {
     this.intro = null;
     this.app.invalidate();
   }
-  // 마스터 등장 장면(28절): 세력 빛깔 바탕 · 붉은 위아래 줄, 64×64 초상을 두 배로(왼쪽에서 들어온다), 「마스터」 · 이름(세 배) · 별칭, 규칙 띠(오른쪽에서 들어온다).
-  // 움직임 줄이기면 미끄러짐 · 번쩍 · 흐르는 줄 없이 그대로 선다
+  // 마스터 등장 장면(28절): 세력 빛깔 바탕 · 위아래 둥근 붉은 띠, 64×64 초상을 두 배로(왼쪽에서 들어온다), 「마스터」 · 이름(두 배) · 별칭, 규칙 띠(오른쪽에서 들어온다).
+  // 틀 문법(27 · 29절): 띠 · 초상 칸 · 규칙 띠 모두 둥근 모서리 + 잉크 테 1. 움직임 줄이기면 미끄러짐 · 번쩍 없이 그대로 선다
   drawIntro(ctx, it) {
     const M = MASTER_BY_ID[it.id], calm = this.app.reducedMotion, t = it.t;
     const a = Math.min(1, t / 0.12, (it.life - t) / 0.18);
@@ -1402,24 +1426,32 @@ export class BattleScreen {
     ctx.globalAlpha = Math.max(0, a) * 0.96;
     rect(ctx, 0, 0, W, H, PAL.feltDk);
     ctx.globalAlpha = Math.max(0, a);
-    // 흐르는 줄: 판 어두운 칸 빛깔 가는 줄이 오른쪽으로 지나간다
-    if (!calm) { ctx.globalAlpha = Math.max(0, a) * 0.22; for (let i = 0; i < 9; i++) { const y = 46 + i * 21, len = 40 + (i * 37) % 70, x = ((t * (260 + i * 30) + i * 97) % (W + len)) - len; rect(ctx, x, y, len, 2, PAL.dark); } ctx.globalAlpha = Math.max(0, a); }
-    rect(ctx, 0, 36, W, 3, PAL.red); rect(ctx, 0, H - 39, W, 3, PAL.red);
-    // 초상: 왼쪽에서 들어와 선다(테 상자 안)
+    // 위아래 띠: 화면 끝 여백 8 안의 둥근 붉은 띠(잉크 테)
+    for (const y of [34, H - 40]) box(ctx, SP.m, y, W - SP.m * 2, 6, PAL.red, PAL.frameDk, { r: 3 });
+    // 초상: 왼쪽에서 들어와 선다(잉크 테 상자 + 안쪽 붉은 테)
     const px = Math.round(-150 + 186 * slide(0.02, 0.24)), py = 62;
-    box(ctx, px - 4, py - 4, 136, 136, PAL.well, PAL.red);
+    box(ctx, px - 4, py - 4, 136, 136, PAL.well, PAL.frameDk);
+    rframe(ctx, px - 3, py - 3, 134, 134, R_LG - 1, PAL.red);
     fine(() => drawPortrait(ctx, it.id, px, py, 4));
-    // 이름 · 별칭: 오른쪽에서
-    const tx = Math.round(190 + (1 - slide(0.1, 0.24)) * 220);
-    text(ctx, '마스터', tx, 66, PAL.red, { bold: true, scale: 2 });
-    const room = W - 190 - 8, ns = [3, 2, 1].find((k) => measure(M.name, true) * k <= room) || 1;
-    boldText(ctx, M.name, tx, 92 + (3 - ns) * 6, PAL.goldHi, { align: 'left', scale: ns });
-    text(ctx, `「${L(M.rule)}」`, tx, 132, PAL.gold, { bold: true }); // 별칭만 옮긴다(괄호를 붙인 글은 표에 없다)
-    // 규칙 띠: 붉은 띠가 오른쪽에서 밀려 들어오고 규칙 글이 선다
-    const lines = wrap(M.text, W - 190 - 16).slice(0, 3);
-    const bh = 8 + lines.length * LINE, by = 158, bx = Math.round(176 + (1 - slide(0.2, 0.22)) * 320);
-    rect(ctx, bx, by, W - bx + 8, bh, PAL.redDk); rect(ctx, bx, by, 3, bh, PAL.red);
-    lines.forEach((l, i) => text(ctx, l, bx + 14, by + 4 + i * LINE, PAL.ink));
+    // 「마스터」(제목 한 배, 붉은) → 이름(두 배 굵게) → 별칭(금빛): 오른쪽에서
+    const tx = Math.round(190 + (1 - slide(0.1, 0.24)) * 220), room = W - 190 - SP.m;
+    const big = measure(M.name, true) * 2 <= room, lines = wrap(M.text, W - 176 - PAD_BOX * 2).slice(0, 3);
+    // 글 묶음(「마스터」 · 이름 · 별칭 · 규칙 띠)을 초상 칸(py − 4 ~ py + 132) 가운데 높이에
+    const blockH = LINE_TITLE + (big ? 28 : LINE_TITLE) + SP.s + LINE + SP.l + PAD_BOX * 2 + lines.length * LINE;
+    const f = flow(py - 4 + Math.max(0, (136 - blockH) >> 1));
+    const kickY = f.line(true);
+    const nameY = big ? f.space(28) + ((28 - INK_H * 2) >> 1) : f.line(true); // 두 배 제목 줄 28
+    f.gap(SP.s);
+    const aliasY = f.line();
+    text(ctx, '마스터', tx, kickY, PAL.red, { bold: true });
+    boldText(ctx, M.name, tx, nameY, PAL.ink, { align: 'left', scale: big ? 2 : 1 });
+    text(ctx, `「${L(M.rule)}」`, tx, aliasY, PAL.gold, { bold: true }); // 별칭만 옮긴다(괄호를 붙인 글은 표에 없다)
+    // 규칙 띠: 붉은 둥근 띠가 오른쪽에서 밀려 들어오고(오른쪽 끝은 화면 밖) 규칙 글이 선다
+    const bx = Math.round(176 + (1 - slide(0.2, 0.22)) * 320);
+    f.gap(SP.l);
+    const by = f.y, bh = PAD_BOX * 2 + lines.length * LINE;
+    box(ctx, bx, by, W - bx + R_LG + 2, bh, PAL.redDk, PAL.frameDk, { r: R_LG });
+    lines.forEach((l, i) => text(ctx, l, bx + PAD_BOX, by + textY(PAD_BOX + i * LINE), PAL.ink));
     // 들어서는 순간 흰 번쩍
     if (!calm && t < 0.34 && t > 0.22) { ctx.globalAlpha = 0.5 * (1 - (t - 0.22) / 0.12); rect(ctx, 0, 0, W, H, PAL.white); }
     ctx.globalAlpha = 1;
@@ -1518,15 +1550,16 @@ export class BattleScreen {
     for (const m of BAR_TIERS) {
       if (m * tgt > maxV + 0.5) break;
       const tx = X + Math.round((Wd * m) / maxV * tgt) - 1;
-      rect(ctx, tx, Y - 2, 2, Hh + 4, m === 1 ? (passed ? PAL.goldHi : PAL.white) : PAL.red);
-      if (m > 1) digits(ctx, `${m}`, tx - 2 * String(m).length, Y - 7, PAL.red);
+      rect(ctx, tx, Y - 1, 2, Hh + 2, m === 1 ? (passed ? PAL.goldHi : PAL.white) : PAL.red);
+      // 숫자 잉크(y − 1 ~ y + 5)는 눈금 윗변 한 줄 위에서 끝난다(leftLayout이 띠 DIGIT_H를 비워 둔다)
+      if (m > 1) digits(ctx, `${m}`, tx - 2 * String(m).length, Y - DIGIT_H - 1, PAL.red);
     }
     if (hot && !this.app.reducedMotion) {
       motion();
       const ex = X + fill;
       for (let i = 0; i < 6; i++) {
         const k = (time * 3 + i / 6) % 1;
-        rect(ctx, ex - 4 + ((i * 5) % 9) - Math.round(Math.sin(time * 9 + i) * 1.5), Y - 1 - Math.round(k * 7), k < 0.4 ? 2 : 1, k < 0.4 ? 2 : 1, k < 0.3 ? PAL.goldHi : k < 0.6 ? PAL.gold : PAL.red);
+        dot(ctx, ex - 3 + ((i * 5) % 9) - Math.sin(time * 9 + i) * 1.5, Y - 1 - Math.round(k * 7), k < 0.4 ? 2 : 1.2, k < 0.3 ? PAL.goldHi : k < 0.6 ? PAL.gold : PAL.red);
       }
     }
   }
@@ -1543,13 +1576,13 @@ export class BattleScreen {
       const hue = Math.floor(time * 360) % 360;
       const cols = { '★': [PAL.white], '★★': [PAL.gold, PAL.goldHi], '★★★': [PAL.red, PAL.gold, PAL.red], '∞': [`hsl(${hue},85%,60%)`, `hsl(${(hue + 90) % 360},85%,60%)`, `hsl(${(hue + 180) % 360},85%,60%)`] }[g.mark];
       ctx.globalAlpha = a;
-      cols.forEach((c, i) => { boardPath(ctx, RIM, 2 + i * 2); ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke(); });
+      cols.forEach((c, i) => { rimPath(ctx, 2 + i * 2); ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke(); });
       ctx.globalAlpha = 1;
     }
     if (this.ring) {
       const k = this.ring.t / this.ring.life;
       ctx.globalAlpha = Math.max(0, 1 - k);
-      boardPath(ctx, RIM, 6 + Math.round(k * 10)); ctx.strokeStyle = this.ring.col; ctx.lineWidth = 2; ctx.stroke();
+      rimPath(ctx, 6 + Math.round(k * 10)); ctx.strokeStyle = this.ring.col; ctx.lineWidth = 2; ctx.stroke();
       ctx.globalAlpha = 1;
     }
     const t = this.clickable();
@@ -1597,7 +1630,8 @@ export class BattleScreen {
       }
       // 판 위 사물(발판 · 문 · 고속도로 줄): 칸 자체가 스스로 풀이한다. 적이 서 있으면 그 풀이 아래에 한 줄 더
       const objs = isHidden(b, sq) ? [] : objectsAt(b.rules, sq);
-      if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.map((o) => o[1])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
+      // 기물 풀이 뒤에 붙는 사물 풀이는 가름줄 아래에 사물 이름(짙은 금빛)과 함께 — 두 풀이가 한 문단으로 읽히지 않게
+      if (objs.length) tip = tip ? [tip[0], [...tip[1], ...objs.flatMap((o) => [TIP_SEP, [o[0], PAL.goldDk], o[1]])]] : [objs.map((o) => o[0]).join(' · '), objs.map((o) => o[1])];
       const tipOpt = tip ? sqTip(tip[0], tip[1], diag) : null;
       // 낱말 상자: 말풍선 제목이 곧 낱말인 것(증원 · 지키는 적 · 특성 · 벽 · 보석 · 특수 기물)
       if (tipOpt) tipOpt.keys = [g && { id: 'reinforce' }, forced && forced.has(sq) && { id: 'threat' }, shut && { id: 'mate' }, cell && !cell.mine && cell.trait && { id: 'trait' }, cell && cell.t === 'X' && { id: 'wall' }, cell && cell.t === 'J' && { id: 'gem' }, cell && !cell.mine && isFairy(cell.t) && { id: 'fairy' }, shut && { skip: 'threat' }].filter(Boolean); // 「지키던 적」에 응수 낱말 상자를 붙이지 않고 체크메이트 풀이를 띄운다
@@ -1873,13 +1907,16 @@ export class BattleScreen {
     const h1 = f.y + P - TOP;
     openBox('panel', RX, TOP, RW, h1, P, { overlay: true, name: '먹으면' });
     panel(ctx, RX, TOP, RW, h1);
-    text(ctx, '지금', RX + 21, labY, PAL.dim, { align: 'center' });
-    text(ctx, '잡으면', RX + 77, labY, PAL.dim, { align: 'center' });
-    box(ctx, RX + 8, artY, 26, 34, PAL.light, PAL.frameDk);
-    sprite(ctx, v.chain.form, 'w', RX + 13, artY + 6, this.look(v.chain.form));
-    text(ctx, '›', RX + 49, artY + 9, PAL.gold, { align: 'center', bold: true, scale: 2 });
-    box(ctx, RX + 64, artY, 26, 34, pv.cut ? PAL.red : PAL.gold, PAL.frameDk);
-    sprite(ctx, pv.form, 'w', RX + 69, artY + 6, this.look(pv.form));
+    // 지금 › 잡으면: 그림 칸 둘을 판넬 안 여백(8)에 붙여 양쪽 끝에, 화살은 가운데(아래 값 · 배수 줄과 같은 양끝)
+    const AW = 26, ax0 = RX + P, ax1 = RX + RW - P - AW;
+    // 이름표는 그림 칸 가운데에, 칸보다 넓으면 판넬 안 여백 안으로 당긴다
+    const lab = (s, cx) => { const hw = Math.ceil(measure(L(s)) / 2) + 1; text(ctx, s, Math.max(RX + P + hw, Math.min(RX + RW - P - hw, cx)), labY, PAL.dim, { align: 'center' }); };
+    lab('지금', ax0 + AW / 2); lab('잡으면', ax1 + AW / 2);
+    box(ctx, ax0, artY, AW, 34, PAL.light, PAL.frameDk);
+    sprite(ctx, v.chain.form, 'w', ax0 + 5, artY + 6, this.look(v.chain.form));
+    text(ctx, '›', RX + RW / 2, artY + 9, PAL.gold, { align: 'center', bold: true, scale: 2 });
+    box(ctx, ax1, artY, AW, 34, pv.cut ? PAL.red : PAL.gold, PAL.frameDk);
+    sprite(ctx, pv.form, 'w', ax1 + 5, artY + 6, this.look(pv.form));
     text(ctx, `+${short(pv.value)}`, RX + P, valY, PAL.val, { bold: true });
     text(ctx, `배수 +${short(pv.mult)}`, RX + RW - P, valY, PAL.gold, { align: 'right', bold: true });
     closeBox();
@@ -1890,7 +1927,12 @@ export class BattleScreen {
       : pv.done ? ['콤보가 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red]
       // 먹을 적이 두 자리면(넓은 행마의 새 특수 기물, CHM-55) 폭에 맞춰 짧은 말로
       : [measure(L(`다음에 잡을 적 ${pv.next.length}`), true) <= RW - P * 2 ? `다음에 잡을 적 ${pv.next.length}` : `잡을 적 ${pv.next.length}`, PAL.gold];
-    fitText(ctx, msg, RX + P, y2 + textY(P), RW - P * 2, col);
+    // 끊김 · 지키는 적(붉은 말)은 어두운 판넬 위에서 묻히지 않게 붉은 칩(잉크 테 · 밝은 글)에
+    if (col === PAL.red) {
+      const cw = Math.min(RW - P * 2, measure(L(msg), true) + CHIP_PAD * 2 + 2), cy = y2 + Math.floor((h2 - FAM_H) / 2);
+      box(ctx, RX + P, cy, cw, FAM_H, PAL.btnRed, PAL.frameDk, { r: R_SM });
+      fitText(ctx, msg, RX + P + CHIP_PAD + 1, inkY(cy, FAM_H), cw - CHIP_PAD * 2 - 2, PAL.btnRedInk);
+    } else fitText(ctx, msg, RX + P, y2 + textY(P), RW - P * 2, col);
     closeBox();
   }
 
@@ -1923,25 +1965,27 @@ export class BattleScreen {
   // 목표 막대 → 값 × 배수 큰 칸 → (빈 자리 — 다시 두기의 견주기 · 수업의 콤보 줄) → 아래에서부터 수 · 희생 · 시계 · 상금 · 덱 줄
   leftLayout() {
     const spec = this.headSpec();
-    let y = 4;
-    const kick = { y, h: 17 };
-    y += 17;
+    let y = SP.s;
+    const kick = { y, h: FAM_H }; // 관 줄: 테 두른 칩 높이(이기면 알약)
+    y += FAM_H;
     const titles = spec.titles.map(() => { const t = textY(y, LINE_TITLE); y += LINE_TITLE; return t; });
     const scoreLab = textY(y); y += LINE;
-    // 큰 점수(세 배): 잉크 33 + 아래로 빠지는 쉼표 6
-    const score = y; y += INK_H * 3 + INK_DESC * 3 + 1;
-    const bar = { y, h: 6 }; y = bar.y + bar.h + 5;
+    // 큰 점수(세 배 잉크 33) → 틈 1 → 넘친 층 숫자 띠(DIGIT_H — 쉼표가 빠지는 자리를 같이 쓴다) → 막대(눈금은 막대 테 높이)
+    const score = y; y += INK_H * 3 + 1 + DIGIT_H;
+    const bar = { y, h: 6 }; y = bar.y + bar.h + SP.s;
     const val = { y, h: VAL_H }; y += VAL_H;
     const n = this.run ? (hasClock(this.run) ? 5 : 4) : 3;
     const rowsTop = SIDE.bottom - n * ROW_L;
+    // 빈 자리(chain): 판 대국에서는 비어 있다 — 대국마다 한 줄(도전 줄 같은 것)을 둘 곳은 이 자리 맨 위 한 줄(note)
     const chainY = y + 3;
-    return { spec, kick, titles, scoreLab, score, bar, val, chain: { y: chainY, h: rowsTop - 3 - chainY }, rowsTop, n, headY: 4, headBottom: score + INK_H * 3 };
+    const chain = { y: chainY, h: rowsTop - 3 - chainY };
+    return { spec, kick, titles, scoreLab, score, bar, val, chain, note: { y: chainY, h: Math.min(LINE_TITLE, chain.h) }, rowsTop, n, headY: SP.s, headBottom: score + INK_H * 3 };
   }
   // 탁월수 배수(CHM-43): 배수 칸(모인 뒤엔 점수 칸)에 청록 테와 오른쪽 위 「×N」 딱지. 값 × 배수가 점수로 흘러갈 때까지
   brillTag(ctx, x, y, w) {
     const T = ANNOT.teal, mark = `×${Number(this.view.brill.x.toFixed(2))}`, sz = annotSize(mark);
-    rframe(ctx, x, y, w, VAL_H, R_BIG, T.fill);
-    rframe(ctx, x + 1, y + 1, w - 2, VAL_H - 2, R_BIG - 1, T.edge);
+    rframe(ctx, x, y, w, VAL_H, R_LG, T.fill);
+    rframe(ctx, x + 1, y + 1, w - 2, VAL_H - 2, R_LG - 1, T.edge);
     drawAnnot(ctx, mark, x + w - sz.w + 4, y - 7, T);
   }
   // 수가 오른 순간부터 스러지는 빛 세기(1 → 0, 0.45초). 움직임 줄이기에도 남는다(한 번 밝아지는 것은 떨림이 아니다)
@@ -2065,7 +2109,7 @@ export class BattleScreen {
       const p = pulse;
       openBox('panel', x, y, w, VAL_H, 2, { name, loose: !!g });
       box(ctx, x - p, y - p, w + p * 2, VAL_H + p * 2, fill, PAL.frameDk);
-      if (!g && (name === '값' ? uv : um) > 0.3) { ctx.globalAlpha = ((name === '값' ? uv : um) - 0.3) * 1.2; rrect(ctx, x - p + 2, y - p + 2, w - 4 + p * 2, VAL_H - 4 + p * 2, R_BIG - 1, PAL.white); ctx.globalAlpha = 1; }
+      if (!g && (name === '값' ? uv : um) > 0.3) { ctx.globalAlpha = ((name === '값' ? uv : um) - 0.3) * 1.2; rrect(ctx, x - p + 2, y - p + 2, w - 4 + p * 2, VAL_H - 4 + p * 2, R_SM, PAL.white); ctx.globalAlpha = 1; }
       if (label) text(ctx, label, x + 5, y + 3, labCol);
       const bn = this.bigNum(n, w - 8, 2);
       text(ctx, bn.s, x + w / 2, y + 14 + (bn.k === 2 ? 0 : INK_H / 2), PAL.cardInk, { align: 'center', bold: true, scale: bn.k });
@@ -2176,7 +2220,7 @@ export class BattleScreen {
   rightLayout(run = this && this.run) {
     // 수업(판 없음)은 킹의 말이 오른쪽 칸 위를 길게 쓰므로 손 카드를 조금 낮춘다(격언 · 시너지 · 콤보 칸이 없다)
     const HAND_H = run ? HAND.h : HAND.hLesson, ROW_H = BTN_S;
-    const handY = 270 - 6 - HAND_H, rowY = handY - 6 - ROW_H;
+    const handY = 270 - SP.m - HAND_H, rowY = handY - SP.m - ROW_H; // 고른 카드가 들려도(HAND.lift 6) 이름표 줄과 2 떨어진다
     const slots = run ? maximSlotsOf(run) : 0;
     const mrows = slots ? Math.ceil(slots / MAXIM_ROW) : 0;
     const mH = mrows ? mrows * MAXC.h + (mrows - 1) * LIST_GAP : 0;
@@ -2186,7 +2230,7 @@ export class BattleScreen {
     const comboN = Math.max(0, Math.min(COMBO.max, Math.floor((comboEnd - comboY + COMBO.gap) / (COMBO.h + COMBO.gap))));
     return { handY, HAND_H, rowY, maxY, mrows, stripY, rows: 1, comboY, comboN, room: stripY - GAP_GROUP - TOP };
   }
-  // 손 이름표 줄 왼쪽(희생 단추 앞, 틈 3): 「손」 → 묘수 칸들 → 다시 놓기 단추(칸마다 15, 사이 2).
+  // 손 이름표 줄 왼쪽(희생 단추 앞, 틈 2): 「손」 → 묘수 칸들 → 다시 놓기 단추(칸마다 15, 사이 2).
   // 칸이 다 들어가지 않으면 「손」 글자를 빼고(손 카드가 바로 아래 있다), 그래도 모자라면 칸 사이를 1로
   handRowLayout() {
     const run = this.run;
@@ -2194,21 +2238,25 @@ export class BattleScreen {
     const rb = this.canReboard();
     const n = tactics.length + (rb ? 1 : 0);
     const itemsW = (gap) => (n ? n * 15 + (n - 1) * gap : 0);
-    const space = RW - discardButton().w - 3;
-    const lw = measure('손') + 6;
-    const label = lw + itemsW(2) <= space;
+    const space = RW - discardButton().w - SP.xs;
+    // 「손」 글자 뒤 틈은 4, 모자라면 2(영어 「Hand」 + 다시 놓기가 희생 단추 앞에 들어가게)
+    const lw = [SP.s, SP.xs].map((g) => measure('손') + g).find((w) => w + itemsW(2) <= space);
+    const label = lw != null;
     const x0 = label ? RX + lw : RX;
     const step = 15 + (label || itemsW(2) <= space ? 2 : 1);
     return { label, tactics: tactics.map((i, k) => ({ i, x: x0 + k * step })), rb: rb ? x0 + tactics.length * step : null };
   }
   // 손 카드 i의 자리(n장일 때) — 부채꼴: 오른쪽 끝(오른쪽 칸 끝)에 붙여 왼쪽으로 펼치고, 가운데에서 멀수록 기울고 조금 내려앉는다.
   // 왼쪽 끝은 판 밑(fanLeft)까지. 희생 연출(흩어지는 카드)도 같은 셈을 쓴다. rot: 기울기(라디안), 구역은 기울이지 않은 네모
+  // 바깥 카드의 기운 윗모서리(over)까지 오른쪽 칸 끝 · fanLeft 안에 둔다
   handRect(i, n, lay = this.rightLayout(this.run)) {
     n = Math.max(1, n);
-    const w = HAND.w, h = lay.HAND_H, right = RX + RW - 1;
-    const step = n > 1 ? Math.min(HAND.step, Math.floor((right - w - fanLeft(lay.handY - HAND.lift)) / (n - 1))) : 0;
-    const x0 = right - w - step * (n - 1), d = i - (n - 1) / 2;
-    return { x: x0 + i * step, y: lay.handY + Math.round(d * d * 0.5), w, h, step, rot: (d * HAND.deg * Math.PI) / 180 };
+    const w = HAND.w, h = lay.HAND_H, dm = (n - 1) / 2;
+    const deg = dm ? Math.min(HAND.deg, HAND.maxDeg / dm) : 0, over = fanOver(w, h, (dm * deg * Math.PI) / 180);
+    const right = RX + RW - over, left = fanLeft(lay.handY - HAND.lift) + over;
+    const step = n > 1 ? Math.min(HAND.step, Math.floor((right - w - left) / (n - 1))) : 0;
+    const x0 = right - w - step * (n - 1), d = i - dm, sag = Math.min(dm * dm * 0.5, HAND.sag);
+    return { x: x0 + i * step, y: lay.handY + (dm ? Math.round(sag * (d / dm) ** 2) : 0), w, h, step, over, rot: (d * deg * Math.PI) / 180 };
   }
   // 콤보 칸: 이번 콤보가 거쳐 간 모습을 차례로(지난 콤보는 흐리게). 위 줄 왼쪽에 잡은 수(크게)와 「콤보」. 칸이 모자라면 최근 것부터
   drawComboSlots(ctx, ui, lay, headRoom) {
@@ -2277,13 +2325,14 @@ export class BattleScreen {
       maximCard(ctx, m, x, y, MAXC.w, MAXC.h, { narrow: true, off: off.includes(m.uid), hot: ui.isHover(id), t: ui.time + i * 0.37 });
     }
   }
-  // 손 카드 하나(크림 카드 · 기물 그림 · 이름이 들어가면 이름): 고른 카드는 금빛 두 겹 테
+  // 손 카드 하나(크림 카드 · 기물 그림 · 이름이 들어가면 이름): 고른 카드는 금빛 테 + 빛
   // vis: 다음 카드에 덮이지 않고 보이는 폭(이름은 그 안 가운데에, 안 들어가면 뺀다)
   handCard(c, p, x, y, w, h, { selected = false, hover = false, dim = false, alpha = 1, tier = 0, level = 0, time = null, loose = false, vis = w } = {}) {
     if (alpha !== 1) c.globalAlpha = alpha;
     openBox('card', x, y, w, h, 2, { overlay: true, loose, name: '손 카드' });
+    // 고른 카드: 금빛 테 1 + 바깥 빛(29절 — parts.js pieceCard와 같은 꼴)
+    if (selected) selectGlow(c, x, y, w, h);
     box(c, x, y, w, h, PAL.card, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk);
-    if (selected) { edgeRing(c, x, y, w, h, -1, PAL.gold); edgeRing(c, x, y, w, h, -2, PAL.frameDk); }
     if (p.eng && ENG_EDGE[p.eng.id]) edgeRing(c, x, y, w, h, 1, ENG_EDGE[p.eng.id]);
     const nm = L(PIECE_NAME[p.t] || ''), vw = Math.min(w, vis), room = vw - 4;
     const bold = measure(nm, true) <= room, show = bold || measure(nm) <= room;
@@ -2301,11 +2350,11 @@ export class BattleScreen {
     if (run) {
       // 위 줄: 콤보 수(왼쪽) · 「행마」 단추 · 정석 표(멈춤 단추 왼쪽에 붙여)
       const nj = (run.josekis || []).length;
-      const bx = PAUSE.x - 4 - nj * 12;
-      const mw = measure('행마', true) + 14, mx = bx - 4 - mw;
+      const bx = PAUSE.x - SP.s - (nj ? nj * (JOSEKI_TILE + SP.xs) - SP.xs : 0);
+      const mw = measure('행마', true) + 14, mx = bx - SP.s - mw; // 위 줄 작은 알약(글 + 양쪽 7)
       // 손가락 구역(CHM-52): 위로는 캔버스 밖 여백까지, 아래로는 콤보 칸 윗변 앞까지, 옆으로는 콤보 수 쪽
       button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { l: Math.max(0, mx - RX - 34), u: Infinity, d: Math.max(0, lay.comboY - 1 - 2 - BTN_S) } });
-      josekiBadges(ctx, ui, run, bx, 9);
+      josekiTiles(ctx, ui, run, bx, 2 + ((BTN_S - JOSEKI_TILE) >> 1)); // 행마 단추(y 2)와 가운데를 맞춘다
       this.drawComboSlots(ctx, ui, lay, mx - 4 - RX);
       familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: lay.rows });
       this.maximCountLabel(ctx, ui, lay);
@@ -2330,7 +2379,7 @@ export class BattleScreen {
     const drawn = v.drawn || [], hiding = v.hiding || [], deal = this.dealIn;
     const nudging = this.nudgeOn = this.nudging();
     const n = v.hand.length;
-    const nc = nextColumn(lay, this.handRect(0, Math.max(1, n), lay).x), nextRight = nc.x + nc.w;
+    const nc = nextColumn(lay, this.fanEdge(n, lay)), nextRight = nc.x + nc.w;
     v.hand.forEach((p, i) => {
       const hr = this.handRect(i, n, lay);
       const w = hr.w, x = hr.x, id = `hand:${i}`;
@@ -2367,9 +2416,11 @@ export class BattleScreen {
     this.drawNext(ctx, ui, lay);
   }
 
+  // 손 부채의 왼끝: 기운 첫 카드의 윗모서리까지
+  fanEdge(n, lay) { const r = this.handRect(0, Math.max(1, n), lay); return r.x - r.over; }
   // 다음 수(CHM-60): 덱 맨 앞 둘(왼쪽이 먼저), 손 부채 왼쪽 아래에 「다음」 이름표와 작은 칸 둘. 덱이 비면 빈 자리
   drawNext(ctx, ui, lay) {
-    const col = nextColumn(lay, this.handRect(0, Math.max(1, this.view.hand.length), lay).x), next = this.view.next || [];
+    const col = nextColumn(lay, this.fanEdge(this.view.hand.length, lay)), next = this.view.next || [];
     ui.region('next', col.x, col.labelY, col.w, col.y + col.h - col.labelY, { tip: () => this.nextTip() });
     text(ctx, '다음', col.x, col.labelY, PAL.dim);
     col.slots.forEach((r, k) => {
@@ -2387,7 +2438,7 @@ export class BattleScreen {
 
   // 손 이름표 줄 오른쪽 단추(희생). 다시 두기(screens/review.js)는 「넘어가기」
   actionButton(ctx, ui, x, y, db, canDiscard, upRoom) {
-    button(ctx, ui, 'btn:discard', x, y, db.w, BTN_S, '희생', { enabled: canDiscard, onClick: () => this.discard(), icon: db.icon ? discardIcon : null, tone: canDiscard ? 'red' : 'plain', grow: { u: upRoom } });
+    button(ctx, ui, 'btn:discard', x, y, db.w, BTN_S, db.label, { tip: () => this.offeredTip(), enabled: canDiscard, onClick: () => this.discard(), icon: db.icon ? discardIcon : null, tone: canDiscard ? 'red' : 'plain', grow: { u: upRoom } });
   }
 
   drawOver(ctx) {
@@ -2396,14 +2447,17 @@ export class BattleScreen {
       const a = Math.min(1, bt * 6, (bn.life - bn.t) * 3);
       ctx.globalAlpha = Math.max(0, a) * 0.85;
       const { row, TW, mBig, subs, bh, by } = this.bannerBox();
-      rect(ctx, BX - 6, by, S * 8 + 12, bh, PAL.shadow);
+      // 띠: 판 폭을 조금 넘는 둥근 상자(R_LG · 잉크 테), 마스터 띠는 안쪽 붉은 테
+      const bx = BX - 6, bw = S * 8 + 12;
+      rrect(ctx, bx, by, bw, bh, R_LG, PAL.shadow);
       ctx.globalAlpha = Math.max(0, a);
+      rframe(ctx, bx, by, bw, bh, R_LG, PAL.frameDk);
+      if (bn.master) rframe(ctx, bx + 1, by + 1, bw - 2, bh - 2, R_LG - 1, PAL.red);
       if (bn.master) {
         // 초상이 오른쪽에서 미끄러져 들어온다(64×64)
         const k = Math.min(1, bt / 0.35);
         const px = BX + 150 + (1 - k * k * (3 - 2 * k)) * 90;
         fine(() => drawPortrait(ctx, bn.master, px, by + 6, 2));
-        rect(ctx, BX - 6, by, S * 8 + 12, 1, PAL.red); rect(ctx, BX - 6, by + bh - 1, S * 8 + 12, 1, PAL.red);
         text(ctx, bn.title, BX + 4, mBig ? by + PAD_BOX : by + PAD_BOX + LINE - 7, bn.col, { bold: true, scale: mBig ? 2 : 1 });
         subs.forEach((l, i) => text(ctx, l, BX + 4, by + PAD_BOX + LINE * 2 + GAP_GROUP + i * LINE, PAL.ink));
       } else {
@@ -2445,8 +2499,8 @@ export class BattleScreen {
   // 판 위 사물의 작은 그림(18×18): 발판 · 문 · 고속도로 줄
   newsObj(ctx, obj, x, y) {
     if (obj === 'step') {
-      ctx.globalAlpha = 0.6; rrect(ctx, x, y, 18, 18, 3, PAL.gold); ctx.globalAlpha = 1;
-      rframe(ctx, x, y, 18, 18, 3, PAL.goldDk);
+      ctx.globalAlpha = 0.6; rrect(ctx, x, y, 18, 18, R_SM, PAL.gold); ctx.globalAlpha = 1;
+      rframe(ctx, x, y, 18, 18, R_SM, PAL.goldDk);
       for (const [i, j] of [[3, 3], [13.5, 3], [3, 13.5], [13.5, 13.5]]) dot(ctx, x + i, y + j, 1.5, PAL.goldHi);
     } else if (obj === 'gate') {
       gateArch(ctx, x, y, 18, 0.5);

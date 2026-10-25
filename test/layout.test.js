@@ -92,15 +92,15 @@ test('오른쪽 칸: 다시 놓기가 보이는 첫 수 전에도 격언 다섯 
   const self = { run, canReboard: () => true };
   const lay = M.battle.BattleScreen.prototype.rightLayout.call(self, run);
   assert.equal(lay.mrows, 1);
-  // 묘수 0 · 1 · 2개와 다시 놓기가 희생 단추(폭 62, 틈 3) 앞에 들어간다
+  // 묘수 0 · 1 · 2개와 다시 놓기가 희생 단추(폭 62, 틈 2) 앞에 들어간다
   for (const lang of LANGS) {
     M.lang.setLang(lang);
     for (const n of [0, 1, 2]) {
       run.consumables = ['freeze', 'reload'].slice(0, n).map((id) => ({ kind: 'tactic', id }));
       const row = M.battle.BattleScreen.prototype.handRowLayout.call(self);
-      assert.ok(row.rb != null && row.rb + 15 <= RX + RW - 62 - 3, `${lang} 묘수 ${n}: 다시 놓기 ${row.rb}`);
-      // 「손」 글자: 한국어는 묘수가 없으면 단추와 같이 들어간다. 영어 「Hand」(31)는 단추와 같이 못 들어가 첫 수 전에만 빠진다
-      if (n === 0 && lang === 'ko') assert.ok(row.label, `${lang}: 「손」 글자`);
+      assert.ok(row.rb != null && row.rb + 15 <= RX + RW - 62 - 2, `${lang} 묘수 ${n}: 다시 놓기 ${row.rb}`);
+      // 「손」 글자: 묘수가 없으면 다시 놓기 · 희생 단추와 같이 들어간다(영어 「Hand」는 틈 2로)
+      if (n === 0) assert.ok(row.label, `${lang}: 「손」 글자`);
       if (n === 0) assert.ok(M.battle.BattleScreen.prototype.handRowLayout.call({ run, canReboard: () => false }).label, `${lang}: 첫 수 뒤 「손」 글자`);
     }
   }
@@ -640,10 +640,17 @@ test('다음 수 칸: 손 카드 · 「!?」 딱지와 겹치지 않고 화면 �
   const B = M.battle;
   const lay = B.BattleScreen.prototype.rightLayout.call({});
   const over = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  for (let n = 1; n <= 6; n++) {
+  // 기운 카드의 네 모서리(그리기와 같은 축 — 카드 아래쪽 가운데, 높이 1.2배 아래)
+  const corners = (hr) => { const px = hr.x + hr.w / 2, py = hr.y + hr.h * 1.2, c = Math.cos(hr.rot), s = Math.sin(hr.rot); return [[hr.x, hr.y], [hr.x + hr.w, hr.y], [hr.x, hr.y + hr.h], [hr.x + hr.w, hr.y + hr.h]].map(([x, y]) => ({ x: px + (x - px) * c - (y - py) * s, y: py + (x - px) * s + (y - py) * c })); };
+  const lastTop = lay.handY - B.HAND.lift; // 기운 카드 윗모서리가 「다음」 이름표 줄과 겹치지 않는지 볼 높이
+  for (let n = 1; n <= 9; n++) {
     const hand = Array.from({ length: n }, (_, i) => B.BattleScreen.prototype.handRect.call({}, i, n, lay));
-    const col = B.nextColumn(lay, hand[0].x);
-    assert.ok(col.x >= B.BX && col.y + col.h <= BOTTOM && col.labelY >= 230, `${n}장: 다음 칸 ${JSON.stringify(col)}`);
+    const col = B.nextColumn(lay, hand[0].x - hand[0].over);
+    assert.ok(col.x >= B.BX && col.y + col.h <= BOTTOM - 6 && col.labelY >= 224, `${n}장: 다음 칸 ${JSON.stringify(col)}`);
+    // 기운 카드도 화면 안(오른쪽 칸 끝 472 · 아래 270), 첫 카드의 기운 왼끝은 다음 칸 오른쪽
+    for (const hr of hand) for (const p of corners(hr)) assert.ok(p.x <= B.RX + B.RW + 0.5 && p.y <= 270, `${n}장 기운 카드 모서리 ${JSON.stringify(p)}`);
+    assert.ok(Math.min(...corners(hand[0]).filter((p) => p.y >= lastTop).map((p) => p.x)) >= col.x + col.w, `${n}장 첫 카드가 다음 칸에 걸친다`);
+    if (n > 6) continue; // 아래는 처음 여섯 장의 옛 검사 그대로
     for (const r of col.slots) assert.ok(r.w >= 14 && r.h >= 18, '기물이 칸 안에 든다');
     hand.forEach((hr, i) => {
       assert.ok(hr.w >= 30 && hr.x + hr.w <= B.RX + B.RW && hr.y + hr.h <= BOTTOM, `${n}장 ${i}째 카드 ${JSON.stringify(hr)}`);

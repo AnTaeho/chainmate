@@ -3,7 +3,7 @@
 // 탭 · 아무 키면 닫히고, 앉은 뒤 2초면 저절로 닫힌다. 막간은 한 수 연출(seq) 밖이다. 뒤에는 왼쪽 칸에 불씨 아이콘이 남는다.
 // 판 상태는 읽기만 한다(기록은 규칙 run.js checkIgnite).
 import { PAL } from '../render/palette.js';
-import { text, rect, rrect, rframe, box, seg, sprite, num, short, measure, fine, radiusOf, W, H } from '../render/gfx.js';
+import { text, rect, rrect, rframe, box, seg, sprite, num, short, measure, fine, R_SM, R_LG, W, H } from '../render/gfx.js';
 import { glow } from '../render/light.js';
 import { DEPTH } from '../render/board3.js';
 import { openBox, closeBox, layerUp } from '../render/layoutlog.js';
@@ -88,7 +88,7 @@ export function drawCombo(ctx, g, { BX, BY, S, center, board = null }) {
   layerUp(); // 덮개처럼: 밑 화면(격언 칸 · 손)과는 상자 겹침을 재지 않는다
   const fade = calm ? 1 : Math.min(1, t / 0.2);
   ctx.globalAlpha = fade * 0.45; rect(ctx, 0, 0, W, H, PAL.shadow);
-  { const d = board || { x: BX, y: BY, w: W8, h: W8 }; ctx.globalAlpha = fade * 0.45; rect(ctx, d.x - 4, d.y - 4, d.w + 8, d.h + 8 + DEPTH, PAL.shadow); ctx.globalAlpha = 1; }
+  { const d = board || { x: BX, y: BY, w: W8, h: W8 }; ctx.globalAlpha = fade * 0.45; rrect(ctx, d.x - 4, d.y - 4, d.w + 8, d.h + 8 + DEPTH, R_LG, PAL.shadow); ctx.globalAlpha = 1; }
   // 사슬의 길: 먹은 차례대로 이어진다. 먹은 칸에 차례 숫자
   const ctr = (sq) => { const p = center(sq); return { x: p.x - 1, y: p.y - 1 }; };
   const n = ig.path.length, upto = calm ? n : Math.min(n, (t / COMBO.PATH) * n);
@@ -99,7 +99,7 @@ export function drawCombo(ctx, g, { BX, BY, S, center, board = null }) {
     if (q > 0) drawRoute(ctx, capPts(c, ctr), q);
     if (q >= 1) marks.push({ sq: c.to, i: i + 1 });
   });
-  { const p = center(ig.drop); rframe(ctx, p.x - 5, p.y - 5, 10, 10, 3, PAL.goldHi, 2); }
+  { const p = center(ig.drop); rframe(ctx, p.x - 5, p.y - 5, 10, 10, R_SM, PAL.goldHi, 2); }
   for (const m of marks) {
     const p = center(m.sq);
     rrect(ctx, p.x - 3, p.y - 3, 6, 6, 3, PAL.goldDk); rrect(ctx, p.x - 2, p.y - 2, 4, 4, 2, PAL.goldHi);
@@ -114,8 +114,9 @@ export function drawCombo(ctx, g, { BX, BY, S, center, board = null }) {
   const y1 = Math.round(BY + (W8 - L.CH) / 2), cy = Math.round(y1 - (1 - k * k) * 160);
   const draw = () => {
     openBox('panel', cx, cy, L.CW, L.CH, L.P, { name: '콤비네이션', loose: k < 1 });
-    box(ctx, cx, cy, L.CW, L.CH, PAL.card, PAL.goldDk);
-    rframe(ctx, cx + 2, cy + 2, L.CW - 4, L.CH - 4, radiusOf(L.CW, L.CH) - 2, PAL.gold);
+    // 잉크 테 1(29절) + 안쪽 금빛 테 — 이 판의 기록 카드
+    box(ctx, cx, cy, L.CW, L.CH, PAL.card, PAL.frameDk);
+    rframe(ctx, cx + 2, cy + 2, L.CW - 4, L.CH - 4, R_SM, PAL.gold);
     text(ctx, '이 판의', cx + L.P, cy + L.kick, PAL.cardDim);
     text(ctx, '콤비네이션', cx + L.P, cy + L.title, PAL.goldDk, { bold: true });
     // 거쳐 간 모습(앞에서 넷, 넘치면 「+N」)
