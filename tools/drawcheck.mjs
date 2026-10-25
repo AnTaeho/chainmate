@@ -410,6 +410,13 @@ const PLAY = async ({ k, sac = false }) => {
   await scene(page, 'records · lessons · setup', async () => {
     for (const s of ['records', 'lessons', 'setup']) { await h.ev((s) => { const a = window.__app; a.toTitle(); a.go(s); }, s); await h.step(40); await h.hoverAll(/./, 3, 15); await h.step(30); }
   });
+  // 업적 탭(쪽 넘김) · 줄 선 업적 알림(금빛 알림이 0.8초 사이로 뜨고 스러진다)
+  await scene(page, 'achievements', async () => {
+    await h.ev(() => { const a = window.__app; a.toTitle(); a.go('records', { tab: 'achv' }); }); await h.step(30);
+    for (let n = 0; n < 4; n++) { await h.press(/^records:next$/, 15); }
+    await h.press(/^records:tab:stats$/, 15); await h.press(/^records:tab:achv$/, 15);
+    await h.ev(() => { window.__app.achvQueue.push('combo3', 'mate1'); }); await h.step(260);
+  });
   await scene(page, 'resize', async () => {
     await h.ev(() => { const a = window.__app; a.toTitle(); a.go('codex'); }); await h.step(30);
     for (const [w, hh] of [[1000, 600], [VW, VH], [800, 450], [VW, VH]]) { await page.setViewportSize({ width: w, height: hh }); await sleep(300); await h.step(30); }
