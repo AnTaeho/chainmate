@@ -690,6 +690,7 @@ export const TEMPLATES = [
   [/^오프닝 (.+)[이가] 열렸어요$/, (m, tr) => `Opening “${tr(m[1])}” unlocked`],
   [/^다음 오프닝 (.+): (.+) \((\d+)\/(\d+)\)$/, (m, tr) => `Next opening ${tr(m[1])}: ${tr(m[2])} (${m[3]}/${m[4]})`],
   [/^다음 오프닝 (.+): (.+) (\d+)\/(\d+)$/, (m, tr) => `Next opening ${tr(m[1])}: ${tr(m[2])} ${m[3]}/${m[4]}`],
+  [/^다음 오프닝 (.+) \((\d+)\/(\d+)\)$/, (m, tr) => `Next opening ${tr(m[1])} (${m[2]}/${m[3]})`],
   [/^오늘의 대국 (.+)$/, (m) => `Today's Match ${m[1]}`],
   [/^끝없는 대국 (\d+)관$/, (m) => `Endless · Hall ${m[1]}`],
   [/^끝없는 대국 최고 도달 (\d+)관$/, (m) => `Deepest endless: Hall ${m[1]}`],

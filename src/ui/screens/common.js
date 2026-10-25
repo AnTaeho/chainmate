@@ -8,7 +8,8 @@ import { panel, tipLines, optLine, fragmentStrip, wrapName, drawName } from '../
 import { button, fingerDots, growHit, btnW, buttonRow, toggleGroup, rowWidth } from '../ui.js';
 import { familyList, familyMore } from '../parts-depth.js';
 import { familyCounts } from '../../data/families.js';
-import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, BTN_H, SP, flow, rowSpan } from '../frame.js';
+import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, BTN_H, SP, flow, rowSpan, textY } from '../frame.js';
+import { wrap } from '../../render/text.js';
 import { openBox, closeBox, logClip, logHead } from '../../render/layoutlog.js';
 import { L as L_ } from '../lang.js';
 import { emberMark } from '../ignite.js';
@@ -40,6 +41,7 @@ export function pauseButton(ctx, ui, app, x = PAUSE.x, y = PAUSE.y) {
 }
 
 // 판 밖 틀의 머리줄(29절 제목 자리 1): 큰 제목(크림 두 배 굵게, (12, 4)) · 탭은 제목 오른쪽 8 · 보조 글은 오른쪽 끝(W − 12, 흐림).
+// 보조 글이 제목 · 탭 오른쪽 8 안에 안 들면 오른쪽 맞춤 두 줄(본문 줄 14 둘 = 큰 제목 높이 28).
 // big 없이 부르면 옛 작은 머리줄(금빛 1배 + 가로줄) — 화면 단계에서 모두 big으로 옮긴다.
 // tabs: { ui, prefix, list: [[id, 글]], cur, go, min } — 같은 폭 알약(toggleGroup), 단추 id는 `${prefix}:tab:${id}`. 돌려주는 값 { tabEnd }(탭 오른끝, 없으면 제목 끝)
 export const HEAD_BIG = { x: PAGE.titleX, y: 4, mid: 15, gap: SP.m };
@@ -55,7 +57,11 @@ export function pageHead(ctx, title, right = null, { big = false, tabs = null } 
       const row = toggleGroup(ctx, tabs.ui, `${tabs.prefix}:tab`, tabs.list, tabs.cur, headTabX(title), HEAD_BIG.tabY, tabs.go, { min: tabs.min ?? 0 });
       tabEnd = row.x + row.w;
     }
-    if (right != null) text(ctx, right, W - PAGE.titleX, HEAD_BIG.mid - 5, PAL.dim, { align: 'right' });
+    if (right != null) {
+      const room = W - PAGE.titleX - tabEnd - HEAD_BIG.gap;
+      if (measure(L_(String(right))) <= room) text(ctx, right, W - PAGE.titleX, HEAD_BIG.mid - 5, PAL.dim, { align: 'right' });
+      else wrap(right, room).forEach((l, i) => text(ctx, l, W - PAGE.titleX, textY(HEAD_BIG.y + i * LINE), PAL.dim, { align: 'right' }));
+    }
     return { tabEnd };
   }
   text(ctx, title, PAGE.titleX, PAGE.titleY, PAL.gold, { bold: true });

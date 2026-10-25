@@ -73,9 +73,9 @@ export class SetupScreen {
   animating() { return false; }
   draw(ctx, ui) {
     const rec = this.app.records;
-    // 다음 오프닝(해금 과제)은 머리줄 오른쪽 보조 글
+    // 다음 오프닝 이름 · 나아간 수는 머리줄 오른쪽 보조 글(해금 과제는 그 잠긴 카드가 적는다)
     const nu = nextUnlock(rec);
-    pageHead(ctx, '새 판', nu ? `다음 오프닝 ${OPENINGS[nu.id].name}: ${nu.text} (${nu.have}/${nu.need})` : null, { big: true });
+    pageHead(ctx, '새 판', nu ? `다음 오프닝 ${OPENINGS[nu.id].name} (${nu.have}/${nu.need})` : null, { big: true });
     // 카드 줄은 머리줄 아래 묶음 틈 8에서 시작한다(윗변에 걸친 도장의 반 높이 7이 머리줄에 닿지 않게). 「오프닝」 이름표는 두지 않는다 —
     // 영어 최악 꼴(오프닝 다섯 · 두 줄 이름 · 레이팅 2400)에서 더하는 규칙 두 줄이 단추 줄 위 12 안에 들어오게
     const f = flow(PAGE.bodyY + SP.m);
