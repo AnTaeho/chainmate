@@ -52,8 +52,16 @@ let rankRng = 20261007;
 const rankApi = fakeApi({ build: 'smoke', now: () => Date.parse(`${DATE}T12:00:00Z`), rand: () => { rankRng = (rankRng * 1103515245 + 12345) & 0x7fffffff; return rankRng / 0x80000000; } });
 await seedBoard(rankApi, DATE, demoRows(24));
 await seedBoard(rankApi, shiftDate(DATE, -1), demoRows(13));
-const netSettle = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
-dom.window.fetch = async (url, init) => { if (String(url).startsWith('/api/')) return rankApi.fetch(url, init); telSent.n++; return { ok: true }; };
+// 비번 해시(scrypt)는 스레드 풀에서 돈다 — 틱 n개 안에 안 돌아올 수 있어, 가짜 서버로 보낸 부름이 다 돌아올 때까지 틱을 더 돈다
+let inflight = 0;
+const netSettle = async (n = 12) => {
+  for (let round = 0; round < 500; round++) {
+    for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r));
+    if (!inflight) return;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+};
+dom.window.fetch = async (url, init) => { if (String(url).startsWith('/api/')) { inflight++; try { return await rankApi.fetch(url, init); } finally { inflight--; } } telSent.n++; return { ok: true }; };
 dom.window.navigator = { sendBeacon: () => { telSent.n++; return true; } };
 const { boot } = await import('../src/main.js');
 const lessonMod = await import('../src/ui/lessons.js');
