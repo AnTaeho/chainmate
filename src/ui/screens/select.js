@@ -4,20 +4,20 @@
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rect, rrect, rframe, fitNum, measure } from '../../render/gfx.js';
+import { text, box, rect, rrect, rframe, fitNum, measure, R_SM } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
 import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
 import { CHARTS } from '../../data/charts.js';
 import { wrap } from '../../render/text.js';
-import { button } from '../ui.js';
+import { button, btnW } from '../ui.js';
 import { KIND_NAME, PACK_NAME, josa } from '../words.js';
 import { drawIcon, drawIconLight } from '../../render/icons.js';
 import { kindTab } from '../kinds.js';
 import { envelope, edgeRing } from '../parts.js';
 import { L } from '../lang.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, BTN_H, cardX, PAD_CARD, LINE, GAP_IN, GAP_GROUP, flow, BTN_S } from '../frame.js';
+import { MAIN, TOP, BTN_H, PAD_CARD, LINE, GAP_IN, GAP_GROUP, SP, flow, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { tipLines, fitText } from '../parts.js';
 import { drawPortrait } from '../../render/portraits.js';
@@ -57,7 +57,7 @@ export function antePath(ctx, ui, run, cx, y, time) {
     const done = a < run.ante, cur = a === run.ante;
     if (a === ANTES) {
       const col = done ? PAL.gold : cur ? PAL.red : PAL.redDk;
-      if (cur) { ctx.globalAlpha = 0.35 + 0.35 * pulse; rrect(ctx, x - 2, py - 3, cw + 4, CROWN.h + 4, 3, PAL.red); ctx.globalAlpha = 1; }
+      if (cur) { ctx.globalAlpha = 0.35 + 0.35 * pulse; rrect(ctx, x - 2, py - 3, cw + 4, CROWN.h + 4, R_SM, PAL.red); ctx.globalAlpha = 1; }
       crown(ctx, x, py - 1, col);
       continue;
     }
@@ -72,7 +72,7 @@ export function antePath(ctx, ui, run, cx, y, time) {
     if (done) box(ctx, x, py, pw, pw, PAL.gold, PAL.goldDk);
     else if (cur) {
       box(ctx, x, py, pw, pw, PAL.goldHi, PAL.gold);
-      ctx.globalAlpha = 0.3 + 0.5 * pulse; rframe(ctx, x - 2, py - 2, pw + 4, pw + 4, 4, PAL.goldHi); ctx.globalAlpha = 1;
+      ctx.globalAlpha = 0.3 + 0.5 * pulse; rframe(ctx, x - 2, py - 2, pw + 4, pw + 4, R_SM, PAL.goldHi); ctx.globalAlpha = 1;
     } else box(ctx, x, py, pw, pw, PAL.feltDk, PAL.dimDk);
   }
   const fm = MASTER_BY_ID[FINAL_MASTER];
@@ -122,7 +122,7 @@ export function tagIcon(ctx, tag, x, y, sc = 1) {
 // 명인(초상 옆 이름 → 묶음 안 틈 → 규칙 글) 또는 「건너뛰면」 → 받는 것 → 묶음 틈 → 단추 줄(지난 대국은 「이김」 · 「건너뜀」)
 const PORTRAIT = 36;
 const TAG_ICON = 24; // 건너뛰기 패 그림(12 × 2배)
-const BAR = { y: 2, h: BTN_S }; // 본 칸 위 띠의 작은 단추(상점 화면 띠와 같다)
+const BAR = { y: SP.xs, h: BTN_H }; // 본 칸 위 띠의 작은 단추(상점 화면 띠와 같다)
 // 대국 카드 셋은 본 칸을 꽉 채운다(사이 4 — 명인 규칙 글이 한 줄이라도 덜 접히게)
 const SEL = { gap: 4, get w() { return Math.floor((MAIN.w - this.gap * 2) / 3); } };
 const selX = (i) => MAIN.x + i * (SEL.w + SEL.gap);
@@ -248,7 +248,7 @@ export class SelectScreen {
     // 처음 시계를 잃은 뒤: 시계 줄을 가리키는 한 줄
     if (run.log.some((x) => x.clockLost)) hint(app, 'clock', 'clock');
     // 판의 길은 본 칸 위 띠(카드 줄이 내용에 맞춰 길어지므로 아래를 비운다)
-    antePath(ctx, ui, run, MAIN.x + MAIN.w / 2, 5, app.time);
+    antePath(ctx, ui, run, MAIN.x + MAIN.w / 2, textY(BAR.y, BAR.h), app.time);
     const lays = selectLays(run);
     const plan = selectPlan(run, lays);
     // 세력 띠: 연습 · 정식 카드 위(문장 2배 · 이름 · 버릇), 명인 카드는 오른쪽에 온 높이
@@ -277,7 +277,8 @@ export class SelectScreen {
       box(ctx, x, y, w, h, cur ? PAL.feltDk : PAL.well, edge);
       // 지금 대국: 바깥에 한 겹 더(둥근 모서리를 따라)
       if (cur) edgeRing(ctx, x, y, w, h, -1, edge);
-      const ink = cur ? PAL.ink : PAL.dim;
+      // 남은 대국 카드도 글은 또렷하게(지난 대국만 흐리게) — 지금 대국은 금빛 테 · 이름 빛깔 · 단추가 가른다
+      const ink = past ? PAL.dim : PAL.ink;
       const P = PAD_CARD;
       fitText(ctx, KIND_NAME[info.kind], x + P, y + lay.kind, w - P * 2, master ? PAL.red : cur ? PAL.gold : PAL.dim);
       lay.rows.forEach((r, k) => {
@@ -299,25 +300,27 @@ export class SelectScreen {
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)
         if (!pv) ui.region(`select:card:${i}`, x, y, w, h, { keys: [lay.m.text] });
         box(ctx, x + P, y + lay.portrait, PORTRAIT, PORTRAIT, PAL.well, cur ? PAL.red : PAL.frameDk);
-        drawPortrait(ctx, info.master, x + P + 2, y + lay.portrait + 2, 1, cur ? 1 : 0.6);
+        drawPortrait(ctx, info.master, x + P + 2, y + lay.portrait + 2, 1, past ? 0.6 : 1);
         for (const [l, ly] of lay.names) text(ctx, l, x + P + lay.nameX, y + ly, PAL.red, { bold: lay.nameBold });
         for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, ink, { termCol: PAL.gold });
       } else {
         text(ctx, '건너뛰면', x + P, y + lay.skipLabel, PAL.dim);
         if (lay.icon2) tagIcon(ctx, info.tag, x + P + lay.icon2.x, y + lay.icon2.y, 2);
         // 받는 것 글 안 낱말(꾸러미 · 판본 · 명경기 조각)은 밝게 — 가리키면 낱말 상자(위 select:board keys)
-        for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, cur ? PAL.gold : PAL.dim, { bold: lay.tagBold, termCol: cur ? PAL.goldHi : PAL.dim });
+        for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, cur ? PAL.gold : ink, { bold: lay.tagBold, termCol: cur ? PAL.goldHi : past ? PAL.dim : PAL.gold });
       }
       // 단추 줄은 카드 아래 안 여백 위(세 카드가 같은 높이라 같은 줄)
       const by = y + h - P - BTN_H;
       if (past) {
         const lost = log && !log.skipped && log.won === false;
-        text(ctx, log && log.skipped ? '건너뜀' : lost ? '패배 · 시계 −1' : '승리', x + w / 2, by + 3, lost ? PAL.red : PAL.dim, { align: 'center', bold: true });
+        text(ctx, log && log.skipped ? '건너뜀' : lost ? '패배 · 시계 −1' : '승리', x + w / 2, inkY(by, BTN_H), lost ? PAL.red : PAL.dim, { align: 'center', bold: true });
       } else if (cur) {
         if (master) { button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '시작', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
         else {
-          button(ctx, ui, 'select:play', x + P, by, 38, BTN_H, '시작', { onClick: () => this.play(), tone: 'gold' });
-          button(ctx, ui, 'select:skip', x + P + 42, by, w - P * 2 - 42, BTN_H, '건너뛰기', { onClick: () => this.skip() });
+          // 카드 안 폭(98)에 단추 둘을 같은 폭 · 최소 64로 놓을 수 없어 「건너뛰기」는 글 + 양옆 SP.m, 「시작」이 남는 폭
+          const sw = measure('건너뛰기', true) + SP.m * 2, pw = w - P * 2 - SP.s - sw;
+          button(ctx, ui, 'select:play', x + P, by, pw, BTN_H, '시작', { onClick: () => this.play(), tone: 'gold' });
+          button(ctx, ui, 'select:skip', x + P + pw + SP.s, by, sw, BTN_H, '건너뛰기', { onClick: () => this.skip() });
         }
       }
       closeBox();
@@ -325,7 +328,7 @@ export class SelectScreen {
     // 떠나온 상점으로: 본 칸 위 띠 왼쪽(상점의 「다음 대국」과 같은 띠 · 같은 높이). 카드 줄 아래는 긴 명인 카드가 다 쓴다
     if (canReopenShop(run)) {
       const label = '상점';
-      button(ctx, ui, 'select:shop', MAIN.x, BAR.y, measure(label, true) + 16, BAR.h, label, { onClick: () => this.toShop() });
+      button(ctx, ui, 'select:shop', MAIN.x, BAR.y, btnW(label), BAR.h, label, { onClick: () => this.toShop() });
     }
   }
   toShop() {
