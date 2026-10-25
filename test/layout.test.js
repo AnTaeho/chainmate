@@ -213,6 +213,24 @@ test('대국 도전 띠: 모든 도전 · 진행 · 도장이 판 폭 − 8 안(
   M.lang.setLang('ko');
 });
 
+test('관 선택 도전 스티커: 모든 도전이 카드 안 폭 − 8 안(한국어 「도전 +$2」 · 영어 「Challenge」), 아랫변이 카드 제목 줄 위', async () => {
+  const { CHALLENGES } = await import('../src/data/challenges.js');
+  const { measure } = await import('../src/render/gfx.js');
+  const { chalSticker, CHAL_STK, blindLayout } = M.select;
+  const run = M.run.createRun({ seed: 1, draft: false });
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const c of CHALLENGES) for (const ante of [1, 4, 8]) {
+      const ch = { id: c.id, ...c.param(ante, () => 0.5), reward: 2 };
+      const lay = blindLayout(run, 0), st = chalSticker(ch);
+      assert.ok(st.w <= lay.IW - 8 && st.w === measure(st.s, true) + CHAL_STK.pad * 2, `${lang} ${c.id} ${st.s} ${st.w}`);
+      assert.ok(CHAL_STK.h - CHAL_STK.up <= lay.kind, `${lang} 스티커 아랫변 ${CHAL_STK.h - CHAL_STK.up} · 제목 줄 ${lay.kind}`);
+    }
+    assert.equal(chalSticker({ id: 'take', n: 4, reward: 2 }).s, lang === 'ko' ? '도전 +$2' : 'Challenge');
+  }
+  M.lang.setLang('ko');
+});
+
 test('대국 도전: 이긴 수에서 이룬 도전은 금빛 알림 없이(끝난 대국은 live()가 null) — 이어지거나 진 수에서만 알림', () => {
   const proto = M.battle.BattleScreen.prototype;
   const run = (events, live) => {

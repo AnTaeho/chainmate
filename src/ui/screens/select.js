@@ -8,13 +8,14 @@ import { text, box, rect, rrect, rframe, fitNum, measure, R_SM } from '../../ren
 import { live } from '../../render/look.js';
 import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
+import { challengeText, CHALLENGE_TEXT } from '../../data/challenges.js';
 import { CHARTS } from '../../data/charts.js';
 import { wrap } from '../../render/text.js';
 import { button, btnW } from '../ui.js';
 import { KIND_NAME, PACK_NAME, josa } from '../words.js';
 import { drawIcon, drawIconLight } from '../../render/icons.js';
 import { kindTab } from '../kinds.js';
-import { envelope, edgeRing } from '../parts.js';
+import { envelope, edgeRing, STAMP } from '../parts.js';
 import { L } from '../lang.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, BTN_H, PAD_CARD, LINE, GAP_IN, GAP_GROUP, SP, flow, textY, inkY } from '../frame.js';
@@ -225,6 +226,16 @@ export function selectPlan(run, lays = selectLays(run)) {
   return { band, H, cards: [{ y, h: TOP + H - y }, { y, h: TOP + H - y }, { y: TOP, h: H }] };
 }
 
+// 도전 스티커: 연습 · 정식 카드 윗변에 걸친 금빛 칩(새 판 · 레퍼토리 도장과 같은 꼴, 오른쪽 안 4). 「도전 +$2」, 카드 안 폭 − 8에 안 들어가면 「도전」(영어).
+// 세력 띠와 카드 사이가 4라 띠 테를 덮는다(띠 위에 그린다). up: 카드 윗변 위로 솟는 높이 — 영어 제목 글자와 2 띄운다
+export const CHAL_STK = { h: STAMP.h, pad: STAMP.pad, up: 8, inset: SP.s };
+export function chalSticker(ch, w = SEL.w) {
+  const nm = L(CHALLENGE_TEXT.name), room = w - PAD_CARD * 2 - 8;
+  const s = [`${nm} +$${ch.reward}`, nm].find((t) => measure(t, true) + CHAL_STK.pad * 2 <= room) || nm;
+  return { s, w: measure(s, true) + CHAL_STK.pad * 2 };
+}
+export const chalTip = (ch) => tipLines(CHALLENGE_TEXT.name, [challengeText(ch), CHALLENGE_TEXT.reward(ch.reward), CHALLENGE_TEXT.skip]);
+
 export class SelectScreen {
   constructor(app) { this.app = app; this.notes = 'side'; this.peeks = new Map(); }
   // 판 보기: 두기를 누르면 열릴 대국(previewBattle). 판(런)이 바뀐 만큼만 다시 잰다
@@ -324,6 +335,15 @@ export class SelectScreen {
         }
       }
       closeBox();
+      // 도전 스티커(지금 · 남은 연습 · 정식 대국): 카드 뒤에 그려 띠 · 카드 테 위에 뜨고, 구역은 카드 구역 뒤라 먼저 잡힌다
+      if (info.challenge && !past) {
+        const st = chalSticker(info.challenge, w), sx = x + w - CHAL_STK.inset - st.w, sy = y - CHAL_STK.up;
+        ui.region(`select:chal:${i}`, sx, sy, st.w, CHAL_STK.h, { tip: () => chalTip(info.challenge) });
+        openBox('edge', sx, sy, st.w, CHAL_STK.h, 0, { name: '도전 스티커', overlay: true, clearY: 0 }); // 칠한 칩: 글 띠가 칩 안에만 들면 된다(glossary 칩과 같다)
+        rrect(ctx, sx, sy, st.w, CHAL_STK.h, R_SM, PAL.gold);
+        text(ctx, st.s, sx + CHAL_STK.pad, inkY(sy, CHAL_STK.h), PAL.cardInk, { bold: true });
+        closeBox();
+      }
     }
     // 떠나온 상점으로: 본 칸 위 띠 왼쪽(상점의 「다음 대국」과 같은 띠 · 같은 높이). 카드 줄 아래는 긴 명인 카드가 다 쓴다
     if (canReopenShop(run)) {
