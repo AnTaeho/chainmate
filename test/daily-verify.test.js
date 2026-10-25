@@ -158,8 +158,10 @@ test('진행 중인 판(아직 안 끝남)은 거절한다', () => {
   assert.equal(code(() => verifyDaily('2026-10-08', [])), 'unfinished');
   assert.equal(code(() => verifyDaily('2026-10-08', cmds.slice(0, 1))), 'unfinished');
   assert.equal(code(() => verifyDaily('2026-10-08', cmds.slice(0, cmds.length - 1))), 'unfinished');
-  // 진 뒤에 덧붙인 명령은 규칙이 거절한다
-  assert.equal(code(() => verifyDaily('2026-10-08', [...cmds, { type: 'play' }])), 'bad_cmd');
+  // 진 뒤에 덧붙인 명령은 규칙이 거절한다(smart는 이 날 8관까지 이겨서 — CHM-78 — 지는 random 판으로)
+  const lost = botDaily('2026-10-09', 'random');
+  assert.equal(lost.run.phase, 'lost');
+  assert.equal(code(() => verifyDaily('2026-10-09', [...lost.cmds, { type: 'play' }])), 'bad_cmd');
 });
 
 test('8관 우승 뒤의 명령(끝없는 대국)은 보지 않고 우승 시점에서 끊는다', () => {

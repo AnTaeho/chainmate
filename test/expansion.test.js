@@ -42,7 +42,7 @@ test('이름 겹침 없음: 격언 · 정석 · 혼 · 각인 · 명인 · 특�
   add('격언', MAXIMS); add('정석', JOSEKIS); add('혼', SOULS); add('각인', ENGRAVINGS); add('명인', MASTERS); add('특성', TRAITS); add('시너지', FAMILIES); add('전설', LEGENDS); add('묘수', TACTICS);
 });
 
-test('새 시너지 둘은 넷 이상에 붙어 2 · 4 · 6이 켜질 수 있다', () => {
+test('새 시너지 둘은 넷 이상에 붙어 2 · 4 · 5가 켜질 수 있다', () => {
   const holders = (f) => [...Object.values(MAXIM_FAMILIES), ...JOSEKIS.map((j) => j.families), ...SOULS.map((s) => s.families)].filter((l) => l.includes(f)).length;
   assert.ok(holders('counter') >= 4, `역습 ${holders('counter')}`);
   assert.ok(holders('ambush') >= 4, `매복 ${holders('ambush')}`);
@@ -52,21 +52,21 @@ test('새 시너지 둘은 넷 이상에 붙어 2 · 4 · 6이 켜질 수 있다
 });
 
 // ── 시너지
-test('역습 시너지: 지키는 적을 먹을 때마다 값 +40 · 4 배수 +3 · 6 ×1.3', () => {
+test('역습 시너지: 지키는 적을 먹을 때마다 값 +30 · 4 배수 +3 · 5 ×1.3', () => {
   const map = { e5: 'B', f6: 'P', a8: 'R' };
   const lv = (level) => chain(map, 'N', 'd3', ['e5', 'f6'], [{ id: 'family:counter', data: { level } }]);
   const base = chain(map, 'N', 'd3', ['e5', 'f6']);
-  assert.equal(lv(1).value, base.value + 40);
+  assert.equal(lv(1).value, base.value + 30);
   assert.equal(lv(2).mult, base.mult + 3);
   assert.ok(Math.abs(lv(3).mult - (base.mult + 3) * 1.3) < 1e-9);
 });
-test('매복 시너지: 증원을 먹을 때마다 배수 +3 · 4 증원 자리 떨구기 배수 +4 · 6 증원을 먹을 때마다 ×2', () => {
+test('매복 시너지: 증원을 먹을 때마다 배수 +2 · 4 증원 자리 떨구기 배수 +4 · 5 증원을 먹을 때마다 ×2', () => {
   const t = tbl({ e5: 'B', h1: 'R' }, [{ id: 'family:ambush', data: { level: 3 } }], { incoming: [{ sq: S('d3'), t: 'P' }] });
   t.board[S('e5')].born = 0;
   startChain(t, { type: 'N', sq: S('d3') });
   chainCapture(t, S('e5'));
   assert.equal(t.chain.value, 30);
-  assert.equal(t.chain.mult, (1 + 3) * 2 + 4);
+  assert.equal(t.chain.mult, (1 + 2) * 2 + 4);
 });
 
 // ── 격언

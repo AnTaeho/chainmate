@@ -51,7 +51,8 @@ import { openPool } from './unlock.js';
 //   (1관 150 그대로) → 100판 42 · 37%(평균 39.5) · 단 8 15%. 앞 값 [150, 616, 4400, 12760, 55000, 242000, 470800, 990000] — docs/reports/beats.md 「C · E 뒤」
 // 외통 조건(한 콤보에서 지키던 적 둘이면 킹을 못 잡는다) 뒤 smart 35.0 → 25.7%, 잃은 승리가 6~8관에 몰려
 //   6~8관만 ×0.85 → 300판 34.7%(×0.88 32.7%) · random 1.0 · none 0.0 · 단 8 10.7%. 앞 값 [150, 690, 4928, 14291, 61600, 271040, 527296, 1108800] — docs/reports/mate.md
-export const B = [150, 690, 4928, 14291, 61600, 230384, 448202, 942480];
+// CHM-78: 시너지 문턱 2 · 4 · 5와 4 · 5 효과를 키운 뒤 smart가 올라 5~8관 ×1.15. 앞 값 [150, 690, 4928, 14291, 61600, 230384, 448202, 942480] — docs/reports/families.md
+export const B = [150, 690, 4928, 14291, 70840, 264942, 515432, 1083852];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;

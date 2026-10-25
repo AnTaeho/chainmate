@@ -27,7 +27,7 @@ export const TERMS = [
   T('fam_hunt', 'set', '사냥 시너지', 'Hunt', /사냥 시너지/, /\bHunt synergy\b/i, '같은 종류의 적을 잇달아 잡을수록 점수가 커진다', 'Grows as you take the same kind in a row'),
   T('fam_counter', 'set', '역습 시너지', 'Counter', /역습 시너지/, /\bCounter synergy\b/i, '지키는 적을 잡을수록 점수가 커진다', 'Grows as you take guards'),
   T('fam_ambush', 'set', '매복 시너지', 'Ambush', /매복 시너지/, /\bAmbush synergy\b/i, '증원을 잡고 증원 자리에 놓을수록 점수가 커진다', 'Grows as you take recruits and drop where they arrive'),
-  T('set', 'set', '시너지', 'Synergy', /시너지/, /\bsynerg(?:y|ies)\b/i, '같은 시너지를 2 · 4 · 6개 모으면 효과가 하나씩 켜진다', 'Collect 2, 4 and 6 of one synergy to switch on its effects'),
+  T('set', 'set', '시너지', 'Synergy', /시너지/, /\bsynerg(?:y|ies)\b/i, '같은 시너지를 2 · 4 · 5개 모으면 효과가 하나씩 켜진다', 'Collect 2, 4 and 5 of one synergy to switch on its effects'),
   // ── 대국
   B('drop', 'battle', '놓기', 'Drop', /놓[기는을으아았]\S*/, /\bdrop\w*/i, '적을 잡을 수 있는 안전한 빈칸에 손의 기물을 놓는다', 'Place a piece from your hand on a safe empty square with prey in reach'),
   B('chain', 'battle', '콤보', 'Chain', /콤보/, /\bchains?\b/i, '놓은 기물이 한 수 동안 적을 잇달아 잡는 것', 'Every take one dropped piece makes in a move'),

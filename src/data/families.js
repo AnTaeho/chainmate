@@ -1,6 +1,6 @@
 // 가족 여덟(깊이 B). 뿌리의 동사에 하나씩: 도약 · 직선 · 대각 · 변신(갈아입기) · 불굴(끊김, id sacrifice — CHM-35에서 이름만 바꿨다) · 왕관(승급 · 외통) · 행진(폰 떨구기) · 사냥(갈아입지 않고 잇달아).
 // 세는 법: 가진 격언의 가족 + 덱 이형 「종류」의 가족 + 정석의 가족 + 혼의 가족. 체스 기물은 세지 않는다.
-// 문턱 2 · 4 · 6마다 효과가 하나씩 켜진다(쌓인다). 효과는 조정자(kind 'family', id 'family:<가족>', data.level 1~3).
+// 문턱 2 · 4 · 5마다 효과가 하나씩 켜진다(쌓인다). 효과는 조정자(kind 'family', id 'family:<가족>', data.level 1~3).
 import { defineModifier } from '../sim/scoring.js';
 import { capWay, lastLeg } from '../sim/board.js';
 import { PIECES } from './pieces.js';
@@ -10,19 +10,19 @@ import { JOSEKI_BY_ID } from './josekis.js';
 import { SOUL_BY_ID } from './souls.js';
 import { TACTIC_BY_ID } from './tactics.js';
 
-export const THRESHOLDS = [2, 4, 6];
+export const THRESHOLDS = [2, 4, 5];
 export const FAMILIES = [
-  { id: 'leap', name: '기사', col: '#6fd1bf', text: ['뛰어 잡으면 값 +20', '대국마다 한 번, 뛰어 잡으면 지키는 적을 무시한다', '뛰어 잡으면 배수 ×1.5'] },
-  { id: 'line', name: '성채', col: '#e0a060', text: ['가로 · 세로로 세 칸 이상 가서 잡으면 배수 +2', '가로 · 세로로 지나간 칸마다 값 +10', '가로 · 세로로 잡으면 그 뒤에 있는 적도 함께 잡는다'] },
-  { id: 'diag', name: '사제', col: '#9fb8ff', text: ['대각선으로 잡으면 값 +15', '대각선으로 잡으면 배수 +2', '대각선으로 잡으면 배수 ×1.3'] },
-  { id: 'change', name: '변신', col: '#d27fd6', text: ['모습이 바뀔 때마다 배수 +2', '거쳐 온 모습이 셋이면 배수 ×1.5 · 넷이면 ×2 …', '더 잡을 적이 없으면 한 번, 거쳐 온 모든 모습의 행마로 이어 잡는다'] },
-  { id: 'sacrifice', name: '불굴', col: '#df5a45', text: ['끊긴 콤보: 값 ×2', '대국마다 한 번, 끊겨도 콤보가 이어진다', '끊길 때마다 배수 ×2'] },
-  { id: 'crown', name: '왕관', col: '#efbd55', text: ['프로모션하거나 퀸 · 아마존을 잡으면 값 +60', '일곱째 줄에만 가도 프로모션한다', '체크메이트하면 적이 다시 나타나고 콤보가 이어진다 · 대국마다 한 번'] },
-  { id: 'march', name: '행진', col: '#c8b48a', text: ['폰으로 시작: 배수 +3', '폰 모습으로 잡을 때마다 배수 +2', '폰으로 시작: 배수 ×3'] },
-  { id: 'hunt', name: '사냥', col: '#8ec07c', text: ['같은 종류를 잇달아 잡으면 값 +30', '판에서 값이 가장 큰 적을 잡으면 배수 +4', '같은 종류를 잇달아 잡을 때마다 배수 ×1.5'] },
+  { id: 'leap', name: '기사', col: '#6fd1bf', text: ['뛰어 잡으면 값 +20', '콤보마다 한 번, 뛰어 잡으면 지키는 적을 무시한다', '뛰어 잡으면 배수 ×2'] },
+  { id: 'line', name: '성채', col: '#e0a060', text: ['가로 · 세로로 세 칸 이상 가서 잡으면 배수 +2', '가로 · 세로로 지나간 칸마다 값 +20', '가로 · 세로로 잡으면 그 뒤에 있는 적도 함께 잡는다'] },
+  { id: 'diag', name: '사제', col: '#9fb8ff', text: ['대각선으로 잡으면 값 +15', '대각선으로 잡으면 배수 +3', '대각선으로 잡으면 배수 ×1.6'] },
+  { id: 'change', name: '변신', col: '#d27fd6', text: ['모습이 바뀔 때마다 배수 +1', '거쳐 온 모습이 셋이면 배수 ×1.5 · 넷이면 ×2 …', '더 잡을 적이 없으면 한 번, 거쳐 온 모든 모습의 행마로 이어 잡는다'] },
+  { id: 'sacrifice', name: '불굴', col: '#df5a45', text: ['끊긴 콤보: 값 ×2', '대국마다 한 번, 끊겨도 콤보가 이어진다', '끊길 때마다 배수 ×1.5'] },
+  { id: 'crown', name: '왕관', col: '#efbd55', text: ['프로모션하거나 퀸 · 아마존을 잡으면 배수 +3', '일곱째 줄에만 가도 프로모션하고, 프로모션하면 배수 ×1.5', '체크메이트하면 적이 다시 나타나고 콤보가 이어진다 · 대국마다 한 번'] },
+  { id: 'march', name: '행진', col: '#c8b48a', text: ['폰으로 시작: 배수 +3', '폰 모습으로 잡을 때마다 배수 +3', '폰으로 시작: 배수 ×5'] },
+  { id: 'hunt', name: '사냥', col: '#8ec07c', text: ['같은 종류를 잇달아 잡으면 값 +30', '판에서 값이 가장 큰 적을 잡으면 배수 +4', '같은 종류를 잇달아 잡을 때마다 배수 ×2'] },
   // 밤샘 2: 지키는 적(응수)과 증원에 하나씩
-  { id: 'counter', name: '역습', col: '#f080a8', text: ['지키는 적을 잡을 때마다 값 +40', '지키는 적을 잡을 때마다 배수 +3', '지키는 적을 잡을 때마다 배수 ×1.3'] },
-  { id: 'ambush', name: '매복', col: '#c0c8d0', text: ['증원을 잡을 때마다 배수 +3', '증원 자리에 놓으면 배수 +4', '증원을 잡을 때마다 배수 ×2'] },
+  { id: 'counter', name: '역습', col: '#f080a8', text: ['지키는 적을 잡을 때마다 값 +30', '지키는 적을 잡을 때마다 배수 +3', '지키는 적을 잡을 때마다 배수 ×1.3'] },
+  { id: 'ambush', name: '매복', col: '#c0c8d0', text: ['증원을 잡을 때마다 배수 +2', '증원 자리에 놓으면 배수 +4', '증원을 잡을 때마다 배수 ×2'] },
 ];
 export const FAMILY_BY_ID = Object.fromEntries(FAMILIES.map((f) => [f.id, f]));
 // 화면 이름: 「기사 시너지」(옛 이름 가족 · 모음 — docs/design-notes/voice.md). 칩 · 띠는 이름만(「기사 +1」 · 「기사 2/4」)
@@ -88,12 +88,12 @@ def('leap', {
   onCapture(ctx) {
     if (!isLeap(ctx.event)) return;
     ctx.addValue(20);
-    if (lv(ctx) >= 3) ctx.mulMult(1.5);
-    if (lv(ctx) >= 2 && !ctx.state.used) ctx.flags.leapGuard = true;
+    if (lv(ctx) >= 3) ctx.mulMult(2);
+    if (lv(ctx) >= 2 && !ctx.flags.leapUsed) ctx.flags.leapGuard = true;
   },
-  // 문턱 4: 대국마다 첫 도약 뒤 그 칸의 노림을 한 번 무시(응수도 끊김도 없다)
+  // 문턱 4: 콤보마다 첫 도약 뒤 그 칸의 노림을 한 번 무시(응수도 끊김도 없다)
   onThreat(ctx) {
-    if (lv(ctx) >= 2 && ctx.flags.leapGuard && !ctx.state.used) { ctx.state.used = true; ctx.flags.leapGuard = false; ctx.ignoreThreat(); }
+    if (lv(ctx) >= 2 && ctx.flags.leapGuard && !ctx.flags.leapUsed) { ctx.flags.leapUsed = true; ctx.flags.leapGuard = false; ctx.ignoreThreat(); }
   },
 });
 def('line', {
@@ -101,7 +101,7 @@ def('line', {
     const e = ctx.event;
     if (!isOrtho(e) || e.stay) return;
     if (e.dist >= 3) ctx.addMult(2);
-    if (lv(ctx) >= 2) ctx.addValue(10 * e.dist);
+    if (lv(ctx) >= 2) ctx.addValue(20 * e.dist);
     if (lv(ctx) >= 3) {
       // 꿰뚫기: 같은 쪽으로 그 너머 첫 기물이 적(킹 빼고)이면 함께 먹은 것으로(값 · 배수 +1, 모습은 그대로)
       const [df, dr] = lastLeg(e); // 꺾쇠는 꺾은 뒤의 걸음 쪽으로
@@ -129,42 +129,42 @@ def('diag', {
   onCapture(ctx) {
     if (!isDiag(ctx.event)) return;
     ctx.addValue(15);
-    if (lv(ctx) >= 2) ctx.addMult(2);
-    if (lv(ctx) >= 3) ctx.mulMult(1.3);
+    if (lv(ctx) >= 2) ctx.addMult(3);
+    if (lv(ctx) >= 3) ctx.mulMult(1.6);
   },
 });
 def('change', {
-  onTransform(ctx) { ctx.addMult(2); },
-  // 문턱 6: 막히면 한 번, 지나온 모습 전부의 행마로 잇는다
+  onTransform(ctx) { ctx.addMult(1); },
+  // 문턱 5: 막히면 한 번, 지나온 모습 전부의 행마로 잇는다
   onBlocked(ctx) { if (lv(ctx) >= 3 && !ctx.flags.unionUsed) { ctx.flags.unionUsed = true; ctx.flags.union = true; ctx.keepGoing(); } },
   onChainEnd(ctx) { if (lv(ctx) >= 2) { const k = ctx.chain.forms.length / 2; if (k > 1) ctx.mulMult(k); } },
 });
 def('sacrifice', {
   onCut(ctx) {
-    if (lv(ctx) >= 3) ctx.mulMult(2);
+    if (lv(ctx) >= 3) ctx.mulMult(1.5);
     if (lv(ctx) >= 2 && !ctx.state.used) { ctx.state.used = true; ctx.cancelCut(); }
   },
   onChainEnd(ctx) { if (ctx.event.reason === 'cut') ctx.addValue(ctx.chain.value); },
 });
 def('crown', {
   onDrop(ctx) { if (lv(ctx) >= 2) ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, 6); },
-  onCapture(ctx) { if (ctx.event.piece === 'Q' || ctx.event.piece === 'Z') ctx.addValue(60); },
-  onPromote(ctx) { ctx.addValue(60); },
+  onCapture(ctx) { if (ctx.event.piece === 'Q' || ctx.event.piece === 'Z') ctx.addMult(3); },
+  onPromote(ctx) { ctx.addMult(3); if (lv(ctx) >= 2) ctx.mulMult(1.5); },
   onMate(ctx) { if (lv(ctx) >= 3 && !ctx.state.refilled) { ctx.state.refilled = true; ctx.keepGoing(); } },
 });
 def('march', {
-  onCapture(ctx) { if (lv(ctx) >= 2 && ctx.event.form === 'P') ctx.addMult(2); },
+  onCapture(ctx) { if (lv(ctx) >= 2 && ctx.event.form === 'P') ctx.addMult(3); },
   onChainEnd(ctx) {
     if (ctx.chain.dropType !== 'P') return;
     ctx.addMult(3);
-    if (lv(ctx) >= 3) ctx.mulMult(3);
+    if (lv(ctx) >= 3) ctx.mulMult(5);
   },
 });
 def('hunt', {
   onCapture(ctx) {
     const e = ctx.event, caps = ctx.chain.captures;
     const prev = caps.length >= 2 ? caps[caps.length - 2] : null;
-    if (prev && prev.piece === e.piece) { ctx.addValue(30); if (lv(ctx) >= 3) ctx.mulMult(1.5); }
+    if (prev && prev.piece === e.piece) { ctx.addValue(30); if (lv(ctx) >= 3) ctx.mulMult(2); }
     if (lv(ctx) >= 2 && e.piece !== 'K') {
       const v = PIECES[e.piece].value;
       if (!ctx.t.board.some((c) => c && !c.mine && c.t !== 'K' && PIECES[c.t].value > v)) ctx.addMult(4);
@@ -175,7 +175,7 @@ def('hunt', {
 def('counter', {
   onCapture(ctx) {
     if (!ctx.event.forced) return;
-    ctx.addValue(40);
+    ctx.addValue(30);
     if (lv(ctx) >= 2) ctx.addMult(3);
     if (lv(ctx) >= 3) ctx.mulMult(1.3);
   },
@@ -184,7 +184,7 @@ def('ambush', {
   onDrop(ctx) { if (lv(ctx) >= 2 && (ctx.t.incoming || []).some((r) => r.sq === ctx.event.sq)) ctx.flags.ambushSet = true; },
   onCapture(ctx) {
     if (!(ctx.event.born >= 0)) return;
-    ctx.addMult(3);
+    ctx.addMult(2);
     if (lv(ctx) >= 3) ctx.mulMult(2);
   },
   onChainEnd(ctx) { if (ctx.flags.ambushSet) ctx.addMult(4); },

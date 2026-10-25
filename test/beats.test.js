@@ -45,9 +45,9 @@ test('사건 → 등급: 표에 있는 것은 S · M · L, 없는 것은 null', 
 test('시너지 문턱: 가족 수 최댓값이 넘은 문턱마다 하나', () => {
   assert.deepEqual(famKeys(0, 1), []);
   assert.deepEqual(famKeys(1, 4), ['fam2', 'fam4']);
-  assert.deepEqual(famKeys(4, 6), ['fam6']);
-  assert.deepEqual(famKeys(6, 7), []);
-  assert.deepEqual(['fam2', 'fam4', 'fam6'].map((k) => TIER[k]), ['S', 'M', 'L']);
+  assert.deepEqual(famKeys(4, 6), ['fam5']);
+  assert.deepEqual(famKeys(5, 7), []);
+  assert.deepEqual(['fam2', 'fam4', 'fam5'].map((k) => TIER[k]), ['S', 'M', 'L']);
 });
 
 test('메마른 구간: 표시 없는 대국이 가장 길게 이어진 수, 하나도 없으면 판 길이', () => {

@@ -117,13 +117,15 @@ function leapRun() {
   return run;
 }
 
-test('끌어당김: 문턱 하나 앞(1 · 3 · 5) 시너지를 찾는다', () => {
+test('끌어당김: 문턱 하나 앞(1 · 3 · 4) 시너지를 찾는다', () => {
   const run = leapRun();
   assert.deepEqual([...nearFamilies(run)], ['leap']);
   run.maxims.push({ uid: 901, id: 'cavalry_charge', data: {} }, { uid: 902, id: 'close_call', data: {} });
   assert.deepEqual([...nearFamilies(run)], ['leap'], '셋도 하나 앞');
   run.maxims.push({ uid: 903, id: 'first_move', data: {} });
-  assert.equal(nearFamilies(run), null, '넷은 문턱 위');
+  assert.deepEqual([...nearFamilies(run)], ['leap'], '넷은 마지막 문턱 5의 하나 앞');
+  run.maxims.push({ uid: 904, id: 'specialty', data: {} });
+  assert.equal(nearFamilies(run), null, '다섯은 문턱 위');
   assert.equal(pullWeight(new Set(['leap']), ['leap', 'march']), SHOP.pull, '둘 붙어도 한 번');
   assert.equal(pullWeight(new Set(['leap']), ['diag']), 1);
   withShop({ pull: 1 }, () => assert.equal(nearFamilies(leapRun()), null, 'pull 1이면 끌어당기지 않는다'));

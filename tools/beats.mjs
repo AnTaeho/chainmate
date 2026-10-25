@@ -39,7 +39,7 @@ export const BEAT_TABLE = {
   legend:   ['L', '전설 완성', 'legend'],
   chest5:   ['L', '상자 5칸', 'chest count 5'],
   awaken:   ['L', '혼 각성', 'awaken'],
-  fam6:     ['L', '시너지 6 문턱', 'familyCounts 최댓값이 6에 닿음'],
+  fam5:     ['L', '시너지 5 문턱', 'familyCounts 최댓값이 5에 닿음(CHM-78 전 6)'],
 };
 export const TIER = Object.fromEntries(Object.entries(BEAT_TABLE).map(([k, v]) => [k, v[0]]));
 export const RANK = { S: 1, M: 2, L: 3 };
@@ -189,7 +189,7 @@ export function runBeats(beats) {
     perBattle: B.map((x) => ({ ante: x[1], won: !!x[3], ...perBattle.get(x[0]) })),
     dryM: longestDry(n, markM), dryL: longestDry(n, markL), noL: cnt.L === 0,
     firstL, ignite,
-    fam: { 2: first.fam2 || null, 4: first.fam4 || null, 6: first.fam6 || null },
+    fam: { 2: first.fam2 || null, 4: first.fam4 || null, 5: first.fam5 || null },
     near: lost.map((x) => ({ ante: x[1], tier: nearTier(x[5] / x[6]) })),
     late: crossed.map((x) => ({ ante: x[1], last2: x[9] >= x[8] - 1, third: crossThird(x[9], x[8]) })),
     mateUnder: won.filter((x) => x[9] == null).length, // 목표 밑에서 체크메이트로 이긴 대국
