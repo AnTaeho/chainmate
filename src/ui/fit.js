@@ -38,15 +38,19 @@ export function backScale(k) {
 // 돌리는 기준: 손가락 기기 + 세로 + 도트 하나가 1 CSS 화소 미만(K / dpr < 1 — 12px 글이 12px보다 작다). 아이패드 세로 · 좁은 데스크톱 창은 그대로
 // fill: 꽉 채움 — K를 정수 대신 1/FILL_STEP 칸의 소수로 고른다(480K × 270K가 기기 화소 정수). 뒷면 캔버스는 기기 화소 그대로(n = K),
 //   K가 cap을 넘으면 K / j(j = 가장 작은 정수, K / j ≤ cap)로 그려 CSS가 정수 j배로 키운다. 그때 pad는 { s, dev }로 뒷면 해상도를 준다
-export function chooseFit({ vw, vh, dpr = 1, inset = null, coarse = false, full = null, fill = false, cap = FILL_CAP }) {
+// gutter: { top, bottom } 꽉 채움에서 보이는 창 위 · 아래 끝에 비워 둘 CSS 화소(창 기준 — 돌려 그려도 창의 위 · 아래).
+//   손가락 기기 브라우저는 창 끝을 누르면 주소창 · 도구 막대가 그 누름을 먹는다(main.js가 준다). 정수 배율은 남는 띠가 넉넉해 쓰지 않는다
+export function chooseFit({ vw, vh, dpr = 1, inset = null, coarse = false, full = null, fill = false, cap = FILL_CAP, gutter = null }) {
   dpr = dpr > 0 ? dpr : 1;
   const fw = Math.max(vw, full && full.width > 0 ? full.width : 0), fh = Math.max(vh, full && full.height > 0 ? full.height : 0);
-  const flat = place({ fw, fh, vis: { x: 0, y: 0, w: vw, h: vh }, dpr, inset, fill, cap });
+  const gT = fill && gutter ? gutter.top || 0 : 0, gB = fill && gutter ? gutter.bottom || 0 : 0;
+  const flat = place({ fw, fh, vis: { x: 0, y: gT, w: vw, h: Math.max(1, vh - gT - gB) }, dpr, inset, fill, cap });
   if (!(coarse && vh > vw && flat.css < 1)) return { ...flat, rot: false, frame: { width: fw, height: fh } };
   // 시계 방향 90도: 돌린 틀의 위 = 창의 오른쪽, 오른쪽 = 창 아래, 아래 = 창 왼쪽, 왼쪽 = 창 위. 틀 (u, v) → 창 (fw - v, u)
   // 보이는 창(창 x 0 ~ vw, y 0 ~ vh)은 틀에서 u 0 ~ vh, v fw - vw ~ fw — 창 아래 띠(fh > vh)는 틀의 오른쪽 끝에 남는다
   const ri = inset ? { top: inset.right || 0, right: inset.bottom || 0, bottom: inset.left || 0, left: inset.top || 0 } : null;
-  return { ...place({ fw: fh, fh: fw, vis: { x: 0, y: fw - vw, w: vh, h: vw }, dpr, inset: ri, fill, cap }), rot: true, frame: { width: fh, height: fw } };
+  // 창 위 · 아래 비움은 돌린 틀의 왼쪽 · 오른쪽(u)
+  return { ...place({ fw: fh, fh: fw, vis: { x: gT, y: fw - vw, w: Math.max(1, vh - gT - gB), h: vw }, dpr, inset: ri, fill, cap }), rot: true, frame: { width: fh, height: fw } };
 }
 
 // 돌린 틀을 창에 얹는 CSS transform(transform-origin 0 0). 틀 (u, v) → 창 (vw - v, u). vw = 창 폭 전체(full)
