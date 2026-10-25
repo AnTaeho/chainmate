@@ -6,9 +6,9 @@
 import { PAL } from '../../render/palette.js';
 import { W, text, box, slot, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
-import { button } from '../ui.js';
-import { pageHead, tabRow, headW, HEAD_BIG } from './common.js';
-import { PAGE, PAD_BOX, LINE, GAP_GROUP, BTN_S, textY } from '../frame.js';
+import { btnW, buttonRow } from '../ui.js';
+import { pageHead, bottomBar } from './common.js';
+import { PAGE, PAD_BOX, LINE, BTN_H, SP, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { L } from '../lang.js';
 import { accountProps } from '../telemetry.js';
@@ -17,25 +17,32 @@ import { gainText } from './link.js';
 
 export const PRIVACY_URL = 'privacy.html';
 export const FIELD_H = 18, LABEL_W = 68, MSG_LINES = 2;
-// 탭 줄(기기 잇기 화면과 같이 쓴다)
+// 머리줄(기기 잇기 화면과 같이 쓴다): 큰 제목 「계정」 + 탭 「아이디」 · 「기기 연결」(같은 폭)
 export const ACCOUNT_TABS = [['account', '아이디'], ['link', '기기 연결']];
 export function accountTabs(ctx, ui, app, cur) {
-  tabRow(ctx, ui, 'acct', ACCOUNT_TABS, cur, PAGE.titleX + headW('계정') + 10, HEAD_BIG.mid - (BTN_S >> 1), BTN_S, (id) => { if (id !== cur) { app.sfx('pick'); app.go(id); } }, 20);
+  pageHead(ctx, '계정', null, { big: true, tabs: { ui, prefix: 'acct', list: ACCOUNT_TABS, cur, go: (id) => { if (id !== cur) { app.sfx('pick'); app.go(id); } } } });
 }
 
-// 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다). 입력 칸은 위쪽 띠(y 110 위)에 둔다 — 폰 키보드가 올라와도 보이게
+// 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다). 입력 칸은 위쪽 띠(y 110 위)에 둔다 — 폰 키보드가 올라와도 보이게.
+// 줄 사이 4(묶음 안), 세로로 쌓은 단추 사이 8. 상자 높이는 그리는 쪽이 상태마다 내용에 맞춘다(h는 가장 큰 것 — 들어와 있음)
 export function accountLayout() {
-  const P = PAD_BOX, y = PAGE.bodyY, h = PAGE.btnY - GAP_GROUP - y;
+  const P = PAD_BOX, y = PAGE.bodyY, IN = SP.s;
   // 왼쪽 칸이 조금 넓다: 가장 넓은 아이디(「m」 스무 자 212)가 안 여백 안에 한 줄로 든다
-  const left = { x: 12, y, w: 232, h }, right = { x: 12 + 232 + 8, y, w: W - 12 - 232 - 8 - 12, h };
-  const titleY = y + P, r1 = titleY + LINE + 6, r2 = r1 + FIELD_H + 6, msgY = r2 + FIELD_H + 6, btnY = msgY + MSG_LINES * LINE + 4;
+  const lw = 232, gap = SP.m;
+  const titleY = y + P, r1 = titleY + LINE + IN, r2 = r1 + FIELD_H + IN, msgY = r2 + FIELD_H + IN, btnY = msgY + MSG_LINES * LINE + IN;
+  const btn2Y = btnY + BTN_H + SP.m, btn3Y = btn2Y + BTN_H + SP.m, h = btn3Y + BTN_H + P - y;
+  const left = { x: PAGE.titleX, y, w: lw, h }, right = { x: PAGE.titleX + lw + gap, y, w: W - PAGE.titleX * 2 - lw - gap, h };
   const cell = (b, top) => ({ x: b.x + P + LABEL_W, y: top, w: b.w - P * 2 - LABEL_W, h: FIELD_H });
   return {
-    left, right, titleY, r1, r2, msgY, btnY, btn2Y: btnY + BTN_S + 6, btn3Y: btnY + (BTN_S + 6) * 2,
+    left, right, titleY, r1, r2, msgY, btnY, btn2Y, btn3Y,
     fields: { user: cell(left, r1), pass: cell(left, r2), cur: cell(right, r1), next: cell(right, r2), del: cell(right, r1) },
-    privacyY: y + h - P - BTN_S,
+    privacyY: y + h - P - BTN_H,
   };
 }
+
+// 계정 없음의 단추 둘(로그인 · 계정 만들기): 같은 폭, 한 줄에 안 들어가면 세로로
+const outBtnW = () => Math.max(btnW('로그인'), btnW('로그인 중'), btnW('계정 만들기'));
+const outStacked = (w) => outBtnW() * 2 + SP.m > w - PAD_BOX * 2;
 
 // 상태 한 줄(붉은 것 · 금빛 것)
 export const ACCOUNT_FAIL = {
@@ -158,22 +165,33 @@ export class AccountScreen {
     lines.slice(0, MSG_LINES).forEach((l, i) => text(ctx, l, b.x + PAD_BOX, textY(lay.msgY + i * LINE), m.tone === 'gold' ? PAL.gold : PAL.red, { bold: m.tone === 'gold' }));
     if (g) text(ctx, g, b.x + PAD_BOX, textY(lay.msgY + lines.length * LINE), PAL.ink);
   }
-  // 글에 맞춘 단추를 왼쪽부터 놓는다
-  row(ctx, ui, x, y, list) {
-    for (const [id, label, opts] of list) {
-      const w = Math.max(44, measure(label, true) + 14);
-      button(ctx, ui, id, x, y, w, BTN_S, label, { enabled: !this.busy, ...opts });
-      x += w + 6;
-    }
+  // 단추 한 줄(같은 폭 · 사이 8 — 29절). 바쁜 동안은 꺼 둔다
+  row(ctx, ui, x, y, list, w = null) {
+    return buttonRow(ctx, ui, list.map(([id, label, opts]) => ({ id, label, enabled: !this.busy, ...opts })), x, y, { w });
   }
 
+  // 오른쪽 칸 알림 줄(알아 둘 것): 문단 자리 · 처리방침 단추 y
+  infoLay(lay) {
+    const w = lay.right.w - PAD_BOX * 2;
+    let y = lay.titleY + LINE + SP.s;
+    const paras = ACCOUNT_INFO.map((s, i) => { if (i) y += SP.s; const lines = wrap(s, w), top = y; y += lines.length * LINE; return { lines, top }; });
+    return { paras, privacyY: y + SP.m };
+  }
+  // 두 상자의 높이: 이 상태에서 내용이 더 긴 쪽에 맞춘다(hug)
+  boxH(lay) {
+    const mode = this.in() ? this.mode : null;
+    const left = (this.in() ? lay.btn3Y : outStacked(lay.left.w) ? lay.btn2Y : lay.btnY) + BTN_H;
+    const rows = mode ? this.modeRows(mode, lay) : null;
+    const right = rows ? rows[rows.length - 1].y + BTN_H : this.infoLay(lay).privacyY + BTN_H;
+    return Math.max(left, right) + PAD_BOX - lay.left.y;
+  }
   draw(ctx, ui) {
-    const app = this.app, lay = accountLayout();
-    pageHead(ctx, '계정', null, { big: true });
+    const app = this.app, lay = accountLayout(), h = this.boxH(lay);
+    lay.left = { ...lay.left, h }; lay.right = { ...lay.right, h };
     accountTabs(ctx, ui, app, 'account');
     if (this.in()) this.drawIn(ctx, ui, lay); else this.drawOut(ctx, ui, lay);
     this.drawRight(ctx, ui, lay);
-    button(ctx, ui, 'acct:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.leave() });
+    bottomBar(ctx, ui, { back: { id: 'acct:back', onClick: () => this.leave() } });
   }
 
   // 계정 없음: 아이디 · 비번 + [들어오기] [계정 만들기]
@@ -189,10 +207,14 @@ export class AccountScreen {
     else if (this.msg && this.msg.text === ACCOUNT_FAIL.hangul && !f.rejected('user')) this.msg = null;
     if (this.unreached && !this.msg && !this.acct) text(ctx, ACCOUNT_FAIL.unreached, b.x + P, textY(lay.msgY), PAL.dim);
     this.say(ctx, b, lay);
-    this.row(ctx, ui, b.x + P, lay.btnY, [
-      ['acct:login', this.busy ? '로그인 중' : '로그인', { tone: 'gold', onClick: () => this.login() }],
-      ['acct:signup', '계정 만들기', { onClick: () => this.signup() }],
-    ]);
+    // 둘이 한 줄에 같은 폭으로 안 들어가면(영어) 세로로 같은 폭
+    const login = ['acct:login', this.busy ? '로그인 중' : '로그인', { tone: 'gold', onClick: () => this.login() }];
+    const signup = ['acct:signup', '계정 만들기', { onClick: () => this.signup() }];
+    if (outStacked(b.w)) {
+      const bw = outBtnW();
+      this.row(ctx, ui, b.x + P, lay.btnY, [login], bw);
+      this.row(ctx, ui, b.x + P, lay.btn2Y, [signup], bw);
+    } else this.row(ctx, ui, b.x + P, lay.btnY, [login, signup], outBtnW());
     closeBox();
   }
 
@@ -208,13 +230,31 @@ export class AccountScreen {
     text(ctx, a.username, b.x + P + (wide ? 0 : LABEL_W), textY(lay.r1, FIELD_H), PAL.goldHi);
     if (a.devices != null) text(ctx, `기기 ${a.devices}대`, b.x + P, textY(lay.r2, FIELD_H), PAL.ink);
     if (!this.mode) this.say(ctx, b, lay);
-    const x = b.x + P;
-    this.row(ctx, ui, x, lay.btnY, [['acct:password', '비밀번호 바꾸기', { tone: this.mode === 'password' ? 'gold' : 'plain', onClick: () => this.open('password') }]]);
-    this.row(ctx, ui, x, lay.btn2Y, [['acct:logout', '로그아웃', { tone: this.mode === 'logout' ? 'gold' : 'plain', onClick: () => this.open('logout') }]]);
-    this.row(ctx, ui, x, lay.btn3Y, [['acct:delete', '계정 삭제', { tone: this.mode === 'delete1' || this.mode === 'delete2' ? 'gold' : 'plain', onClick: () => this.open('delete1') }]]);
+    // 할 일 셋은 세로로 같은 폭(가장 넓은 글)
+    const x = b.x + P, bw = Math.max(btnW('비밀번호 바꾸기'), btnW('로그아웃'), btnW('계정 삭제'));
+    this.row(ctx, ui, x, lay.btnY, [['acct:password', '비밀번호 바꾸기', { tone: this.mode === 'password' ? 'gold' : 'plain', onClick: () => this.open('password') }]], bw);
+    this.row(ctx, ui, x, lay.btn2Y, [['acct:logout', '로그아웃', { tone: this.mode === 'logout' ? 'gold' : 'plain', onClick: () => this.open('logout') }]], bw);
+    this.row(ctx, ui, x, lay.btn3Y, [['acct:delete', '계정 삭제', { tone: this.mode === 'delete1' || this.mode === 'delete2' ? 'gold' : 'plain', onClick: () => this.open('delete1') }]], bw);
     closeBox();
   }
 
+  // 고른 일의 단추 줄: [하기 · 취소]가 한 줄에 같은 폭으로 안 들어가면(영어) 세로로, 그 아래 줄(비번 잊음)은 다음 칸에.
+  // 돌려주는 값 [{ items, y, w }] — 줄 자리는 btnY · btn2Y · btn3Y
+  modeRows(mode, lay) {
+    const stop = ['acct:no', '취소', { onClick: () => { this.mode = null; this.msg = null; } }];
+    const yes = {
+      password: ['acct:yes', this.busy ? '변경 중' : '변경', { tone: 'gold', onClick: () => this.password() }],
+      logout: ['acct:yes', this.busy ? '로그아웃 중' : '로그아웃', { tone: 'red', onClick: () => this.logout() }],
+      delete1: ['acct:yes', '계속', { tone: 'red', onClick: () => this.open('delete2') }],
+      delete2: ['acct:yes', this.busy ? '삭제 중' : '계정 삭제', { tone: 'red', onClick: () => this.remove() }],
+    }[mode];
+    const extra = mode === 'password' ? [['acct:forgot', this.forgot ? '비밀번호를 알아요' : '비밀번호를 잊었어요', { onClick: () => { this.forgot = !this.forgot; this.msg = null; } }]] : [];
+    const ys = [lay.btnY, lay.btn2Y, lay.btn3Y], inner = lay.right.w - PAD_BOX * 2;
+    const w = Math.max(...[yes, stop].map(([, l]) => btnW(l)));
+    const rows = w * 2 + SP.m <= inner ? [{ items: [yes, stop], w }] : [{ items: [yes], w }, { items: [stop], w }];
+    for (const e of extra) rows.push({ items: [e], w: null });
+    return rows.map((r, i) => ({ ...r, y: ys[i] }));
+  }
   // 오른쪽 칸: 알림 줄 또는 고른 일
   drawRight(ctx, ui, lay) {
     const app = this.app, b = lay.right, P = PAD_BOX, x = b.x + P, mode = this.in() ? this.mode : null;
@@ -223,28 +263,22 @@ export class AccountScreen {
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, mode === 'delete1' || mode === 'delete2' ? PAL.red : PAL.frameHi);
     text(ctx, title, x, textY(lay.titleY), PAL.dim);
     const para = (s, y, col = PAL.ink) => { const lines = wrap(s, b.w - P * 2); lines.forEach((l, i) => text(ctx, l, x, textY(y + i * LINE), col)); return y + lines.length * LINE; };
-    const stop = ['acct:no', '취소', { onClick: () => { this.mode = null; this.msg = null; } }];
-    if (mode) this.say(ctx, b, lay);
+    if (mode) { this.say(ctx, b, lay); for (const r of this.modeRows(mode, lay)) this.row(ctx, ui, x, r.y, r.items, r.w); }
     if (mode === 'password') {
       if (this.forgot) para(FORGOT_TEXT, lay.r1 + 2, PAL.dim);
       else this.cell(ctx, 'cur', '현재', lay.fields.cur, { type: 'password', autocomplete: 'current-password', name: 'current-password', max: 72, hint: 'next', enter: () => app.fields.focus('next') });
       this.cell(ctx, 'next', '새로', lay.fields.next, { type: 'password', autocomplete: 'new-password', name: 'new-password', max: 72, hint: 'go', enter: () => this.password() });
-      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '변경 중' : '변경', { tone: 'gold', onClick: () => this.password() }], stop]);
-      this.row(ctx, ui, x, lay.btn2Y, [['acct:forgot', this.forgot ? '비밀번호를 알아요' : '비밀번호를 잊었어요', { onClick: () => { this.forgot = !this.forgot; this.msg = null; } }]]);
     } else if (mode === 'logout') {
       para(LOGOUT_TEXT, lay.r1);
-      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '로그아웃 중' : '로그아웃', { tone: 'red', onClick: () => this.logout() }], stop]);
     } else if (mode === 'delete1') {
       para(DELETE_TEXT, lay.r1);
-      this.row(ctx, ui, x, lay.btnY, [['acct:yes', '계속', { tone: 'red', onClick: () => this.open('delete2') }], stop]);
     } else if (mode === 'delete2') {
       this.cell(ctx, 'del', '비밀번호', lay.fields.del, { type: 'password', autocomplete: 'current-password', name: 'password', max: 72, hint: 'go', enter: () => this.remove() });
       para(DELETE_TEXT2, lay.r2 + 2, PAL.red);
-      this.row(ctx, ui, x, lay.btnY, [['acct:yes', this.busy ? '삭제 중' : '계정 삭제', { tone: 'red', onClick: () => this.remove() }], stop]);
     } else {
-      let y = lay.titleY + LINE + 6;
-      for (const s of ACCOUNT_INFO) y = para(s, y) + 6;
-      this.row(ctx, ui, x, lay.privacyY, [['acct:privacy', '개인정보 처리방침', { enabled: true, onClick: () => { if (!app.openPage(PRIVACY_URL)) app.toast('열지 못했어요', PAL.ink); } }]]);
+      const info = this.infoLay(lay);
+      for (const p of info.paras) p.lines.forEach((l, i) => text(ctx, l, x, textY(p.top + i * LINE), PAL.ink));
+      this.row(ctx, ui, x, info.privacyY, [['acct:privacy', '개인정보 처리방침', { enabled: true, onClick: () => { if (!app.openPage(PRIVACY_URL)) app.toast('열지 못했어요', PAL.ink); } }]]);
     }
     closeBox();
   }
