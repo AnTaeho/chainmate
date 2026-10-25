@@ -19,6 +19,7 @@ import { valueOf } from '../src/data/pieces.js';
 import { bestMove } from '../src/sim/solver.js';
 import { addOffering, weightOf as weightOfPiece } from '../src/data/sacrifice.js';
 import { cloneBattle, applyDecision, pieceKey } from '../src/sim/replay.js';
+import { challengeMet } from '../src/data/challenges.js';
 
 // ratio 1 → 2(밤샘 2 3부): 1이면 대국당 0.08번만 다시 놓아 판을 끝낸 죽음의 판 운 몫이 52.6%, 2면 0.18번 · 31.3%(luck 30판)
 export const REBOARD = { ratio: 2 }; // 켜고 끄기는 src/sim/tuning.js BOARD_TUNING.reboard(끄면 canReboard가 늘 거짓)
@@ -32,6 +33,22 @@ export const BOT = { nodes: null, look: 0, stats: null, next: null };
 // 봇이 아는 「다음 수」 개수(측정용, run.mjs --next): null이면 규칙 그대로 NEXT_DRAWS, 0이면 주머니 전체를 모르는 것으로 친다
 const knownNext = () => BOT.next ?? NEXT_DRAWS;
 const betterMove = (x, y, nomate, rank) => !y || (x.mate !== y.mate ? (nomate ? y.mate : x.mate) : rank ? rank(x) > rank(y) : x.score > y.score);
+
+// 대국 도전 쫓기(docs/reports/goty.md): on이면 판 봇이 도전을 이루는 줄에 덤을 준다(끄면 「무시하는 봇」 — 하네스 --chase 0).
+//   weight: 이번 수로 목표에 못 닿는 줄끼리는 도전을 이루는 줄의 점수에 남은 목표 × weight를 더해 견준다.
+//   목표에 닿는 줄은 늘 못 닿는 줄보다 앞이고, 닿는 줄끼리는 도전을 이루는 줄이 앞(그다음 점수)이다 — 덤 때문에 이길 수를 놓치지 않게.
+export const CHASE = { on: true, weight: 0.25 };
+export function chaseRank(b) {
+  const ch = b && b.challenge;
+  if (!CHASE.on || !ch || ch.done || b.target == null || b.status !== 'play') return null;
+  const need = Math.max(1, b.target - b.score);
+  const bonus = CHASE.weight * need;
+  return (r) => {
+    const met = challengeMet(ch, r.h);
+    if (r.score >= need) return (met ? 5 : 3) * need + (need * r.score) / (r.score + need);
+    return r.score + (met ? bonus : 0);
+  };
+}
 
 // rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
 export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null, sacrifice = true } = {}) {

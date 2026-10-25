@@ -20,7 +20,9 @@ import { buildLog } from './build.mjs';
 import { buildReport } from './build-report.mjs';
 import { beatLog, runBeats, BEAT_TABLE, TIER, NEAR_NAMES } from './beats.mjs';
 import { REVIEW } from '../src/sim/replay.js';
-import { BOT } from './bot.mjs';
+import { BOT, CHASE } from './bot.mjs';
+import { CHALLENGE, NEMESIS } from '../src/sim/tuning.js';
+import { CHALLENGES } from '../src/data/challenges.js';
 import { JOSEKIS, DRAFT_ANTES } from '../src/data/josekis.js';
 import { SOULS, SOUL_BY_ID, SOUL_RARITY, RARITY_NAME } from '../src/data/souls.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
@@ -61,6 +63,8 @@ function parseArgs(argv) {
     else if (k === '--peek-skip') a.peekSkip = Number(argv[++i]);      // 판 읽기가 이 값보다 낮으면 건너뛴다
     else if (k === '--peek-alt') a.peekAlt = true;                     // 건너뛴 판을 복사본에서 두어 이겼을지(대체 승률)
     else if (k === '--peek-nodes') a.peekNodes = Number(argv[++i]);    // 판 읽기 풀이기 마디(기물 하나마다)
+    else if (k === '--chase') a.chase = Number(argv[++i]);             // 대국 도전 쫓기(bot.mjs CHASE): 0 = 무시하는 봇, 1 = 쫓는 봇(기본)
+    else if (k === '--chase-weight') a.chaseWeight = Number(argv[++i]); // 쫓는 덤(남은 목표 × weight)
     else if (k === '--from') a.from = Number(argv[++i]);                // 판 차례 i를 이만큼 밀어 시작(긴 하네스를 나눠 돌린다 — 같은 seed면 --from 0 --runs 100 · --from 100 --runs 100 …이 --runs 200과 같은 판)
     else if (k === '--merge') a.merge = argv[++i].split(',');            // 나눠 돌린 dump들을 합쳐 표를 다시 낸다(판을 두지 않는다, 판당 ms는 0)
     else if (k === '--dump') a.dump = argv[++i];                       // 판별 결과 전부(ms 빼고, seed 순)를 JSON으로 — 손질 전후 결정성 비교(CHM-44)
@@ -101,7 +105,13 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, unlock, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats, build } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, unlock, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats, build, chase, chaseWeight } = workerData;
+  if (chase != null) CHASE.on = !!chase;
+  if (chaseWeight != null) CHASE.weight = chaseWeight;
+  // 대국 도전 · 숙적 실험: --tune '{"challenge":{"reward":1,"kinds":[…]},"nemesis":{"on":false},"chWeights":{"mate":0}}'
+  if (tune && tune.challenge) Object.assign(CHALLENGE, tune.challenge);
+  if (tune && tune.nemesis) Object.assign(NEMESIS, tune.nemesis);
+  if (tune && tune.chWeights) for (const c of CHALLENGES) if (tune.chWeights[c.id] != null) c.weight = tune.chWeights[c.id];
   if (beats) BEATS.on = true;
   if (build) BUILD.on = true;
   if (replay) REPLAY.on = true;
@@ -135,6 +145,8 @@ if (!isMainThread) {
   parentPort.postMessage(out);
 } else {
   const args = parseArgs(process.argv.slice(2));
+  if (args.tune && args.tune.challenge) Object.assign(CHALLENGE, args.tune.challenge); // 표의 상금 셈도 일꾼과 같게
+  if (args.tune && args.tune.nemesis) Object.assign(NEMESIS, args.tune.nemesis);
   if (args.merge) {
     const parts = args.merge.map((f) => JSON.parse(readFileSync(f, 'utf8')));
     const rows = parts.flatMap((d) => d.runs).sort((x, y) => x.seed - y.seed);
@@ -146,7 +158,7 @@ if (!isMainThread) {
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + ((args.from || 0) + i) * 7919) >>> 0);
   const t0 = performance.now();
   // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
-  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, unlock: args.unlock, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, build: args.build };
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, unlock: args.unlock, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, build: args.build, chase: args.chase, chaseWeight: args.chaseWeight };
   const results = [], timeouts = [];
   let next = 0, done = 0;
   await new Promise((finish) => {
@@ -191,7 +203,7 @@ function report(R, args, wall) {
   console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
   if (args.botstats) { const d = R.reduce((a, r) => a + (r.botStats ? r.botStats.decisions : 0), 0), c = R.reduce((a, r) => a + (r.botStats ? r.botStats.capped : 0), 0); console.log(`대국 결정 ${d}번 중 풀이기가 마디 예산에 닿은 결정 ${c}번(${pc(c / Math.max(1, d))})`); }
   if (args.timeouts && args.timeouts.length) console.log(`시간 초과 ${args.timeouts.length}판(${args.limit}초, 표에서 뺐다): seed ${args.timeouts.join(' ')}`);
-  console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.strong && args.strong !== 1 ? `, 세기 ×${args.strong}` : ''}${args.look ? `, 내다보기 ${args.look}` : ''}${args.next != null ? `, 다음 수 ${args.next}` : ''}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
+  console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.strong && args.strong !== 1 ? `, 세기 ×${args.strong}` : ''}${args.look ? `, 내다보기 ${args.look}` : ''}${args.next != null ? `, 다음 수 ${args.next}` : ''}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''}${args.chase === 0 ? ', 도전 무시' : ''}${args.chaseWeight != null ? `, 쫓는 덤 ${args.chaseWeight}` : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
 
   // 관별
   const rows = [];
@@ -251,6 +263,7 @@ function report(R, args, wall) {
   const bfAll = battles.flatMap((x) => x.brilliantFrags || []);
   const bfR = R.filter((r) => r.log.some((x) => (x.brilliantFrags || []).length));
   console.log(`  탁월수 조각: ${bfAll.length}개 (첫 ${bfAll.filter((x) => x.part === 'first').length} · 재현 ${bfAll.filter((x) => x.part === 'feat').length}), 얻은 판 ${pc(bfR.length / n)}, 그 판 중 전설 완성 ${bfR.filter((r) => r.legends.length).length}판`);
+  gotyReport(R, battles, { pc, f, f2, table });
   const lostBy = {};
   for (const r of R) if (!r.won) { const last = r.log.at(-1); lostBy[last.reason] = (lostBy[last.reason] || 0) + 1; }
   console.log(`전체 대국 ${battles.length}: 외통으로 이김 ${pc(allMates / battles.length)}, 막힘 패배 ${pc(battles.filter((b) => b.reason === 'stuck').length / battles.length)}. 판이 끝난 이유: ${Object.entries(lostBy).map(([k, v]) => `${k} ${pc(v / n)}`).join(', ')}`);
@@ -649,4 +662,40 @@ function beatsReport(R, { pc, f, f2, table, pctile }) {
   console.log('시너지 문턱(가족 수 최댓값, 판 상태로 셈): 넘은 판 · 그 판 승률 · 못 넘은 판 승률 · 처음 넘은 관');
   table(['문턱', '넘은 판', '승률', '못 넘은 판 승률', '처음 넘은 관'], famRows);
   return out;
+}
+
+// 대국 도전 · 숙적(docs/reports/goty.md): 대국 줄의 challenge · nemesis 칸으로 센다
+function gotyReport(R, battles, { pc, f, f2, table }) {
+  const n = R.length;
+  const chB = battles.filter((b) => b.challenge);
+  if (chB.length) {
+    const done = chB.filter((b) => b.challenge.done);
+    const money = done.length * CHALLENGE.reward;
+    const first = done.filter((b) => b.challenge.move === 0).length;
+    console.log(`대국 도전: 붙은 대국 ${chB.length}(둔 대국의 ${pc(chB.length / battles.length)}) · 이룸 ${pc(done.length / chB.length)} · 이긴 대국 중 ${pc(done.filter((b) => b.won).length / Math.max(1, chB.filter((b) => b.won).length))} · 진 대국 중 ${pc(done.filter((b) => !b.won).length / Math.max(1, chB.filter((b) => !b.won).length))} · 첫 수에 ${pc(first / Math.max(1, done.length))} · 판당 도전 상금 ${f2(money / n)} · 도전 붙은 대국 승률 ${pc(chB.filter((b) => b.won).length / chB.length)}`);
+    const rows = [];
+    for (const c of CHALLENGES) {
+      const xs = chB.filter((b) => b.challenge.id === c.id);
+      if (!xs.length) continue;
+      const byAnte = [1, 2, 3, 4, 5, 6, 7, 8].map((a) => { const ys = xs.filter((b) => b.ante === a); return ys.length ? pc(ys.filter((b) => b.challenge.done).length / ys.length) : '-'; });
+      rows.push([c.id, String(xs.length), pc(xs.filter((b) => b.challenge.done).length / xs.length), pc(xs.filter((b) => b.won).length / xs.length), ...byAnte]);
+    }
+    table(['도전', '대국', '이룸', '대국 승률', '1관', '2관', '3관', '4관', '5관', '6관', '7관', '8관'], rows);
+  }
+  const nb = battles.filter((b) => b.nemesis);
+  if (nb.length) {
+    const runsWith = R.filter((r) => r.log.some((b) => b.nemesis && b.nemesis.born));
+    const cur = nb.filter((b) => b.nemesis.t);
+    const placed = cur.filter((b) => b.nemesis.placed);
+    const taken = placed.filter((b) => b.nemesis.taken);
+    const takenWon = taken.filter((b) => b.won);
+    const ups = nb.reduce((a, b) => a + (b.nemesis.ups || 0), 0);
+    const born = nb.filter((b) => b.nemesis.born).length;
+    const maxLv = R.map((r) => Math.max(0, ...r.log.filter((b) => b.nemesis && b.nemesis.t).map((b) => b.nemesis.lv + (b.nemesis.ups || 0))));
+    const bounty = takenWon.reduce((a, b) => a + (NEMESIS.bounty[Math.min(NEMESIS.bounty.length, b.nemesis.taken) - 1] || 0), 0);
+    const wr = (xs) => pc(xs.filter((r) => r.won).length / Math.max(1, xs.length));
+    console.log(`숙적: 생긴 판 ${pc(runsWith.length / n)} · 판당 생김 ${f2(born / n)} · 숙적이 있던 대국 ${cur.length} 중 다시 나옴 ${pc(placed.length / Math.max(1, cur.length))} · 나온 대국에서 잡음 ${pc(taken.length / Math.max(1, placed.length))}(이긴 대국에서 ${takenWon.length}) · 또 끊음 ${ups}번 · 판의 최고 단 1 ${pc(maxLv.filter((x) => x === 1).length / n)} · 2 ${pc(maxLv.filter((x) => x === 2).length / n)} · 3 ${pc(maxLv.filter((x) => x >= 3).length / n)} · 판당 현상금 ${f2(bounty / n)} · 판 승률 생긴 판 ${wr(runsWith)} / 안 생긴 판 ${wr(R.filter((r) => !runsWith.includes(r)))}`);
+    const pb = placed, nob = cur.filter((b) => !b.nemesis.placed);
+    console.log(`  숙적이 나온 대국 승률 ${pc(pb.filter((b) => b.won).length / Math.max(1, pb.length))} · 숙적이 안 나온 대국(숙적은 있음) ${pc(nob.filter((b) => b.won).length / Math.max(1, nob.length))} · 숙적이 없는 대국 ${pc(nb.filter((b) => !b.nemesis.t).filter((b) => b.won).length / Math.max(1, nb.filter((b) => !b.nemesis.t).length))}`);
+  }
 }

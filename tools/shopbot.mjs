@@ -15,7 +15,7 @@ import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { FINAL_FACTION } from '../src/data/factions.js';
-import { stepBattle, SACLOG, SAC, sacrificeChoice, pieceKey, BOT } from './bot.mjs';
+import { stepBattle, SACLOG, SAC, sacrificeChoice, pieceKey, BOT, chaseRank } from './bot.mjs';
 import { rollDisplay, rollPacks } from '../src/sim/shop.js';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
@@ -604,6 +604,8 @@ export function playRun(run, policy = 'smart', { endlessUntil = 0, stopAt = null
     if (run.phase === 'select') { selectStep(run, policy, r); continue; }
     if (run.phase === 'battle') {
       const opts = policy === 'hunt' ? { rank: huntRank(run) } : policy === 'nosac' ? { sacrifice: false } : {};
+      // 대국 도전(docs/reports/goty.md): 쫓는 봇이면 도전을 이루는 줄에 덤(bot.mjs CHASE — 끄면 무시하는 봇)
+      if (!opts.rank) { const cr = chaseRank(run.battle); if (cr) opts.rank = cr; }
       if (!REPLAY.on) {
         if (!stepBattle(run.battle, (c) => act(run, c), opts)) throw new Error('bot has no move but battle is live');
         continue;
