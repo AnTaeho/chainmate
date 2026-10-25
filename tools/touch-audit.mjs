@@ -6,7 +6,7 @@
 //   tap    가운데 한 번 누름 뒤 상태(화면 · 덮개 · 판 · 고른 것 · 말풍선)가 마우스 누름과 같은가. 미리 보기 구역은 두 번째 누름을 마우스와 견준다
 //   drift  누른 채 6 · 4 CSS 화소 밀었다 떼도 같은가(손가락은 떼며 미끄러진다)
 //   near   손가락보다 작은 구역의 바로 바깥(2 도트 밖 빈 자리)을 눌러도 가운데 누름과 같은가
-//   slip   그런 구역 가운데를 눌러 구역 오른쪽 3 도트 밖(빈 자리)에서 떼도 같은가
+//   slip   그런 구역 가운데를 눌러 좁은 쪽으로 3 도트 밖(빈 자리)에서 떼도 같은가
 //   tip    마우스로 가리키면 뜨는 말풍선 · 낱말 상자가 손가락 누름 뒤에도 뜨나
 //   edge   누를 수 있는 단추가 창 끝에서 몇 CSS 화소인가(iOS 몸짓 띠 20 미만)
 // 손가락은 #stage에 touchstart · touchmove · touchend를 직접 보낸다(WebKit은 Touch 생성자가 없다 — main.js가 읽는 칸만 담는다). 사이에 프레임을 돈다.
@@ -210,7 +210,7 @@ const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
 async function enter(page, sc) {
   // 설정은 장면마다 처음으로 되돌린다 — 앞 장면에서 누른 횟수(손가락은 미리 보기 · 밀기로 더 누른다)에 따라 언어 · 큰 글자가 갈리면 뒤 장면이 모두 다르게 보인다
   await page.evaluate(async () => {
-    const a = window.__app; a.ui.move(-1, -1); a.ui.previewId = null;
+    const a = window.__app; a.ui.move(-1, -1); a.ui.previewId = null; a.toasts = [];
     for (const k of Object.keys(a.settings)) delete a.settings[k];
     Object.assign(a.settings, JSON.parse(window.__set0));
     (await import('/src/ui/lang.js')).setLang(a.settings.lang);
@@ -358,10 +358,14 @@ async function touchRun(cfg, cfgName, sc, ref) {
       // near · slip: 손가락보다 작은 구역 바로 바깥 빈 자리를 누르거나, 가운데를 눌러 구역 오른쪽 3 도트 밖에서 떼도 가운데 누름과 같아야 한다(UI.snap)
       // 손가락 판의 구역(넓힌 것이면 넓힌 자리)이 손가락보다 작은 쪽이 있을 때만. 바깥 자리는 그 구역 밖이면서 손가락 판에서 아무 구역도 없는 곳
       const box0 = regs.find((q) => q.id === r.id) || r;
-      if (EDGE && r.en && (box0.w * fit.css < 44 || box0.h * fit.css < 44)) {
+      if (EDGE && r.en && (box0.w < fit.finger || box0.h < fit.finger)) {
         const [bx, by] = center(box0);
-        const cand = [[box0.x - 2, by], [box0.x + box0.w + 1, by], [bx, box0.y - 2], [bx, box0.y + box0.h + 1]].filter((q) => q[0] >= 0 && q[1] >= 0 && q[0] < 480 && q[1] < 270);
-        const slipAt = [box0.x + box0.w + 3, gy];
+        // 손가락보다 작은 쪽으로만 바깥을 잰다(넓은 쪽은 이미 손가락 크기라 붙이지 않는다)
+        // 바깥으로 들일 거리: 손가락 크기까지 모자란 몫의 반(UI.snap과 같은 셈), 2 도트까지. 1 도트 밑이면 그 쪽은 재지 않는다
+        const ox = Math.min(2, Math.floor((fit.finger - box0.w) / 2)), oy = Math.min(2, Math.floor((fit.finger - box0.h) / 2));
+        const narrowW = ox >= 1, narrowH = oy >= 1;
+        const cand = [...(narrowW ? [[box0.x - ox, by], [box0.x + box0.w - 1 + ox, by]] : []), ...(narrowH ? [[bx, box0.y - oy], [bx, box0.y + box0.h - 1 + oy]] : [])].filter((q) => q[0] >= 0 && q[1] >= 0 && q[0] < 480 && q[1] < 270);
+        const slipAt = narrowW ? [box0.x + box0.w + 3, gy] : [gx, box0.y + box0.h + 3];
         const ch = await page.evaluate((p) => window.__hits(p), [...cand, slipAt]);
         const np = cand.find((q, j) => ch[j] == null) || null;
         if (np) {
@@ -371,12 +375,14 @@ async function touchRun(cfg, cfgName, sc, ref) {
           const dn = rel(tb, t1, nb, n1);
           if (dn.length) rows.push({ kind: 'near', id: r.id, detail: `그림 밖 (${np[0]},${np[1]}) 누름: ${dn.map((k) => `${k} 기대 ${JSON.stringify(t1[k])} / ${JSON.stringify(n1[k])}`).join(' · ')}` });
         }
-        if (ch[cand.length] == null && slipAt[0] < 480) {
+        if (ch[cand.length] == null && slipAt[0] < 480 && slipAt[1] < 270) {
           await leave(page, sc); await enter(page, sc);
           const sb = await page.evaluate(() => window.__sig());
-          const s1 = await tap((slipAt[0] - gx) * fit.css, 0);
+          // 뗄 자리는 게임 좌표로 정해 창 좌표 차로 민다(돌려 그린 세로 화면은 축이 바뀐다)
+          const [c0, c1] = await page.evaluate(([a, b]) => [window.__client(a[0] + 0.5, a[1] + 0.5), window.__client(b[0] + 0.5, b[1] + 0.5)], [[gx, gy], slipAt]);
+          const s1 = await tap(c1[0] - c0[0], c1[1] - c0[1]);
           const ds = rel(tb, t1, sb, s1);
-          if (ds.length) rows.push({ kind: 'slip', id: r.id, detail: `구역 오른쪽 3 도트 밖에서 뗌: ${ds.map((k) => `${k} 기대 ${JSON.stringify(t1[k])} / ${JSON.stringify(s1[k])}`).join(' · ')}` });
+          if (ds.length) rows.push({ kind: 'slip', id: r.id, detail: `구역 ${narrowW ? '오른쪽' : '아래'} 3 도트 밖에서 뗌: ${ds.map((k) => `${k} 기대 ${JSON.stringify(t1[k])} / ${JSON.stringify(s1[k])}`).join(' · ')}` });
         }
       }
     }
