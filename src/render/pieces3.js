@@ -1,4 +1,4 @@
-// 벡터 기물(안 3, docs/design-notes/art3.md 1 · 2절): 둥근 받침 위의 굵은 실루엣, 왼쪽 빛 · 오른쪽 그늘 두 톤 + 잉크 테.
+// 벡터 기물(안 3, docs/design-notes/art3.md 1 · 2절): 작은 받침 위의 체스 말 결 실루엣(발 고리 · 기둥 · 칼라 · 머리), 셀 그늘 + 잉크 테.
 // (모양, 톤, 고리 빛깔, 배율 N)마다 N배 캔버스에 한 번 굽고, 판에는 논리 크기로 붙인다 — 그리는 비용은 붙이기 한 번.
 // Path2D를 쓰지 않는다(연기 시험의 가짜 캔버스에 없다): 모양은 M · L · C · Z와 타원만.
 import { PAL } from './palette.js';
@@ -9,24 +9,26 @@ import { soulSpark, place } from './gfx.js';
 import { SOUL_BY_ID } from '../data/souls.js';
 import { PIECES } from '../data/pieces.js';
 import { THINGS, drawThing, drawThingFit } from './board3.js';
-import { trace, shapePath, two as twoTone, scaleOf } from './vec.js';
+import { trace, shapePath, scaleOf } from './vec.js';
 
 export { scaleOf };
 
 export const INK = '#12153a';
 export const P3 = { w: 22 };                // 판 위 기물 폭(논리 px). 높이는 × 140 / 120
 const S = P3.w / 120;                        // 원본(120 × 140 상자) → 논리
-const PAD = 6;                               // 테가 상자 밖으로 나가는 몫(원본 단위)
-const BOX = { x: -PAD, y: -PAD, w: 120 + PAD * 2, h: 140 + PAD * 2 };
+const PAD = 6;                               // 테가 상자 위아래로 나가는 몫(원본 단위)
+const BOX = { x: 4, y: -PAD, w: 112, h: 140 + PAD * 2 }; // 모양이 x 18 ~ 102 안이라 옆은 테 몫만 남기고 줄인다
 export const BASE = { x: 60, y: 124 };       // 받침 가운데(칸 가운데에 선다)
-// 선 굵기(논리 px) → 원본 단위
-const LW = { body: 1.0 / S, base: 0.8 / S, ring: 0.6 / S, gem: 0.8 / S };
+// 받침: 윗면 · 아랫면 타원(가운데 y) · 반지름, 안쪽 고리
+const PLATE = { top: 121, low: 128, rx: 32, ry: 8, ring: [23, 5] };
+// 선 굵기(논리 px) → 원본 단위. body = 실루엣 바깥 테, inner = 칼라 · 부분 이음매
+const LW = { body: 1.0 / S, inner: 0.75 / S, base: 0.8 / S, ring: 0.6 / S, gem: 0.8 / S };
 // 체스 여섯(받침 · 그림자 규칙이 처음 정해진 기물)
 export const STANDARD = new Set(['P', 'N', 'B', 'R', 'Q', 'K']);
 
 const GOLD = { fill: '#f6be45', shade: '#d48b1c' };
 const BASE_W = { top: '#efe6d2', side: '#b8a47a' }, BASE_B = { top: '#262c5f', side: '#141737' };
-// 톤: 몸 빛 · 그늘 · 테 + 받침(내 편 크림 · 적 남색) + 고리
+// 톤: 몸 빛 · 그늘 · 테 + 받침(내 편 크림 · 적 남색) + 고리. hiA는 반짝 점의 짙기
 function toneOf(side, eng) {
   if (side === 'b') return { fill: '#343a86', shade: '#222661', line: '#0a0c22', base: BASE_B, ring: PAL.dark, crown: GOLD, hiA: 0.22 };
   if (side === 'g') return { fill: GOLD.fill, shade: GOLD.shade, line: '#3a1d08', base: BASE_B, ring: '#efbd55', crown: null, hiA: 0.5 };
@@ -37,84 +39,101 @@ function toneOf(side, eng) {
   return { fill: '#f7eedb', shade: '#dcc9a2', line: INK, base: BASE_W, ring: '#efbd55', crown: null, hiA: 0.7 };
 }
 
-// 모양(체스 여섯은 pieces3.mjs 그대로): body · top · parts는 경로 글(M L C Z) 또는 타원 [cx, cy, rx, ry, 돌림].
-// parts: 몸 위에 더 얹는 두 톤 조각({ d, crown: 적이면 금 · gold: 늘 금 }). cuts · eyes · slit · strokes는 테 빛깔 새김, gems는 구슬, gem은 기보 보석 자리
+// 모양: body · top · parts는 경로 글(M L C Z) 또는 타원 [cx, cy, rx, ry, 돌림]. 몸 바닥 y 117(받침 윗면 안)
+// parts: 몸 위에 더 얹는 조각({ d, crown: 적이면 금 · gold: 늘 금 }) — 칼라(머리 이음매를 덮는 납작한 타원) · 발 고리도 여기.
+// cuts · eyes · slit · strokes는 테 빛깔 새김, gems는 구슬, gem은 기보 보석 자리, shine은 둥근 머리의 반짝 점
+// 키 위계(꼭대기 y): 킹 8(십자가) · 비숍 12(구슬) · 퀸 15 · 나이트 18 · 룩 34 · 폰 49
+const FOOT = (cx = 60) => ({ d: [cx, 111, 23, 5] });
+const COL = (cy, rx, ry = 4) => ({ d: [60, cy, rx, ry] });
+// 기둥: 목 반폭 n(y) → 발 반폭 f(y 106)로 오목하게 퍼지고 바닥 117은 f + 2
+const STEM = (y, n, f) => { const m = Math.round(y + (106 - y) * 0.55); return `M${60 - n} ${y} L${60 + n} ${y} C${60 + n} ${m} ${54 + f} 103 ${60 + f} 106 L${62 + f} 117 L${58 - f} 117 L${60 - f} 106 C${66 - f} 103 ${60 - n} ${m} ${60 - n} ${y} Z`; };
+const ROOK = (y) => `M45 ${y} L75 ${y} L78 104 L82 117 L38 117 L42 104 Z`;
+const HORSE = 'M40 86 C34 68 36 48 48 33 L52 18 L60 27 C72 28 82 38 88 50 C91 56 94 62 91 67 C88 72 82 73 76 69 L68 64 C62 70 66 80 76 86 Z';
+const PLINTH = (y) => `M48 ${y} L72 ${y} C74 ${y + 6} 77 ${y + 10} 80 112 L81 117 L39 117 L40 112 C43 ${y + 10} 46 ${y + 6} 48 ${y} Z`;
 const SHAPE = {
-  P: { body: 'M36 120 C40 100 50 90 51 76 L69 76 C70 90 80 100 84 120 Z', top: [[60, 76, 20, 7], [60, 54, 20, 20]], gem: [60, 34] },
-  R: { body: 'M36 120 L41 74 L79 74 L84 120 Z', top: 'M30 76 L30 30 L44 30 L44 42 L54 42 L54 30 L66 30 L66 42 L76 42 L76 30 L90 30 L90 76 Z', cuts: ['M55 86 L65 86 L65 106 L55 106 Z'], gem: [60, 30] },
-  N: { body: 'M36 120 C38 106 44 98 48 92 L76 92 C78 100 82 108 84 120 Z', top: 'M48 94 L40 82 L36 62 L50 40 L54 20 L62 32 L78 42 L90 64 L88 74 L74 72 L64 64 L68 80 L76 94 Z', eyes: [[62, 48, 4.5]], gem: [54, 22] },
-  B: { body: 'M38 120 C42 102 50 94 52 86 L68 86 C70 94 78 102 82 120 Z', top: ['M60 20 C82 38 86 62 74 86 L46 86 C34 62 38 38 60 20 Z', [60, 18, 7, 7]], slit: [50, 44, 70, 64], gem: [60, 11] },
-  Q: { body: 'M36 120 C40 100 48 90 50 80 L70 80 C72 90 80 100 84 120 Z', top: 'M40 80 L32 40 L47 56 L53 32 L60 54 L67 32 L73 56 L88 40 L80 80 Z', gems: [[32, 38], [53, 30], [67, 30], [88, 38]], crown: true, gem: [60, 54] },
-  K: { body: 'M36 120 C40 100 48 90 50 80 L70 80 C72 90 80 100 84 120 Z', top: 'M40 80 L36 46 L49 56 L60 38 L71 56 L84 46 L80 80 Z', cross: true, crown: true, gem: [60, 62] },
-  // 특수 기물
+  P: { body: STEM(80, 7, 19), top: [60, 62, 13, 13], parts: [COL(79, 15), FOOT()], gem: [60, 52], shine: [55, 57] },
+  R: { body: ROOK(66), top: 'M38 62 L38 34 L48 34 L48 42 L55 42 L55 34 L65 34 L65 42 L72 42 L72 34 L82 34 L82 62 Z', parts: [COL(64, 24), FOOT()], cuts: ['M55 94 L55 81 C55 75 65 75 65 81 L65 94 Z'], gem: [60, 48] },
+  N: { body: PLINTH(86), top: HORSE, parts: [COL(86, 20, 4.5), FOOT()], eyes: [[66, 42, 4]], strokes: [['M47 42 C42 54 42 66 46 78', 3]], gem: [57, 32] },
+  B: { body: STEM(74, 6, 19), top: ['M60 24 C73 33 79 45 76 57 C74 64 68 69 60 69 C52 69 46 64 44 57 C41 45 47 33 60 24 Z', [60, 18, 6, 6]], parts: [COL(72, 14), FOOT()], slit: [67, 37, 56, 51], gem: [60, 18], shine: [51, 42] },
+  Q: { body: STEM(74, 7, 20), top: 'M47 72 C44 60 40 46 38 32 L48 44 L49 26 L56 42 L60 22 L64 42 L71 26 L72 44 L82 32 C80 46 76 60 73 72 Z', parts: [COL(73, 16, 4.5), FOOT()], gems: [[38, 30], [49, 24], [60, 20], [71, 24], [82, 30]], crown: true, gem: [60, 58] },
+  K: { body: STEM(74, 7, 20), top: 'M47 72 C45 62 42 53 41 45 C43 36 51 32 60 32 C69 32 77 36 79 45 C78 53 75 62 73 72 Z', parts: [{ d: [60, 47, 19, 3.5], crown: true }, COL(73, 16, 4.5), FOOT()], cross: true, crown: true, gem: [60, 60] },
+  // 특수 기물(같은 문법 — 발 고리 · 칼라, x 18 ~ 102 안)
   // 아마존: 나이트 말머리에 퀸의 뾰족 관(적이면 금)
-  Z: { body: 'M36 120 C38 106 44 98 48 92 L76 92 C78 100 82 108 84 120 Z', top: 'M48 94 L40 82 L36 62 L50 40 L54 20 L62 32 L78 42 L90 64 L88 74 L74 72 L64 64 L68 80 L76 94 Z', parts: [{ d: 'M45 38 L42 14 L52 24 L58 8 L64 24 L74 14 L71 38 Z', crown: true }], gems: [[42, 12], [58, 6], [74, 12]], eyes: [[63, 50, 4.5]], gem: [58, 30] },
+  Z: { body: PLINTH(86), top: HORSE, parts: [{ d: 'M46 38 L44 20 L52 28 L58 14 L64 28 L72 20 L70 38 Z', crown: true }, COL(86, 20, 4.5), FOOT()], gems: [[44, 18], [58, 11], [72, 18]], eyes: [[68, 46, 4]], gem: [58, 32] },
   // 낙타: 혹 둘 · 긴 목(오른쪽을 본다 — 나이트와 같은 도약 가족)
-  L: { body: 'M36 120 C38 108 44 100 48 96 L76 96 C78 102 82 110 84 120 Z', top: 'M26 98 C24 74 32 58 42 56 C50 54 54 64 58 66 C62 52 72 46 80 58 L86 56 L88 34 L96 26 L106 30 L106 38 L96 40 L96 60 C95 74 92 86 90 98 Z', eyes: [[99, 32, 3.5]], strokes: [['M28 74 C20 78 19 88 22 96', 3.5]], gem: [44, 50] },
-  // 포: 비스듬한 포신 · 바퀴
-  O: { body: 'M34 120 C36 110 42 106 50 104 L74 104 C80 108 84 114 86 120 Z', top: 'M26 90 L82 34 L94 46 L38 102 Z', parts: [{ d: 'M76 32 L86 22 L104 40 L94 50 Z' }, { d: [46, 98, 18, 18] }], eyes: [[46, 98, 5]], strokes: [['M46 82 L46 114 M30 98 L62 98', 3]], gem: [92, 30] },
+  L: { body: PLINTH(98), top: 'M28 98 C22 84 28 60 43 60 C50 60 52 67 55 69 C58 61 62 55 69 55 C76 55 78 64 80 70 C86 68 84 50 86 42 C87 35 92 31 98 33 L104 37 L104 44 L96 46 C94 58 97 76 91 90 L89 98 Z', parts: [COL(98, 22, 4.5), FOOT()], eyes: [[96, 38, 3]], strokes: [['M29 76 C21 80 20 88 23 95', 3.5]], gem: [44, 60] },
+  // 포: 비스듬한 포신 · 바퀴 · 낮은 포가
+  O: { body: 'M38 104 L82 104 L84 117 L36 117 Z', top: 'M30 90 L80 42 L90 52 L40 100 Z', parts: [{ d: 'M76 38 L84 30 L98 44 L90 52 Z' }, { d: [48, 96, 16, 16] }, FOOT()], eyes: [[48, 96, 4.5]], strokes: [['M48 83 L48 109 M35 96 L61 96', 3]], gem: [88, 38] },
   // 궁수: 두건 쓴 몸 · 오른쪽에 크게 휜 활과 시위
-  S: { body: 'M34 120 C38 100 44 90 48 80 L68 80 C70 90 76 100 80 120 Z', top: 'M56 16 C72 28 78 46 76 62 C74 76 66 84 56 84 C46 84 38 76 36 62 C34 46 42 30 56 16 Z', parts: [{ d: 'M80 20 C102 38 102 94 80 112 L85 117 C111 96 111 36 85 15 Z' }], eyes: [[56, 60, 9]], strokes: [['M83 18 L83 114', 2], ['M58 62 L82 62', 2.5]], gem: [56, 26] },
+  S: { body: 'M50 80 L66 80 C67 92 72 101 78 106 L80 117 L36 117 L38 106 C44 101 49 92 50 80 Z', top: 'M56 18 C70 28 76 44 74 60 C72 74 64 81 56 81 C48 81 40 74 38 60 C36 44 42 28 56 18 Z', parts: [{ d: 'M80 22 C99 40 99 92 80 110 L84 114 C105 94 105 38 84 18 Z' }, { d: [58, 81, 15, 4] }, FOOT(58)], eyes: [[56, 58, 8]], strokes: [['M82 20 L82 112', 2.5], ['M58 60 L84 60', 2.5]], gem: [56, 30] },
   // 유령: 떠 있는 망토(아랫몸이 반쯤 비친다) · 눈 둘
-  W: { body: 'M60 20 C82 20 90 40 90 58 L90 98 L82 106 L74 98 L67 106 L60 98 L53 106 L46 98 L38 106 L30 98 L30 58 C30 40 38 20 60 20 Z', fade: 74, eyes: [[50, 50, 5], [70, 50, 5]], strokes: [['M54 66 C58 70 62 70 66 66', 3]], gem: [60, 26] },
+  W: { body: 'M60 22 C80 22 88 40 88 58 L88 96 L81 104 L74 96 L67 104 L60 96 L53 104 L46 96 L39 104 L32 96 L32 58 C32 40 40 22 60 22 Z', fade: 74, eyes: [[51, 50, 5], [69, 50, 5]], strokes: [['M54 66 C58 70 62 70 66 66', 3]], gem: [60, 30], shine: [44, 38] },
   // 꺾쇠: 룩 몸 위에 직각으로 꺾인 쇠 갈고리
-  T: { body: 'M38 120 L43 78 L77 78 L82 120 Z', top: 'M58 80 L58 34 L40 34 L40 50 L32 60 L24 50 L24 18 L76 18 L76 80 Z', strokes: [['M41 98 L79 98', 4]], eyes: [[67, 26, 3]], gem: [67, 12] },
+  T: { body: ROOK(78), top: 'M57 78 L57 34 L42 34 L42 48 L34 56 L26 48 L26 18 L78 18 L78 78 Z', parts: [COL(78, 22, 4.5), FOOT()], strokes: [['M43 96 L77 96', 4]], eyes: [[68, 26, 3]], gem: [68, 44] },
   // 물수제비: 비숍 몸 · 물결 새긴 둥근 머리 · 머리 위로 튀어 오른 납작한 돌
-  E: { body: 'M38 120 C42 102 50 94 52 86 L68 86 C70 94 78 102 82 120 Z', top: [[60, 86, 17, 6], [60, 64, 19, 19]], parts: [{ d: [76, 22, 20, 7, -0.3] }], strokes: [['M43 64 C49 57 54 71 60 64 C66 57 71 71 77 64', 4.5]], gem: [60, 45] },
+  E: { body: STEM(82, 6, 19), top: [60, 64, 17, 17], parts: [{ d: [78, 24, 18, 6, -0.3] }, COL(82, 15), FOOT()], strokes: [['M44 64 C50 57 54 71 60 64 C66 57 70 71 76 64', 4]], gem: [60, 51], shine: [52, 54] },
   // 까마귀: 왼쪽을 본 새(나이트 · 낙타와 반대쪽) · 위로 든 날개 · 꽁지
-  V: { body: 'M40 120 C44 108 50 102 52 96 L70 96 C72 102 76 108 80 120 Z', top: 'M16 50 L36 42 C40 30 54 26 62 36 L76 14 L94 8 L88 28 L104 24 L94 46 L98 64 L104 80 L88 82 C82 98 58 102 48 92 C38 84 36 68 42 60 L36 56 Z', eyes: [[47, 42, 4.5]], gem: [50, 30] },
+  V: { body: PLINTH(98), top: 'M20 50 L38 43 C42 31 54 27 62 36 L74 16 L92 10 L86 28 L98 26 L90 46 L94 62 L98 78 L86 80 C80 96 60 100 50 92 C40 84 38 70 44 60 L38 56 Z', parts: [COL(98, 16), FOOT()], eyes: [[48, 42, 4.5]], gem: [56, 30] },
   // 광대: 밖으로 늘어진 두 갈래 고깔(끝에 방울) · 가면 · 주름 깃
-  M: { body: 'M36 120 C40 102 48 94 50 88 L70 88 C72 94 80 102 84 120 Z', top: [[60, 64, 15, 15]], parts: [{ d: 'M44 56 C40 38 28 30 20 50 C18 30 36 18 52 38 C56 32 64 32 68 38 C84 18 102 30 100 50 C92 30 80 38 76 56 Z' }, { d: 'M34 88 L42 78 L48 86 L54 78 L60 86 L66 78 L72 86 L78 78 L86 88 L78 96 L42 96 Z' }], gems: [[20, 54], [100, 54]], eyes: [[54, 63, 3.5], [66, 63, 3.5]], gem: [60, 33] },
+  M: { body: STEM(88, 9, 19), top: [60, 64, 15, 15], parts: [{ d: 'M45 56 C41 38 31 30 24 50 C22 30 38 18 53 38 C56 32 64 32 67 38 C82 18 98 30 96 50 C89 30 79 38 75 56 Z' }, { d: 'M34 88 L42 78 L48 86 L54 78 L60 86 L66 78 L72 86 L78 78 L86 88 L78 96 L42 96 Z' }, FOOT()], gems: [[24, 54], [96, 54]], eyes: [[54, 63, 3.5], [66, 63, 3.5]], gem: [60, 34] },
   // 화약병: 아래가 무거운 둥근 병 · 마개 · 심지 · 금빛 불꽃
-  D: { body: 'M60 54 C86 54 94 76 92 96 C90 112 80 120 60 120 C40 120 30 112 28 96 C26 76 34 54 60 54 Z', top: 'M50 56 L52 42 L46 42 L46 32 L74 32 L74 42 L68 42 L70 56 Z', parts: [{ d: 'M70 2 C79 10 79 17 70 21 C61 17 63 10 70 2 Z', gold: true }], strokes: [['M60 32 C60 22 70 26 70 18', 3], ['M32 86 C50 94 70 94 88 86', 4]], gem: [60, 37] },
+  D: { body: 'M60 54 C84 54 92 76 90 96 C88 110 78 117 60 117 C42 117 32 110 30 96 C28 76 36 54 60 54 Z', top: 'M50 56 L52 42 L46 42 L46 32 L74 32 L74 42 L68 42 L70 56 Z', parts: [{ d: 'M70 6 C78 13 78 19 70 23 C62 19 64 13 70 6 Z', gold: true }], strokes: [['M60 32 C60 24 70 28 70 22', 3], ['M32 86 C50 94 70 94 88 86', 4]], gem: [60, 37], shine: [44, 74] },
 };
 export const SHAPES = new Set(Object.keys(SHAPE));
-const CROSS = 'M56 6 L64 6 L64 16 L72 16 L72 24 L64 24 L64 38 L56 38 L56 24 L48 24 L48 16 L56 16 Z';
+const CROSS = 'M57 8 L63 8 L63 14 L69 14 L69 20 L63 20 L63 33 L57 33 L57 20 L51 20 L51 14 L57 14 Z';
 
-// 몸 하나: 빛 → 오른쪽 그늘(x 62부터 자른다) → 테
-const two = (x, sh, fc, line, lw) => twoTone(x, sh, fc.fill, fc.shade, 62, line, lw);
+// 셀 그늘: 모양을 그늘 빛깔로 채우고, 왼쪽으로 OFF 민 같은 모양과 겹친 곳만 빛 빛깔 — 오른쪽 가장자리를 따라 초승달 그늘이 남는다
+const OFF = 9;
+function fillShape(x, sh, fc) {
+  shapePath(x, sh); x.fillStyle = fc.shade; x.fill();
+  x.save(); shapePath(x, sh); x.clip(); x.translate(-OFF, 0); shapePath(x, sh); x.fillStyle = fc.fill; x.fill(); x.restore();
+}
+const edge = (x, sh, col, lw) => { shapePath(x, sh); x.strokeStyle = col; x.lineWidth = lw; x.lineJoin = 'round'; x.lineCap = 'round'; x.stroke(); };
 const disc = (x, cx, cy, r, fill, line, lw) => { x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fillStyle = fill; x.fill(); if (line) { x.strokeStyle = line; x.lineWidth = lw; x.stroke(); } };
 
 // k: 원본 한 단위의 기기 화소. 선은 기기 화소 1 밑으로 가늘어지지 않는다(작은 손 카드 · 도감 칸에서도 테가 남는다).
-// 작은 그림(받침 폭 < 기기 화소 16)은 고리 · 빛 줄을 빼고 새김을 굵게 — 몇 화소 안에서 뭉개지지 않게
+// 테 위계: 모든 조각의 바깥 테를 두 배 굵기로 먼저 긋고 칠한 뒤(밖으로 body 굵기만 남는다), 조각 이음매는 inner 굵기로.
+// 작은 그림(120 상자 < 기기 화소 22)은 고리 · 반짝 점을 빼고 새김을 굵게 — 몇 화소 안에서 뭉개지지 않게
 function paint(x, t, C, tier, k, bare = false, lwBody = 0) {
   const S0 = SHAPE[t] || SHAPE.P;
-  const small = 88 * k < 16;
+  const small = 120 * k < 22;
   const lw = (v, min = 1) => Math.max(v, min / k);
-  const LB = lwBody ? Math.max(lwBody, 1 / k) : lw(LW.body), LBASE = lw(LW.base, 0.75), LRING = lw(LW.ring, 0.75), LGEM = lw(LW.gem, 0.75);
-  // 받침: 아래 타원(옆면) → 옆 띠 → 윗면 → 고리. 기보 단계는 옆면 빛깔
+  const LB = lwBody ? Math.max(lwBody, 1 / k) : lw(LW.body), LI = lw(LW.inner, 0.75), LBASE = lw(LW.base, 0.75), LRING = lw(LW.ring, 0.75), LGEM = lw(LW.gem, 0.75);
+  // 받침: 아랫면(옆면 빛깔) → 옆 띠 → 윗면 → 고리. 기보 단계는 옆면 빛깔
   const side = tier ? TIER[tier].d : C.base.side;
   const ell = (cy, rx, ry) => { x.beginPath(); x.ellipse(60, cy, rx, ry, 0, 0, Math.PI * 2); };
   if (!bare) {
-  ell(128, 44, 12); x.fillStyle = side; x.fill(); x.strokeStyle = C.line; x.lineWidth = LBASE; x.stroke();
-  x.fillStyle = side; x.fillRect(16, 120, 88, 8);
-  ell(120, 44, 12); x.fillStyle = C.base.top; x.fill(); x.strokeStyle = C.line; x.lineWidth = LBASE; x.stroke();
-  if (!small) { ell(120, 34, 8); x.strokeStyle = C.ring; x.lineWidth = LRING; x.stroke(); }
+    ell(PLATE.low, PLATE.rx, PLATE.ry); x.fillStyle = side; x.fill(); x.strokeStyle = C.line; x.lineWidth = LBASE; x.stroke();
+    x.fillStyle = side; x.fillRect(60 - PLATE.rx, PLATE.top, PLATE.rx * 2, PLATE.low - PLATE.top);
+    ell(PLATE.top, PLATE.rx, PLATE.ry); x.fillStyle = C.base.top; x.fill(); x.strokeStyle = C.line; x.lineWidth = LBASE; x.stroke();
+    if (!small) { ell(PLATE.top, PLATE.ring[0], PLATE.ring[1]); x.strokeStyle = C.ring; x.lineWidth = LRING; x.stroke(); }
   }
   const crownC = (C.crown) || C;
-  const body = () => { two(x, S0.body, C, C.line, LB); if (S0.top) two(x, S0.top, S0.crown ? crownC : C, C.line, LB); };
+  const layers = [[S0.body, C]];
+  if (S0.top) layers.push([S0.top, S0.crown ? crownC : C]);
+  for (const p of S0.parts || []) layers.push([p.d, p.gold ? GOLD : p.crown ? crownC : C]);
+  const body = () => {
+    for (const [sh] of layers) edge(x, sh, C.line, LB * 2);
+    for (const [sh, fc] of layers) { fillShape(x, sh, fc); edge(x, sh, C.line, LI); }
+  };
   if (C.glass) x.globalAlpha = 0.88;
   if (S0.fade) {
     // 아랫몸이 반쯤 비친다(유령)
     x.save(); x.beginPath(); x.rect(-10, -10, 140, S0.fade + 10); x.clip(); body(); x.restore();
     x.save(); x.beginPath(); x.rect(-10, S0.fade, 140, 160); x.clip(); x.globalAlpha *= 0.5; body(); x.restore();
   } else body();
-  for (const p of S0.parts || []) two(x, p.d, p.gold ? GOLD : p.crown ? crownC : C, C.line, LB);
   x.globalAlpha = 1;
   const ink = C.line, grow = small ? 1.35 : 1;
   for (const d of S0.cuts || []) { x.beginPath(); trace(x, d); x.fillStyle = ink; x.fill(); }
   for (const [ex, ey, r] of S0.eyes || []) disc(x, ex, ey, r * grow, ink);
-  if (S0.slit) { x.beginPath(); x.moveTo(S0.slit[0], S0.slit[1]); x.lineTo(S0.slit[2], S0.slit[3]); x.strokeStyle = ink; x.lineWidth = 6.5 * grow; x.lineCap = 'round'; x.stroke(); x.lineCap = 'butt'; }
+  if (S0.slit) { x.beginPath(); x.moveTo(S0.slit[0], S0.slit[1]); x.lineTo(S0.slit[2], S0.slit[3]); x.strokeStyle = ink; x.lineWidth = 5.5 * grow; x.lineCap = 'round'; x.stroke(); x.lineCap = 'butt'; }
   for (const [d, w] of S0.strokes || []) { x.beginPath(); trace(x, d); x.strokeStyle = ink; x.lineWidth = Math.max(w * grow, 1 / k); x.lineCap = 'round'; x.lineJoin = 'round'; x.stroke(); x.lineCap = 'butt'; }
-  if (S0.gems) for (const [gx, gy] of S0.gems) disc(x, gx, gy, 6, C.crown ? C.crown.fill : C.fill, ink, LGEM);
+  const gemC = C.crown || C;
+  if (S0.gems) for (const [gx, gy] of S0.gems) { disc(x, gx, gy, 5, gemC.shade, ink, LGEM); disc(x, gx - 1.2, gy - 0.8, 3.2, gemC.fill); }
   if (S0.cross) { x.beginPath(); trace(x, CROSS); x.fillStyle = GOLD.fill; x.fill(); x.strokeStyle = ink; x.lineWidth = LGEM; x.lineJoin = 'round'; x.stroke(); }
-  // 왼쪽 빛 한 줄
-  if (!small) {
-    x.save(); x.beginPath(); x.rect(-10, -10, 62, 160); x.clip(); x.translate(4, 0);
-    shapePath(x, S0.body); x.strokeStyle = `rgba(255,255,255,${C.hiA})`; x.lineWidth = 3; x.stroke(); x.restore();
-  }
+  if (!small && S0.shine) disc(x, S0.shine[0], S0.shine[1], 3.2, `rgba(255,255,255,${Math.min(0.9, C.hiA + 0.2)})`);
   // 기보 2단계부터 머리 보석(은 · 금)
-  if (tier >= 2 && S0.gem) disc(x, S0.gem[0], S0.gem[1], 5.5, tier === 3 ? '#efbd55' : '#dfe6ec', ink, LGEM);
+  if (tier >= 2 && S0.gem) disc(x, S0.gem[0], S0.gem[1], 5, tier === 3 ? '#efbd55' : '#dfe6ec', ink, LGEM);
 }
 
 // 받침 없는 실루엣(격언 그림 · 아이콘 · 행마 그림): 굽는 캔버스 g에 바로, 몸 바닥 가운데 (cx, by) · 높이 h(g 단위).
@@ -122,7 +141,7 @@ function paint(x, t, C, tier, k, bare = false, lwBody = 0) {
 export function pieceGlyph(g, t, side, cx, by, h, n = 1, lw = 0) {
   if (!SHAPE[t]) t = artOf(t);
   const s = h / 112;
-  g.save(); g.translate(cx, by); g.scale(s, s); g.translate(-60, -120);
+  g.save(); g.translate(cx, by); g.scale(s, s); g.translate(-60, -117);
   paint(g, t, toneOf(side), 0, s * n, true, lw / s);
   g.restore();
 }
@@ -179,7 +198,7 @@ export function piece3(ctx, t, side, cx, cy, { alpha = 1, sx = 1, eng = null, ti
 }
 // 판 밖 기물(손 카드 · 사슬 칸 · 도감 · 상점 …): 정면 그림을 상자 (x, y, bw, bh) 안에 맞춰 — 받침 아래가 상자 아래, 가로 가운데.
 // 모든 기물이 같은 비율로 줄어 크기를 견줄 수 있다. hx: 가로 배율(뒤집힘). 금 기운 · 혼 기운은 상자 가운데 16 폭 자리에
-const FIT = { w: 92, h: 139, below: 141 - BASE.y };
+const FIT = { w: 92, h: 131, below: PLATE.low + PLATE.ry + 1 - BASE.y };
 export function fitScale(bw, bh) { return Math.min(bw / FIT.w, bh / FIT.h); }
 // 상자에 맞춘 기물의 받침 가운데(cx, cy)와 120 상자 논리 폭 w
 export function fitAt(x, y, bw, bh) { const s = fitScale(bw, bh); return { cx: x + bw / 2, cy: y + bh - FIT.below * s, w: s * 120 }; }
@@ -215,7 +234,7 @@ export function drawMask(ctx, m, cx, cy, alpha = 1) { blit(ctx, m, cx, cy, alpha
 export const PIECE_TOP = Math.round((BASE.y - 6) * S); // 22
 
 // 부서질 조각의 빛깔 점(16 × 22 자리): 벡터 모양(fitPiece와 같은 맞춤)을 칸 가운데마다 재서 톤 빛깔
-// (빛 → 몸, x 62 오른쪽 → 그늘, 새김 · 눈 → 테, 관 · 금 조각 → 금, 받침 → 받침 빛깔). 사물은 제 빛깔 덩이
+// (빛 → 몸, 왼쪽으로 OFF 민 모양 밖 → 그늘, 새김 · 눈 → 테, 관 · 금 조각 → 금, 받침 → 받침 빛깔). 사물은 제 빛깔 덩이
 const THING_CHIPS = {
   X: { box: [2, 8, 12, 12], cols: ['#9aa6a1', '#6f7a76', '#4e5754'] },
   J: { box: [4, 9, 8, 7], cols: ['#e8fffc', '#6fd8e6', '#2f9fb0'] },
@@ -261,7 +280,7 @@ function chipGeo(t) {
     body: polys(S0.body), top: S0.top ? polys(S0.top) : null, crownTop: !!S0.crown,
     parts: (S0.parts || []).map((q) => ({ ps: polys(q.d), gold: !!q.gold, crown: !!q.crown })),
     ink: [...(S0.cuts || []).map(polys), ...(S0.eyes || []).map(([x, y, r]) => polys([x, y, r, r]))],
-    gems: (S0.gems || []).map(([x, y]) => polys([x, y, 6, 6])), cross: S0.cross ? polys(CROSS) : null,
+    gems: (S0.gems || []).map(([x, y]) => polys([x, y, 5, 5])), cross: S0.cross ? polys(CROSS) : null,
   };
   CHIP_GEO.set(t, g);
   return g;
@@ -276,7 +295,8 @@ export function pieceChips(t, side, eng = null) {
   }
   const C = toneOf(side, eng), G = chipGeo(t), crownC = C.crown || C;
   const { cx, cy, w } = fitAt(0, 0, 16, 22), s = w / 120, out = [];
-  const tone = (fc, x) => (x >= 62 ? fc.shade : fc.fill);
+  // 셀 그늘과 같은 규칙: 왼쪽으로 OFF 민 같은 모양 안이면 빛, 아니면 그늘
+  const tone = (fc, ps, X, Y) => (inside(ps, X + OFF, Y) ? fc.fill : fc.shade);
   for (let y = 0; y < 22; y++) for (let x = 0; x < 16; x++) {
     const X = BASE.x + (x + 0.5 - cx) / s, Y = BASE.y + (y + 0.5 - cy) / s;
     let col = null;
@@ -285,12 +305,12 @@ export function pieceChips(t, side, eng = null) {
     else if (G.gems.some((ps) => inside(ps, X, Y))) col = C.crown ? C.crown.fill : C.fill;
     else {
       const part = G.parts.find((q) => inside(q.ps, X, Y));
-      if (part) col = tone(part.gold ? GOLD : part.crown ? crownC : C, X);
-      else if (G.top && inside(G.top, X, Y)) col = tone(G.crownTop ? crownC : C, X);
-      else if (inside(G.body, X, Y)) col = tone(C, X);
-      else if (Math.abs(X - 60) <= 44 && Y >= 108 && Y <= 140) {
-        const top = ((X - 60) / 44) ** 2 + ((Y - 120) / 12) ** 2 <= 1, low = ((X - 60) / 44) ** 2 + ((Y - 128) / 12) ** 2 <= 1;
-        if (top) col = C.base.top; else if (low || (Y >= 120 && Y <= 128)) col = C.base.side;
+      if (part) col = tone(part.gold ? GOLD : part.crown ? crownC : C, part.ps, X, Y);
+      else if (G.top && inside(G.top, X, Y)) col = tone(G.crownTop ? crownC : C, G.top, X, Y);
+      else if (inside(G.body, X, Y)) col = tone(C, G.body, X, Y);
+      else if (Math.abs(X - 60) <= PLATE.rx && Y >= PLATE.top - PLATE.ry && Y <= PLATE.low + PLATE.ry) {
+        const e = (cy) => ((X - 60) / PLATE.rx) ** 2 + ((Y - cy) / PLATE.ry) ** 2 <= 1;
+        if (e(PLATE.top)) col = C.base.top; else if (e(PLATE.low) || (Y >= PLATE.top && Y <= PLATE.low)) col = C.base.side;
       }
     }
     if (col) out.push({ x, y, col });
