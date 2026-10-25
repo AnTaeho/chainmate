@@ -22,7 +22,7 @@ test('꽉 채움: 배율은 1/30 칸, 캔버스는 기기 화소 정수 크기 �
     assert.ok(near(b.k / b.n, j), tag);
     assert.ok(near(GW * b.n, Math.round(GW * b.n)) && near(GH * b.n, Math.round(GH * b.n)), `${tag} n ${b.n}`);
     if (b.fill) {
-      assert.ok(b.n <= 4 + 1e-9, tag);
+      assert.ok(b.n <= 5 + 1e-9, tag);
       // 캔버스 자리는 j의 배수(여백 판 화소와 뒷면 화소가 같은 격자), dpr이 정수면 CSS 화소 정수
       assert.equal(Math.round(c.left * dpr) % j, 0, tag);
       if (Number.isInteger(dpr)) assert.ok(Number.isInteger(c.left) && Number.isInteger(c.top), tag);
@@ -41,9 +41,12 @@ test('꽉 채움: 정수로 딱 맞는 창 · 480×270보다 작은 창은 정�
 
 test('꽉 채움 뒷면 배율: 상한을 넘으면 정수 j로 나눈다', () => {
   assert.deepEqual(fillBack(3.5), { n: 3.5, j: 1 });
+  assert.deepEqual(fillBack(5.5), { n: 2.75, j: 2 });
   assert.deepEqual(fillBack(7), { n: 3.5, j: 2 });
+  assert.deepEqual(fillBack(7, 4), { n: 3.5, j: 2 });
   assert.deepEqual(fillBack(7, 8), { n: 7, j: 1 });
-  assert.equal(fillBack(9.6).j, 3);
+  assert.equal(fillBack(9.6).j, 2);
+  assert.deepEqual(fillBack(4.4), { n: 4.4, j: 1 }); // 폰 dpr 3 가로 · 세로는 반으로 떨어지지 않는다
 });
 
 test('소수 배율의 칸 맞춤: 자리 · 오른쪽 끝이 기기 화소, 테 1은 어디서나 round(N) 화소', () => {

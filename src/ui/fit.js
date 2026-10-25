@@ -3,8 +3,8 @@
 export const GW = 480, GH = 270;
 // 꽉 채움의 배율 칸: 480 · 270의 최대공약수 30 — K = m / 30이면 캔버스가 기기 화소 16m × 9m(정수)
 export const FILL_STEP = 30;
-// 꽉 채움 뒷면 배율 상한(정수 배율의 backScale 상한 4와 같다 — 뒷면 1920×1080 안)
-export const FILL_CAP = 4;
+// 꽉 채움 뒷면 배율 상한: 5(뒷면 2400×1350까지). 4로 두면 폰 dpr 3(K 4.1 ~ 4.4)이 j = 2로 떨어져 뒷면이 정수 배율의 반이 된다
+export const FILL_CAP = 5;
 // 꽉 채움의 뒷면 배율: K ≤ cap이면 K 그대로, 넘으면 K / j(정수 j로 나눠 cap 안에)
 export function fillBack(k, cap = FILL_CAP) {
   if (!(k > cap)) return { n: k, j: 1 };
