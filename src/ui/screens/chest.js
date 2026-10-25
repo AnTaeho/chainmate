@@ -1,7 +1,6 @@
 // 명인의 상자: 다섯 칸 릴이 돌다가 왼쪽부터 멈춘다. 불 켜진 칸(가운데부터)에 물건이 선다.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, sprite, radiusOf } from '../../render/gfx.js';
-import { rpath } from '../../render/light.js';
+import { W, H, text, box, rect, sprite, radiusOf, innerPath } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { CHARTS } from '../../data/charts.js';
 import { ENGRAVING_BY_ID } from '../../data/engravings.js';
@@ -110,7 +109,7 @@ export class ChestScreen {
           const it = SPIN[k % SPIN.length];
           const off = Math.floor((this.t * 14 * 32) % 32) - 16;
           // 도는 그림은 칸 안쪽 둥근 모서리에서 잘린다
-          g.save(); rpath(g, cx0 + 1, cy0 + 1, CELL.w - 2, CELL.h - 2, radiusOf(CELL.w, CELL.h) - 1); g.clip();
+          g.save(); innerPath(g, cx0, cy0, CELL.w, CELL.h, radiusOf(CELL.w, CELL.h) - 1); g.clip();
           g.globalAlpha = 0.6;
           drawItem(g, it, mx, my + off);
           g.globalAlpha = 1;

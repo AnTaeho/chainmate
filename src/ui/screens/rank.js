@@ -3,7 +3,7 @@
 //   순위 화면: 머리줄(제목 · 「오늘 · 어제」 탭 · 날짜와 사람 수) → 머릿줄 → 열 줄 → 붙박은 내 줄(금빛) 또는 「오늘의 대국 두기」 → 단추 줄(쪽 넘김)
 //   결과 카드: 「오늘 14등 / 312명」 · 「순위 보기」 → 내 위아래 이웃(자리가 되는 만큼 둘씩 · 하나씩 · 내 줄만), 줄마다 등수 · 이름 · 도달(순위 화면과 같은 글) · 점수
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rect, rrect, measure, num, fitNum } from '../../render/gfx.js';
+import { W, text, box, rect, rrect, measure, num, fitNum, inner } from '../../render/gfx.js';
 import { button, buttonRow } from '../ui.js';
 import { pageHead, bottomBar } from './common.js';
 import { PAGE, PAD_BOX, LINE, GAP_GROUP, GAP_IN, BTN_H, SP, textY, inkY } from '../frame.js';
@@ -13,7 +13,7 @@ import { shiftDate, PAGE as PER } from '../rank.js';
 
 const en = () => getLang() === 'en';
 // 내 줄 바탕: 둥근 짙은 금빛 띠 + 금빛 테 1
-function mineRow(ctx, x, y, w) { rrect(ctx, x, y, w, LINE, 3, PAL.goldDk); rrect(ctx, x + 1, y + 1, w - 2, LINE - 2, 2, MINE_BG); }
+function mineRow(ctx, x, y, w) { rrect(ctx, x, y, w, LINE, 3, PAL.goldDk); inner(ctx, x, y, w, LINE, 2, MINE_BG); }
 const MINE_BG = '#3a3014', CARD_BG = PAL.deep;
 // 도달: 이겼으면 「8관 이김」, 아니면 「7관 마스터전」. 영어는 줄 폭에 맞춘 짧은 꼴(Hall 7 Master — 결과 화면의 「Master Match」보다 짧다)
 const KIND = { ko: ['연습 대국', '정식 대국', '마스터전'], en: ['Practice', 'Rated', 'Master'] };

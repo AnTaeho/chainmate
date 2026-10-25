@@ -1,5 +1,5 @@
 // 화면 연기 시험: 가짜 캔버스 · 가짜 입력으로 실제 src/main.js를 부팅해, 봇 명령을 화면 누르기로 바꿔 판을 끝까지 돈다.
-//   node tools/smoke.mjs [--seed 3] [--runs 2] [--verbose] [--lang en] [--spacing pad8,line14,…] [--window 1920x950@2] [--fit fill]
+//   node tools/smoke.mjs [--seed 3] [--runs 2] [--verbose] [--lang en] [--spacing pad8,line14,…] [--window 1920x950@2] [--fit int]
 // 확인: 예외 0 · 모든 화면 방문 · 프레임당 그리기 시간 · 한 수 연출 시간(×1) · 저장 → 이어 하기.
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle, stepBattle } from './bot.mjs';
@@ -36,7 +36,7 @@ if (opt('--spacing', null)) globalThis.__SPACING = opt('--spacing', null);
 const log = (...a) => { if (VERBOSE) console.log(...a); };
 
 globalThis.__CHAINMATE_NO_BOOT__ = true;
-// --window 1920x950@2: 창 크기 · dpr(기본 1366×700 · 1.25), --fit fill: 꽉 채움 배율(주소 ?fit=fill — src/main.js)
+// --window 1920x950@2: 창 크기 · dpr(기본 1366×700 · 1.25), --fit int: 정수 배율(주소 ?fit=int — 기본은 꽉 채움, src/main.js)
 const WIN = (opt('--window', '1366x700@1.25').match(/^(\d+)x(\d+)(?:@([\d.]+))?$/) || []).slice(1).map(Number);
 const dom = makeFakeDom({ width: WIN[0] || 1366, height: WIN[1] || 700, dpr: WIN[2] || 1.25 });
 if (opt('--fit', null)) dom.window.location = { search: `?fit=${opt('--fit', null)}`, hostname: '' };
@@ -52,8 +52,16 @@ let rankRng = 20261007;
 const rankApi = fakeApi({ build: 'smoke', now: () => Date.parse(`${DATE}T12:00:00Z`), rand: () => { rankRng = (rankRng * 1103515245 + 12345) & 0x7fffffff; return rankRng / 0x80000000; } });
 await seedBoard(rankApi, DATE, demoRows(24));
 await seedBoard(rankApi, shiftDate(DATE, -1), demoRows(13));
-const netSettle = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
-dom.window.fetch = async (url, init) => { if (String(url).startsWith('/api/')) return rankApi.fetch(url, init); telSent.n++; return { ok: true }; };
+// 비번 해시(scrypt)는 스레드 풀에서 돈다 — 틱 n개 안에 안 돌아올 수 있어, 가짜 서버로 보낸 부름이 다 돌아올 때까지 틱을 더 돈다
+let inflight = 0;
+const netSettle = async (n = 12) => {
+  for (let round = 0; round < 500; round++) {
+    for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r));
+    if (!inflight) return;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+};
+dom.window.fetch = async (url, init) => { if (String(url).startsWith('/api/')) { inflight++; try { return await rankApi.fetch(url, init); } finally { inflight--; } } telSent.n++; return { ok: true }; };
 dom.window.navigator = { sendBeacon: () => { telSent.n++; return true; } };
 const { boot } = await import('../src/main.js');
 const lessonMod = await import('../src/ui/lessons.js');

@@ -1,0 +1,45 @@
+# 넘김: 아이폰에서 안 눌리는 곳 찾기(손가락 · 마우스 견주기)
+
+브랜치 `worktree-agent-aea4142ff71b21664`. 사용자가 실기기 아이폰 사파리 가로(아마 `?fit=fill`)에서 「몇 곳이 안 눌린다 — 다 봐 달라」고 했다. 어느 곳인지는 모른다.
+
+## 한 것
+- `tools/touch-audit.mjs`를 썼다(커밋 bb44b55). **아직 한 번도 끝까지 돌리지 않았다.** 첫 실행은 macOS에 `timeout` 명령이 없어 시작 전에 멈췄다.
+- 고친 코드는 없다.
+
+## 지금까지 확인한 것
+| 항목 | 결과 | 근거 |
+|---|---|---|
+| 누른 자리 → 게임 좌표(`fit.js` `toGame`), 가로 · 세로 × int · fill | 바르다. 차이는 ±1 도트뿐 | WebKit `page.touchscreen.tap`으로 네 귀퉁이 · 가운데를 눌러 `app.pointer`를 받아 적음. WebKit 손가락 좌표가 정수 CSS 화소라 생기는 반 도트 차이(세로 fill 아래 끝 탭이 y 270 — 판 밖). 고칠 것 없음 |
+| 판 수치 | 가로 int K 3 · css 1 · 손가락 44 도트, 가로 fill K 3.8 · 캔버스 608×342 @ 63,0 · 손가락 35, 세로 int K 4 돌림 · 33, 세로 fill K 4.1 돌림 · 369×656 · 33 | 같은 탐침 |
+| 입력 칸(`textfield.js`) | 폼이 `body`에 붙어 `#stage` touchstart(preventDefault)에 걸리지 않는다 — 안 눌릴 이유 아님 | 코드 읽음(textfield.js:62) |
+| 관 선택 판 보기(`select:board:i`) | onClick 없이 tip만, 단추가 뒤에 그려져 먼저 잡힌다 — 탭하면 가리킴이 남아 보인다 | select.js:305 |
+| 상자 `pointing`(chest.js:101) | 그림만 바꾼다, 구역은 늘 있다 | 코드 읽음 |
+| 손가락 말풍선 방식 | 따로 없다. 손을 떼도 `ui.mouse`가 그 자리에 남아 가리킴(hover)이 이어지는 것이 곧 「탭하면 설명」이다 | ui.js `up` → `move` |
+
+## 의심(도구로 확인할 것)
+1. **누름 뒤 미끄러짐**: `ui.up`은 뗀 자리의 구역 id가 누른 구역과 같아야 누른다. 18 도트 단추에서 손가락이 떼며 몇 화소 밀리면 아무 일도 없다(마우스는 안 밀린다). 가장 유력.
+2. **작은 구역**: `growHit`을 쓰지 않는 구역(전술 칸 15×15, 도장, 낱말 칩, 도감 칸 등)은 손가락에 작다. 아무 구역도 없는 자리를 누르면 가장 가까운 켜진 구역(손가락 반경 안)으로 붙이는 방법을 생각 중(down · up 둘 다 같은 셈, `this.touch`일 때만).
+3. **넓힌 구역이 이웃을 덮음**: 손가락 구역이 다른 구역 그림 가운데를 덮는지(`steal`).
+4. **미리 보기 두 번 누름**: 상점 · 꾸러미 · 정석 · 전술 · 판 칸(먹기 · 떨구기)은 설계상 두 번. 정석 카드와 그 도장(`draft:i` · `draft:i:stamp`)은 id가 달라 오가면 세 번 눌러야 한다. 판 칸 `tapSq`가 손 카드를 바꿔도 지워지는지 볼 것(battle.js:505).
+5. **창 끝**: fill이면 캔버스가 창 위 0 · 아래 342(343 창)까지 온다. iOS 몸짓 띠(위 · 아래 20 CSS 화소 안) 단추를 표로. 도구의 `edge` 칸이 낸다(아이폰 17 사파리 가로 안전 영역 판 `i17-int` · `i17-fill`도).
+
+## 도구 쓰는 법
+```
+PLAYWRIGHT=<playwright index.mjs 경로> node tools/touch-audit.mjs --only title,shop --configs land-fill   # 먼저 작게
+PLAYWRIGHT=… node tools/touch-audit.mjs --json /tmp/touch-before.json                                     # 전부(오래 걸릴 수 있다 — 장면 28 × 판 4)
+```
+- 판: `land-int` · `land-fill` · `port-int` · `port-fill`(손가락 견주기) + `i17-int` · `i17-fill`(창 끝 표만).
+- 마우스 기준은 손가락 없는 734×343 창 하나. 손가락은 `#stage`에 가짜 touch 사건(WebKit은 `Touch` 생성자가 없다), 사이에 프레임을 돈다. 좌표 확인만 진짜 `touchscreen.tap`.
+- 출력: 장면마다 다른 수 → 「다름」 표(steal · map · tap · drift · tip) → 창 끝 표.
+- 손볼 것: 상태 서명(`__sig`의 `st` — 화면 칸 해시)이 시각 · 연출 값 때문에 시끄러우면 `SKIP` 정규식을 넓힌다. 장면 꾸밈이 안 맞으면(구역 0) `SCENES` 문자열을 drawcheck.mjs 꾸밈과 맞춘다. 미리 보기 판단(`first`)은 previewId · tapSq로 한다.
+
+## 클라우드에서 주의
+- 클라우드 세션에는 아이폰 · Safari 실기기가 없다. Playwright WebKit(`npx playwright install webkit`)만 있다. iOS 몸짓(상태 막대 탭 · 홈 막대 · 도구 막대 되살리기)은 흉내 낼 수 없어 창 끝 표로만 보고한다.
+- `timeout` 명령이 없는 곳이 있다. 포트 8123 · 7777은 쓰지 않는다(도구는 빈 포트).
+
+## 남은 것
+1. 도구를 돌려 「다름」 표를 얻는다(고치기 전). 시끄러운 줄을 걸러 진짜 다름만.
+2. 원인을 한 곳(`src/ui/ui.js` `UI.down/up/hitIn`, `src/main.js` 손가락 처리)에서 고친다 — 단추마다 따로 고치지 않는다. `this.touch`일 때만 바꿔 마우스는 그대로.
+3. 보이는 것이 바뀌면 시안 2~4장.
+4. 검증: `npm test`(905) · `npm run smoke`(SMOKE OK · 넘침 0 · 한 수 ≤4초) · 그리기를 바꿨으면 `node tools/drawcheck.mjs` · `node tools/drawcheck.mjs --scale 1280x720 --fit fill` · 도구 고친 뒤 표.
+5. 범위 밖: `src/sim/` · `src/data/` · `tuning.js` · `src/ui/i18n/en.js` · `desktop/`.

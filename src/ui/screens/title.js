@@ -5,7 +5,7 @@
 import { hint, markSeen } from '../coach.js';
 import { inkY, SP, BTN_HERO } from '../frame.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, rect, rrect, rframe, box, measure, selectRing, R_SM } from '../../render/gfx.js';
+import { W, H, text, rect, rrect, rframe, box, measure, selectRing, R_SM, inner } from '../../render/gfx.js';
 import { pillR } from '../ui.js';
 import { makeCanvas, context } from '../../render/surface.js';
 import { LOOK } from '../../render/look.js';
@@ -206,7 +206,7 @@ export class TitleScreen {
     if (this.sel === 0) rframe(ctx, hx - R, hy - R, HERO.w + R * 2, HERO.h + R * 2, pr + R, PAL.edge, 1);
     openBox('edge', hx, hy, HERO.w, HERO.h, 1, { name: '첫 화면 단추', r: pr });
     rrect(ctx, hx, hy, HERO.w, HERO.h, pr, PAL.frameDk);
-    rrect(ctx, hx + 1, hy + 1, HERO.w - 2, HERO.h - 2, pr - 1, ui.isHover(hid) ? PAL.goldHi : PAL.gold);
+    inner(ctx, hx, hy, HERO.w, HERO.h, pr - 1, ui.isHover(hid) ? PAL.goldHi : PAL.gold);
     text(ctx, hlabel, W / 2, inkY(hy, HERO.h), PAL.cardInk, { align: 'center', bold: true });
     closeBox();
     // 아이콘 줄: 같은 폭 칸, 칸마다 둥근 남색 칸 + 벡터 아이콘 + 이름(넘치면 낱말 단위 두 줄). 고른 칸은 한 칸 들리고 금빛 테
