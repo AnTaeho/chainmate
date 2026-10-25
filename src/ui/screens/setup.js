@@ -9,6 +9,7 @@ import { OPENING_ORDER, UNLOCKS, nextUnlock } from '../records.js';
 import { pageHead, bottomBar } from './common.js';
 import { PAGE, LINE, PAD_CARD, GAP_IN, GAP_GROUP, BTN_H, SP, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
+import { danStamp, STAMP } from '../parts.js';
 
 // 단 → 레이팅(표시만). 저장 · 규칙은 단 0~8 그대로
 export const rating = (d) => 800 + 200 * (d || 0);
@@ -91,6 +92,9 @@ export class SetupScreen {
       op.bag.forEach((t, k) => sprite(ctx, t, 'w', bx + (k % 4) * 19, y + lay.bag + Math.floor(k / 4) * 20));
       for (const [l, ly] of lay.extras) text(ctx, l, x + w / 2, y + ly, PAL.goldDk, { align: 'center' });
       closeBox();
+      // 도장: 이 오프닝으로 이긴 가장 높은 레이팅 — 카드 윗변에 반쯤 걸친 스티커(오른쪽 안 4)
+      const won = (rec.openingDan || {})[id];
+      if (won != null) danStamp(ctx, x + w - SP.s, y - (STAMP.h >> 1), won);
     });
     // 레이팅(단): 이름표와 단추 줄 한 줄 → 묶음 틈 → 더하는 규칙
     f.gap(GAP_GROUP);

@@ -66,6 +66,8 @@ export const RULES = {
   lessonsDone: or, tutorialAsked: or,
   lessonsSeen: union, coachSeen: union, movesSeen: union,
   runNew,
+  // 업적 · 업적이 읽는 칸 · 도장(열쇠마다 켜진 쪽 · 큰 쪽 — 도장의 단 0은 「단 0으로 이겼다」라 열쇠가 있으면 남는다)
+  achv: union, feats: union, mastersBeaten: union, synergyTop: union, openingDan: union, josekiDan: union,
   // 이 기기의 취향(다음 새 판 · 마지막에 고른 것): 덩이에 싣지 않는다(LOCAL_ONLY). 규칙은 법칙을 지키려고만 둔다
   lastOpening: loose, lastDan: loose,
 };

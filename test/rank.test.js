@@ -417,7 +417,7 @@ test('앱: 로컬 서버 · 자동화 브라우저에서는 오늘의 대국을 
     app.openOverlay('settings'); tick(app, 4);
     await settle();
     assert.equal(api.calls.length, 0, JSON.stringify(opts));
-    assert.equal(app.toasts.length, 0);
+    assert.equal(app.toasts.filter((t) => !t.achv).length, 0, '업적 알림 말고는 없다');
     assert.equal(app.stats.errors, 0);
     assert.equal(d.window.localStorage.getItem(PLAYER_KEY), null);
     assert.equal(d.window.localStorage.getItem(QUEUE_KEY), null);

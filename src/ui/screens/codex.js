@@ -11,7 +11,7 @@ import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { EDITIONS } from '../../data/editions.js';
 import { toggleGroup, rowWidth } from '../ui.js';
-import { tipLines, miniShard, moveTip, cardBase, wrapName, drawName, fragmentSteps, rarityLine, soulGlyph, maximArt, editionArt, MAXIM_CELL, MAXIM_ICON_W } from '../parts.js';
+import { danStamp, stampW, stampText, STAMP, tipLines, miniShard, moveTip, cardBase, wrapName, drawName, fragmentSteps, rarityLine, soulGlyph, maximArt, editionArt, MAXIM_CELL, MAXIM_ICON_W } from '../parts.js';
 import { SOULS, soulPrice } from '../../data/souls.js';
 import { L } from '../lang.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
@@ -24,7 +24,7 @@ import { lockTier, lockIcon } from '../unlockview.js';
 // 줄 높이 · 열 수는 본 것 · 안 본 것을 가리지 않고 탭의 모든 이름으로 잰다(도감이 차도 쪽이 바뀌지 않는다)
 const GRID = { x: 12, w: W - 24, gap: 4, cols: [5, 4, 3] };
 // 오른쪽 그림 자리(격언 · 판본 그림 칸 20 · 기물 16 · 혼 문양 9 · 문장 · 조각 셋)
-const artW = (tab, e) => (e.piece ? 16 + 2 : e.soul ? 9 + 2 : tab === 'maxims' || tab === 'legends' || tab === 'editions' ? MAXIM_ICON_W : e.crest ? 12 + 2 : e.parts != null ? 18 + 2 : 0);
+const artW = (tab, e) => (e.stamp != null ? stampW(e.stamp) + 2 : e.piece ? 16 + 2 : e.soul ? 9 + 2 : tab === 'maxims' || tab === 'legends' || tab === 'editions' ? MAXIM_ICON_W : e.crest ? 12 + 2 : e.parts != null ? 18 + 2 : 0);
 // 격자 자리: { cols, cw, pages: [[{ i, x, y, h, name, nameW }]] } — 쪽마다 들어가는 줄까지. 칸 높이는 탭의 가장 긴 이름 하나로 모두 같다(격자가 고르게).
 // top: 격자 윗변(탭이 두 줄이면 그 아래)
 export function codexLayout(tab, list, top = PAGE.bodyY) {
@@ -68,7 +68,8 @@ export class CodexScreen {
       return FACTIONS.map((f) => ({ id: f.id, seen: met(f), name: f.name, crest: f.id, tip: () => tipLines(f.name, [f.habit.text, `마스터 ${bossOf(f.id).name}`, bossOf(f.id).text]), col: f.hue }));
     }
     if (this.tab === 'legends') return LEGENDS.map((l) => ({ id: l.id, seen: (c.legends[l.id] || 0) > 0 || !!c.legendsDone[l.id], name: l.name, parts: c.legends[l.id] || 0, done: !!c.legendsDone[l.id], tip: () => tipLines(l.name, [`전설: ${l.text}`, ...fragmentSteps(l, c.legendsDone[l.id] ? { first: true, feat: true, gold: true } : null)]), col: PAL.gold }));
-    if (this.tab === 'openings') return OPENING_ORDER.map((id) => { const o = OPENINGS[id]; const u = UNLOCKS.find((x) => x.id === id); const open = this.app.records.unlocked.openings.includes(id); return { id, seen: open, name: o.name, tip: () => (open ? tipLines(o.name, o.text) : tipLines('잠김', u.text)), col: PAL.gold }; });
+    // 오프닝: 이긴 적이 있으면 오른쪽에 도장(이긴 가장 높은 레이팅)
+    if (this.tab === 'openings') return OPENING_ORDER.map((id) => { const o = OPENINGS[id]; const u = UNLOCKS.find((x) => x.id === id); const open = this.app.records.unlocked.openings.includes(id); const won = open ? (this.app.records.openingDan || {})[id] : null; return { id, seen: open, name: o.name, stamp: won ?? null, tip: () => (open ? tipLines(o.name, won != null ? [o.text, `이긴 가장 높은 레이팅 ${stampText(won)}`] : o.text) : tipLines('잠김', u.text)), col: PAL.gold }; });
     return EDITIONS.map((e) => ({ id: e.id, seen: !!c.editions[e.id], name: e.name, tip: () => tipLines(e.name, e.text), col: EDITION_TINT[e.id] }));
   }
   // 판 밖 틀: 머리줄(제목 · 탭 · 모은 수) + 격자(다섯 칸, 이름이 두 줄로도 안 들어가면 넷 — 넘치면 쪽) + 맨 아래 단추 줄. 칸 말풍선은 칸 바로 아래(마지막 줄은 위)
@@ -140,6 +141,7 @@ export class CodexScreen {
       if (this.tab === 'editions') editionArt(ctx, e.id, x + cw - MAXIM_CELL.inset - MAXIM_CELL.w, y + Math.floor((ch - MAXIM_CELL.h) / 2));
       if (e.soul) soulGlyph(ctx, e.soul, x + cw - P - 9, y + Math.floor((ch - 9) / 2));
       if (e.piece) sprite(ctx, e.piece, 'w', x + cw - P - 16, y + Math.floor((ch - 22) / 2));
+      if (e.stamp != null) danStamp(ctx, x + cw - P, y + Math.floor((ch - STAMP.h) / 2), e.stamp);
       if (e.crest) drawCrest(ctx, e.crest, x + cw - P - CREST_SIZE, y + Math.floor((ch - CREST_SIZE) / 2));
       if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - (low ? MAXIM_CELL.inset + 19 : P + 18) + k * 6, y + ch - P - 5, PAL.goldDk); }
       closeBox();
