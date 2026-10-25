@@ -269,6 +269,17 @@ export function soulGlyph(ctx, id, x, y) {
     g.restore();
   });
 }
+// 월계관(도장의 이겨서 받은 표, size × size): 크림 몸 + 잉크 테 — 문양 붓의 선 굵기 그대로
+const LAUREL = [[6.4, 5.6, 0.95], [4.4, 10.4, 0.45], [5, 15.6, -0.15], [8.2, 19.6, -0.75]];
+export function laurelMark(ctx, x, y, size) {
+  blitVec(ctx, 'laurel', x, y, size, size, (g, n) => {
+    const k = size / 24; g.save(); g.scale(k, k);
+    const p = pen(g, k * n);
+    p.stroke('M11 22 C3.5 19.5 2.5 11 6.5 3.5 M13 22 C20.5 19.5 21.5 11 17.5 3.5', INK, 1.8);
+    for (const [lx, ly, a] of LAUREL) { p.shape([lx, ly, 3.3, 1.9, a], 'cream'); p.shape([24 - lx, ly, 3.3, 1.9, -a], 'cream'); }
+    g.restore();
+  });
+}
 // 명경기 조각 16×14 — 작은 자리(금빛 꾸러미 건너뛰기 줄 · 마스터의 상자 · 결과)
 export function shardIcon(ctx, x, y) {
   blitVec(ctx, 'shard', x, y, 16, 14, (g, n) => { const k = 14 / 24; g.save(); g.translate(1.5, 0); g.scale(k, k); shard(pen(g, k * n)); g.restore(); });

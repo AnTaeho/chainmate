@@ -9,7 +9,7 @@ import { OPENING_ORDER, UNLOCKS, nextUnlock } from '../records.js';
 import { pageHead, bottomBar } from './common.js';
 import { PAGE, LINE, PAD_CARD, GAP_IN, GAP_GROUP, BTN_H, SP, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
-import { danStamp, STAMP } from '../parts.js';
+import { danStamp, stampTip, STAMP } from '../parts.js';
 
 // 단 → 레이팅(표시만). 저장 · 규칙은 단 0~8 그대로
 export const rating = (d) => 800 + 200 * (d || 0);
@@ -59,7 +59,8 @@ export class SetupScreen {
     pageHead(ctx, '새 판', nu ? `다음 오프닝 ${OPENINGS[nu.id].name}: ${nu.text} (${nu.have}/${nu.need})` : null, { big: true });
     const f = flow(PAGE.bodyY);
     text(ctx, '오프닝', PAGE.titleX, f.line(), PAL.dim);
-    f.gap(GAP_IN);
+    // 윗변에 걸친 도장(반 높이 7)이 이름표 줄에 닿지 않게: 도장이 하나라도 있으면 묶음 틈
+    f.gap(OPENING_ORDER.some((id) => (rec.openingDan || {})[id] != null) ? GAP_GROUP : GAP_IN);
     // 카드 다섯: 판 밖 폭(12 ~ 468)을 사이 8로 나눈다
     const n = OPENING_ORDER.length, w = Math.floor((W - PAGE.titleX * 2 - SP.m * (n - 1)) / n);
     const lays = OPENING_ORDER.map((id) => this.cardLayout(id, w)), h = Math.max(...lays.map((q) => q.h));
@@ -72,7 +73,8 @@ export class SetupScreen {
       const rid = `setup:op:${id}`;
       const unlock = UNLOCKS.find((u) => u.id === id);
       // 잠긴 오프닝은 카드가 해금 과제를 적는다(말풍선 없음)
-      ui.region(rid, x, y, w, h, { enabled: open, onClick: () => { this.opening = id; this.app.sfx('pick'); } });
+      const choose = () => { this.opening = id; this.app.sfx('pick'); }, sid = `setup:stamp:${id}`;
+      ui.region(rid, x, y, w, h, { enabled: open, onClick: choose });
       openBox('card', x, y, w, h, PAD_CARD, { name: `오프닝 ${id}` });
       // 열린 오프닝은 크림 카드(고르면 바깥 금빛 고리 2), 잠긴 오프닝은 빈 자리
       if (!open) {
@@ -84,7 +86,7 @@ export class SetupScreen {
       }
       // 고른 카드: 빛은 카드 뒤, 금빛 테 1은 카드 위(29절)
       if (sel) selectGlow(ctx, x, y, w, h);
-      box(ctx, x, y, w, h, PAL.card, !sel && ui.isHover(rid) ? PAL.gold : PAL.frameDk);
+      box(ctx, x, y, w, h, PAL.card, !sel && (ui.isHover(rid) || ui.isHover(sid)) ? PAL.gold : PAL.frameDk);
       if (sel) selectRing(ctx, x, y, w, h, { r: R_LG, glowA: 0 });
       for (const [l, ly] of lay.names) text(ctx, l, x + w / 2, y + ly, PAL.cardInk, { align: 'center', bold: true });
       // 덱 모습: 작은 기물 여덟(두 줄)
@@ -94,7 +96,7 @@ export class SetupScreen {
       closeBox();
       // 도장: 이 오프닝으로 이긴 가장 높은 레이팅 — 카드 윗변에 반쯤 걸친 스티커(오른쪽 안 4)
       const won = (rec.openingDan || {})[id];
-      if (won != null) danStamp(ctx, x + w - SP.s, y - (STAMP.h >> 1), won);
+      if (won != null) danStamp(ctx, x + w - SP.s, y - (STAMP.h >> 1), won, { ui, id: sid, tip: () => stampTip(op.name, won), onClick: choose });
     });
     // 레이팅(단): 이름표와 단추 줄 한 줄 → 묶음 틈 → 더하는 규칙
     f.gap(GAP_GROUP);

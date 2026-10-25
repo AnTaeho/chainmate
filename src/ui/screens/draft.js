@@ -8,7 +8,7 @@ import { text, box, rect, rrect, radiusOf } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows, chipBlockH } from '../parts-depth.js';
-import { cardBase, tipLines, CARD_CHIP_ROWS, danStamp, STAMP } from '../parts.js';
+import { cardBase, tipLines, CARD_CHIP_ROWS, danStamp, stampTip, STAMP } from '../parts.js';
 import { runSide, pauseButton } from './common.js';
 import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, SP, LINE, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -82,7 +82,8 @@ export class DraftScreen {
       const x = x0 + i * (CW + CARD.gap), y = draftY(CH);
       const uid = `draft:${i}`;
       ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
-      const hov = ui.isHover(uid) && !this.chosen;
+      // 도장 구역(drawCard)을 가리켜도 카드는 들린 채로 — 내려앉으면 도장이 커서 밑에서 빠져 떨린다
+      const hov = (ui.isHover(uid) || ui.isHover(`${uid}:stamp`)) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
       if (p < 0.5) { box(ctx, xx, y, nw, CH, PAL.fogHi, PAL.frameDk); if (nw > 30) tierSeal(ctx, xx + Math.floor(nw / 2), y + CH / 2, 9, TIER_COL[j.tier]); return; }
       if (j.tier === 'rainbow') motion();
@@ -106,7 +107,7 @@ export class DraftScreen {
       text(ctx, TIER_NAME[j.tier], x + P, y + lay.tier, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
       // 도장: 이 레퍼토리로 이긴 가장 높은 레이팅(등급 줄 오른끝)
       const won = (this.app.records.josekiDan || {})[id];
-      if (won != null) danStamp(ctx, x + CW - P, y + P + ((LINE - STAMP.h) >> 1), won);
+      if (won != null) danStamp(ctx, x + CW - P, y + P + ((LINE - STAMP.h) >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.pick(i), preview: true });
       for (const [l, ly] of lay.names) text(ctx, l, x + P, y + ly, PAL.cardInk, { bold: true });
       rect(ctx, x + P, y + lay.rule, lay.IW, 1, col);
       for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } });
