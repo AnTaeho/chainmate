@@ -16,11 +16,11 @@ let FINE = 0;
 export function fine(fn) { FINE++; try { return fn(); } finally { FINE--; } }
 // 꽉 채움(뒷면 배율이 소수)이면 멈춘 자리도 정수 칸에 둔 뒤 기기 화소에 맞춘다(look.js grid) — 정수 배율이면 Math.round 그대로
 const R = (v) => (FINE ? snap(v) : grid(v));
-// 칠하는 칸: 소수 배율이면 왼쪽 · 오른쪽 끝을 모두 기기 화소에 맞춘다(테 1이 어디서나 같은 기기 화소 수). 정수 배율이면 그대로
+// 도트 칸(점선 · 계단 선): 소수 배율이면 두 끝을 저마다 격자에 맞춘다 — 이웃 칸과 틈 없이 잇닿는다. 정수 배율이면 그대로
 function cell(ctx, x, y, w, h) {
   if (!frac()) { ctx.fillRect(x, y, w, h); return; }
   const X = R(x), Y = R(y);
-  ctx.fillRect(X, Y, span(X, w), span(Y, h));
+  ctx.fillRect(X, Y, R(x + w) - X, R(y + h) - Y);
 }
 // 자리 하나를 지금 모드(정수 칸 · fine 안이면 1/N 칸)에 맞춘다 — gfx 밖에서 drawImage를 바로 부르는 그림용
 export const place = R;
