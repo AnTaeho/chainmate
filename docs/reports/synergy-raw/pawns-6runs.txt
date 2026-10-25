@@ -1,0 +1,106 @@
+seed 1000003 won 8관 끝 주머니 MMQRRWRT
+  1관 remove  폰 4
+  → 2관 주머니 PPPPNNBM
+  2관 evolve P→S
+  2관 promote B 폰 2
+  → 3관 주머니 SBPPNNBM
+  3관 promote R 폰 2
+  3관 promote R 폰 2
+  → 4관 주머니 BPPRRMQZ
+  4관 remove  폰 2
+  → 5관 주머니 PPRRMQT
+  5관 promote Q 폰 1
+  5관 promote N 폰 0
+  → 6관 주머니 NQRMTRM
+  6관 promote Q 폰 0
+  6관 remove  폰 0
+  → 7관 주머니 QMRMLQZ
+  7관 remove  폰 0
+  7관 promote Q 폰 0
+  → 8관 주머니 MMQQOR
+seed 1007922 won 8관 끝 주머니 SQOQWV
+  1관 evolve P→S
+  1관 evolve P→S
+  1관 remove  폰 1
+  → 2관 주머니 SSPNNBR
+  2관 remove  폰 1
+  → 3관 주머니 SSPNBR
+  → 4관 주머니 SSPNBRO
+  4관 remove  폰 0
+  4관 promote R 폰 0
+  → 5관 주머니 SNRROQW
+  → 6관 주머니 SNTROQW
+  6관 promote R 폰 0
+  6관 remove  폰 0
+  → 7관 주머니 SRROQW
+  7관 remove  폰 0
+  7관 promote Q 폰 0
+  7관 remove  폰 0
+  → 8관 주머니 SOQOQW
+seed 1015841 won 8관 끝 주머니 NSBPER
+  1관 remove  폰 4
+  1관 remove  폰 3
+  → 2관 주머니 PPPNBWD
+  2관 promote R 폰 3
+  → 3관 주머니 PPPRBWD
+  → 4관 주머니 PRBWDTB
+  4관 promote Q 폰 1
+  → 5관 주머니 PQWDTB
+  → 6관 주머니 PQWDB
+  6관 promote Q 폰 1
+  → 7관 주머니 PWDBQQ
+  7관 remove  폰 1
+  7관 promote B 폰 2
+  → 8관 주머니 PDQSBWP
+  8관 promote N 폰 1
+  8관 remove  폰 1
+seed 1023760 lost 7관 끝 주머니 PPOTNW
+  1관 evolve P→S
+  1관 remove  폰 2
+  1관 remove  폰 3
+  → 2관 주머니 SPPNBRP
+  → 3관 주머니 SPPNBRP
+  3관 remove  폰 3
+  → 4관 주머니 SPPNRPBO
+  4관 remove  폰 3
+  → 5관 주머니 SPPNRPOT
+  → 6관 주머니 SPPROTN
+  6관 promote Q 폰 2
+  → 7관 주머니 PPOTNS
+  7관 remove  폰 2
+seed 1031679 lost 8관 끝 주머니 SBNBWTTDWPDSR
+  1관 evolve P→S
+  1관 evolve P→S
+  → 2관 주머니 SSPPNNBR
+  → 3관 주머니 SSPPNNBRQN
+  3관 promote B 폰 1
+  → 4관 주머니 SSBPNNBRQNBW
+  → 5관 주머니 SSBPNNBRQNBWR
+  → 6관 주머니 SSBPNNBRQNBWR
+  6관 remove  폰 0
+  6관 remove  폰 0
+  6관 promote Q 폰 0
+  → 7관 주머니 SBNNBQQNBWRT
+  7관 remove  폰 0
+  7관 promote Q 폰 0
+  7관 remove  폰 1
+  → 8관 주머니 SNBQQNBWTTDWPD
+  8관 remove  폰 1
+seed 1039598 won 8관 끝 주머니 BSNNMQWTDVWD
+  1관 remove  폰 4
+  1관 promote B 폰 3
+  1관 promote N 폰 2
+  → 2관 주머니 BNPPNNR
+  2관 evolve P→S
+  → 3관 주머니 BNPSNNRM
+  → 4관 주머니 BNPSNNRMQWT
+  4관 promote B 폰 0
+  → 5관 주머니 BNBSNNRMQWT
+  → 6관 주머니 BNBSNNRMQWT
+  6관 remove  폰 1
+  → 7관 주머니 NBSNNRMQWTP
+  7관 evolve P→D
+  7관 remove  폰 0
+  7관 promote Q 폰 0
+  7관 remove  폰 0
+  → 8관 주머니 BSNNMQWTDV
