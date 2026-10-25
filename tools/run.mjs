@@ -112,6 +112,7 @@ if (!isMainThread) {
   if (tune && tune.challenge) Object.assign(CHALLENGE, tune.challenge);
   if (tune && tune.nemesis) Object.assign(NEMESIS, tune.nemesis);
   if (tune && tune.chWeights) for (const c of CHALLENGES) if (tune.chWeights[c.id] != null) c.weight = tune.chWeights[c.id];
+  if (tune && tune.chBonus) for (const c of CHALLENGES) if (tune.chBonus[c.id] != null) c.bonus = tune.chBonus[c.id];
   if (beats) BEATS.on = true;
   if (build) BUILD.on = true;
   if (replay) REPLAY.on = true;
@@ -126,6 +127,7 @@ if (!isMainThread) {
   if (tune && tune.chest) CHEST.counts = tune.chest;
   if (tune && tune.chestItems) CHEST.items = tune.chestItems;
   if (tune && tune.masterBase != null) REWARD.base.master = tune.masterBase;
+  if (tune && tune.base) Object.assign(REWARD.base, tune.base); // {"practice":2,"official":3}
   if (tune && tune.chestMoney != null) CHEST.money = tune.chestMoney;
   if (tune && tune.golden != null) GOLDEN.chance = tune.golden;
   if (tune && tune.calling != null) GOLDEN.calling = tune.calling;
@@ -147,6 +149,7 @@ if (!isMainThread) {
   const args = parseArgs(process.argv.slice(2));
   if (args.tune && args.tune.challenge) Object.assign(CHALLENGE, args.tune.challenge); // 표의 상금 셈도 일꾼과 같게
   if (args.tune && args.tune.nemesis) Object.assign(NEMESIS, args.tune.nemesis);
+  if (args.tune && args.tune.chBonus) for (const c of CHALLENGES) if (args.tune.chBonus[c.id] != null) c.bonus = args.tune.chBonus[c.id];
   if (args.merge) {
     const parts = args.merge.map((f) => JSON.parse(readFileSync(f, 'utf8')));
     const rows = parts.flatMap((d) => d.runs).sort((x, y) => x.seed - y.seed);
@@ -670,7 +673,7 @@ function gotyReport(R, battles, { pc, f, f2, table }) {
   const chB = battles.filter((b) => b.challenge);
   if (chB.length) {
     const done = chB.filter((b) => b.challenge.done);
-    const money = done.length * CHALLENGE.reward;
+    const money = done.reduce((a, b) => a + CHALLENGE.reward + ((CHALLENGES.find((c) => c.id === b.challenge.id) || {}).bonus || 0), 0);
     const first = done.filter((b) => b.challenge.move === 0).length;
     console.log(`대국 도전: 붙은 대국 ${chB.length}(둔 대국의 ${pc(chB.length / battles.length)}) · 이룸 ${pc(done.length / chB.length)} · 이긴 대국 중 ${pc(done.filter((b) => b.won).length / Math.max(1, chB.filter((b) => b.won).length))} · 진 대국 중 ${pc(done.filter((b) => !b.won).length / Math.max(1, chB.filter((b) => !b.won).length))} · 첫 수에 ${pc(first / Math.max(1, done.length))} · 판당 도전 상금 ${f2(money / n)} · 도전 붙은 대국 승률 ${pc(chB.filter((b) => b.won).length / chB.length)}`);
     const rows = [];
