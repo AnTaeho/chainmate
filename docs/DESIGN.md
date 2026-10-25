@@ -418,7 +418,7 @@ onSetup(판을 깐 뒤: 횃불 · 함정 · 선수) · onArrive(증원이 들 �
 - 대국 상태 `b.nem { cur, placed, sq, taken, ups, born }`, 사건 `nemesis { kind: new | up | taken }`(대국) · `nemesisNew` · `nemesisGone`(판).
 
 ### 화면이 쓸 것
-- 도전 화면: 대국은 판 위 띠(진행 · 미리 보기 · 도장, `docs/design-notes/layout.md` 31절), 이긴 대국 보상 내역 「도전 상금」. 관 선택 카드는 아직 없다. 숙적은 화면이 없다.
+- 도전 화면: 대국은 판 위 띠(진행 · 미리 보기 · 도장, `docs/design-notes/layout.md` 31절), 이긴 대국 보상 내역 「도전 상금」. 관 선택 카드는 윗변 스티커 「도전 +$2」(가리키면 온 조건). 숙적은 화면이 없다.
 - 도전: `blindInfo(run, ante, blind).challenge`(관 선택) · `run.battle.challenge { id, n?, form?, reward, done, move? }` · 대국 사건 `challenge { id, reward, move }`(사슬 `end` 뒤, 승패 앞) · `run.last.reward.challenge` / `run.last.challengeMoney` · 대국 줄 `run.log[].challenge`. 글은 `challengeText(ch)` · `CHALLENGE_TEXT`(이름표 · 이룬 뒤 · 효과 줄 · 알림 · 덧말 · 건너뛰기 · 보상 줄), 처음 안내 `coach.js HINTS.challenge`, 낱말 `glossary.js` `challenge`.
 - 숙적(켤 때): `run.nemesis` · `run.battle.nem` · 판 칸 `cell.nem`(단) · 사건 `nemesis { kind, sq, piece, lv, money? }` · `nemesisNew` · `nemesisGone`. 글은 `NEMESIS_TEXT` · `nemesisBounty(lv)` · `nemesisTrait(lv)`, `HINTS.nemesis`, 낱말 `nemesis`.
 - 영어는 `src/data/i18n/en.js`(수치가 끼는 글은 `PRE` 틀), 기록 보내기 `challenge_done` · `nemesis_*` · `battle_end`의 `challenge` · `challenge_done` · `nemesis`(`docs/design-notes/telemetry.md`).
