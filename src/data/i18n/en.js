@@ -300,7 +300,7 @@ export const EN = {
 
   '빈 덱': 'Empty Deck',
   '작은 덱': 'Small Deck',
-  '증원 환영': 'Welcome Party',
+  '증원 환영': 'Welcome Crew',
   '그림자 읽기': 'Foresight',
   '상아탑': 'Ivory Tower',
   '기보 수집가': 'Tome Hoard',
@@ -560,7 +560,7 @@ export const EN = {
   '일곱째 줄에만 가도 프로모션하고, 프로모션하면 배수 ×1.5': 'Promote on the 7th rank · each promotion: ×1.5 Mult', '체크메이트하면 적이 다시 나타나고 콤보가 이어진다 · 대국마다 한 번': 'A mate refills the board and the chain goes on · once per match',
   '폰으로 시작: 배수 +3': 'Start with a pawn: +3 Mult', '폰으로 시작: 배수 ×5': 'Start with a pawn: ×5 Mult',
   '같은 종류를 잇달아 잡으면 값 +30': 'Same kind twice in a row: +30 Value', '판에서 값이 가장 큰 적을 잡으면 배수 +4': 'Take the highest-value enemy: +4 Mult',
-  '같은 종류를 잇달아 잡을 때마다 배수 ×2': 'Each same-kind take in a row: ×2 Mult',
+  '같은 종류를 잇달아 잡을 때마다 배수 ×2': 'Each same kind in a row: ×2 Mult',
   // 행마(두 문장까지)
   'L자로 뛰어 잡는다. 사이의 기물은 넘는다': 'Leaps in an L to take. Jumps anything in between',
   '대각선으로 곧게 가서 잡는다': 'Slides diagonally to take', '가로 · 세로로 곧게 가서 잡는다': 'Slides straight to take',

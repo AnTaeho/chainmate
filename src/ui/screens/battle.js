@@ -2001,7 +2001,8 @@ export class BattleScreen {
     // 연습 · 정식은 「농민군 · 연습 대국」, 한 줄에 안 들어가면 「농민군 · 연습」, 그래도 안 들어가면(영어) 세력 이름만
     // (머리 칸은 한 줄: 두 줄이면 사슬 칸이 모자란다. 대국 종류는 관 줄의 「이기면 $3 · $4」와 목표가 말한다)
     const fa = factionOfBattle(b);
-    const room = LW - PAD_BOX * 2;
+    // 그리는 폭과 같게: 안 여백 PX 양쪽 · 세력 점(9)
+    const room = LW - PX * 2 - (fa ? 9 : 0);
     // 마스터전 제목은 이름만(CHM-46): 「마스터」는 빨간 제목 빛깔과 가리키면 뜨는 말풍선 제목(「마스터 ○○」)이 말한다 — 「마스터 사냥꾼 두령」이 폭 96을 넘었다
     let title = master ? MASTER_BY_ID[master.id].name : KIND_NAME[b.kind];
     if (fa && !master) {
