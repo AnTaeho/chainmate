@@ -1,7 +1,7 @@
 // 대국 도전(docs/ideas/goty.md 1 · 보고서 docs/reports/goty.md): 연습 · 정식 대국마다 콤보 하나로 이루는 과제가 하나 붙는다.
 // 이기는 데는 필요 없고, 이루면 대국이 끝날 때 상금을 받는다. 판정은 끝난 콤보 요약(chain.js chainSummary) 하나로만 —
 // 대국(battle.js endMove)과 봇의 줄 평가(tools/bot.mjs chaseRank)가 같은 check를 쓴다.
-//   id · weight(뽑힐 무게) · param(관, 난수, 세력) → 수치 칸 · check(h, ch) · text(ch) 화면 글(효과 글 「~다」)
+//   id · weight(뽑힐 무게) · bonus(어려운 도전의 상금 덤, CHALLENGE.reward에 더한다) · param(관, 난수, 세력) → 수치 칸 · check(h, ch) · text(ch) 화면 글(효과 글 「~다」)
 // 대국 상태에 남는 것은 { id, n?, form?, reward, done }(JSON 왕복 안전). 규칙 코드는 이 표를 id로 찾을 뿐 id마다 갈리지 않는다.
 import { int, next } from '../sim/rng.js';
 import { CHALLENGE } from '../sim/tuning.js';
@@ -16,7 +16,7 @@ const RUN3 = /(.)\1\1/;
 
 export const CHALLENGES = [
   // 갈아입기: 떨군 모습까지 세어 서로 다른 모습 n가지
-  { id: 'forms', weight: 1, param: (ante) => ({ n: ante >= 4 ? 4 : 3 }), check: (h, ch) => (h.forms || 0) >= ch.n, text: (ch) => `한 콤보에서 모습 ${ch.n}가지를 거친다` },
+  { id: 'forms', weight: 1, param: (ante) => ({ n: ante >= 4 ? 5 : 4 }), check: (h, ch) => (h.forms || 0) >= ch.n, text: (ch) => `한 콤보에서 모습 ${ch.n}가지를 거친다` },
   // 잡기: 한 콤보에 n번(관이 오르면 하나씩)
   { id: 'take', weight: 1, param: (ante) => ({ n: 4 + Math.floor((ante - 1) / 2) }), check: (h, ch) => h.captures >= ch.n, text: (ch) => `한 콤보에 ${ch.n}번 잡는다` },
   // 갈아입기: 콤보가 끝날 때의 모습(둘 이상 잡은 콤보)
@@ -25,8 +25,8 @@ export const CHALLENGES = [
   { id: 'guards', weight: 1, param: () => ({ n: 2 }), check: (h, ch) => (h.forced || 0) >= ch.n, text: () => '한 콤보에서 지키는 적을 둘 잡는다' },
   // 프로모션
   { id: 'promote', weight: 1, param: () => ({}), check: (h) => (h.promotions || 0) >= 1, text: () => '콤보 중에 프로모션한다' },
-  // 체크메이트
-  { id: 'mate', weight: 1, param: () => ({}), check: (h) => (h.mates || 0) >= 1, text: () => '킹을 잡아 체크메이트한다' },
+  // 체크메이트 — 무게 0(뽑지 않는다): 쫓는 봇도 3~6%만 이뤘다(외통은 이미 대국을 끝내고 상금 +3을 준다). 보고서 「버린 안」
+  { id: 'mate', weight: 0, param: () => ({}), check: (h) => (h.mates || 0) >= 1, text: () => '킹을 잡아 체크메이트한다' },
   // 사냥: 같은 종류를 셋 잇달아
   { id: 'same', weight: 1, param: () => ({}), check: (h) => RUN3.test(h.caps || ''), text: () => '같은 종류의 적을 셋 잇달아 잡는다' },
 ];
@@ -39,7 +39,7 @@ export function drawChallenge(r, ante, kind) {
   const total = pool.reduce((a, c) => a + c.weight, 0);
   let x = next(r) * total, pick = pool[pool.length - 1];
   for (const c of pool) { if (x < c.weight) { pick = c; break; } x -= c.weight; }
-  return { id: pick.id, ...pick.param(ante, r), reward: CHALLENGE.reward, done: false };
+  return { id: pick.id, ...pick.param(ante, r), reward: CHALLENGE.reward + (pick.bonus || 0), done: false };
 }
 
 // 끝난 콤보 요약 h가 도전 ch를 이루나(대국 · 봇 공용)

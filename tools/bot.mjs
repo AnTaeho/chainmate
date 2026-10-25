@@ -37,7 +37,7 @@ const betterMove = (x, y, nomate, rank) => !y || (x.mate !== y.mate ? (nomate ? 
 // 대국 도전 쫓기(docs/reports/goty.md): on이면 판 봇이 도전을 이루는 줄에 덤을 준다(끄면 「무시하는 봇」 — 하네스 --chase 0).
 //   weight: 이번 수로 목표에 못 닿는 줄끼리는 도전을 이루는 줄의 점수에 남은 목표 × weight를 더해 견준다.
 //   목표에 닿는 줄은 늘 못 닿는 줄보다 앞이고, 닿는 줄끼리는 도전을 이루는 줄이 앞(그다음 점수)이다 — 덤 때문에 이길 수를 놓치지 않게.
-export const CHASE = { on: true, weight: 0.25 };
+export const CHASE = { on: true, weight: 0.5 };
 export function chaseRank(b) {
   const ch = b && b.challenge;
   if (!CHASE.on || !ch || ch.done || b.target == null || b.status !== 'play') return null;
