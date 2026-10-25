@@ -528,8 +528,8 @@ test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) �
   assert.deepEqual(moves.openFairies(app3).sort(), ['E', 'L', 'S']);
 });
 
-// CHM-46: 도감 격자 칸 이름은 낱말 단위로 두 줄까지 — 한 줄(row)은 가장 긴 이름의 높이, 두 줄로도 안 되는 이름이 있는 탭만 열을 줄인다
-test('도감 격자: 모든 탭 · 모든 이름이 두 줄 안(낱말 단위), 줄 높이는 그 줄의 가장 긴 이름, 쪽은 단추 줄 위', async () => {
+// CHM-46: 도감 격자 칸 이름은 낱말 단위로 두 줄까지 — 칸 높이는 탭의 가장 긴 이름 하나(29절 고른 격자), 두 줄로도 안 되는 이름이 있는 탭만 열을 줄인다
+test('도감 격자: 모든 탭 · 모든 이름이 두 줄 안(낱말 단위), 칸 높이는 탭의 가장 긴 이름 하나, 쪽은 단추 줄 위', async () => {
   const { codex, frame, parts, text } = M;
   const { LEGENDS } = await import('../src/data/legends.js');
   const room = frame.PAGE.btnY - frame.GAP_GROUP;
@@ -550,9 +550,8 @@ test('도감 격자: 모든 탭 · 모든 이름이 두 줄 안(낱말 단위), 
         assert.ok(nm, `${lang} ${tab} 「${M.lang.L(e.name)}」 두 줄에 안 들어간다(열 ${lay.cols})`);
         assert.ok(nm.lines.length <= 2 && nm.lines.join(' ') === M.lang.L(e.name), `${lang} ${tab} ${JSON.stringify(nm.lines)}`);
         for (const l of nm.lines) assert.ok(text.textWidth(l, !nm.thin) <= q.nameW, `${lang} ${tab} 「${l}」 ${text.textWidth(l, !nm.thin)} > ${q.nameW}`);
-        // 줄 높이 = 그 줄에서 가장 긴 이름(한 줄 28 · 두 줄 42)
-        const row = cells.filter((o) => o.y === q.y && lay.pages.findIndex((p) => p.includes(o)) === lay.pages.findIndex((p) => p.includes(q)));
-        assert.equal(q.h, frame.rowBoxH(frame.PAD_CARD, Math.max(...row.map((o) => o.name.lines.length))));
+        // 칸 높이 = 탭에서 가장 긴 이름(한 줄 28 · 두 줄 42) — 격자의 모든 칸이 같다
+        assert.equal(q.h, frame.rowBoxH(frame.PAD_CARD, Math.max(...cells.map((o) => o.name.lines.length))));
         assert.ok(q.y + q.h <= room, `${lang} ${tab} 칸 아래 ${q.y + q.h} > ${room}`);
       }
       // 열을 줄였다면 하나 더 많은 열에선 두 줄에 안 들어가는 이름이 있다
@@ -912,8 +911,21 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
   M.lang.setLang('ko');
 });
 
-test('설정 이름 줄: 큰 글자 · 언어 줄의 오른쪽 반에 이름 + 다시 짓기 — 긴 이름이면 「이름」 이름표를 빼고, 상자는 그대로 270 안(한국어 · 영어)', async () => {
+// 설정(판 밖 틀 — layout.md 29절): 단추끼리 겹치지 않고 화면 안, 묶음은 맨 아래 단추 줄 위 12 안
+const setRegions = (a) => a.app.ui.regions.filter((r) => r.id.startsWith('set:'));
+function settingsSane(a, tag) {
+  const { PAGE } = M.frame;
+  const rs = setRegions(a);
+  for (const r of rs) assert.ok(r.x >= 8 && r.x + r.w <= 480 - 8 && r.y >= 0 && r.y + r.h <= 270, `${tag}: ${r.id} 화면 밖`);
+  for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
+    const p = rs[i], q = rs[j];
+    assert.ok(p.x + p.w <= q.x || q.x + q.w <= p.x || p.y + p.h <= q.y || q.y + q.h <= p.y, `${tag}: ${p.id} · ${q.id} 겹침`);
+  }
+  for (const r of rs.filter((q) => q.y < PAGE.btnY)) assert.ok(r.y + r.h <= PAGE.btnY - 12, `${tag}: ${r.id}가 맨 아래 단추 줄 위 12를 넘는다`);
+}
+test('설정 이름 줄: 순위 · 기록 묶음에 이름 + 이름 바꾸기 — 긴 이름도 칸 안, 단추끼리 겹치지 않고 가리킨 풀이는 머리줄 오른쪽에 들어간다(한국어 · 영어)', async () => {
   const S = await import('../src/ui/screens/settings.js');
+  const C = await import('../src/ui/screens/common.js');
   const { measure } = await import('../src/render/gfx.js');
   const { nameText } = await import('../src/data/names.js');
   for (const lang of LANGS) {
@@ -923,9 +935,8 @@ test('설정 이름 줄: 큰 글자 · 언어 줄의 오른쪽 반에 이름 + �
     let f = none.frame();
     assert.deepEqual(f.bad, [], `${lang} 이름 없음`);
     assert.ok(!none.has('set:name'));
-    const size = (g) => { const b = g.boxes.find((q) => q.name === '설정'); return [b.x, b.y, b.w, b.h]; };
-    const plain = size(f);
-    assert.ok(plain[1] >= 0 && plain[1] + plain[3] <= 270);
+    assert.ok(f.texts.some((q) => q.s === M.lang.L('설정') && q.x === 12 && q.y === 4), `${lang}: 큰 머리 (12, 4)`);
+    settingsSane(none, `${lang} 이름 없음`);
     for (const longName of [true, false]) {
       const a = await rankApp({ lang, me: { ante: 3, score: 900 } });
       if (!longName) { const k = JSON.parse(a.d.window.localStorage.getItem('chainmate.player.v1')); a.d.window.localStorage.setItem('chainmate.player.v1', JSON.stringify({ ...k, a: 0, n: 0 })); }
@@ -938,20 +949,13 @@ test('설정 이름 줄: 큰 글자 · 언어 줄의 오른쪽 반에 이름 + �
       f = a.frame();
       const tag = `${lang} 「${name}」`;
       assert.deepEqual(f.bad, [], tag);
-      assert.deepEqual(size(f), plain, `${tag}: 설정 상자가 달라졌다`);
       assert.ok(a.has('set:name'), tag);
-      const [x, , w] = plain, at = S.nameRow(x, w, name);
-      // 이름은 큰 글자 단추(x + 120 ~ 184)에 닿지 않는다
-      assert.ok(at.nameX >= x + 184 + 8, `${tag}: 이름이 단추에 닿는다 ${at.nameX}`);
-      // 「이름」 이름표는 이름 옆에 들어갈 때만 — 짧은 이름이면 늘 있다
-      if (!longName) assert.ok(at.label != null, `${tag}: 「이름」 이름표`);
-      assert.equal(f.texts.some((q) => q.s === M.lang.L('이름')), at.label != null, tag);
-      assert.ok(f.texts.some((q) => q.s === name));
-      if (at.label != null) assert.ok(at.label >= at.x0 && at.label + measure('이름') + 6 <= at.nameX);
-      // 다시 짓기 단추는 언어 단추에 닿지 않는다 · 가리키면 제목 자리에 한 줄
-      const btn = a.app.ui.regions.find((r) => r.id === 'set:name'), langBtn = a.app.ui.regions.find((r) => r.id === 'set:lang');
-      assert.ok(btn.x >= langBtn.x + langBtn.w + 8, `${tag}: 다시 짓기가 언어 단추에 닿는다`);
-      for (const left of [null, 19, 1, 0]) assert.ok(measure(S.rerollTip(left)) <= w - 16, `${tag}: 「${S.rerollTip(left)}」`);
+      const nt = f.texts.find((q) => q.s === name);
+      assert.ok(nt && nt.x + nt.w <= 480 - 12, `${tag}: 이름이 화면 오른쪽 12 안`);
+      settingsSane(a, tag);
+      // 가리킨 풀이 한 줄(이름 바꾸기 · 기록 전송)은 머리줄 오른쪽: 제목 끝 + 8 ~ W − 12
+      const room = 480 - 12 - C.headTabX('설정');
+      for (const s of [S.rerollTip(null), S.rerollTip(19), S.rerollTip(1), S.rerollTip(0), S.TELEMETRY_TIP]) assert.ok(measure(s) <= room, `${tag}: 「${M.lang.L(s)}」 ${measure(s)} > ${room}`);
       a.app.settings.big = true;
       assert.deepEqual(a.frame().bad, [], `${tag} 큰 글자`);
     }
@@ -960,37 +964,31 @@ test('설정 이름 줄: 큰 글자 · 언어 줄의 오른쪽 반에 이름 + �
 });
 
 // ── 기기 잇기(CHM-71, docs/design-notes/layout.md 23절)
-test('설정 「기기 잇기」: 언어 줄 오른쪽 — 다시 짓기 · 언어 단추에 닿지 않고 상자는 그대로, 판을 두는 중 · 순위에 닿지 못하는 곳에서는 없다(한국어 · 영어)', async () => {
+test('설정 「계정」: 맨 아래 단추 줄 오른쪽 끝 — 이름 줄과 겹치지 않고, 판을 두는 중 · 순위에 닿지 못하는 곳에서는 없다(한국어 · 영어)', async () => {
   const S = await import('../src/ui/screens/settings.js');
+  const C = await import('../src/ui/screens/common.js');
   const { measure } = await import('../src/render/gfx.js');
   const { createRank } = await import('../src/ui/rank.js');
+  const { PAGE } = M.frame;
   for (const lang of LANGS) {
-    const size = (g) => { const b = g.boxes.find((q) => q.name === '설정'); return [b.x, b.y, b.w, b.h]; };
-    // 이름이 없을 때: 줄의 오른끝
+    const region = (a, id) => a.app.ui.regions.find((r) => r.id === id);
     const none = await rankApp({ lang });
     none.app.openOverlay('settings');
     let f = none.frame();
     assert.deepEqual(f.bad, [], `${lang} 이름 없음`);
-    const plain = size(f), [x, , w] = plain;
-    const region = (a, id) => a.app.ui.regions.find((r) => r.id === id);
     let link = region(none, 'set:link');
-    assert.ok(link && !none.has('set:name'), `${lang}: 이름이 없어도 기기 잇기는 있다`);
-    assert.equal(link.x + link.w, x + w - 8);
-    assert.ok(link.x >= region(none, 'set:lang').x + region(none, 'set:lang').w + 8);
-    assert.ok(measure(S.LINK_TIP) <= w - 16, `${lang}: 「${S.LINK_TIP}」`);
-    // 가장 넓은 이름 · 다시 짓기 옆
+    assert.ok(link && !none.has('set:name'), `${lang}: 이름이 없어도 계정 단추는 있다`);
+    assert.deepEqual([link.x + link.w, link.y, link.w], [480 - 12, PAGE.btnY, S.linkW()], `${lang}: 맨 아래 줄 오른쪽 끝`);
+    assert.ok(measure(S.LINK_TIP) <= 480 - 12 - C.headTabX('설정'), `${lang}: 「${S.LINK_TIP}」`);
     const a = await rankApp({ lang, me: { ante: 3, score: 900 } });
     a.app.rank = createRank({ fetch: a.d.window.fetch, storage: a.d.window.localStorage, base: '', today: () => RANK_DAY, lang: () => lang });
     a.app.openOverlay('settings');
     f = a.frame();
     assert.deepEqual(f.bad, [], `${lang} 이름 있음`);
-    assert.deepEqual(size(f), plain, `${lang}: 설정 상자가 달라졌다`);
+    settingsSane(a, `${lang} 이름 있음`);
     link = region(a, 'set:link');
-    const name = region(a, 'set:name'), langBtn = region(a, 'set:lang');
-    assert.ok(link.x >= langBtn.x + langBtn.w + 8, `${lang}: 기기 잇기가 언어 단추에 닿는다 ${link.x} / ${langBtn.x + langBtn.w}`);
-    assert.ok(link.x + link.w + 6 <= name.x, `${lang}: 기기 잇기가 다시 짓기에 닿는다`);
-    assert.equal(link.w, S.linkW());
-    // 누르면 설정이 닫히고 계정 화면으로(CHM-72 — 탭 「기기 잇기」로 기기 잇기 화면)
+    assert.ok(link && a.has('set:name'), `${lang}: 이름 · 계정 둘 다`);
+    // 누르면 설정이 닫히고 계정 화면으로(CHM-72 — 탭 「기기 연결」로 기기 잇기 화면)
     link.onClick();
     assert.deepEqual([a.app.overlay, a.app.screen.name], [null, 'account']);
     a.frame();
@@ -1002,6 +1000,7 @@ test('설정 「기기 잇기」: 언어 줄 오른쪽 — 다시 짓기 · 언�
     f = a.frame();
     assert.ok(!a.has('set:link') && a.has('set:name'), `${lang}: 두는 중`);
     assert.deepEqual(f.bad, []);
+    settingsSane(a, `${lang} 두는 중`);
     // 순위에 닿지 못하는 곳(로컬 서버)에는 없다
     a.app.toTitle();
     a.app.rank = createRank();
@@ -1277,7 +1276,7 @@ test('해금 화면: 길 21칸 · 모든 묶음의 카드 높이 · 쪽 나누�
   const V = M.unlockview, { MAX_TIER, UNLOCK_GATES } = M.unlockData, { PAGE, GAP_GROUP, PAD_BOX } = M.frame;
   assert.equal(MAX_TIER, 20);
   assert.ok(PATH.x >= 8 && PATH.x + MAX_TIER * PATH.pitch + PATH.cw <= 480 - 8, '길이 화면 폭 안');
-  assert.ok(PATH.colY + PATH.rows * PATH.row + 6 + 14 <= 190, '그림 줄 · 남은 관 줄이 아래 칸 위');
+  assert.ok(PATH.colY + PATH.rows * PATH.row - 1 + 4 + 14 <= M.unlocks.PANEL.y, '그림 줄 · 남은 관 줄이 아래 칸 위');
   assert.ok(190 + PAD_BOX * 2 + 28 <= PAGE.btnY - 2, '아래 칸이 단추 줄 위');
   assert.deepEqual([1, 4, 5, 8, 41].map((n) => { const { pages, per } = bundlePages(n); return [pages, per]; }), [[1, 1], [1, 4], [2, 3], [2, 4], [11, 4]]);
   assert.ok(CARDS.per * CARDS.w + (CARDS.per - 1) * CARDS.gap <= 480 - 16, '카드 넷이 한 줄에');

@@ -1,22 +1,23 @@
 // 튜토리얼 목록: 장 셋(기초 · 대국 · 판), 끝낸 수업에 표, 아래 큰 단추 「이어서」(안 끝낸 첫 수업부터 차례로). 누르면 그 수업 하나.
 // 흐름(처음 켬 덮개 「튜토리얼부터」 · 「이어서」 → 수업을 차례로 → 끝 카드 「새 판」)과 수업 「상점과 시너지」(연습용 판 위에서 따라 하는 길)도 여기서.
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect } from '../../render/gfx.js';
+import { W, H, text, box, rect, R_SM } from '../../render/gfx.js';
 import { button } from '../ui.js';
 import { createRun } from '../../sim/run.js';
 import { createRng, fork } from '../../sim/rng.js';
 import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide, kingNoteLayout, kingNote } from '../coach.js';
 import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
-import { pageHead, pageButtons, headW, HEAD_BIG } from './common.js';
+import { pageHead, pageButtons, bottomBar } from './common.js';
 import { wrapName, drawName } from '../parts.js';
-import { PAGE, PAD_BOX, LINE, GAP_GROUP, flow, textY, BTN_S } from '../frame.js';
+import { PAGE, PAD_BOX, LINE, LINE_TITLE, GAP_GROUP, BTN_H, BTN_HERO, SP, flow, textY } from '../frame.js';
 import { openBox, closeBox, layerUp } from '../../render/layoutlog.js';
 
 const TERM_DEF_X = 120; // 낱말 풀이: 풀이 글이 시작하는 x
-const TERM_BOX = { x: 12, h: PAGE.btnY - 8 - PAGE.bodyY }; // 낱말 풀이: 본 칸 상자(왼쪽 x · 쪽의 가장 큰 높이 — 쪽마다 내용에 맞춘다)
-const LESSON_BTN = 32; // 수업 목록 단추 높이
-export const GO = { w: 176, h: 24 }; // 목록 아래 큰 단추(「이어서」 · 「새 판」)
+const TERM_BOX = { x: PAGE.titleX, h: PAGE.btnY - SP.l - PAGE.bodyY }; // 낱말 풀이: 본 칸 상자(왼쪽 x · 쪽의 가장 큰 높이 — 쪽마다 내용에 맞춘다)
+// 수업 칸(목록 칸 — 단추가 아니다): 이름 두 줄(14 × 2) + 위아래 2. 칸 사이 4
+const LESSON_H = LINE * 2 + SP.s, LESSON_GAP = SP.s;
+export const GO = { w: 176, h: BTN_HERO }; // 목록 아래 큰 단추(「이어서」 · 「새 판」 — 29절 수업 「시작」 26)
 export const END_SAY = '튜토리얼 끝! 이제 진짜 판을 시작해 볼까?';
 import { wrap } from '../../render/text.js';
 
@@ -131,11 +132,12 @@ export class LessonsScreen {
     if (this.terms) return this.drawTerms(ctx, ui);
     const done = LESSONS.filter((L) => seen[L.id]).length, next = nextLesson(app);
     pageHead(ctx, '튜토리얼', `${done}/${LESSONS.length}`, { big: true });
-    const colW = 140, x0 = Math.floor((W - colW * 3 - 16) / 2);
-    // 장 칸 쌓기: 장 이름(제목 줄) → 묶음 틈 → 수업 단추들(사이 GAP_GROUP) — 세 칸은 가장 긴 칸의 높이
+    // 장 판넬 셋: 판 밖 폭(12 ~ 468)을 사이 8로 나눈다
+    const colW = Math.floor((W - PAGE.titleX * 2 - SP.m * 2) / 3), x0 = PAGE.titleX;
+    // 장 칸 쌓기: 장 이름(제목 줄) → 묶음 안 틈 → 수업 칸들(사이 4) — 세 칸은 가장 긴 칸의 높이
     const groups = LESSON_GROUPS.map((g) => LESSONS.map((L, i) => ({ L, i })).filter((o) => o.L.group === g.id));
-    const colH = Math.max(...groups.map((list) => PAD_BOX * 2 + 18 + GAP_GROUP + list.length * LESSON_BTN + (list.length - 1) * GAP_GROUP));
-    const top = PAGE.bodyY + 4;
+    const colH = Math.max(...groups.map((list) => PAD_BOX * 2 + LINE_TITLE + SP.s + list.length * LESSON_H + (list.length - 1) * LESSON_GAP));
+    const top = PAGE.bodyY;
     LESSON_GROUPS.forEach((g, gi) => {
       const x = x0 + gi * (colW + 8), list = groups[gi];
       const f = flow(top + PAD_BOX);
@@ -145,29 +147,32 @@ export class LessonsScreen {
       const ty = f.line(true);
       text(ctx, g.name, x + PAD_BOX, ty, PAL.gold, { bold: true });
       text(ctx, `${n}/${list.length}`, x + colW - PAD_BOX, ty, n === list.length ? PAL.gold : PAL.dim, { align: 'right' });
-      f.gap(GAP_GROUP);
+      f.gap(SP.s);
       list.forEach(({ L, i }, k) => {
-        if (k) f.gap(GAP_GROUP);
-        const y = f.space(LESSON_BTN), id = `lessons:${i}`;
+        if (k) f.gap(LESSON_GAP);
+        const y = f.space(LESSON_H), id = `lessons:${i}`, cx = x + PAD_BOX, cw = colW - PAD_BOX * 2;
         const ok = !!seen[L.id];
-        button(ctx, ui, id, x + PAD_BOX, y, colW - PAD_BOX * 2, LESSON_BTN, '', { onClick: () => openLesson(app, i, 'list') });
+        // 목록 칸(크림 칸 · 모서리 4): 누르면 그 수업 하나. 가리키면 금빛 테
+        ui.region(id, cx, y, cw, LESSON_H, { onClick: () => openLesson(app, i, 'list') });
+        openBox('tile', cx, y, cw, LESSON_H, 0, { name: `수업 칸 ${i}` });
+        box(ctx, cx, y, cw, LESSON_H, ok ? PAL.slot : PAL.btn, ui.isHover(id) ? PAL.gold : PAL.frameDk, { r: R_SM, drop: 0 });
+        closeBox();
         // 번호 원: 끝낸 수업은 금빛 원에 잉크 표, 아니면 잉크 원에 번호(다음 수업은 금빛)
-        const sx = x + PAD_BOX + 4, sy = y + 8;
+        const sx = cx + SP.s, sy = y + ((LESSON_H - 16) >> 1);
         numberDisc(ctx, sx, sy, ok);
         if (!ok) text(ctx, `${i + 1}`, sx + 8, textY(sy, 16), i === next ? PAL.gold : PAL.ink, { bold: true, align: 'center' });
-        // 수업 이름은 두 줄까지(낱말 단위) — 단추 32에 두 줄(14 × 2)이 테와 2씩 띄워 들어간다
-        const nx = sx + 22, nw = x + colW - PAD_BOX - 4 - nx, nm = wrapName(L.title, nw, { bold: false });
-        const ys = nm && nm.lines.length > 1 ? nm.lines.map((_, q) => y + textY(((LESSON_BTN - nm.lines.length * LINE) >> 1) + q * LINE)) : [y + textY(0, LESSON_BTN) + 1];
-        drawName(ctx, L.title, nm, nx, ys, nw, ok ? PAL.cardDim : PAL.cardInk, { bold: false });
+        // 수업 이름은 두 줄까지(낱말 단위) — 칸 32에 두 줄(14 × 2)이 테와 2씩 띄워 들어간다. 끝낸 수업은 어두운 칸에 흐린 글
+        const nx = sx + 16 + SP.s, nw = cx + cw - SP.s - nx, nm = wrapName(L.title, nw, { bold: false });
+        const ys = nm && nm.lines.length > 1 ? nm.lines.map((_, q) => y + textY(((LESSON_H - nm.lines.length * LINE) >> 1) + q * LINE)) : [y + textY(0, LESSON_H)];
+        drawName(ctx, L.title, nm, nx, ys, nw, ok ? PAL.dim : PAL.cardInk, { bold: false });
       });
       closeBox();
     });
     // 큰 단추: 안 끝낸 첫 수업부터 차례로(하나도 안 했으면 「처음부터」), 다 끝냈으면 판으로
-    const gy = top + colH + 12, gx = Math.floor(W / 2 - GO.w / 2);
+    const gy = top + colH + SP.l, gx = Math.floor(W / 2 - GO.w / 2);
     const label = next < 0 ? playLabel(app) : done ? '이어서' : '처음부터';
     button(ctx, ui, 'lessons:go', gx, gy, GO.w, GO.h, label, { tone: 'gold', onClick: () => (next < 0 ? play(app) : startTutorial(app, 'flow')) });
-    button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => app.toTitle() });
-    button(ctx, ui, 'lessons:terms', W - PAGE.titleX - 100, PAGE.btnY, 100, PAGE.btnH, '용어 사전', { onClick: () => { this.terms = true; } });
+    bottomBar(ctx, ui, { back: { id: 'lessons:back', onClick: () => app.toTitle() }, primary: { id: 'lessons:terms', label: '용어 사전', onClick: () => { this.terms = true; } } });
     if (this.end) this.drawEnd(ctx, ui);
   }
   // 끝 카드: 목록 위를 어둡게 덮고 킹이 말한다 — 「새 판」(저장된 판이 있으면 「이어 하기」) · 「목록」
@@ -177,13 +182,13 @@ export class LessonsScreen {
     layerUp();
     ui.region('lessons:endcover', 0, 0, W, H, { onClick: () => {} });
     ctx.globalAlpha = 0.6; rect(ctx, 0, 0, W, H, PAL.shadow); ctx.globalAlpha = 1;
-    const w = 200, lay = kingNoteLayout(END_SAY, w), btnY = lay.h + GAP_GROUP - PAD_BOX, h = btnY + BTN_S + PAD_BOX;
+    const w = 200, lay = kingNoteLayout(END_SAY, w), btnY = lay.h + GAP_GROUP - PAD_BOX, h = btnY + BTN_H + PAD_BOX;
     const x = Math.floor(W / 2 - w / 2), y = Math.floor(H / 2 - h / 2);
-    const bw = Math.floor((w - PAD_BOX * 2 - 6) / 2);
+    const bw = Math.floor((w - PAD_BOX * 2 - SP.m) / 2);
     kingNote(ctx, app, x, y, w, END_SAY, { ...lay, h }, { joy: true, name: '튜토리얼 끝', inner: () => {
       // 손가락 구역(CHM-52): 덮개라 바깥쪽은 막힘 없이, 두 단추 사이는 반씩
-      button(ctx, ui, 'lessons:list', x + PAD_BOX, y + btnY, bw, BTN_S, '목록', { onClick: () => { this.end = false; }, grow: { l: Infinity, r: 3, u: Infinity, d: Infinity } });
-      button(ctx, ui, 'lessons:play', x + w - PAD_BOX - bw, y + btnY, bw, BTN_S, playLabel(app), { tone: 'gold', onClick: () => play(app), grow: { l: 3, r: Infinity, u: Infinity, d: Infinity } });
+      button(ctx, ui, 'lessons:list', x + PAD_BOX, y + btnY, bw, BTN_H, '목록', { onClick: () => { this.end = false; }, grow: { l: Infinity, r: 4, u: Infinity, d: Infinity } });
+      button(ctx, ui, 'lessons:play', x + w - PAD_BOX - bw, y + btnY, bw, BTN_H, playLabel(app), { tone: 'gold', onClick: () => play(app), grow: { l: 4, r: Infinity, u: Infinity, d: Infinity } });
     } });
   }
   // 낱말 풀이: 카드 옆 낱말 상자와 같은 표(glossary.js TERMS)를 묶음 탭(대국 · 판 · 물건 · 모음)과 쪽으로
@@ -191,13 +196,7 @@ export class LessonsScreen {
     // 판 밖 틀: 머리줄(제목 · 탭) + 본 칸 + 맨 아래 단추 줄(돌아가기 왼쪽 · 쪽 넘기기 오른쪽)
     // 큰 제목 오른쪽 가운데 줄에 탭. 다 안 들어가면 작은 제목 · 윗줄 탭(옛 머리줄)
     const tab = this.termTab || 'battle';
-    const tw = 62, tabsW = TERM_GROUPS.length * (tw + 4) - 4;
-    const big = PAGE.titleX + headW('용어 사전') + 10 + tabsW <= W - PAGE.titleX;
-    pageHead(ctx, '용어 사전', null, { big });
-    const tx0 = big ? PAGE.titleX + headW('용어 사전') + 10 : 90, ty = big ? HEAD_BIG.mid - (BTN_S >> 1) : 5;
-    TERM_GROUPS.forEach(([id, name], k) => {
-      button(ctx, ui, `terms:tab:${id}`, tx0 + k * (tw + 4), ty, tw, BTN_S, name, { tone: id === tab ? 'gold' : 'plain', onClick: () => { this.termTab = id; this.termPage = 0; } });
-    });
+    pageHead(ctx, '용어 사전', null, { big: true, tabs: { ui, prefix: 'terms', list: TERM_GROUPS, cur: tab, go: (id) => { this.termTab = id; this.termPage = 0; } } });
     const pages = this.termPages(tab);
     const page = Math.min(this.termPage || 0, pages.length - 1);
     const pg = pages[page];
@@ -210,7 +209,7 @@ export class LessonsScreen {
     }
     closeBox();
     if (pages.length > 1) pageButtons(ctx, ui, 'terms', page, pages.length, (p) => { this.termPage = p; });
-    button(ctx, ui, 'lessons:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => { this.terms = false; } });
+    bottomBar(ctx, ui, { back: { id: 'lessons:back', onClick: () => { this.terms = false; } } });
   }
   // 한 묶음의 낱말을 쪽으로 나눈다: 낱말마다 풀이 줄들(본문 줄), 낱말 사이 GAP_GROUP. 쪽 높이는 상자 안 여백 안(TERM_BOX.h)
   termPages(tab) {

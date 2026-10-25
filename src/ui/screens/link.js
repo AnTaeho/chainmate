@@ -2,11 +2,11 @@
 //   왼쪽 「이 기기의 코드」: [코드 받기] → 큰 숫자 여덟 자리 + 남은 시간 막대. 오른쪽 「다른 기기의 코드 넣기」: 숫자 여덟 칸 + 숫자판(키보드 숫자 · Backspace · Enter도).
 //   아래 한 줄: 이어진 기기 수 · 마지막으로 맞춘 때 · [이 기기 떼기]. 서버와 주고받는 것은 app.rank · app.cloud가 한다 — 화면은 열쇠를 모른다.
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rrect, rframe, slot, measure } from '../../render/gfx.js';
+import { W, text, box, rrect, slot, selectRing, measure, R_SM } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
-import { button, pillR } from '../ui.js';
-import { pageHead } from './common.js';
-import { PAGE, PAD_BOX, LINE, GAP_GROUP, BTN_S, textY, inkY } from '../frame.js';
+import { button, pillR, buttonRow } from '../ui.js';
+import { bottomBar } from './common.js';
+import { PAGE, PAD_BOX, LINE, BTN_H, BTN_HERO, SP, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { linkRedeemProps } from '../telemetry.js';
 import { mergeGain } from '../merge.js';
@@ -26,17 +26,20 @@ const backIcon = (ctx, x, y, col) => {
 // 숫자판: 세 줄 × 네 칸(오른쪽 칸이 지우기 · 0 · 잇기)
 export const PAD_ROWS = [['1', '2', '3', 'del'], ['4', '5', '6', '0'], ['7', '8', '9', 'go']];
 
-// 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다)
+// 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다). 두 상자는 숫자판까지 내용에 맞춘 같은 높이, 아래 한 줄 상자는 그 아래 8.
+// 숫자판 칸은 손가락 단추(BTN_HERO 26 — 29절 예외), 칸 사이 4
 export function linkLayout() {
-  const P = PAD_BOX, y = PAGE.bodyY, sh = P * 2 + BTN_S, sy = PAGE.btnY - GAP_GROUP - sh, h = sy - GAP_GROUP - y;
-  const left = { x: 12, y, w: 224, h }, right = { x: W - 12 - 224, y, w: 224, h };
-  const titleY = y + P, cellsY = titleY + LINE + 6, cw = 20, ch = 22, cg = 3, mid = 9;
-  const cellsW = CODE_LEN * cw + (CODE_LEN - 2) * cg + mid, cx0 = right.x + Math.floor((right.w - cellsW) / 2);
-  const cells = Array.from({ length: CODE_LEN }, (_, i) => ({ x: cx0 + i * (cw + cg) + (i >= 4 ? mid - cg : 0), y: cellsY, w: cw, h: ch }));
-  const msgY = cellsY + ch + 4, padY = msgY + LINE + 4, kw = 50, kh = 24, gx = 3, gy = 4;
+  const P = PAD_BOX, y = PAGE.bodyY, IN = SP.s, cw = 224;
+  const titleY = y + P, cellsY = titleY + LINE + IN, ch = 22, cg = IN, mid = SP.l, dw = 20;
+  const msgY = cellsY + ch + IN, padY = msgY + LINE + IN, kw = 48, kh = BTN_HERO, gx = IN, gy = IN;
+  const h = padY + PAD_ROWS.length * kh + (PAD_ROWS.length - 1) * gy + P - y;
+  const left = { x: PAGE.titleX, y, w: cw, h }, right = { x: W - PAGE.titleX - cw, y, w: cw, h };
+  const cellsW = CODE_LEN * dw + (CODE_LEN - 2) * cg + mid, cx0 = right.x + Math.floor((right.w - cellsW) / 2);
+  const cells = Array.from({ length: CODE_LEN }, (_, i) => ({ x: cx0 + i * (dw + cg) + (i >= 4 ? mid - cg : 0), y: cellsY, w: dw, h: ch }));
   const kx0 = right.x + Math.floor((right.w - (4 * kw + 3 * gx)) / 2);
   const keys = PAD_ROWS.flatMap((row, r) => row.map((k, c) => ({ k, x: kx0 + c * (kw + gx), y: padY + r * (kh + gy), w: kw, h: kh })));
-  return { left, right, titleY, cells, msgY, padY, keys, status: { x: 12, y: sy, w: W - 24, h: sh }, grow: { l: gx >> 1, r: gx >> 1, u: gy >> 1, d: gy >> 1 } };
+  // 아래 한 줄(상자 없이 판 밖 글 줄): 두 상자 아래 12
+  return { left, right, titleY, cells, msgY, padY, keys, status: { x: PAGE.titleX, y: y + h + SP.l, w: W - PAGE.titleX * 2, h: BTN_H }, grow: { l: gx >> 1, r: gx >> 1, u: gy >> 1, d: gy >> 1 } };
 }
 // 「4827 1593」
 export const codeText = (code) => `${code.slice(0, 4)} ${code.slice(4)}`;
@@ -164,7 +167,6 @@ export class LinkScreen {
     this.drawnKey = this.clockKey();
     const app = this.app, lay = linkLayout(), P = PAD_BOX;
     // 계정(CHM-72)과 한 머리줄: 탭 「아이디」 · 「기기 잇기」
-    pageHead(ctx, '계정', null, { big: true });
     accountTabs(ctx, ui, app, 'link');
     this.drawMine(ctx, ui, lay);
     this.drawEntry(ctx, ui, lay);
@@ -174,24 +176,20 @@ export class LinkScreen {
     const parts = [this.devices == null ? null : linked ? `기기 ${this.devices}대 연결됨` : '연결된 기기 없음', at ? `마지막 동기화 ${agoText(Math.max(0, app.cloud.now() - at))}` : null].filter(Boolean);
     // 말할 것이 없으면(열쇠가 없다 · 닿지 못했다) 줄도 없다
     if (this.unlinking || parts.length) {
-      openBox('panel', s.x, s.y, s.w, s.h, P, { name: '연결된 기기' });
-      box(ctx, s.x, s.y, s.w, s.h, PAL.feltDk, PAL.frameHi);
-      const ty = inkY(s.y + P, BTN_S);
+      const ty = inkY(s.y, BTN_H);
       if (this.unlinking) {
-        text(ctx, UNLINK_TEXT, s.x + P, ty, PAL.ink);
-        const bw = Math.max(44, measure('연결 해제', true) + 12), cw = Math.max(44, measure('취소', true) + 12), x1 = s.x + s.w - P;
-        button(ctx, ui, 'link:unlink:no', x1 - cw, s.y + P, cw, BTN_S, '취소', { enabled: this.unlinking === 'ask', onClick: () => { this.unlinking = null; } });
-        button(ctx, ui, 'link:unlink:yes', x1 - cw - 6 - bw, s.y + P, bw, BTN_S, '연결 해제', { tone: 'red', enabled: this.unlinking === 'ask', onClick: () => this.unlink() });
+        text(ctx, UNLINK_TEXT, s.x, ty, PAL.ink);
+        const on = this.unlinking === 'ask';
+        buttonRow(ctx, ui, [
+          { id: 'link:unlink:yes', label: '연결 해제', tone: 'red', enabled: on, onClick: () => this.unlink() },
+          { id: 'link:unlink:no', label: '취소', enabled: on, onClick: () => { this.unlinking = null; } },
+        ], s.x + s.w, s.y, { anchor: 'right' });
       } else {
-        text(ctx, parts.join(' · '), s.x + P, ty, linked ? PAL.ink : PAL.dim);
-        if (linked) {
-          const bw = measure('이 기기 연결 해제', true) + 12;
-          button(ctx, ui, 'link:unlink', s.x + s.w - P - bw, s.y + P, bw, BTN_S, '이 기기 연결 해제', { onClick: () => { this.unlinking = 'ask'; app.sfx('pick'); } });
-        }
+        text(ctx, parts.join(' · '), s.x, ty, linked ? PAL.ink : PAL.dim);
+        if (linked) buttonRow(ctx, ui, [{ id: 'link:unlink', label: '이 기기 연결 해제', onClick: () => { this.unlinking = 'ask'; app.sfx('pick'); } }], s.x + s.w, s.y, { anchor: 'right' });
       }
-      closeBox();
     }
-    button(ctx, ui, 'link:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.leave() });
+    bottomBar(ctx, ui, { back: { id: 'link:back', onClick: () => this.leave() } });
   }
 
   drawMine(ctx, ui, lay) {
@@ -200,7 +198,7 @@ export class LinkScreen {
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, m.phase === 'linked' ? PAL.gold : PAL.frameHi);
     text(ctx, '이 기기의 코드', b.x + P, textY(lay.titleY), PAL.dim);
     const say = (s, y, col = PAL.dim, bold = false) => text(ctx, s, cx, textY(y), col, { align: 'center', bold });
-    const get = (y) => { const bw = measure('코드 받기', true) + 24; button(ctx, ui, 'link:code', cx - (bw >> 1), y, bw, BTN_S, '코드 받기', { tone: 'gold', onClick: () => this.getCode() }); };
+    const get = (y) => buttonRow(ctx, ui, [{ id: 'link:code', label: '코드 받기', tone: 'gold', onClick: () => this.getCode() }], cx, y, { anchor: 'center' });
     const y0 = lay.cells[0].y;
     if (m.phase === 'code') {
       // 큰 숫자(두 배) + 남은 시간 막대
@@ -247,17 +245,19 @@ export class LinkScreen {
     lay.cells.forEach((c, i) => {
       const d = e.digits[i], next = e.phase === 'type' && i === e.digits.length;
       slot(ctx, c.x, c.y, c.w, c.h, { r: 4 });
-      if (next) rframe(ctx, c.x, c.y, c.w, c.h, 4, PAL.gold, 1);
+      if (next) selectRing(ctx, c.x, c.y, c.w, c.h, { r: R_SM });
       if (d) text(ctx, d, c.x + (c.w >> 1), inkY(c.y, c.h), PAL.goldHi, { align: 'center', bold: true });
     });
     if (e.phase === 'confirm' || e.phase === 'working') {
       // 잇기 전 확인
       const lines = wrap(CONFIRM_TEXT, b.w - P * 2);
       lines.forEach((l, i) => text(ctx, l, cx, textY(lay.msgY + 6 + i * LINE), PAL.ink, { align: 'center' }));
-      const by = lay.msgY + 6 + lines.length * LINE + 10, gw = Math.max(64, measure('연결', true) + 16), nw = Math.max(64, measure('취소', true) + 16);
+      const by = lay.msgY + 6 + lines.length * LINE + SP.l;
       const busy = e.phase === 'working';
-      button(ctx, ui, 'link:yes', cx - gw - 4, by, gw, BTN_S, busy ? '연결 중' : '연결', { tone: 'gold', enabled: !busy, onClick: () => this.redeem() });
-      button(ctx, ui, 'link:no', cx + 4, by, nw, BTN_S, '취소', { enabled: !busy, onClick: () => { e.phase = 'type'; } });
+      buttonRow(ctx, ui, [
+        { id: 'link:yes', label: busy ? '연결 중' : '연결', tone: 'gold', enabled: !busy, onClick: () => this.redeem() },
+        { id: 'link:no', label: '취소', enabled: !busy, onClick: () => { e.phase = 'type'; } },
+      ], cx, by, { anchor: 'center' });
       closeBox();
       return;
     }

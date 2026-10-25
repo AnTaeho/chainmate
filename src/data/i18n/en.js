@@ -44,7 +44,7 @@ export const EN = {
   '이 기기만 연결이 끊겨요': 'This device splits off', '기록은 양쪽에 남아요': 'Records stay on both', '방금': 'just now',
   // 순위(CHM-70): 순위 화면 · 결과 카드 · 설정 이름 줄
   '순위': 'Ranks', '오늘': 'Today', '어제': 'Yesterday', '이름': 'Name',
-  '아직 아무도 플레이하지 않았어요': 'No one has played yet', '순위를 불러오지 못했어요': "Couldn't reach the ranks", '순위 불러오는 중': 'Opening the ranks',
+  '아직 아무도 플레이하지 않았어요': 'No one has played yet', '순위를 불러오지 못했어요': "Couldn't reach the ranks", '순위 불러오는 중': 'Opening the ranks', '다시 불러오기': 'Try again',
   '오늘은 아직 플레이하지 않았어요': 'Not played yet today', '어제는 플레이하지 않았어요': 'Not played yesterday', '오늘의 대국 시작': "Play Today's Match",
   '순위 보기': 'See ranks', '확인 중': 'Checking', '이름 바꾸기': 'Reroll',
   '게임이 업데이트됐어요': 'A new version is out', '새로 고침하면 다음 판부터 순위에 올라가요': 'Refresh to rank from your next run',
@@ -188,7 +188,7 @@ export const EN = {
   '체인메이트': 'CHAINMATE', '잡으면 그 기물로 바뀐다': 'Take It, Become It', '잡고, 변하고, 또 잡는다': 'Take. Become. Take again.',
   '이어 하기': 'Continue', '새 판': 'New Run', '오늘의 대국': "Today's Match", '도감': 'Almanac', '기록': 'Records', '설정': 'Settings',
   '멈춤': 'Paused', '계속': 'Continue', '메인 화면으로': 'To Title', '메인 화면': 'Title', '뒤로': 'Back', '다시': 'Again', '계속 두기': 'Play On',
-  '소리': 'Sound', '음악': 'Music', '연출 속도': 'Speed', '화면 흔들림': 'Screen Shake', '큰 글자': 'Large Text', '켬': 'On', '끔': 'Off', '언어': 'Language',
+  '소리': 'Sound', '음악': 'Music', '연출 속도': 'Speed', '화면 흔들림': 'Screen Shake', '큰 글자': 'Large Text', '켬': 'On', '끔': 'Off', '언어': 'Language', '화면': 'Display', '플레이': 'Play',
   '연습 대국': 'Practice Match', '정식 대국': 'Rated Match', '마스터전': 'Master Match', '연습': 'Practice', '정식': 'Rated',
   '목표': 'Target', '이기면': 'Win', '건너뛰면': 'Skip', '건너뜀': 'Skipped', '승리': 'Won', '시작': 'Play', '건너뛰기': 'Skip',
   '끝없는 대국': 'Endless',
