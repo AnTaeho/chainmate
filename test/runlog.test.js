@@ -10,7 +10,9 @@ import { fileURLToPath } from 'node:url';
 import { createRun, applyRun } from '../src/sim/run.js';
 import { newTrack, trackBefore, trackCommand, runRow, addRow, RUNLOG_MAX } from '../src/sim/runlog.js';
 import { playRun } from '../tools/shopbot.mjs';
-import { stepBattle } from '../tools/bot.mjs';
+import { stepBattle, chaseRank } from '../tools/bot.mjs';
+// 하네스 playRun과 같은 대국 봇(도전을 쫓는 줄 평가)
+const chase = (b) => { const rank = chaseRank(b); return rank ? { rank } : {}; };
 import { makeStore, KEYS } from '../src/ui/save.js';
 import { loadRuns, keepRow, exportText } from '../src/ui/runlog.js';
 
@@ -45,7 +47,7 @@ function playTracked(run, track) {
     if (run.phase === 'lost' || run.phase === 'won') break;
     if (run.phase === 'draft') act({ type: 'joseki', index: 0 });
     else if (run.phase === 'select') act({ type: 'play' });
-    else if (run.phase === 'battle') { if (!stepBattle(run.battle, act, {})) throw new Error('stuck'); }
+    else if (run.phase === 'battle') { if (!stepBattle(run.battle, act, chase(run.battle))) throw new Error('stuck'); }
     else if (run.phase === 'shop') act({ type: 'leave' });
     else if (run.phase === 'pack') act({ type: 'skipPack' });
   }
@@ -141,7 +143,7 @@ after(() => { delete globalThis.document; delete globalThis.window; });
 const fresh = async () => { for (const k of [...dom.store.keys()]) dom.store.delete(k); const app = await boot({ window: dom.window, document: dom.document }); tick(app); return app; };
 const rows = (app) => loadRuns(app.store);
 // 대국 하나를 봇으로 끝까지(앱 명령으로)
-const finishBattle = (app) => { for (let i = 0; i < 400 && app.run.phase === 'battle'; i++) if (!stepBattle(app.run.battle, (c) => app.cmd(c), {})) break; };
+const finishBattle = (app) => { for (let i = 0; i < 400 && app.run.phase === 'battle'; i++) if (!stepBattle(app.run.battle, (c) => app.cmd(c), chase(app.run.battle))) break; };
 
 test('앱: 판이 끝나면(짐) 한 줄, 판 시간과 앱 판이 함께', async () => {
   const app = await fresh();

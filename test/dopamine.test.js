@@ -105,7 +105,7 @@ test('넘친 목표 상금: ×5 +1 · ×10 +2, 보상 내역에 overflow', () =>
     const tier = overflowTier(run.last.score, run.last.target);
     assert.equal(run.last.overflow, tier);
     assert.equal(r.overflow, REWARD.overflow[tier] || 0);
-    assert.equal(r.total, r.base + r.moves + r.interest + r.mate + r.overflow + r.earned);
+    assert.equal(r.total, r.base + r.moves + r.interest + r.mate + r.overflow + r.earned + r.challenge);
     checked++;
   }
   assert.ok(checked >= 5);
