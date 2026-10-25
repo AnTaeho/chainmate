@@ -89,3 +89,25 @@ test('모양 구역(hit): 붙인 자리가 모양 밖이면 가운데로, 가운
   assert.deepEqual(ui.snap('down', 95, 95), [110, 110]);
   assert.deepEqual(ui.snap('down', 195, 95), [195, 95]);
 });
+
+test('미리 보기 묶음: 카드와 그 위 도장은 어느 쪽을 눌러도 같은 미리 보기 — 두 번째 누름이 고른다', () => {
+  const ui = make();
+  frame(ui, [['draft:0', 100, 100, 60, 80, { preview: 'draft:0' }], ['draft:0:stamp', 140, 92, 24, 14, { preview: 'draft:0' }]]);
+  tap(ui, [120, 140]);
+  assert.deepEqual([ui.clicks, ui.previewId], [[], 'draft:0']);
+  tap(ui, [150, 98]); // 도장을 눌러도 같은 묶음 — 고른다
+  assert.deepEqual([ui.clicks, ui.previewId], [['draft:0:stamp'], null]);
+});
+
+test('미리 보기 구역(preview: true)은 손가락 첫 누름에 실행하지 않는다 · 마우스는 곧바로', () => {
+  const ui = make();
+  frame(ui, [['btn:reboard', 100, 100, 15, 14, { preview: true }]]);
+  tap(ui, [107, 107]);
+  assert.deepEqual(ui.clicks, []);
+  tap(ui, [107, 107]);
+  assert.deepEqual(ui.clicks, ['btn:reboard']);
+  const m = make({ touch: false, finger: 0 });
+  frame(m, [['btn:reboard', 100, 100, 15, 14, { preview: true }]]);
+  tap(m, [107, 107]);
+  assert.deepEqual(m.clicks, ['btn:reboard']);
+});

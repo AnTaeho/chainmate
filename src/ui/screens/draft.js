@@ -81,7 +81,7 @@ export class DraftScreen {
       const sx = Math.abs(1 - 2 * p);
       const x = x0 + i * (CW + CARD.gap), y = draftY(CH);
       const uid = `draft:${i}`;
-      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
+      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: uid, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
       // 도장 구역(drawCard)을 가리켜도 카드는 들린 채로 — 내려앉으면 도장이 커서 밑에서 빠져 떨린다
       const hov = (ui.isHover(uid) || ui.isHover(`${uid}:stamp`)) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
@@ -112,7 +112,7 @@ export class DraftScreen {
       closeBox();
       // 도장: 이 레퍼토리로 이긴 가장 높은 레이팅 — 새 판 오프닝 카드처럼 윗변에 반쯤 걸친 스티커(오른쪽 안 4). 등급 줄 오른끝은 영어 「Rainbow」와 겹친다
       const won = (this.app.records.josekiDan || {})[id];
-      if (won != null) danStamp(ctx, x + CW - SP.s, y - (STAMP.h >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.pick(i), preview: true });
+      if (won != null) danStamp(ctx, x + CW - SP.s, y - (STAMP.h >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.pick(i), preview: uid });
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rrect(ctx, x, y, CW, CH, radiusOf(CW, CH), PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     }
