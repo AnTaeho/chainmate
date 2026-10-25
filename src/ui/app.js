@@ -88,7 +88,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   app.scale = 1;
   // 꽉 채움(fit.js chooseFit fill)이면 n이 소수(1/30 칸)다 — 뒷면이 기기 화소와 1:1(480n × 270n이 정수)
   app.setScale = (n) => {
-    n = n >= 1 ? (Number.isInteger(n) ? n : Math.round(n * 1000) / 1000) : 1;
+    n = n >= 1 ? n : 1; // 소수는 그대로 둔다(1/30 칸 — 맞춘 값이어야 기기 화소 격자와 어긋나지 않는다)
     app.scale = n; LOOK.n = n;
     const cw = Math.round(W * n), ch = Math.round(H * n);
     if (canvas.width !== cw) canvas.width = cw;
