@@ -1,12 +1,12 @@
 // 물건 그림 칸(CHM-69, docs/design-notes/layout.md 「종류 표시」 · art3.md 7절): 진열 카드 · 뒤집히는 카드 · 두루마리 칸이 같은 그림 칸을 쓴다.
 // 칸은 그림 상자 하나(22×26, 진화만 44×26, 두루마리 칸은 18×22)이고 안 3 벡터 그림을 (물건, 칸 크기, 배율 N)마다 한 번 굽고 붙인다.
-// 격언 · 전설: 가족 빛깔 상자 + 가족 모양(밝은 그림자) + 문양(emblems.js). 각인 · 혼 · 전술 · 조각 · 도박 · 깨우기는 제 물건 그림.
+// 격언 · 전설: 가족 빛깔 상자 + 가족 모양(밝은 그림자) + 문양(emblems.js). 각인 · 혼 · 전술 · 조각 · 도박 · 깨우기 · 판본은 제 물건 그림.
 import { PAL } from '../render/palette.js';
 import { live } from '../render/look.js';
 import { rect, dot } from '../render/gfx.js';
 import { tierOf } from '../render/sprites.js';
 import { fitPiece } from '../render/pieces3.js';
-import { INK, blitVec } from '../render/vec.js';
+import { INK, blitVec, trace } from '../render/vec.js';
 import { pen, drawMotif } from '../render/emblems.js';
 import { ART } from '../render/ink.js';
 import { SOUL_BY_ID } from '../data/souls.js';
@@ -38,7 +38,7 @@ export function familyOf(id) {
   return 'board';
 }
 // 다른 종류의 상자 면(종류 빛깔을 낮춘 것)
-const KIND_BOX = { engraving: '#73485f', soul: '#25414d', tactic: '#8a6440', fragment: '#3d427a', gamble: '#7d4560', awaken: '#3d427a' };
+const KIND_BOX = { engraving: '#73485f', soul: '#25414d', tactic: '#8a6440', fragment: '#3d427a', gamble: '#7d4560', awaken: '#3d427a', edition: '#4b4566' };
 
 // 각인 재료 빛깔(몸 · 그늘 · 빛). 각인은 덱의 어느 기물에나 새기므로 기물을 그리지 않는다
 export const EMBLEM = {
@@ -118,6 +118,45 @@ function awaken(p) {
   p.stroke('M11 3.5 L12.5 7.5 L10.5 10.5 L13.5 13.5 L12 17 L14 20.5', INK, 1.3);
 }
 
+// 판본: 제 재료 하나 — 은박 = 접힌 은빛 종이와 빗긴 빛, 자개 = 조개 위 진주, 무지개 = 빛깔 띠 무지개, 흑요 = 깎인 검은 조각
+const RAINBOW = ['#e57a8a', '#f0a060', '#f3dc6b', '#7fc98a', '#7f9be0', '#a983d6'];
+// 테 없는 네 뿔 반짝(작은 칸에서 잉크 테가 반짝을 덮지 않게)
+const glint = (p, x, y, r, c = '#ffffff') => { const q = r * 0.28; p.flat(`M${x} ${y - r} L${x + q} ${y - q} L${x + r} ${y} L${x + q} ${y + q} L${x} ${y + r} L${x - q} ${y + q} L${x - r} ${y} L${x - q} ${y - q} Z`, c); };
+const cloud = (x) => `M${x - 4} 21 C${x - 6.5} 21 ${x - 6.5} 17 ${x - 3.6} 17.3 C${x - 3.2} 13.6 ${x + 2.2} 13.6 ${x + 2.6} 17 C${x + 5.6} 16.6 ${x + 6} 21 ${x + 3.4} 21 Z`;
+const EDITION_G = {
+  foil: (p) => {
+    const sheet = 'M4 5 L17 3 L21 7 L20 21 L5 20.5 Z';
+    p.shape(sheet, ['#eef3f7', '#b9c6cf']);
+    p.g.save(); p.g.beginPath(); trace(p.g, sheet); p.g.clip();
+    p.stroke('M3 15 L14 2 M7 21 L21 5', '#ffffff', 2.2); p.stroke('M10 21 L22 8', '#ffffff', 0.9);
+    p.g.restore();
+    p.poly([[17, 3], [17.6, 6.6], [21, 7]], ['#cdd7de', '#9eabb5']);
+    glint(p, 5, 5, 3.4);
+  },
+  pearl: (p) => {
+    p.shape('M2.5 15 C2.5 9 7 6.5 12 6.5 C17 6.5 21.5 9 21.5 15 L18 21 L6 21 Z', ['#f2d6e4', '#cfa9c0']);
+    p.stroke('M6 20.5 L4.5 13 M9 21 L8.5 9.5 M12 21 L12 8.5 M15 21 L15.5 9.5 M18 20.5 L19.5 13', '#b98aa8', 1);
+    p.disc(12, 12.5, 5.6, ['#fbf6fa', '#d9cde0']);
+    p.stroke('M8.8 11.2 C9.2 9.6 10.4 8.6 11.8 8.4', '#ffffff', 1.4); p.dot(14.4, 15, 0.9, '#efc7dc');
+    glint(p, 20, 4.5, 3.4);
+  },
+  rainbow: (p) => {
+    for (let i = 0; i < RAINBOW.length; i++) { const r = 10 - i * 1.25; p.g.beginPath(); p.g.arc(12, 17, r, Math.PI, 0); p.g.strokeStyle = RAINBOW[i]; p.g.lineWidth = 1.35; p.g.stroke(); }
+    p.g.beginPath(); p.g.arc(12, 17, 10.7, Math.PI, 0); p.g.strokeStyle = INK; p.g.lineWidth = p.O; p.g.stroke();
+    p.g.beginPath(); p.g.arc(12, 17, 3.1, Math.PI, 0); p.g.stroke();
+    for (const x of [4.6, 19.4]) p.shape(cloud(x), 'cream');
+  },
+  obsidian: (p) => {
+    const pts = [[12, 1.5], [19.5, 8], [17.5, 21.5], [8, 22.5], [4, 11]];
+    p.poly(pts, ['#3d3157', '#221a36']);
+    p.flat('M12 1.5 L19.5 8 L13 11 Z', '#5a4a80'); p.flat('M12 1.5 L13 11 L4 11 Z', '#4a3d6a'); p.flat('M13 11 L17.5 21.5 L8 22.5 Z', '#2c2344');
+    p.stroke('M12 1.5 L13 11 L19.5 8 M4 11 L13 11 L17.5 21.5 M13 11 L8 22.5', '#8a5cc8', 0.9);
+    p.outline(`M${pts.map(([x, y]) => `${x} ${y}`).join(' L')} Z`);
+    p.stroke('M8.5 6.5 L10.6 4.2', '#ffffff', 1.3); glint(p, 20, 19, 3.2, '#e6d6ff');
+  },
+};
+export const EDITION_G_IDS = Object.keys(EDITION_G);
+
 // 그림 상자 뒤 모양(가족 표): 상자 가운데 (cx, cy), 반지름 r
 function haloPath(shape, cx, cy, r) {
   const ring = (n, rot = -Math.PI / 2, k = 1) => Array.from({ length: n }, (_, i) => { const a = rot + (i / n) * Math.PI * 2, q = i % 2 && k !== 1 ? r * k : r; return [cx + Math.cos(a) * q, cy + Math.sin(a) * q]; });
@@ -165,6 +204,7 @@ function paintCell(g, n, it, w, h, hue) {
   else if (it.kind === 'fragment') sub(shard);
   else if (it.kind === 'gamble') sub(it.id === 'roulette' ? roulette(hue) : potion(hue));
   else if (it.kind === 'awaken') sub(awaken);
+  else if (it.kind === 'edition') { if (EDITION_G[it.id]) sub(EDITION_G[it.id]); }
 }
 
 // 도박의 도는 빛깔: 한 바퀴를 스물넷으로 끊는다(구운 칸을 그만큼만 둔다)
@@ -205,6 +245,12 @@ export const MAXIM_CELL = { w: 20, h: 22, gap: 3, inset: 3 };
 export function maximArt(ctx, id, x, y, alpha = 1) {
   if (alpha !== 1) ctx.globalAlpha = alpha;
   itemArt(ctx, { kind: 'maxim', id }, x, y, 0, null, MAXIM_CELL);
+  if (alpha !== 1) ctx.globalAlpha = 1;
+}
+// 판본 그림 칸(도감 칸 20 × 22): id = 판본 id
+export function editionArt(ctx, id, x, y, alpha = 1) {
+  if (alpha !== 1) ctx.globalAlpha = alpha;
+  itemArt(ctx, { kind: 'edition', id }, x, y, 0, null, MAXIM_CELL);
   if (alpha !== 1) ctx.globalAlpha = 1;
 }
 // 옛 이름: 각인 · 혼 · 깨우기 그림 칸(22 × 26). sq가 거짓이면 같은 그림을 상자 없이 — 지금은 늘 상자째

@@ -9,6 +9,7 @@ import { LEGENDS } from '../src/data/legends.js';
 import { ENGRAVINGS } from '../src/data/engravings.js';
 import { TACTICS } from '../src/data/tactics.js';
 import { SOULS } from '../src/data/souls.js';
+import { EDITIONS } from '../src/data/editions.js';
 
 let dom, art, kinds, emblems, icons;
 before(async () => {
@@ -41,6 +42,7 @@ const allItems = () => [
   ...ENGRAVINGS.map((e) => ({ kind: 'engraving', id: e.id })), ...TACTICS.map((x) => ({ kind: 'tactic', id: x.id })),
   ...SOULS.map((s) => ({ kind: 'soul', id: s.id })),
   { kind: 'fragment', legend: 'immortal' }, { kind: 'gamble', id: 'potion' }, { kind: 'gamble', id: 'roulette' }, { kind: 'awaken' },
+  ...EDITIONS.map((e) => ({ kind: 'edition', id: e.id })),
 ];
 
 test('잉크 상자: 마스크에서 바로 재고, 가운데 놓으면 네 여백이 같다', () => {

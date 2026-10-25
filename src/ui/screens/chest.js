@@ -6,7 +6,7 @@ import { wrap } from '../../render/text.js';
 import { CHARTS } from '../../data/charts.js';
 import { ENGRAVING_BY_ID } from '../../data/engravings.js';
 import { PIECE_NAME } from '../words.js';
-import { shardIcon, awakenArt, artW, edgeRing } from '../parts.js';
+import { shardIcon, awakenArt, itemArt, artW, edgeRing } from '../parts.js';
 import { SOUL_BY_ID } from '../../data/souls.js';
 import { LINE, GAP_IN, SP, ART_H, INK_H, flow, textY } from '../frame.js';
 import { interlude, interludeLayout, INTER } from './common.js';
@@ -40,6 +40,7 @@ function drawItem(ctx, it, cx, cy) {
   else if (it.kind === 'engrave') sprite(ctx, it.piece, 'w', cx - 8, cy, { sx: K, sy: K, eng: it.eng });
   else if (it.kind === 'piece') sprite(ctx, it.t, 'w', cx - 8, cy, { sx: K, sy: K });
   else if (it.kind === 'awaken') { const aw = artW({ kind: 'awaken' }); scaled(ctx, cx, cy, aw, ART_H, () => awakenArt(ctx, 0, 0, 0)); }
+  else if (it.kind === 'edition') { const ed = { kind: 'edition', id: it.edition }; scaled(ctx, cx, cy, artW(ed), ART_H, () => itemArt(ctx, ed, 0, 0)); }
   else scaled(ctx, cx, cy, 16, 14, () => shardIcon(ctx, 0, 0));
 }
 const SPIN = [{ kind: 'money', money: 2 }, { kind: 'chart', form: 'N' }, { kind: 'engrave', piece: 'P', eng: 'gold' }, { kind: 'chart', form: 'Q' }, { kind: 'chart', form: 'R' }];

@@ -26,7 +26,7 @@ import { kindTab, tabW, TAB, TAB_GAP } from './kinds.js';
 import { blitVec } from '../render/vec.js';
 import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
-export { maximArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
+export { maximArt, editionArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
 
 // 카드 모서리를 따라 안쪽 k에 그리는 둥근 테(k < 0이면 바깥)
 export const edgeRing = (ctx, x, y, w, h, k, col, t = 1) => rframe(ctx, x + k, y + k, w - 2 * k, h - 2 * k, Math.max(0, radiusOf(w, h) - k), col, t);
