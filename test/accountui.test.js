@@ -18,7 +18,15 @@ after(() => { delete globalThis.document; delete globalThis.window; setLang('ko'
 
 const DATE = '2026-10-08';
 const PW = 'moonlit-rook-42', PW2 = 'second-knight-77';
-const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
+// 비번 해시(scrypt)는 스레드 풀에서 돈다 — 기기가 바쁘면 틱 30개 안에 돌아오지 않는다. 가짜 서버로 보낸 부름이 다 돌아올 때까지 틱을 더 돈다
+let inflight = 0;
+const settle = async (n = 30) => {
+  for (let round = 0; round < 500; round++) {
+    for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r));
+    if (!inflight) return;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+};
 
 // 기기 하나: 가짜 DOM + 진짜 boot(가짜 서버에 물린다). 저장은 기기마다 따로
 async function device(api, { lang = 'ko', width = 1280, height = 720 } = {}) {
@@ -26,7 +34,11 @@ async function device(api, { lang = 'ko', width = 1280, height = 720 } = {}) {
   const { boot } = await import('../src/main.js');
   const d = makeFakeDom({ width, height });
   if (lang !== 'ko') d.window.localStorage.setItem(KEYS.settings, JSON.stringify({ lang }));
-  d.window.fetch = (url, init) => (String(url).startsWith('/api/') ? api.fetch(url, init) : Promise.resolve({ ok: true, status: 200 }));
+  d.window.fetch = (url, init) => {
+    if (!String(url).startsWith('/api/')) return Promise.resolve({ ok: true, status: 200 });
+    inflight++;
+    return api.fetch(url, init).finally(() => { inflight--; });
+  };
   // 구역의 onClick을 곧바로 부르니(입력 길의 invalidate를 거치지 않는다) 프레임마다 그린다
   const app = await boot({ window: d.window, document: d.document, today: () => DATE, rankBase: '', alwaysDraw: true });
   app.records.tutorialAsked = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
@@ -121,12 +133,15 @@ test('계정 화면의 입력 칸: 캔버스 위 그 자리에 <input> — 비�
   assert.deepEqual(ins.map((el) => el.parent.children.find((c) => c.attrs.for === el.id).textContent), ['아이디', '비밀번호']);
   assert.deepEqual([ins[0].maxLength, ins[1].maxLength], [20, 72]);
   assert.ok(ins[0].parent.children.some((c) => c.tagName === 'BUTTON' && c.type === 'submit'), 'Enter로 내려면 제출 단추가 있어야 한다');
-  // 자리: 창 1280 × 720 → 2배, 캔버스가 (160, 90)에. 입력 칸은 위쪽 띠(게임 y 110 위)
+  // 자리: 창 1280 × 720 → 꽉 채움(기본) 8/3배, 캔버스가 창을 다 덮는다. 입력 칸은 위쪽 띠(게임 y 110 위)
   const rect = a.d.screen.getBoundingClientRect();
-  assert.deepEqual([rect.left, rect.top, rect.width, rect.height], [160, 90, 960, 540]);
+  assert.deepEqual([rect.left, rect.top, rect.width, rect.height], [0, 0, 1280, 720]);
   for (const [el, id] of [[ins[0], 'user'], [ins[1], 'pass']]) {
     const want = placeField(lay.fields[id], rect, false);
-    assert.deepEqual([el.style.left, el.style.top, el.style.width, el.style.height, el.style.fontSize, el.style.transform], [`${want.left}px`, `${want.top}px`, `${want.width}px`, `${want.height}px`, '24px', ''], id);
+    // 소수 배율이면 CSS 화소는 소수 둘째 자리까지 적는다(textfield.js)
+    const px = (v) => Number.parseFloat(v);
+    for (const [k, v] of [['left', want.left], ['top', want.top], ['width', want.width], ['height', want.height]]) assert.ok(Math.abs(px(el.style[k]) - v) < 0.01, `${id} ${k} ${el.style[k]} ≈ ${v}`);
+    assert.deepEqual([el.style.fontSize, el.style.transform], [`${want.font}px`, ''], id);
     assert.ok(lay.fields[id].y + lay.fields[id].h <= 110, `${id}: 위쪽 띠`);
   }
   // 영어: 이름표도 옮긴다
