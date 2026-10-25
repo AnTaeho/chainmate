@@ -100,6 +100,12 @@ for (const [w, h] of SIZES) for (const lang of LANGS) {
     // 10번 판 연습 대국: 「한 콤보에 4번 잡기」 — 가장 좋은 수가 다섯을 잡아 넷째에서 채우고 이긴다
     await battle(page, 10);
     await shot(page, `battle-idle-${tag}`);
+    // 띠 아래쪽(뒷줄 칸 구역이 올라오는 곳)을 가리켜도 도전 말풍선
+    const hov = await page.evaluate(async () => { const a = window.__app, r = a.canvas.getBoundingClientRect(); return [r.left + (240.5 / 480) * r.width, r.top + (17.5 / 270) * r.height]; });
+    await page.mouse.move(hov[0], hov[1]);
+    await page.waitForTimeout(300);
+    console.log('띠 아래쪽 가리킴', await page.evaluate(() => (window.__app.ui.hover ? window.__app.ui.hover.id : null)));
+    await shot(page, `battle-tip-${tag}`, { move: false, wait: 300 });
     const line = await bestLine(page);
     for (const c of line.slice(0, 3)) await send(page, c);
     await shot(page, `battle-progress-${tag}`);
