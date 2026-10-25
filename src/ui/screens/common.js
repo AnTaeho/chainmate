@@ -177,8 +177,11 @@ export function runSide(ctx, ui, app, title) {
   // 레퍼토리 이름도 두 줄까지(영어 「Stepping Stones」) — 줄마다 본문 줄 하나. 둘째 줄은 JS_IND만큼 들여 다음 이름과 갈린다
   const jn = js.map((id) => { const q = wrapName(JOSEKI_BY_ID[id].name, LW - P * 2); return q && q.lines.length > 1 ? wrapName(JOSEKI_BY_ID[id].name, LW - P * 2 - JS_IND) : q; });
   const jsLines = jn.reduce((n, q) => n + (q ? q.lines.length : 1), 0);
-  const jsH = js.length ? GAP_GROUP + labelH + jsLines * LINE : 0;
+  let jsH = js.length ? GAP_GROUP + labelH + jsLines * LINE : 0;
   const famRows = Math.max(0, Math.floor((midH - P * 2 - labelH - jsH) / FAM_ROW));
+  // 시너지 이름표 줄이 모자라면 레퍼토리 이름표 → 이름 사이 틈을 접는다(영어 두 줄 머리 칸 + 레퍼토리 넷 줄)
+  const jsIn = js.length && !famRows && midH - P * 2 - jsH < LINE ? 0 : GAP_IN;
+  jsH -= GAP_IN - jsIn;
   const f = flow(top + P);
   if (famRows && familyCount(run)) {
     const ly = f.line();
@@ -200,7 +203,7 @@ export function runSide(ctx, ui, app, title) {
     const jy = f.line();
     text(ctx, '레퍼토리', L + P, jy, PAL.dim);
     rows.push(rowSpan(jy));
-    f.gap(GAP_IN);
+    f.gap(jsIn);
     js.forEach((id, k) => {
       const j = JOSEKI_BY_ID[id], n = jn[k] ? jn[k].lines.length : 1;
       const top1 = f.y, ys = [];

@@ -31,7 +31,7 @@ const RUNS = Number(opt('--runs', 2));
 // 다른 날짜의 판을 보려면 --date YYYY-MM-DD
 const DATE = opt('--date', '2026-10-07');
 const VERBOSE = args.includes('--verbose');
-// --spacing pad8,card7,line14,title18,in3,group8: 글 간격 시안으로 자리 규칙을 잰다(src/ui/frame.js applySpacing)
+// --spacing pad8,card7,line14,title18,in4,group8: 글 간격 시안으로 자리 규칙을 잰다(src/ui/frame.js applySpacing)
 if (opt('--spacing', null)) globalThis.__SPACING = opt('--spacing', null);
 const log = (...a) => { if (VERBOSE) console.log(...a); };
 
