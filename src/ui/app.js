@@ -20,6 +20,8 @@ import { familyCounts, THRESHOLDS, levelOf } from '../data/families.js';
 import { Fx } from './anim.js';
 import { makeStore, loadSettings, KEYS } from './save.js';
 import { loadRecords, emptyRecords, observe, finishRun, finishEndless, quitEndless, noteMove, dailySeed, today } from './records.js';
+import { noteFeats, checkAchievements } from './achievements.js';
+import { ACHIEVEMENT_BY_ID } from '../data/achievements.js';
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
 import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps, unlockTierProps } from './telemetry.js';
@@ -40,6 +42,8 @@ function toastPill(ctx, x, y, w, h, col) {
 import { foldSide } from './fold.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
+// 기록을 바로 저장하는 사건(업적이 읽는 한 콤보 끝 · 상자 · 넘침 포함)
+const SAVE_ON = new Set(['win', 'grade', 'legend', 'end', 'chest', 'overflow']);
 for (const f of FACTIONS) addLook(f.id, f.look);
 // 판 밖 화면: 판이 있어도 남색 기본 모습
 const OUTSIDE = new Set(['title', 'settings', 'setup', 'codex', 'records', 'lessons', 'lesson', 'rank', 'link', 'account', 'unlocks']);
@@ -109,6 +113,16 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
   app.speed = () => app.settings.speed || 1;
   app.records = loadRecords(store);
+  // 업적(src/data/achievements.js): 이 판본 전 기록으로 이미 닿은 것은 알림 없이 받는다
+  if (checkAchievements(app.records).length) store.set(KEYS.records, app.records);
+  // 새로 받은 업적은 줄을 세워 두고, 대국 연출이 끝난 뒤 하나씩 알린다(한 수 연출 4초 예산 밖 — app.update)
+  app.achvQueue = [];
+  app.achvAt = 0;
+  app.achieve = () => {
+    const got = checkAchievements(app.records);
+    if (got.length) app.achvQueue.push(...got);
+    return got;
+  };
   setLang(app.settings.lang);
   app.fresh = [];   // 이번 판에 새로 채운 도감 칸
   app.saveRecords = () => { const ok = store.set(KEYS.records, app.records); if (app.cloud) app.cloud.mark(); app.invalidate(); return ok; };
@@ -297,6 +311,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (!run.scratch && !run.track) run.track = newTrack({ startedAt: null, app: app.appInfo });
     const prev = run.scratch ? null : trackBefore(run);
     const tb = track && !run.scratch ? telBefore(run) : null;
+    // 업적이 읽는 대국 · 사슬: 이긴 대국은 명령 뒤 run.battle이 비므로 앞에서 잡아 둔다
+    const bat = run.battle, chain = bat ? bat.chain : null;
     const ev = applyRun(run, cmd);
     if (tb) for (const [name, props] of commandEvents(run, cmd, ev, tb)) app.track(name, props);
     if (prev) {
@@ -311,10 +327,12 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (run.scratch) { if (app.onCommand) app.onCommand(cmd, ev); return ev; }
     const before = app.fresh.length;
     observe(app.records, app.run, ev, app.fresh);
-    if (app.fresh.length !== before || ev.some((e) => e.type === 'win' || e.type === 'grade' || e.type === 'legend')) app.saveRecords();
+    noteFeats(app.records, app.run, ev, bat, chain);
+    if (app.fresh.length !== before || ev.some((e) => SAVE_ON.has(e.type))) app.saveRecords();
     // 판이 끝난 그 명령에서 기록 · 해금을 적는다 — 판 저장은 위 save()가 이미 지웠으니 결과 화면 전에 닫혀도 잃지 않게
     const ended = prev && prev.phase !== run.phase && (run.phase === 'won' || run.phase === 'lost');
     if (ended) app.finishRun();
+    if (app.achieve().length) app.saveRecords();
     // 맞추는 때(CHM-71): 판이 끝남(기록을 적은 뒤) · 상점을 떠남 · 관 선택에 섬
     if (prev && (prev.phase !== run.phase) && (ended || run.phase === 'select' || prev.phase === 'shop')) app.cloud.touch();
     if (app.onCommand) app.onCommand(cmd, ev);
@@ -418,6 +436,12 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (app.clockFx) { app.clockFx.t += dt; if (app.clockFx.t > 2.4) app.clockFx = null; } // 시계 칸을 잃는 깜빡임(common.js clockPips)
     app.ui.time = app.time;
     const sp = app.speed();
+    // 업적 알림: 대국 연출(busy) · 덮개 · 멈칫이 없을 때 하나씩, 사이 0.8초(금빛 알림 + 팡파르)
+    if (app.achvQueue.length && app.time >= app.achvAt && !app.overlay && !(app.hitstopT > 0) && !(app.screen && app.screen.busy)) {
+      const a = ACHIEVEMENT_BY_ID[app.achvQueue.shift()];
+      if (a) { app.toast(`업적 · ${a.name}`, PAL.gold, 3); app.toasts[app.toasts.length - 1].achv = true; app.sfx('fanfare'); }
+      app.achvAt = app.time + 0.8;
+    }
     for (const t of app.toasts) t.t += dt;
     app.toasts = app.toasts.filter((t) => t.t < t.life);
     // 멈칫(히트스톱): 짧게 모든 연출이 선다

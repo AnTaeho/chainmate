@@ -1,5 +1,5 @@
-@font-face { font-family: "Black Han Sans"; src: url("assets/fonts/BlackHanSans.8b137859.woff2") format("woff2"); font-weight: 400; font-display: block; }
-@font-face { font-family: "Chainmate Sans KR"; src: url("assets/fonts/ChainmateSansKR-Medium.ef4571f2.woff2") format("woff2"); font-weight: 500; font-display: block; }
+@font-face { font-family: "Black Han Sans"; src: url("assets/fonts/BlackHanSans.4f3f2644.woff2") format("woff2"); font-weight: 400; font-display: block; }
+@font-face { font-family: "Chainmate Sans KR"; src: url("assets/fonts/ChainmateSansKR-Medium.d86e263e.woff2") format("woff2"); font-weight: 500; font-display: block; }
 /* 화면 맞춤(docs/design-notes/layout.md 「화면 맞춤」): 캔버스 자리 · 크기는 main.js가 기기 화소 정수 자리에 둔다.
    창은 끌리지도 · 튕기지도 · 확대되지도 않는다(손가락 두 번 누르기 · 벌리기 · 길게 누르기 선택과 메뉴 포함) */
 html, body {

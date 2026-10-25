@@ -1,7 +1,7 @@
 // 판 투영(안 3, docs/design-notes/art3.md 3절): 칸 가운데 · 꼭짓점 · 누르는 구역이 서로 맞는다 — 손잡이 셋 모두
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { VIEWS, VIEW, AREA, setView, center, projectSq, unproject, sqBox, order, picker, hitBox, PIECE_UP } from '../src/render/board3.js';
+import { VIEWS, VIEW, AREA, setView, center, projectSq, unproject, sqBox, order, picker, hitBox, PIECE_UP, bodyW } from '../src/render/board3.js';
 import { UI } from '../src/ui/ui.js';
 
 for (const name of Object.keys(VIEWS)) {
@@ -68,7 +68,7 @@ for (const name of Object.keys(VIEWS)) {
       const o = order();
       for (let i = 0; i < 64; i++) for (let j = i + 1; j < 64; j++) {
         const back = o[i], front = o[j], a = center(back), f = center(front);
-        if (Math.abs(a.x - f.x) >= 22 || f.y - a.y >= PIECE_UP + 2 || f.y === a.y) continue;
+        if (Math.abs(a.x - f.x) >= 2 * bodyW() || f.y - a.y >= PIECE_UP + 2 || f.y === a.y) continue;
         const y = Math.max(a.y - PIECE_UP, f.y - PIECE_UP), x = (a.x + f.x) / 2;
         if (y >= Math.min(a.y, f.y) + 2) continue;
         assert.equal(full(x, y), front, `칸 ${back} 몸과 ${front} 몸이 겹친 자리`);

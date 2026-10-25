@@ -20,13 +20,13 @@ import { LEGEND_BY_ID, LEGENDS } from '../data/legends.js';
 import { shade, glow, flicker, unshaded, rpath } from '../render/light.js';
 import { live } from '../render/look.js';
 import { hasDiagram, DIAG_W } from './diagram.js';
-import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, rowBoxH, BTN_S } from './frame.js';
+import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP, flow, textY, inkY, rowBoxH, BTN_S } from './frame.js';
 import { openBox, closeBox, logClip, LOG } from '../render/layoutlog.js';
 import { kindTab, tabW, TAB, TAB_GAP } from './kinds.js';
 import { blitVec } from '../render/vec.js';
 import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
-export { maximArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
+export { maximArt, editionArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
 
 // 카드 모서리를 따라 안쪽 k에 그리는 둥근 테(k < 0이면 바깥)
 export const edgeRing = (ctx, x, y, w, h, k, col, t = 1) => rframe(ctx, x + k, y + k, w - 2 * k, h - 2 * k, Math.max(0, radiusOf(w, h) - k), col, t);
@@ -795,3 +795,18 @@ export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9, ste
   return list.length * w;
 }
 
+
+// 도장(Balatro 스테이크 스티커 꼴): 그 오프닝 · 레퍼토리로 이긴 가장 높은 레이팅. 칠한 금빛 칩(R_SM) + 짙은 잉크 굵은 수.
+// 저장은 단(records.openingDan · josekiDan), 화면은 레이팅(800 + 200 × 단 — setup.js danName과 같다)
+export const STAMP = { h: 15, pad: 4 };
+export const stampText = (dan) => `${800 + 200 * (dan || 0)}`;
+export const stampW = (dan) => measure(stampText(dan), true) + STAMP.pad * 2;
+// x2: 오른끝. 돌려주는 값은 폭
+export function danStamp(ctx, x2, y, dan) {
+  const s = stampText(dan), w = stampW(dan);
+  openBox('edge', x2 - w, y, w, STAMP.h, 1, { name: '도장' });
+  rrect(ctx, x2 - w, y, w, STAMP.h, R_SM, PAL.gold);
+  text(ctx, s, x2 - (w >> 1), inkY(y, STAMP.h), PAL.cardInk, { align: 'center', bold: true });
+  closeBox();
+  return w;
+}

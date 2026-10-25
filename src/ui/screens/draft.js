@@ -8,9 +8,9 @@ import { text, box, rect, rrect, radiusOf } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows, chipBlockH } from '../parts-depth.js';
-import { cardBase, tipLines, CARD_CHIP_ROWS } from '../parts.js';
+import { cardBase, tipLines, CARD_CHIP_ROWS, danStamp, STAMP } from '../parts.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, SP, flow } from '../frame.js';
+import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, SP, LINE, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 const TIER_NAME = { silver: '은', gold: '금', rainbow: '무지개' };
@@ -104,6 +104,9 @@ export class DraftScreen {
       const lay = josekiLayout(j), P = PAD_CARD;
       openBox('card', x, y, CW, CH, P, { name: `레퍼토리 ${id}` });
       text(ctx, TIER_NAME[j.tier], x + P, y + lay.tier, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
+      // 도장: 이 레퍼토리로 이긴 가장 높은 레이팅(등급 줄 오른끝)
+      const won = (this.app.records.josekiDan || {})[id];
+      if (won != null) danStamp(ctx, x + CW - P, y + P + ((LINE - STAMP.h) >> 1), won);
       for (const [l, ly] of lay.names) text(ctx, l, x + P, y + ly, PAL.cardInk, { bold: true });
       rect(ctx, x + P, y + lay.rule, lay.IW, 1, col);
       for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } });

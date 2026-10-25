@@ -1856,7 +1856,7 @@ export class BattleScreen {
     for (const s of reach(v.board, form, from, 1)) {
       const c = this.center(s);
       if (slide) dotLine(ctx, o.x, o.y, c.x, c.y, PAL.goldHi, 2);
-      if (!v.board[s]) { if (slide) rect(ctx, c.x - 1, c.y - 1, 2, 2, PAL.goldHi); else strokeSq(ctx, s, PAL.goldHi, 1, 8); }
+      if (!v.board[s]) rect(ctx, c.x - 1, c.y - 1, 2, 2, PAL.goldHi);
     }
     ctx.globalAlpha = 1;
   }

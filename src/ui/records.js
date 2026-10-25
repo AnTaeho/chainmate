@@ -38,6 +38,12 @@ export function emptyRecords() {
     reviewReplays: 0,          // 갈림길 카드에서 「다시 두기」를 누른 수
     gates: 0,                  // 돌파한 관의 누적 수(해금 사다리의 잣대, CHM-73)
     unlockTier: 0,             // 해금 단계 0 ~ 20(src/data/unlocks.js) — 한 판에 하나씩만 오른다
+    achv: {},                  // { [업적 id]: true } 받은 업적(src/data/achievements.js)
+    feats: {},                 // 업적이 읽는 한 콤보 · 한 대국의 최고(모습 수 · 프로모션 · 응수 · 점수 …, src/ui/achievements.js noteFeats)
+    mastersBeaten: {},         // { [마스터 id]: true } 이긴 마스터
+    synergyTop: {},            // { [시너지 id]: 가장 많이 모은 수 }
+    openingDan: {},            // { [오프닝 id]: 이긴 가장 높은 단 } 오프닝 도장(없으면 아직 못 이겼다 — 0은 단 0으로 이겼다)
+    josekiDan: {},             // { [레퍼토리 id]: 이긴 가장 높은 단 } 레퍼토리 도장
   };
   // 칸을 더하면 기기 사이 합치는 규칙도 넣는다(src/ui/merge.js RULES, CHM-71)
 }
@@ -125,6 +131,8 @@ export function finishRun(rec, run, { daily = null } = {}) {
   if (won) {
     rec.danWins[dan] = (rec.danWins[dan] || 0) + 1;
     if (dan >= rec.unlocked.dan && dan < MAX_DAN) { rec.unlocked.dan = dan + 1; out.dan = dan + 1; }
+    stampRun(rec, run);
+    if (daily) { rec.feats = rec.feats || {}; rec.feats.daily = (rec.feats.daily || 0) + 1; }
   }
   for (const u of UNLOCKS) {
     if (rec.unlocked.openings.includes(u.id)) continue;
@@ -139,6 +147,14 @@ export function finishRun(rec, run, { daily = null } = {}) {
     rec.daily = d;
   }
   return out;
+}
+
+// 도장: 이긴 판의 오프닝 · 레퍼토리마다 이긴 가장 높은 단
+export function stampRun(rec, run) {
+  const dan = run.dan || 0;
+  const put = (k, id) => { if (id == null) return; const o = rec[k] || (rec[k] = {}); if (!(o[id] >= dan)) o[id] = dan; };
+  put('openingDan', run.opening || 'standard');
+  for (const id of run.josekis || []) put('josekiDan', id);
 }
 
 // 해금: 이 판이 아직 안 센 관을 누적에 더하고, 이 판이 아직 하나도 안 열었으면 단계를 하나 올린다. 센 것은 판(run.gatesDone · run.tierOpened)에 적는다

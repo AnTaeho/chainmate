@@ -6,6 +6,7 @@ import { KEYS } from './save.js';
 import { setLang } from './lang.js';
 import { mergeInto, cloudRecords, mergeGain } from './merge.js';
 import { saveSyncProps } from './telemetry.js';
+import { checkAchievements } from './achievements.js';
 
 export const CLOUD_KEY = 'chainmate.cloud.v1'; // { rev, runAt(판이 끝난 때), setAt, snap, at(마지막으로 맞춘 때), sum }
 export const PUSH_GAP = 15000;                 // 올리기 사이 최소 간격
@@ -64,6 +65,7 @@ export function createCloud({ rank, now = () => Date.now(), setTimer = (fn, ms) 
     if (JSON.stringify(merged) !== JSON.stringify(app.records)) {
       for (const k of Object.keys(app.records)) delete app.records[k];
       Object.assign(app.records, merged);
+      checkAchievements(app.records); // 다른 기기의 기록으로 닿은 업적은 알림 없이
       app.store.set(KEYS.records, app.records);
     }
     const s = st();

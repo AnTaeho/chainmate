@@ -466,7 +466,7 @@ test('앱: 관 선택에 설 때 · 상점을 떠날 때 · 판이 끝날 때 �
   assert.ok(s2.blob.runAt >= s1.blob.runAt);
   assert.equal(s2.blob.records.runs, app.records.runs);
   assert.ok(!('lastOpening' in s2.blob.records));
-  assert.equal(app.toasts.length, 0, '맞추는 것은 화면에 드러나지 않는다');
+  assert.equal(app.toasts.filter((t) => !t.achv).length, 0, '맞추는 것은 화면에 드러나지 않는다(업적 알림은 판에서 난 것)');
   assert.equal(app.stats.errors, 0);
 });
 

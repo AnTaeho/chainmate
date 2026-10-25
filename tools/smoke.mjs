@@ -54,6 +54,7 @@ dom.window.fetch = async (url, init) => { if (String(url).startsWith('/api/')) r
 dom.window.navigator = { sendBeacon: () => { telSent.n++; return true; } };
 const { boot } = await import('../src/main.js');
 const lessonMod = await import('../src/ui/lessons.js');
+const achvMod = await import('../src/data/achievements.js');
 const coachMod = await import('../src/ui/coach.js');
 const { termsIn, TERM_BY_ID, KEY_MAX } = await import('../src/ui/glossary.js');
 const { tipTexts } = await import('../src/ui/ui.js');
@@ -1223,6 +1224,17 @@ click('codex:back');
   Object.assign(app.records.codex, JSON.parse(keep));
 }
 click('title:records');
+// 업적 탭: 못 받은 칸(빈 칸 · 숨은 「?」)과 받은 칸(크림 카드 · 메달 · N/M)을 모든 쪽에서 잰다
+{
+  const keep = JSON.stringify(app.records.achv || {});
+  for (const all of [false, true]) {
+    if (all) { app.records.achv = Object.fromEntries(achvMod.ACHIEVEMENTS.map((a) => [a.id, true])); }
+    click('records:tab:achv'); pump(1); notesCheck();
+    for (let n = 0; n < 12 && region('records:next') && region('records:next').enabled; n++) { click('records:next'); pump(1); notesCheck(); }
+    click('records:tab:stats'); pump(1);
+  }
+  app.records.achv = JSON.parse(keep);
+}
 click('records:back');
 click('title:lesson');
 if (!region(`lessons:${lessonMod.LESSONS.length - 1}`) || !region('lessons:go')) throw new Error('lesson list incomplete');

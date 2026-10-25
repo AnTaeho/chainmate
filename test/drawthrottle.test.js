@@ -105,6 +105,7 @@ test('대국(움직임 줄이기): 쉬면 건너뛰고, 손 들썩임이 켜지�
   app.run.battle.incoming = []; // 증원 그림자(초당 3번 들썩임)를 치워 멈춘 판으로
   app.records.coachSeen = new Proxy({}, { get: () => true, has: () => true });
   app.go('battle', { events: [] });
+  app.achvQueue.length = 0; // 손으로 3관에 세운 판이라 「1관 돌파」 업적 알림이 뜬다 — 이 시험은 멈춘 판만 잰다
   const s = app.screen;
   app.tick(10);
   s.idleT = -1e9;
