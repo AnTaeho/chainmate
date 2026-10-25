@@ -18,14 +18,7 @@ after(() => { delete globalThis.document; delete globalThis.window; setLang('ko'
 
 const DATE = '2026-10-08';
 const PW = 'moonlit-rook-42', PW2 = 'second-knight-77';
-// 비번 해시(scrypt)는 스레드 풀에서 돈다 — 틱만 세면 바쁜 기기에서 덜 끝난다. 계정 화면이 바쁘지 않을 때까지(2초 안) 더 기다린다
-const apps = [];
-const busy = () => apps.some((a) => a.screen && a.screen.busy);
-const settle = async (n = 30) => {
-  for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r));
-  for (let i = 0; i < 400 && busy(); i++) await new Promise((r) => setTimeout(r, 5));
-  for (let i = 0; i < 12; i++) await new Promise((r) => setImmediate(r));
-};
+const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
 
 // 기기 하나: 가짜 DOM + 진짜 boot(가짜 서버에 물린다). 저장은 기기마다 따로
 async function device(api, { lang = 'ko', width = 1280, height = 720 } = {}) {
@@ -36,7 +29,6 @@ async function device(api, { lang = 'ko', width = 1280, height = 720 } = {}) {
   d.window.fetch = (url, init) => (String(url).startsWith('/api/') ? api.fetch(url, init) : Promise.resolve({ ok: true, status: 200 }));
   // 구역의 onClick을 곧바로 부르니(입력 길의 invalidate를 거치지 않는다) 프레임마다 그린다
   const app = await boot({ window: d.window, document: d.document, today: () => DATE, rankBase: '', alwaysDraw: true });
-  apps.push(app);
   app.records.tutorialAsked = true; app.records.coachSeen = { telemetry: true, bigText: true, rankName: true };
   const events = [];
   const track = app.track;
