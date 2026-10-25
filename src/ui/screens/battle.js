@@ -1431,8 +1431,10 @@ export class BattleScreen {
 
   // ── 그리기
   draw(ctx, ui) {
-    this.drawChallenge(ctx, ui);
+    const band = this.drawChallenge(ctx);
     this.drawBoard(ctx, ui);
+    // 도전 띠 구역은 판 칸 구역 뒤에 쌓는다(뒷줄 칸 구역이 기물 머리만큼 띠 아래쪽으로 올라온다 — 나중 구역이 먼저 눌린다)
+    if (band) ui.region('challenge', band.x, band.y, band.w, band.h, { tip: () => this.chTip(band.ch), keys: [{ id: 'challenge' }] });
     this.drawLeft(ctx, ui);
     this.drawRight(ctx, ui);
     this.drawOver(ctx);
@@ -2204,7 +2206,8 @@ export class BattleScreen {
   }
   // ── 대국 도전 띠(layout.md 31절): 판 위 가운데 한 줄 — 「도전」 칩 · 조건(온 글이 안 들어가면 짧은 이름표) · 오른끝 진행 「2/4」(셀 수 없는 도전은 「+$2」).
   // 이루면 칩이 「도전 성공」 도장으로, 조건은 흐리게. 기물 뒤에 그린다(뒷줄 기물 머리가 띠 위로 솟는다). 복기 · 다시 두기는 그 자리가 제목 띠라 그리지 않는다
-  chTip(ch) { return tipLines('도전', [challengeText(ch), CHALLENGE_TEXT.reward(ch.reward), CHALLENGE_TEXT.note]); }
+  // 말풍선: 온 조건 · 상금(「이기는 데는 필요 없다」는 옆 낱말 상자가 말한다)
+  chTip(ch) { return tipLines('도전', [challengeText(ch), CHALLENGE_TEXT.reward(ch.reward)]); }
   // 반짝 세기(1 → 0): 콤보 중에 조건이 채워진 순간 · 이룬 순간부터 0.8초
   chGlow() {
     const k = this.chFlash != null ? (this.app.time - this.chFlash) / 0.8 : 9;
@@ -2254,10 +2257,11 @@ export class BattleScreen {
     }
     return pv.chal;
   }
-  drawChallenge(ctx, ui) {
+  // 그린 띠를 돌려준다(누르는 구역은 판 칸 구역 뒤에 — draw)
+  drawChallenge(ctx) {
     const B = this.chBand();
-    if (!B) return;
-    const app = this.app, v = this.view, { ch, done, pv, x, y, w, h } = B;
+    if (!B) return null;
+    const app = this.app, v = this.view, { done, pv, x, y, w, h } = B;
     const met = !!v.chMet, gl = this.chGlow(), want = !!(pv && pv.met);
     // 진행 수가 오른 순간 한 번 밝아진다(점수 칸과 같은 0.45초)
     const up = v.chProg ? this.pulseAt('chal', v.chProg.have, app.time) : 0;
@@ -2266,7 +2270,6 @@ export class BattleScreen {
     if (want) { motion(); glow(ctx, x, y, w, h, PAL.gold, 0.25 + 0.2 * Math.sin(app.time * 6), 6); }
     rrect(ctx, x, y + 2, w, h, R_SM, PAL.drop);
     box(ctx, x, y, w, h, PAL.feltDk, done || met || want ? PAL.gold : PAL.frameDk, { r: R_SM });
-    ui.region('challenge', x, y, w, h, { tip: () => this.chTip(ch), keys: [{ id: 'challenge' }] });
     let cx = x + SP.xs;
     if (done) cx += this.chStamp(ctx, cx, y + SP.xs) + SP.s;
     else {
@@ -2284,6 +2287,7 @@ export class BattleScreen {
       text(ctx, B.tail, tx, ty, col, { align: 'right', bold: true, alpha: want ? 0.65 + 0.35 * Math.sin(app.time * 6) : 1 });
     }
     closeBox();
+    return B;
   }
   // 아래 칸 줄(판넬 없이): 수 · 희생(둥근 구슬) → 시계 → 상금 → 덱. 이름표는 왼쪽, 값은 오른쪽 끝
   drawFootRows(ctx, ui, lay = this.leftLayout()) {
