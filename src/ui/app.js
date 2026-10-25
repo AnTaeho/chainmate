@@ -10,10 +10,10 @@ import { createDailyRun } from '../sim/daily.js';
 import { PAL, setTheme, addLook, lightFill } from '../render/palette.js';
 import { W, H, text, box, rect, dot, lift, fine, measure } from '../render/gfx.js';
 import { wrap, textGen } from '../render/text.js';
-import { LINE, BTN_S, LIST_GAP, inkY } from './frame.js';
+import { LINE, BTN_S, LIST_GAP, SP, inkY } from './frame.js';
 import { UI, tooltip, bigTooltip, tipHeight, tipTexts, fingerDots } from './ui.js';
 import { miniShard } from './parts.js';
-import { setLang, getLang } from './lang.js';
+import { setLang, getLang, L } from './lang.js';
 import { termsIn, keyList, keyHeight, drawKeyBox } from './glossary.js';
 import { placeNotes, noteMode, noteWidth, NOTE_GAP } from './placement.js';
 import { familyCounts, THRESHOLDS, levelOf } from '../data/families.js';
@@ -384,11 +384,28 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       },
     });
   };
-  const achvSpot = () => (!app.overlay && app.screen && app.screen.achvSpot ? app.screen.achvSpot() : null);
-  app.toast = (msg, col = PAL.ink, dur = 2.2) => {
+  // 덮개 화면(막간 상자 — coverBox)의 업적 자리: 상자 위 빈 줄 → 상자 아래 빈 줄 → 왼쪽 빈 칸(낱말 단위로 접는다) → 자리가 없으면 다음 화면까지 기다린다(hold).
+  // solo: 다른 알림(위 가운데)이 사라진 뒤에 띄운다(대국에서 넘어온 「도전을 이뤘어요」와 같은 자리)
+  const SIDE_MIN = 96; // 왼쪽 빈 칸이 이보다 좁으면 낱말 하나씩 세 줄 넘게 접힌다
+  const coverSpot = (b) => {
+    if (!b) return { hold: true };
+    const th = BTN_S + 2, need = th + SP.s * 2, below = H - b.y - b.h, side = b.x - SP.m * 2; // 알림 높이 + 그림자 2
+    if (b.y >= need) return { cx: W / 2, w: W - SP.m * 2, y: Math.round((b.y - th) / 2), solo: true };
+    if (below >= need) return { cx: W / 2, w: W - SP.m * 2, y: b.y + b.h + Math.round((below - th) / 2), solo: true };
+    if (side >= SIDE_MIN) return { cx: SP.m + Math.round(side / 2), w: side, y: b.y, wrap: true, solo: true };
+    return { hold: true };
+  };
+  const achvSpot = () => {
+    const s = !app.overlay && app.screen;
+    if (!s) return null;
+    if (s.achvSpot) return s.achvSpot();
+    return s.coverBox ? coverSpot(s.coverBox()) : null;
+  };
+  // 알림이 셋을 넘으면 가장 오래된 것을 버린다 — 업적 알림은 버리지 않는다(업적 줄은 한 번에 하나라 늘 남는 것이 있다)
+  app.toast = (msg, col = PAL.ink, dur = 2.2, { achv = false } = {}) => {
     app.invalidate();
-    app.toasts.push({ msg, col, t: 0, life: dur });
-    if (app.toasts.length > 3) app.toasts.shift();
+    app.toasts.push({ msg, col, t: 0, life: dur, achv });
+    if (app.toasts.length > 3) { const i = app.toasts.findIndex((t) => !t.achv); app.toasts.splice(Math.max(0, i), 1); }
   };
   app.sfx = (name, arg) => { if (app.audio) app.audio.play(name, arg); };
 
@@ -437,12 +454,16 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (app.clockFx) { app.clockFx.t += dt; if (app.clockFx.t > 2.4) app.clockFx = null; } // 시계 칸을 잃는 깜빡임(common.js clockPips)
     app.ui.time = app.time;
     const sp = app.speed();
-    // 업적 알림: 대국 연출(busy) · 덮개 · 멈칫이 없을 때 하나씩, 사이 0.8초(금빛 알림 + 팡파르).
-    // 화면이 업적 자리(achvSpot — 대국은 판 위 한 줄)를 주면 앞 업적 알림이 사라진 뒤에 띄운다(쌓이면 판을 덮는다). hold면 그 자리 알림을 멈춰 숨긴다
+    // 업적 알림: 대국 연출(busy) · 덮개 · 멈칫이 없을 때 하나씩, 사이 0.8초(금빛 알림 + 팡파르). 앞 업적 알림이 사라진 뒤에 띄운다(쌓이면 판 · 상자를 덮는다).
+    // 화면이 업적 자리(achvSpot — 대국은 판 위 한 줄, 막간 상자는 coverSpot)를 주면 그 자리에. hold면 그 자리 알림을 멈춰 숨기고, drop이면 걷는다(대국 도전 띠를 돌려놓는다)
     const as = achvSpot();
-    if (app.achvQueue.length && app.time >= app.achvAt && !app.overlay && !(app.hitstopT > 0) && !(app.screen && app.screen.busy) && !(as && (as.hold || app.toasts.some((t) => t.achv)))) {
-      const a = ACHIEVEMENT_BY_ID[app.achvQueue.shift()];
-      if (a) { app.toast(`업적 · ${a.name}`, PAL.gold, 3); app.toasts[app.toasts.length - 1].achv = true; app.sfx('fanfare'); }
+    if (as && as.drop && app.toasts.some((t) => t.achv)) { app.toasts = app.toasts.filter((t) => !t.achv); app.invalidate(); }
+    // 좁은 자리(wrap)는 낱말 하나라도 그 폭을 넘으면 기다린다(낱말 가운데서 끊지 않는다)
+    const achvMsg = (id) => (ACHIEVEMENT_BY_ID[id] ? `업적 · ${ACHIEVEMENT_BY_ID[id].name}` : '');
+    const fits = (msg) => !(as && as.wrap) || L(msg).split(' ').every((x) => measure(x, true) <= as.w - 16);
+    if (app.achvQueue.length && app.time >= app.achvAt && !app.overlay && !(app.hitstopT > 0) && !(app.screen && app.screen.busy) && !(as && as.hold) && !(as && as.solo && app.toasts.length) && !app.toasts.some((t) => t.achv) && fits(achvMsg(app.achvQueue[0]))) {
+      const msg = achvMsg(app.achvQueue.shift());
+      if (msg) { app.toast(msg, PAL.gold, 3, { achv: true }); app.sfx('fanfare'); }
       app.achvAt = app.time + 0.8;
     }
     for (const t of app.toasts) if (!(as && as.hold && t.achv)) t.t += dt;
@@ -502,12 +523,15 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const rest = achvT ? app.toasts.filter((t) => t !== achvT) : app.toasts;
     app.toastRects = [];
     if (achvT && !aspot.hold) {
-      const w = Math.min(aspot.w, measure(achvT.msg, true) + 16), x = Math.round(aspot.cx - w / 2), y = aspot.y;
-      app.toastRects.push({ x, y, w, h: BTN_S });
+      // 좁은 자리(wrap — 막간 상자 왼쪽 빈 칸)는 낱말 단위로 접는다
+      const lines = aspot.wrap ? wrap(achvT.msg, aspot.w - 16, true) : [achvT.msg];
+      const w = Math.min(aspot.w, Math.max(...lines.map((l) => measure(l, true))) + 16), h = BTN_S + (lines.length - 1) * LINE;
+      const x = Math.round(aspot.cx - w / 2), y = aspot.y;
+      app.toastRects.push({ x, y, w, h });
       ctx.globalAlpha = Math.max(0, Math.min(1, achvT.t * 8, (achvT.life - achvT.t) * 4));
-      openBox('edge', x, y, w, BTN_S, 1, { name: '알림', r: TOAST_R });
-      const ink = toastPill(ctx, x, y, w, BTN_S, achvT.col);
-      text(ctx, achvT.msg, aspot.cx, inkY(y, BTN_S), ink, { align: 'center', bold: true });
+      openBox('edge', x, y, w, h, 1, { name: '알림', r: TOAST_R });
+      const ink = toastPill(ctx, x, y, w, h, achvT.col);
+      lines.forEach((l, k) => text(ctx, l, aspot.cx, inkY(y, BTN_S) + k * LINE, ink, { align: 'center', bold: true }));
       closeBox();
       ctx.globalAlpha = 1;
     }

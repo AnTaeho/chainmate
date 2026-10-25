@@ -86,6 +86,8 @@ export class ChestScreen {
     // 칸을 가리키면 그 아래에 낱말 상자가 뜬다(받은 것 줄은 접힌다) — 「계속」 위에 그 자리를 남긴다
     return { reel, count, items, big, h: Math.max(f.y, CELL.h + TIP_ROOM) };
   }
+  // 업적 알림이 피할 상자(app.js coverSpot — 지난 그림의 자리, 그리기 전에는 기다린다)
+  coverBox() { return this.cover || null; }
   draw(ctx, ui) {
     const c = this.chest, B = this.body();
     // 다섯 칸 · 세 칸의 금빛 번쩍임은 상자 둘레에(상자 · 단추는 덮지 않는다)
@@ -93,6 +95,7 @@ export class ChestScreen {
     if (fl) { ctx.globalAlpha = fl.a; rect(ctx, 0, 0, W, H, fl.col); ctx.globalAlpha = 1; }
     const w = REEL_W + INTER.pad * 2, x = Math.floor((W - w) / 2);
     const y = Math.floor((H - interludeLayout(B.h).h) / 2);
+    this.cover = { x, y, w, h: interludeLayout(B.h).h };
     const done = this.stopped >= c.cells.length;
     // 받은 것 줄은 칸을 가리키는 동안 접는다 — 그 칸의 설명이 바로 아래에 같은 것을 말한다(CHM-34)
     const pointing = ui.hover && ui.hover.id.startsWith('chest:cell:');

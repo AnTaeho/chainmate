@@ -111,6 +111,8 @@ export class LegendScreen {
   }
   // 가운데 이야기 칸: 판 오른쪽 SP.l부터 격언 칸 왼쪽 SP.l까지
   storyCol() { const x0 = MX + Q * 8 + FR + INTER.pad, x1 = LEGEND_RX - INTER.pad; return { cx: (x0 + x1) >> 1, w: x1 - x0 }; }
+  // 업적 알림: 상자가 화면을 다 써서 자리가 없다 — 다음 화면까지 기다린다(app.js coverSpot)
+  coverBox() { return BOX; }
   draw(ctx, ui) {
     const l = this.l, t = this.t;
     // 멈춤: 금빛 번쩍(여백 판도 같이) — 상자 둘레에

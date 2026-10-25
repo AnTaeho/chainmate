@@ -85,6 +85,8 @@ export class AwakenScreen {
       ctx.globalAlpha = 1;
     }
   }
+  // 업적 알림이 피할 상자(app.js coverSpot — 지난 그림의 자리, 그리기 전에는 기다린다)
+  coverBox() { return this.cover || null; }
   draw(ctx, ui) {
     const t = this.t, done = t >= DONE;
     // 막간 상자: 제목 → 큰 카드 → 이름 · 각성 한 줄 · 어디서 → 계속
@@ -98,6 +100,7 @@ export class AwakenScreen {
     const awakeY = L1.awake.map(() => f.line());
     const fromY = L1.from ? f.line() : null;
     const bodyH = f.y, h = interludeLayout(bodyH).h, x = Math.floor((W - w) / 2), y = Math.floor((H - h) / 2);
+    this.cover = { x, y, w, h };
     const a = done ? 1 : Math.max(0, Math.min(1, (t - BURST) / 0.4));
     interlude(ctx, ui, x, y, w, bodyH, (c, bx, by, bw) => {
       const cx = bx + (bw >> 1);

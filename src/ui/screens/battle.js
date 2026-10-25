@@ -369,8 +369,16 @@ export class BattleScreen {
     return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: Math.min(BY + S * 8 - 4, this.nextLabelY() - 3), top };
   }
   // 업적 알림 자리: 판 위 한 줄(왼쪽 · 오른쪽 칸 사이 — 판 칸을 덮지 않는다). 복기 갈림길 카드가 떠 있으면 알림 자리(toastSpot).
-  // 콤보 평가 도장(BY + 4)이 떠 있는 동안은 자리가 겹쳐 멈춰 숨긴다(hold)
-  achvSpot() { return this.rv ? null : { cx: BX + (S * 8) / 2, w: RX - LX - LW - SP.s * 2, y: SP.s, hold: !!this.stamp }; }
+  // 콤보 평가 도장(BY + 4)이 떠 있는 동안은 자리가 겹쳐 멈춰 숨긴다(hold). 도전 띠가 있으면 띠 자리(윗변 1)를 빌리고, 수를 두면 걷는다(drop)
+  achvSpot() {
+    if (this.rv) return null;
+    const band = this.hasBand();
+    return { cx: BX + (S * 8) / 2, w: RX - LX - LW - SP.s * 2, y: band ? 1 : SP.s, hold: !!this.stamp, drop: band && this.busy };
+  }
+  // 도전 띠를 그리는 대국인가(chBand와 같은 조건 — 미리 보기를 재지 않는다)
+  hasBand() { return this.src.kind === 'run' && !this.rv && !!this.run && !!this.b.challenge; }
+  // 업적 알림이 띠 자리에 떠 있나(그동안 띠 · 띠 구역 · 띠 안내는 쉰다)
+  achvOnBand() { return this.hasBand() && !this.stamp && this.app.toasts.some((t) => t.achv); }
   nextLabelY() { return nextColumn(this.rightLayout(this.run)).labelY; }
   // 대국 시작 띠의 자리(drawOver · toastSpot). 명인 띠: 이름(두 배, 초상 왼쪽 146에 안 들어가면 한 배) → 묶음 틈 → 규칙 글(줄마다 LINE) — 띠 높이는 글에 맞춘다(초상 64 이상)
   bannerBox() {
@@ -1434,7 +1442,7 @@ export class BattleScreen {
 
   // ── 그리기
   draw(ctx, ui) {
-    const band = this.drawChallenge(ctx);
+    const band = this.achvOnBand() ? null : this.drawChallenge(ctx);
     this.drawBoard(ctx, ui);
     // 도전 띠 구역은 판 칸 구역 뒤에 쌓는다(뒷줄 칸 구역이 기물 머리만큼 띠 아래쪽으로 올라온다 — 나중 구역이 먼저 눌린다)
     if (band) ui.region('challenge', band.x, band.y, band.w, band.h, { tip: () => this.chTip(band.ch), keys: [{ id: 'challenge' }] });
@@ -1512,7 +1520,7 @@ export class BattleScreen {
     const nb = v.hand.findIndex((p) => (v.drawn || []).includes(p.id));
     if (nb >= 0) hint(app, 'brilliant', `hand:${nb}`);
     // 대국 도전: 처음 도전이 붙은 대국에서 판 위 띠를 가리킨다
-    if (this.chBand()) hint(app, 'challenge', 'challenge');
+    if (this.chBand() && !this.achvOnBand()) hint(app, 'challenge', 'challenge');
     const ghost = (b.incoming || []).find((r) => !v.board[r.sq] && !isHidden(b, r.sq));
     if (ghost) hint(app, 'incoming', `sq:${ghost.sq}`);
     const find = (f) => v.board.findIndex((c, sq) => c && !c.mine && !isHidden(b, sq) && f(c));

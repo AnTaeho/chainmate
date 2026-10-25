@@ -90,6 +90,8 @@ export class RewardScreen {
     const w = Math.max(240, segW(this.scoreSegs()) + INTER.pad * 2 + SP.m * 2, stamp ? measure(title, true) * 2 + (sw + INTER.pad + SP.m) * 2 : 0);
     return { lay, body, title, stamp, sw, w, h: lay.h, x: Math.floor((W - w) / 2), y: Math.floor((270 - lay.h) / 2) };
   }
+  // 업적 알림이 피할 상자(app.js coverSpot)
+  coverBox() { const g = this.geom(); return { x: g.x, y: g.y, w: g.w, h: g.h }; }
   draw(ctx, ui) {
     const app = this.app, last = this.last;
     const { body: B, title, stamp, sw, w, x, y } = this.geom();

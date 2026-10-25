@@ -229,6 +229,42 @@ test('앱: 판을 두면 업적이 받히고 · 알림은 대국이 바쁘지 �
   assert.match(app.toasts.at(-1).msg, /^업적 · /);
   app.update(0.3);
   assert.equal(app.toasts.filter((t) => t.achv).length, 1, '사이를 둔다');
-  for (let i = 0; i < queued.length * 10; i++) app.update(0.1); // 한 프레임은 0.1초까지
+  // 어느 화면에서든 한 번에 하나: 앞 알림(3초)이 사라진 뒤에 다음
+  for (let i = 0; i < queued.length * 40; i++) { app.update(0.1); assert.ok(app.toasts.filter((t) => t.achv).length <= 1, '한 번에 하나'); } // 한 프레임은 0.1초까지
   assert.equal(app.achvQueue.length, 0);
+});
+
+test('앱: 알림이 셋을 넘어도 업적 알림은 버리지 않는다 · 덮개 화면은 상자를 피한다 · 도전 띠 대국은 수를 두면 걷는다', () => {
+  const app = makeApp();
+  app.toasts.length = 0; app.achvQueue.length = 0;
+  app.screen = { busy: false, draw() {}, name: 'shop' };
+  app.achvQueue.push('combo3');
+  app.update(0.01);
+  for (let i = 0; i < 5; i++) app.toast(`알림 ${i}`);
+  assert.equal(app.toasts.length, 3);
+  assert.equal(app.toasts.filter((t) => t.achv).length, 1, '업적 알림이 남는다');
+  // 덮개 화면: 상자 위 빈 줄이 있으면 다른 알림이 사라진 뒤에 상자 위에, 좁으면 왼쪽 빈 칸, 그것도 없으면 기다린다
+  app.toasts.length = 0; app.achvQueue.push('mate1'); app.achvAt = 0;
+  app.screen = { busy: false, draw() {}, name: 'reward', coverBox: () => ({ x: 120, y: 38, w: 240, h: 194 }) };
+  app.toast('도전을 이뤘어요');
+  app.update(0.01);
+  assert.equal(app.toasts.filter((t) => t.achv).length, 0, '위 가운데 알림이 있는 동안 기다린다');
+  for (let i = 0; i < 30 && !app.toasts.some((t) => t.achv); i++) app.update(0.1);
+  app.draw();
+  const r = app.toastRects.at(-1);
+  assert.ok(r.y + r.h + 2 <= 38 && r.y >= 4, `상자 위 ${JSON.stringify(r)}`);
+  app.toasts.length = 0; app.achvQueue.push('combo8'); app.achvAt = 0;
+  app.screen.coverBox = () => ({ x: 10, y: 10, w: 460, h: 250 });
+  for (let i = 0; i < 10; i++) app.update(0.1);
+  assert.equal(app.toasts.filter((t) => t.achv).length, 0, '자리가 없으면 기다린다');
+  app.achvQueue.length = 0;
+  // 도전 띠 자리(achvSpot drop): 화면이 바빠지면 업적 알림을 걷는다
+  app.toasts.length = 0; app.achvAt = 0; app.achvQueue.push('forms5');
+  const scr = { busy: false, draw() {}, name: 'battle', achvSpot: () => ({ cx: 240, w: 232, y: 1, hold: false, drop: scr.busy }) };
+  app.screen = scr;
+  app.update(0.01);
+  assert.equal(app.toasts.filter((t) => t.achv).length, 1);
+  scr.busy = true;
+  app.update(0.01);
+  assert.equal(app.toasts.filter((t) => t.achv).length, 0, '수를 두면 걷힌다');
 });
