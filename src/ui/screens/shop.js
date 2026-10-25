@@ -495,8 +495,9 @@ export class ShopScreen {
       const mx = run.maxims[m.index];
       const spot = this.col && this.col.spots.find((s) => s.i === m.index);
       if (!mx || !spot) { this.menu = null; return; }
-      // 팔기 단추: 고른 격언 칸 위에 겹쳐 오른끝(그 칸의 그림 자리 — 진열 카드의 딱지 · 값은 가리지 않는다)
-      const label = `팔기 $${sellPrice(mx)}`, w = btnW(label), x = RX + RW - SP.s - w, y = spot.y + ((spot.h - BTN_H) >> 1);
+      // 팔기 단추: 격언 칸 왼쪽, 고른 칸 높이 가운데. 고른 칸은 덮지 않아(다시 누르면 닫힌다), 진열 카드 위 딱지 · 값 줄 아래로만 내려선다
+      const band = TOP + SP.s + Math.max(0, ...run.shop.display.map((it) => PAD_CARD + itemCardLayout(it, CARD_W, { run, hold: true }).kinds.length * LINE));
+      const label = `팔기 $${sellPrice(mx)}`, w = btnW(label), x = RX - SP.s - w, y = Math.max(band, spot.y + ((spot.h - BTN_H) >> 1));
       openBox('tile', x, y, w, BTN_H, 0, { overlay: true, name: '팔기' });
       if (canSell(mx)) button(ctx, ui, 'shop:sell', x, y, w, BTN_H, label, { onClick: () => { this.menu = null; this.act({ type: 'sell', index: m.index }, 'coin'); }, tone: 'red' });
       closeBox();
