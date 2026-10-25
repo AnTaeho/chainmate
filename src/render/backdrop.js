@@ -40,12 +40,15 @@ const SCENE_M = 8;
 let sceneCv = null, sceneKey = null;
 export const padStats = { sceneMs: 0 };
 function scenePad(pad, scene) {
-  const key = `${scene.key}|${pad.cols}x${pad.rows}@${pad.ox},${pad.oy}`;
+  const s = pad.s || 1;
+  const key = `${scene.key}|${pad.cols}x${pad.rows}@${pad.ox},${pad.oy}|${s}`;
   if (sceneCv && sceneKey === key) return sceneCv;
   const t0 = globalThis.performance ? performance.now() : 0;
-  sceneCv = makeCanvas(pad.cols + 2 * SCENE_M, pad.rows + 2 * SCENE_M);
+  // 꽉 채움(pad.s가 소수): 장면도 여백 판 해상도로 칠한다 — 도트 해상도 그림을 소수 배로 늘리면 도트가 2 · 3 화소로 들쭉날쭉하다
+  sceneCv = makeCanvas(Math.ceil((pad.cols + 2 * SCENE_M) * s), Math.ceil((pad.rows + 2 * SCENE_M) * s));
   const g = context(sceneCv);
   g.imageSmoothingEnabled = false;
+  if (s !== 1) g.setTransform(s, 0, 0, s, 0, 0);
   scene.paint(g, -pad.ox - SCENE_M, -pad.oy - SCENE_M, pad.cols + 2 * SCENE_M, pad.rows + 2 * SCENE_M);
   sceneKey = key;
   padStats.sceneMs = globalThis.performance ? performance.now() - t0 : 0;
@@ -54,7 +57,8 @@ function scenePad(pad, scene) {
 function drawScene(ctx, pad, scene) {
   const live = scene.live || null;
   const [dx, dy] = (live && live.shake) || [0, 0];
-  ctx.drawImage(scenePad(pad, scene), dx - SCENE_M, dy - SCENE_M);
+  const sc = scenePad(pad, scene), s = pad.s || 1;
+  ctx.drawImage(sc, dx - SCENE_M, dy - SCENE_M, sc.width / s, sc.height / s);
   if (!live) return;
   if (live.draw) {
     ctx.save();
@@ -72,12 +76,15 @@ export function drawPad(canvas, pad, s) {
   const t = flowTime(s.time || 0);
   const fl = s.flash && s.flash.a > 0 ? s.flash : null;
   const key = `${pad.cols}x${pad.rows}@${pad.ox},${pad.oy}|${s.scene ? `scene:${s.scene.key}:${s.scene.live ? s.scene.live.key : ''}` : `${t}|${s.tint}`}|${fl ? `${fl.col}@${fl.a.toFixed(3)}` : ''}|${s.dim || 0}`;
-  if (key === lastKey && canvas.width === pad.cols && canvas.height === pad.rows) return false;
+  // 꽉 채움(fit.js placeFill): 여백 판 캔버스는 뒷면 해상도(pad.dev), 도트 좌표는 변환으로 그 화소에 놓는다
+  const dev = pad.dev || null, cw = dev ? dev.w : pad.cols, ch = dev ? dev.h : pad.rows;
+  if (key === lastKey && canvas.width === cw && canvas.height === ch) return false;
   lastKey = key;
-  if (canvas.width !== pad.cols) canvas.width = pad.cols;
-  if (canvas.height !== pad.rows) canvas.height = pad.rows;
+  if (canvas.width !== cw) canvas.width = cw;
+  if (canvas.height !== ch) canvas.height = ch;
   const ctx = canvas.getContext('2d');
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (dev) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch); ctx.setTransform(pad.s, 0, 0, pad.s, dev.tx, dev.ty); }
+  else ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = false;
   ctx.globalAlpha = 1;
   if (s.scene) drawScene(ctx, pad, s.scene);

@@ -86,11 +86,13 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   LOOK.calm = app.reducedMotion;
   // 뒷면 캔버스 배율(main.js fit이 정한다). 캔버스 크기를 바꾸면 그리기 상태가 풀리므로 draw마다 setTransform
   app.scale = 1;
+  // 꽉 채움(fit.js chooseFit fill)이면 n이 소수(1/30 칸)다 — 뒷면이 기기 화소와 1:1(480n × 270n이 정수)
   app.setScale = (n) => {
-    n = Math.max(1, Math.floor(n) || 1);
+    n = n >= 1 ? (Number.isInteger(n) ? n : Math.round(n * 1000) / 1000) : 1;
     app.scale = n; LOOK.n = n;
-    if (canvas.width !== W * n) canvas.width = W * n;
-    if (canvas.height !== H * n) canvas.height = H * n;
+    const cw = Math.round(W * n), ch = Math.round(H * n);
+    if (canvas.width !== cw) canvas.width = cw;
+    if (canvas.height !== ch) canvas.height = ch;
     app.invalidate(); // 캔버스 크기를 바꾸면 그림이 지워진다 · 손가락 구역도 다시 잰다
   };
   // 모습(layout.md 27절): 판 안 화면은 그 관 세력의 모습(상자 면 · 판 어두운 칸 · 흐르는 얼룩), 판 밖 화면 · 수업 · scratch 판은 남색 기본.

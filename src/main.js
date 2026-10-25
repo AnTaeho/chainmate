@@ -74,6 +74,11 @@ export async function boot(env = {}) {
   };
 
   let app = null, fit = null, pendingScale = 1;
+  // 화면 맞춤 방식(layout.md 「화면 맞춤」): 'int' 정수 배율(기본) · 'fill' 꽉 채움(소수 배율, fit.js chooseFit fill).
+  // 주소 ?fit=fill|int가 설정(settings.fit)보다 앞선다. ?fitcap=N은 꽉 채움 뒷면 배율 상한(시험용)
+  const query = (() => { try { return new URLSearchParams((win.location && win.location.search) || ''); } catch { return null; } })();
+  const fitMode = () => (query && query.get('fit')) || (app && app.settings.fit) || 'int';
+  const fitCap = query && Number(query.get('fitcap')) > 0 ? Number(query.get('fitcap')) : undefined;
   // 글자 입력 칸(CHM-72, src/ui/textfield.js): 캔버스 위에 겹치는 아이디 · 비번 칸. 가짜 DOM에 body가 없으면 값만 드는 가짜가 된다
   const fields = createFields({ doc, win, canvas, rot: () => !!(fit && fit.rot), safeTop: () => { const i = inset(); return i ? i.top : 0; } });
   // 입력 칸에 초점이 있는 동안에는 창이 줄어도(폰 키보드) 화면을 다시 맞추지 않는다 — 키보드 위 좁은 띠에 맞추면 글이 읽히지 않는다.
@@ -94,7 +99,7 @@ export async function boot(env = {}) {
   function refit(force = false) {
     if (!force && fit && fields.focused()) { liftStage(); return; }
     const { vw, vh, full } = viewport();
-    fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: coarse() });
+    fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: coarse(), fill: fitMode() === 'fill', cap: fitCap });
     // 화면 글 12px가 몇 배로 보이나(CSS 화소). 작은 창에서 처음 안내가 큰 글자를 권한다
     if (app) { app.pixelScale = fit.css; app.coarse = coarse(); }
     const c = fit.canvas;
@@ -236,6 +241,8 @@ export async function boot(env = {}) {
   // GPU가 캔버스를 잃었다 되찾으면 빈 캔버스다
   if (canvas.addEventListener) canvas.addEventListener('contextrestored', () => app.invalidate());
   app.setScale(pendingScale);
+  // 설정에서 화면 맞춤을 바꾸면 곧바로 다시 맞춘다
+  app.refit = () => refit(true);
   refit();
   tel.open();
   rank.open();
