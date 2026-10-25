@@ -1,5 +1,5 @@
 // 대국 판의 투영(안 3, docs/design-notes/art3.md 3절): 칸 (f, r)과 화면 자리를 잇는다. 화면은 이 모듈의 project · unproject · 칸 경로 · 뒤에서 앞 차례만 쓴다.
-// 손잡이는 VIEW.name 하나(diamond · shallow · flat, 지금은 정면 shallow) — 바꾸면 판 · 누르기 · 연출이 같이 따라간다. DOM 없이 돈다(연기 시험의 가짜 캔버스).
+// 손잡이는 VIEW.name 하나(diamond · shallow · flat, 지금은 네모 칸 flat) — 바꾸면 판 · 누르기 · 연출이 같이 따라간다. DOM 없이 돈다(연기 시험의 가짜 캔버스).
 import { PAL } from './palette.js';
 import { makeCanvas, context } from './surface.js';
 import { LOOK, snap } from './look.js';
@@ -11,9 +11,9 @@ import { textGen } from './text.js';
 export const VIEWS = {
   diamond: { rot: 45, tilt: 0.786 },
   shallow: { rot: 0, tilt: 0.72, w: 200, bottom: 206, rank: 0.45 },
-  flat: { rot: 0, tilt: 1 },
+  flat: { rot: 0, tilt: 1, w: 160, bottom: 203 }, // 칸 20 × 20: 좌표 · 뒷줄 기물 머리 · 판 밑 손 부채가 다 들어가는 가장 큰 네모
 };
-export const VIEW = { name: 'shallow' };
+export const VIEW = { name: 'flat' };
 // 판이 들어갈 자리(대국 화면의 판 자리 — battle.js BX · BY · S × 8과 같다)
 export const AREA = { x: 128, y: 14, w: 224, h: 224 };
 export const DEPTH = 5;     // 판 두께
@@ -86,19 +86,21 @@ export function unproject(x, y) {
 // 칸 bbox(바닥 칸만)
 export const sqBox = (sq) => projectSq(sq).box;
 
-// ── 누르기: 기물 · 사물이 선 칸은 그 몸 상자(가운데 ±BODY_W, 위로 몸 높이, 아래로 BODY_DOWN)도 가진다.
+// ── 누르기: 기물 · 사물이 선 칸은 그 몸 상자(가운데 ±bodyW, 위로 몸 높이, 아래로 BODY_DOWN)도 가진다.
 // 기물은 모든 바닥 위에 그리니 몸이 바닥을 이기고, 몸끼리는 앞(그리는 차례 뒤)이 이긴다. 빈 칸은 바닥 칸
 export const BODY_W = 11, BODY_DOWN = 2;
+// 몸 반폭: 칸이 좁으면(flat 칸 20) 반 칸까지 — 옆 칸 몸과 겹치지 않게
+export const bodyW = (g = geo()) => Math.min(BODY_W, Math.floor(g.hw));
 // 사물의 몸 높이: 벽은 들인 윗면 꼭짓점까지, 보석은 윗면 띠까지
 export function thingTop(t, g = geo()) { return t === 'X' ? Math.ceil(WALL.h + g.hh * WALL.inset) : 15; }
 // topOf(sq) → 그 칸 몸 높이(0이면 빈 칸). 돌려주는 것: (x, y) → 칸(판 밖이면 null)
 export function picker(topOf) {
-  const g = geo(), tops = new Array(64), cx = new Array(64), cy = new Array(64);
+  const g = geo(), bw = bodyW(g), tops = new Array(64), cx = new Array(64), cy = new Array(64);
   for (let sq = 0; sq < 64; sq++) { const c = center(sq); tops[sq] = topOf(sq) || 0; cx[sq] = c.x; cy[sq] = c.y; }
   return (x, y) => {
     for (let i = 63; i >= 0; i--) {
       const sq = g.order[i], h = tops[sq];
-      if (h && x >= cx[sq] - BODY_W && x < cx[sq] + BODY_W && y >= cy[sq] - h && y < cy[sq] + BODY_DOWN) return sq;
+      if (h && x >= cx[sq] - bw && x < cx[sq] + bw && y >= cy[sq] - h && y < cy[sq] + BODY_DOWN) return sq;
     }
     return unproject(x, y);
   };
