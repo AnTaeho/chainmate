@@ -136,13 +136,16 @@ async function openPage(cfg, { touch }) {
     });
   }, cfg.emu);
   await page.addInitScript(() => { localStorage.clear(); localStorage.setItem('chainmate.settings.v1', JSON.stringify({ volume: 0, music: 0, lang: 'ko', telemetry: false })); });
-  await page.goto(`http://127.0.0.1:${PORT}/index.html?fit=${cfg.fit}`);
-  await page.evaluate(async (today) => {
-    const m = await import('/src/main.js');
-    m.boot({ rankBase: '', today: () => today });
-    window.__toClient = (await import('/src/ui/fit.js')).toClient;
-  }, TODAY);
-  await page.waitForFunction(() => window.__app && window.__raf, null, { timeout: 180000 }); // 여러 판을 함께 돌리면 첫 모듈 받기가 느리다
+  // 여러 판을 함께 돌리면 첫 받기(모듈 · 글꼴)가 멈출 때가 있다 — 90초 안에 첫 그림이 없으면 다시 연다(세 번까지)
+  for (let tries = 0; ; tries++) {
+    await page.goto(`http://127.0.0.1:${PORT}/index.html?fit=${cfg.fit}`);
+    await page.evaluate(async (today) => {
+      const m = await import('/src/main.js');
+      m.boot({ rankBase: '', today: () => today });
+      window.__toClient = (await import('/src/ui/fit.js')).toClient;
+    }, TODAY);
+    try { await page.waitForFunction(() => window.__app && window.__raf, null, { timeout: 90000 }); break; } catch (e) { if (tries >= 2) throw e; console.log(`# 다시 연다(${cfg.w}×${cfg.h} ${cfg.fit})`); }
+  }
   await page.waitForTimeout(300); // 늦춘 다시 맞추기
   await page.evaluate(() => {
     const a = window.__app;
