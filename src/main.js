@@ -99,10 +99,17 @@ export async function boot(env = {}) {
     stage.style.top = up ? `${-up}px` : '';
     fields.layout();
   };
+  // 꽉 채움의 창 끝 비움(fit.js chooseFit gutter): 손가락 기기 브라우저는 창 위 · 아래 끝 누름을 주소창 · 도구 막대가 먹는다(아이폰 사파리 가로).
+  // 홈 화면 앱(주소창 없음)과 마우스 기기는 비우지 않는다
+  const EDGE_GUTTER = 12;
+  const edgeGutter = () => {
+    if (!coarse() || (win.navigator && win.navigator.standalone === true) || media('(display-mode: standalone)') || media('(display-mode: fullscreen)')) return null;
+    return { top: EDGE_GUTTER, bottom: EDGE_GUTTER };
+  };
   function refit(force = false) {
     if (!force && fit && fields.focused()) { liftStage(); return; }
     const { vw, vh, full } = viewport();
-    fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: coarse(), fill: fitMode() === 'fill', cap: fitCap });
+    fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: coarse(), fill: fitMode() === 'fill', cap: fitCap, gutter: edgeGutter() });
     // 화면 글 12px가 몇 배로 보이나(CSS 화소). 작은 창에서 처음 안내가 큰 글자를 권한다
     if (app) { app.pixelScale = fit.css; app.coarse = coarse(); }
     const c = fit.canvas;

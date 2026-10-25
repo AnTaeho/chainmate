@@ -64,3 +64,16 @@ test('소수 배율의 칸 맞춤: 자리 · 오른쪽 끝이 기기 화소, 테
     assert.equal(span(5, 2.4), 2);
   } finally { LOOK.n = keep; }
 });
+
+// 창 끝 비움(gutter): 손가락 기기 브라우저에서 창 위 · 아래 끝 누름을 주소창 · 도구 막대가 먹는다 — 캔버스를 그만큼 안쪽에
+test('꽉 채움 gutter: 캔버스가 창 위 · 아래 끝에서 그만큼 떨어지고, 정수 배율보다 작아지지 않는다 · 정수 배율은 그대로', () => {
+  const g = { top: 12, bottom: 12 };
+  const f = chooseFit({ vw: 734, vh: 343, dpr: 3, coarse: true, fill: true, gutter: g });
+  assert.ok(f.canvas.top >= 12 && f.canvas.top + f.canvas.height <= 343 - 12, JSON.stringify(f.canvas));
+  assert.ok(f.k >= chooseFit({ vw: 734, vh: 343, dpr: 3, coarse: true }).k, `k ${f.k}`);
+  assert.deepEqual(chooseFit({ vw: 734, vh: 343, dpr: 3, coarse: true, gutter: g }), chooseFit({ vw: 734, vh: 343, dpr: 3, coarse: true }));
+  // 돌려 그린 폰 세로: 창의 위 · 아래(돌린 틀의 왼쪽 · 오른쪽)
+  const r = chooseFit({ vw: 393, vh: 659, dpr: 3, coarse: true, fill: true, gutter: g });
+  assert.equal(r.rot, true);
+  assert.ok(r.canvas.left >= 12 && r.canvas.left + r.canvas.width <= 659 - 12, JSON.stringify(r.canvas));
+});
