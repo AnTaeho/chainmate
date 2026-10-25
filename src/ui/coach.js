@@ -6,13 +6,13 @@
 //   말하는 이는 내 편 킹(bubble): 상아 몸 · 금관 킹이 말풍선 머리에서 말하고, 말할 때 살짝 들썩이며 기쁠 때 금관이 반짝인다.
 import { PAL } from '../render/palette.js';
 import { W, H, text, box, rect, rframe, lift, sprite, measure, R_BIG } from '../render/gfx.js';
-import { button } from './ui.js';
+import { buttonRow, rowWidth } from './ui.js';
 import { SW } from '../render/sprites.js';
 import { LOOK, live } from '../render/look.js';
 import { wrap } from '../render/text.js';
 import { L } from './lang.js';
 import { placeBubble, noteMode, noteWidth } from './placement.js';
-import { PAD_BOX, GAP_GROUP, GAP_IN, flow, BTN_S, inkY, textY } from './frame.js';
+import { PAD_BOX, GAP_GROUP, GAP_IN, flow, BTN_H, SP, textY } from './frame.js';
 import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 처음 만나는 것마다 한 줄. 글은 「언제 → 무엇」, 한 문장.
@@ -180,22 +180,29 @@ export function drawCoach(ctx, app) {
 // ok가 있으면 「알겠어」(okLabel), skip이 있으면 「건너뛰기」 단추. joy면 금관이 반짝인다.
 export const KING_HEAD = 18;
 const KING_NAME = '킹';
+// 머리줄 자리: 킹 그림(16×22)은 안 여백보다 2 왼쪽 · 6 위로 솟고, 이름은 그림 오른쪽 2, 가는 줄은 이름 뒤 4 · 머리줄 가운데
+const KING_POS = { dx: -SP.xs, dy: -6, name: SW + SP.xs, rule: SP.s, ruleY: KING_HEAD >> 1 };
+function kingHead(ctx, app, x, y, w, lay, joy, headRight = 0) {
+  const P = PAD_BOX, nw = measure(KING_NAME, true), rx = P + KING_POS.name + nw + KING_POS.rule;
+  drawKing(ctx, app, x + P + KING_POS.dx, y + lay.headTop + KING_POS.dy, { joy });
+  text(ctx, KING_NAME, x + P + KING_POS.name, textY(y + lay.headTop, KING_HEAD), PAL.cardInk, { bold: true });
+  rect(ctx, x + rx, y + lay.headTop + KING_POS.ruleY, w - P - rx - headRight, 1, PAL.cardDim);
+}
 // 말이 바뀐 때(들썩임은 말이 바뀐 뒤 잠깐)
 let talkSay = null, talkT0 = 0;
-// 단추 폭: 글에 맞춘다(글과 테 사이 4 이상)
-export const bubbleBtnW = (label) => Math.max(40, measure(label, true) + 8);
 export function bubbleLayout(say, w, { ok = null, skip = null } = {}) {
   const f = flow(PAD_BOX);
   const headTop = f.space(KING_HEAD);
   f.gap(GAP_IN);
   const lines = wrap(say, w - PAD_BOX * 2);
   const ys = lines.map(() => f.line());
-  // 단추 줄: 「알겠어」 · 「건너뛰기」가 한 줄에 안 들어가면 두 줄(「알겠어」 위)
+  // 단추 줄: 「알겠어」 · 「건너뛰기」는 같은 폭(btnW), 한 줄(사이 8)에 안 들어가면 두 줄(「알겠어」 위)
   const labels = [ok, skip].filter(Boolean);
-  const oneRow = labels.reduce((a, l) => a + bubbleBtnW(l) + 4, -4) <= w - PAD_BOX * 2;
+  const { bw, w: rowW } = rowWidth(labels.map((label) => ({ label })));
+  const oneRow = rowW <= w - PAD_BOX * 2;
   const rows = labels.length ? (oneRow ? [labels] : labels.map((l) => [l])) : [];
-  const rowYs = rows.map((_, k) => (k ? f.gap(GAP_IN) : f.gap(GAP_GROUP)).space(BTN_S));
-  return { lines, ys, headTop, rows, rowYs, h: f.y + PAD_BOX };
+  const rowYs = rows.map((_, k) => (k ? f.gap(GAP_IN) : f.gap(GAP_GROUP)).space(BTN_H));
+  return { lines, ys, headTop, rows, rowYs, bw, h: f.y + PAD_BOX };
 }
 export function drawKing(ctx, app, x, y, { joy = false } = {}) {
   const calm = LOOK.calm;
@@ -260,21 +267,12 @@ export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip =
   }
   const P = PAD_BOX;
   // 머리줄: 킹(16×22, 머리 줄 위로 조금 솟는다) · 이름 · 가는 줄
-  drawKing(ctx, app, x + P - 2, y + lay.headTop - 6, { joy });
-  const nw = measure(KING_NAME, true);
-  text(ctx, KING_NAME, x + P + 18, textY(y + lay.headTop, KING_HEAD), PAL.cardInk, { bold: true });
-  rect(ctx, x + P + 22 + nw, y + lay.headTop + 9, w - P * 2 - 22 - nw, 1, PAL.cardDim);
+  kingHead(ctx, app, x, y, w, lay, joy);
   lay.lines.forEach((l, k) => text(ctx, l, x + P, y + lay.ys[k], PAL.cardInk));
   const act = { [okText]: [ok, 'gold', 'guide:ok'], [skipText]: [skip, 'plain', 'guide:skip'] };
   lay.rows.forEach((row, k) => {
-    const by = y + lay.rowYs[k];
-    let bx = x + w - P;
-    for (const label of row) {
-      const [fn, tone, id] = act[label], bw = bubbleBtnW(label);
-      bx -= bw;
-      button(ctx, ui, id, bx, by, bw, BTN_S, label, { tone, onClick: fn });
-      bx -= 4;
-    }
+    const items = row.map((label) => { const [onClick, tone, id] = act[label]; return { id, label, tone, onClick }; });
+    buttonRow(ctx, ui, items, x + w - P, y + lay.rowYs[k], { anchor: 'right', w: lay.bw });
   });
   closeBox();
 }
@@ -298,10 +296,7 @@ export function kingNote(ctx, app, x, y, w, say, lay, { joy = false, line = null
   openBox('panel', x, y, w, lay.h, PAD_BOX, { name });
   box(ctx, x, y, w, lay.h, PAL.card, PAL.frameDk);
   const P = PAD_BOX;
-  drawKing(ctx, app, x + P - 2, y + lay.headTop - 6, { joy });
-  const nw = measure(KING_NAME, true);
-  text(ctx, KING_NAME, x + P + 18, textY(y + lay.headTop, KING_HEAD), PAL.cardInk, { bold: true });
-  rect(ctx, x + P + 22 + nw, y + lay.headTop + 9, w - P * 2 - 22 - nw - headRight, 1, PAL.cardDim);
+  kingHead(ctx, app, x, y, w, lay, joy, headRight);
   lay.lines.forEach((l, k) => (line ? line(l, x + P, y + lay.ys[k]) : text(ctx, l, x + P, y + lay.ys[k], PAL.cardInk)));
   lay.feet.forEach((l, k) => text(ctx, l, x + w - P, y + lay.fys[k], PAL.cardDim, { align: 'right' }));
   if (inner) inner();
