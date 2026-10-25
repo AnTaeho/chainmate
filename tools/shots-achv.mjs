@@ -64,6 +64,7 @@ async function shot(page, name, { keep = false } = {}) {
 
 // 구역 id의 가운데로 마우스를 옮긴다(말풍선)
 async function hover(page, id) {
+  await page.waitForFunction((id) => !!window.__app.ui.find(id), id, { timeout: 5000 }).catch(() => {});
   const at = await page.evaluate((id) => { const a = window.__app, r = a.ui.find(id), c = a.canvas.getBoundingClientRect(); return r && [c.left + ((r.x + r.w / 2) / 480) * c.width, c.top + ((r.y + r.h / 2) / 270) * c.height]; }, id);
   if (!at) throw new Error(`구역 없음 ${id}`);
   await page.mouse.move(at[0], at[1]);
@@ -123,10 +124,12 @@ for (const lang of ['ko', 'en']) {
   await page.evaluate(() => { const a = window.__app; a.toasts.length = 0; a.toTitle(); a.go('setup'); });
   await hover(page, 'setup:stamp:standard');
   await shot(page, 'stamp-setup-tip-en', { keep: true });
-  await page.evaluate(() => {
-    const a = window.__app; a.newRun({ seed: 33 });
-    const o = a.run.draft.options;
-    a.records.josekiDan = { [o[0]]: 2, [o[2]]: 8 };
+  // 영어 레퍼토리: 셋째를 무지개 카드(가장 긴 등급 글 「Rainbow」)로 바꿔 넣고 셋 모두 도장 2400(그림만 — 규칙 판은 안 쓴다)
+  await page.evaluate(async () => {
+    const a = window.__app, { JOSEKIS } = await import('/src/data/josekis.js');
+    a.newRun({ seed: 33 });
+    a.run.draft.options[2] = JOSEKIS.find((j) => j.tier === 'rainbow').id;
+    a.records.josekiDan = Object.fromEntries(a.run.draft.options.map((id) => [id, 8]));
     a.go('draft');
   });
   await page.waitForTimeout(1600);
