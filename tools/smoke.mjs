@@ -1,5 +1,5 @@
 // 화면 연기 시험: 가짜 캔버스 · 가짜 입력으로 실제 src/main.js를 부팅해, 봇 명령을 화면 누르기로 바꿔 판을 끝까지 돈다.
-//   node tools/smoke.mjs [--seed 3] [--runs 2] [--verbose] [--lang en] [--spacing pad8,line14,…]
+//   node tools/smoke.mjs [--seed 3] [--runs 2] [--verbose] [--lang en] [--spacing pad8,line14,…] [--window 1920x950@2] [--fit fill]
 // 확인: 예외 0 · 모든 화면 방문 · 프레임당 그리기 시간 · 한 수 연출 시간(×1) · 저장 → 이어 하기.
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle, stepBattle } from './bot.mjs';
@@ -36,7 +36,10 @@ if (opt('--spacing', null)) globalThis.__SPACING = opt('--spacing', null);
 const log = (...a) => { if (VERBOSE) console.log(...a); };
 
 globalThis.__CHAINMATE_NO_BOOT__ = true;
-const dom = makeFakeDom({ width: 1366, height: 700, dpr: 1.25 });
+// --window 1920x950@2: 창 크기 · dpr(기본 1366×700 · 1.25), --fit fill: 꽉 채움 배율(주소 ?fit=fill — src/main.js)
+const WIN = (opt('--window', '1366x700@1.25').match(/^(\d+)x(\d+)(?:@([\d.]+))?$/) || []).slice(1).map(Number);
+const dom = makeFakeDom({ width: WIN[0] || 1366, height: WIN[1] || 700, dpr: WIN[2] || 1.25 });
+if (opt('--fit', null)) dom.window.location = { search: `?fit=${opt('--fit', null)}`, hostname: '' };
 globalThis.document = dom.document;
 globalThis.window = dom.window;
 // 기록 보내기(CHM-63): 가짜 fetch · sendBeacon으로 나간 요청을 센다 — 연기 시험에서는 한 건도 나가면 안 된다(보내는 호스트가 아니다)
