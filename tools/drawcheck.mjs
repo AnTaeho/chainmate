@@ -260,6 +260,26 @@ const PLAY = async ({ k, sac = false }) => {
     await h.settle();
     await h.move(240, 200, 1); await h.step(240); // 손이 들썩이는 쉼(2.5초 뒤)
   });
+  // 대국 도전 띠(layout.md 31절): 진행 「2/4」 · 넷째 잡기를 겨누면 깜빡임 · 채운 순간 반짝 · 이룬 뒤 도장(10번 판 「한 콤보에 4번 잡기」)
+  await scene(page, 'battle challenge: progress · preview blink · met flash · stamp', async () => {
+    await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 10; a.newRun(); if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); a.cmd({ type: 'play' }); a.go('battle', { events: [] }); });
+    await h.step(20);
+    await h.hoverAll(/^challenge$/, 20);
+    const line = await h.ev(async () => { const { bestMove, lineCommands } = await import('/src/sim/solver.js'); const r = bestMove(window.__app.run.battle); return [{ type: 'drop', handIndex: r.handIndex, sq: r.sq }, ...lineCommands(r.line)]; });
+    for (let i = 0; i < line.length; i++) {
+      if (i === 4) { await h.hoverAll(new RegExp(`^sq:${line[4].sq}$`), 60); }
+      await h.ev((c) => window.__app.screen.send(c), line[i]);
+      await h.step(i % 2 ? 4 : 30);
+      await h.settle();
+      await h.step(60);
+    }
+    // 20번 판: 첫 수로 이루고 대국이 이어진다 — 알림 · 도장 반짝이 끝날 때까지
+    await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 20; a.newRun(); if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); a.cmd({ type: 'play' }); a.go('battle', { events: [] }); });
+    await h.step(20);
+    const l2 = await h.ev(async () => { const { bestMove, lineCommands } = await import('/src/sim/solver.js'); const r = bestMove(window.__app.run.battle); return [{ type: 'drop', handIndex: r.handIndex, sq: r.sq }, ...lineCommands(r.line)]; });
+    for (const c of l2) { await h.ev((c) => window.__app.screen.send(c), c); await h.step(10); await h.settle(); }
+    await h.move(1, 1, 200);
+  });
   await scene(page, 'battle master intro (1.5s) + banner', async () => { await h.ev(MASTER); await h.move(1, 1, 1); await h.step(300); });
   await scene(page, 'battle master intro tap skip', async () => { await h.ev(MASTER, { ante: 4 }); await h.step(20); await h.click(240, 135, 2); await h.step(200); });
   await scene(page, 'battle overflow · slam · coins · win confetti', async () => {

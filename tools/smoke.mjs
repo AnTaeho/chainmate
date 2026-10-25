@@ -470,6 +470,8 @@ const HINT_SUBJECT = {
   rankName: (id) => scrName() === 'title' && id === 'title:settings:tip' && !!app.rank.player(),
   // 해금(CHM-73): 해금 길의 지금 자리 마디
   unlocks: (id) => scrName() === 'unlocks' && id === 'unlocks:here',
+  // 대국 도전(layout.md 31절): 도전이 붙은 대국의 판 위 띠
+  challenge: (id, run) => id === 'challenge' && scrName() === 'battle' && !!run.battle && !!run.battle.challenge,
   brilliant: (id, run) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')], off = run.battle && run.battle.offering; return !!(p && off && (off.drawn || []).includes(p.id)); },
 };
 function hintSubject() {
