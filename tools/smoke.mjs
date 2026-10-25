@@ -52,8 +52,7 @@ let rankRng = 20261007;
 const rankApi = fakeApi({ build: 'smoke', now: () => Date.parse(`${DATE}T12:00:00Z`), rand: () => { rankRng = (rankRng * 1103515245 + 12345) & 0x7fffffff; return rankRng / 0x80000000; } });
 await seedBoard(rankApi, DATE, demoRows(24));
 await seedBoard(rankApi, shiftDate(DATE, -1), demoRows(13));
-// 비번 해시(scrypt)는 스레드 풀에서 돈다 — 열 번마다 1ms 타이머로 풀에 차례를 준다(setImmediate만이면 빠른 기기에서 해시보다 먼저 끝난다)
-const netSettle = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise((r) => (i % 10 === 9 ? setTimeout(r, 1) : setImmediate(r))); };
+const netSettle = async (n = 12) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
 dom.window.fetch = async (url, init) => { if (String(url).startsWith('/api/')) return rankApi.fetch(url, init); telSent.n++; return { ok: true }; };
 dom.window.navigator = { sendBeacon: () => { telSent.n++; return true; } };
 const { boot } = await import('../src/main.js');
