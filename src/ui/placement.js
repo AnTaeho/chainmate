@@ -3,12 +3,14 @@
 //   'side'  판 틀(관 선택 · 정석 · 대국 · 수업 · 상점 · 꾸러미): 고정 설명 자리 = 왼쪽 칸(x 6 · 폭 116).
 //           윗변은 가리킨 것의 윗변 높이. 왼쪽 칸 안의 것을 가리키면 그 바로 아래(모자라면 바로 위).
 //   'below' 판 밖 틀 · 막간: 가리킨 것 바로 아래(왼끝 맞춤, 넘치면 오른끝 맞춤). 모자라거나 누를 것을 덮으면 바로 위.
+//           위 · 아래 어디에도 다 안 들어가면 가리킨 것 옆(오른쪽, 안 되면 왼쪽).
 // 설명 묶음 = 말풍선 → 낱말 상자, 같은 폭 · 2px 틈의 세로 한 줄. 다 안 들어가면 뒤의 것부터 뺀다.
 // 첫 네모 하나도 안 들어가면 그 자리 높이(clip)를 돌려준다 — 그리는 쪽이 그 높이로 자른다(ui.js tooltip · glossary.js drawKeyBox, CHM-34).
 // 기하만 다룬다(그리기 · 글 줄바꿈은 ui.js · glossary.js). DOM 없음.
 import { LEFT } from './frame.js';
 
 export const NOTE_W = 176;               // 판 밖 틀의 묶음 폭
+export const NOTE_MIN_W = 150;           // 옆에 세울 때 좁힐 수 있는 폭(판 밖 틀)
 export const SIDE_X = LEFT.x - 2, SIDE_W = LEFT.w + 4; // 판 틀: 왼쪽 칸 위(6 · 116)
 export const NOTE_GAP = 2;                // 묶음 안 틈
 export const NOTE_OFF = 3;                // 가리킨 것과의 틈
@@ -24,9 +26,9 @@ const sum = (hs, n) => hs.slice(0, n).reduce((u, v) => u + v, 0) + NOTE_GAP * Ma
 
 // 묶음 자리. hs: 묶음 안 네모들의 높이(차례대로, noteWidth(mode) 폭으로 잰 것).
 // avoid: 덮으면 안 되는 네모(누를 수 있는 구역 — 'below'에서 위로 뒤집는 데 쓴다).
-// 돌려주는 값: { x, y, w, n, side } — n은 들어간 네모 수, side는 가리킨 것에서 본 쪽('right' 왼쪽 칸 · 'below' · 'above').
+// 돌려주는 값: { x, y, w, n, side, hs? } — n은 들어간 네모 수(hs는 좁혀 다시 잰 높이 — 옆에 세울 때만), side는 가리킨 것에서 본 쪽('right' 왼쪽 칸 · 'below' · 'above' · 옆 'beside-right' · 'beside-left').
 // soft: 덮지 않으면 좋은 것(다른 카드 · 칸 — 판 밖 틀의 격자). 'below'에서 아래 · 위 × 왼끝 · 오른끝 맞춤 중 덜 덮는 자리를 고른다
-export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [], soft = [] } = {}) {
+export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [], soft = [], remeasure = null } = {}) {
   if (!hs.length) return null;
   const w = noteWidth(mode);
   if (mode === 'side') {
@@ -93,7 +95,24 @@ export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [], sof
     if (!pick || room > pick.room) pick = { x: cx, below, room };
   }
   const side = pick.below ? 'below' : 'above';
-  if (h0 > pick.room) return { x: pick.x, y: pick.below ? yB : yA - pick.room, w, n: 1, side, clip: pick.room };
+  if (h0 > pick.room) {
+    // 위 · 아래 어디에도 다 안 들어가면(자르기 직전): 가리킨 것 옆(오른쪽, 안 되면 왼쪽)에 세운다 — 누를 것은 덮지 않는다.
+    // 그 쪽 자리가 묶음 폭보다 좁으면 NOTE_MIN_W까지 좁혀 다시 잰다(remeasure — 그리는 쪽이 준 높이 셈, 돌려주는 hs).
+    // 세로는 가리킨 것의 윗변(넘치면 화면 안으로 당김). 누를 것을 덮으면 가리킨 것과 겹치는 데까지 위로 올린다. 들어가는 만큼 묶음을 잇는다
+    const right = anchor.x + anchor.w + NOTE_OFF, left = anchor.x - NOTE_OFF;
+    for (const [room, s] of [[W - EDGE - right, 'beside-right'], [left - EDGE, 'beside-left']]) {
+      const sw = Math.min(w, room);
+      if (sw < w && (sw < NOTE_MIN_W || !remeasure)) continue;
+      const shs = sw === w ? hs : remeasure(sw), cx = s === 'beside-right' ? right : left - sw;
+      for (let n = shs.length; n >= 1; n--) {
+        const total = sum(shs, n);
+        if (total > H - EDGE * 2) continue;
+        const top = Math.max(EDGE, Math.min(H - EDGE - total, anchor.y)), low = Math.max(EDGE, anchor.y + anchor.h - total);
+        for (let cy = top; cy >= low; cy--) if (clear({ x: cx, y: cy, w: sw, h: total })) return { x: cx, y: cy, w: sw, n, side: s, ...(sw === w ? {} : { hs: shs }) };
+      }
+    }
+    return { x: pick.x, y: pick.below ? yB : yA - pick.room, w, n: 1, side, clip: pick.room };
+  }
   return { x: pick.x, y: pick.below ? yB : yA - h0, w, n: 1, side };
 }
 
@@ -101,6 +120,6 @@ export function placeNotes(mode, anchor, hs, { W = 480, H = 270, avoid = [], sof
 export function placeBubble(mode, anchor, h, opts = {}) {
   if (!anchor) { const w = noteWidth(mode); return { x: Math.floor(((opts.W || 480) - w) / 2), y: 110, w, arrow: null }; }
   const p = placeNotes(mode, anchor, [h], opts);
-  const arrow = p.side === 'right' ? 'right' : p.side === 'below' ? 'up' : 'down';
+  const arrow = p.side === 'right' ? 'right' : p.side === 'below' ? 'up' : p.side === 'above' ? 'down' : null;
   return { x: p.x, y: p.y, w: p.w, arrow };
 }

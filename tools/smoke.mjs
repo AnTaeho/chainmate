@@ -398,7 +398,9 @@ function checkStack(id) {
   } else {
     const hx = rs[0].x === a.x ? 'left' : rs[0].x + rs[0].w === a.x + a.w ? 'right' : rs[0].x === 2 || rs[0].x + rs[0].w === 478 ? 'edge' : null;
     const vy = top === a.y + a.h + P.NOTE_OFF ? 'below' : bot === a.y - P.NOTE_OFF ? 'above' : null;
-    rel = hx && vy ? `${vy}-${hx}` : null;
+    // 옆(위 · 아래 어디에도 다 안 들어갈 때): 가리킨 것 오른쪽 · 왼쪽 3px, 세로로 가리킨 것과 겹친다
+    const bx = rs[0].x === a.x + a.w + P.NOTE_OFF ? 'beside-right' : rs[0].x + rs[0].w === a.x - P.NOTE_OFF ? 'beside-left' : null;
+    rel = hx && vy ? `${vy}-${hx}` : bx && top < a.y + a.h && bot > a.y ? bx : null;
   }
   if (!rel) placeBad('rule', id, `${st.mode} top ${top} anchor ${a.x},${a.y},${a.w},${a.h}`);
   const k = `${screen()} ${kindOf(id)}`;

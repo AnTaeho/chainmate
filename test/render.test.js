@@ -180,6 +180,17 @@ test('설명 자리: 판 틀은 왼쪽 칸에 가리킨 것의 윗변 높이로,
   // 화면 높이를 넘는 말풍선(영어 긴 기물 풀이)도 화면 높이로 자른다
   const tall = placeNotes('side', { x: 200, y: 50, w: 28, h: 28 }, [318]);
   assert.deepEqual([tall.y, tall.clip], [2, 266]);
+  // 판 밖에서 위 · 아래 어디에도 다 안 들어가면 가리킨 것 옆(오른쪽, 안 되면 왼쪽) — 자르지 않는다
+  const tallAt = { x: 100, y: 100, w: 60, h: 60 };
+  const rt = placeNotes('below', tallAt, [160]);
+  assert.deepEqual([rt.x, rt.y, rt.side, rt.clip], [163, 100, 'beside-right', undefined]);
+  const lt = placeNotes('below', { ...tallAt, x: 340 }, [160]);
+  assert.deepEqual([lt.x + lt.w, lt.side], [337, 'beside-left']);
+  // 오른쪽이 누를 것을 덮으면 왼쪽, 양옆 다 막히면 예전처럼 자른다
+  const blockR = { x: 170, y: 120, w: 20, h: 20 };
+  assert.equal(placeNotes('below', { ...tallAt, x: 200 }, [160], { avoid: [{ ...blockR, x: 270 }] }).side, 'beside-left');
+  const cut = placeNotes('below', { ...tallAt, x: 200 }, [160], { avoid: [{ ...blockR, x: 270 }, { ...blockR, x: 30 }] });
+  assert.ok(cut.clip != null);
   // 처음 안내도 같은 자리(판 틀은 왼쪽 칸, 화살표는 오른쪽)
   const h = placeBubble('side', { x: 300, y: 100, w: 28, h: 28 }, 40);
   assert.deepEqual([h.x, h.y, h.arrow], [SIDE_X, 100, 'right']);
