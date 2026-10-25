@@ -367,6 +367,9 @@ export class BattleScreen {
     // 밑변은 손 부채 왼쪽의 「다음」 이름표 위(안 3 — 판 아래 오른쪽에 손이 선다)
     return { cx: BX + (S * 8) / 2, w: S * 8 - 8, bottom: Math.min(BY + S * 8 - 4, this.nextLabelY() - 3), top };
   }
+  // 업적 알림 자리: 판 위 한 줄(왼쪽 · 오른쪽 칸 사이 — 판 칸을 덮지 않는다). 복기 갈림길 카드가 떠 있으면 알림 자리(toastSpot).
+  // 콤보 평가 도장(BY + 4)이 떠 있는 동안은 자리가 겹쳐 멈춰 숨긴다(hold)
+  achvSpot() { return this.rv ? null : { cx: BX + (S * 8) / 2, w: RX - LX - LW - SP.s * 2, y: SP.s, hold: !!this.stamp }; }
   nextLabelY() { return nextColumn(this.rightLayout(this.run)).labelY; }
   // 대국 시작 띠의 자리(drawOver · toastSpot). 명인 띠: 이름(두 배, 초상 왼쪽 146에 안 들어가면 한 배) → 묶음 틈 → 규칙 글(줄마다 LINE) — 띠 높이는 글에 맞춘다(초상 64 이상)
   bannerBox() {

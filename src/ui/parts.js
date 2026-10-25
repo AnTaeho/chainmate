@@ -24,7 +24,7 @@ import { PAD_BOX, PAD_CARD, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, ART_H, LIST_GAP
 import { openBox, closeBox, logClip, LOG } from '../render/layoutlog.js';
 import { kindTab, tabW, TAB, TAB_GAP } from './kinds.js';
 import { blitVec } from '../render/vec.js';
-import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL } from './art.js';
+import { itemArt, artW, shardIcon, maximArt, MAXIM_CELL, laurelMark } from './art.js';
 // 물건 그림(그림 칸 · 옛 1배 그림 · 작은 자리 그림)은 art.js에 있다
 export { maximArt, editionArt, MAXIM_CELL, EMBLEM, engravingEmblem, soulEmblem, soulGlyph, SOUL_GLYPH, awakenArt, shardIcon, TACTIC_G, TACTIC_COL, tacticIcon, itemArt, artW } from './art.js';
 
@@ -798,15 +798,18 @@ export function fragmentStrip(ctx, ui, run, x, y, { align = 'left', max = 9, ste
 
 // 도장(Balatro 스테이크 스티커 꼴): 그 오프닝 · 레퍼토리로 이긴 가장 높은 레이팅. 칠한 금빛 칩(R_SM) + 짙은 잉크 굵은 수.
 // 저장은 단(records.openingDan · josekiDan), 화면은 레이팅(800 + 200 × 단 — setup.js danName과 같다)
-export const STAMP = { h: 15, pad: 4 };
+export const STAMP = { h: 15, pad: 4, mark: 11, gap: 2 };
 export const stampText = (dan) => `${800 + 200 * (dan || 0)}`;
-export const stampW = (dan) => measure(stampText(dan), true) + STAMP.pad * 2;
-// x2: 오른끝. 돌려주는 값은 폭
-export function danStamp(ctx, x2, y, dan) {
-  const s = stampText(dan), w = stampW(dan);
-  openBox('edge', x2 - w, y, w, STAMP.h, 1, { name: '도장' });
-  rrect(ctx, x2 - w, y, w, STAMP.h, R_SM, PAL.gold);
-  text(ctx, s, x2 - (w >> 1), inkY(y, STAMP.h), PAL.cardInk, { align: 'center', bold: true });
+export const stampW = (dan) => STAMP.pad + STAMP.mark + STAMP.gap + measure(stampText(dan), true) + STAMP.pad;
+export const stampTip = (name, dan) => tipLines(name, `이긴 가장 높은 레이팅 ${stampText(dan)}`);
+// x2: 오른끝. 돌려주는 값은 폭. hit가 있으면 도장 자리에 말풍선 구역({ ui, id, tip, onClick, preview } — 카드 구역 뒤에 적어 먼저 잡히고, 누르면 카드와 같다)
+export function danStamp(ctx, x2, y, dan, hit = null) {
+  const s = stampText(dan), w = stampW(dan), x = x2 - w;
+  if (hit) hit.ui.region(hit.id, x, y, w, STAMP.h, { tip: hit.tip, onClick: hit.onClick, preview: hit.preview });
+  openBox('edge', x, y, w, STAMP.h, 1, { name: '도장' });
+  rrect(ctx, x, y, w, STAMP.h, R_SM, PAL.gold);
+  laurelMark(ctx, x + STAMP.pad, y + ((STAMP.h - STAMP.mark) >> 1), STAMP.mark);
+  text(ctx, s, x + STAMP.pad + STAMP.mark + STAMP.gap, inkY(y, STAMP.h), PAL.cardInk, { bold: true });
   closeBox();
   return w;
 }
