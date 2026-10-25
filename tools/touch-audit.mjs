@@ -142,13 +142,14 @@ async function openPage(cfg, { touch }) {
     m.boot({ rankBase: '', today: () => today });
     window.__toClient = (await import('/src/ui/fit.js')).toClient;
   }, TODAY);
-  await page.waitForFunction(() => window.__app && window.__raf);
+  await page.waitForFunction(() => window.__app && window.__raf, null, { timeout: 180000 }); // 여러 판을 함께 돌리면 첫 모듈 받기가 느리다
   await page.waitForTimeout(300); // 늦춘 다시 맞추기
   await page.evaluate(() => {
     const a = window.__app;
     a.alwaysDraw = true;
     a.records.coachSeen = new Proxy({}, { get: () => true, has: () => true }); a.records.tutorialAsked = true;
     if (a.overlay && a.overlay.name === 'welcome') a.closeOverlay();
+    window.__set0 = JSON.stringify(a.settings);
     window.__step(5);
   });
   page.errors = errors;
@@ -201,7 +202,13 @@ const SCENES = [
 
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
 async function enter(page, sc) {
-  await page.evaluate(() => { const a = window.__app; a.ui.move(-1, -1); });
+  // 설정은 장면마다 처음으로 되돌린다 — 앞 장면에서 누른 횟수(손가락은 미리 보기 · 밀기로 더 누른다)에 따라 언어 · 큰 글자가 갈리면 뒤 장면이 모두 다르게 보인다
+  await page.evaluate(async () => {
+    const a = window.__app; a.ui.move(-1, -1); a.ui.previewId = null;
+    for (const k of Object.keys(a.settings)) delete a.settings[k];
+    Object.assign(a.settings, JSON.parse(window.__set0));
+    (await import('/src/ui/lang.js')).setLang(a.settings.lang);
+  });
   await page.evaluate(sc.setup);
   await page.evaluate((n) => { window.__step(n); window.__settle(); window.__step(2); }, sc.frames || 20);
   // 망 답(가짜 서버)을 기다린다
@@ -232,6 +239,11 @@ const center = (r) => [Math.floor(r.x + r.w / 2), Math.floor(r.y + r.h / 2)];
 const edges = (r) => { const [cx, cy] = center(r); const i = Math.min(2, Math.floor(r.w / 4)), j = Math.min(2, Math.floor(r.h / 4)); return [[r.x + i, cy], [r.x + r.w - 1 - i, cy], [cx, r.y + j], [cx, r.y + r.h - 1 - j]]; };
 const KEYS = ['scr', 'ov', 'phase', 'money', 'run', 'st', 'ovst', 'prev', 'tapSq', 'tip', 'keys', 'toasts', 'guide'];
 const diff = (a, b, keys = KEYS) => keys.filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
+// 두 쪽의 기준(누르기 전) 상태가 다른 칸(화면 칸 해시 · 판 해시 — 손가락 판은 구역을 넓혀 화면 칸이 다르다)은 값 대신 「누름으로 바뀌었나」를 견준다
+const rel = (mb, m, tb, t, keys = KEYS) => keys.filter((k) => {
+  const same = (x, y) => JSON.stringify(x[k]) === JSON.stringify(y[k]);
+  return same(mb, tb) ? !same(m, t) : same(mb, m) !== same(tb, t);
+});
 
 // ── 마우스 기준(손가락 없는 창 734×343): 장면마다 구역 · 가리킴 · 누름 결과
 async function mouseRef(sc) {
@@ -246,11 +258,12 @@ async function mouseRef(sc) {
     await enter(page, sc);
     const [gx, gy] = center(r);
     const [cx, cy] = await page.evaluate(([x, y]) => window.__client(x + 0.5, y + 0.5), [gx, gy]);
+    const base = await page.evaluate(() => window.__sig());
     await page.mouse.move(cx, cy); await page.evaluate(() => window.__step(3));
     const hover = await page.evaluate(() => window.__sig());
     let clicked = null;
     if (r.click && r.en) { await page.mouse.down(); await page.evaluate(() => window.__step(3)); await page.mouse.up(); await page.evaluate(() => window.__step(8)); clicked = await page.evaluate(() => window.__sig()); }
-    out.sig[r.id] = { hover, clicked };
+    out.sig[r.id] = { base, hover, clicked };
     await page.mouse.move(1, 1);
     await leave(page, sc);
   }
@@ -314,18 +327,21 @@ async function touchRun(cfg, cfgName, sc, ref) {
       return page.evaluate(() => window.__sig());
     };
     await enter(page, sc);
+    const tb = await page.evaluate(() => window.__sig());
     const t1 = await tap();
     let t2 = null;
     if (m.clicked) {
-      let dd = diff(m.clicked, t1);
+      let dd = rel(m.base, m.clicked, tb, t1);
       const first = t1.prev === r.id || (t1.tapSq != null && m.clicked.tapSq == null);
-      if (dd.length && first) { t2 = await tap(); dd = diff(m.clicked, t2); }
+      if (dd.length && first) { t2 = await tap(); dd = rel(m.base, m.clicked, tb, t2); }
       if (dd.length) rows.push({ kind: 'tap', id: r.id, detail: `${first ? '두 번째 누름' : '누름'} 뒤 다름: ${dd.map((k) => `${k} 마우스 ${JSON.stringify(m.clicked[k])} / 손가락 ${JSON.stringify((t2 || t1)[k])}`).join(' · ')}` });
       if (DRIFT && r.en && r.h <= 30) {
         await leave(page, sc); await enter(page, sc);
+        const db = await page.evaluate(() => window.__sig());
         let d1 = await tap(6, 4);
-        const exp = first ? t1 : m.clicked;
-        const ddd = diff(exp, d1);
+        // 밀고 뗀 결과는 같은 손가락 판의 가운데 누름(첫 누름이 미리 보기면 그 첫 누름)과 견준다
+        const exp = t1;
+        const ddd = rel(tb, exp, db, d1);
         if (ddd.length) rows.push({ kind: 'drift', id: r.id, detail: `6·4 CSS 화소 밀고 뗌: ${ddd.map((k) => `${k} 기대 ${JSON.stringify(exp[k])} / ${JSON.stringify(d1[k])}`).join(' · ')}` });
       }
     }
