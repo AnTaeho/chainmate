@@ -6,7 +6,7 @@ import { PAL } from '../../render/palette.js';
 import { W, H, text, measure } from '../../render/gfx.js';
 import { flowLayer } from '../../render/light.js';
 import { button, btnW, buttonRow, rowWidth } from '../ui.js';
-import { setLang } from '../lang.js';
+import { setLang, getLang } from '../lang.js';
 import { PAGE, BTN_H, SP, LINE, LINE_TITLE, textY } from '../frame.js';
 import { pageHead, bottomBar } from './common.js';
 import { diceIcon } from '../../render/dice.js';
@@ -27,7 +27,7 @@ const NUM_W = 24;                          // ± 사이 숫자 칸
 const ROW = BTN_H, IN = SP.s, SEC = SP.l;
 const SPEEDS = [1, 2, 4];
 // 단추 열의 단추 하나짜리 줄(켬 · 끔 · 언어 · 다시 보기 · 이름 바꾸기)는 모두 같은 폭(가장 넓은 글)
-export const togW = () => Math.max(...['켬', '끔', '한국어', 'English', '다시 보기'].map((s) => btnW(s)), btnW('이름 바꾸기', { icon: true }));
+export const togW = () => Math.max(...['켬', '끔', getLang() === 'en' ? 'English' : '한국어', '다시 보기'].map((s) => btnW(s)), btnW('이름 바꾸기', { icon: true }));
 const speedW = () => rowWidth(SPEEDS.map((v) => ({ label: `×${v}` })), { gap: IN, min: 0 }).w;
 const stepW = () => stepBtnW() * 2 + NUM_W + IN * 2;
 
