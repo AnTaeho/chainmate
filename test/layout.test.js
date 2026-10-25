@@ -528,8 +528,8 @@ test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) �
   assert.deepEqual(moves.openFairies(app3).sort(), ['E', 'L', 'S']);
 });
 
-// CHM-46: 도감 격자 칸 이름은 낱말 단위로 두 줄까지 — 한 줄(row)은 가장 긴 이름의 높이, 두 줄로도 안 되는 이름이 있는 탭만 열을 줄인다
-test('도감 격자: 모든 탭 · 모든 이름이 두 줄 안(낱말 단위), 줄 높이는 그 줄의 가장 긴 이름, 쪽은 단추 줄 위', async () => {
+// CHM-46: 도감 격자 칸 이름은 낱말 단위로 두 줄까지 — 칸 높이는 탭의 가장 긴 이름 하나(29절 고른 격자), 두 줄로도 안 되는 이름이 있는 탭만 열을 줄인다
+test('도감 격자: 모든 탭 · 모든 이름이 두 줄 안(낱말 단위), 칸 높이는 탭의 가장 긴 이름 하나, 쪽은 단추 줄 위', async () => {
   const { codex, frame, parts, text } = M;
   const { LEGENDS } = await import('../src/data/legends.js');
   const room = frame.PAGE.btnY - frame.GAP_GROUP;
@@ -550,9 +550,8 @@ test('도감 격자: 모든 탭 · 모든 이름이 두 줄 안(낱말 단위), 
         assert.ok(nm, `${lang} ${tab} 「${M.lang.L(e.name)}」 두 줄에 안 들어간다(열 ${lay.cols})`);
         assert.ok(nm.lines.length <= 2 && nm.lines.join(' ') === M.lang.L(e.name), `${lang} ${tab} ${JSON.stringify(nm.lines)}`);
         for (const l of nm.lines) assert.ok(text.textWidth(l, !nm.thin) <= q.nameW, `${lang} ${tab} 「${l}」 ${text.textWidth(l, !nm.thin)} > ${q.nameW}`);
-        // 줄 높이 = 그 줄에서 가장 긴 이름(한 줄 28 · 두 줄 42)
-        const row = cells.filter((o) => o.y === q.y && lay.pages.findIndex((p) => p.includes(o)) === lay.pages.findIndex((p) => p.includes(q)));
-        assert.equal(q.h, frame.rowBoxH(frame.PAD_CARD, Math.max(...row.map((o) => o.name.lines.length))));
+        // 칸 높이 = 탭에서 가장 긴 이름(한 줄 28 · 두 줄 42) — 격자의 모든 칸이 같다
+        assert.equal(q.h, frame.rowBoxH(frame.PAD_CARD, Math.max(...cells.map((o) => o.name.lines.length))));
         assert.ok(q.y + q.h <= room, `${lang} ${tab} 칸 아래 ${q.y + q.h} > ${room}`);
       }
       // 열을 줄였다면 하나 더 많은 열에선 두 줄에 안 들어가는 이름이 있다

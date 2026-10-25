@@ -10,13 +10,13 @@ import { drawCrest, CREST_SIZE } from '../../render/crests.js';
 import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
 import { EDITIONS } from '../../data/editions.js';
-import { button } from '../ui.js';
+import { toggleGroup, rowWidth } from '../ui.js';
 import { tipLines, miniShard, moveTip, cardBase, wrapName, drawName, fragmentSteps, rarityLine, soulGlyph, maximArt, MAXIM_CELL, MAXIM_ICON_W } from '../parts.js';
 import { SOULS, soulPrice } from '../../data/souls.js';
 import { L } from '../lang.js';
 import { OPENING_ORDER, UNLOCKS } from '../records.js';
-import { pageHead, pageButtons, tabRow, headW, HEAD_BIG } from './common.js';
-import { PAGE, PAD_CARD, LIST_GAP, GAP_GROUP, LINE, textY, rowBoxH, BTN_S } from '../frame.js';
+import { pageHead, pageButtons, bottomBar, headTabX, HEAD_BIG } from './common.js';
+import { PAGE, PAD_CARD, GAP_GROUP, LINE, BTN_H, SP, textY, rowBoxH } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { lockTier, lockIcon } from '../unlockview.js';
 
@@ -25,9 +25,10 @@ import { lockTier, lockIcon } from '../unlockview.js';
 const GRID = { x: 12, w: W - 24, gap: 4, cols: [5, 4, 3] };
 // 오른쪽 그림 자리(격언 그림 칸 20 · 기물 16 · 혼 문양 9 · 문장 · 조각 셋)
 const artW = (tab, e) => (e.piece ? 16 + 2 : e.soul ? 9 + 2 : tab === 'maxims' || tab === 'legends' ? MAXIM_ICON_W : e.crest ? 12 + 2 : e.parts != null ? 18 + 2 : 0);
-// 격자 자리: { cols, cw, pages: [[{ i, x, y, h, name, nameW }]] } — 쪽마다 들어가는 줄까지, 줄 높이는 그 줄의 가장 긴 이름
-export function codexLayout(tab, list) {
-  const P = PAD_CARD, room = PAGE.btnY - GAP_GROUP - PAGE.bodyY;
+// 격자 자리: { cols, cw, pages: [[{ i, x, y, h, name, nameW }]] } — 쪽마다 들어가는 줄까지. 칸 높이는 탭의 가장 긴 이름 하나로 모두 같다(격자가 고르게).
+// top: 격자 윗변(탭이 두 줄이면 그 아래)
+export function codexLayout(tab, list, top = PAGE.bodyY) {
+  const P = PAD_CARD, room = PAGE.btnY - GAP_GROUP - top;
   let cols = 0, cw = 0, names = null;
   for (const n of GRID.cols) {
     cols = n; cw = Math.floor((GRID.w - (n - 1) * GRID.gap) / n);
@@ -35,19 +36,17 @@ export function codexLayout(tab, list) {
     if (names.every(Boolean)) break;
   }
   const pages = [[]];
-  let y = PAGE.bodyY;
+  let y = top;
+  const h = rowBoxH(P, Math.max(...names.map((q) => (q ? q.lines.length : 1))));
   for (let r = 0; r * cols < list.length; r++) {
     const idx = list.map((_, i) => i).slice(r * cols, r * cols + cols);
-    const lines = Math.max(...idx.map((i) => (names[i] ? names[i].lines.length : 1)));
-    const h = rowBoxH(P, lines);
-    if (pages[pages.length - 1].length && y + h > PAGE.bodyY + room) { pages.push([]); y = PAGE.bodyY; }
+    if (pages[pages.length - 1].length && y + h > top + room) { pages.push([]); y = top; }
     idx.forEach((i, k) => pages[pages.length - 1].push({ i, x: GRID.x + k * (cw + GRID.gap), y, h, name: names[i], nameW: cw - P * 2 - artW(tab, list[i]) }));
     y += h + GRID.gap;
   }
   return { cols, cw, pages };
 }
 
-const UNLOCK_BTN = 80; // 맨 아래 「해금」 단추 폭
 const TABS = [['maxims', '격언'], ['pieces', '기물'], ['souls', '혼'], ['factions', '세력'], ['legends', '명경기'], ['openings', '오프닝'], ['editions', '판본']];
 
 export class CodexScreen {
@@ -76,13 +75,19 @@ export class CodexScreen {
   // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
   animating() { return false; }
   draw(ctx, ui) {
-    // 큰 제목 오른쪽 가운데 줄에 탭. 탭이 다 안 들어가면(영어 — 큰 「Almanac」 + 탭 일곱) 작은 제목 · 윗줄 탭(옛 머리줄)
-    const tabsW = TABS.reduce((n, [, label]) => n + Math.max(44, measure(label, true) + 8) + 4, -4);
-    const big = PAGE.titleX + headW('도감') + 10 + tabsW <= W - PAGE.titleX;
-    pageHead(ctx, '도감', null, { big });
-    const tx0 = big ? PAGE.titleX + headW('도감') + 10 : Math.max(44, PAGE.titleX + measure('도감', true) + 8);
-    // 탭 폭은 이름마다 글에 맞춘다(common.js tabRow — 영어 「Masters」 · 「Opening」이 테에 붙지 않고 오른쪽 모은 수에 닿지 않게)
-    const tabEnd = tabRow(ctx, ui, 'codex', TABS, this.tab, tx0, big ? HEAD_BIG.mid - (BTN_S >> 1) : 5, BTN_S, (id) => { this.tab = id; this.page = 0; this.app.sfx('pick'); });
+    // 큰 제목 오른쪽 가운데 줄에 같은 폭 탭. 한 줄에 안 들어가면(영어 — 큰 「Almanac」 + 탭 일곱) 넷 · 셋 두 줄(같은 폭), 격자는 그 아래
+    pageHead(ctx, '도감', null, { big: true });
+    const go = (id) => { this.tab = id; this.page = 0; this.app.sfx('pick'); };
+    const tx0 = headTabX('도감'), { bw, w: oneW } = rowWidth(TABS.map(([, label]) => ({ label })), { gap: SP.s, min: 0 });
+    const two = tx0 + oneW > W - PAGE.titleX;
+    let tabEnd, gridTop = PAGE.bodyY;
+    if (!two) tabEnd = toggleGroup(ctx, ui, 'codex:tab', TABS, this.tab, tx0, HEAD_BIG.tabY, go, { w: bw }).w + tx0;
+    else {
+      const r1 = toggleGroup(ctx, ui, 'codex:tab', TABS.slice(0, 4), this.tab, tx0, HEAD_BIG.tabY, go, { w: bw });
+      toggleGroup(ctx, ui, 'codex:tab', TABS.slice(4), this.tab, tx0, HEAD_BIG.tabY + BTN_H + SP.s, go, { w: bw });
+      tabEnd = r1.x + r1.w;
+      gridTop = HEAD_BIG.tabY + BTN_H * 2 + SP.s + SP.m;
+    }
     const list = this.entries();
     // 잠긴 칸: 아직 안 연 묶음의 것이고 본 적도 없다(특수 기물은 행마 보기에서 만난 적이 없다)
     const tier = this.app.records.unlockTier || 0, met = this.app.records.movesSeen || {};
@@ -91,12 +96,14 @@ export class CodexScreen {
       if (t > tier && !(this.tab === 'pieces' ? met[e.id] : e.seen)) { e.lock = t; e.seen = false; }
     }
     const seen = list.filter((e) => e.seen).length;
-    // 모은 수: 머리줄 오른쪽. 탭이 거기까지 차면(영어 — 탭 일곱) 맨 아래 「돌아가기」 오른쪽으로
+    // 모은 수(굵게): 머리줄 오른쪽. 탭이 거기까지 차면 맨 아래 「해금」 오른쪽으로
     const count = `${seen} / ${list.length}`;
-    if (tabEnd + 8 + measure(count) <= W - PAGE.titleX) text(ctx, count, W - PAGE.titleX, big ? HEAD_BIG.mid - 5 : PAGE.titleY, PAL.dim, { align: 'right' });
-    else text(ctx, count, PAGE.titleX + 80 + 8 + UNLOCK_BTN + 8, PAGE.btnY + 3, PAL.dim);
+    // 해금 길로 들어가는 길: 첫 화면 아이콘 줄은 여덟 칸이면 좁아(칸 59) 도감 옆에 둔다
+    const bar = bottomBar(ctx, ui, { back: { id: 'codex:back', onClick: () => this.app.go('title') }, extras: [{ id: 'codex:unlocks', label: '해금', tone: 'gold', onClick: () => this.toUnlocks() }] });
+    if (tabEnd + SP.m + measure(count, true) <= W - PAGE.titleX) text(ctx, count, W - PAGE.titleX, HEAD_BIG.mid - 5, PAL.dim, { align: 'right', bold: true });
+    else { const u = bar.extras[0]; text(ctx, count, u.x + u.w + SP.m, textY(PAGE.btnY, BTN_H), PAL.dim, { bold: true }); }
     // 칸 이름은 두 줄까지(낱말 단위). 한 줄(row)의 높이는 그 줄에서 가장 긴 이름에 맞추고, 쪽은 본 칸(머리줄 아래 ~ 단추 줄 위 묶음 틈)에 들어가는 줄까지
-    const lay = codexLayout(this.tab, list);
+    const lay = codexLayout(this.tab, list, gridTop);
     const pages = lay.pages.length;
     const page = Math.min(this.page || 0, pages - 1);
     const P = PAD_CARD, cw = lay.cw;
@@ -136,9 +143,6 @@ export class CodexScreen {
       if (e.parts != null) for (let k = 0; k < 3; k++) { if (k < e.parts) miniShard(ctx, x + cw - (low ? MAXIM_CELL.inset + 19 : P + 18) + k * 6, y + ch - P - 5, PAL.goldDk); }
       closeBox();
     }
-    button(ctx, ui, 'codex:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.app.go('title') });
-    // 해금 길로 들어가는 길: 첫 화면 아이콘 줄은 여덟 칸이면 좁아(칸 59) 도감 옆에 둔다
-    button(ctx, ui, 'codex:unlocks', PAGE.titleX + 80 + 8, PAGE.btnY, UNLOCK_BTN, PAGE.btnH, '해금', { tone: 'gold', onClick: () => this.toUnlocks() });
     if (pages > 1) pageButtons(ctx, ui, 'codex', page, pages, (p) => { this.page = p; });
   }
   key(k) {
