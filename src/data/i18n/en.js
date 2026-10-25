@@ -44,7 +44,7 @@ export const EN = {
   '이 기기만 연결이 끊겨요': 'This device splits off', '기록은 양쪽에 남아요': 'Records stay on both', '방금': 'just now',
   // 순위(CHM-70): 순위 화면 · 결과 카드 · 설정 이름 줄
   '순위': 'Ranks', '오늘': 'Today', '어제': 'Yesterday', '이름': 'Name',
-  '아직 아무도 플레이하지 않았어요': 'No one has played yet', '순위를 불러오지 못했어요': "Couldn't reach the ranks", '순위 불러오는 중': 'Opening the ranks',
+  '아직 아무도 플레이하지 않았어요': 'No one has played yet', '순위를 불러오지 못했어요': "Couldn't reach the ranks", '순위 불러오는 중': 'Opening the ranks', '다시 불러오기': 'Try again',
   '오늘은 아직 플레이하지 않았어요': 'Not played yet today', '어제는 플레이하지 않았어요': 'Not played yesterday', '오늘의 대국 시작': "Play Today's Match",
   '순위 보기': 'See ranks', '확인 중': 'Checking', '이름 바꾸기': 'Reroll',
   '게임이 업데이트됐어요': 'A new version is out', '새로 고침하면 다음 판부터 순위에 올라가요': 'Refresh to rank from your next run',

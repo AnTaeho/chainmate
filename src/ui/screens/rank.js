@@ -4,9 +4,9 @@
 //   결과 카드: 「오늘 14등 / 312명」 · 「순위 보기」 → 내 위아래 이웃(자리가 되는 만큼 둘씩 · 하나씩 · 내 줄만), 줄마다 등수 · 이름 · 도달(순위 화면과 같은 글) · 점수
 import { PAL } from '../../render/palette.js';
 import { W, text, box, rect, rrect, measure, num, fitNum } from '../../render/gfx.js';
-import { button } from '../ui.js';
-import { pageHead, tabRow, headW, HEAD_BIG } from './common.js';
-import { PAGE, PAD_BOX, LINE, GAP_GROUP, GAP_IN, BTN_S, textY, inkY } from '../frame.js';
+import { button, buttonRow } from '../ui.js';
+import { pageHead, bottomBar } from './common.js';
+import { PAGE, PAD_BOX, LINE, GAP_GROUP, GAP_IN, BTN_H, SP, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { getLang } from '../lang.js';
 import { shiftDate, PAGE as PER } from '../rank.js';
@@ -29,7 +29,7 @@ export const peopleText = (n) => `${num(n)}명`;
 //   등수 20 ~ 57(「9,999」) · 이름 76 ~ 249 · 도달 268 ~ 362(「Hall 8 Practice」 94) · 점수 397 ~ 460.
 //   내 줄의 「14 / 1,204」가 이름 칸을 넘으면 그 줄만 이름 · 도달을 오른쪽으로 민다(colsFor)
 export const COL = { x0: 12, x1: W - 12, rank: 20, name: 76, reach: 268, score: W - 20, gap: 8 };
-export const BOARD = { get headY() { return PAGE.bodyY; }, get rowsY() { return PAGE.bodyY + LINE + 4; }, get mineH() { return PAD_BOX * 2 + LINE; }, get mineY() { return PAGE.btnY - GAP_GROUP - (PAD_BOX * 2 + LINE); } };
+export const BOARD = { get headY() { return PAGE.bodyY; }, get rowsY() { return PAGE.bodyY + LINE + 4; }, get mineH() { return PAD_BOX * 2 + BTN_H; }, get mineY() { return PAGE.btnY - SP.l - (PAD_BOX * 2 + BTN_H); } };
 // 한 줄의 글 자리: { rank, name, reach, score(오른끝), scoreRoom }. 재는 쪽(test/layout.test.js)과 그리는 쪽이 같이 쓴다
 export function colsFor(rankLabel, name, reach, bold = false) {
   const nx = Math.max(COL.name, COL.rank + measure(rankLabel, true) + COL.gap);
@@ -40,7 +40,7 @@ function rowLine(ctx, r, name, top, { mine = false, total = null } = {}) {
   const ty = textY(top), c = mine ? PAL.gold : PAL.ink;
   const label = total != null ? `${num(r.rank)} / ${num(total)}` : num(r.rank), reach = reachText(r);
   const at = colsFor(label, name, reach, mine);
-  text(ctx, label, at.rank, ty, mine ? PAL.gold : r.rank <= 3 ? PAL.goldHi : PAL.dim, { bold: mine || r.rank <= 3 });
+  text(ctx, label, at.rank, ty, mine ? PAL.gold : r.rank <= 3 ? PAL.goldHi : PAL.dim, { bold: true });
   text(ctx, name, at.name, ty, c, { bold: mine });
   text(ctx, reach, at.reach, ty, r.won || mine ? PAL.gold : PAL.dim);
   text(ctx, fitNum(r.score, at.scoreRoom), at.score, ty, c, { align: 'right', bold: true });
@@ -75,8 +75,7 @@ export class RankScreen {
     const v = app.rank.board(date, this.page + 1), d = v.data;
     if (d) this.seen = { date, total: d.total, pages: d.pages, me: d.me };
     const seen = this.seen && this.seen.date === date ? this.seen : null;
-    pageHead(ctx, '순위', seen ? `${dayText(date)} · ${peopleText(seen.total)}` : dayText(date), { big: true });
-    tabRow(ctx, ui, 'rank', [['today', '오늘'], ['yesterday', '어제']], this.tab, PAGE.titleX + headW('순위') + 10, HEAD_BIG.mid - (BTN_S >> 1), BTN_S, (id) => this.setTab(id), 20);
+    pageHead(ctx, '순위', seen ? `${dayText(date)} · ${peopleText(seen.total)}` : dayText(date), { big: true, tabs: { ui, prefix: 'rank', list: [['today', '오늘'], ['yesterday', '어제']], cur: this.tab, go: (id) => this.setTab(id) } });
     const pages = seen ? seen.pages : 1;
     if (this.page > pages - 1) this.page = pages - 1;
     // 머릿줄
@@ -93,7 +92,11 @@ export class RankScreen {
         closeBox();
       });
     } else if (d) say('아직 아무도 플레이하지 않았어요');
-    else say(v.phase === 'unreached' ? '순위를 불러오지 못했어요' : '순위 불러오는 중');
+    else if (v.phase === 'unreached') {
+      // 닿지 못함: 한 줄 + 다시 불러오기(서버 부름은 app.rank가 한다)
+      say('순위를 불러오지 못했어요');
+      buttonRow(ctx, ui, [{ id: 'rank:retry', label: '다시 불러오기', onClick: () => { app.sfx('pick'); app.rank.forget(); app.rank.retry(); app.invalidate(); } }], W / 2, BOARD.rowsY + 5 * LINE + SP.m, { anchor: 'center' });
+    } else say('순위 불러오는 중');
     // 붙박은 내 줄: 본 칸 아랫변. 오늘 아직 안 뒀으면 그 자리에 「오늘의 대국 두기」
     if (seen) {
       const my = BOARD.mineY, bw = COL.x1 - COL.x0, me = seen.me;
@@ -101,16 +104,15 @@ export class RankScreen {
       box(ctx, COL.x0, my, bw, BOARD.mineH, PAL.feltDk, me ? PAL.gold : PAL.frameHi);
       if (me) {
         ui.region('rank:mine', COL.x0, my, bw, BOARD.mineH, { onClick: () => this.go(Math.floor((me.rank - 1) / PER)) });
-        rowLine(ctx, me, app.rank.nameOf(me), my + PAD_BOX, { mine: true, total: seen.total });
+        rowLine(ctx, me, app.rank.nameOf(me), my + PAD_BOX + ((BTN_H - LINE) >> 1), { mine: true, total: seen.total });
       } else if (this.tab === 'today') {
-        text(ctx, '오늘은 아직 플레이하지 않았어요', COL.rank, textY(my + PAD_BOX), PAL.dim);
-        const pw = measure('오늘의 대국 시작', true) + 20;
-        button(ctx, ui, 'rank:play', COL.x1 - 6 - pw, my + 6, pw, BTN_S, '오늘의 대국 시작', { tone: 'gold', onClick: () => app.newRun({ daily: true }) });
-      } else text(ctx, '어제는 플레이하지 않았어요', COL.rank, textY(my + PAD_BOX), PAL.dim);
+        text(ctx, '오늘은 아직 플레이하지 않았어요', COL.rank, inkY(my + PAD_BOX, BTN_H), PAL.dim);
+        buttonRow(ctx, ui, [{ id: 'rank:play', label: '오늘의 대국 시작', tone: 'gold', onClick: () => app.newRun({ daily: true }) }], COL.x1 - PAD_BOX, my + PAD_BOX, { anchor: 'right' });
+      } else text(ctx, '어제는 플레이하지 않았어요', COL.rank, inkY(my + PAD_BOX, BTN_H), PAL.dim);
       closeBox();
     }
     if (pages > 1) pager(ctx, ui, this.page, pages, (p) => this.go(p));
-    button(ctx, ui, 'rank:back', PAGE.titleX, PAGE.btnY, 80, PAGE.btnH, '뒤로', { onClick: () => this.leave() });
+    bottomBar(ctx, ui, { back: { id: 'rank:back', onClick: () => this.leave() } });
   }
   key(k) {
     const pages = this.seen ? this.seen.pages : 1;
@@ -139,7 +141,7 @@ export function rankCard(app, run, n = 5) {
     if (n && !rows.some((r) => r.rank === st.me.rank)) rows = [st.me];
   }
   const count = st.phase === 'pending' ? Math.min(n, 3) : rows.length;
-  return { st, phase: st.phase, rows, count, h: P * 2 + BTN_S + (count ? GAP_IN + count * LINE : 0) };
+  return { st, phase: st.phase, rows, count, h: P * 2 + BTN_H + (count ? GAP_IN + count * LINE : 0) };
 }
 // 카드 줄의 글 자리(재는 쪽과 그리는 쪽이 같이 쓴다): 등수 · 이름 · [도달] · 점수. 도달은 순위 화면과 같은 글(reachText — 관 + 대국).
 // 한 줄이라도 이름이 도달에 닿으면 줄 전체를 짧은 꼴(관만)로, 그래도 닿으면 도달 칸을 뺀다. reachOf: 줄 → 도달 글(칸이 없으면 null)
@@ -158,7 +160,7 @@ export function drawRankCard(ctx, ui, app, card, x, y, w) {
   box(ctx, x, y, w, h, CARD_BG, phase === 'ok' ? PAL.gold : PAL.frameHi);
   if (phase === 'unreached') { text(ctx, '순위를 불러오지 못했어요', x + P, textY(y + P), PAL.dim); closeBox(); return; }
   if (phase === 'stale') { STALE_LINES.forEach((s, i) => text(ctx, s, x + P, textY(y + P + i * LINE), i ? PAL.dim : PAL.ink)); closeBox(); return; }
-  const hy = inkY(y + P, BTN_S);
+  const hy = inkY(y + P, BTN_H);
   if (phase === 'pending' || !st.rank) text(ctx, '확인 중', x + P, hy, PAL.dim, { bold: true });
   else {
     const today = st.date === app.today();
@@ -167,8 +169,8 @@ export function drawRankCard(ctx, ui, app, card, x, y, w) {
     text(ctx, ` / ${peopleText(st.total)}`, x + P + measure(a, true), hy, PAL.dim);
   }
   const bw = measure('순위 보기', true) + 12;
-  button(ctx, ui, 'result:rank', x + w - P - bw, y + P, bw, BTN_S, '순위 보기', { onClick: () => app.go('rank', { back: 'result' }) });
-  const y0 = y + P + BTN_S + GAP_IN;
+  button(ctx, ui, 'result:rank', x + w - P - bw, y + P, bw, BTN_H, '순위 보기', { onClick: () => app.go('rank', { back: 'result' }) });
+  const y0 = y + P + BTN_H + GAP_IN;
   if (phase === 'pending') {
     // 서버가 판을 다시 두는 동안: 빈 줄(가운데가 내 줄 자리)
     for (let i = 0; i < card.count; i++) {
