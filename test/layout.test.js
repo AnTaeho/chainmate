@@ -855,7 +855,7 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
     // 판 밖 알림 줄: 카드 아래 · 단추 줄 위의 글
     const note = (f, card) => { const by = a.app.ui.regions.find((r) => r.id === 'result:again').y; return f.texts.some((q) => q.y >= card.y + card.h && q.y + q.h <= by); };
     const draw = async (o) => { await endDaily(a.app, o); a.app.go('result'); return a.frame(); };
-    for (const [won, frags, rows, wantNote] of [[false, 0, 3, true], [true, 0, 4, true], [false, 3, null, false], [true, 3, null, false], [false, 1, null, false]]) {
+    for (const [won, frags, rows, wantNote] of [[false, 0, 4, true], [true, 0, 4, true], [false, 3, null, false], [true, 3, null, false], [false, 1, null, false]]) {
       const tag = `${lang} ${won ? '이긴 판' : '진 판'} 조각 ${frags}`;
       st = ok;
       const f = await draw({ won, frags });

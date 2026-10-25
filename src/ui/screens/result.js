@@ -3,29 +3,33 @@
 // 해금(CHM-73, layout.md 26절): 다음 묶음까지의 막대 + 남은 관 한 줄, 이번 판에 묶음이 열렸으면 금빛 「N개 열렸어요」 단추(해금 화면이 그 묶음을 펼친 채 열린다).
 // quiet: 순위 화면에서 돌아올 때 — 소리를 다시 내지 않는다
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, rframe, rrect, sprite, num, short, fitNum, seg as line, measure, fine } from '../../render/gfx.js';
+import { W, text, box, rect, rframe, sprite, num, short, fitNum, seg as line, measure, fine, slot, R_SM, R_LG } from '../../render/gfx.js';
+import { wrap } from '../../render/text.js';
 import { LEGENDS } from '../../data/legends.js';
 import { OPENINGS } from '../../data/openings.js';
-import { button } from '../ui.js';
-import { KIND_NAME } from '../words.js';
+import { button, buttonRow, btnW } from '../ui.js';
+import { KIND_NAME, josa } from '../words.js';
 import { shardIcon } from '../parts.js';
 import { nextUnlock } from '../records.js';
 import { rating } from './setup.js';
 import { lerp } from '../anim.js';
-import { PAD_BOX, LINE, GAP_GROUP, GAP_IN, flow, textY } from '../frame.js';
+import { PAD_BOX, LINE, GAP_IN, SP, BTN_H, INK_H, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { replayState, routeAt } from '../fxroute.js';
 import { rankCard, drawRankCard, CARD_NEIGHBOURS } from './rank.js';
+import { lightHue } from './common.js';
 import { hasHighlight } from '../highlight.js';
 import { unlockState, bundleSize, nextLine, progressBar, BAR_H } from '../unlockview.js';
 import { confetti, screenFlash, CAP } from '../juice.js';
 
-const Q = 16, MX = 330, ROW_R = 300; // 다시 보기 판: 칸 16px. 윗변 MY는 결과 상자 자리에 따라(draw가 정한다). ROW_R: 기록 줄 수치의 오른끝
+// 다시 보기 판: 칸 16px, 판 틀 오른끝이 상자 안 여백에 닿는다(12 + 456 − 8 − 4 − 128). 윗변 MY는 결과 상자 자리에 따라(draw가 정한다)
+const Q = 16, MX = 328;
 let MY = 50;
 const STEP = 0.5;
-export const RESULT_BTN = { 2: [90, 20], 3: [90, 15], 4: [84, 8] }; // 단추 수 → [폭, 사이]
-// 해금 줄: 알림 줄 자리에서는 막대 · 글 · 단추가 한 줄, 판 아래(왼쪽 칸이 더 길어 자리가 남을 때 — 순위 카드)에서는 막대 아래 글 또는 단추
-export const UNLOCK_ROW = { bar: 96, gap: 8, btnPad: 10, sideBar: 120, sideTop: 4 };
+const HERO_LH = 28;            // 두 배 글 줄(제목 · 큰 수)
+const SHARD = { w: 16 };       // 조각 그림 칸(art.js shardIcon 16 × 14)
+export const UNLOCK_LABEL = '해금';
+const UNLOCK_BAR = 48;         // 한 줄 꼴 막대의 가장 짧은 폭
 
 export class ResultScreen {
   constructor(app, { quiet = false } = {}) {
@@ -79,7 +83,7 @@ export class ResultScreen {
     const poly = (pts, col) => { for (let i = 0; i + 1 < pts.length; i++) { const a = mid(pts[i]), b = mid(pts[i + 1]); line(ctx, a.x, a.y, b.x, b.y, col); } };
     // 지나온 길(꺾인 길은 꺾은 칸을 거쳐) · 제자리 쏘기는 점선 대신 짧은 화살 줄
     for (const pts of st.trail) poly(pts, PAL.gold);
-    for (const [a0, b0] of st.shots) { const a = mid(a0), b = mid(b0); line(ctx, a.x, a.y, b.x, b.y, PAL.goldDk); rframe(ctx, this.xy(b0).x, this.xy(b0).y, Q, Q, 3, PAL.goldDk); }
+    for (const [a0, b0] of st.shots) { const a = mid(a0), b = mid(b0); line(ctx, a.x, a.y, b.x, b.y, PAL.goldDk); rframe(ctx, this.xy(b0).x, this.xy(b0).y, Q, Q, R_SM, PAL.goldDk); }
     let { x, y } = this.xy(st.pos);
     let moving = false;
     const cur = st.cur, rt = st.route;
@@ -103,152 +107,183 @@ export class ResultScreen {
     if (moving) fine(() => sprite(ctx, st.form, 'w', x, y - 6)); else sprite(ctx, st.form, 'w', x, y - 6);
     if (done >= n) {
       const e = this.xy(st.pos);
-      rframe(ctx, e.x, e.y, Q, Q, 3, r.reason === 'cut' ? PAL.red : PAL.gold);
+      rframe(ctx, e.x, e.y, Q, Q, R_SM, r.reason === 'cut' ? PAL.red : PAL.gold);
     }
   }
 
-  // 막간 상자(hug, PAD_BOX): 왼쪽은 큰 제목(두 배) → 묶음 틈 → 기록 줄 → 묶음 틈 → 모은 조각, 오른쪽은 최고 한 수 판.
-  // 아래로 묶음 틈 → 판 밖에 남은 것(한 줄씩) → 묶음 틈 → 단추 줄
+  // 막간 상자(hug, PAD_BOX): 왼쪽 칸은 큰 제목(두 배) → 기록 표(이름 열 + 수치, 모은 조각도 표 줄) → 순위 카드 → 알림 줄 → 해금 줄,
+  // 오른쪽 칸은 「최고 한 수」 → 다시 보기 판 → 그 점수(큰 수). 해금 줄은 왼쪽 칸 끝과 판 아래 중 상자가 덜 길어지는 쪽. 아래로 단추 줄
   draw(ctx, ui) {
     const app = this.app, run = app.run;
     const x = 12, w = W - 24, P = PAD_BOX;
-    const rows = [];
-    // 수치 줄: 이름표(x + P + 8) 오른쪽부터 오른끝(ROW_R)까지에 안 들어가면 수를 짧은 꼴로(끝없는 대국의 큰 수)
-    const room = (label) => ROW_R - (x + P + 8 + measure(label) + 6);
-    const nums = (label, f) => { const s = f(num); return measure(s, true) <= room(label) ? s : f(short); };
-    if (this.last) rows.push(['도달', `${run.ante}관 ${KIND_NAME[this.last.kind]}`]);
-    rows.push(['최고 한 수', fitNum(this.replay ? Math.max(this.best, this.replay.score) : this.best, room('최고 한 수'))]);
-    if (!this.won && this.last) {
-      rows.push(['마지막 대국', nums('마지막 대국', (n) => `${n(this.last.score)} / ${n(this.last.target)}`)]);
-      if (this.short > 0) rows.push(['모자란 점수', nums('모자란 점수', (n) => `${n(this.short)} (${this.pct}%)`)]);
-    }
-    rows.push(['상금', `$${run.money}`]);
+    const leftX = x + P, leftW = MX - 4 - SP.m - leftX, cx = MX + Q * 4;
+    const best = this.replay ? Math.max(this.best, this.replay.score) : this.best;
+    // 기록 표: 이름 열은 가장 긴 이름 + 16, 수치는 그 열 끝에서 가장 넓은 수치만큼(표째 왼쪽 칸 가운데)
     const got = LEGENDS.filter((l) => run.fragments[l.id] && (run.fragments[l.id].first || run.fragments[l.id].feat || run.fragments[l.id].gold)).slice(0, 3);
+    const labels = [];
+    if (this.last) labels.push('도달');
+    if (!this.won && this.last) { labels.push('마지막 대국'); if (this.short > 0) labels.push('모자란 점수'); }
+    labels.push('상금');
+    if (got.length) labels.push('모은 조각');
+    const labW = Math.max(...labels.map((l) => measure(l))) + SP.xl;
+    const room = leftW - labW;
+    const nums = (f) => { const s = f(num); return measure(s, true) <= room ? s : f(short); };
+    const rows = [];
+    if (this.last) rows.push({ label: '도달', value: `${run.ante}관 ${KIND_NAME[this.last.kind]}` });
+    if (!this.won && this.last) {
+      rows.push({ label: '마지막 대국', value: nums((n) => `${n(this.last.score)} / ${n(this.last.target)}`) });
+      if (this.short > 0) rows.push({ label: '모자란 점수', value: nums((n) => `${n(this.short)} (${this.pct}%)`), col: PAL.red });
+    }
+    rows.push({ label: '상금', value: `$${run.money}` });
+    got.forEach((l, i) => rows.push({ label: i ? '' : '모은 조각', legend: l, vw: measure(l.name) + SP.s + SHARD.w * 3 + SP.xs * 2 }));
+    for (const r of rows) if (r.vw == null) r.vw = measure(r.value, true);
+    const tableW = labW + Math.max(...rows.map((r) => r.vw));
+    const tableX = leftX + Math.max(0, Math.floor((leftW - tableW) / 2));
     // 판 밖에 남은 것: 자리가 모자라면 앞의 것부터 빠진다 — 다음 오프닝까지 · 새 도감 칸 · 오늘의 대국 · 끝없는 대국 · 열린 오프닝 · 레이팅
     const notes = [];
     if (!this.out.unlocked.length && this.next) notes.push([`다음 오프닝 ${OPENINGS[this.next.id].name}: ${this.next.text} ${this.next.have}/${this.next.need}`, PAL.dim]);
     if (this.out.fresh) notes.push([`도감 ${this.out.fresh}칸을 새로 채웠어요`, PAL.ink]);
-    // 순위 카드(CHM-70): 오늘의 대국 판이면 왼쪽 칸 아래에. 카드가 「오늘의 대국 날짜」 줄을 대신한다
+    // 순위 카드(CHM-70): 오늘의 대국 판이면 기록 표 아래에. 카드가 「오늘의 대국 날짜」 줄을 대신한다
     const hasCard = !!rankCard(app, run, 0);
     if (run.daily && !hasCard) notes.push([`오늘의 대국 ${run.daily}`, PAL.goldDk]);
     if (this.out.deeper) notes.push([`끝없는 대국 최고 도달 ${this.out.endless}관`, PAL.gold]);
-    for (const id of this.out.unlocked) notes.push([`오프닝 「${OPENINGS[id].name}」이 열렸어요`, PAL.gold]);
+    for (const id of this.out.unlocked) notes.push([`오프닝 ${josa(OPENINGS[id].name, '이/가')} 열렸어요`, PAL.gold]);
     if (this.out.dan) notes.push([`레이팅 ${rating(this.out.dan)}이 열렸어요`, PAL.gold]);
     // 해금: 다 연 뒤에는 아무것도 없다(마지막 묶음을 연 판만 단추)
-    const st = unlockState(app.records), U = UNLOCK_ROW;
+    const st = unlockState(app.records);
     const un = st.next == null && this.opened == null ? null
       : { st, bar: st.next != null, line: st.next != null ? nextLine(st) : null, btn: this.opened != null ? `${bundleSize(this.opened)}개 열렸어요` : null };
     if (un) {
-      un.btnW = un.btn ? measure(un.btn, true) + U.btnPad * 2 : 0;
-      un.flowH = un.btn ? 18 : LINE;
-      // 판 아래 꼴: 막대 → 글 또는 단추
-      un.sideH = U.sideTop + (un.bar ? BAR_H + 2 + GAP_IN : 0) + (un.btn ? 18 : LINE);
+      un.btnW = un.btn ? btnW(un.btn) : 0;
+      un.rowH = un.btn ? BTN_H : LINE;
+      // 왼쪽 칸 꼴: 이름표 · 막대 · 글 · 단추 한 줄, 안 들어가면(영어) 이름표 · 막대 · 단추 → 막대 자리부터 글
+      const lw = measure(UNLOCK_LABEL) + SP.m;
+      un.oneRow = lw + UNLOCK_BAR + (un.line ? SP.m + measure(un.line) : 0) + (un.btn ? SP.m + un.btnW : 0) <= leftW;
+      un.lines2 = !un.oneRow && un.line ? wrap(un.line, leftW - lw) : [];
+      un.flowH = un.rowH + (un.lines2.length ? GAP_IN + un.lines2.length * LINE : 0);
+      // 판 아래 꼴: 「해금」 · 막대 한 줄 → 글 → 단추
+      un.sideLines = un.line ? wrap(un.line, Q * 8 + 8) : [];
+      un.sideH = LINE + (un.sideLines.length ? GAP_IN + un.sideLines.length * LINE : 0) + (un.btn ? GAP_IN + BTN_H : 0);
     }
-    // 상자 윗변을 0으로 재고(오른쪽 판: 이름표 → 4 → 판 → 4 → 점수) 화면 가운데에 놓는다.
-    // 카드의 이웃 줄은 판 밖 알림 한 줄이 살아남는 가장 큰 수(둘씩 → 하나씩 → 내 줄만 → 머리만)로, 알림은 270 안에 들어가는 만큼(셋까지)
-    const boardTop = P + LINE + 4;
+    // 오른쪽 칸(상자 윗변 0부터): 「최고 한 수」 → 4 → 판 틀 → 4 → 큰 수. 다시 보기가 없으면(옛 저장 · 다시 놓기가 든 수) 판 없이 큰 수만
+    const capY = P, frameY = capY + LINE + GAP_IN;
+    const heroY = this.replay ? frameY + Q * 8 + 8 + GAP_IN : frameY;
+    const rightEnd = heroY + HERO_LH;
+    const btnCost = SP.l + BTN_H + P;
     const lay = (n) => {
       const f = flow(P), o = { f };
-      o.titleY = f.space(LINE * 2);
-      f.gap(GAP_GROUP);
-      o.rowYs = rows.map(() => f.line());
-      o.fragY = null; o.fragYs = [];
-      if (got.length) { f.gap(GAP_GROUP); o.fragY = f.line(); f.gap(GAP_IN); o.fragYs = got.map(() => f.line()); }
+      o.titleY = f.space(HERO_LH);
+      f.gap(SP.m);
+      o.rowYs = rows.map(() => f.space(LINE));
       o.card = hasCard ? rankCard(app, run, n) : null;
-      if (o.card) { f.gap(GAP_GROUP); o.cardY = f.space(o.card.h); }
-      const boardEnd = boardTop + Q * 8 + 4 + LINE;
-      // 해금 줄: 판 아래(왼쪽 칸이 판보다 길면 남는 자리 — 순위 카드를 덜 밀어낸다)와 알림 줄 아래 한 줄 중 상자가 덜 길어지는 쪽
-      const sideCost = un ? Math.max(0, boardEnd + un.sideH - Math.max(f.y, boardEnd)) : 0;
-      o.unSide = !!un && sideCost < un.flowH + GAP_IN ? boardEnd + U.sideTop : null;
-      o.unFlow = !!un && o.unSide == null;
-      f.y = Math.max(f.y, boardEnd, o.unSide != null ? boardEnd + un.sideH : 0);
-      o.room = Math.floor((270 - (f.y + GAP_GROUP + 18 + P) - GAP_GROUP - (o.unFlow ? un.flowH + GAP_IN : 0)) / LINE);
+      if (o.card) { f.gap(SP.m); o.cardY = f.space(o.card.h); }
+      // 해금 줄: 왼쪽 칸 끝 한 줄과 판 아래 중 상자가 덜 길어지는 쪽
+      const sideCost = un ? Math.max(0, rightEnd + SP.m + un.sideH - Math.max(f.y, rightEnd)) : 0;
+      o.unSide = !!un && sideCost < un.flowH + SP.m;
+      const unFlow = un && !o.unSide ? SP.m + un.flowH : 0;
+      const colEnd = (left) => Math.max(left, rightEnd + (o.unSide ? SP.m + un.sideH : 0));
+      // 알림 줄: 왼쪽 칸 폭에서 줄을 바꾼 높이로 270 안에 드는 만큼(뒤의 것부터 셋까지)
+      o.notes = [];
+      let used = 0;
+      for (const nt of notes.slice().reverse()) {
+        if (o.notes.length >= 3) break;
+        const lines = wrap(nt[0], leftW);
+        const add = SP.m + lines.length * LINE + (o.notes.length ? GAP_IN - SP.m : 0);
+        if (colEnd(f.y + used + add + unFlow) + btnCost > 270) break;
+        used += add;
+        o.notes.unshift({ lines, col: nt[1] });
+      }
+      o.fits = colEnd(f.y + used + unFlow) + btnCost <= 270;
       return o;
     };
     let L0 = null;
-    for (const n of hasCard ? CARD_NEIGHBOURS : [0]) { L0 = lay(n); if (L0.room >= Math.min(1, notes.length)) break; }
-    const { f, titleY, rowYs, fragY, fragYs, card } = L0;
-    const shown = L0.room > 0 ? notes.slice(-Math.min(3, L0.room)) : [];
-    const noteYs = shown.map((_, i) => (i ? f : f.gap(GAP_GROUP)).line());
-    const unY = L0.unFlow ? f.gap(shown.length ? GAP_IN : GAP_GROUP).space(un.flowH) : L0.unSide;
-    const btnY = f.gap(GAP_GROUP).space(18);
+    for (const n of hasCard ? CARD_NEIGHBOURS : [0]) { L0 = lay(n); if (L0.fits && L0.notes.length >= Math.min(1, notes.length)) break; }
+    const { f, titleY, rowYs, card } = L0;
+    const noteYs = L0.notes.map((q, i) => { f.gap(i ? GAP_IN : SP.m); return q.lines.map(() => f.space(LINE)); });
+    // 한 줄 꼴 해금 줄은 왼쪽 칸이 짧으면 큰 수 줄 밑변에 맞춘다(왼쪽 아래가 비지 않게)
+    let unY = null;
+    if (un && L0.unSide) unY = rightEnd + SP.m;
+    else if (un) { unY = f.gap(SP.m).space(un.flowH); if (f.y < rightEnd) { unY = rightEnd - un.flowH; f.y = rightEnd; } }
+    f.y = Math.max(f.y, rightEnd, un && L0.unSide ? unY + un.sideH : 0);
+    const btnY = f.gap(SP.l).space(BTN_H);
     const h = f.y + P, y = Math.max(0, Math.floor((270 - h) / 2));
-    MY = y + boardTop;
-    const by = y + btnY;
-    for (const a of [rowYs, fragYs, noteYs]) a.forEach((v, i) => { a[i] = v + y; });
-    const tY = y + titleY, fY = fragY == null ? null : y + fragY;
+    MY = y + frameY + 4;
     openBox('panel', x, y, w, h, P, { name: '결과' });
-    box(ctx, x, y, w, h, PAL.feltDk, this.won ? PAL.gold : PAL.red);
+    box(ctx, x, y, w, h, PAL.feltDk, this.won ? PAL.gold : PAL.red, { r: R_LG });
+    // 큰 제목: 두 배, 왼쪽 칸 가운데(영어도 두 배 — 말을 줄여 맞췄다)
     const title = run.endless && !this.won ? `끝없는 대국 ${run.ante}관` : this.won ? '8관 돌파!' : '판이 끝났어요';
-    // 큰 제목은 두 배, 왼쪽 칸(판 왼쪽까지)에 안 들어가면(영어) 한 배 굵게 — 같은 줄 높이 가운데
-    const leftW = MX - 4 - GAP_GROUP - (x + P);
-    const big = measure(title, true) * 2 <= leftW;
-    text(ctx, title, x + P + Math.floor(leftW / 2), big ? tY : tY + LINE - 7, this.won || run.endless ? PAL.gold : PAL.red, { align: 'center', bold: true, scale: big ? 2 : 1 });
+    const tY = y + titleY, tcx = leftX + Math.floor(leftW / 2), big2 = (HERO_LH - INK_H * 2) >> 1;
+    text(ctx, title, tcx, tY + big2, this.won || run.endless ? PAL.gold : PAL.red, { align: 'center', bold: true, scale: 2 });
     {
-      const tw = measure(title, true) * (big ? 2 : 1), cx = x + P + Math.floor(leftW / 2);
-      this.titleBand = { clip: { x: x + 2, y: y + 2, w: leftW + P - 2, h: Math.max(8, (rowYs.length ? rowYs[0] : tY + 30) - 2 - (y + 2)) }, avoid: { x: cx - tw / 2 - 1, y: tY - 1, w: tw + 2, h: (big ? 24 : 13) } };
+      const tw = measure(title, true) * 2;
+      this.titleBand = { clip: { x: x + 2, y: y + 2, w: leftW + P - 2, h: HERO_LH + P - 2 }, avoid: { x: tcx - tw / 2 - 1, y: tY + big2 - 1, w: tw + 2, h: INK_H * 2 + 2 } };
       if (this.burst) {
         this.burst = false;
         const area = () => (app.screen === this ? this.titleBand : null);
-        confetti(app.fx, cx - tw / 2 - 8, tY + 10, { n: CAP.confetti, seed: 11, spread: 150, life: 2, area });
-        confetti(app.fx, cx + tw / 2 + 8, tY + 10, { n: CAP.confetti, seed: 23, spread: 150, life: 2, area });
+        confetti(app.fx, tcx - tw / 2 - 8, tY + 14, { n: CAP.confetti, seed: 11, spread: 150, life: 2, area });
+        confetti(app.fx, tcx + tw / 2 + 8, tY + 14, { n: CAP.confetti, seed: 23, spread: 150, life: 2, area });
       }
     }
-    rows.forEach(([a, b], i) => {
-      text(ctx, a, x + P + 8, rowYs[i], PAL.dim);
-      text(ctx, b, ROW_R, rowYs[i], a === '모자란 점수' ? PAL.red : PAL.ink, { align: 'right', bold: true });
+    // 기록 표
+    const right = tableX + tableW;
+    rows.forEach((r, i) => {
+      const ty = textY(y + rowYs[i]);
+      if (r.label) text(ctx, r.label, tableX, ty, PAL.dim);
+      if (!r.legend) { text(ctx, r.value, right, ty, r.col || PAL.ink, { align: 'right', bold: true }); return; }
+      const f2 = run.fragments[r.legend.id];
+      const n = (f2.first ? 1 : 0) + (f2.feat ? 1 : 0) + (f2.gold ? 1 : 0);
+      const sx = right - SHARD.w * 3 - SP.xs * 2;
+      text(ctx, r.legend.name, sx - SP.s, ty, run.legends.includes(r.legend.id) ? PAL.gold : PAL.ink, { align: 'right' });
+      for (let k = 0; k < 3; k++) {
+        const kx = sx + k * (SHARD.w + SP.xs);
+        if (k < n) shardIcon(ctx, kx, ty - 1, PAL.gold, PAL.goldDk);
+        else slot(ctx, kx + SP.s, ty + 2, SHARD.w - SP.m, INK_H - 4);
+      }
     });
-    // 최고 한 수 다시 보기
-    text(ctx, '최고 한 수', MX + 64, MY - 4 - LINE, PAL.dim, { align: 'center' });
-    this.drawReplay(ctx);
-    if (this.replay) text(ctx, fitNum(this.replay.score, Q * 8 + 8), MX + 64, MY + Q * 8 + 4, PAL.gold, { align: 'center', bold: true });
-    // 조각
-    if (got.length) {
-      text(ctx, '모은 조각', x + P + 8, fY, PAL.dim);
-      got.forEach((l, i) => {
-        const f2 = run.fragments[l.id];
-        const n = (f2.first ? 1 : 0) + (f2.feat ? 1 : 0) + (f2.gold ? 1 : 0);
-        const yl = fragYs[i];
-        text(ctx, l.name, x + P + 8, yl, run.legends.includes(l.id) ? PAL.gold : PAL.ink);
-        for (let k = 0; k < 3; k++) {
-          if (k < n) shardIcon(ctx, 236 + k * 22, yl - 1, PAL.gold, PAL.goldDk);
-          else rrect(ctx, 238 + k * 22, yl + 4, 10, 6, 3, PAL.frame);
-        }
-      });
+    // 최고 한 수: 이름표 → 다시 보기 판 → 큰 수
+    text(ctx, '최고 한 수', cx, textY(y + capY), PAL.dim, { align: 'center' });
+    if (this.replay) this.drawReplay(ctx);
+    text(ctx, fitNum(best, Math.floor((Q * 8 + 8) / 2)), cx, y + heroY + big2, PAL.gold, { align: 'center', bold: true, scale: 2 });
+    // 순위 카드: 상자보다 한 단 밝은 판넬(세력 빛 그대로)
+    if (card) drawRankCard(ctx, ui, app, card, leftX, y + L0.cardY, leftW, { fill: lightHue(PAL.feltDk, 0.08) });
+    L0.notes.forEach((q, i) => q.lines.forEach((s2, j) => text(ctx, s2, tcx, textY(y + noteYs[i][j]), q.col, { align: 'center' })));
+    if (un) this.drawUnlock(ctx, ui, un, y + unY, L0.unSide, leftX, leftW);
+    // 단추 줄: (계속 두기) · 새 판 · (하이라이트) · 메인 화면 — 같은 폭, 사이 8, 화면 가운데. 하이라이트 덮개가 떠 있으면 덮개 단추 뒤로 비치지 않게 그리지 않는다
+    if (!(app.overlay && app.overlay.name === 'highlight')) {
+      const btns = [];
+      if (this.won) btns.push({ id: 'result:endless', label: '계속 두기', onClick: () => this.endless() });
+      btns.push({ id: 'result:again', label: '새 판', onClick: () => this.again(), tone: 'gold' });
+      if (hasHighlight(run)) btns.push({ id: 'result:highlight', label: '하이라이트', onClick: () => app.openOverlay('highlight') });
+      btns.push({ id: 'result:title', label: '메인 화면', onClick: () => app.toTitle() });
+      buttonRow(ctx, ui, btns, W / 2, y + btnY, { anchor: 'center' });
     }
-    if (card) drawRankCard(ctx, ui, app, card, x + P, y + L0.cardY, leftW);
-    shown.forEach(([s2, c], i) => text(ctx, s2, W / 2, noteYs[i], c, { align: 'center' }));
-    if (un) this.drawUnlock(ctx, ui, un, y + unY, !L0.unFlow);
-    // 단추 줄: (계속 두기) · 다시 · (하이라이트) · 타이틀 — 넷이면 폭 84 · 사이 8, 셋은 90 · 15, 둘은 90 · 20
-    const btns = [];
-    if (this.won) btns.push(['result:endless', '계속 두기', () => this.endless(), 'plain']);
-    btns.push(['result:again', '새 판', () => this.again(), 'gold']);
-    if (hasHighlight(run)) btns.push(['result:highlight', '하이라이트', () => app.openOverlay('highlight'), 'plain']);
-    btns.push(['result:title', '메인 화면', () => app.toTitle(), 'plain']);
-    const [bw, bg] = RESULT_BTN[btns.length];
-    const bx = W / 2 - Math.floor((btns.length * bw + (btns.length - 1) * bg) / 2);
-    btns.forEach(([id, label, onClick, tone], i) => button(ctx, ui, id, bx + i * (bw + bg), by, bw, 18, label, { onClick, tone }));
     closeBox();
   }
-  // 해금 줄. side: 판 아래(막대 → 글 또는 단추, 판 폭 가운데), 아니면 한 줄(막대 · 글 · 단추, 화면 가운데)
-  drawUnlock(ctx, ui, un, y, side) {
-    const U = UNLOCK_ROW, go = () => this.app.go('unlocks', { open: this.opened, from: 'result' });
-    const gold = (bx, by) => button(ctx, ui, 'result:unlocks', bx, by, un.btnW, 18, un.btn, { tone: 'gold', onClick: go });
+  // 해금 줄: 「해금」 이름표 + 막대, 그 뒤 남은 관 글 또는 금빛 「N개 열렸어요」 단추.
+  // side: 판 아래(이름표 · 막대 한 줄 → 글 → 단추, 판 폭), 아니면 왼쪽 칸 끝 한 줄(이름표 · 막대 · 글 · 단추는 오른끝)
+  drawUnlock(ctx, ui, un, y, side, leftX, leftW) {
+    const go = () => this.app.go('unlocks', { open: this.opened, from: 'result' });
+    const gold = (bx, by) => button(ctx, ui, 'result:unlocks', bx, by, un.btnW, BTN_H, un.btn, { tone: 'gold', onClick: go });
+    const lw = measure(UNLOCK_LABEL);
     if (side) {
-      const cx = MX + Q * 4;
-      let yy = y;
-      if (un.bar) { progressBar(ctx, cx - U.sideBar / 2, yy + 1, U.sideBar, un.st.p); yy += BAR_H + 2 + GAP_IN; }
-      if (un.btn) gold(Math.round(cx - un.btnW / 2), yy);
-      else text(ctx, un.line, cx, textY(yy), PAL.dim, { align: 'center' });
+      const x0 = MX - 4, w = Q * 8 + 8, cx = x0 + w / 2;
+      const ty = textY(y);
+      text(ctx, UNLOCK_LABEL, x0, ty, PAL.dim);
+      if (un.bar) progressBar(ctx, x0 + lw + SP.m, ty + ((INK_H - BAR_H) >> 1), w - lw - SP.m - 1, un.st.p);
+      let yy = y + LINE;
+      if (un.sideLines.length) { yy += GAP_IN; for (const s of un.sideLines) { text(ctx, s, cx, textY(yy), PAL.dim, { align: 'center' }); yy += LINE; } }
+      if (un.btn) gold(Math.round(cx - un.btnW / 2), yy + GAP_IN);
       return;
     }
-    const lw = un.line ? measure(un.line) : 0;
-    const parts = [un.bar ? U.bar : 0, lw, un.btnW].filter(Boolean);
-    let x = Math.round(W / 2 - (parts.reduce((a, b) => a + b, 0) + (parts.length - 1) * U.gap) / 2);
-    const ty = textY(y + ((un.flowH - LINE) >> 1));
-    if (un.bar) { progressBar(ctx, x, ty + Math.floor((11 - BAR_H) / 2), U.bar, un.st.p); x += U.bar + U.gap; }
-    if (un.line) { text(ctx, un.line, x, ty, this.opened != null ? PAL.ink : PAL.dim); x += lw + U.gap; }
-    if (un.btn) gold(x, y);
+    const linew = un.oneRow && un.line ? measure(un.line) : 0;
+    const ty = textY(y + ((un.rowH - LINE) >> 1)), lineCol = this.opened != null ? PAL.ink : PAL.dim;
+    const bx = leftX + lw + SP.m;
+    text(ctx, UNLOCK_LABEL, leftX, ty, PAL.dim);
+    const barW = Math.max(UNLOCK_BAR, leftW - (bx - leftX) - (linew ? linew + SP.m : 0) - (un.btnW ? un.btnW + SP.m : 0));
+    if (un.bar) progressBar(ctx, bx, ty + ((INK_H - BAR_H) >> 1), barW, un.st.p);
+    if (linew) text(ctx, un.line, bx + (un.bar ? barW + SP.m : 0), ty, lineCol);
+    if (un.btn) gold(leftX + leftW - un.btnW, y);
+    un.lines2.forEach((s, i) => text(ctx, s, bx, textY(y + un.rowH + GAP_IN + i * LINE), lineCol));
   }
   again() { const r = this.app.run; this.app.newRun({ opening: r.opening, dan: r.dan, daily: !!r.daily }); }
   endless() { this.app.cmd({ type: 'endless' }); this.app.goPhase(); }

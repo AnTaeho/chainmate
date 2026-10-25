@@ -1,9 +1,7 @@
-// 일시정지(덮개): 계속 · 설정 · 타이틀로.
-import { PAL } from '../../render/palette.js';
-import { W, text, box } from '../../render/gfx.js';
-import { button } from '../ui.js';
-import { PAD_BOX, GAP_GROUP, flow } from '../frame.js';
-import { openBox, closeBox } from '../../render/layoutlog.js';
+// 일시정지(덮개): 계속 · 설정 · 메인 화면. 막간 상자(29절 제목 자리 3): 두 배 제목 가운데, 단추 셋은 같은 폭 한 줄 가운데.
+import { W } from '../../render/gfx.js';
+import { rowWidth } from '../ui.js';
+import { INTER, interlude, interludeLayout } from './common.js';
 
 export class PauseScreen {
   constructor(app) { this.app = app; }
@@ -13,16 +11,13 @@ export class PauseScreen {
   animating() { return false; }
   draw(ctx, ui) {
     const app = this.app;
-    // 막간 상자(hug): 제목(제목 줄) → 묶음 틈 → 단추 셋(사이 묶음 틈)
-    const f = flow(PAD_BOX), ty = f.line(true);
-    const ids = [['pause:resume', '계속', () => app.closeOverlay(), 'gold'], ['pause:settings', '설정', () => app.openOverlay('settings', { back: 'pause' }), 'plain'], ['pause:title', '메인 화면으로', () => app.toTitle(), 'plain']];
-    const ys = ids.map(() => f.gap(GAP_GROUP).space(18));
-    const w = 140, h = f.y + PAD_BOX, x = Math.floor((W - w) / 2), y = Math.floor((270 - h) / 2);
-    openBox('panel', x, y, w, h, PAD_BOX, { name: '멈춤' });
-    box(ctx, x, y, w, h, PAL.feltDk, PAL.frameHi);
-    text(ctx, '멈춤', W / 2, y + ty, PAL.gold, { align: 'center', bold: true });
-    ids.forEach(([id, label, fn, tone], i) => button(ctx, ui, id, x + 20, y + ys[i], w - 40, 18, label, { onClick: fn, tone }));
-    closeBox();
+    const buttons = [
+      { id: 'pause:resume', label: '계속', onClick: () => app.closeOverlay(), tone: 'gold' },
+      { id: 'pause:settings', label: '설정', onClick: () => app.openOverlay('settings', { back: 'pause' }) },
+      { id: 'pause:title', label: '메인 화면', onClick: () => app.toTitle() },
+    ];
+    const w = rowWidth(buttons).w + INTER.pad * 2, h = interludeLayout(0).h;
+    interlude(ctx, ui, Math.floor((W - w) / 2), Math.floor((270 - h) / 2), w, 0, null, { title: '멈춤', buttons, name: '멈춤' });
   }
   key(k) { if (k === 'Escape' || k === 'Enter') this.app.closeOverlay(); }
 }
