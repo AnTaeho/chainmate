@@ -181,6 +181,7 @@ export class LessonScreen extends BattleScreen {
   }
   // 보기(손가락이 혼자 둔다)는 내내 움직인다
   animating() { return super.animating() || this.phase === 'demo'; }
+  achvSpot() { return null; } // 판 위 줄은 띠가 쓴다 — 업적 알림은 알림 자리(toastSpot)
   update(dt) {
     super.update(dt);
     if (this.demo && this.phase === 'demo') { this.updateDemo(dt); if (this.demo.press > 0) this.demo.press -= dt; }

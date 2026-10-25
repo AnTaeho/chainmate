@@ -79,6 +79,7 @@ export class ReviewScreen extends BattleScreen {
 
   // 이번 수에 남은 먹기를 update가 둔다
   animating() { return super.animating() || this.queue.length > 0; }
+  achvSpot() { return null; } // 판 위 줄은 띠가 쓴다 — 업적 알림은 알림 자리(toastSpot)
   update(dt) {
     super.update(dt);
     if (this.queue.length) this.pump();

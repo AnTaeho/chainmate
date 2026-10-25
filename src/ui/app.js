@@ -384,6 +384,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       },
     });
   };
+  const achvSpot = () => (!app.overlay && app.screen && app.screen.achvSpot ? app.screen.achvSpot() : null);
   app.toast = (msg, col = PAL.ink, dur = 2.2) => {
     app.invalidate();
     app.toasts.push({ msg, col, t: 0, life: dur });
@@ -436,13 +437,15 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (app.clockFx) { app.clockFx.t += dt; if (app.clockFx.t > 2.4) app.clockFx = null; } // 시계 칸을 잃는 깜빡임(common.js clockPips)
     app.ui.time = app.time;
     const sp = app.speed();
-    // 업적 알림: 대국 연출(busy) · 덮개 · 멈칫이 없을 때 하나씩, 사이 0.8초(금빛 알림 + 팡파르)
-    if (app.achvQueue.length && app.time >= app.achvAt && !app.overlay && !(app.hitstopT > 0) && !(app.screen && app.screen.busy)) {
+    // 업적 알림: 대국 연출(busy) · 덮개 · 멈칫이 없을 때 하나씩, 사이 0.8초(금빛 알림 + 팡파르).
+    // 화면이 업적 자리(achvSpot — 대국은 판 위 한 줄)를 주면 앞 업적 알림이 사라진 뒤에 띄운다(쌓이면 판을 덮는다). hold면 그 자리 알림을 멈춰 숨긴다
+    const as = achvSpot();
+    if (app.achvQueue.length && app.time >= app.achvAt && !app.overlay && !(app.hitstopT > 0) && !(app.screen && app.screen.busy) && !(as && (as.hold || app.toasts.some((t) => t.achv)))) {
       const a = ACHIEVEMENT_BY_ID[app.achvQueue.shift()];
       if (a) { app.toast(`업적 · ${a.name}`, PAL.gold, 3); app.toasts[app.toasts.length - 1].achv = true; app.sfx('fanfare'); }
       app.achvAt = app.time + 0.8;
     }
-    for (const t of app.toasts) t.t += dt;
+    for (const t of app.toasts) if (!(as && as.hold && t.achv)) t.t += dt;
     app.toasts = app.toasts.filter((t) => t.t < t.life);
     // 멈칫(히트스톱): 짧게 모든 연출이 선다
     if (app.hitstopT > 0) { app.hitstopT -= dt; if (app.audio) app.audio.update(dt, app); return; }
@@ -494,11 +497,24 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     // 알림(화면 위에 잠깐 뜬다). 화면이 자리를 정하면(toastSpot — 대국은 판 아래쪽, CHM-48) 그 칸 폭 안에서 낱말 단위로 줄을 바꾸고
     // 아래에서 위로 쌓는다. 그 자리의 알림은 뜨지 않는 상자로 적어 smoke 「글 넘침」이 목표 막대와 겹침을 잰다. 다른 화면은 위 가운데
     const spot = !app.overlay && app.screen && app.screen.toastSpot ? app.screen.toastSpot() : null;
+    // 업적 자리(achvSpot)가 있으면 가장 새 업적 알림은 그 한 줄에, 나머지는 알림 자리에
+    const aspot = achvSpot(), achvT = aspot ? app.toasts.filter((t) => t.achv).pop() : null;
+    const rest = achvT ? app.toasts.filter((t) => t !== achvT) : app.toasts;
     app.toastRects = [];
+    if (achvT && !aspot.hold) {
+      const w = Math.min(aspot.w, measure(achvT.msg, true) + 16), x = Math.round(aspot.cx - w / 2), y = aspot.y;
+      app.toastRects.push({ x, y, w, h: BTN_S });
+      ctx.globalAlpha = Math.max(0, Math.min(1, achvT.t * 8, (achvT.life - achvT.t) * 4));
+      openBox('edge', x, y, w, BTN_S, 1, { name: '알림', r: TOAST_R });
+      const ink = toastPill(ctx, x, y, w, BTN_S, achvT.col);
+      text(ctx, achvT.msg, aspot.cx, inkY(y, BTN_S), ink, { align: 'center', bold: true });
+      closeBox();
+      ctx.globalAlpha = 1;
+    }
     if (spot) {
       // 새 알림이 아래(자리 밑변)에, 오래된 것이 위로. 윗변(spot.top)을 넘는 오래된 것은 그리지 않는다
       let bottom = spot.bottom;
-      [...app.toasts].reverse().forEach((t) => {
+      [...rest].reverse().forEach((t) => {
         const lines = wrap(t.msg, spot.w - 16, true);
         const w = Math.min(spot.w, Math.max(...lines.map((l) => measure(l, true))) + 16), h = BTN_S + (lines.length - 1) * LINE;
         const x = Math.round(spot.cx - w / 2), y = bottom - h;
@@ -514,7 +530,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       });
     } else {
       openBox('fx', 0, 0, W, H, 0, { loose: true, name: '알림' });
-      app.toasts.forEach((t, i) => {
+      rest.forEach((t, i) => {
         const a = Math.min(1, t.t * 8, (t.life - t.t) * 4);
         ctx.globalAlpha = Math.max(0, a);
         const w = Math.min(300, measure(t.msg, true) + 20);
