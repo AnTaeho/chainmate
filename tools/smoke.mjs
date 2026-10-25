@@ -127,7 +127,7 @@ function rule29Check() {
   }
   if (!PAGE_SCREENS.includes(sc)) return;
   const at = rule29.head.get(sc) || { ok: 0, bad: 0, seen: null };
-  const h = LL.LOG.heads.find((q) => q.layer === LL.LOG.layer);
+  const h = LL.LOG.heads.find((q) => q.layer <= LL.LOG.layer); // 같은 화면이 위에 덮개를 띄워도(수업 끝 카드) 아래 층의 머리를 본다
   if (h && h.x === 12 && h.y === 4) at.ok++;
   else {
     at.bad++;
