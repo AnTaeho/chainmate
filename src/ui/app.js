@@ -422,6 +422,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       if (button === 2) { app.ui.move(x, y); const s = app.overlay || app.screen; if (s && s.rightDown) s.rightDown(x, y); return; }
       // 처음 안내: 떠 있는 안내는 사라지고, 따라 하는 길이면 가리키는 곳만 눌린다
       app.ui.touch = !!app.touch; // 손가락이면 끌기 거리가 넓다(ui.move)
+      [x, y] = app.ui.snap('down', x, y); // 손가락: 빈 자리를 누르면 가까운 작은 구역으로 붙인다
       if (!coachDown(app, x, y)) { app.ui.move(x, y); return; }
       app.ui.down(x, y);
       const s = app.overlay || app.screen;
@@ -429,6 +430,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     } else if (type === 'up') {
       if (button === 2) { app.ui.move(x, y); const s = app.overlay || app.screen; if (s && s.rightUp) s.rightUp(x, y); return; }
       app.ui.touch = !!app.touch;
+      [x, y] = app.ui.snap('up', x, y); // 손가락: 떼며 조금 밀려도 누른 구역에서 뗀 것으로
       app.ui.up(x, y);
     }
     app.lastInputMs = now() - t0;

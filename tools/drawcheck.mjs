@@ -19,7 +19,7 @@ const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] :
 const [VW, VH] = opt('--scale', '1440x810').split('x').map(Number);
 const ONLY = opt('--only', null);
 const PORT = Number(opt('--port', 8793));
-// --fit fill: 꽉 채움 배율(주소 ?fit=fill — src/main.js)로 돈다
+// --fit int: 정수 배율(주소 ?fit=int — 기본은 꽉 채움, src/main.js)로 돈다
 const FIT = opt('--fit', null);
 let fitShown = false;
 

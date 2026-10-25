@@ -60,6 +60,43 @@ export class UI {
     if (r && r.enabled && r.drag) this.drag = { region: r, x, y, moved: false };
     return r;
   }
+  // 손가락 자리 고치기(app.pointer가 down · up 앞에 부른다 — 화면의 pointerDown도 고친 자리를 받는다). 마우스면 그대로.
+  // down: 아무 구역도 없는 자리를 누르면, 손가락 크기(finger)로 넓혔을 때 그 자리를 덮는 가장 가까운 구역 안으로 붙인다(빈 자리만 — 다른 구역 위의 누름은 그대로)
+  // up: 누른 구역에서 손가락이 떼며 조금 밀려도(손가락 크기 + TAP_SLOP 안) 누른 구역 안으로 되돌린다(끌기는 그대로)
+  snap(kind, x, y) {
+    if (!this.touch || !this.finger) return [x, y];
+    const reach = (r, pad = 0) => {
+      const ex = Math.max(0, (this.finger - r.w) / 2) + pad, ey = Math.max(0, (this.finger - r.h) / 2) + pad;
+      const dx = Math.max(r.x - x, 0, x - (r.x + r.w - 1)), dy = Math.max(r.y - y, 0, y - (r.y + r.h - 1));
+      return dx <= ex && dy <= ey ? dx * dx + dy * dy : -1;
+    };
+    const into = (r) => {
+      const p = [Math.min(Math.max(x, r.x), r.x + r.w - 1), Math.min(Math.max(y, r.y), r.y + r.h - 1)];
+      if (!r.hit || r.hit(p[0], p[1])) return p;
+      const c = [r.x + Math.floor(r.w / 2), r.y + Math.floor(r.h / 2)];
+      return r.hit(c[0], c[1]) ? c : null;
+    };
+    if (kind === 'down') {
+      if (this.hitIn(this.regions, x, y)) return [x, y];
+      let best = null, bd = Infinity;
+      for (let i = this.regions.length - 1; i >= 0; i--) {
+        const r = this.regions[i];
+        if (r.passive || !r.enabled || !(r.onClick || r.drag || r.tip || r.keys) || r.w <= 0 || r.h <= 0) continue;
+        const d = reach(r);
+        if (d >= 0 && d < bd) { const p = into(r); if (p && this.hitIn(this.regions, p[0], p[1]) === r) { best = p; bd = d; } }
+      }
+      return best || [x, y];
+    }
+    const p = this.press;
+    if (!p || (this.drag && this.drag.moved)) return [x, y];
+    const hit = this.hitIn(this.regions, x, y);
+    if (hit && hit.id === p.id) return [x, y];
+    let cur = null;
+    for (let i = this.regions.length - 1; i >= 0 && !cur; i--) if (this.regions[i].id === p.id) cur = this.regions[i];
+    if (!cur || reach(cur, TAP_SLOP) < 0) return [x, y];
+    const q = into(cur);
+    return q && this.hitIn(this.regions, q[0], q[1]) === cur ? q : [x, y];
+  }
   up(x, y) {
     this.move(x, y);
     const r = this.hitIn(this.regions, x, y);
@@ -71,14 +108,16 @@ export class UI {
       if (d.region.onDrop) d.region.onDrop(x, y, r);
       return 'drag';
     }
+    // 미리 보기 묶음: preview가 글이면 그 이름으로 묶는다(카드와 그 위 도장 — 어느 쪽을 눌러도 같은 미리 보기)
+    const pkey = (q) => (typeof q.preview === 'string' ? q.preview : q.id);
     if (r && p && r.id === p.id && r.enabled && r.onClick) {
       // 손가락으로는 preview 카드를 처음 누르면 말풍선 · 낱말 상자만 보이고, 한 번 더 눌러야 산다 · 고른다
-      if (this.touch && r.preview && this.previewId !== r.id) { this.previewId = r.id; return r; }
+      if (this.touch && r.preview && this.previewId !== pkey(r)) { this.previewId = pkey(r); return r; }
       this.previewId = null;
       r.onClick(r);
       return r;
     }
-    if (!r || r.id !== this.previewId) this.previewId = null;
+    if (!r || !r.preview || pkey(r) !== this.previewId) this.previewId = null;
     return null;
   }
 }
@@ -86,6 +125,8 @@ export class UI {
 // 손가락 누르는 구역(CHM-52): 손가락 기기면 실제 화면 44pt(CSS 화소)를 도트로 몇 칸인지. 마우스 기기면 0(구역을 넓히지 않는다).
 // app.pixelScale = 도트 하나의 CSS 크기(main.js), app.coarse = 손가락 기기(첫 그림부터), app.touch = 손가락으로 누른 적 있음
 export const FINGER_PT = 44;
+// 손가락을 떼며 밀려도 누른 것으로 치는 거리(도트, 손가락 크기로 넓힌 구역 밖으로 — UI.snap). 끌기로 치는 거리(ui.move 8)와 같다
+export const TAP_SLOP = 8;
 export function fingerDots(app) {
   if (!app || !(app.coarse || app.touch)) return 0;
   return Math.ceil(FINGER_PT / (app.pixelScale > 0 ? app.pixelScale : 1));
@@ -116,11 +157,11 @@ export function pillR(w, h, tw) {
 // 글에 맞춘 단추 폭(29절): 글 + 양쪽 BTN_PAD(12), 가장 좁아도 min(BTN_MIN 64). icon이면 아이콘 자리(10)를 더한다
 export const btnW = (label, { icon = false, min = BTN_MIN } = {}) => Math.max(min, (label ? measure(label, true) : 0) + (icon ? 10 : 0) + BTN_PAD * 2);
 // w · h를 null로 주면 w는 btnW(글), h는 BTN_H
-export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null, grow = null } = {}) {
+export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null, grow = null, preview = null } = {}) {
   if (w == null) w = btnW(label, { icon: !!icon });
   if (h == null) h = BTN_H;
   const g = grow && ui.finger ? growHit(x, y, w, h, ui.finger, grow) : { x, y, w, h };
-  const r = ui.region(id, g.x, g.y, g.w, g.h, { enabled, onClick, ...(tip ? { tip } : {}) });
+  const r = ui.region(id, g.x, g.y, g.w, g.h, { enabled, onClick, ...(tip ? { tip } : {}), ...(preview ? { preview } : {}) });
   const hov = enabled && ui.isHover(id);
   const pressed = hov && ui.press && ui.press.id === id;
   // 알약 단추(안 3 — layout.md 27절): 크림(보조) · 금빛(주) · 붉은(위험), 꺼진 단추는 빈 자리 빛깔. 잉크 테 1 + 바로 아래 잉크 그림자 2(누르면 1 내려앉고 1)

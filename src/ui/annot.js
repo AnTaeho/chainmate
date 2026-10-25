@@ -4,7 +4,7 @@
 //   ×N  탁월수 배수: 값 × 배수 칸의 배수 칸에 붙는다. 청록 바탕
 // 딱지는 둥근 칸 + 짙은 테, 글은 굵은 글꼴을 옛 7줄 글자 자리에 맞춰 줄여 쓴다(text.js tinyText — 글 넘침 검사의 테와 엉키지 않게 글 기록 밖).
 // 자리 셈(handTagRect · boardTagRect · offeredRow)은 그리기와 따로 두어 시험이 잰다(test/annot.test.js).
-import { rrect } from '../render/gfx.js';
+import { rrect, inner } from '../render/gfx.js';
 import { tinyText } from '../render/text.js';
 import { center as sqCenter, AREA, PIECE_UP } from '../render/board3.js';
 
@@ -55,7 +55,7 @@ export function drawAnnot(ctx, mark, x, y, tone = ANNOT.teal, scale = 1) {
   const r = Math.min(Math.floor(h / 2), scale > 1 ? 6 : 4);
   if (scale > 1) rrect(ctx, x, y + 1, w, h, r, tone.edge);
   rrect(ctx, x, y, w, h, r, tone.edge);
-  rrect(ctx, x + 1, y + 1, w - 2, h - 2, r - 1, tone.fill);
+  inner(ctx, x, y, w, h, r - 1, tone.fill);
   drawGlyphs(ctx, mark, x + 1 + px, y + 1 + py, tone.ink, scale);
   return { x, y, w, h };
 }

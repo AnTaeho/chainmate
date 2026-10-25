@@ -1,6 +1,6 @@
 // 화면 배율 비교 스크린샷(정수 배율 · 꽉 채움): 창 셋 × 장면 다섯을 기기 화소로 찍고, 테 · 글자 · 기물 가장자리를 확대해 잘라 낸다.
 //   node tools/shots-scale.mjs [--fit int|fill] [--prefix 이름] [--out 폴더] [--sizes iphone,hd,fhd] [--scenes title,select,battle,shop,achv]
-// --fit fill은 주소에 ?fit=fill을 붙인다(그 설정이 없는 판본은 무시하고 정수 배율로 돈다). 찍은 뒤 캔버스 크기 · 배율과
+// --fit은 주소에 ?fit=int|fill을 붙인다(기본은 꽉 채움 — 그 설정이 없는 옛 판본은 무시하고 정수 배율로 돈다). 찍은 뒤 캔버스 크기 · 배율과
 // 「뒷면 = 기기 화소」인 창에서는 뒷면 캔버스 화소와 찍은 화소의 차(1:1로 붙었나)를 적는다.
 // Playwright는 저장소 의존성에 넣지 않는다 — PLAYWRIGHT(index.mjs 경로) · 'playwright' · 전역 순.
 import http from 'node:http';
@@ -52,6 +52,8 @@ const port = srv.address().port;
 const pw = await loadPlaywright();
 const browsers = {};
 const browserFor = async (e) => (browsers[e] ||= await pw[e].launch());
+// WebKit이 없는 곳(클라우드 — 내려받기가 막힌 곳)에서는 아이폰 창도 손가락을 흉내 내는 Chromium으로 찍는다
+try { await browserFor('webkit'); } catch { for (const S of Object.values(SIZES)) if (S.engine === 'webkit') S.engine = 'chromium'; console.log('# WebKit 없음 — Chromium으로'); }
 fs.mkdirSync(OUT, { recursive: true });
 const errors = [];
 const table = [];
@@ -105,7 +107,7 @@ for (const sizeName of WANT) {
   const page = await browser.newPage({ viewport: { width: S.w, height: S.h }, deviceScaleFactor: S.dpr, hasTouch: !!S.touch, isMobile: !!S.touch && S.engine !== 'webkit' ? true : undefined });
   page.on('pageerror', (e) => errors.push(`${sizeName}: ${String(e.stack || e).split('\n').slice(0, 2).join(' ')}`));
   await page.addInitScript(() => { window.__autoDraft = true; });
-  const q = FIT === 'fill' ? '?fit=fill' : '';
+  const q = `?fit=${FIT}`;
   await page.goto(`http://localhost:${port}/index.html${q}`);
   await page.waitForFunction(() => window.__app && window.__app.screen, null, { timeout: 30000 });
   await page.evaluate(() => {
