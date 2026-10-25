@@ -1,7 +1,7 @@
 // 깊이 층의 화면 조각: 시너지(옛 가족) 문양 · 칩 · 띠(켜진 시너지와 다음 문턱) · 문턱을 넘는 순간.
 import { PAL } from '../render/palette.js';
 import { live } from '../render/look.js';
-import { rrect, rframe, radiusOf, text, box, measure } from '../render/gfx.js';
+import { rrect, rframe, radiusOf, text, box, measure, R_SM } from '../render/gfx.js';
 import { FAMILIES, FAMILY_BY_ID, THRESHOLDS, familyCounts, levelOf, setName } from '../data/families.js';
 import { tipLines, optLine } from './parts.js';
 import { L } from './lang.js';
@@ -94,7 +94,7 @@ export const chipW = (id) => CHIP_PAD + 5 + 3 + measure(chipLabel(id)) + CHIP_PA
 export function familyChip(ctx, id, x, y) {
   const w = chipW(id);
   openBox('edge', x, y, w, CHIP_H, 0, { name: `칩 ${id}` });
-  rrect(ctx, x, y, w, CHIP_H, Math.min(5, CHIP_H >> 1), PAL.felt);
+  rrect(ctx, x, y, w, CHIP_H, R_SM, PAL.felt);
   familyGlyph(ctx, id, x + CHIP_PAD, y + ((CHIP_H - 5) >> 1));
   text(ctx, chipLabel(id), x + CHIP_PAD + 8, inkY(y, CHIP_H), PAL.ink);
   closeBox();

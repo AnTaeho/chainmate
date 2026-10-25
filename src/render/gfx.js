@@ -1,6 +1,6 @@
 // 그리기 도구. 좌표는 모두 480×270 안의 정수 칸.
 import { PAL, lightFill } from './palette.js';
-import { shade, softShadow, rpath, DROP } from './light.js';
+import { shade, softShadow, rpath, DROP, glow } from './light.js';
 import { textImage, textWidth, inkBox, tinyText } from './text.js';
 import { orbPaint, SW, SH } from './sprites.js';
 import { blitVec } from './vec.js';
@@ -37,9 +37,12 @@ export function rect(ctx, x, y, w, h, col) {
 
 // 틀 문법(안 3 — layout.md 27절): 둥근 상자 + 잉크 테 1 + 바로 아래 잉크 그림자(큰 상자 2). 크림 카드는 흐린 그림자를 더한다(light.js softShadow).
 // 테 빛깔을 따로 주지 않으면(PAL.frameDk · PAL.frameHi) 잉크. 금빛 · 등급 · 세력 빛깔처럼 뜻이 있는 테는 그대로
+// 모서리는 셋만(layout.md 29절): 작은 것(칩 · 빈 칸 · 작은 그림 칸) R_SM, 큰 것(판넬 · 카드 · 말풍선 · 막간 상자) R_LG, 알약(단추 · 탭 · 토글)은 ui.js pillR
 export const BIG = 24;
-export const R_BIG = 4;                       // 큰 상자(가로 · 세로 BIG 이상) 모서리
-export const radiusOf = (w, h) => (Math.min(w, h) >= BIG ? R_BIG : Math.min(w, h) >= 12 ? 3 : 2);
+export const R_SM = 4;
+export const R_LG = 6;
+export const R_BIG = R_LG;                    // 옛 이름
+export const radiusOf = (w, h) => (Math.min(w, h) >= BIG ? R_LG : R_SM);
 export const edgeOf = (fill, edge = PAL.frameDk) => (edge === PAL.frameDk || edge === PAL.frameHi ? PAL.frameDk : edge);
 export const edgeW = () => 1;
 // 둥근 네모 칠하기(정수 칸 · fine 안이면 1/N 칸)
@@ -81,8 +84,8 @@ export function box(ctx, x, y, w, h, fill, edge = PAL.frameDk, { r = radiusOf(w,
 // 뒤 판넬 테 · 글과 설명 상자 사이를 끊는다. 묶음은 한 번에 깔아 상자 사이 틈도 이음선이 된다(테 기록 logFrame 없이 칠만)
 export function lift(ctx, x, y, w, h) {
   softShadow(ctx, x, y + 3, w, h);
-  rrect(ctx, x - 1, y + 1, w + 2, h + 2, R_BIG + 1, PAL.shadow);
-  rrect(ctx, x - 1, y - 1, w + 2, h + 2, R_BIG + 1, PAL.shadow);
+  rrect(ctx, x - 1, y + 1, w + 2, h + 2, R_LG + 1, PAL.shadow);
+  rrect(ctx, x - 1, y - 1, w + 2, h + 2, R_LG + 1, PAL.shadow);
 }
 
 // 테두리만(네모). 둥근 상자 위에 겹치는 테는 rframe
@@ -91,13 +94,20 @@ export function frame(ctx, x, y, w, h, col, t = 1) {
   rect(ctx, x, y, t, h, col); rect(ctx, x + w - t, y, t, h, col);
 }
 
-// 빈 자리(격언 빈칸 · 두루마리 빈칸 · 다음 수 빈칸 · 콤보 빈칸): 테 두른 둥근 칸 — 깊은 남색 바탕 + 옅은 남색 테 1(안 3 틀 문법 — layout.md 27절).
-// 모서리는 낮은 칸이면 알약(높이의 반), 14까지
-export const slotR = (w, h) => Math.min(14, Math.floor(Math.min(w, h) / 2));
-export function slot(ctx, x, y, w, h, { r = slotR(w, h) } = {}) {
+// 빈 자리(격언 · 두루마리 · 다음 수 · 콤보 · 도감 잠김 · 해금 카드 뒤): 한 꼴 — 움푹한 어두운 칸, 옅은 남색 테 1, 모서리 R_SM(29절).
+// 옛 부름의 { r }는 받기만 한다
+export const slotR = () => R_SM;
+export function slot(ctx, x, y, w, h) {
   if (LOG.on) logFrame(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
-  rrect(ctx, x, y, w, h, r, PAL.slotEdge);
-  rrect(ctx, x + 1, y + 1, w - 2, h - 2, Math.max(0, r - 1), PAL.slot);
+  rrect(ctx, x, y, w, h, R_SM, PAL.slotEdge);
+  rrect(ctx, x + 1, y + 1, w - 2, h - 2, R_SM - 1, PAL.slot);
+}
+
+// 고른 것(29절): 금빛 테 1 + 바깥 빛(2px 테 없음). selectGlow는 칸을 그리기 전에(빛이 칸 뒤), selectRing은 칸 위에 테까지
+export const selectGlow = (ctx, x, y, w, h, col = PAL.gold, a = 0.45) => glow(ctx, x, y, w, h, col, a, 4);
+export function selectRing(ctx, x, y, w, h, { r = radiusOf(w, h), col = PAL.gold, glowA = 0.45 } = {}) {
+  if (glowA > 0) selectGlow(ctx, x, y, w, h, col, glowA);
+  rframe(ctx, x, y, w, h, r, col, 1);
 }
 
 // 점선 테두리(증원 그림자 · 빈 칸)
@@ -177,10 +187,12 @@ export function sprite(ctx, type, side, x, y, { alpha = 1, sx = 1, sy = 1, eng =
   fitPiece(ctx, type, side, R(x + (SW - bw) / 2), R(y + SH - bh), bw, bh, { alpha, hx: still ? 1 : Math.abs(sx) / (k || 1), eng, tier, time, soul, awake, spark: still && k === 1 });
 }
 
-// 작은 숫자(작은 칸 번호 · 기보 수): 옛 3 × 5 도트 숫자 자리(글자마다 폭 4)의 가운데에 굵은 글꼴 숫자(잉크 높이 5). 돌려주는 값은 자리 폭
+// 작은 숫자(기보 수 표 · 조각 수 · 막대 눈금): 주석 글자 높이 DIGIT_H(annot.js GLYPH_H와 같은 7, 29절의 유일한 작은 글자) 굵은 숫자.
+// 가운데 줄은 y + 2.5(옛 5줄 숫자 자리와 같다), 글자마다 폭 5. 돌려주는 값은 자리 폭
+export const DIGIT_H = 7;
 export function digits(ctx, n, x, y, col) {
-  const s = String(n), w = s.length * 4 - 1;
-  tinyText(ctx, s, x + w / 2, y + 2.5, 5, col);
+  const s = String(n), w = s.length * 5 - 1;
+  tinyText(ctx, s, x + w / 2, y + 2.5, DIGIT_H, col);
   return w;
 }
 

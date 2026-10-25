@@ -2,7 +2,7 @@
 import { richText } from './glossary.js';
 import { sheen } from './juice.js';
 import { PAL, RARITY, EDITION_TINT } from '../render/palette.js';
-import { box, rect, rrect, text, seg, dot, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf } from '../render/gfx.js';
+import { box, rect, rrect, text, seg, dot, sprite, measure, digits, place, edgeW, slot, rframe, radiusOf, R_SM, selectGlow } from '../render/gfx.js';
 import { button } from './ui.js';
 import { ENG_EDGE, tierOf } from '../render/sprites.js';
 import { maximFamilies } from '../data/families.js';
@@ -152,7 +152,7 @@ export function editionShine(ctx, edition, x, y, w, h, t) {
     for (let i = 0; i < 7; i++) {
       const px = x + 5 + ((i * 37) % (w - 10)), py = y + 3 + ((i * 13) % (h - 6));
       ctx.globalAlpha = 0.55;
-      rect(ctx, px, py, 2, 1, `hsl(${Math.floor(t * 90 + i * 51) % 360},70%,80%)`);
+      dot(ctx, px, py - 0.5, 1.8, `hsl(${Math.floor(t * 90 + i * 51) % 360},70%,80%)`);
       ctx.globalAlpha = 1;
     }
     edgeRing(ctx, x, y, w, h, 0, `hsl(${Math.floor(t * 60) % 360},45%,82%)`);
@@ -293,8 +293,9 @@ export function pieceCard(ctx, p, x, y, w, h, { lift = 0, selected = false, hove
   const yy = y - lift;
   if (alpha !== 1) ctx.globalAlpha = alpha;
   // slot: 덱 칸(안 3 시안 — 상자 면 빛깔 칸 위 크림 기물). 기본은 크림 카드(손 카드 · 미리 보기)
+  // 고른 카드: 금빛 테 1 + 바깥 빛(29절 — 2px 테 없음)
+  if (selected) selectGlow(ctx, x, yy, w, h);
   box(ctx, x, yy, w, h, slot ? PAL.feltDk : PAL.light, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk, slot ? { drop: 2 } : undefined);
-  if (selected) edgeRing(ctx, x, yy, w, h, -1, PAL.gold);
   if (p.eng && ENG_EDGE[p.eng.id]) { edgeRing(ctx, x, yy, w, h, 1, ENG_EDGE[p.eng.id]); cornerTicks(ctx, x + 2, yy + 2, w - 4, h - 4, ENG_EDGE[p.eng.id]); }
   sprite(ctx, p.t, 'w', x + Math.floor((w - 16) / 2), yy + Math.floor((h - 22) / 2) + 1, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null });
   // 혼 표(각성 금테)가 기보 표를 덮지 않게 먼저
@@ -334,15 +335,15 @@ export function soulMark(ctx, p, x, y, w, h, time = null, dim = false) {
   }
   if (dim) ctx.globalAlpha /= 0.6;
 }
-// 기보 수준 표: 오른끝 right · 윗변 y에 붙는 둥근 청록 칸(숫자 자리 3 × 5 + 둘레 1). 돌려주는 값은 폭
+// 기보 수준 표: 오른끝 right · 윗변 y에 붙는 둥근 청록 칸(7줄 숫자 + 둘레 2 · 1). 돌려주는 값은 폭
 export function chartBadge(ctx, level, right, y, { dim = false, glow = 0 } = {}) {
   const [, hi, dk] = SEAL.chart;
   const s = String(Math.min(99, level));
-  const bw = s.length * 4 + 1, bh = 7, bx = right - bw;
+  const bw = s.length * 5 + 3, bh = 9, bx = right - bw;
   const a0 = ctx.globalAlpha;
   if (dim) ctx.globalAlpha = a0 * 0.6;
-  rrect(ctx, bx, y, bw, bh, 2, glow > 0 ? mixHex(dk, hi, glow * 0.6) : dk);
-  digits(ctx, s, bx + 1, y + 1, glow > 0.5 ? PAL.white : hi);
+  rrect(ctx, bx, y, bw, bh, R_SM, glow > 0 ? mixHex(dk, hi, glow * 0.6) : dk);
+  digits(ctx, s, bx + 2, y + 2, glow > 0.5 ? PAL.white : hi);
   ctx.globalAlpha = a0;
   return bw;
 }
@@ -667,10 +668,10 @@ function itemCardWide(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run,
   closeBox();
 }
 
-// 금빛 값표(상점 진열): 값 글 자리(오른끝 x2 · 글 y)에서 TAG.out만큼 오른쪽으로 옮겨 카드 오른쪽 테 밖까지 걸친다(둥근 5, 잉크 테 · 아래 그림자)
+// 금빛 값표(상점 진열): 값 글 자리(오른끝 x2 · 글 y)에서 TAG.out만큼 오른쪽으로 옮겨 카드 오른쪽 테 밖까지 걸친다(모서리 R_SM, 잉크 테 · 아래 그림자)
 export const TAG = { h: 17, padX: 4, out: 6 };
 export function priceTag(ctx, label, x2, ty) {
-  const tw = measure(label, true), w = tw + TAG.padX * 2, x = x2 + TAG.out + TAG.padX - w, y = ty - 3, r = 5;
+  const tw = measure(label, true), w = tw + TAG.padX * 2, x = x2 + TAG.out + TAG.padX - w, y = ty - 3, r = R_SM;
   openBox('edge', x, y, w, TAG.h, 1, { name: '값표', r });
   rrect(ctx, x, y + 2, w, TAG.h, r, PAL.drop);
   rrect(ctx, x, y, w, TAG.h, r, PAL.frameDk);
