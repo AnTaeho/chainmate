@@ -3,18 +3,18 @@
 // 주인공 단추 하나(저장이 있으면 「이어 하기」, 없으면 「새 판」)가 금빛으로 숨 쉬며, 나머지는 아래 아이콘 줄이다.
 // 바탕(하늘 · 달 · 별 · 실루엣 · 가장자리 어둡기)은 여백 판이 창 전체로 같은 함수로 이어 칠한다(surroundScene).
 import { hint, markSeen } from '../coach.js';
-import { inkY } from '../frame.js';
+import { inkY, SP, BTN_HERO } from '../frame.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, rect, rrect, rframe, box, measure } from '../../render/gfx.js';
+import { W, H, text, rect, rrect, rframe, box, measure, selectRing, R_SM } from '../../render/gfx.js';
 import { pillR } from '../ui.js';
 import { makeCanvas, context } from '../../render/surface.js';
 import { LOOK } from '../../render/look.js';
 import { textImage, textWidth, wrap, textGen, inkBox } from '../../render/text.js';
 import { drawIcon } from '../../render/icons.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
-import { paintNight, drawNightLive, drawVignette, drawSky, skyScale, silShift } from '../../render/night.js';
+import { paintNight, drawNightLive, drawVignette, drawSky, skyScale, silShift, MOON } from '../../render/night.js';
 import { skyScene, skyShake, calmScene } from '../skychain.js';
-import { L } from '../lang.js';
+import { L, getLang } from '../lang.js';
 
 // 멈춘 바탕(하늘 · 달)은 게임 둘레 8도트까지 한 번 칠해 둔다 — 흔들려 옮겨 깔아도 가장자리가 비지 않는다
 const M = 8;
@@ -66,9 +66,11 @@ export function noteLayout() {
   const tw = measure(TELEMETRY_NOTE), lw = measure(NOTE_LINK, true), w = 8 + tw + 10 + lw + 8, x = Math.round(W / 2 - w / 2);
   return { x, w, textX: x + 8, link: { x: x + 8 + tw + 6, y: NOTE_Y, w: lw + 8, h: NOTE_H } };
 }
-export const HERO = { w: 112, h: 26, y: 196 };
+export const HERO = { w: 112, h: BTN_HERO, y: 196, drop: SP.xs, ring: SP.s };
 // 아이콘 줄 칸 폭: 여섯 칸까지 72, 일곱 칸(저장이 있을 때 — 「순위」가 든 뒤, CHM-70)이면 화면 폭에 맞춰 68
 export const ROW = { y: 226, cw: 72, box: 22, boxH: 16 };
+// 영어 이름이 칸 폭(64)을 넘어 두 줄이 되는 칸의 짧은 이름 — 화면 아래 끝에 붙지 않게
+const ROW_SHORT_EN = { 'title:daily': 'Daily' };
 export const rowCw = (n) => (n * ROW.cw > W - 4 ? Math.floor((W - 4) / n) : ROW.cw);
 
 const ICON = { 'title:continue': 'menu_continue', 'title:new': 'menu_new', 'title:lesson': 'menu_lesson', 'title:daily': 'menu_daily', 'title:rank': 'menu_rank', 'title:codex': 'menu_codex', 'title:records': 'menu_records', 'title:settings': 'menu_settings' };
@@ -178,7 +180,8 @@ export class TitleScreen {
   drawLogo(ctx, calm) {
     // 말이 바뀌거나 글꼴이 다시 오면(글자 캐시를 비우면) 다시 굽는다
     if (!logo || logo.s !== L('체인메이트') || logo.gen !== textGen() || logo.n !== LOOK.n) logo = bakeLogo();
-    const lx = Math.round(W / 2 - logo.w / 2), t = this.app.time;
+    // 가운데에 두되 달(원판) 왼쪽 8 앞에서 멈춘다 — 영어 「CHAINMATE」는 가운데면 달에 닿는다
+    const lx = Math.min(Math.round(W / 2 - logo.w / 2), MOON.x - MOON.r - SP.m - logo.w), t = this.app.time;
     for (const { c, x, i, w, h, dy } of logo.letters) {
       const bob = calm ? 0 : Math.round(Math.sin(t * 2.2 + i * 0.8) * 2);
       ctx.drawImage(c, lx + x, LOGO_Y + bob + dy, w, h);
@@ -194,11 +197,12 @@ export class TitleScreen {
     const [hid, hlabel, hfn] = items[0];
     const hx = W / 2 - HERO.w / 2, up = Math.round(Math.max(0, Math.sin(app.time * 3))) - pressed(hid);
     const hy = HERO.y - up;
-    ui.region(hid, hx - 4, HERO.y - 5, HERO.w + 8, ROW.y - (HERO.y - 5), { onClick: hfn });
-    // 금빛 알약(ui.js button과 같은 문법): 잉크 테 1 + 아래 잉크 그림자 3(숨 쉬어도 그림자는 바닥에), 고르면 바깥 크림 고리
+    const R = HERO.ring;
+    ui.region(hid, hx - R, HERO.y - R, HERO.w + R * 2, ROW.y - (HERO.y - R), { onClick: hfn });
+    // 금빛 알약(ui.js button과 같은 문법, 높이 BTN_HERO): 잉크 테 1 + 아래 잉크 그림자(숨 쉬어도 그림자는 바닥에), 고르면 바깥 크림 고리
     const pr = pillR(HERO.w, HERO.h, measure(hlabel, true));
-    rrect(ctx, hx, HERO.y + 3, HERO.w, HERO.h, pr, PAL.drop);
-    if (this.sel === 0) rframe(ctx, hx - 3, hy - 3, HERO.w + 6, HERO.h + 6, pr + 3, PAL.edge, 1);
+    rrect(ctx, hx, HERO.y + HERO.drop, HERO.w, HERO.h, pr, PAL.drop);
+    if (this.sel === 0) rframe(ctx, hx - R, hy - R, HERO.w + R * 2, HERO.h + R * 2, pr + R, PAL.edge, 1);
     openBox('edge', hx, hy, HERO.w, HERO.h, 1, { name: '첫 화면 단추', r: pr });
     rrect(ctx, hx, hy, HERO.w, HERO.h, pr, PAL.frameDk);
     rrect(ctx, hx + 1, hy + 1, HERO.w - 2, HERO.h - 2, pr - 1, ui.isHover(hid) ? PAL.goldHi : PAL.gold);
@@ -216,12 +220,13 @@ export class TitleScreen {
       const bx = cx - ROW.box / 2, by = ROW.y + 2 - lift;
       // 아이콘 칸: 둥근 남색 칸(잉크 테), 고르면 바깥 금빛 고리. 기록 알림이 떠 있는 동안 설정 칸에 금빛 고리가 깜박인다
       const blink = id === 'title:settings' && this.noteOn() && (app.reducedMotion || Math.floor(app.time * 2) % 2 === 0);
-      box(ctx, bx, by, ROW.box, ROW.boxH, PAL.feltDk, PAL.frameDk, { r: 5, drop: on ? 2 : 1 });
-      if (on || blink) rframe(ctx, bx - 2, by - 2, ROW.box + 4, ROW.boxH + 4, 7, on ? PAL.gold : PAL.goldHi, 1);
+      box(ctx, bx, by, ROW.box, ROW.boxH, PAL.feltDk, PAL.frameDk, { r: R_SM, drop: on ? 2 : 1 });
+      if (on || blink) selectRing(ctx, bx, by, ROW.box, ROW.boxH, { r: R_SM, col: on ? PAL.gold : PAL.goldHi });
       drawIcon(ctx, ICON[id], cx - 6, by + 2);
-      // 일곱 칸(폭 68)은 구역 폭을 다 쓴다 — 「오늘의 대국」(63)이 한 줄에 들어간다
-      const lines = wrap(label, n > 6 ? rw : rw - 2);
-      const ly = (lines.length > 1 ? ROW.y + 20 : ROW.y + 22) - lift;
+      // 일곱 칸(폭 68)은 구역 폭을 다 쓴다 — 「오늘의 대국」(63)이 한 줄에 들어간다. 영어가 두 줄이면 짧은 이름(ROW_SHORT_EN)
+      let lines = wrap(label, n > 6 ? rw : rw - 2);
+      if (lines.length > 1 && getLang() === 'en' && ROW_SHORT_EN[id]) lines = [ROW_SHORT_EN[id]];
+      const ly = (lines.length > 1 ? ROW.y + 20 : ROW.y + 2 + ROW.boxH + SP.s) - lift;
       lines.forEach((s, j) => text(ctx, s, cx, ly + j * 11, on ? PAL.goldHi : PAL.dim, { align: 'center', shadow: PAL.shadow }));
       closeBox();
     });

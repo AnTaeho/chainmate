@@ -1,7 +1,7 @@
 // 해금(CHM-73, docs/design-notes/layout.md 26절): 해금 화면 · 결과 화면 · 도감이 같이 쓰는 조각 — 묶음 · 진행 막대 · 카드 · 뒷면 · 작은 그림.
 // 단계와 문턱은 src/data/unlocks.js, 기록은 records.gates · records.unlockTier.
 import { PAL } from '../render/palette.js';
-import { rrect, box, slot, text, measure } from '../render/gfx.js';
+import { rrect, box, slot, text, measure, R_SM } from '../render/gfx.js';
 import { drawIcon } from '../render/icons.js';
 import { UNLOCK_TIERS, UNLOCK_KINDS, UNLOCK_GATES, unlockProgress, tierOf } from '../data/unlocks.js';
 import { MAXIMS } from '../data/maxims.js';
@@ -92,7 +92,7 @@ export function backCard(ctx, kind, x, y, w, h, { next = false } = {}) {
   box(ctx, x, y, w, h, PAL.slot, next ? PAL.gold : PAL.frameDk);
   edgeRing(ctx, x, y, w, h, 3, next ? PAL.goldDk : PAL.slotEdge);
   const gy = y + Math.floor((h - TAB - GAP_IN - LINE) / 2), gx = x + Math.floor((w - TAB) / 2);
-  rrect(ctx, gx, gy, TAB, TAB, 3, KIND[kind].bg);
+  rrect(ctx, gx, gy, TAB, TAB, R_SM, KIND[kind].bg);
   kindGlyph(ctx, kind, gx, gy, TAB, TAB);
   text(ctx, KIND_LABEL[kind], x + Math.floor(w / 2), gy + TAB + GAP_IN + 1, PAL.dim, { align: 'center' });
   closeBox();
@@ -103,18 +103,18 @@ export const MINI = { w: 20, h: 22 };
 // 열렸으면 그 물건의 그림, 잠겼으면 흐린 종류 그림
 export function miniArt(ctx, b, x, y, open) {
   if (!open) {
-    slot(ctx, x, y, MINI.w, MINI.h, { r: 3 });
+    slot(ctx, x, y, MINI.w, MINI.h);
     kindGlyph(ctx, b.kind, x, y, MINI.w, MINI.h, PAL.dimDk);
     return;
   }
   if (b.kind === 'maxim') return maximArt(ctx, b.id, x, y);
   if (b.kind === 'piece' || b.kind === 'soul' || (b.kind === 'engraving' && EMBLEM[b.id])) { itemArt(ctx, itemOf(b), x, y, 0, null, MINI); return; }
-  rrect(ctx, x, y, MINI.w, MINI.h, 3, CELL.bg);
+  rrect(ctx, x, y, MINI.w, MINI.h, R_SM, CELL.bg);
   if (b.kind === 'joseki') kindGlyph(ctx, 'joseki', x, y, MINI.w, MINI.h, TIER_COL[JOSEKI_BY_ID[b.id].tier]);
   else kindGlyph(ctx, b.kind, x, y, MINI.w, MINI.h);
 }
 // 종류만 보이는 칸(처음부터 열린 묶음처럼 수가 많을 때): 종류 그림
 export function kindCell(ctx, kind, x, y) {
-  rrect(ctx, x, y, MINI.w, MINI.h, 3, CELL.bg);
+  rrect(ctx, x, y, MINI.w, MINI.h, R_SM, CELL.bg);
   kindGlyph(ctx, kind, x, y, MINI.w, MINI.h);
 }

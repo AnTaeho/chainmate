@@ -11,7 +11,7 @@ import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } 
 import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
-import { button, growHit } from '../ui.js';
+import { button, buttonRow, btnW, growHit } from '../ui.js';
 import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, edgeRing, itemArt, chartLevel, SEAL, targetOk, isSwap, rarityLine, HOLD_MARK, itemName, itemCardLayout } from '../parts.js';
 import { EDITION_BY_ID } from '../../data/editions.js';
 import { chartForm } from '../../data/pieces.js';
@@ -25,14 +25,14 @@ const ENG_NAME = (id) => engravingInfo(id).name;
 import { familyStrip, familyRises, josekiBadges } from '../parts-depth.js';
 import { PACK_NAME, PIECE_NAME, PIECE_MOVE, PART_NAME, josa } from '../words.js';
 import { runSide, pauseButton, shardTo } from './common.js';
-import { RIGHT, CENTER, CARD, TOP, PAD_CARD, LINE, GAP_IN, GAP_GROUP, LIST_GAP, flow, textY, inkY, rowBoxH, BTN_S } from '../frame.js';
+import { RIGHT, CENTER, CARD, TOP, PAD_CARD, LINE, GAP_IN, GAP_GROUP, LIST_GAP, flow, textY, inkY, rowBoxH, BTN_H, SP } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { L } from '../lang.js';
 
 const RX = RIGHT.x, RW = RIGHT.w;
 // 판 틀(docs/design-notes/layout.md 「상점」): 가운데 칸 위 띠에 「진열」 이름표 · 다시 진열 · 다음 대국, 그 아래로 진열 카드 줄(hug) →
 // 꾸러미 줄(hug) → 덱(남는 높이). 오른쪽 칸은 격언 칸 → 두루마리(아래에서부터). 묶음 사이 GAP_GROUP
-const CARD_W = CARD.w, BAR_Y = 2, BAR_H = BTN_S, BOTTOM = 270 - 2, BAG_MIN = 28;
+const CARD_W = CARD.w, BAR_Y = SP.xs, BAR_H = BTN_H, BOTTOM = 270 - SP.xs, BAG_MIN = 28;
 // 진열 카드 기울기(라디안, 1.2도): 높이 160 카드의 아래 모서리가 3 비켜 두 카드 사이 8에 들어간다
 const HANG = 0.021;
 // (x, y)를 pivot 둘레로 돌리면 얼마나 옮겨지나
@@ -57,6 +57,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
   // 줄 자리를 기록기에 남긴다(글은 없다 — 화면 밖 · 다른 칸과 겹침만 잰다)
   openBox('tile', x, y, w, (rows - 1) * step + ch, 0, { name: '덱 줄' });
   closeBox();
+  const bottomY = y + (rows - 1) * step + ch;
   run.deck.forEach((p, i) => {
     const col = i % per, row = Math.floor(i / per);
     const px = x + col * hstep, py = y + row * step;
@@ -78,6 +79,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     if (growing) { if (grow.big || grow.from == null) growPillar(ctx, px, py, cw, ch, grow.p); else growSparks(ctx, px, py, cw, ch, grow.p); }
     if (glow && pick && ok) { live(); const a = 0.4 + 0.3 * Math.sin(ui.time * 6); ctx.globalAlpha = a; edgeRing(ctx, px, py, cw, ch, -1, PAL.gold); ctx.globalAlpha = 1; }
   });
+  return { bottom: bottomY };
 }
 
 // 기보로 자라는 연출 길이: 단계가 바뀌면(빛 기둥) · 수준만 오르면(청록 반짝). 옛 모습이 새 모습으로 바뀌는 때(비율)
@@ -153,7 +155,7 @@ function scrollArt(ctx, c, ax, ay) { itemArt(ctx, c, ax, ay, 0, null, SCROLL_ART
 // 봉투 속 「무엇 셋 중 하나」는 가리키면 왼쪽 칸 설명에(packTip)
 const ENV = { w: 28, h: 22 };
 // 넓은 칸의 봉투(상자 없이 그리므로 자리보다 크게) · 봉투 기울기
-const ENV_BIG = { w: 40, h: 30 }, ENV_TILT = 0.07;
+const ENV_BIG = { w: 38, h: 28 }, ENV_TILT = 0.07;
 const PACK_INSIDE = { piece: '기물 셋 중 하나', chart: '기보 셋 중 하나', engraving: '각인 셋 중 하나', golden: '판본 격언 셋 중 하나' };
 export const packTip = (pk) => tipLines(PACK_NAME[pk.kind], PACK_INSIDE[pk.kind] || '');
 const PACK_GAP = 4;
@@ -317,6 +319,11 @@ export class ShopScreen {
     const labelY = scrollY - GAP_IN - LINE;
     return { wide, ch, scrollY, labelY, room: labelY - GAP_GROUP - TOP };
   }
+  // 알림 자리: 가운데 칸 덱 줄 아래(단추 · 카드를 덮지 않는다). 긴 진열 카드로 덱이 바닥까지 내려와 한 줄도 안 들어가면 기본 자리(위 가운데)
+  toastSpot() {
+    const top = (this.bagBottom || BOTTOM) + SP.s;
+    return top + BTN_H <= BOTTOM ? { cx: CENTER.x + (CENTER.w >> 1), w: CENTER.w, bottom: BOTTOM, top } : null;
+  }
   // 판 틀(docs/design-notes/layout.md): 왼쪽 칸(상점 · 시너지 · 정석 · 상금 · 덱 수 — 설명 자리),
   // 가운데(띠: 진열 · 다시 진열 · 다음 대국 / 진열 둘 · 꾸러미 둘 · 덱), 오른쪽 칸(격언 · 두루마리)
   // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
@@ -326,11 +333,13 @@ export class ShopScreen {
     runSide(ctx, ui, app, '상점');
     pauseButton(ctx, ui, app);
     const CX = CENTER.x, lay = this.centerLayout();
-    text(ctx, '진열', CX, textY(BAR_Y, BAR_H), PAL.dim);
+    // 위 띠: 다시 진열 · 다음 대국은 같은 폭(오른끝), 「진열」 이름표는 단추 줄 왼쪽에 들어갈 때만(영어 단추가 넓다)
     const rc = rerollCost(run);
-    const leaveW = measure('다음 대국', true) + 12, rerollW = Math.max(80, measure(`리롤 $${rc}`, true) + 12);
-    button(ctx, ui, 'shop:leave', CX + CENTER.w - leaveW, BAR_Y, leaveW, BAR_H, '다음 대국', { onClick: () => this.leave(), tone: 'gold' });
-    button(ctx, ui, 'shop:reroll', CX + CENTER.w - leaveW - 4 - rerollW, BAR_Y, rerollW, BAR_H, `리롤 $${rc}`, { enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') });
+    const bar = buttonRow(ctx, ui, [
+      { id: 'shop:reroll', label: `리롤 $${rc}`, enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') },
+      { id: 'shop:leave', label: '다음 대국', onClick: () => this.leave(), tone: 'gold' },
+    ], CX + CENTER.w, BAR_Y, { anchor: 'right' });
+    if (CX + measure('진열') + SP.m <= bar.x) text(ctx, '진열', CX, textY(BAR_Y, BAR_H), PAL.dim);
     // 두루마리를 쓰는 중: 진열 · 꾸러미 자리에 미리 보기 판(고른 기물이 어떻게 되는지 보이고 확인을 받는다), 그 아래 덱
     let bagY = lay.bagY;
     const target = this.target && run.consumables[this.target.index];
@@ -384,14 +393,14 @@ export class ShopScreen {
     const since = (fx, d) => (fx && app.time - fx.t0 < d ? (app.time - fx.t0) / d : null);
     const fp = since(this.flash, 0.3), gp = since(this.grow, this.grow && !this.grow.big ? GROW_SMALL : GROW_BIG);
     if (fp != null || gp != null) live();
-    bagRow(ctx, ui, run, CX, bagY, CENTER.w, {
+    this.bagBottom = bagRow(ctx, ui, run, CX, bagY, CENTER.w, {
       pick: (p) => this.pickPiece(p), glow: !!this.target, selectedId: this.menu && this.menu.kind === 'piece' ? this.menu.id : this.target ? this.target.pieceId : null,
       flash: fp != null ? { id: this.flash.id, p: fp } : null, grow: gp != null ? { ...this.grow, p: gp } : null, bottom: BOTTOM,
       can: target ? (p) => targetOk(target, p) : null,
-    });
+    }).bottom;
     // 오른쪽 칸: 격언 → 두루마리
     const rl = this.rightLayout();
-    text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, 8, PAL.dim);
+    text(ctx, `격언 ${maximCount(run)}/${maximCapacity(run)}`, RX, textY(BAR_Y, BAR_H), PAL.dim);
     const col = maximColumn(ctx, ui, run, RX, TOP, RW, rl.room, {
       onClick: (i) => { this.menu = this.menu && this.menu.kind === 'maxim' && this.menu.index === i ? null : { kind: 'maxim', index: i }; this.target = null; },
       drag: (i, mx, my) => this.dropMaxim(i, my, col),
@@ -470,7 +479,9 @@ export class ShopScreen {
     } else {
       // 좁은 칸(셋 · 넷)은 작은 봉투를 값 줄 오른쪽에(이름 줄은 폭을 다 쓴다)
       if (lay.env == null) envelope(ctx, x + w - P - ENV_XS.w, y + lay.price - ((LINE - 11) >> 1) + 1, ENV_XS.w, ENV_XS.h, pk.kind, { hover });
-      fitText(ctx, packShortName(pk), x + lay.tx, y + lay.name, lay.tw, hover ? PAL.gold : PAL.ink);
+      // 이름 굵기는 줄 전체가 같게: 하나라도 굵게 안 들어가면 줄의 이름을 다 보통 굵기로
+      const bold = packs.every((q) => measure(packShortName(q), true) <= lay.tw);
+      fitText(ctx, packShortName(pk), x + lay.tx, y + lay.name, lay.tw, hover ? PAL.gold : PAL.ink, { bold });
       text(ctx, price, x + lay.tx, y + lay.price, PAL.gold, { bold: true });
     }
     ctx.globalAlpha = 1;
@@ -484,9 +495,11 @@ export class ShopScreen {
       const mx = run.maxims[m.index];
       const spot = this.col && this.col.spots.find((s) => s.i === m.index);
       if (!mx || !spot) { this.menu = null; return; }
-      const y = spot.y + Math.floor(spot.h / 2) - 9;
-      openBox('tile', RX - 70, y, 66, 18, 0, { overlay: true, name: '팔기' });
-      if (canSell(mx)) button(ctx, ui, 'shop:sell', RX - 70, y, 66, 18, `팔기 $${sellPrice(mx)}`, { onClick: () => { this.menu = null; this.act({ type: 'sell', index: m.index }, 'coin'); }, tone: 'red' });
+      // 팔기 단추: 격언 칸 왼쪽, 고른 칸 높이 가운데. 고른 칸은 덮지 않아(다시 누르면 닫힌다), 진열 카드 위 딱지 · 값 줄 아래로만 내려선다
+      const band = TOP + SP.s + Math.max(0, ...run.shop.display.map((it) => PAD_CARD + itemCardLayout(it, CARD_W, { run, hold: true }).kinds.length * LINE));
+      const label = `팔기 $${sellPrice(mx)}`, w = btnW(label), x = RX - SP.s - w, y = Math.max(band, spot.y + ((spot.h - BTN_H) >> 1));
+      openBox('tile', x, y, w, BTN_H, 0, { overlay: true, name: '팔기' });
+      if (canSell(mx)) button(ctx, ui, 'shop:sell', x, y, w, BTN_H, label, { onClick: () => { this.menu = null; this.act({ type: 'sell', index: m.index }, 'coin'); }, tone: 'red' });
       closeBox();
     } else if (m.kind === 'piece') {
       const p = run.deck.find((x) => x.id === m.id);
@@ -496,12 +509,12 @@ export class ShopScreen {
       if (!run.shop.promoted) for (const to of PROMOTE[p.t] || []) opts.push([`shop:promote:${to}`, `${josa(PIECE_NAME[to], '으로/로')} 교체 $${SHOP.promotePrice}`, run.money >= SHOP.promotePrice, () => this.act({ type: 'promote', pieceId: p.id, to }, 'promote')]);
       if (!run.shop.removed) opts.push(['shop:remove', `빼기 $${SHOP.removePrice}`, run.money >= SHOP.removePrice && run.deck.length > SHOP.deckMin, () => this.act({ type: 'remove', pieceId: p.id }, 'discard')]);
       if (!opts.length) opts.push(['shop:none', '이번 상점에서는 이미 사용', false, null]);
-      // 차림표 폭은 가장 긴 단추 글에 맞춘다(영어 「Promote to Knight $3」)
-      const w = Math.max(112, ...opts.map(([, label]) => measure(label, true) + 12)) + 4, h = opts.length * 20 + 4;
-      const x = Math.min(r.x, CENTER.x + CENTER.w - w), y = r.y - h - 2;
+      // 차림표: 단추는 같은 폭(가장 긴 글 — 영어 「Promote to Knight $3」), 안 여백 · 사이 SP.xs
+      const P = SP.xs, bw = Math.max(...opts.map(([, label]) => btnW(label))), w = bw + P * 2, h = opts.length * (BTN_H + P) + P;
+      const x = Math.min(r.x, CENTER.x + CENTER.w - w), y = r.y - h - P;
       openBox('tile', x, y, w, h, 0, { overlay: true, name: '기물 차림표' });
       box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
-      opts.forEach(([id, label, ok, fn], k) => button(ctx, ui, id, x + 2, y + 2 + k * 20, w - 4, 18, label, { enabled: ok, onClick: () => { this.menu = null; if (fn) fn(); } }));
+      opts.forEach(([id, label, ok, fn], k) => button(ctx, ui, id, x + P, y + P + k * (BTN_H + P), bw, BTN_H, label, { enabled: ok, onClick: () => { this.menu = null; if (fn) fn(); } }));
       closeBox();
     }
   }

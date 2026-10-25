@@ -8,7 +8,7 @@ import { apply } from '../../sim/battle.js';
 import { previewDrop } from '../../sim/solver.js';
 import { BattleScreen, BX, S, LX, LW, RX, RW, sqCenter, HAND } from './battle.js';
 import { strokeSq } from '../../render/board3.js';
-import { PAD_BOX, TOP, PAUSE, BTN_S } from '../frame.js';
+import { PAD_BOX, TOP, PAUSE, BTN_S, SP, LINE, LINE_TITLE } from '../frame.js';
 import { button } from '../ui.js';
 import { kingNoteLayout, kingNote, pointRing } from '../coach.js';
 import { LESSONS, LESSON_GROUPS, lessonBattle, lessonSq } from '../lessons.js';
@@ -21,6 +21,7 @@ export const DEMO_FOOT = '화면을 눌러 직접 해 봐';
 export function lessonPanelLayout(say, demo) { return kingNoteLayout(say, RW, demo ? DEMO_FOOT : null); }
 
 const AFTER_SEC = 3; // 끝맺는 한 줄이 떠 있는 시간
+const BAND_Y = SP.s; // 판 위 띠(29절 제목 자리 4): 화면 윗변에서 4
 
 export class LessonScreen extends BattleScreen {
   constructor(app, { index = 0, phase = 'demo' } = {}) {
@@ -201,7 +202,7 @@ export class LessonScreen extends BattleScreen {
     // 판 위 한 줄: 판 폭에 안 들어가면(영어) 수업 번호만 — 제목은 왼쪽 머리 칸에 있다
     const full = `튜토리얼 ${this.index + 1}/${LESSONS.length} · ${this.L.title}`;
     const t = measure(full, true) <= S * 8 ? full : `튜토리얼 ${this.index + 1}/${LESSONS.length}`;
-    text(ctx, t, BX + S * 4, 1, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
+    text(ctx, t, BX + S * 4, BAND_Y, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
     this.drawTopRow(ctx, ui);
     this.drawPress(ctx, ui);
     if (this.phase === 'demo' && this.demo && !this.demo.done) this.drawFinger(ctx);
@@ -246,6 +247,12 @@ export class LessonScreen extends BattleScreen {
     const mw = Math.max(tw + 10, Math.min(tw + 14, PAUSE.x - 4 - 4 - RX - lw)), mx = PAUSE.x - 4 - mw;
     button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { u: Infinity, d: Math.max(0, TOP - 1 - (2 + BTN_S)) } });
     button(ctx, ui, 'lesson:skip', RX, 2, mx - 4 - RX, BTN_S, this.skipLabel, { onClick: () => this.skipAll() });
+  }
+  // 두 줄 제목: 둘째 줄은 본문 줄 높이(14)로 붙이고, 남는 자리는 「점수」 이름표 앞 틈이 된다(대국 이름 칸 높이는 그대로)
+  leftLayout() {
+    const lay = super.leftLayout();
+    if (lay.titles.length > 1) lay.titles = lay.titles.map((t, k) => t + k * (LINE - LINE_TITLE));
+    return lay;
   }
   // 머리 칸: 대국 제목 대신 수업 묶음과 지금 수업(제목은 두 줄까지), 목표는 점수나 외통
   headSpec() {

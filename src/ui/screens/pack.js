@@ -4,15 +4,15 @@
 import { sway, tiltHit } from '../sway.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { box, rrect, measure, fine } from '../../render/gfx.js';
+import { box, measure, fine } from '../../render/gfx.js';
 import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../../sim/run.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
-import { button } from '../ui.js';
-import { itemCard, itemRowH, itemKeys, itemExtraTip, itemEffect, itemName, maximGrid, maximGridH, envelope, ENV_COL, targetPanel, targetOk, isSwap, cardBase, fitText, shardIcon } from '../parts.js';
+import { button, btnW } from '../ui.js';
+import { itemCard, itemRowH, itemKeys, itemExtraTip, itemEffect, itemName, maximGrid, maximGridH, envelope, ENV_COL, targetPanel, targetPanelLayout, targetOk, isSwap, cardBase, fitText, shardIcon } from '../parts.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, BTN_H, GAP_GROUP, LIST_GAP, PAD_CARD, flow, BTN_S } from '../frame.js';
+import { MAIN, TOP, CARD, BTN_H, GAP_GROUP, LIST_GAP, PAD_CARD, SP, flow } from '../frame.js';
 import { bagRow } from './shop.js';
 import { familyCounts } from '../../data/families.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -22,6 +22,10 @@ import { LOOK } from '../../render/look.js';
 const OPEN = 0.4;
 const flipAt = (i) => OPEN + i * 0.18;
 const RAYS = 0.75; // 봉투가 열리며 뒤로 퍼지는 빛줄기가 사라지는 때(초)
+// 둥근 봉랍(카드 뒷면): 잉크 테 1 + 덮개 빛깔
+function seal(ctx, cx, cy, r, col) {
+  for (const [rr, c] of [[r, PAL.frameDk], [r - 1, col]]) { ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); }
+}
 // 카드 줄 부채(상점 걸린 카드와 같은 결): 양 끝 카드만 바깥 윗모서리 쪽이 처지게 1.2도, 안쪽 윗모서리에 건다
 const FAN = 0.021;
 const fanOf = (k, n, x, y, w) => (n < 2 || (n % 2 && k === (n - 1) / 2) ? { tilt: 0, pivot: null } : k < n / 2 ? { tilt: -FAN, pivot: [x + w, y] } : { tilt: FAN, pivot: [x, y] });
@@ -35,7 +39,7 @@ export function shardCellLayout(w) {
   return { tx, tw: w - tx - P, name, effect, h: Math.max(f.y, P + 26) + P };
 }
 // 위 띠의 격언 이름표 단추(판 틀 위 띠 — 관 선택의 「상점」 단추와 같은 자리 · 높이)
-const TAG_Y = 2;
+const TAG_Y = SP.xs;
 export const maximTagW = (run) => measure(`격언 ${maximCount(run)}/${maximCapacity(run)}`, true) + 12;
 
 // 꾸러미 화면 자리(재기와 그리기가 같이 쓴다 — test/layout.test.js).
@@ -66,7 +70,9 @@ export function packLayout(run, pack, panel = null) {
   const cw2 = 2 * CARD.w + CARD.gap;
   const cell = !panel && out.length ? { i: out[0], x: MAIN.x, y: rowY, w: cw2, h: shardCellLayout(cw2).h } : null;
   const rowH = cell ? cell.h : BTN_H;
-  const skip = { x: cell ? MAIN.x + MAIN.w - 100 : MAIN.x + Math.floor(MAIN.w / 2) - 50, y: rowY + Math.floor((rowH - BTN_H) / 2), w: 100 };
+  // 건너뛰기 · 취소(같은 자리에 번갈아 선다)는 둘 중 넓은 글에 맞춘 폭
+  const sw = Math.max(btnW('건너뛰기'), btnW('취소'));
+  const skip = { x: cell ? MAIN.x + MAIN.w - sw : MAIN.x + Math.floor((MAIN.w - sw) / 2), y: rowY + Math.floor((rowH - BTN_H) / 2), w: sw };
   return { cards, n, cw, gap, x0, ch, tag, grid, chosen, cell, rowY, rowH, skip, bottom: rowY + rowH };
 }
 
@@ -143,12 +149,16 @@ export class PackScreen {
     if (this.engraveIndex != null) {
       const o = pack.options[this.engraveIndex];
       const p = this.engraveTarget != null ? run.deck.find((x) => x.id === this.engraveTarget) : null;
-      const th = targetPanel(ctx, ui, run, o, p, MAIN.x, TOP, MAIN.w, {
+      // 미리 보기 판 + 덱은 본 칸 높이 가운데에. 기물을 골라 판이 커져도 자리가 흔들리지 않게 큰 쪽(고른 뒤) 높이로 잰다
+      const any = run.deck.find((q) => targetOk(o, q));
+      const ph = Math.max(targetPanelLayout(run, o, null, MAIN.w).h, any ? targetPanelLayout(run, o, any, MAIN.w).h : 0);
+      const y0 = Math.max(TOP, TOP + ((270 - SP.m - TOP - (ph + GAP_GROUP + 28)) >> 1));
+      targetPanel(ctx, ui, run, o, p, MAIN.x, y0, MAIN.w, {
         onConfirm: () => this.finish({ type: 'pick', index: this.engraveIndex, target: this.engraveTarget }),
         onCancel: () => { this.engraveIndex = null; this.engraveTarget = null; },
         onBack: () => { this.engraveTarget = null; },
       });
-      bagRow(ctx, ui, run, MAIN.x, TOP + th + GAP_GROUP, MAIN.w, { pick: (q) => { if (targetOk(o, q)) this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget, can: (q) => targetOk(o, q), bottom: 268 });
+      bagRow(ctx, ui, run, MAIN.x, y0 + ph + GAP_GROUP, MAIN.w, { pick: (q) => { if (targetOk(o, q)) this.engraveTarget = this.engraveTarget === q.id ? null : q.id; }, glow: true, selectedId: this.engraveTarget, can: (q) => targetOk(o, q), bottom: 268 });
       return;
     }
     const lay = packLayout(run, pack, this.panel);
@@ -202,7 +212,7 @@ export class PackScreen {
         // 카드 뒷면: 봉투 몸 종이에 덮개 빛깔 둥근 봉랍
         const E = ENV_COL[pack.kind] || ENV_COL.piece;
         box(ctx, x + Math.floor((w - nw) / 2), y, nw, h, E.body, PAL.frameDk);
-        if (nw > 20) { const sy = y + Math.min(46, Math.floor(h / 2) - 7); rrect(ctx, x + Math.floor(w / 2) - 7, sy, 14, 14, 7, PAL.frameDk); rrect(ctx, x + Math.floor(w / 2) - 6, sy + 1, 12, 12, 6, E.flap); }
+        if (nw > 20) seal(ctx, x + Math.floor(w / 2), y + Math.min(53, Math.floor(h / 2)), 7, E.flap);
       } else draw(scaleX, ui.isHover(id));
     };
     lay.cards.forEach((i, k) => {
@@ -255,11 +265,12 @@ export class PackScreen {
     const m = run.maxims[this.sellMenu];
     const spot = spots.find((q) => q.i === this.sellMenu);
     if (!m || !spot || !canSell(m)) { this.sellMenu = null; return; }
-    // 단추: 고른 격언 칸 오른쪽 끝에 겹쳐(칸 위에 뜬다)
-    const bx = spot.x + spot.w - 62, by = spot.y + 5, k = this.sellMenu;
-    openBox('tile', bx, by, 60, BTN_S, 0, { overlay: true, name: '팔기' });
-    if (lay.chosen) button(ctx, ui, 'pack:swap', bx, by, 60, BTN_S, '바꾸기', { tone: 'gold', onClick: () => this.swap(k) });
-    else button(ctx, ui, 'pack:sell', bx, by, 60, BTN_S, `팔기 $${sellPrice(m)}`, { tone: 'red', onClick: () => { this.sellMenu = null; this.app.cmd({ type: 'sell', index: k }); this.app.sfx('coin'); } });
+    // 단추: 고른 격언 칸 오른쪽 끝에 겹쳐(칸 위에 뜬다 — 높이 가운데)
+    const label = lay.chosen ? '바꾸기' : `팔기 $${sellPrice(m)}`, bw = btnW(label);
+    const bx = spot.x + spot.w - SP.s - bw, by = spot.y + ((spot.h - BTN_H) >> 1), k = this.sellMenu;
+    openBox('tile', bx, by, bw, BTN_H, 0, { overlay: true, name: '팔기' });
+    if (lay.chosen) button(ctx, ui, 'pack:swap', bx, by, bw, BTN_H, label, { tone: 'gold', onClick: () => this.swap(k) });
+    else button(ctx, ui, 'pack:sell', bx, by, bw, BTN_H, label, { tone: 'red', onClick: () => { this.sellMenu = null; this.app.cmd({ type: 'sell', index: k }); this.app.sfx('coin'); } });
     closeBox();
   }
   key(k) {

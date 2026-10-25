@@ -4,13 +4,13 @@ import { live as motion } from '../../render/look.js';
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { W, H, text, box, rect, rrect, frame } from '../../render/gfx.js';
+import { text, box, rect, rrect, radiusOf } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
 import { familyChips, chipRows, chipBlockH } from '../parts-depth.js';
 import { cardBase, tipLines, CARD_CHIP_ROWS } from '../parts.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, flow } from '../frame.js';
+import { MAIN, TOP, CARD, PAD_CARD, GAP_IN, GAP_GROUP, SP, flow } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 
 const TIER_NAME = { silver: '은', gold: '금', rainbow: '무지개' };
@@ -30,6 +30,12 @@ export function josekiLayout(j, w = CW) {
 }
 export const josekiCardH = (ids) => Math.max(0, ...ids.map((id) => josekiLayout(JOSEKI_BY_ID[id]).h));
 const at = (i) => 0.2 + i * 0.22;
+// 카드 줄 윗변: 본 칸(TOP ~ 화면 끝 여백) 높이 가운데 — 짧은 카드 셋이 위에 붙어 아래 절반이 비지 않게
+export const draftY = (ch) => Math.max(TOP, TOP + ((270 - SP.m - TOP - ch) >> 1));
+// 뒤집히기 전 카드 등의 둥근 등급 표: 잉크 테 1 + 등급 빛
+function tierSeal(ctx, cx, cy, r, col) {
+  for (const [rr, c] of [[r, PAL.frameDk], [r - 1, col]]) { ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); }
+}
 
 export class DraftScreen {
   constructor(app) { this.app = app; this.t = 0; this.chosen = null; this.notes = 'side'; app.sfx('pack'); }
@@ -73,12 +79,12 @@ export class DraftScreen {
       const j = JOSEKI_BY_ID[id];
       const p = Math.max(0, Math.min(1, (this.t - at(i)) / 0.26));
       const sx = Math.abs(1 - 2 * p);
-      const x = x0 + i * (CW + CARD.gap), y = TOP;
+      const x = x0 + i * (CW + CARD.gap), y = draftY(CH);
       const uid = `draft:${i}`;
       ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: true, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
       const hov = ui.isHover(uid) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
-      if (p < 0.5) { box(ctx, xx, y, nw, CH, PAL.fogHi, PAL.frameDk); if (nw > 30) { rrect(ctx, xx + Math.floor(nw / 2) - 9, y + CH / 2 - 9, 18, 18, 9, PAL.frameDk); rrect(ctx, xx + Math.floor(nw / 2) - 8, y + CH / 2 - 8, 16, 16, 8, TIER_COL[j.tier]); } return; }
+      if (p < 0.5) { box(ctx, xx, y, nw, CH, PAL.fogHi, PAL.frameDk); if (nw > 30) tierSeal(ctx, xx + Math.floor(nw / 2), y + CH / 2, 9, TIER_COL[j.tier]); return; }
       if (j.tier === 'rainbow') motion();
       const col = j.tier === 'rainbow' ? `hsl(${Math.floor(time * 120 + i * 60) % 360},70%,70%)` : TIER_COL[j.tier];
       const picked = this.chosen && this.chosen.i === i;
@@ -103,7 +109,7 @@ export class DraftScreen {
       for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } });
       if (lay.chips != null) familyChips(ctx, j.families, x + P, y + lay.chips + (CH - lay.h), lay.IW, CARD_CHIP_ROWS);
       closeBox();
-      if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rrect(ctx, x, y, CW, CH, 4, PAL.white); ctx.globalAlpha = 1; }
+      if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rrect(ctx, x, y, CW, CH, radiusOf(CW, CH), PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     }
   }

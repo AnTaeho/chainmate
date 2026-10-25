@@ -8,7 +8,7 @@ import { text, fitNum, measure } from '../../render/gfx.js';
 import { SW, SH } from '../../render/sprites.js';
 import { fitPiece } from '../../render/pieces3.js';
 import { BattleScreen, BX, S, LX, LW, RX } from './battle.js';
-import { PAD_BOX, LINE, BTN_S, textY } from '../frame.js';
+import { PAD_BOX, LINE, BTN_S, SP, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { panel, tipLines, fitText } from '../parts.js';
 import { button } from '../ui.js';
@@ -16,6 +16,7 @@ import { ANNOT, drawAnnot, annotSize } from '../annot.js';
 import { stepLabel } from '../review.js';
 
 const ALL = Array.from({ length: 64 }, (_, i) => i);
+const BAND_Y = SP.s; // 판 위 띠(29절 제목 자리 4): 화면 윗변에서 4
 // ◀ · ▶ 단추 그림: 4 × 9 칸의 채운 삼각형(벡터)
 const triangle = (dir) => (ctx, x, y, col) => {
   const a = dir < 0 ? x + 4 : x, b = dir < 0 ? x : x + 4;
@@ -92,7 +93,7 @@ export class ReviewScreen extends BattleScreen {
   drawTactics(ctx, ui, y) {
     const live = !this.busy || this.playing;
     button(ctx, ui, 'btn:back', RX, y, 20, BTN_S, '', { enabled: this.i > 0 || this.playing, onClick: () => this.back(), icon: triangle(-1), tip: () => tipLines('앞 수', []) });
-    button(ctx, ui, 'btn:forward', RX + 23, y, 20, BTN_S, '', { enabled: live && this.i < this.n, onClick: () => this.forward(), icon: triangle(1), tone: this.i < this.n && !this.playing ? 'gold' : 'plain', tip: () => tipLines('다음 수', []) });
+    button(ctx, ui, 'btn:forward', RX + 20 + SP.s, y, 20, BTN_S, '', { enabled: live && this.i < this.n, onClick: () => this.forward(), icon: triangle(1), tone: this.i < this.n && !this.playing ? 'gold' : 'plain', tip: () => tipLines('다음 수', []) });
   }
   actionButton(ctx, ui, x, y, db) {
     button(ctx, ui, 'btn:moveon', x, y, db.w, BTN_S, '건너뛰기', { onClick: () => this.moveOn(), tone: this.i >= this.n && !this.playing ? 'gold' : 'plain' });
@@ -114,9 +115,9 @@ export class ReviewScreen extends BattleScreen {
       ui.region(`review:${k}`, LX + 2, ry, LW - 4, LINE, { tip: () => tipLines(name, []) });
       const tag = annotSize(mark);
       drawAnnot(ctx, mark, LX + PX, ry + Math.floor((LINE - tag.h) / 2), tone);
-      let x = LX + PX + tag.w + 3;
+      let x = LX + PX + tag.w + SP.s;
       if (!st) { text(ctx, '—', x, ty, PAL.dim); return; }
-      if (st.t) { fitPiece(ctx, st.t, 'w', x, ry + 1, SW / 2, SH / 2); x += SW / 2 + 3; }
+      if (st.t) { fitPiece(ctx, st.t, 'w', x, ry + 1, SW / 2, SH / 2); x += SW / 2 + SP.s; }
       const g = fitNum(st.gain, 40);
       const gw = measure(g, true);
       fitText(ctx, st.label, x, ty, LX + LW - PX - gw - 4 - x, PAL.ink);
@@ -126,7 +127,7 @@ export class ReviewScreen extends BattleScreen {
   }
   drawOver(ctx) {
     super.drawOver(ctx);
-    text(ctx, `복기 · ${this.i}/${this.n}수`, BX + (S * 8) / 2, 1, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
+    text(ctx, `복기 · ${this.i}/${this.n}수`, BX + (S * 8) / 2, BAND_Y, PAL.gold, { align: 'center', bold: true, shadow: PAL.shadow });
   }
   key(k) {
     if (k === 'ArrowRight' || (k === 'Enter' && this.i < this.n)) this.forward();

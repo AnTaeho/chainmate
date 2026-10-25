@@ -1,11 +1,19 @@
 // 대국 승리: 보상이 한 줄씩(기본 · 남은 수 · 적립 · 외통 · 넘친 목표 · 대국 중 번 상금) 쌓인다.
 import { PAL } from '../../render/palette.js';
-import { W, text, box, rect, num, measure } from '../../render/gfx.js';
-import { button } from '../ui.js';
-import { PAD_BOX, LINE, GAP_GROUP, flow, BTN_S, inkY } from '../frame.js';
+import { W, text, rect, rrect, num, measure, R_SM } from '../../render/gfx.js';
+import { LINE, GAP_GROUP, SP, BTN_H, flow, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { flyCoins, boldText, stepScale, CAP } from '../juice.js';
 import { live } from '../../render/look.js';
+import { interlude, interludeLayout, INTER } from './common.js';
+
+// 이름 · 수치가 섞인 한 줄: 조각 [글, 굵게?, 빛깔]을 이어 그린다(이름 보통 · 수치 굵게 — 29절). align: left | center | right
+const segW = (segs) => segs.reduce((n, [s, b]) => n + measure(s, b), 0);
+function mixed(ctx, segs, x, y, { align = 'left' } = {}) {
+  let cx = align === 'center' ? x - Math.floor(segW(segs) / 2) : align === 'right' ? x - segW(segs) : x;
+  for (const [s, b, col] of segs) { text(ctx, s, cx, y, col, { bold: b }); cx += measure(s, b); }
+}
+const STAMP_H = BTN_H;
 
 export class RewardScreen {
   constructor(app, { reward, events = [] }) {
@@ -14,11 +22,12 @@ export class RewardScreen {
     const r = reward;
     const last = app.run.last || {};
     this.last = last;
+    // [이름, 상금, 이름 뒤 수치(굵게)]
     this.lines = [['기본 보상', r.base]];
-    if (r.moves) this.lines.push([`남은 수 ${r.moves}`, r.moves]);
+    if (r.moves) this.lines.push(['남은 수', r.moves, `${r.moves}`]);
     if (r.interest) this.lines.push(['이자', r.interest]);
     if (r.mate) this.lines.push(['체크메이트', r.mate]);
-    if (r.overflow) this.lines.push([`목표 초과 ×${last.overflow}`, r.overflow]);
+    if (r.overflow) this.lines.push(['목표 초과', r.overflow, `×${last.overflow}`]);
     if (r.earned) this.lines.push(['대국 중 얻은 상금', r.earned]);
     this.total = r.total;
     this.gold = events.some((e) => e.type === 'goldenPack');
@@ -50,72 +59,74 @@ export class RewardScreen {
     const app = this.app;
     if (app.reducedMotion || !v) { this.sum += v; this.kick = app.time; return; }
     const g = this.geom(), n = Math.max(1, Math.min(CAP.coinsLine, v));
-    // 금액(오른쪽 맞춤, x + w − P − 12) 바로 오른쪽 칸에서 솟아 같은 칸으로 「합」 줄까지 내려간다 — 금액 · 이름 글을 덮지 않는다
-    const xr = g.x + g.w - g.P - 4;
-    flyCoins(app.fx, xr, g.y + g.lay.rows[i] + 5, xr, g.y + g.lay.total + 5, { n, seed: i * 17 + v, rise: 8, jitter: 0, onHit: () => { this.sum += v / n; this.kick = app.time; } });
+    // 금액(오른쪽 맞춤) 바로 오른쪽 칸에서 솟아 같은 칸으로 「합」 줄까지 내려간다 — 금액 · 이름 글을 덮지 않는다
+    const xr = g.x + g.w - INTER.pad - SP.s, by = g.y + g.lay.bodyY;
+    flyCoins(app.fx, xr, by + g.body.rows[i] + 5, xr, by + g.body.total + 5, { n, seed: i * 17 + v, rise: 8, jitter: 0, onHit: () => { this.sum += v / n; this.kick = app.time; } });
   }
-  // 상자 자리(그리기와 동전이 같이 쓴다)
-  geom() {
-    const last = this.last, lay = this.layout();
-    const scoreLine = `점수 ${num(last.score || 0)} / 목표 ${num(last.target || 0)}`;
-    const title = last.reason === 'mate' ? '체크메이트 승리' : '대국 승리', stamp = last.overflow >= 2 ? `목표 ×${last.overflow}` : null;
-    const sw = stamp ? measure(stamp, true) + 8 : 0;
-    const w = Math.max(240, measure(scoreLine) + PAD_BOX * 2 + 8, stamp ? measure(title, true) * 2 + (sw + PAD_BOX + 4) * 2 : 0), h = lay.h;
-    return { lay, scoreLine, title, stamp, sw, w, h, x: Math.floor((W - w) / 2), y: Math.floor((270 - h) / 2), P: PAD_BOX };
+  // 점수 줄 조각: 「점수 500 / 목표 150」(이름 보통 · 수치 굵게)
+  scoreSegs() {
+    const last = this.last;
+    return [['점수', false, PAL.ink], [' ', false, PAL.ink], [num(last.score || 0), true, PAL.ink], [' / ', false, PAL.dim], ['목표', false, PAL.ink], [' ', false, PAL.ink], [num(last.target || 0), true, PAL.ink]];
   }
-  // 막간 상자 쌓기(PAD_BOX · 토큰): 큰 제목(두 배, 줄 LINE × 2) → 묶음 틈 → 점수 줄 → 묶음 틈 → 보상 줄들 → 묶음 틈(가운데 가로줄) → 합 · 상금 · 금빛 꾸러미 → 묶음 틈 → 계속
-  layout() {
-    const f = flow(PAD_BOX);
-    const title = f.space(LINE * 2);
-    f.gap(GAP_GROUP);
+  // 막간 상자 본문 쌓기(상자 안 위부터): 점수 줄 → 묶음 틈 → 보상 줄들 → 묶음 틈(가운데 가로줄) → 합 · 상금 · 금빛 꾸러미
+  body() {
+    const f = flow(0);
     const score = f.line();
     f.gap(GAP_GROUP);
     const rows = this.lines.map(() => f.line());
     const rule = f.y + Math.floor(GAP_GROUP / 2);
     f.gap(GAP_GROUP);
     const total = f.line(), money = f.line(), gold = this.gold ? f.line() : null;
-    f.gap(GAP_GROUP);
-    const btn = f.space(18);
-    return { title, score, rows, rule, total, money, gold, btn, h: f.y + PAD_BOX };
+    return { score, rows, rule, total, money, gold, h: f.y };
+  }
+  // 상자 자리(그리기와 동전이 같이 쓴다). 폭은 글에 맞춘다(끝없는 대국의 큰 점수 줄): 240 이상.
+  // 넘친 목표 도장(제목 줄 오른쪽)이 있으면 가운데 제목과 SP.m 띄울 만큼 넓힌다(영어 「Match Won」)
+  geom() {
+    const last = this.last, body = this.body(), lay = interludeLayout(body.h);
+    const title = last.reason === 'mate' ? '체크메이트 승리' : '대국 승리', stamp = last.overflow >= 2 ? `목표 ×${last.overflow}` : null;
+    const sw = stamp ? measure(stamp, true) + SP.m * 2 : 0;
+    const w = Math.max(240, segW(this.scoreSegs()) + INTER.pad * 2 + SP.m * 2, stamp ? measure(title, true) * 2 + (sw + INTER.pad + SP.m) * 2 : 0);
+    return { lay, body, title, stamp, sw, w, h: lay.h, x: Math.floor((W - w) / 2), y: Math.floor((270 - lay.h) / 2) };
   }
   draw(ctx, ui) {
     const app = this.app, last = this.last;
-    // 폭도 글에 맞춘다(끝없는 대국의 큰 점수 줄): 240 이상. 넘친 목표 도장(제목 옆)이 있으면 가운데 제목과 4 띄울 만큼 넓힌다(영어 「Match Won」)
-    const { lay, scoreLine, title, stamp, sw, w, h, x, y, P } = this.geom();
-    openBox('panel', x, y, w, h, P, { name: '보상' });
-    box(ctx, x, y, w, h, PAL.feltDk, PAL.gold);
-    text(ctx, title, W / 2, y + lay.title, PAL.gold, { align: 'center', bold: true, scale: 2 });
-    if (stamp) {
-      const col = last.overflow >= 5 ? PAL.red : PAL.gold, s = stamp;
-      openBox('edge', x + w - sw - P, y + P + 6, sw, BTN_S, 1, { name: '넘친 목표' });
-      box(ctx, x + w - sw - P, y + P + 6, sw, BTN_S, PAL.feltDk, col);
-      text(ctx, s, x + w - P - sw / 2, inkY(y + P + 6, BTN_S), col, { align: 'center', bold: true });
-      closeBox();
-    }
-    text(ctx, scoreLine, W / 2, y + lay.score, PAL.ink, { align: 'center' });
-    this.lines.forEach(([label, v], i) => {
-      if (i >= this.shown) return;
-      text(ctx, label, x + P + 12, y + lay.rows[i], PAL.dim);
-      text(ctx, `$${v}`, x + w - P - 12, y + lay.rows[i], PAL.gold, { align: 'right', bold: true });
-    });
-    // 「합」 줄은 처음부터 서 있고 동전이 닿을 때마다 오르며 튄다(0.25초, 큰 수는 상자 밖 연출 자리에)
-    rect(ctx, x + P + 8, y + lay.rule, w - P * 2 - 16, 1, PAL.frameHi);
-    text(ctx, '합', x + P + 12, y + lay.total, PAL.ink, { bold: true });
+    const { body: B, title, stamp, sw, w, x, y } = this.geom();
     const done = this.shown > this.lines.length && !app.fx.list.some((f) => f.coin);
-    const sumS = `$${done ? this.total : Math.min(this.total, Math.round(this.sum))}`;
-    const k = app.reducedMotion ? 1 : (app.time - this.kick) / 0.25;
-    if (k >= 0 && k < 1) {
-      live();
-      openBox('fx', x + w - P - 60, y + lay.total - 8, 60, 28, 0, { loose: true, name: '오르는 합' });
-      boldText(ctx, sumS, x + w - P - 12, y + lay.total + 6 - 6 * stepScale(1 + 0.6 * (1 - k)), k < 0.3 ? PAL.white : PAL.gold, { align: 'right', scale: stepScale(1 + 0.6 * (1 - k)) });
-      closeBox();
-    } else text(ctx, sumS, x + w - P - 12, y + lay.total, PAL.gold, { align: 'right', bold: true });
-    if (this.shown > this.lines.length) {
-      text(ctx, `상금 $${app.run.money}`, W / 2, y + lay.money, PAL.ink, { align: 'center' });
-      if (this.gold) text(ctx, '금빛 팩이 상점에 나왔어요', W / 2, y + lay.gold, PAL.gold, { align: 'center', bold: true });
-    }
-    button(ctx, ui, 'next', W / 2 - 40, y + lay.btn, 80, 18, '계속', { onClick: () => this.next(), tone: 'gold' });
-    closeBox();
+    const box = interlude(ctx, ui, x, y, w, B.h, (c, bx, by, bw) => {
+      mixed(c, this.scoreSegs(), bx + (bw >> 1), by + B.score, { align: 'center' });
+      // 보상 줄: 이름(흐림, 이름 뒤 수치는 굵게) · 금액(오른쪽, 굵게) — 이름 · 금액은 안쪽 SP.m
+      const L0 = bx + SP.m, R0 = bx + bw - SP.m;
+      this.lines.forEach(([label, v, n], i) => {
+        if (i >= this.shown) return;
+        mixed(c, n ? [[label, false, PAL.dim], [' ', false, PAL.dim], [n, true, PAL.dim]] : [[label, false, PAL.dim]], L0, by + B.rows[i]);
+        text(c, `$${v}`, R0, by + B.rows[i], PAL.gold, { align: 'right', bold: true });
+      });
+      // 「합」 줄은 처음부터 서 있고 동전이 닿을 때마다 오르며 튄다(0.25초, 큰 수는 상자 밖 연출 자리에)
+      rect(c, bx, by + B.rule, bw, 1, PAL.frameHi);
+      text(c, '합', L0, by + B.total, PAL.ink);
+      const sumS = `$${done ? this.total : Math.min(this.total, Math.round(this.sum))}`;
+      const k = app.reducedMotion ? 1 : (app.time - this.kick) / 0.25;
+      if (k >= 0 && k < 1) {
+        live();
+        openBox('fx', R0 - 60, by + B.total - 8, 60, 28, 0, { loose: true, name: '오르는 합' });
+        boldText(c, sumS, R0, by + B.total + 6 - 6 * stepScale(1 + 0.6 * (1 - k)), k < 0.3 ? PAL.white : PAL.gold, { align: 'right', scale: stepScale(1 + 0.6 * (1 - k)) });
+        closeBox();
+      } else text(c, sumS, R0, by + B.total, PAL.gold, { align: 'right', bold: true });
+      if (this.shown > this.lines.length) {
+        mixed(c, [['상금', false, PAL.ink], [' ', false, PAL.ink], [`$${app.run.money}`, true, PAL.gold]], bx + (bw >> 1), by + B.money, { align: 'center' });
+        if (this.gold) text(c, '금빛 팩이 상점에 나왔어요', bx + (bw >> 1), by + B.gold, PAL.gold, { align: 'center', bold: true });
+      }
+      // 넘친 목표 도장: 제목 줄 오른쪽 끝, 칠한 칩(모서리 R_SM)
+      if (stamp) {
+        const col = last.overflow >= 5 ? PAL.red : PAL.gold;
+        const sx = x + w - INTER.pad - sw, sy = y + INTER.pad + ((INTER.titleH - STAMP_H) >> 1);
+        openBox('edge', sx, sy, sw, STAMP_H, 1, { name: '넘친 목표' });
+        rrect(c, sx, sy, sw, STAMP_H, R_SM, col);
+        text(c, stamp, sx + (sw >> 1), inkY(sy, STAMP_H), PAL.cardInk, { align: 'center', bold: true });
+        closeBox();
+      }
+    }, { title, titleCol: PAL.gold, edge: PAL.gold, name: '보상', buttons: [{ id: 'next', label: '계속', tone: 'gold', onClick: () => this.next() }] });
+    return box;
   }
   next() {
     if (this.shown <= this.lines.length) { this.t = 99; return; }
