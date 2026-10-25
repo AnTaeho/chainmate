@@ -72,3 +72,9 @@ pkill -f "serve.py 8611"
 - `npm run smoke`(계정 기다림만 고쳐 잰 것): `SMOKE OK` · `글 넘침 0(글이 상자 밖 0 · 테에 붙음 0 · 상자 겹침 0 · 화면 밖 0) · 잰 프레임 48059` · `한 수 연출(×1, 멈칫 포함) 평균 2.93s · 최대 3.94s (150수)` · `프레임 20000 · 그리기 평균 1.53ms · p99 14.91ms`. 고침 없이는 계정 단계(`둘째 기기: no region acct:password`)에서 멈춘다 — main에서도 같다. `claude/brave-bohr-r74efm`을 합친 smoke는 그 갈래의 `src/ui/screens/draft.js:115` `uid is not defined`(커밋 cedd94b)로 떨어져 그 세션에 알렸다.
 - `node tools/drawcheck.mjs`: `합계: 프레임 23030 · 건너뜀 4738 (21%) · 어김 0`
 - `node tools/drawcheck.mjs --scale 1280x720 --fit fill`: `합계: 프레임 23031 · 건너뜀 4740 (21%) · 어김 0`
+
+**`claude/brave-bohr-r74efm`(0f82b15)을 합친 뒤 다시 잰 원문** — 이 갈래의 마지막 상태
+- `npm test`: `# tests 915` · `# pass 915` · `# fail 0`
+- `npm run smoke`: `SMOKE OK` · `글 넘침 0(글이 상자 밖 0 · 테에 붙음 0 · 상자 겹침 0 · 화면 밖 0) · 잰 프레임 48109` · `한 수 연출(×1, 멈칫 포함) 평균 2.93s · 최대 3.94s (150수)` · `프레임 20000 · 그리기 평균 1.63ms · p99 15.31ms`
+- `node tools/drawcheck.mjs`: `합계: 프레임 23030 · 건너뜀 4738 (21%) · 어김 0`
+- `node tools/drawcheck.mjs --scale 1280x720 --fit fill`: `합계: 프레임 23030 · 건너뜀 4738 (21%) · 어김 0`
