@@ -1,4 +1,4 @@
-// 대국 도전 스크린샷: 관 선택 카드 · 대국 중 도전 줄(쉬는 판 · 콤보 중 진행 · 이룬 순간) · 보상 · 진 대국 결과 · 처음 안내.
+// 대국 도전 스크린샷: 관 선택 카드(도전 스티커 · 말풍선) · 대국 중 도전 줄(쉬는 판 · 콤보 중 진행 · 이룬 순간) · 보상 · 진 대국 결과 · 처음 안내.
 //   node tools/shots-challenge.mjs [--out docs/shots/challenge] [--only battle,select] [--size 1440x810,844x390] [--lang ko,en]
 import http from 'node:http';
 import fs from 'node:fs';
@@ -90,6 +90,9 @@ for (const [w, h] of SIZES) for (const lang of LANGS) {
       a.goPhase();
     });
     await shot(page, `select-${tag}`);
+    // 도전 스티커를 가리키면 말풍선(온 조건 · 이루면 · 건너뛰면)
+    const at = await page.evaluate(() => { const a = window.__app, r = a.ui.find('select:chal:1'), c = a.canvas.getBoundingClientRect(); return r && [c.left + ((r.x + r.w / 2) / 480) * c.width, c.top + ((r.y + r.h / 2) / 270) * c.height]; });
+    if (at) { await page.mouse.move(at[0], at[1]); await shot(page, `select-tip-${tag}`, { move: false }); }
     // 7관 정식(영어 큰 목표 · 긴 도전 글이 가장 긴 카드)
     await page.evaluate(() => { const a = window.__app; a.run.ante = 7; a.run.blind = 1; a.go('select'); });
     await shot(page, `select7-${tag}`);
