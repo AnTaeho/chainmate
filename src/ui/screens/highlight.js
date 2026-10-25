@@ -1,12 +1,14 @@
 // 하이라이트(덮개, CHM-73): 결과 화면 「하이라이트」 — 카드 한 장, 그 아래 「그림 저장」 · 「공유」 · 「닫기」. Esc · 바깥 누르기로 닫힌다.
 // 그림은 열 때 미리 만들어 둔다(공유 시트는 누른 그 순간 안에서 열어야 한다). 공유를 못 하는 곳에서는 「공유」 단추가 없다.
+// 밑의 결과 화면은 덮개가 떠 있는 동안 단추 줄을 그리지 않는다(덮개 단추 사이로 비치지 않게)
 import { PAL } from '../../render/palette.js';
 import { W, H, rect } from '../../render/gfx.js';
-import { button } from '../ui.js';
-import { BTN_H } from '../frame.js';
+import { buttonRow } from '../ui.js';
+import { SP } from '../frame.js';
 import { CARD, HIGHLIGHT_FILE, highlightLayout, drawHighlight, highlightBlob } from '../highlight.js';
 
-export const HL = { x: (W - CARD.w) >> 1, y: 8, btnY: 241, btnW: 90, gap: 15 };
+export const HL = { x: (W - CARD.w) >> 1, y: SP.m };
+HL.btnY = HL.y + CARD.h + SP.m;
 
 export class HighlightScreen {
   constructor(app) {
@@ -20,14 +22,13 @@ export class HighlightScreen {
   update() {}
   animating() { return false; }
   draw(ctx, ui) {
-    // 밑의 결과 화면 단추가 카드 아래 단추 뒤로 비치지 않게 한 겹 더 어둡게
+    // 밑의 결과 화면을 한 겹 더 어둡게
     ctx.globalAlpha = 0.6; rect(ctx, 0, 0, W, H, PAL.shadow); ctx.globalAlpha = 1;
     drawHighlight(ctx, this.run, highlightLayout(this.run, HL.x, HL.y));
-    const list = [['hl:save', '그림 저장', () => this.save(), 'gold', !!this.blob]];
-    if (this.canShare) list.push(['hl:share', '공유', () => this.share(), 'plain', true]);
-    list.push(['hl:close', '닫기', () => this.app.closeOverlay(), 'plain', true]);
-    const x0 = (W - (list.length * HL.btnW + (list.length - 1) * HL.gap)) >> 1;
-    list.forEach(([id, label, onClick, tone, enabled], i) => button(ctx, ui, id, x0 + i * (HL.btnW + HL.gap), HL.btnY, HL.btnW, BTN_H, label, { onClick, tone, enabled }));
+    const list = [{ id: 'hl:save', label: '그림 저장', onClick: () => this.save(), tone: 'gold', enabled: !!this.blob }];
+    if (this.canShare) list.push({ id: 'hl:share', label: '공유', onClick: () => this.share() });
+    list.push({ id: 'hl:close', label: '닫기', onClick: () => this.app.closeOverlay() });
+    buttonRow(ctx, ui, list, W / 2, HL.btnY, { anchor: 'center' });
   }
   save() {
     const app = this.app, ok = app.saveImage(HIGHLIGHT_FILE, this.blob);
