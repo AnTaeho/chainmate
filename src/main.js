@@ -74,10 +74,10 @@ export async function boot(env = {}) {
   };
 
   let app = null, fit = null, pendingScale = 1;
-  // 화면 맞춤 방식(layout.md 「화면 맞춤」): 'int' 정수 배율(기본) · 'fill' 꽉 채움(소수 배율, fit.js chooseFit fill).
+  // 화면 맞춤 방식(layout.md 「화면 맞춤」): 'fill' 꽉 채움(소수 배율, fit.js chooseFit fill — 기본) · 'int' 정수 배율.
   // 주소 ?fit=fill|int가 설정(settings.fit)보다 앞선다. ?fitcap=N은 꽉 채움 뒷면 배율 상한(시험용)
   const query = (() => { try { return new URLSearchParams((win.location && win.location.search) || ''); } catch { return null; } })();
-  const fitMode = () => (query && query.get('fit')) || (app && app.settings.fit) || 'int';
+  const fitMode = () => (query && query.get('fit')) || (app && app.settings.fit) || 'fill';
   const fitCap = query && Number(query.get('fitcap')) > 0 ? Number(query.get('fitcap')) : undefined;
   // 글자 입력 칸(CHM-72, src/ui/textfield.js): 캔버스 위에 겹치는 아이디 · 비번 칸. 가짜 DOM에 body가 없으면 값만 드는 가짜가 된다
   const fields = createFields({ doc, win, canvas, rot: () => !!(fit && fit.rot), safeTop: () => { const i = inset(); return i ? i.top : 0; } });
