@@ -18,7 +18,8 @@ after(() => { delete globalThis.document; delete globalThis.window; setLang('ko'
 
 const DATE = '2026-10-08';
 const PW = 'moonlit-rook-42', PW2 = 'second-knight-77';
-const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise((r) => setImmediate(r)); };
+// 비번 해시(scrypt)는 libuv 스레드 풀에서 돈다 — setImmediate만 돌리면 빠른 기기에서 해시보다 먼저 끝나니, 열 번마다 1ms 타이머로 풀에 차례를 준다
+const settle = async (n = 30) => { for (let i = 0; i < n; i++) await new Promise((r) => (i % 10 === 9 ? setTimeout(r, 1) : setImmediate(r))); };
 
 // 기기 하나: 가짜 DOM + 진짜 boot(가짜 서버에 물린다). 저장은 기기마다 따로
 async function device(api, { lang = 'ko', width = 1280, height = 720 } = {}) {
