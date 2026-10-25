@@ -299,7 +299,7 @@ hug하면 상점 · 금빛 꾸러미가 480 × 270에 들어가지 않아 글을
 - 창 전체 `touch-action: none` · `overscroll-behavior: none` · `user-select: none` · `-webkit-touch-callout: none`, viewport `maximum-scale=1, user-scalable=no, viewport-fit=cover`, document의 `touchmove` · `gesturestart` · `gesturechange` · `dblclick` 막음.
 - 한 손가락만 받는다. `touchmove`로 끌기(격언 순서 바꾸기)가 된다. `touchcancel`은 아무것도 누르지 않은 것으로.
 - 손가락 자리 고치기(`ui.js` `UI.snap`, 2026-10-25 — 마우스는 그대로): 아무 구역도 없는 자리를 누르면 손가락 크기(44pt)로 넓혔을 때 그 자리를 덮는 가장 가까운 켜진 구역 안으로 붙인다(다른 구역 위의 누름은 그대로라 이웃을 덮지 않는다). 손가락을 떼며 밀려도 누른 구역에서 손가락 크기 + `TAP_SLOP`(8 도트) 안이면 누른 구역에서 뗀 것으로 친다(끌기로 바뀐 것은 그대로). 화면의 `pointerDown`도 고친 자리를 받는다. 시험 `test/touch-snap.test.js`, 견주기 `node tools/touch-audit.mjs`.
-- 한 번 누르면 미리 보기 · 설명, 한 번 더 누르면 실행(`preview: true`)을 되돌릴 수 없는 곳에 모두 둔다: 상점 진열 · 꾸러미 · 두루마리 쓰기, 대국 전술 칸, 판 칸(먹기 · 떨구기), 꾸러미 · 정석 카드. 손 카드 고르기 · 격언 메뉴 열기는 되돌릴 수 있어 곧바로.
+- 한 번 누르면 미리 보기 · 설명, 한 번 더 누르면 실행(`preview: true`)을 되돌릴 수 없는 곳에 모두 둔다: 상점 진열 · 꾸러미 · 두루마리 쓰기, 대국 전술 칸 · 다시 놓기(그림만 있는 단추 — 이름이 말풍선에만 있다), 판 칸(먹기 · 떨구기), 꾸러미 · 정석 카드. 카드와 그 위 도장처럼 같은 것을 고르는 두 구역은 `preview: '묶음 이름'`으로 묶어 어느 쪽을 눌러도 같은 미리 보기다. 손 카드 고르기 · 격언 메뉴 열기는 되돌릴 수 있어 곧바로.
 - 오른쪽 누르기(판 위 표시)는 손가락에 없다.
 
 **홈 화면에 추가**: `manifest.webmanifest`(이름 체인메이트, `display: fullscreen` → standalone, 가로, 바탕 #0b1210), 아이콘 `assets/icons/`(`node tools/icons.mjs`로 굽는다 — 192 · 512 · maskable 512 · apple-touch 180), iOS `apple-mobile-web-app-capable` · `status-bar-style: black-translucent` · `apple-touch-icon`.
