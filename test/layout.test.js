@@ -32,7 +32,7 @@ const BOTTOM = 270 - 2;
 
 test('토큰: 이름마다 한 값(후보 2) · 시안 덮어쓰기는 이름 하나를 바꾼다', () => {
   const F = M.frame;
-  assert.deepEqual([F.PAD_BOX, F.PAD_CARD, F.LINE, F.LINE_TITLE, F.GAP_IN, F.GAP_GROUP], [8, 7, 14, 18, 3, 8]);
+  assert.deepEqual([F.PAD_BOX, F.PAD_CARD, F.LINE, F.LINE_TITLE, F.GAP_IN, F.GAP_GROUP], [8, 7, 14, 18, 4, 8]);
   // 잉크(11줄)는 줄 가운데: 본문 줄은 위 1 · 아래 2, 제목 줄은 위 3 · 아래 4
   assert.equal(F.textY(100, 14), 101);
   assert.equal(F.textY(100, 18), 103);
@@ -614,7 +614,8 @@ test('짜임 칸: 두 줄 머리 칸 · 두 줄 레퍼토리 이름 · 레퍼토
   for (const [titleLines, jsLines] of [[1, 3], [1, 4], [2, 3], [2, 4], [2, 2]]) {
     const st = common.sideStack(common.headLayout(titleLines, 0).h, common.footLayout(3).h);
     const jsH = GAP_GROUP + LINE + GAP_IN + jsLines * LINE;
-    assert.ok(P * 2 + LINE + jsH <= st.mid.h, `제목 ${titleLines}줄 · 레퍼토리 ${jsLines}줄: 짜임 칸 ${st.mid.h}`);
+    // 모자라면 레퍼토리 이름표 → 이름 틈(GAP_IN)을 접는다(common.js runSide)
+    assert.ok(P * 2 + LINE + jsH - GAP_IN <= st.mid.h, `제목 ${titleLines}줄 · 레퍼토리 ${jsLines}줄: 짜임 칸 ${st.mid.h}`);
     // 레퍼토리 셋이 한 줄씩이면 칩 줄 하나는 들어간다(지금까지와 같다)
     if (titleLines === 1 && jsLines === 3) assert.ok(P * 2 + LINE + GAP_IN + FAM_ROW + jsH <= st.mid.h);
   }

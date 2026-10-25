@@ -167,14 +167,14 @@ function drawHit(g, sc, h, keep = null) {
   if (h.dust) {
     const a = h.age / 0.3;
     g.globalAlpha = Math.max(0, 1 - a);
-    for (let i = 0; i < 8; i++) rect(g, h.x + 10 * z + (i - 3.5) * 4 * (1 + a * 2), h.y + 28 * z - a * 4 - (i % 2) * 2, 2, 2, '#b8c7c0');
+    for (let i = 0; i < 8; i++) dot(g, h.x + 10 * z + (i - 3.5) * 4 * (1 + a * 2), h.y + 28 * z - a * 4 - (i % 2) * 2, 2, '#b8c7c0');
     g.globalAlpha = 1;
     return;
   }
   if (h.age < 0.45) {
     const a = h.age / 0.45, r = (6 + a * 22) * p;
     g.globalAlpha = 1 - a;
-    for (let j = 0; j < 16; j++) { const ang = (j / 16) * Math.PI * 2; rect(g, cx + Math.cos(ang) * r, cy + Math.sin(ang) * r * 0.8, 2, 2, j % 2 ? PAL.goldHi : PAL.gold); }
+    for (let j = 0; j < 16; j++) { const ang = (j / 16) * Math.PI * 2; dot(g, cx + Math.cos(ang) * r, cy + Math.sin(ang) * r * 0.8, 2, j % 2 ? PAL.goldHi : PAL.gold); }
     g.globalAlpha = 1;
   }
   if (h.age < 1.1 && h.type) {
@@ -195,7 +195,7 @@ function drawHit(g, sc, h, keep = null) {
     g.globalAlpha = Math.max(0, 1 - tt / 0.5);
     for (let j = 0; j < 14 + h.n * 2; j++) {
       const ang = j * 2.39996, sp = (60 + (j % 5) * 22) * p, s = j % 3 ? 1 : 2;
-      rect(g, cx + Math.cos(ang) * sp * tt, cy + Math.sin(ang) * sp * tt + 80 * tt * tt, s, s, j % 2 ? '#fff8e8' : PAL.goldHi);
+      dot(g, cx + Math.cos(ang) * sp * tt, cy + Math.sin(ang) * sp * tt + 80 * tt * tt, s + 0.5, j % 2 ? '#fff8e8' : PAL.goldHi);
     }
     g.globalAlpha = 1;
   }

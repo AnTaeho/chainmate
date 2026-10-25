@@ -10,9 +10,14 @@ export const TOP = 22;                       // 판 틀의 본 칸 · 오른쪽 
 export const PAUSE = { x: 460, y: 5 };       // 멈춤 단추(모든 화면 같은 자리)
 export const CARD = { w: 108, gap: 10 };     // 판 틀 카드 줄(셋이면 128 · 246 · 364)
 export const cardX = (i) => MAIN.x + i * (CARD.w + CARD.gap);
-// 판 밖 틀
-export const PAGE = { titleX: 12, titleY: 8, ruleY: 25, bodyY: 32, btnY: 244, btnH: 18 };
-export const BTN_H = 18;                     // 보통 단추 높이
+// 간격 자(layout.md 29절): 2 · 4 · 8 · 12 · 16 · 24 여섯 단만 쓴다(테 1 빼고)
+export const SP = { xs: 2, s: 4, m: 8, l: 12, xl: 16, xxl: 24 };
+export const BTN_H = 18;                     // 단추 높이 하나(첫 화면 큰 단추 · 수업 「시작」만 BTN_HERO)
+export const BTN_HERO = 26;
+export const BTN_MIN = 64;                   // 글에 맞춘 단추의 가장 좁은 폭
+export const BTN_PAD = SP.l;                 // 글에 맞춘 단추의 글 양옆 여백
+// 판 밖 틀: 제목(12, 4) · 「뒤로」(12, 244) 폭 80 · 주 단추 오른쪽 끝(W − 12 − 폭)
+export const PAGE = { titleX: SP.l, titleY: 8, ruleY: 25, bodyY: 32, btnY: 244, btnH: BTN_H, backW: 80, gap: SP.m };
 
 // ── 글 간격 토큰(docs/design-notes/layout.md 「격자와 여백」): 이름 하나가 뜻 하나, 값도 하나다.
 //   PAD_BOX     상자(판넬 · 말풍선 · 낱말 상자 · 처음 안내 · 풀이 칸 · 막간 상자) 안 여백
@@ -24,10 +29,10 @@ export const BTN_H = 18;                     // 보통 단추 높이
 // 상자는 내용에 맞춘다(hug): 높이 = 안 여백 × 2 + 줄 높이의 합 + 묶음 틈. 그리는 쪽과 재는 쪽이 같은 흐름(flow)을 쓴다.
 // 그리는 쪽은 그릴 때마다 여기서 읽는다(미리 계산해 두지 않는다 — 시안 applySpacing이 값을 바꾼다).
 export let PAD_BOX = 8;
-export let PAD_CARD = 7;
+export let PAD_CARD = 7;                  // 29절 예외: 8이면 상점 진열 카드 · 관 선택 · 전설 · 하이라이트 띠가 넘친다(화면 단계에서 8로)
 export let LINE = 14;
 export let LINE_TITLE = 18;
-export let GAP_IN = 3;
+export let GAP_IN = 4;
 export let GAP_GROUP = 8;
 export const FONT_H = 12;                    // 글꼴 크기(논리 12px — src/render/type.js)
 import { INK_H } from '../render/type.js';
@@ -65,12 +70,12 @@ export const CHIP_ROW = 17;                  // 시너지 칩 줄(칩 15 + 2)
 export const CHIP_PAD = 3;                   // 칩(시너지 칩 · 띠 · 왼쪽 칸 시너지 줄) 안 가로 여백 — 폭은 글에 맞춘다
 export const FAM_H = 17;                     // 테 두른 시너지 칩(대국 띠 · 왼쪽 칸 시너지 세로 줄)
 export const FAM_ROW = 19;                   // 왼쪽 칸 시너지 세로 줄(칩 17 + 2)
-export const BTN_S = 18;                     // 작은 단추(판넬 안 · 위 띠 · 처음 안내 「알았다」 · 넘친 목표 도장) 높이 — 보통 단추와 같다
+export const BTN_S = BTN_H;                  // 옛 이름(작은 단추) — BTN_H와 같다
 export const ART_H = 26;                     // 물건 카드 그림 칸 높이
 export const LIST_GAP = 2;                   // 세로로 잇는 같은 칸(격언 칸 · 두루마리 칸) 사이
 
 // ── 시안: 글 간격 토큰 덮어쓰기(화면 모습만 — 저장 · 규칙과 상관없다). 상자가 내용에 맞추므로 상자 크기도 따라 바뀐다.
-//   「pad8,card7,line14,title18,in3,group8」 꼴: pad PAD_BOX · card PAD_CARD · line LINE · title LINE_TITLE · in GAP_IN · group GAP_GROUP.
+//   「pad8,card7,line14,title18,in4,group8」 꼴: pad PAD_BOX · card PAD_CARD · line LINE · title LINE_TITLE · in GAP_IN · group GAP_GROUP.
 //   브라우저는 주소 ?spacing=…, 연기 시험 · 도구는 globalThis.__SPACING(모듈을 부르기 전에).
 export function applySpacing(spec) {
   for (const part of String(spec).split(',').map((q) => q.trim()).filter(Boolean)) {

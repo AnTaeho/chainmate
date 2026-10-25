@@ -15,7 +15,7 @@
 // loose: 연출 중(뒤집히는 카드 등)이라 이번 프레임은 재지 않는다.
 // clips: 이번 프레임에 줄이거나 자른 글(「잘린 글」 검사, layout.md 「잘린 글 검사」) — logClip
 import { INK_H } from './type.js';
-export const LOG = { on: false, boxes: [], texts: [], frames: [], stack: [], layer: 0, folded: [], clips: [] };
+export const LOG = { on: false, boxes: [], texts: [], frames: [], stack: [], layer: 0, folded: [], clips: [], heads: [] };
 export const EDGE_CLEAR = 2;          // 'edge' 칸: 글과 테 사이 최소 틈
 export const INK_DESC = 2; // 아래로 빠지는 글자의 더 내려가는 줄(12px, 1배)
 export { INK_H };
@@ -23,7 +23,7 @@ const DESC = /[gjpqy,]/;
 
 export function logBegin() {
   if (!LOG.on) return;
-  LOG.boxes = []; LOG.texts = []; LOG.frames = []; LOG.stack = []; LOG.layer = 0; LOG.folded = []; LOG.clips = [];
+  LOG.boxes = []; LOG.texts = []; LOG.frames = []; LOG.stack = []; LOG.layer = 0; LOG.folded = []; LOG.clips = []; LOG.heads = [];
 }
 // 둥근 모서리(안 3): 반지름 r인 모서리에서, 상자 윗변(또는 아랫변)으로부터 a 떨어진 줄의 가로 들어감
 export function arcInset(r, a) { if (!(r > 0) || a >= r) return 0; const dy = r - Math.max(0, a); return r - Math.sqrt(Math.max(0, r * r - dy * dy)); }
@@ -42,7 +42,7 @@ export function layerUp() { if (LOG.on) LOG.layer++; }
 // 글 하나: 잉크 네모(text()의 y부터 INK_H × scale), 아래로 빠지는 글자가 있으면 d(INK_DESC × scale)만큼 더
 export function logText(s, x, y, w, scale = 1) {
   if (!LOG.on) return;
-  LOG.texts.push({ s, x, y, w, h: INK_H * scale, d: DESC.test(s) ? INK_DESC * scale : 0, box: LOG.stack[LOG.stack.length - 1] || null, layer: LOG.layer });
+  LOG.texts.push({ s, x, y, w, h: INK_H * scale, d: DESC.test(s) ? INK_DESC * scale : 0, scale, box: LOG.stack[LOG.stack.length - 1] || null, layer: LOG.layer });
 }
 // 줄이거나 자른 글 하나(「잘린 글」 검사): kind 'thin' 보통 굵기로 줄임 · 'cut' 끝을 「…」로 · 'char' 낱말을 글자 단위로 끊음.
 // src 원문, shown 그려진 글(끊김은 줄을 「 / 」로 이어), w 자리 폭. 그때 열려 있던 상자(이름 · 연출 여부)에 묶인다
@@ -51,6 +51,8 @@ export function logClip(kind, src, shown, w) {
   const box = LOG.stack[LOG.stack.length - 1] || null;
   LOG.clips.push({ kind, src: String(src), shown: String(shown), w, box: box ? box.name || box.kind : '', loose: !!(box && box.loose), layer: LOG.layer });
 }
+// 판 밖 화면 큰 머리(common.js pageHead big): 연기 시험 「제목 자리」가 (12, 4)에 있는지 잰다
+export function logHead(s, x, y) { if (LOG.on) LOG.heads.push({ s: String(s), x, y, layer: LOG.layer }); }
 // 그린 테 하나(gfx.js box()): 그때 열려 있던 상자에 묶인다
 export function logFrame(x, y, w, h) {
   if (!LOG.on) return;

@@ -1,6 +1,7 @@
 // 손맛 연출(layout.md 28절): 잡기 연기 · 동전 · 색종이 · 화면 번쩍 · 굵은 테 글 · 진열 반짝 띠 · 상금 흔들림.
 // 모두 Fx(따로 도는 효과)라 한 수 연출 시간(Seq)을 늘리지 않는다. 무작위는 시드, 개수는 CAP 안. 움직임 줄이기면 부르는 쪽이 끄거나 정지 그림으로(동전은 날리지 않고 상금 수 빛만).
 import { PAL } from '../render/palette.js';
+import { rpath } from '../render/light.js';
 import { W, H, rect, text, measure } from '../render/gfx.js';
 import { live, beat, LOOK } from '../render/look.js';
 import { INK, bake, scaleOf } from '../render/vec.js';
@@ -102,7 +103,7 @@ export function confetti(fx, x, y, { n = 36, seed = 5, spread = 200, life = 1.6,
       for (const p of f.parts) {
         if (av && p.x > av.x - 4 && p.x < av.x + av.w && p.y > av.y - 4 && p.y < av.y + av.h) continue;
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.ph * 0.35); ctx.scale(Math.max(0.15, Math.abs(Math.cos(p.ph))), 1);
-        ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -1.5, p.w, 3); ctx.restore();
+        rpath(ctx, -p.w / 2, -1.5, p.w, 3, 1.5); ctx.fillStyle = p.col; ctx.fill(); ctx.restore();
       }
       ctx.globalAlpha = 1;
       if (ar) ctx.restore();
