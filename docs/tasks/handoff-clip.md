@@ -49,7 +49,7 @@ node tools/drawcheck.mjs                  # 그리기를 바꿨으면, 따로
 ## 결과(2026-10-25, `claude/clip-finish`)
 | 커밋 | 내용 |
 |---|---|
-| 02e179a · 5f2ba56 | smoke · `test/accountui.test.js` 계정 흐름이 비번 해시(scrypt, 스레드 풀)가 끝날 때까지 기다린다. 틱만 세던 대기라 4코어 클라우드에서는 혼자 돌려도 늘 떨어졌다 |
+| 02e179a · 5f2ba56 → efd1e6b | smoke · `test/accountui.test.js` 계정 흐름 기다림을 고쳤다가 되돌렸다 — 같은 고침이 `claude/brave-bohr-r74efm`(93ba3c0 · 312c2f4)에 있어 그 브랜치를 합쳤다(05a0306) |
 | 2d6cc85 | `placement.js` 'below': 위 · 아래 어디에도 다 안 들어갈 때(clip 직전)만 가리킨 것 옆(오른쪽 +3, 안 되면 왼쪽 −3). 그 쪽 자리가 176보다 좁으면 150(`NOTE_MIN_W`)까지 좁혀 `remeasure`로 다시 잰다. 세로는 가리킨 것의 윗변, 누를 것을 덮으면 가리킨 것과 겹치는 데까지 올린다. smoke 자리 검사에 `beside-right` · `beside-left`, `test/render.test.js`에 넷 |
 | f968574 | `battle.js` `headSpec`: 굵게 「세력 · 종류」 → 굵게 「세력 · 짧은 종류」 → **굵게 세력 이름만** → 보통 굵기 「세력 · 종류」 |
 | 88f8a12 | `layout.md` 5절 표 · 잘린 글 검사 · 머리 칸 줄 |
@@ -74,9 +74,17 @@ node tools/drawcheck.mjs                  # 그리기를 바꿨으면, 따로
 남은 en 9: 명경기 이름 「…」 4(격언 칸 98 — 실제 이름을 지킨다) · 줄임 Pilgrimage · Vanguard · Rainbow · Obsidian · The Opera Game(이름 · 칸 폭 — 그대로). ko 1: 상점 「사냥 시너지 8」(`families.js` 효과 글 — 손대지 않음).
 
 ### 검증(원문)
+아래는 `claude/brave-bohr-r74efm`을 합치기 전에 잰 것. 합친 뒤(05a0306, 꽉 채움 기본 · 배율 3.23)에 다시 잰 것은 맨 아래 「합친 뒤」.
 - `npm test`: `# tests 905 · # pass 905 · # fail 0`(계정 시험 대기를 고친 뒤 — 고치기 전에는 `test/accountui.test.js` 둘이 혼자 돌려도 `# fail 2`)
 - `node tools/drawcheck.mjs`: `합계: 프레임 23032 · 건너뜀 4738 (21%) · 어김 0`
 - `node tools/drawcheck.mjs --scale 1280x720 --fit fill`: `합계: 프레임 23031 · 건너뜀 4738 (21%) · 어김 0`
 - smoke en: `자리 규칙: 가리킨 것 1329(판 틀 1258 · 판 밖 71, 화면 10) · 어김 0 · … · 누를 것 덮음 0 · 안 뜸 0 · … · 잘림(…) 0` · `글 넘침 0(…) · 잰 프레임 48426` · `한 수 연출(×1, 멈칫 포함) … 최대 3.94s`
 - smoke ko: `자리 규칙: 가리킨 것 1362 · 어김 0 · … · 잘림(…) 1 (shop fam 1)` · `글 넘침 0(…) · 잰 프레임 48483`
 - **smoke 둘 다 `SMOKE FAIL`, 까닭은 「프레임 p99가 16ms를 넘는다」 하나뿐**: en `p99 16.96ms`(혼자 다시 돌림, 부하 2), ko `p99 17.40ms`. 같은 기기에서 고치기 전 코드(`handoff/clip` + smoke 계정 대기만)도 `p99 16.95ms`로 FAIL — 이 4코어 클라우드 기기의 바닥값이다. 넘겨받는 사람의 기기에서 `SMOKE OK`를 다시 확인해야 한다.
+
+### 합친 뒤(05a0306)
+- `npm test`: `# tests 915 · # pass 915 · # fail 0`
+- smoke en: `잘린 글 9(… 4 · 줄임 5 · 글자 끊김 0) · 허용 4 · 보류 0 · 목록 밖 0 — en` · `자리 규칙: 가리킨 것 1328(판 틀 1258 · 판 밖 70, 화면 10) · 어�…` · 글 넘침 0 · 계정 흐름 모두 확인 · `p99 16.75ms` → SMOKE FAIL(p99만)
+- smoke ko: `잘린 글 1(… 1 · 줄임 0 · 글자 끊김 0) · 허용 1 · 보류 0 · 목록 밖 0 — ko` · 글 넘침 0 · 계정 흐름 모두 확인 · `p99 16.96ms` → SMOKE FAIL(p99만)
+- `node tools/drawcheck.mjs`: `합계: 프레임 23031 · 건너뜀 4738 (21%) · 어김 0`
+- `node tools/drawcheck.mjs --scale 1280x720 --fit fill`: `합계: 프레임 23032 · 건너뜀 4737 (21%) · 어김 0`
