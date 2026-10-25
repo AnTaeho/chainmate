@@ -112,7 +112,7 @@ export class DraftScreen {
       closeBox();
       // 도장: 이 레퍼토리로 이긴 가장 높은 레이팅 — 새 판 오프닝 카드처럼 윗변에 반쯤 걸친 스티커(오른쪽 안 4). 등급 줄 오른끝은 영어 「Rainbow」와 겹친다
       const won = (this.app.records.josekiDan || {})[id];
-      if (won != null) danStamp(ctx, x + CW - SP.s, y - (STAMP.h >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.pick(i), preview: uid });
+      if (won != null) danStamp(ctx, x + CW - SP.s, y - (STAMP.h >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.pick(i), preview: `draft:${i}` });
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rrect(ctx, x, y, CW, CH, radiusOf(CW, CH), PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     }
