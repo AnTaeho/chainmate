@@ -68,7 +68,7 @@ const dayGap = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`
 // newCode: () => 숫자 여덟 자리 글
 // scryptN: 비번 해시의 N(시험은 작은 값을 넘긴다)
 // verify: 비번 견줌(시험이 바꿔 끼워 「없는 아이디도 진짜와 같은 꼴의 해시로 한 번 견준다」를 구조로 잰다 — C-3)
-export function createService({ store, build = 'dev', now = Date.now, newKey = () => randomBytes(32).toString('hex'), rand = Math.random, newCode = () => String(randomInt(0, 1e8)).padStart(8, '0'), scryptN = SCRYPT.N, verify = verifyPassword }) {
+export function createService({ store, build = 'dev', rulesVersion = RULES_VERSION, now = Date.now, newKey = () => randomBytes(32).toString('hex'), rand = Math.random, newCode = () => String(randomInt(0, 1e8)).padStart(8, '0'), scryptN = SCRYPT.N, verify = verifyPassword }) {
   const today = () => utcDate(now());
   const who = async (key) => (isKey(key) ? store.getPlayer(hashKey(key), today()) : null);
   const hourOf = () => new Date(now()).toISOString().slice(0, 13);
@@ -101,7 +101,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
   };
   return {
     // build: 배포 식별자 · rules: 규칙 판본(src/sim/rules.js) — 화면은 rules로 판이 서버와 같은 규칙인지 안다
-    hello: async () => ok({ build, rules: RULES_VERSION }),
+    hello: async () => ok({ build, rules: rulesVersion }),
 
     // { key?, reroll? } → { key, a, n, rerolls(오늘 남은 다시 짓기) }. key가 없으면 새 플레이어(모두 합쳐 한 시간 한도 — 429 player_limit)
     async player(body) {
@@ -125,7 +125,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
     },
 
     // { key, date, rules | build, cmds } → { ok, best, rank, total, improved }. 차례: 꼴 → key → 판본 → date → 하루 한도 → 다시 두기 → 갈아 끼우기
-    // 판본: rules(판을 시작한 규칙 판본)가 있으면 그것을 이 서버의 RULES_VERSION과 견준다. 없으면(옛 화면) 옛 길대로 배포 식별자 build를 견준다
+    // 판본: rules(판을 시작한 규칙 판본)가 있으면 그것을 이 서버의 규칙 판본(rulesVersion — 기본 RULES_VERSION, 시험 · 도구만 바꾼다)과 견준다. 없으면(옛 화면) 옛 길대로 배포 식별자 build를 견준다
     async submit(body) {
       const { key, date, build: theirs, rules, cmds } = body || {};
       if (!isKey(key) || !Array.isArray(cmds)) return err(400, 'bad_request');
@@ -133,7 +133,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       if (cmds.length > LIMITS.cmds) return err(413, 'too_many_cmds');
       const p = await store.getPlayer(hashKey(key), today());
       if (!p) return err(401, 'unknown_key');
-      if (rules != null ? rules !== RULES_VERSION : theirs !== build) return err(409, 'stale', { stale: true, build, rules: RULES_VERSION });
+      if (rules != null ? rules !== rulesVersion : theirs !== build) return err(409, 'stale', { stale: true, build, rules: rulesVersion });
       if (!isDate(date) || Math.abs(dayGap(date, today())) > LIMITS.dateSpan) return err(422, 'bad_date');
       if (!(await store.bumpSubmit(p.id, today(), LIMITS.submits))) return err(429, 'submit_limit');
       let result, used;

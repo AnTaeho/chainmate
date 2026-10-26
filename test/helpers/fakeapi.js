@@ -4,14 +4,18 @@ import { createService } from '../../api/_lib/service.js';
 import { memStore } from './memstore.js';
 
 // api.mode: 'ok' | 'fail'(망이 끊김 — fetch가 거절) | 'html'(다른 서버가 답함 — JSON이 아닌 404) | 'hang'(답이 안 온다)
-// api.calls: 받은 요청 [{ method, path, query, body }]. api.setBuild(b): 새로 배포된 것처럼 배포 식별자를 바꾼다
+// api.calls: 받은 요청 [{ method, path, query, body }]. api.setBuild(b): 새로 배포된 것처럼 배포 식별자를 바꾼다. api.setRules(r): 서버 규칙 판본을 바꾼다
 // newCode: 옮기기 코드를 정해 줄 때(없으면 진짜 무작위)
 // scryptN: 비번 해시의 N — 시험은 작게(진짜 값은 한 번에 수십 ms · 32MiB)
 export function fakeApi({ build = 'test-build', now = () => Date.now(), store = memStore(), rand = Math.random, newCode = null, scryptN = 16 } = {}) {
   const api = { store, mode: 'ok', calls: [], build };
   const more = { scryptN, ...(newCode ? { newCode } : {}) };
-  let service = createService({ store, build, now, rand, ...more });
-  api.setBuild = (b) => { api.build = b; service = createService({ store, build: b, now, rand, ...more }); };
+  let rulesVersion;
+  const make = () => createService({ store, build: api.build, now, rand, ...more, ...(rulesVersion != null ? { rulesVersion } : {}) });
+  let service = make();
+  api.setBuild = (b) => { api.build = b; service = make(); };
+  // 규칙이 바뀐 배포(서버의 규칙 판본만 바꾼다 — 두던 오늘의 대국은 409 stale)
+  api.setRules = (r) => { rulesVersion = r; service = make(); };
   api.named = (path) => api.calls.filter((c) => c.path === path);
   api.fetch = async (url, init = {}) => {
     const u = new URL(url, 'http://fake.local');

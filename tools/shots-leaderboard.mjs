@@ -17,6 +17,7 @@ import { createDailyRun } from '../src/sim/daily.js';
 import { hashKey } from '../api/_lib/service.js';
 import { playRun } from './shopbot.mjs';
 import { fakeApi, seedBoard, demoRows, LONG_KO, LONG_EN } from '../test/helpers/fakeapi.js';
+import { loadPlaywright } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -30,10 +31,6 @@ const PLAYER_KEY = 'chainmate.player.v1';
 const DAY_LOST = '2026-10-08', DAY_WON = '2026-10-06';
 const shift = (date, n) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
 const botCache = new Map();
 function botCmds(date, policy = 'smart') {
   const k = `${date}:${policy}`;
@@ -106,7 +103,7 @@ async function open(browser, { lang = 'ko', base = `http://localhost:${port}`, r
   if (rank) await page.evaluate(async (today) => { const m = await import('/src/main.js'); await m.boot({ rankBase: '', ...(today ? { today: () => today } : {}) }); }, today);
   await page.waitForFunction(() => window.__app && window.__app.screen);
   // 첫 판 대본 · 기록 알림 · 처음 안내는 치운다
-  await page.evaluate((save) => { const a = window.__app; a.records.tutorialAsked = true; a.records.runs = 3; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true }; a.saveRecords(); if (save) { a.newRun({ seed: 7 }); a.go('title'); } }, save);
+  await page.evaluate((save) => { const a = window.__app; a.records.tutorialAsked = true; a.records.runs = 3; a.records.coachSeen = { telemetry: true, bigText: true, rankName: true }; a.saveRecords(); if (a.overlay) a.closeOverlay(); if (save) { a.newRun({ seed: 7 }); a.go('title'); } }, save);
   await page.waitForFunction(() => window.__app.ui.regions.length > 0 && window.__app.stats.frames > 2);
   const settle = (ms = 250) => page.waitForTimeout(ms);
   const ev = (fn, arg) => page.evaluate(fn, arg);
@@ -278,11 +275,11 @@ async function shots(browserType, name) {
     await s.shot(`after-card-pending${tag}`);
     for (const r of hung.splice(0)) r.destroy();
     await s.context.close();
-    // 새 배포: 판을 두는 사이 배포 식별자가 바뀌었다
+    // 새 배포: 판을 두는 사이 규칙이 바뀐 배포가 나갔다(배포 식별자만 바뀐 배포는 그대로 받는다 — 규칙 판본, 묶음 6)
     await newWorld(DAY_LOST);
     s = await open(browser, { today: DAY_LOST });
     await s.settle(300);
-    world.setBuild('next-build');
+    world.setBuild('next-build'); world.setRules(-1);
     await s.playDaily(botCmds(DAY_LOST));
     check(`${name} 새 배포 → 내지 못함`, !!(await s.until(async () => (await s.status()).phase === 'stale')), `제출 ${world.named('/api/daily/submit').length}번 · 오른 성적 ${world.store.scores.filter((q) => q.date === DAY_LOST).length - 24}`);
     await s.settle(300);
@@ -341,15 +338,15 @@ async function plain(browserType, name) {
     const date = await s.ev(() => window.__app.today());
     const st = await s.playDaily(botCmds(date, 'random'));
     await s.settle(600);
-    const toasts = [await s.ev(() => window.__app.toasts.length)];
+    const toasts = [await s.ev(() => window.__app.toasts.filter((t) => !t.achv).length)]; // 업적 알림은 오류가 아니다
     await s.shot(`after-local-result-${name}`);
     // 닿지 못하는 카드에는 「순위 보기」가 없다 — 첫 화면의 「순위」로 연다
     await s.click('result:title'); await s.click('title:rank'); await s.settle(600);
-    toasts.push(await s.ev(() => window.__app.toasts.length));
+    toasts.push(await s.ev(() => window.__app.toasts.filter((t) => !t.achv).length));
     await s.shot(`after-local-rank-${name}`);
     await s.click('rank:tab:yesterday'); await s.settle(400);
     await s.click('rank:back'); await s.click('title:settings'); await s.settle(300);
-    toasts.push(await s.ev(() => window.__app.toasts.length));
+    toasts.push(await s.ev(() => window.__app.toasts.filter((t) => !t.achv).length));
     const stored = await s.ev((k) => [localStorage.getItem(k), localStorage.getItem('chainmate.rankq.v1'), !!window.__app.ui.regions.find((r) => r.id === 'set:name')], PLAYER_KEY);
     check(`[${name}] python3 tools/serve.py(${free}): 오늘의 대국을 끝냈다`, st.screen === 'result', `${date} · ${st.phase} ${st.ante}관`);
     check(`[${name}] /api로 나간 요청 0건`, s.seen.api.length === 0, `${s.seen.api.length}건`);
