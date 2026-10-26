@@ -320,10 +320,10 @@ export function battleMods(build, master = null, faction = null) {
   if (faction) mods.push({ id: `faction:${faction}` });
   if (master) mods.push({ id: master });
   mods.push({ id: 'charts', data: { table: CHART_TABLE, levels: { ...build.charts } } });
-  // 가족(깊이 B): 문턱을 넘은 가족마다 하나(정석 「복제」면 가장 많이 모은 가족의 문턱이 하나 낮다)
+  // 가족(깊이 B): 문턱을 넘은 가족마다 하나(정석 familyDrop — 「복제」면 가장 많이 모은 가족의 문턱이 하나 낮다)
   const counts = familyCounts(build);
   let dropFor = null;
-  if ((build.josekis || []).includes('clone')) { const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]; if (top && top[1] > 0) dropFor = top[0]; }
+  for (const id of build.josekis || []) { const j = JOSEKI_BY_ID[id]; if (j && j.familyDrop) dropFor = j.familyDrop(counts) ?? dropFor; }
   mods.push(...familyMods(counts, dropFor));
   // 정석(깊이 E)
   for (const id of build.josekis || []) mods.push({ id: `joseki:${id}` });

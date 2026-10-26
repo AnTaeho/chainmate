@@ -4,6 +4,7 @@
 //   pick(run, events)    고르는 순간 판(런)을 바꾼다(덱 기물을 이형으로 · …)
 //   조정자 훅           대국 안에서(defineModifier('joseki:<id>', { kind: 'joseki', … }))
 //   rules(battle, rng)  대국 규칙을 더한다(판 위 사물: 문 · 발판, 고속도로 줄) — 판을 짓기 전에
+//   familyDrop(counts)  문턱이 하나 낮아질 시너지 id(없으면 null) — 대국 조정자를 만들 때(run.js battleMods)
 import { defineModifier } from '../sim/scoring.js';
 import { martyrBurst, MARTYR_TEXT, MARTYR_MORE } from './souls.js';
 import { PIECES } from './pieces.js';
@@ -15,8 +16,8 @@ export const TIER_COL = { silver: '#d8dee6', gold: '#efbd55', rainbow: '#9fe0a0'
 
 export const JOSEKIS = [];
 function joseki(id, name, tier, families, text, def = {}) {
-  const { pick = null, rules = null, targetMult = null, more = null, ...hooks } = def;
-  JOSEKIS.push({ id, name, tier, families, text, pick, rules, targetMult, more });
+  const { pick = null, rules = null, targetMult = null, familyDrop = null, more = null, ...hooks } = def;
+  JOSEKIS.push({ id, name, tier, families, text, pick, rules, targetMult, familyDrop, more });
   // 판 위 사물 · 규칙은 대국 시작(판을 짓기 전)에 대국 시드에서 갈라 낸 흐름으로 정한다
   if (rules) hooks.onBattleStart = (ctx) => { const r = fork(createRng((ctx.t.seed ?? 1) >>> 0), `joseki:${id}`); rules(ctx.t, () => next(r)); };
   defineModifier(`joseki:${id}`, { kind: 'joseki', ...hooks });
@@ -105,7 +106,10 @@ joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 콤보가 한 줄�
     if (!c.flags.gomoku && collinear5(sqs)) { c.flags.gomoku = true; ctx.emit({ type: 'gomoku', squares: sqs }); }
   },
 });
-joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 시너지는 1 · 3 · 4개에서 켜진다');
+joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 시너지는 1 · 3 · 4개에서 켜진다', {
+  // 가장 많이 모은 것(같으면 앞의 것), 하나도 없으면 없음
+  familyDrop(counts) { const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]; return top && top[1] > 0 ? top[0] : null; },
+});
 
 
 // ── 밤샘 2: 열하나 더
