@@ -72,7 +72,7 @@
 - 검증: `node tools/drawcheck.mjs`의 건너뜀률이 오르는지(지금 21%), smoke p99.
 
 ## 묶음 8 — 시험 · 도구 · 측정 (결정 없음)
-거의 끝(8566066 · 517c951 · 7345c02 · 337e19c · 8cb9025 · 3c25864 · 0e81e45). 남은 것: C-7(도구 58개 공용 브라우저 lib — 크고 돌려 볼 도구가 많아 미룸), D-14(사람 판 기록이 있어야 잰다 — PostHog는 이 세션에서 못 본다).
+거의 끝(8566066 · 517c951 · 7345c02 · 337e19c · 8cb9025 · 3c25864 · 0e81e45). C-7은 `tools/_lib/browser.mjs`(`loadPlaywright` · `serveRoot`)로 도구 50개 · 정적 서버 36개를 모았다(10a1350 · 2cb39ff) — 가짜 /api · 패치를 내주는 서버 10개(drawcheck · touch-audit · shots-account · link · leaderboard · gate · night2 · icons · render-music · telemetry)는 꼴이 갈려 그대로. 남은 것: D-14(사람 판 기록이 있어야 잰다 — PostHog는 이 세션에서 못 본다). 덤으로 고친 도구: shots-leaderboard(처음 켬 덮개 · 규칙 판본 뒤 stale 흉내 · 업적 알림), 고치지 않은 것: shots-hold(`shop:hold:1` 구역 없음 — 이번 일 앞에서부터).
 - C-4 `npm test` 48초 중 `test/daily-verify.test.js`가 46초 — 봇 판 명령 줄 · 기대 결과를 `test/fixtures/`에 두고 다시 만드는 스크립트를 함께 둔다.
 - C-3 `test/account.test.js:157` 비번 견줌 시간 비율 시험 → `createService`에 verify 주입, 없는 아이디에도 가짜 해시로 한 번 견주는지 구조로 잰다. C-6 smoke 프레임 p99 16ms 절대 문턱 → 같은 실행 안 기준 대비로(또는 CPU 시간). C-14 merge 무작위 시험에 업적 칸 여섯. C-17 시험 없는 화면 모듈에 최소 시험.
 - C-7 도구 58개의 Playwright 불러오기 · 정적 서버 복사 → `tools/_lib/browser.mjs` 하나로(png content-type도 바로). C-8 어디서도 안 부르는 일회용 도구 16개 지우기(목록은 code.md). C-10 `link_limits` 청소를 한도 검사 쪽에도.
