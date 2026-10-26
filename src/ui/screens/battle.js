@@ -2257,7 +2257,7 @@ export class BattleScreen {
       const last = i === shown.length - 1;
       if (last && c) rrect(ctx, x - 1, iy + 15, 18, 3, 1.5, c.cut ? PAL.red : PAL.gold);
       ctx.globalAlpha = a;
-      fitPiece(ctx, tp, 'w', x, iy, 16, 18, { eng, spark: false });
+      fitPiece(ctx, tp, 'w', x, iy, 16, 18, { eng, spark: false, fill: 1 });
       ctx.globalAlpha = 1;
       x += step;
     });
@@ -2394,7 +2394,7 @@ export class BattleScreen {
   offeredRow(ctx, x0, x1, ty) {
     const list = this.view.offered || [];
     const row = offeredRow(list.length, x0, x1);
-    row.xs.forEach((x, i) => fitPiece(ctx, list[i], 'w', x, ty - 1, SW / 2, SH / 2, { alpha: 0.55 }));
+    row.xs.forEach((x, i) => fitPiece(ctx, list[i], 'w', x, ty - 1, SW / 2, SH / 2, { alpha: 0.55, fill: 1 }));
     if (row.more && row.fits) drawMore(ctx, row.more, row.moreX, ty + 4, PAL.dim, digits);
     this.offeredLayout = { ...row, x0, x1, n: list.length };
   }
@@ -2479,7 +2479,7 @@ export class BattleScreen {
       ctx.globalAlpha = a;
       box(ctx, RX, y, RW, H, fill, PAL.frameDk, { r: H / 2 });
       text(ctx, `${s + 1}`, RX + 8, inkY(y, H), PAL.cardDim, { bold: true });
-      fitPiece(ctx, tp, 'w', RX + 22, y + 1, 12, H - 2, { eng, tier: tierAt(tp), spark: false });
+      fitPiece(ctx, tp, 'w', RX + 22, y + 1, 12, H - 2, { eng, tier: tierAt(tp), spark: false, fill: 1 });
       const name = L(PIECE_NAME[tp] || ''), room = RW - 38 - 8;
       if (name && measure(name, true) <= room) text(ctx, name, RX + 38, inkY(y, H), PAL.cardInk, { bold: true });
       else if (name && measure(name) <= room) text(ctx, name, RX + 38, inkY(y, H), PAL.cardInk);
@@ -2527,7 +2527,7 @@ export class BattleScreen {
     // 이름 꼴은 손 전체가 하나(names — drawHand가 고른다: 굵게 · 보통 · 없음). 따로 부르면 이 카드만 재어 고른다(S-4 · S-21)
     const mode = names || handNameMode([[nm, room]]);
     const bold = mode === 'bold', show = mode !== 'none';
-    fitPiece(c, p.t, 'w', x + 3, y + 3, w - 6, h - 19, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null, awake: !!p.awake });
+    fitPiece(c, p.t, 'w', x + 3, y + 3, w - 6, h - 19, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null, awake: !!p.awake, fill: 0.65 });
     if (show) text(c, nm, x + Math.floor(vw / 2), y + h - 14, dim ? PAL.cardDim : PAL.cardInk, { align: 'center', bold });
     if (level > 0) chartBadge(c, level, x + w - 3, y + 3, { dim });
     if (p.soul && (p.awake || isCracked(p))) soulMark(c, p, x, y, w, h, time, dim);
@@ -2622,7 +2622,7 @@ export class BattleScreen {
       const p = next[k];
       if (!p) { slot(ctx, r.x, r.y, r.w, r.h, { r: radiusOf(r.w, r.h) }); return; }
       box(ctx, r.x, r.y, r.w, r.h, PAL.slot, PAL.slotEdge);
-      fitPiece(ctx, p.t, 'w', r.x + 2, r.y + 2, r.w - 4, r.h - 4, { alpha: k === 0 ? 0.9 : 0.65, eng: p.eng ? p.eng.id : null, spark: false });
+      fitPiece(ctx, p.t, 'w', r.x + 2, r.y + 2, r.w - 4, r.h - 4, { alpha: k === 0 ? 0.9 : 0.65, eng: p.eng ? p.eng.id : null, spark: false, fill: 1 });
     });
   }
 

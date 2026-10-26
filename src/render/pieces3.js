@@ -202,10 +202,33 @@ const FIT = { w: 92, h: 131, below: PLATE.low + PLATE.ry + 1 - BASE.y };
 export function fitScale(bw, bh) { return Math.min(bw / FIT.w, bh / FIT.h); }
 // 상자에 맞춘 기물의 받침 가운데(cx, cy)와 120 상자 논리 폭 w
 export function fitAt(x, y, bw, bh) { const s = fitScale(bw, bh); return { cx: x + bw / 2, cy: y + bh - FIT.below * s, w: s * 120 }; }
-export function fitPiece(ctx, t, side, x, y, bw, bh, { alpha = 1, hx = 1, eng = null, tier = 0, soul = null, awake = false, time = null, spark = true } = {}) {
+// 모양 하나의 원본 단위 테두리(테 몫 2 포함) — 작은 칸 채우기(fill)가 기물마다 제 키로 맞출 때
+const BOUNDS = new Map();
+function artBounds(t) {
+  let b = BOUNDS.get(t);
+  if (b) return b;
+  const S0 = SHAPE[t] || SHAPE.P;
+  let x0 = 60 - PLATE.rx, x1 = 60 + PLATE.rx, y0 = PLATE.top;
+  const add = (sh) => { for (const poly of polys(sh)) for (const [px, py] of poly) { x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); } };
+  add(S0.body); if (S0.top) add(S0.top);
+  for (const q of S0.parts || []) add(q.d);
+  for (const [gx, gy] of S0.gems || []) { x0 = Math.min(x0, gx - 5); x1 = Math.max(x1, gx + 5); y0 = Math.min(y0, gy - 5); }
+  if (S0.cross) y0 = Math.min(y0, 8);
+  b = { w: x1 - x0 + 4, h: BASE.y + FIT.below - y0 + 2 };
+  BOUNDS.set(t, b);
+  return b;
+}
+// fill: 0이면 같은 비율(키 위계). 0 ~ 1이면 기물 키가 상자 높이의 그 몫 아래로 줄지 않게, 1이면 기물마다 제 키로 상자를 채운다
+// (판 밖 작은 아이콘 칸 — 콤보 칸 · 다음 칸 · 바친 기물 · 복기 — 에서 폰이 점처럼 작아지지 않게, S-16)
+export function fitPiece(ctx, t, side, x, y, bw, bh, { alpha = 1, hx = 1, eng = null, tier = 0, soul = null, awake = false, time = null, spark = true, fill = 0 } = {}) {
   if (alpha <= 0 || bw <= 0 || bh <= 0) return;
   t = artOf(t);
-  const { cx, cy, w } = fitAt(x, y, bw, bh);
+  let { cx, cy, w } = fitAt(x, y, bw, bh);
+  if (fill > 0 && !THINGS.has(t)) {
+    const b = artBounds(t), s0 = fitScale(bw, bh), most = Math.min(bw / b.w, bh / b.h);
+    const sc = Math.min(most, Math.max(s0, fill >= 1 ? most : (fill * bh) / b.h));
+    cy = y + bh - FIT.below * sc; w = sc * 120;
+  }
   if (THINGS.has(t)) { drawThingFit(ctx, t, cx, y + bh, w, alpha); return; }
   const c = pieceCanvas(t, side, { eng, tier, n: scaleOf(ctx), w });
   if (hx === 1 && spark) sparks(ctx, Math.round(cx - 8), Math.round(y), tier, soul, awake, time, alpha);

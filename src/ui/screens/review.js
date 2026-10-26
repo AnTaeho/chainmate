@@ -118,7 +118,7 @@ export class ReviewScreen extends BattleScreen {
       drawAnnot(ctx, mark, LX + PX, ry + Math.floor((LINE - tag.h) / 2), tone);
       let x = LX + PX + tag.w + SP.s;
       if (!st) { text(ctx, '—', x, ty, PAL.dim); return; }
-      if (st.t) { fitPiece(ctx, st.t, 'w', x, ry + 1, SW / 2, SH / 2); x += SW / 2 + SP.s; }
+      if (st.t) { fitPiece(ctx, st.t, 'w', x, ry + 1, SW / 2, SH / 2, { fill: 1 }); x += SW / 2 + SP.s; }
       const g = fitNum(st.gain, 40);
       const gw = measure(g, true);
       fitText(ctx, st.label, x, ty, LX + LW - PX - gw - 4 - x, PAL.ink);
