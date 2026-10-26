@@ -1,5 +1,7 @@
 # 넘김 — 2026-10-25 로컬 세션에서 클라우드 세션으로
 
+> 끝남 — 다섯 갈래 모두 main `f2275d0`에 들어가 배포됐다(시너지 수치만 사용자 결정 대기). 다음 일은 `docs/tasks/next.md`.
+
 부르는 법: 「AnTaeho/chainmate 저장소 docs/tasks/handoff.md를 읽고 이어서 진행해」.
 
 ## 먼저 읽을 것
