@@ -11,7 +11,7 @@ import { canBuy, sellPrice, canSell, maximCapacity, maximCount, engravingInfo } 
 import { SHOP, PROMOTE, rerollCost } from '../../sim/shop.js';
 import { CHARTS } from '../../data/charts.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
-import { button, buttonRow, btnW, growHit } from '../ui.js';
+import { button, buttonRow, btnW, growHit, reachDown } from '../ui.js';
 import { fitText, cardBase, maximColumn, maximColumnH, itemCard, itemRowH, itemKeys, itemTip, itemEffect, effectHead, itemExtraTip, targetPanel, pieceCard, pieceTip, chartTip, tipLines, fragmentStrip, cornerTicks, envelope, edgeRing, itemArt, chartLevel, SEAL, targetOk, isSwap, rarityLine, HOLD_MARK, itemName, itemCardLayout } from '../parts.js';
 import { EDITION_BY_ID } from '../../data/editions.js';
 import { chartForm } from '../../data/pieces.js';
@@ -63,7 +63,8 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     const px = x + col * hstep, py = y + row * step;
     const id = `${idPrefix}:${p.id}`;
     const ok = !can || can(p);
-    ui.region(id, px, py, cw, ch, { onClick: pick && ok ? () => pick(p) : null, tip: () => pieceTip(p) });
+    // 마지막 줄이 캔버스 아래 끝에 닿으면 손가락 구역만 밑으로(P-2)
+    ui.region(id, px, py, cw, ch + (row === rows - 1 ? reachDown(ui, py, ch) : 0), { onClick: pick && ok ? () => pick(p) : null, tip: () => pieceTip(p) });
     const hov = ui.isHover(id);
     let fl = flash && flash.id === p.id ? 1 - flash.p : 0;
     let level = chartLevel(run, p.t), gl = 0;
@@ -420,7 +421,7 @@ export class ShopScreen {
       const c = run.consumables[i];
       if (!c) { slot(ctx, x, y, cw, rl.ch); continue; }
       const id = `cons:${i}`;
-      ui.region(id, x, y, cw, rl.ch, { onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c), preview: true });
+      ui.region(id, x, y, cw, rl.ch + reachDown(ui, y, rl.ch), { onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c), preview: true });
       // 좁은 칸은 줄(두 칸)마다 이름 · 그림을 함께 고른다(CHM-41)
       const row = i - (i % 2), names = rl.wide || scrollRowNames(run.consumables.slice(row, Math.min(row + 2, run.consumableSlots)), cw);
       consumableCard(ctx, c, x, y, cw, rl.ch, ui.isHover(id) || (this.target && this.target.index === i), { names });

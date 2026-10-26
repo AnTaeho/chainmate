@@ -1878,7 +1878,9 @@ export class BattleScreen {
       const id = `tactic:${i}`;
       // 묘수 칸(15)은 손 이름표 줄(BTN_S) 가운데
       const ty = y + ((BTN_S - 15) >> 1);
-      ui.region(id, x, ty, 15, 15, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c), preview: true });
+      // 손가락: 위 · 아래로 손 이름표 줄(위 틈 GAP_IN까지 — 희생 단추와 같은 몫)만큼 구역을 넓힌다. 옆 칸과는 1~2라 넓히지 않는다(P-13)
+      const hit = ui.finger ? growHit(x, ty, 15, 15, ui.finger, { u: ty - y + GAP_IN, d: y + BTN_S - ty - 15 }) : { x, y: ty, w: 15, h: 15 };
+      ui.region(id, hit.x, hit.y, hit.w, hit.h, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c), preview: true });
       box(ctx, x, ty, 15, 15, PAL.well, ui.isHover(id) && ok ? PAL.gold : PAL.frameDk);
       ctx.save(); ctx.translate(x + 1, ty + 2); ctx.scale(0.8, 0.8); tacticIcon(ctx, c.id, 0, 0); ctx.restore();
     });

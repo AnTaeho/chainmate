@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chooseFit, toGame, toClient, GW, GH } from '../src/ui/fit.js';
-import { fingerDots, growHit } from '../src/ui/ui.js';
+import { fingerDots, growHit, reachDown, EDGE_REACH } from '../src/ui/ui.js';
 
 const I17 = { top: 62, right: 0, bottom: 34, left: 0 };
 // 돌린 틀 안의 캔버스를 창 좌표 사각형으로(틀 (u, v) → 창 (fw − v, u))
@@ -109,4 +109,10 @@ test('growHit: 막힌 쪽은 넘지 않고, 모자란 몫은 다른 쪽이 진�
   assert.deepEqual(growHit(10, 10, 20, 18, 44, { u: 4, d: 4 }), { x: 10, y: 6, w: 20, h: 26 });
   // 이미 크면 그대로
   assert.deepEqual(growHit(0, 0, 50, 50, 44, { l: 9, r: 9, u: 9, d: 9 }), { x: 0, y: 0, w: 50, h: 50 });
+});
+
+test('reachDown: 캔버스 아래 끝(16 안)에 닿은 줄만 손가락 기기에서 캔버스 밑으로 닿는다 — 마우스 · 위쪽 줄은 그대로(P-2)', () => {
+  assert.equal(reachDown({ finger: 33 }, 240, 28), 270 - 268 + EDGE_REACH, '덱 마지막 줄(아래 268)');
+  assert.equal(reachDown({ finger: 33 }, 200, 28), 0, '위쪽 줄');
+  assert.equal(reachDown({ finger: 0 }, 240, 28), 0, '마우스');
 });

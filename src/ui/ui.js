@@ -127,6 +127,9 @@ export class UI {
 export const FINGER_PT = 44;
 // 손가락을 떼며 밀려도 누른 것으로 치는 거리(도트, 손가락 크기로 넓힌 구역 밖으로 — UI.snap). 끌기로 치는 거리(ui.move 8)와 같다
 export const TAP_SLOP = 8;
+// 손가락 기기: 캔버스 아래 끝에 닿은 줄의 구역이 캔버스 밑으로 더 닿는 도트(창 끝 비움 12 CSS 화소 ≈ 10도트를 덮고 남는다, P-2)
+export const EDGE_REACH = 24;
+export const reachDown = (ui, y, h, near = 16) => (ui.finger && y + h >= 270 - near ? 270 - (y + h) + EDGE_REACH : 0);
 export function fingerDots(app) {
   if (!app || !(app.coarse || app.touch)) return 0;
   return Math.ceil(FINGER_PT / (app.pixelScale > 0 ? app.pixelScale : 1));

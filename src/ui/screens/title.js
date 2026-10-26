@@ -6,7 +6,7 @@ import { hint, markSeen } from '../coach.js';
 import { inkY, SP, BTN_HERO } from '../frame.js';
 import { PAL } from '../../render/palette.js';
 import { W, H, text, rect, rrect, rframe, box, measure, selectRing, R_SM, inner } from '../../render/gfx.js';
-import { pillR } from '../ui.js';
+import { pillR, EDGE_REACH } from '../ui.js';
 import { makeCanvas, context } from '../../render/surface.js';
 import { LOOK } from '../../render/look.js';
 import { put } from '../../render/vec.js';
@@ -76,7 +76,6 @@ export const rowCw = (n) => (n * ROW.cw > W - 4 ? Math.floor((W - 4) / n) : ROW.
 
 const ICON = { 'title:continue': 'menu_continue', 'title:new': 'menu_new', 'title:lesson': 'menu_lesson', 'title:daily': 'menu_daily', 'title:rank': 'menu_rank', 'title:codex': 'menu_codex', 'title:records': 'menu_records', 'title:settings': 'menu_settings' };
 
-const EDGE_REACH = 24; // 손가락 기기: 아이콘 줄 구역이 캔버스 밑으로 더 닿는 도트(창 끝 비움 12 CSS 화소 ≈ 10도트를 덮고 남는다)
 
 export class TitleScreen {
   constructor(app) {
