@@ -566,8 +566,8 @@ export const EN = {
   '더 잡을 적이 없으면 한 번, 거쳐 온 모든 모습의 행마로 이어 잡는다': 'Once, when stuck: go on with every form you wore',
   '끊긴 콤보: 값 ×2': 'Broken chain: ×2 Value', '끊길 때마다 배수 ×1.5': 'Each break: ×1.5 Mult', '모습이 바뀔 때마다 배수 +1': 'Each change of form: +1 Mult', '끊길 때마다 배수 ×2': 'Each break: ×2 Mult',
   '프로모션하거나 퀸 · 아마존을 잡으면 배수 +3': 'Promote, or take a queen or amazon: +3 Mult',
-  '일곱째 줄에만 가도 프로모션하고, 프로모션하면 배수 ×1.5': 'Promote on the 7th rank · each promotion: ×1.5 Mult', '체크메이트하면 적이 다시 나타나고 콤보가 이어진다 · 대국마다 한 번': 'A mate refills the board and the chain goes on · once per match',
-  '폰으로 시작: 배수 +3': 'Start with a pawn: +3 Mult', '폰으로 시작: 배수 ×5': 'Start with a pawn: ×5 Mult',
+  '일곱째 줄에만 가도 프로모션하고, 프로모션하면 배수 ×2': 'Promote on the 7th rank · each promotion: ×2 Mult', '체크메이트하면 적이 다시 나타나고 콤보가 이어진다 · 대국마다 한 번': 'A mate refills the board and the chain goes on · once per match',
+  '폰으로 시작: 배수 ×2': 'Start with a pawn: ×2 Mult', '폰으로 시작: 배수 ×3(×2 대신)': 'Start with a pawn: ×3 Mult (replaces ×2)', '폰으로 시작: 배수 ×5(×3 대신)': 'Start with a pawn: ×5 Mult (replaces ×3)',
   '같은 종류를 잇달아 잡으면 값 +30': 'Same kind twice in a row: +30 Value', '판에서 값이 가장 큰 적을 잡으면 배수 +4': 'Take the highest-value enemy: +4 Mult',
   '같은 종류를 잇달아 잡을 때마다 배수 ×2': 'Each same kind in a row: ×2 Mult',
   // 행마(두 문장까지)

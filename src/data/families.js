@@ -17,8 +17,8 @@ export const FAMILIES = [
   { id: 'diag', name: '사제', col: '#9fb8ff', text: ['대각선으로 잡으면 값 +15', '대각선으로 잡으면 배수 +3', '대각선으로 잡으면 배수 ×1.6'] },
   { id: 'change', name: '변신', col: '#d27fd6', text: ['모습이 바뀔 때마다 배수 +1', '거쳐 온 모습이 셋이면 배수 ×1.5 · 넷이면 ×2 …', '더 잡을 적이 없으면 한 번, 거쳐 온 모든 모습의 행마로 이어 잡는다'] },
   { id: 'sacrifice', name: '불굴', col: '#df5a45', text: ['끊긴 콤보: 값 ×2', '대국마다 한 번, 끊겨도 콤보가 이어진다', '끊길 때마다 배수 ×1.5'] },
-  { id: 'crown', name: '왕관', col: '#efbd55', text: ['프로모션하거나 퀸 · 아마존을 잡으면 배수 +3', '일곱째 줄에만 가도 프로모션하고, 프로모션하면 배수 ×1.5', '체크메이트하면 적이 다시 나타나고 콤보가 이어진다 · 대국마다 한 번'] },
-  { id: 'march', name: '행진', col: '#c8b48a', text: ['폰으로 시작: 배수 +3', '폰 모습으로 잡을 때마다 배수 +3', '폰으로 시작: 배수 ×5'] },
+  { id: 'crown', name: '왕관', col: '#efbd55', text: ['프로모션하거나 퀸 · 아마존을 잡으면 배수 +3', '일곱째 줄에만 가도 프로모션하고, 프로모션하면 배수 ×2', '체크메이트하면 적이 다시 나타나고 콤보가 이어진다 · 대국마다 한 번'] },
+  { id: 'march', name: '행진', col: '#c8b48a', text: ['폰으로 시작: 배수 ×2', '폰으로 시작: 배수 ×3(×2 대신)', '폰으로 시작: 배수 ×5(×3 대신)'] },
   { id: 'hunt', name: '사냥', col: '#8ec07c', text: ['같은 종류를 잇달아 잡으면 값 +30', '판에서 값이 가장 큰 적을 잡으면 배수 +4', '같은 종류를 잇달아 잡을 때마다 배수 ×2'] },
   // 밤샘 2: 지키는 적(응수)과 증원에 하나씩
   { id: 'counter', name: '역습', col: '#f080a8', text: ['지키는 적을 잡을 때마다 값 +30', '지키는 적을 잡을 때마다 배수 +3', '지키는 적을 잡을 때마다 배수 ×1.3'] },
@@ -149,16 +149,13 @@ def('sacrifice', {
 def('crown', {
   onDrop(ctx) { if (lv(ctx) >= 2) ctx.flags.promoteFrom = Math.min(ctx.flags.promoteFrom ?? 7, 6); },
   onCapture(ctx) { if (ctx.event.piece === 'Q' || ctx.event.piece === 'Z') ctx.addMult(3); },
-  onPromote(ctx) { ctx.addMult(3); if (lv(ctx) >= 2) ctx.mulMult(1.5); },
+  onPromote(ctx) { ctx.addMult(3); if (lv(ctx) >= 2) ctx.mulMult(2); },
   onMate(ctx) { if (lv(ctx) >= 3 && !ctx.state.refilled) { ctx.state.refilled = true; ctx.keepGoing(); } },
 });
+// 폰으로 시작한 콤보의 배수를 단마다 갈아 끼운다(쌓지 않는다): 2 ×2 · 4 ×3 · 5 ×5
+const MARCH_MUL = [1, 2, 3, 5];
 def('march', {
-  onCapture(ctx) { if (lv(ctx) >= 2 && ctx.event.form === 'P') ctx.addMult(3); },
-  onChainEnd(ctx) {
-    if (ctx.chain.dropType !== 'P') return;
-    ctx.addMult(3);
-    if (lv(ctx) >= 3) ctx.mulMult(5);
-  },
+  onChainEnd(ctx) { if (ctx.chain.dropType === 'P') ctx.mulMult(MARCH_MUL[lv(ctx)]); },
 });
 def('hunt', {
   onCapture(ctx) {

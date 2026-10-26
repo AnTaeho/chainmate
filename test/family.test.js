@@ -90,7 +90,7 @@ test('희생: 끊긴 사슬 값 ×2, 4에 대국마다 첫 끊김을 넘긴다, 
   assert.equal(t2.chain.value, 20);
 });
 
-test('왕관: 퀸을 먹으면 배수 +3 · 4에 승급 칸이 한 줄 앞', () => {
+test('왕관: 퀸을 먹으면 배수 +3 · 4에 승급 칸이 한 줄 앞 · 프로모션 ×2', () => {
   const c = run(T({ e6: 'Q' }, 'crown', 1), 'N', 'd4', ['e6']);
   assert.equal(c.value, 90);
   assert.equal(c.mult, 1 + 3);
@@ -98,12 +98,16 @@ test('왕관: 퀸을 먹으면 배수 +3 · 4에 승급 칸이 한 줄 앞', () 
   startChain(t, { type: 'N', sq: S('b5') });
   chainCapture(t, S('c7'));
   assert.equal(t.chain.promotions, 1, '폰 모습으로 7번째 줄에서 승급');
+  assert.equal(t.chain.mult, (1 + 3) * 2, '프로모션 배수 +3 · 4에 ×2');
 });
 
-test('행진: 폰으로 떨군 사슬 배수 +3, 폰 모습 먹기 +3, 5에 ×5', () => {
-  const c = run(T({ e5: 'N' }, 'march', 3), 'P', 'd4', ['e5']);
-  assert.equal(c.value, 30);
-  assert.equal(c.mult, (1 + 3 + 3) * 5, '폰 모습으로 먹어 +3, 폰으로 떨궈 +3 · ×5');
+test('행진: 폰으로 떨군 사슬 배수 2에 ×2 · 4에 ×3 · 5에 ×5(갈아 끼운다), 다른 기물로 떨구면 없다', () => {
+  for (const [level, mul] of [[1, 2], [2, 3], [3, 5]]) {
+    const c = run(T({ e5: 'N' }, 'march', level), 'P', 'd4', ['e5']);
+    assert.equal(c.value, 30);
+    assert.equal(c.mult, 1 * mul, `행진 단 ${level}`);
+  }
+  assert.equal(run(T({ e5: 'N' }, 'march', 3), 'N', 'c4', ['e5']).mult, 1);
 });
 
 test('사냥: 같은 종류를 잇달아 먹으면 값 +30, 4에 판에서 가장 비싼 적을 먹으면 연쇄 +4', () => {
