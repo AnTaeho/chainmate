@@ -125,6 +125,9 @@ export function coachDown(app, x, y) {
   return inside(r) || inside(reg('guide:ok')) || inside(reg('guide:skip')) || inside(reg('btn:pause'));
 }
 
+// 안내가 가리키는 자리: 구역에 ring(그린 자리)이 있으면 그것 — 누르는 구역은 손가락 · 테두리만큼 그림보다 넓다
+const hintTarget = (ui, id) => { const q = ui.regions.find((x) => x.id === id); return q && q.ring ? { ...q, ...q.ring } : q; };
+
 function guideRegion(app, st) {
   const id = typeof st.target === 'function' ? st.target(app) : st.target;
   if (!id) return null;
@@ -159,7 +162,7 @@ export function coachPlan(app) {
     opts = { ok: st.ok ? '알겠어' : null, okLabel: st.okLabel, skip: st.noSkip ? null : g.skip };
   } else {
     const onScreen = (q) => q && q.w > 0 && q.h > 0 && q.x >= 0 && q.y >= 0 && q.x + q.w <= W && q.y + q.h <= H;
-    for (const c of app.hintNow || []) { const q = app.ui.regions.find((x) => x.id === c.regionId); if (onScreen(q)) { r = q; say = HINTS[c.id]; break; } }
+    for (const c of app.hintNow || []) { const q = hintTarget(app.ui, c.regionId); if (onScreen(q)) { r = q; say = HINTS[c.id]; break; } }
     if (!r) return null;
   }
   return { r, rect: bubbleRect(app, r, say, opts) };
@@ -202,7 +205,7 @@ export function drawCoach(ctx, app) {
   // 앞의 후보부터, 가리킬 구역이 이번 프레임 화면 안에 그려진 것 하나
   const onScreen = (q) => q && q.w > 0 && q.h > 0 && q.x >= 0 && q.y >= 0 && q.x + q.w <= W && q.y + q.h <= H;
   let h = null, r = null;
-  for (const c of list) { const q = ui.regions.find((x) => x.id === c.regionId); if (onScreen(q)) { h = c; r = q; break; } }
+  for (const c of list) { const q = hintTarget(ui, c.regionId); if (onScreen(q)) { h = c; r = q; break; } }
   if (!h) { app.hintShown = null; return; }
   app.hintShown = h;
   bubble(ctx, ui, app, r, HINTS[h.id], { gesture: GESTURE[h.id] || null });

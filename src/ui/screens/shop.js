@@ -64,7 +64,7 @@ export function bagRow(ctx, ui, run, x, y, w, { pick = null, glow = false, selec
     const id = `${idPrefix}:${p.id}`;
     const ok = !can || can(p);
     // 마지막 줄이 캔버스 아래 끝에 닿으면 손가락 구역만 밑으로(P-2)
-    ui.region(id, px, py, cw, ch + (row === rows - 1 ? reachDown(ui, py, ch) : 0), { onClick: pick && ok ? () => pick(p) : null, tip: () => pieceTip(p) });
+    ui.region(id, px, py, cw, ch + (row === rows - 1 ? reachDown(ui, py, ch) : 0), { ring: { x: px, y: py, w: cw, h: ch }, onClick: pick && ok ? () => pick(p) : null, tip: () => pieceTip(p) });
     const hov = ui.isHover(id);
     let fl = flash && flash.id === p.id ? 1 - flash.p : 0;
     let level = chartLevel(run, p.t), gl = 0;
@@ -372,7 +372,8 @@ export class ShopScreen {
         const held = isHeld(run, i), mark = holdMarkAt(it, x, y, CARD_W), hid = `shop:hold:${i}`;
         if (!it.sold) {
           const g = holdHit(ui, mark), mc = turn(mark.x + HOLD_MARK.w / 2, mark.y + HOLD_MARK.h / 2, tilt, pivot);
-          ui.region(hid, Math.round(g.x + mc[0]), Math.round(g.y + mc[1]), g.w, g.h, { onClick: () => this.act({ type: 'hold', slot: i }, 'pick'), tip: () => tipLines(held ? '찜함' : '찜', held ? '다음 상점에도 그대로 남아요' : it.kept ? '지난 상점에서 찜한 카드예요. 다시 찜하면 다음 상점에도 남아요' : '다음 상점까지 남겨 둬요', 130) });
+          const ring = { x: Math.round(mark.x + mc[0]), y: Math.round(mark.y + mc[1]), w: HOLD_MARK.w, h: HOLD_MARK.h };
+          ui.region(hid, Math.round(g.x + mc[0]), Math.round(g.y + mc[1]), g.w, g.h, { ring, onClick: () => this.act({ type: 'hold', slot: i }, 'pick'), tip: () => tipLines(held ? '찜함' : '찜', held ? '다음 상점에도 그대로 남아요' : it.kept ? '지난 상점에서 찜한 카드예요. 다시 찜하면 다음 상점에도 남아요' : '다음 상점까지 남겨 둬요', 130) });
         }
         // 들림(sway.js): 가리키면 들리고, 누르면 가라앉는다
         const hov = (ui.isHover(id) && ok) || ui.isHover(hid);
@@ -421,7 +422,7 @@ export class ShopScreen {
       const c = run.consumables[i];
       if (!c) { slot(ctx, x, y, cw, rl.ch); continue; }
       const id = `cons:${i}`;
-      ui.region(id, x, y, cw, rl.ch + reachDown(ui, y, rl.ch), { onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c), preview: true });
+      ui.region(id, x, y, cw, rl.ch + reachDown(ui, y, rl.ch), { ring: { x, y, w: cw, h: rl.ch }, onClick: () => this.useConsumable(i), tip: () => consumableTip(c), keys: () => itemKeys(c), preview: true });
       // 좁은 칸은 줄(두 칸)마다 이름 · 그림을 함께 고른다(CHM-41)
       const row = i - (i % 2), names = rl.wide || scrollRowNames(run.consumables.slice(row, Math.min(row + 2, run.consumableSlots)), cw);
       consumableCard(ctx, c, x, y, cw, rl.ch, ui.isHover(id) || (this.target && this.target.index === i), { names });

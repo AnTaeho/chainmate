@@ -217,7 +217,7 @@ export class TitleScreen {
       const i = k + 1, on = this.sel === i;
       const cx = x0 + k * CW + CW / 2, rx = x0 + k * CW + 2, rw = CW - 4, rh = H - ROW.y;
       // 손가락: 누르는 구역은 캔버스 밑 여백(창 끝 비움)까지 — 아이콘 칸 아래쪽을 누르면 iOS 도구 막대 띠에 걸렸다(P-2)
-      ui.region(id, rx, ROW.y, rw, rh + (ui.finger ? EDGE_REACH : 0), { onClick: fn });
+      ui.region(id, rx, ROW.y, rw, rh + (ui.finger ? EDGE_REACH : 0), { ring: { x: rx, y: ROW.y, w: rw, h: rh }, onClick: fn });
       if (id === 'title:settings') ui.region('title:settings:tip', rx, ROW.y, W - 2 - rx, rh, { passive: true });
       openBox('tile', rx, ROW.y, rw, rh, 0, { name: id });
       const lift = (on ? 1 : 0) - pressed(id);

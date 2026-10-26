@@ -1894,7 +1894,7 @@ export class BattleScreen {
       const ty = y + ((BTN_S - 15) >> 1);
       // 손가락: 위 · 아래로 손 이름표 줄(위 틈 GAP_IN까지 — 희생 단추와 같은 몫)만큼 구역을 넓힌다. 옆 칸과는 1~2라 넓히지 않는다(P-13)
       const hit = ui.finger ? growHit(x, ty, 15, 15, ui.finger, { u: ty - y + GAP_IN, d: y + BTN_S - ty - 15 }) : { x, y: ty, w: 15, h: 15 };
-      ui.region(id, hit.x, hit.y, hit.w, hit.h, { enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c), preview: true });
+      ui.region(id, hit.x, hit.y, hit.w, hit.h, { ring: { x, y: ty, w: 15, h: 15 }, enabled: ok, onClick: () => this.useTactic(i), tip: () => itemTip(c), preview: true });
       box(ctx, x, ty, 15, 15, PAL.well, ui.isHover(id) && ok ? PAL.gold : PAL.frameDk);
       ctx.save(); ctx.translate(x + 1, ty + 2); ctx.scale(0.8, 0.8); tacticIcon(ctx, c.id, 0, 0); ctx.restore();
     });
@@ -2603,7 +2603,7 @@ export class BattleScreen {
       const g = ui.finger
         ? growHit(x, y - HAND.lift, w, hr.h + HAND.lift, ui.finger, { l: i === 0 ? Math.max(0, x - nextRight - 2) : 0, r: i === n - 1 ? Math.max(0, W - (x + w)) : 0, u: Math.max(0, y - HAND.lift - (lay.rowY + BTN_S) - 1), d: Math.max(0, 270 - (y + hr.h)) })
         : { x, y: y - HAND.lift, w, h: hr.h + HAND.lift };
-      ui.region(id, g.x, g.y, g.w, g.h, { onClick: () => this.toggle(i), tip: () => pieceTip(p) });
+      ui.region(id, g.x, g.y, g.w, g.h, { ring: { x, y: y - HAND.lift, w, h: hr.h + HAND.lift }, onClick: () => this.toggle(i), tip: () => pieceTip(p) });
       const hov = ui.isHover(id);
       const usable = live && live.status === 'play' && !this.busy;
       const nudge = nudging && beat(app.time, 3) % n === i ? 2 : 0;
