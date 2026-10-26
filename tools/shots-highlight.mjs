@@ -4,11 +4,10 @@
 //     장면: 이긴 판 · 진 판(한국어 · 영어) · 기물 적은 판 · 많은 판, 그림만: 기물 14 · 15(2배 → 1배 두 줄의 문턱) · 아주 많은 판 · 끝없는 대국의 큰 수.
 //     찍는 김에 글 넘침 · 받은 그림의 크기(1200 × 675) · Esc와 바깥 누르기 · 「공유」 단추가 뜨는 조건 · 다른 곳으로 나간 요청 0도 본다.
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadPlaywright } from './_lib/browser.mjs';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -17,15 +16,7 @@ const OUT = path.resolve(ROOT, opt('--out', 'docs/shots/highlight'));
 const SC = Number(opt('--scale', 3));
 const ONLY = opt('--only', null);
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream', 'cache-control': 'no-store' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const base = `http://localhost:${srv.address().port}`;
 const pw = await loadPlaywright();
 fs.mkdirSync(OUT, { recursive: true });

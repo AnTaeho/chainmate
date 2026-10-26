@@ -25,7 +25,7 @@ export function serveRoot(root, { handle = null } = {}) {
     const p = path.join(root, u === '/' ? 'index.html' : u);
     const rel = path.relative(root, p);
     if (rel.startsWith('..') || path.isAbsolute(rel) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-    res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
+    res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream', 'cache-control': 'no-store' });
     fs.createReadStream(p).pipe(res);
   });
   return new Promise((ok) => srv.listen(0, () => ok(srv)));

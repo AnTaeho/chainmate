@@ -6,11 +6,10 @@
 //   shop-card       상점 진열의 명국 조각 카드
 //   pack-cell       금빛 꾸러미의 명국 조각 칸
 //   codex           도감 명국 탭(불멸의 대국 — 완성)
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadPlaywright } from './_lib/browser.mjs';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -19,15 +18,7 @@ const PREFIX = opt('--prefix', 'after');
 const OUT = path.resolve(HERE, opt('--out', 'docs/shots/fragment-tip'));
 const ONLY = opt('--only', null);
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(HERE, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(HERE) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(HERE);
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 480, height: 270 }, deviceScaleFactor: 1 });

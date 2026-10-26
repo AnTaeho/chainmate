@@ -7,11 +7,10 @@
 //   result         결과 상자의 마지막 대국 · 모자란 점수 · 최고 한 수(15자리)
 //   records        기록의 최고 한 수(15자리)
 //   reward         보상 상자의 점수 줄(15자리)
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadPlaywright } from './_lib/browser.mjs';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const HERE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -20,15 +19,7 @@ const PREFIX = opt('--prefix', 'after');
 const OUT = path.resolve(HERE, opt('--out', 'docs/shots/bignum'));
 const ONLY = opt('--only', null);
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(HERE, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(HERE) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(HERE);
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 480, height: 270 }, deviceScaleFactor: 1 });

@@ -1,23 +1,14 @@
 // 찜(CHM-58 F, docs/design-notes/agency.md 「F 찜 — 구현 뒤」) — 구현한 화면 스크린샷(시안 draft*는 같은 자리에 남아 있다).
 //   NPM_CONFIG_PREFIX=<playwright 있는 곳> node tools/shots-hold.mjs   → docs/shots/hold/after-*.png
 //   이번 상점에서 찜(한국어 · 영어) · 찜한 카드를 가리킴 · 다음 상점(넘어온 카드) · 처음 안내
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadPlaywright } from './_lib/browser.mjs';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.resolve(ROOT, 'docs/shots/hold');
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok)); // 빈 포트(8123은 건드리지 않는다)
+const srv = await serveRoot(ROOT); // 빈 포트(8123은 건드리지 않는다)
 const port = srv.address().port;
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();

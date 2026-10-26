@@ -1,11 +1,10 @@
 // 화면별 스크린샷: 실제 브라우저(Playwright chromium)로 index.html을 열고 앱을 몰아 화면마다 PNG를 docs/shots/에 남긴다.
 //   node tools/shots.mjs [--only battle] [--out docs/shots]
 // 480×270 원본(<이름>.png)과 3배 확대(<이름>@3x.png). Playwright는 저장소 의존성에 넣지 않는다(전역 설치나 npx -y로).
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadPlaywright } from './_lib/browser.mjs';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -14,15 +13,8 @@ const OUT = path.resolve(ROOT, opt('--out', 'docs/shots'));
 const ONLY = opt('--only', null);
 
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
 function serve() {
-  const srv = http.createServer((req, res) => {
-    const p = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]) === '/' ? 'index.html' : decodeURIComponent(req.url.split('?')[0]));
-    if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-    res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-    fs.createReadStream(p).pipe(res);
-  });
-  return new Promise((ok) => srv.listen(0, () => ok(srv)));
+  return serveRoot(ROOT);
 }
 
 const { chromium } = await loadPlaywright();

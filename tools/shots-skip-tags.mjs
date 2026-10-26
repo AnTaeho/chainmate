@@ -1,23 +1,14 @@
 // 건너뛰기 패 여덟(CHM-58 ②) — 실제 화면 스크린샷: 관 선택(한국어 · 영어, 낱말 상자) · 패 여덟 모음 · 꾸러미 칸 셋(꾸러미 칸 패 뒤 상점) ·
 // 상점 없이 열린 꾸러미(꾸러미 · 금빛 꾸러미 패). 시안 도구(시안 1 · 2 · 3)를 옮겨 시안 덮어쓰기 없이 구현 화면을 찍는다.
 //   NPM_CONFIG_PREFIX=<playwright 있는 곳> node tools/shots-skip-tags.mjs   → docs/shots/skip-tags/after-*.png
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadPlaywright } from './_lib/browser.mjs';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.resolve(ROOT, 'docs/shots/skip-tags');
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok)); // 빈 포트(사람이 쓰는 8123은 건드리지 않는다)
+const srv = await serveRoot(ROOT); // 빈 포트(사람이 쓰는 8123은 건드리지 않는다)
 const port = srv.address().port;
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
