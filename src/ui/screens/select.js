@@ -330,8 +330,9 @@ export class SelectScreen {
         else {
           // 카드 안 폭(98)에 단추 둘을 같은 폭 · 최소 64로 놓을 수 없어 「건너뛰기」는 글 + 양옆 SP.m, 「시작」이 남는 폭
           const sw = measure('건너뛰기', true) + SP.m * 2, pw = w - P * 2 - SP.s - sw;
-          button(ctx, ui, 'select:play', x + P, by, pw, BTN_H, '시작', { onClick: () => this.play(), tone: 'gold' });
-          button(ctx, ui, 'select:skip', x + P + pw + SP.s, by, sw, BTN_H, '건너뛰기', { onClick: () => this.skip() });
+          // 손가락: 위 · 아래로 카드 안 여백만큼 넓힌다(옆 단추와는 4 — 넓히지 않는다, P-13)
+          button(ctx, ui, 'select:play', x + P, by, pw, BTN_H, '시작', { onClick: () => this.play(), tone: 'gold', grow: { u: SP.s, d: P } });
+          button(ctx, ui, 'select:skip', x + P + pw + SP.s, by, sw, BTN_H, '건너뛰기', { onClick: () => this.skip(), grow: { u: SP.s, d: P } });
         }
       }
       closeBox();

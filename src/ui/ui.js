@@ -211,8 +211,8 @@ export function buttonRow(ctx, ui, items, x, y, { anchor = 'left', gap = SP.m, w
   return { x: x0, w: total, bw, rects };
 }
 // 토글 무리(켬 · 끔 · ×1 · 한국어 — 29절): 같은 폭, 고른 것은 금빛. options [[값, 글]], 단추 id는 `${prefix}:${값}`. 사이 gap(4)
-export function toggleGroup(ctx, ui, prefix, options, cur, x, y, go, { anchor = 'left', gap = SP.s, w = null, h = BTN_H, min = BTN_MIN, enabled = true } = {}) {
-  const items = options.map(([v, label]) => ({ id: `${prefix}:${v}`, label, tone: cur === v ? 'gold' : 'plain', enabled, onClick: () => go(v) }));
+export function toggleGroup(ctx, ui, prefix, options, cur, x, y, go, { anchor = 'left', gap = SP.s, w = null, h = BTN_H, min = BTN_MIN, enabled = true, grow = null } = {}) {
+  const items = options.map(([v, label]) => ({ id: `${prefix}:${v}`, label, tone: cur === v ? 'gold' : 'plain', enabled, onClick: () => go(v), ...(grow ? { grow } : {}) }));
   return buttonRow(ctx, ui, items, x, y, { anchor, gap, w, h, min });
 }
 

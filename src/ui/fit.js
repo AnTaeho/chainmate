@@ -5,6 +5,9 @@ export const GW = 480, GH = 270;
 export const FILL_STEP = 30;
 // 꽉 채움 뒷면 배율 상한: 5(뒷면 2400×1350까지). 4로 두면 폰 dpr 3(K 4.1 ~ 4.4)이 j = 2로 떨어져 뒷면이 정수 배율의 반이 된다
 export const FILL_CAP = 5;
+// 마우스 기기(큰 화면 — 맥북 전체 화면 1470×956@2 K 6.07 · 2560×1440 K 5.33)는 6.5까지(뒷면 3120×1755 ≈ 5.5MP): 상한 5에서는 j = 2로 떨어져
+// 뒷면이 기기 화소의 반이라 기물 · 글 가장자리가 계단졌다(P-4). 폰은 캔버스 메모리 한도가 낮아 5 그대로
+export const FILL_CAP_FINE = 6.5;
 // 꽉 채움의 뒷면 배율: K ≤ cap이면 K 그대로, 넘으면 K / j(정수 j로 나눠 cap 안에)
 export function fillBack(k, cap = FILL_CAP) {
   if (!(k > cap)) return { n: k, j: 1 };

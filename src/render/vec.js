@@ -65,6 +65,8 @@ export function put(ctx, c, n, x, y, w, h) {
 }
 // 한 번 굽기: w × h 논리 크기를 N배 캔버스에. paint(g, k)는 논리 좌표로 그린다(k = N, 선 바닥 1 / k)
 const CACHE = new Map();
+// 화면 배율이 바뀌면 옛 배율로 구운 것을 버린다(app.setScale — 창을 끌어 바꾸면 배율마다 상한까지 쌓였다, P-17)
+export function clearBakes() { CACHE.clear(); }
 export function bake(key, w, h, n, paint) {
   const k = `${key}|${w}x${h}|${n}`;
   let c = CACHE.get(k);

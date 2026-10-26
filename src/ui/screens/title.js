@@ -76,6 +76,8 @@ export const rowCw = (n) => (n * ROW.cw > W - 4 ? Math.floor((W - 4) / n) : ROW.
 
 const ICON = { 'title:continue': 'menu_continue', 'title:new': 'menu_new', 'title:lesson': 'menu_lesson', 'title:daily': 'menu_daily', 'title:rank': 'menu_rank', 'title:codex': 'menu_codex', 'title:records': 'menu_records', 'title:settings': 'menu_settings' };
 
+const EDGE_REACH = 24; // 손가락 기기: 아이콘 줄 구역이 캔버스 밑으로 더 닿는 도트(창 끝 비움 12 CSS 화소 ≈ 10도트를 덮고 남는다)
+
 export class TitleScreen {
   constructor(app) {
     this.app = app;
@@ -215,7 +217,8 @@ export class TitleScreen {
     row.forEach(([id, label, fn], k) => {
       const i = k + 1, on = this.sel === i;
       const cx = x0 + k * CW + CW / 2, rx = x0 + k * CW + 2, rw = CW - 4, rh = H - ROW.y;
-      ui.region(id, rx, ROW.y, rw, rh, { onClick: fn });
+      // 손가락: 누르는 구역은 캔버스 밑 여백(창 끝 비움)까지 — 아이콘 칸 아래쪽을 누르면 iOS 도구 막대 띠에 걸렸다(P-2)
+      ui.region(id, rx, ROW.y, rw, rh + (ui.finger ? EDGE_REACH : 0), { onClick: fn });
       if (id === 'title:settings') ui.region('title:settings:tip', rx, ROW.y, W - 2 - rx, rh, { passive: true });
       openBox('tile', rx, ROW.y, rw, rh, 0, { name: id });
       const lift = (on ? 1 : 0) - pressed(id);

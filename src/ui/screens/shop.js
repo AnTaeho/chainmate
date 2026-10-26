@@ -340,9 +340,10 @@ export class ShopScreen {
     // 위 띠: 다시 진열 · 다음 대국은 같은 폭(오른끝), 「진열」 이름표는 단추 줄 왼쪽에 들어갈 때만(영어 단추가 넓다)
     const rc = rerollCost(run);
     const bar = buttonRow(ctx, ui, [
-      { id: 'shop:reroll', label: `리롤 $${rc}`, enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') },
+      // 손가락: 위 띠 단추는 창 위 끝(iOS 도구 막대 띠)에 가까워 누르는 구역을 위로만 넓힌다 — 아래는 진열 카드 책갈피(P-2)
+      { id: 'shop:reroll', label: `리롤 $${rc}`, enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin'), grow: { u: Infinity } },
       // 바로 아래 둘째 진열 카드의 책갈피(찜)와 2도트 — 빈 자리를 빗누른 손가락이 「다음 대국」으로 붙지 않게(P-5)
-      { id: 'shop:leave', label: '다음 대국', onClick: () => this.leave(), tone: 'gold', nosnap: true },
+      { id: 'shop:leave', label: '다음 대국', onClick: () => this.leave(), tone: 'gold', nosnap: true, grow: { u: Infinity } },
     ], CX + CENTER.w, BAR_Y, { anchor: 'right' });
     if (CX + measure('진열') + SP.m <= bar.x) text(ctx, '진열', CX, textY(BAR_Y, BAR_H), PAL.dim);
     // 두루마리를 쓰는 중: 진열 · 꾸러미 자리에 미리 보기 판(고른 기물이 어떻게 되는지 보이고 확인을 받는다), 그 아래 덱

@@ -461,18 +461,20 @@ export function createAudio(win = globalThis, opts = {}) {
   return {
     get ready() { return !!ctx; },
     get music() { return { track: mus.track, layers: mus.layers }; },
+    // iOS WebKit은 전화 · 시리 · 다른 앱이 소리를 가져가면 'interrupted'로 둔다 — 'suspended'만 보면 돌아와 눌러도 소리가 다시 나지 않았다(P-3)
     unlock() {
       if (!ensure()) return;
-      if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+      if (ctx.state !== 'running' && ctx.state !== 'closed' && ctx.state !== undefined && ctx.resume) { try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch { /* 다음 누름에 */ } }
     },
-    // 화면이 숨으면 쉬고(돌던 때만 — 첫 누름 전이면 그대로), 다시 보이면 잇는다
+    // 화면이 숨으면 쉬고(돌던 때만 — 첫 누름 전이면 그대로), 다시 보이면 잇는다. 숨기 전에 이미 끊겼으면(interrupted) 다시 보일 때 잇는다
     suspend() {
+      if (ctx && ctx.state === 'interrupted') { paused = true; return; }
       if (!ctx || ctx.state !== 'running' || !ctx.suspend) return;
       paused = true;
       try { const p = ctx.suspend(); if (p && p.catch) p.catch(() => {}); } catch { /* 그대로 */ }
     },
     resume() {
-      if (!ctx || !paused || !ctx.resume) return;
+      if (!ctx || !(paused || ctx.state === 'interrupted') || !ctx.resume) return;
       paused = false;
       try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch { /* 그대로 */ }
     },

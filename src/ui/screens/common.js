@@ -54,7 +54,8 @@ export function pageHead(ctx, title, right = null, { big = false, tabs = null } 
     text(ctx, title, HEAD_BIG.x, HEAD_BIG.y, PAL.ink, { bold: true, scale: 2 });
     let tabEnd = HEAD_BIG.x + headW(title);
     if (tabs) {
-      const row = toggleGroup(ctx, tabs.ui, `${tabs.prefix}:tab`, tabs.list, tabs.cur, headTabX(title), HEAD_BIG.tabY, tabs.go, { min: tabs.min ?? 0 });
+      // 손가락: 탭은 창 위 끝 띠(iOS 도구 막대)에 가까워 누르는 구역을 위로 화면 끝까지, 아래로 본문 앞까지 넓힌다(P-2 · P-13)
+      const row = toggleGroup(ctx, tabs.ui, `${tabs.prefix}:tab`, tabs.list, tabs.cur, headTabX(title), HEAD_BIG.tabY, tabs.go, { min: tabs.min ?? 0, grow: { u: Infinity, d: PAGE.bodyY - SP.s - (HEAD_BIG.tabY + BTN_H) } });
       tabEnd = row.x + row.w;
     }
     if (right != null) {

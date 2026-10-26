@@ -77,3 +77,15 @@ test('꽉 채움 gutter: 캔버스가 창 위 · 아래 끝에서 그만큼 떨�
   assert.equal(r.rot, true);
   assert.ok(r.canvas.left >= 12 && r.canvas.left + r.canvas.width <= 659 - 12, JSON.stringify(r.canvas));
 });
+
+// P-1: 비움은 iOS 사파리에만(main.js edgeGutter). 비움 없는 안드로이드 가로는 꽉 채움이 정수 배율보다 작지 않다 ·
+// 정수 배율의 남는 띠가 비움 이상이면 그 정수 배율은 비운 자리 안에 들어가므로 비운 꽉 채움도 그보다 작지 않다(따로 고르지 않는다)
+test('꽉 채움: 안드로이드 가로(비움 없음)는 정수 배율 이상 · 아이폰 Pro Max 사파리(비움)는 창 끝에서 12 떨어진다', () => {
+  for (const [vw, vh, dpr] of [[915, 412, 2.625], [851, 393, 2.75], [780, 360, 3]]) {
+    const f = chooseFit({ vw, vh, dpr, coarse: true, fill: true });
+    assert.ok(f.k >= chooseFit({ vw, vh, dpr, coarse: true }).k, `${vw}×${vh}@${dpr} k ${f.k}`);
+  }
+  assert.equal(chooseFit({ vw: 915, vh: 412, dpr: 2.625, coarse: true, fill: true }).k, 4);
+  const pm = chooseFit({ vw: 932, vh: 370, dpr: 3, coarse: true, fill: true, gutter: { top: 12, bottom: 12 } });
+  assert.ok(pm.canvas.top >= 12 && pm.canvas.top + pm.canvas.height <= 370 - 12, JSON.stringify(pm.canvas));
+});

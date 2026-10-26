@@ -249,7 +249,7 @@ export class LessonScreen extends BattleScreen {
     const tw = measure('행마', true), lw = measure(this.skipLabel, true) + 10;
     const mw = Math.max(tw + 10, Math.min(tw + 14, PAUSE.x - 4 - 4 - RX - lw)), mx = PAUSE.x - 4 - mw;
     button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { u: Infinity, d: Math.max(0, TOP - 1 - (2 + BTN_S)) } });
-    button(ctx, ui, 'lesson:skip', RX, 2, mx - 4 - RX, BTN_S, this.skipLabel, { onClick: () => this.skipAll() });
+    button(ctx, ui, 'lesson:skip', RX, 2, mx - 4 - RX, BTN_S, this.skipLabel, { onClick: () => this.skipAll(), grow: { u: Infinity, d: Math.max(0, TOP - 1 - (2 + BTN_S)) } });
   }
   // 두 줄 제목: 둘째 줄은 본문 줄 높이(14)로 붙이고, 남는 자리는 「점수」 이름표 앞 틈이 된다(대국 이름 칸 높이는 그대로)
   leftLayout() {

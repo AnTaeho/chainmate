@@ -79,3 +79,23 @@ test('화면이 숨으면 돌던 소리만 쉬고, 다시 보이면 그것만 �
   audio.resume(); audio.resume();
   assert.deepEqual(calls, ['suspend', 'resume']);
 });
+
+test('iOS가 소리를 가져가 끊긴 컨텍스트(interrupted)는 다음 누름 · 다시 보임에 잇는다(P-3)', () => {
+  const dom = makeFakeDom();
+  const ctx = new dom.window.AudioContext();
+  let resumed = 0;
+  ctx.resume = function () { resumed++; this.state = 'running'; return Promise.resolve(); };
+  const audio = createAudio(dom.window, { strict: true, context: ctx });
+  audio.unlock();
+  // 돌던 중 전화가 와 끊겼다 → 돌아와 화면을 누른다
+  ctx.state = 'interrupted';
+  audio.unlock();
+  assert.equal(resumed, 1, '누름이 다시 켠다');
+  // 끊긴 채 화면이 숨었다가 다시 보인다
+  ctx.state = 'interrupted';
+  audio.suspend(); audio.resume();
+  assert.equal(resumed, 2, '다시 보임이 다시 켠다');
+  // 돌던 소리는 누름으로 다시 부르지 않는다
+  audio.unlock();
+  assert.equal(resumed, 2);
+});

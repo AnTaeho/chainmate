@@ -82,10 +82,11 @@ export class CodexScreen {
     const tx0 = headTabX('도감'), { bw, w: oneW } = rowWidth(TABS.map(([, label]) => ({ label })), { gap: SP.s, min: 0 });
     const two = tx0 + oneW > W - PAGE.titleX;
     let tabEnd, gridTop = PAGE.bodyY;
-    if (!two) tabEnd = toggleGroup(ctx, ui, 'codex:tab', TABS, this.tab, tx0, HEAD_BIG.tabY, go, { w: bw }).w + tx0;
+    // 손가락: 탭 구역은 위로 화면 끝까지(iOS 도구 막대 띠), 두 줄이면 줄 사이는 반씩(P-2 · P-13)
+    if (!two) tabEnd = toggleGroup(ctx, ui, 'codex:tab', TABS, this.tab, tx0, HEAD_BIG.tabY, go, { w: bw, grow: { u: Infinity, d: SP.s } }).w + tx0;
     else {
-      const r1 = toggleGroup(ctx, ui, 'codex:tab', TABS.slice(0, 4), this.tab, tx0, HEAD_BIG.tabY, go, { w: bw });
-      toggleGroup(ctx, ui, 'codex:tab', TABS.slice(4), this.tab, tx0, HEAD_BIG.tabY + BTN_H + SP.s, go, { w: bw });
+      const r1 = toggleGroup(ctx, ui, 'codex:tab', TABS.slice(0, 4), this.tab, tx0, HEAD_BIG.tabY, go, { w: bw, grow: { u: Infinity, d: SP.s >> 1 } });
+      toggleGroup(ctx, ui, 'codex:tab', TABS.slice(4), this.tab, tx0, HEAD_BIG.tabY + BTN_H + SP.s, go, { w: bw, grow: { u: SP.s >> 1, d: SP.s } });
       tabEnd = r1.x + r1.w;
       gridTop = HEAD_BIG.tabY + BTN_H * 2 + SP.s + SP.m;
     }

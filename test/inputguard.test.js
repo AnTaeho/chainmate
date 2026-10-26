@@ -82,3 +82,25 @@ test('「다음 대국」 곁 빈 자리를 손가락으로 빗눌러도 「다�
   assert.deepEqual(ui.snap('down', 195, 5), [200, 5], '다른 작은 구역에는 그대로 붙는다');
   assert.deepEqual(ui.snap('down', 130, 10), [130, 10], '단추 위 누름은 그대로');
 });
+
+test('손가락: 창 끝에 가까운 단추는 누르는 구역이 캔버스 끝 너머까지(첫 화면 아이콘 줄 · 상점 위 띠 · 탭 · 수업 단추), 이웃과 겹치지 않는다(P-2 · P-13)', async () => {
+  const app = await fresh();
+  app.touch = true; app.pixelScale = 734 * 3 / 3 / 480; // 아이폰 가로 꽉 채움(도트 하나 ≈ 1.18 CSS 화소)
+  const reg = (id) => app.ui.regions.find((r) => r.id === id);
+  const clash = (ids) => {
+    const rs = app.ui.regions.filter((r) => !r.passive && r.onClick && ids.some((p) => r.id.startsWith(p)));
+    for (const a of rs) for (const b of rs) if (a !== b && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) return `${a.id} × ${b.id}`;
+    return null;
+  };
+  app.toTitle(); tick(app);
+  assert.ok(reg('title:lesson').y + reg('title:lesson').h > 270, '첫 화면 아이콘 줄은 캔버스 밑으로');
+  assert.equal(clash(['title:']), null);
+  shopRun(app);
+  assert.ok(reg('shop:leave').y < 0 && reg('shop:reroll').y < 0, '상점 위 띠는 캔버스 위로');
+  app.go('records'); tick(app);
+  assert.ok(reg('records:tab:stats').y < 0, '탭은 캔버스 위로');
+  assert.equal(clash(['records:']), null);
+  app.go('codex'); tick(app);
+  assert.ok(reg('codex:tab:pieces') ? reg('codex:tab:pieces').y < 0 : app.ui.regions.some((r) => r.id.startsWith('codex:tab:') && r.y < 0));
+  assert.equal(clash(['codex:tab:']), null);
+});

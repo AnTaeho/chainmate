@@ -213,6 +213,8 @@ export function fitPiece(ctx, t, side, x, y, bw, bh, { alpha = 1, hx = 1, eng = 
 }
 // 기물 모양 한 빛깔(빛 테 · 흰 번쩍임): grow는 둘레로 넓힐 기기 화소. 돌려주는 것은 pieceCanvas와 같은 꼴(ox · oy는 받침 가운데)
 const MASKS = new Map();
+// 화면 배율이 바뀌면 옛 배율로 구운 기물 · 테를 버린다(app.setScale, P-17)
+export function clearPieceCache() { CACHE.clear(); MASKS.clear(); }
 export function pieceMask(t, col, { w = P3.w, n = LOOK.n, grow = 0 } = {}) {
   t = artOf(t);
   const key = `${t}:${col}:${Math.round(w * 4) / 4}:${n}:${grow}`;

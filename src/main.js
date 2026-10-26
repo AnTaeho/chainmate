@@ -1,7 +1,7 @@
 // 브라우저 진입: 화면 맞춤(폰 세로면 돌려 그리기) · 여백 판 · 입력 · 루프. 화면과 흐름은 src/ui/app.js.
 // 연기 시험(tools/smoke.mjs)은 가짜 window/document를 넘겨 boot()를 그대로 부른다 — 가짜에는 body · 여백 판 · 돌리는 틀 · visualViewport가 없다.
 import { createApp } from './ui/app.js';
-import { chooseFit, stageTransform, toGame as pointToGame } from './ui/fit.js';
+import { chooseFit, stageTransform, toGame as pointToGame, FILL_CAP, FILL_CAP_FINE } from './ui/fit.js';
 import { drawPad, resetPad } from './render/backdrop.js';
 import { createTelemetry } from './ui/telemetry.js';
 import { createRank } from './ui/rank.js';
@@ -101,15 +101,17 @@ export async function boot(env = {}) {
   };
   // 꽉 채움의 창 끝 비움(fit.js chooseFit gutter): 손가락 기기 브라우저는 창 위 · 아래 끝 누름을 주소창 · 도구 막대가 먹는다(아이폰 사파리 가로).
   // 홈 화면 앱(주소창 없음)과 마우스 기기는 비우지 않는다
+  // 이 일은 iOS 사파리에만 있다 — 안드로이드 크롬은 창 끝 누름을 그대로 넘기는데 비움 때문에 판이 정수 배율보다 작아졌다(P-1)
   const EDGE_GUTTER = 12;
+  const iosWeb = () => { const nav = win.navigator || {}, ua = nav.userAgent || ''; return /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && nav.maxTouchPoints > 1); };
   const edgeGutter = () => {
-    if (!coarse() || (win.navigator && win.navigator.standalone === true) || media('(display-mode: standalone)') || media('(display-mode: fullscreen)')) return null;
+    if (!coarse() || !iosWeb() || (win.navigator && win.navigator.standalone === true) || media('(display-mode: standalone)') || media('(display-mode: fullscreen)')) return null;
     return { top: EDGE_GUTTER, bottom: EDGE_GUTTER };
   };
   function refit(force = false) {
     if (!force && fit && fields.focused()) { liftStage(); return; }
     const { vw, vh, full } = viewport();
-    fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: coarse(), fill: fitMode() === 'fill', cap: fitCap, gutter: edgeGutter() });
+    fit = chooseFit({ vw, vh, full, dpr: win.devicePixelRatio || 1, inset: inset(), coarse: coarse(), fill: fitMode() === 'fill', cap: fitCap ?? (coarse() ? FILL_CAP : FILL_CAP_FINE), gutter: edgeGutter() });
     // 화면 글 12px가 몇 배로 보이나(CSS 화소). 작은 창에서 처음 안내가 큰 글자를 권한다
     if (app) { app.pixelScale = fit.css; app.coarse = coarse(); }
     const c = fit.canvas;
@@ -141,6 +143,16 @@ export async function boot(env = {}) {
   let timer = null;
   const later = (ms = 120) => { if (timer) win.clearTimeout(timer); timer = win.setTimeout ? win.setTimeout(() => { timer = null; refit(); }, ms) : (refit(), null); };
   win.addEventListener('resize', () => later());
+  // 화면 비율(dpr)만 바뀌면(창을 다른 모니터로 옮길 때) resize가 없다 — 지금 dpr 질의가 바뀌면 다시 맞추고 새 dpr로 다시 건다(P-7)
+  const watchDpr = () => {
+    try {
+      const mq = win.matchMedia && win.matchMedia(`(resolution: ${win.devicePixelRatio || 1}dppx)`);
+      if (!mq) return;
+      const on = () => { if (mq.removeEventListener) mq.removeEventListener('change', on); else if (mq.removeListener) mq.removeListener(on); later(); watchDpr(); };
+      if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on);
+    } catch { /* 질의를 못 하는 브라우저는 resize만 */ }
+  };
+  watchDpr();
   win.addEventListener('orientationchange', () => { fields.blur(); refit(true); later(350); });
   // 초점이 풀리면 올린 틀을 내리고 그사이 바뀐 창에 다시 맞춘다
   fields.onFocus = (id) => { if (app) app.invalidate(); if (id) { liftStage(); return; } if (lifted) { lifted = 0; if (stage) stage.style.top = ''; } later(60); };
