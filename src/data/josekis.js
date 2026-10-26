@@ -154,7 +154,7 @@ joseki('long_think', '장고', 'gold', ['hunt'], '수 −1 · 손 +2 · 희생 +
   onBattleStart(ctx) { ctx.rules.moves = Math.max(1, (ctx.rules.moves ?? 4) - 1); ctx.rules.hand = (ctx.rules.hand ?? 4) + 2; ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
 });
 joseki('first_mover', '선수', 'rainbow', ['crown'], '대국이 시작되면 값이 가장 큰 적 하나가 사라진다', {
-  onSetup(ctx) { const b = ctx.t.board; const sq = heavyFirst(b)[0]; if (sq != null) { b[sq] = null; ctx.emit({ type: 'firstMover', sq }); } },
+  onSetup(ctx) { const b = ctx.t.board; const sq = heavyFirst(b)[0]; if (sq != null) { const piece = b[sq].t; b[sq] = null; ctx.emit({ type: 'firstMover', sq, piece }); } },
 });
 joseki('captive', '포로', 'rainbow', ['change'], '대국 첫 콤보에서 마지막에 잡은 적이 내 덱에 들어온다', {
   more: '덱 열넷까지',

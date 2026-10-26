@@ -887,6 +887,7 @@ export function applyRun(run, cmd) {
       run.shop = null;
       startBattle(run);
       events.push({ type: 'battleStart', ...blindInfo(run) });
+      if (run.battle.setup) { events.push(...run.battle.setup); delete run.battle.setup; }
       break;
     }
     case 'skip': {

@@ -234,6 +234,13 @@ test('정석 선수: 값이 가장 큰 적 하나가 빠진다', () => {
   const p = createBattle({ seed: 21, ante: 5 });
   const count = (b) => b.board.filter((c) => c && !c.mine && c.t !== 'X' && c.t !== 'J').length;
   assert.equal(count(a), count(p) - 1);
+  // 지운 칸 · 종류를 사건으로 남긴다(판(런)이 대국 시작 사건 뒤에 옮겨 싣는다 — 화면 연출, D-16)
+  assert.equal(a.setup.length, 1);
+  const e = a.setup[0];
+  assert.equal(e.type, 'firstMover');
+  assert.equal(a.board[e.sq], null);
+  assert.equal(p.board[e.sq].t, e.piece);
+  assert.equal(p.setup, undefined, '사건이 없으면 칸도 없다');
 });
 test('정석 포로: 대국 첫 사슬이 마지막에 먹은 적이 주머니로', () => {
   assert.deepEqual(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['joseki:captive']).traitors, ['B']);

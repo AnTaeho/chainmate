@@ -307,6 +307,9 @@ export class BattleScreen {
       this.banner = { title: `마스터 ${M.name}`, sub: M.text, t: 0, life: at + 1.6, from: at, col: PAL.red, master: m.id };
     }
     else if (info && this.run) { const fa = factionOfBattle(b); this.banner = { title: `${this.run.ante}관 · ${KIND_NAME[b.kind]}`, sub: `${fa ? `${fa.name} · ` : ''}목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold }; }
+    // 레퍼토리 「선수」가 판을 깔 때 지운 적: 등장 장면 · 띠가 걷힌 뒤 그 칸에서 연기가 걷히고 알림 한 줄(D-16)
+    const gone = events.filter((e) => e.type === 'firstMover');
+    if (gone.length) this.firstMover = { t: 0, at: (this.intro ? INTRO : 0) + 0.4, list: gone };
     // 이번 판에서 처음 나온 것(이형 적 · 적 특성 · 판 위 사물 · 금빛 적): 띠 아래에 작은 그림 한 줄
     if (this.banner && info && this.run) {
       const news = this.newThings(b);
@@ -1457,6 +1460,17 @@ export class BattleScreen {
     this.updateFlames(dt);
     if (this.intro) { const was = this.intro.t; this.intro.t += dt; if (was < 0.26 && this.intro.t >= 0.26) this.shake(2, 0.15); if (this.intro.t >= this.intro.life) this.endIntro(); }
     if (this.banner) { this.banner.t += dt; if (this.banner.t > this.banner.life) this.banner = null; }
+    if (this.firstMover) {
+      const f = this.firstMover;
+      f.t += dt;
+      if (f.t >= f.at) {
+        this.firstMover = null;
+        for (const e of f.list) { this.sparkle(e.sq, PAL.dim, 10); this.flash(e.sq, PAL.goldHi); }
+        const t = f.list[0].piece;
+        this.toast(t && PIECE_NAME[t] ? `선수로 적 ${josa(PIECE_NAME[t], '이/가')} 사라졌어요` : '선수로 적 하나가 사라졌어요', PAL.gold, 2.4);
+        this.snd('glass');
+      }
+    }
     if (this.stamp) { this.stamp.t += dt * this.app.speed(); if (this.stamp.t > this.stamp.life) this.stamp = null; }
     if (this.combo) {
       const g = this.combo, was = g.t, land = comboLand(g.calm);

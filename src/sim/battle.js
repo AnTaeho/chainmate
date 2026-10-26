@@ -157,7 +157,10 @@ export function createBattle(opts = {}) {
   else layBoard(b, b.rng.board, fork(root, 'filter'));
   layGold(b, root, opts);
   if (b.nem) placeNemesis(b, fork(root, 'nemesis'));
-  runHook(b, 'onSetup', {}, []);
+  // 판을 깔 때 낸 사건(선수가 지운 적)은 대국 시작 사건 뒤에 판(런)이 옮겨 싣는다(run.js play — 화면이 연출한다, D-16)
+  const setup = [];
+  runHook(b, 'onSetup', {}, setup);
+  if (setup.length) b.setup = setup;
   telegraph(b);
   markFairy(b);
   refreshHints(b);
