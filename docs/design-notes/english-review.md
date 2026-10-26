@@ -38,6 +38,10 @@
 | 명경기 · 명경기 조각 · 재현 · 불멸의 기보 | Classic · Classic Fragment · Reenact · Immortal Games | |
 | 판본 | Edition | |
 | 시계 · 다시 놓기 | Clock · New Board | |
+| 메인 화면 | Main Menu | 단추 「Title」이 낱말로 안 읽혔다(2026-10-26, U-22) |
+| 잡은 수 · N 잡음 | Takes · N takes | 잡기 = take(Captures를 쓰던 곳을 맞췄다) |
+| 마스터의 상자 칸 · 시계 칸 | slot · tick | 같은 「칸」을 cell로 부르던 것을 나눴다 |
+| 복기 점수 줄 | Yours · Best · Target | 「You 560」이 주어만 있는 말로 읽혔다(U-25) |
 | 레이팅 | Rating | |
 
 성채 하나만 두 뜻이다. 한국어도 세력 「성채」와 시너지 「성채」가 같은 낱말이고 화면은 한 열쇠로 옮기므로 영어도 Fortress 하나로 둔다. 그전엔 열쇠가 두 번 적혀 뒤의 Fortress가 이겼는데, 낱말 풀이는 「Castle synergy」를 찾아 시너지 상자가 영어에서 뜨지 않았다.
