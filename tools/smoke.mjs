@@ -494,7 +494,7 @@ const HINT_SUBJECT = {
   hold: (id, run) => scrName() === 'shop' && !!run.shop.display[num(id, 'shop:hold:')] && !run.shop.display[num(id, 'shop:hold:')].sold,
   joseki: (id, run) => id.startsWith('joseki:') && run.josekis.length > 0,
   tactic: (id, run) => id.startsWith('tactic:') && run.consumables.some((c) => c.kind === 'tactic'),
-  bigText: (id) => scrName() === 'title' && id === 'title:settings',
+  bigText: (id) => scrName() === 'title' && id === 'title:settings:tip',
   // 첫 수(U-5): 손의 첫 카드
   firstDrop: (id) => scrName() === 'battle' && id === 'hand:0' && !!(app.screen.view && app.screen.view.hand && app.screen.view.hand.length),
   clock: (id, run) => id === 'clock' && run.log.some((x) => x.clockLost),

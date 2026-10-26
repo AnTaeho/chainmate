@@ -133,10 +133,11 @@ export class TitleScreen {
   surroundFlash() { const f = this.snap; return f && f.flash > 0 ? { col: '#fff8e8', a: f.flash } : null; }
   draw(ctx, ui) {
     const app = this.app;
+    // 설정 칸을 가리키는 안내 둘은 누르지 못하는 네모(title:settings:tip — drawMenu)를 가리킨다: 말풍선(폭 176)이 오른끝에 붙어
+    // 주인공 단추를 덮지 않고, 손가락 기기에서 캔버스 밑으로 넓힌 설정 칸 구역 때문에 안 뜨는 일도 없다
     // 큰 글자 안내는 판을 한 번 끝낸 뒤 첫 화면에서(처음 켠 사람은 튜토리얼 · 첫 판 권유가 먼저 — U-8)
-    if (app.pixelScale && app.pixelScale < 2 && !app.settings.big && (app.records.runs || 0) > 0) hint(app, 'bigText', 'title:settings');
-    // 순위에 이름이 생긴 뒤 첫 화면에 돌아온 순간 한 번(CHM-70): 이름은 설정에서 다시 짓는다 — 설정 칸을 가리킨다.
-    // 가리키는 네모는 설정 칸에서 화면 오른끝까지(누르지 못하는 구역 — drawMenu): 말풍선(폭 176)이 오른끝에 붙어 주인공 단추를 덮지 않는다
+    if (app.pixelScale && app.pixelScale < 2 && !app.settings.big && (app.records.runs || 0) > 0) hint(app, 'bigText', 'title:settings:tip');
+    // 순위에 이름이 생긴 뒤 첫 화면에 돌아온 순간 한 번(CHM-70): 이름은 설정에서 다시 짓는다
     if (app.rank.player()) hint(app, 'rankName', 'title:settings:tip');
     const f = (this.snap = this.sky());
     const [dx, dy] = f.shake;
@@ -218,7 +219,8 @@ export class TitleScreen {
       const cx = x0 + k * CW + CW / 2, rx = x0 + k * CW + 2, rw = CW - 4, rh = H - ROW.y;
       // 손가락: 누르는 구역은 캔버스 밑 여백(창 끝 비움)까지 — 아이콘 칸 아래쪽을 누르면 iOS 도구 막대 띠에 걸렸다(P-2)
       ui.region(id, rx, ROW.y, rw, rh + (ui.finger ? EDGE_REACH : 0), { onClick: fn });
-      if (id === 'title:settings') ui.region('title:settings:tip', rx, ROW.y, W - 2 - rx, rh, { passive: true });
+      // 안내가 가리키는 네모: 설정 칸 가운데를 축으로 화면 오른끝까지 — 말풍선 화살표가 칸 가운데에 온다
+      if (id === 'title:settings') ui.region('title:settings:tip', 2 * cx - (W - 2), ROW.y, 2 * (W - 2 - cx), rh, { passive: true });
       openBox('tile', rx, ROW.y, rw, rh, 0, { name: id });
       const lift = (on ? 1 : 0) - pressed(id);
       const bx = cx - ROW.box / 2, by = ROW.y + 2 - lift;
