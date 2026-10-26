@@ -57,6 +57,36 @@ export const HINTS = {
   faction_royal: '왕궁 근위 땅이야. 킹을 지키는 적이 하나 더 있어',
 };
 
+// 조작 안내의 그림 칸(U-6 — 「그림 + 동사 한 줄」): 말풍선 머리줄 오른끝에 손가락 하나. tap 누르기 · drag 끌기(글이 「누르면」 · 「끌면」인 안내)
+export const GESTURE = {
+  firstDrop: 'tap', scroll: 'tap', maximSell: 'drag', hold: 'tap', tactic: 'tap', joseki: 'tap', unlocks: 'tap',
+  trait: 'tap', things: 'tap', fairy: 'tap',
+};
+export const GESTURE_W = 14;
+// 손가락(위를 가리킨 손 커서 꼴) 14 × 14 도트 그림: # 잉크 테 · o 크림 몸 · g 금빛 표시(tap 손끝 양옆 · drag 오른쪽 화살)
+const HAND = [
+  '.....##.......',
+  '....#oo#......',
+  '....#oo#......',
+  '....#oo#......',
+  '....#oo###....',
+  '....#oo#oo###.',
+  '.##.#oo#oo#oo#',
+  '#oo##oooooooo#',
+  '#ooooooooooo#.',
+  '.#ooooooooooo#',
+  '..#oooooooooo#',
+  '...#ooooooo##.',
+  '....#oooooo#..',
+  '....########..',
+];
+const MARK = { tap: [[2, 0], [1, 1], [3, 2], [9, 0], [10, 1], [8, 2]], drag: [[11, 0], [9, 1], [10, 1], [11, 1], [12, 1], [11, 2]] };
+const DOT = { '#': PAL.cardInk, o: PAL.cardHi };
+export function gestureIcon(ctx, kind, x, y) {
+  HAND.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (DOT[row[i]]) rect(ctx, x + i, y + j, 1, 1, DOT[row[i]]); });
+  for (const [i, j] of MARK[kind] || []) rect(ctx, x + i, y + j, 1, 1, PAL.goldDk);
+}
+
 // 안내 id → 그것을 가르치는 튜토리얼 수업 id(src/ui/lessons.js). 여기 없는 안내는 튜토리얼에 없는 것이라 처음 한 번 뜬다
 export const TAUGHT = {
   firstDrop: 'become', incoming: 'reinforce', fairy: 'fairy',
@@ -175,7 +205,7 @@ export function drawCoach(ctx, app) {
   for (const c of list) { const q = ui.regions.find((x) => x.id === c.regionId); if (onScreen(q)) { h = c; r = q; break; } }
   if (!h) { app.hintShown = null; return; }
   app.hintShown = h;
-  bubble(ctx, ui, app, r, HINTS[h.id]);
+  bubble(ctx, ui, app, r, HINTS[h.id], { gesture: GESTURE[h.id] || null });
 }
 
 // 킹 말풍선: 자리는 설명 묶음과 같은 규칙(placement.js placeBubble).
@@ -242,7 +272,7 @@ export function pointRing(ctx, r, col, pad = 1) {
   const w = r.w + pad * 2, h = r.h + pad * 2;
   rframe(ctx, r.x - pad, r.y - pad, w, h, h <= 26 ? Math.floor(h / 2) : R_BIG + pad, col, 1);
 }
-export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip = null, joy = false } = {}) {
+export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip = null, joy = false, gesture = null } = {}) {
   live(); // 테가 깜박이고 킹이 들썩인다
   if (say !== talkSay) { talkSay = say; talkT0 = app.time; }
   const okText = ok ? okLabel || '알겠어' : null, skipText = skip ? '건너뛰기' : null;
@@ -274,7 +304,8 @@ export function bubble(ctx, ui, app, r, say, { ok = null, okLabel = null, skip =
   }
   const P = PAD_BOX;
   // 머리줄: 킹(16×22, 머리 줄 위로 조금 솟는다) · 이름 · 가는 줄
-  kingHead(ctx, app, x, y, w, lay, joy);
+  kingHead(ctx, app, x, y, w, lay, joy, gesture ? GESTURE_W + SP.s : 0);
+  if (gesture) gestureIcon(ctx, gesture, x + w - P - GESTURE_W, y + lay.headTop + ((KING_HEAD - HAND.length) >> 1));
   lay.lines.forEach((l, k) => text(ctx, l, x + P, y + lay.ys[k], PAL.cardInk));
   const act = { [okText]: [ok, 'gold', 'guide:ok'], [skipText]: [skip, 'plain', 'guide:skip'] };
   lay.rows.forEach((row, k) => {
