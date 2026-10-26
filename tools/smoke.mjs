@@ -17,6 +17,7 @@ const { targetOk } = await import('../src/ui/parts.js');
 const { FAMILIES, familyCounts } = await import('../src/data/families.js');
 const { L } = await import('../src/ui/lang.js');
 const { LEGENDS } = await import('../src/data/legends.js');
+const { SHOP } = await import('../src/sim/shop.js');
 const codexDone = { cells: 0, cover: 0 };
 const codexAll = { pages: 0 };
 // 진열 카드 종류 장면(CHM-42): 장면마다 잰 카드 상자 · 글 · 넘침
@@ -196,6 +197,7 @@ const seen = () => { for (const v of app.visited) visited.add(v); };
 const hintsShown = new Set();
 const previewSeen = { scroll: 0, pack: 0 };
 const goldSeen = { swap: 0, sell: 0, bad: [] };
+const bonusSeen = { got: 0, bad: [] }; // 꾸러미 덤 조각(D-3)
 // 멈칫(hit-stop)은 한 수 연출(Seq) 밖의 시간이라 따로 센다: 이 프레임에 멈칫이 먹은 시간을 ×1로 환산(measureSeq가 더한다)
 const stopFrame = (dt) => {
   const sc = app && app.screen;
@@ -1533,6 +1535,19 @@ click('next');
     click('pack:pick:2'); pump(2);
     if (app.run.phase !== 'shop' || !app.run.maxims.some((m) => m.id === 'memory')) goldSeen.bad.push('자리가 생긴 뒤 격언을 곧바로 받지 못했다');
   }
+  // 꾸러미 덤 조각(D-3): 기보 꾸러미를 사면 끼어 나온 첫 조각은 고르지 않아도 받고, 카드 셋이 뒤집힌 뒤 건너뛰기 줄 왼쪽 덤 칸에 드러난다(누르는 칸 아님)
+  {
+    const keep = SHOP.fragmentChance;
+    SHOP.fragmentChance = { ...keep, pack: 1 };
+    try { scene((r) => { r.phase = 'shop'; stock(r); delete r.fragments.century; app.go('shop'); pump(2); click('shop:pack:1'); }); } finally { SHOP.fragmentChance = keep; }
+    const r = app.run, b = r.pack && r.pack.bonus;
+    if (scrName() !== 'pack' || !b || !region('pack:bonus') || region('pack:pick:3') || !region('pack:pick:2') || !(r.fragments[b.legend] && r.fragments[b.legend].first)) bonusSeen.bad.push(`덤 조각 칸이 없거나 고르는 칸이 넷이다(화면 ${scrName()} · 덤 ${JSON.stringify(b)} · 구역 ${app.ui.regions.map((q) => q.id).filter((id) => /^(pack|shop:pack)/.test(id)).join(',')})`);
+    else {
+      click('pack:pick:0'); pump(2);
+      if (r.phase !== 'shop' || !r.fragments[b.legend].first) bonusSeen.bad.push('덤 조각을 받은 꾸러미에서 고른 뒤 상점으로 돌아오지 않았다');
+      else bonusSeen.got++;
+    }
+  }
   scene((r) => { r.ante = 3; r.blind = 0; r.draft = { ante: 3, options: ['martyr_vow', 'knight_oath', 'highway'] }; r.phase = 'draft'; app.go('draft'); });
   // 레퍼토리 도장(카드 윗변 스티커 · 들림과 같이 움직인다): 셋 모두 2400
   {
@@ -2462,6 +2477,8 @@ if (!moreSeen.battle6 || moreSeen.bad.length) { console.log('시너지 여섯 �
 const flowN = flow.text + flow.pad + flow.overlap + flow.screen;
 console.log(`금빛 꾸러미 격언 칸: 바꾸기 ${goldSeen.swap} · 팔기 ${goldSeen.sell} · 어긋남 ${goldSeen.bad.length}${goldSeen.bad.length ? `: ${goldSeen.bad.join(' | ')}` : ''}`);
 if (!goldSeen.swap || !goldSeen.sell || goldSeen.bad.length) { console.log('금빛 꾸러미의 격언 칸(펼치기 · 바꾸기 · 팔기)이 어긋났다'); fail = true; }
+console.log(`꾸러미 덤 조각: 받음 ${bonusSeen.got} · 어긋남 ${bonusSeen.bad.length}${bonusSeen.bad.length ? `: ${bonusSeen.bad.join(' | ')}` : ''}`);
+if (!bonusSeen.got || bonusSeen.bad.length) { console.log('꾸러미 덤 조각이 어긋났다'); fail = true; }
 console.log(`큰 수 장면: 대국 ${bigSeen.battle} · 관 선택 ${bigSeen.select} · 결과 ${bigSeen.result} · 기록 ${bigSeen.records} · 보상 ${bigSeen.reward} · 글끼리 겹침 ${bigSeen.overlap.length}${bigSeen.overlap.length ? `: ${bigSeen.overlap.join(' | ')}` : ''}`);
 if (!bigSeen.battle || !bigSeen.select || !bigSeen.result || !bigSeen.records || !bigSeen.reward || bigSeen.overlap.length) { console.log('큰 수 장면을 다 지나지 못했거나, 이름표와 수치가 겹쳤다'); fail = true; }
 console.log(`진열 카드 종류 장면 ${shopCards.scenes.length}: 카드 상자 ${shopCards.boxes} · 글 ${shopCards.lines} · 넘침 ${shopCards.bad}\n  ${shopCards.scenes.join('\n  ')}`);

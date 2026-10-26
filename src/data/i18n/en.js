@@ -230,7 +230,7 @@ export const EN = {
   '기보': 'Tome', '각인': 'Engraving', '명경기 조각': 'Classic Fragment',
   '마스터의 상자': "Master's Chest", '한 칸': 'One slot', '세 칸': 'Three slots', '다섯 칸!': 'FIVE SLOTS!',
   '조각 셋이면 전설': 'Three make a legend', '불멸의 기보': 'Immortal Games', '전설': 'Legend', '흔함': 'Common', '드묾': 'Uncommon', '귀함': 'Rare', '잠듦': 'Asleep', '잠김': 'Locked',
-  '첫 조각': 'First fragment', '재현 조각': 'Reenactment fragment', '금빛 조각': 'Golden fragment', '재현': 'Reenact', '금빛': 'Golden',
+  '첫 조각': 'First fragment', '첫 조각 · 셋이면 전설': 'First of three for a legend', '덤': 'Bonus', '재현 조각': 'Reenactment fragment', '금빛 조각': 'Golden fragment', '재현': 'Reenact', '금빛': 'Golden',
   '판이 끝났어요': 'The run is over', '8관 돌파!': 'All 8 halls cleared!', '도달': 'Reached', '최고 한 수': 'Best move',
   '마지막 대국': 'Last match', '모자란 점수': 'Short by', '이긴 대국': 'Matches won', '모은 조각': 'Fragments',
   '오프닝': 'Opening', '레이팅': 'Rating', '기본': 'Standard', '추가 규칙 없음': 'No extra rules',

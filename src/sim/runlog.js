@@ -38,7 +38,7 @@ function noteDisplay(seen, run) {
 function notePack(seen, run) {
   if (run.pack.kind === 'golden') seen.golden++;
   else seen.packs++;
-  if (run.pack.options.some((o) => o.kind === 'fragment')) seen.fragPack++;
+  if (run.pack.bonus || run.pack.options.some((o) => o.kind === 'fragment')) seen.fragPack++;
 }
 const itemId = (it) => it.id ?? it.form ?? it.t ?? it.legend ?? null;
 

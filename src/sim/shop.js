@@ -220,11 +220,11 @@ export function rollPacks(run) {
   }
 }
 
-// 꾸러미를 열면 3개 중 1개. 기보 · 각인은 서로 다른 셋.
-// 기물 · 기보 · 각인 꾸러미는 fragmentChance.pack으로 셋째 자리에 그 꾸러미에서 나오는 명국의 첫 조각이 들어선다.
-// 금빛 꾸러미: 판본 붙은 격언 셋(+ 가끔 첫 조각).
-// rng · goldenFragment: 상점 밖에서 여는 꾸러미(건너뛰기 패)는 따로 준다
-export function rollPackOptions(run, kind, rng = run.shop.rng, { goldenFragment = !!(run.shop && run.shop.goldenFragment) } = {}) {
+// 꾸러미를 열면 3개 중 1개(options). 기보 · 각인은 서로 다른 셋.
+// 기물 · 기보 · 각인 꾸러미는 fragmentChance.pack으로 그 꾸러미에서 나오는 명국의 첫 조각이 덤(bonus)으로 붙는다 — 고르지 않아도 열 때 받는다.
+// 금빛 꾸러미: 판본 붙은 격언 셋(+ 가끔 첫 조각 — 넷째로 고르는 칸).
+// rng · goldenFragment: 상점 밖에서 여는 꾸러미(건너뛰기 패)는 따로 준다. 돌려주는 값 { options, bonus | null }
+export function rollPack(run, kind, rng = run.shop.rng, { goldenFragment = !!(run.shop && run.shop.goldenFragment) } = {}) {
   const out = [];
   const near = nearFamilies(run);
   if (kind === 'golden') {
@@ -239,7 +239,7 @@ export function rollPackOptions(run, kind, rng = run.shop.rng, { goldenFragment 
       const f = fragmentOffer(run, rng, null);
       if (f) out.push(f);
     }
-    return out;
+    return { options: out, bonus: null };
   }
   for (let i = 0; i < SHOP.packSize; i++) {
     if (kind === 'piece') out.push({ kind: 'piece', t: rollPiece(run, rng, near) });
@@ -248,11 +248,12 @@ export function rollPackOptions(run, kind, rng = run.shop.rng, { goldenFragment 
       out.push({ kind: 'chart', form: pool[int(rng, pool.length)] });
     } else out.push({ kind: 'engraving', id: rollEngravingId(rng, out.map((o) => o.id), run) });
   }
+  let bonus = null;
   if (next(rng) < pityChance(SHOP.fragmentChance.pack, 'fragment', shopPity(run, 'fragment')) * fragmentMult(run)) {
-    const f = fragmentOffer(run, rng, kind);
-    if (f) { out[out.length - 1] = f; pityHit(run, 'fragment'); }
+    bonus = fragmentOffer(run, rng, kind);
+    if (bonus) pityHit(run, 'fragment');
   }
-  return out;
+  return { options: out, bonus };
 }
 
 // 건너뛰기 패의 값 없는 다시 진열(shop.free)이 남았으면 0. 값은 값을 치른 횟수로만 오른다

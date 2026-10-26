@@ -286,7 +286,7 @@ export class ShopScreen {
     this.noteFamilies(before);
     this.app.sfx(sound);
     for (const e of ev) {
-      if (e.type === 'fragment') {
+      if (e.type === 'fragment' && e.via !== 'pack') { // 꾸러미의 덤 조각은 꾸러미 화면이 드러낼 때 알린다
         this.app.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6);
         this.app.sfx('fragment');
         const r = this.app.ui.hover;

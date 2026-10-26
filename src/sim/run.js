@@ -18,7 +18,7 @@ import { parseSq } from './board.js';
 import { createBattle, battleLayout, battleRules, apply as applyBattle, legalCommands as battleCommands, BASE_REWARD, GOLDEN, DEFAULT_RULES, refreshHints, soulOf } from './battle.js';
 import { isCracked } from '../data/souls.js';
 import { getModifier } from './scoring.js';
-import { SHOP, PROMOTE, pityOf, pityChance, pityMiss, pityHit, rollDisplay, rollPacks, rollPackOptions, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul, priceBonus } from './shop.js';
+import { SHOP, PROMOTE, pityOf, pityChance, pityMiss, pityHit, rollDisplay, rollPacks, rollPack, rerollCost, weighted, rollEdition, maximPrice, fragmentMult, rollSoul, priceBonus } from './shop.js';
 import { gradeOf, markFairy } from './chain.js';
 import { MAXIM_BY_ID } from '../data/maxims.js';
 import { CHART_TABLE, CHART_FORMS } from '../data/charts.js';
@@ -108,9 +108,14 @@ const TAG_ROLL = {
 // 꾸러미를 곧바로 연다(상점 없이 — 고르거나 넘기면 다음 대국 앞으로, run.pack.from = 'tag')
 function openTagPack(run, kind, events) {
   const r = fork(root(run), `tagpack:${run.ante}:${run.blind}`);
-  run.pack = { kind, options: rollPackOptions(run, kind, r, { goldenFragment: false }), from: 'tag' };
+  openPack(run, kind, rollPack(run, kind, r, { goldenFragment: false }), events, 'tag');
+}
+// 꾸러미를 펼친다: 셋 중 하나를 고르는 칸(options)과, 끼어 나온 첫 조각은 덤(bonus)으로 곧바로 받는다(사건 packOpen 뒤 fragment via 'pack')
+function openPack(run, kind, { options, bonus }, events, from = null) {
+  run.pack = { kind, options, ...(bonus ? { bonus } : {}), ...(from ? { from } : {}) };
   run.phase = 'pack';
-  events.push({ type: 'packOpen', kind, options: clone(run.pack.options), from: 'tag' });
+  events.push({ type: 'packOpen', kind, options: clone(options), ...(bonus ? { bonus: clone(bonus) } : {}), ...(from ? { from } : {}) });
+  if (bonus) grantFragment(run, bonus.legend, 'first', events, 'pack');
 }
 const addPerk = (run, k, n) => { run.perks = run.perks || {}; run.perks[k] = (run.perks[k] || 0) + n; };
 // 패를 받는다. 돌려주는 값: 받은 상금(이벤트 · 알림용, 없으면 0)
@@ -961,12 +966,10 @@ export function applyRun(run, cmd) {
       if (!pk || pk.sold) throw new Error('no pack');
       if (run.money < pk.price) throw new Error('not enough money');
       // 굴림이 실패해도 돈 · 팔림 표시가 남지 않게 먼저 굴린다(굴림 차례는 그대로)
-      const options = rollPackOptions(run, pk.kind);
+      const rolled = rollPack(run, pk.kind);
       pay(run, pk.price);
       pk.sold = true;
-      run.pack = { kind: pk.kind, options };
-      run.phase = 'pack';
-      events.push({ type: 'packOpen', kind: pk.kind, options: clone(run.pack.options) });
+      openPack(run, pk.kind, rolled, events);
       break;
     }
     case 'pick': {

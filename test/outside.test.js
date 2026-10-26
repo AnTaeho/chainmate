@@ -166,22 +166,42 @@ test('오늘의 대국: 날짜마다 정해진 시드', () => {
   assert.equal(rec.daily.runs, 2);
 });
 
-test('세기의 대국 첫 조각은 기보 꾸러미에서 4%로 나오고 고르면 받는다(2b에서 0이었던 것은 봇 탓)', async () => {
-  const { rollPackOptions } = await import('../src/sim/shop.js');
+test('세기의 대국 첫 조각은 기보 꾸러미에서 덤으로 나오고, 꾸러미를 열면 고르지 않아도 받는다', async () => {
+  const { rollPack, SHOP } = await import('../src/sim/shop.js');
+  const { createRng } = await import('../src/sim/rng.js');
+  const { legalRunCommands } = await import('../src/sim/run.js');
   const run = createRun({ draft: false, seed: 1 });
   run.shop = { rng: { s: 99 }, display: [], packs: [], rerolls: 0 };
   let n = 0;
   const N = 5000;
-  for (let i = 0; i < N; i++) if (rollPackOptions(run, 'chart').some((o) => o.kind === 'fragment' && o.legend === 'century')) n++;
-  assert.ok(n / N > 0.03 && n / N < 0.05, `기보 꾸러미에서 ${n}/${N}`);
+  for (let i = 0; i < N; i++) {
+    const { options, bonus } = rollPack(run, 'chart');
+    assert.equal(options.length, 3);
+    assert.ok(!options.some((o) => o.kind === 'fragment'), '조각은 고르는 칸에 끼지 않는다');
+    if (bonus && bonus.legend === 'century') n++;
+  }
+  const p = SHOP.fragmentChance.pack;
+  assert.ok(n / N > p * 0.75 && n / N < p * 1.25, `기보 꾸러미에서 ${n}/${N} (기대 ${p})`);
   // 다른 꾸러미에서는 나오지 않는다
-  for (let i = 0; i < 2000; i++) for (const k of ['piece', 'engraving']) assert.ok(!rollPackOptions(run, k).some((o) => o.legend === 'century'));
-  // 고르면 첫 조각
-  run.phase = 'pack';
-  run.pack = { kind: 'chart', options: [{ kind: 'chart', form: 'N' }, { kind: 'fragment', legend: 'century' }] };
-  const ev = applyRun(run, { type: 'pick', index: 1 });
-  assert.ok(ev.some((e) => e.type === 'fragment' && e.legend === 'century' && e.part === 'first'));
-  assert.ok(run.fragments.century.first);
+  for (let i = 0; i < 2000; i++) for (const k of ['piece', 'engraving']) assert.ok((rollPack(run, k).bonus || {}).legend !== 'century');
+  // 꾸러미를 사면 덤 조각은 곧바로 받고(사건 packOpen 뒤 fragment via pack), 고르는 칸은 셋 그대로
+  const keep = SHOP.fragmentChance;
+  SHOP.fragmentChance = { ...keep, pack: 1 };
+  try {
+    run.phase = 'shop';
+    run.money = 20;
+    run.shop = { rng: createRng(3), display: [], packs: [{ kind: 'chart', price: 4, sold: false }], rerolls: 0 };
+    const ev = applyRun(run, { type: 'buyPack', slot: 0 });
+    const at = ev.findIndex((e) => e.type === 'packOpen');
+    const fi = ev.findIndex((e) => e.type === 'fragment' && e.legend === 'century' && e.part === 'first' && e.via === 'pack');
+    assert.ok(at >= 0 && fi > at, '꾸러미를 연 뒤 덤 조각');
+    assert.deepEqual(ev[at].bonus, { kind: 'fragment', legend: 'century' });
+    assert.ok(run.fragments.century.first);
+    assert.equal(run.pack.options.length, 3);
+    assert.ok(!legalRunCommands(run).some((c) => c.type === 'pick' && c.index === 3));
+    applyRun(run, { type: 'pick', index: 0 });
+    assert.equal(run.phase, 'shop');
+  } finally { SHOP.fragmentChance = keep; }
 });
 
 test('최고 도달은 8관까지: 끝없는 대국의 명령 · 예전에 8을 넘겨 적힌 기록 · 다른 기기에서 온 기록 모두', () => {

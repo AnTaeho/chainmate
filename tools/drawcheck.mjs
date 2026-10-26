@@ -390,6 +390,13 @@ const PLAY = async ({ k, sac = false }) => {
   await scene(page, 'pack open', async () => {
     if (await h.press(/^shop:pack:0$/, 120)) { await h.hoverAll(/^pack:pick/, 8); await h.step(60); await h.press(/^pack:pick:0$/, 120); await h.step(120); }
   });
+  // 꾸러미 덤 조각(D-3): 기보 꾸러미에 첫 조각이 끼면 카드 셋 뒤에 덤 칸이 빛나며 드러난다
+  await scene(page, 'pack bonus fragment', async () => {
+    await h.ev(SHOP); await h.step(20);
+    await h.ev(async () => { const { SHOP: S } = await import('/src/sim/shop.js'); window.__keepFrag = S.fragmentChance; S.fragmentChance = { ...S.fragmentChance, pack: 1 }; });
+    if (await h.press(/^shop:pack:1$/, 160)) { await h.hoverAll(/^pack:bonus$/, 40); await h.step(60); await h.press(/^pack:pick:0$/, 120); await h.step(120); }
+    await h.ev(async () => { const { SHOP: S } = await import('/src/sim/shop.js'); S.fragmentChance = window.__keepFrag; });
+  });
   await scene(page, 'settings toggles (calm · lang)', async () => {
     await h.ev(SHOP); await h.step(20);
     await h.ev(() => window.__app.openOverlay('settings')); await h.step(30);
