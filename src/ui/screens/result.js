@@ -141,7 +141,7 @@ export class ResultScreen {
     const tableX = leftX + Math.max(0, Math.floor((leftW - tableW) / 2));
     // 판 밖에 남은 것: 자리가 모자라면 앞의 것부터 빠진다 — 다음 오프닝까지 · 새 도감 칸 · 오늘의 대국 · 끝없는 대국 · 열린 오프닝 · 레이팅
     const notes = [];
-    if (!this.out.unlocked.length && this.next) notes.push([`다음 오프닝 ${OPENINGS[this.next.id].name}: ${this.next.text} ${this.next.have}/${this.next.need}`, PAL.dim]);
+    if (!this.out.unlocked.length && this.next) notes.push([`다음 오프닝 ${OPENINGS[this.next.id].name}: ${this.next.text} (${this.next.have}/${this.next.need})`, PAL.dim]);
     if (this.out.fresh) notes.push([`도감 ${this.out.fresh}칸을 새로 채웠어요`, PAL.ink]);
     // 순위 카드(CHM-70): 오늘의 대국 판이면 기록 표 아래에. 카드가 「오늘의 대국 날짜」 줄을 대신한다
     const hasCard = !!rankCard(app, run, 0);

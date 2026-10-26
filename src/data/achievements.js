@@ -1,5 +1,5 @@
 // 업적: 판 밖에 남는 배지(힘은 남기지 않는다 — 받는 것은 배지와 팡파르뿐). 모두 뿌리의 동사나 판의 걸음에 매단다.
-// 필드: id · name(명사형) · text(조건 「~다」) · have(기록) → 지금 값 · need(닿을 값, 2 이상이면 화면에 「N/M」) · secret(받기 전엔 「?」)
+// 필드: id · name(명사형) · text(조건 「~다」) · have(기록) → 지금 값 · need(이룰 값, 2 이상이면 화면에 「N/M」) · secret(받기 전엔 「?」)
 // have는 기록(app.records)만 읽는다 — 한 콤보 안의 것은 src/ui/achievements.js noteFeats가 records.feats에 먼저 적는다.
 import { MASTERS } from './masters.js';
 import { LEGENDS } from './legends.js';
@@ -27,9 +27,9 @@ export const ACHIEVEMENTS = [
   { id: 'forms6', name: '천의 얼굴', text: '한 콤보에서 모습 여섯을 거친다', have: (r) => yes(F(r, 'forms') >= 6), need: 1 },
   // 응수 · 끊김
   { id: 'replies3', name: '맞받아치기', text: '한 콤보에서 지키는 적을 셋 잡는다', have: (r) => yes(F(r, 'replies') >= 3), need: 1 },
-  { id: 'unbroken', name: '꺾이지 않는 수', text: '끊길 자리에서 콤보를 잇는다', have: (r) => F(r, 'unbroken'), need: 1 },
+  { id: 'unbroken', name: '꺾이지 않는 수', text: '끊길 자리에서 콤보를 이어 간다', have: (r) => F(r, 'unbroken'), need: 1 },
   // 프로모션
-  { id: 'promote1', name: '첫 퀸', text: '폰 모습으로 끝줄에 닿아 프로모션한다', have: (r) => yes(F(r, 'promos') >= 1), need: 1 },
+  { id: 'promote1', name: '첫 퀸', text: '폰 모습으로 끝줄에 가서 프로모션한다', have: (r) => yes(F(r, 'promos') >= 1), need: 1 },
   { id: 'promote2', name: '두 번의 퀸', text: '한 콤보에서 프로모션을 두 번 한다', have: (r) => yes(F(r, 'promos') >= 2), need: 1 },
   // 체크메이트
   { id: 'mate1', name: '체크메이트', text: '체크메이트로 대국을 이긴다', have: (r) => r.mates || 0, need: 1 },
@@ -52,7 +52,7 @@ export const ACHIEVEMENTS = [
   { id: 'dan4', name: '레이팅 1600', text: '레이팅 1600 이상으로 판을 이긴다', have: (r) => danWon(r, 4), need: 1 },
   { id: 'dan8', name: '레이팅 2400', text: '레이팅 2400으로 판을 이긴다', have: (r) => danWon(r, 8), need: 1 },
   { id: 'openings5', name: '다섯 오프닝', text: '오프닝 다섯으로 모두 판을 이긴다', have: (r) => OPENING_IDS.filter((id) => (r.openingDan || {})[id] != null).length, need: OPENING_IDS.length },
-  { id: 'endless12', name: '끝없는 밤', text: '끝없는 대국에서 12관에 닿는다', have: (r) => yes((r.bestEndless || 0) >= 12), need: 1 },
+  { id: 'endless12', name: '끝없는 밤', text: '끝없는 대국에서 12관에 도달한다', have: (r) => yes((r.bestEndless || 0) >= 12), need: 1 },
   { id: 'daily', name: '오늘의 승자', text: '오늘의 대국을 8관까지 이긴다', have: (r) => Math.max(F(r, 'daily'), yes(r.daily && r.daily.won)), need: 1 },
   // 전설 · 시너지
   { id: 'legend1', name: '불멸의 기보', text: '명경기 하나를 전설로 완성한다', have: (r) => r.legends || 0, need: 1 },

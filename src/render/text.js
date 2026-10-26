@@ -168,6 +168,16 @@ function glueVM(words, w, bold) {
   }
   return out;
 }
+// 수 목록(「2 · 4 · 5개」)은 한 덩이로 줄을 바꾼다 — 줄 끝 「 ·」를 빼면 「4 / 5개」가 「45개」처럼 붙어 읽힌다
+function glueNums(words) {
+  const out = [];
+  for (let i = 0; i < words.length; i++) {
+    const prev = out[out.length - 1];
+    if (prev != null && words[i] === '·' && /(?:^|\s)\d+$/.test(prev) && /^\d/.test(words[i + 1] || '')) { out[out.length - 1] = `${prev} · ${words[i + 1]}`; i++; }
+    else out.push(words[i]);
+  }
+  return out;
+}
 // 낱말 안 줄 바꿈 자리: 붙임표 뒤(앞뒤가 글자일 때), 숫자 사이 쉼표 뒤. 나눈 조각을 이으면 원래 낱말이다
 export function breakPieces(word) {
   const out = [];
@@ -200,7 +210,7 @@ function wrapRaw(s, w, bold) {
   const out = [];
   for (const para of String(s).split('\n')) {
     let line = '';
-    for (const word of glueVM(para.split(' '), w, bold)) {
+    for (const word of glueVM(glueNums(para.split(' ')), w, bold)) {
       const tryLine = line ? `${line} ${word}` : word;
       if (lineWidth(tryLine, bold) <= w) { line = tryLine; continue; }
       if (line) out.push(noDot(line));

@@ -51,7 +51,7 @@ export const agoText = (ms) => { const m = Math.floor(ms / 60000); return m < 1 
 export function gainText(g) {
   if (!g) return null;
   if (g.codex) return `도감 ${g.codex}칸이 새로 채워졌어요`;
-  if (g.openings) return `레퍼토리 ${g.openings}개가 새로 열렸어요`;
+  if (g.openings) return `오프닝 ${g.openings}개가 새로 열렸어요`;
   if (g.runs) return `판 ${g.runs}개가 더해졌어요`;
   return null;
 }

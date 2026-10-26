@@ -295,7 +295,7 @@ maxim('soul_collector', '혼 수집가', '덱의 혼 하나마다 배수 +2', '�
   onBuild(spec, build) { spec.data = { ...(spec.data || {}), souls: (build.deck || []).filter((p) => p.soul).length }; },
   onChainEnd(ctx) { ctx.addMult(2 * num(ctx.data.souls)); },
 });
-maxim('specialty', '주특기', '기보 단계가 가장 높은 모습으로 잡을 때마다 값 +25', '기보', 'common', 4, {
+maxim('specialty', '주특기', '기보로 가장 많이 키운 모습으로 잡을 때마다 값 +25', '기보', 'common', 4, {
   onCapture(ctx) {
     const ch = (ctx.t.mods || []).find((m) => m.id === 'charts');
     const lv = (ch && ch.data && ch.data.levels) || {};

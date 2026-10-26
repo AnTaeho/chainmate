@@ -15,10 +15,10 @@
 | 도움말 팁 | 가르치는 수업 |
 |---|---|
 | `incoming`(증원 그림자) | `reinforce` 목표 · 수 · 증원 |
-| `brilliant`(탁월수) | `redraw` 손과 희생 |
 | `fairy`(특수 기물) | `fairy` 체스 밖의 행마 |
 | `shop` · `pack` · `family` | `shop` 상점과 시너지 |
 
+  탁월수(`brilliant`)는 수업 판에 킹이 있는 희생 장면이 없어 가르치지 않는다 — 판에서 처음 한 번 뜬다(2026-10-26, U-9).
   나머지(레퍼토리 · 마스터 · 금빛 적 · 특성 · 벽과 보석 · 다음 수 · 판 보기 · 팔기 · 찜 · 전술 · 시계 · 혼 · 복기 · 세력 …)는 튜토리얼에 없어 처음 한 번 뜬다.
 - **옛 저장**: 없앤 첫 판 대본 대국 도중의 판(`run.script` · `battle.script`)은 이어 하면 그 대국을 접고 평범한 1관 첫머리(레퍼토리 고르기)로 돌아온다(`run.js` `dropOldScript`). 대본 대국을 끝낸 판의 미룬 레퍼토리(`draftLate`)는 `openDraft`가 그대로 연다.
 - **원격 기록**: `tutorial_offer { pick: lesson | play | close }` · `lesson_start { id }` · `lesson_done { id }`(`telemetry.md`).

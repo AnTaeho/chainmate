@@ -11,6 +11,8 @@ import { PAGE, BTN_H, SP, LINE, LINE_TITLE, textY } from '../frame.js';
 import { pageHead, bottomBar } from './common.js';
 import { diceIcon } from '../../render/dice.js';
 
+// 이름 바꾸기가 서버에 닿지 못했을 때(순위 화면의 「순위를 불러오지 못했어요」와 다른 일)
+export const REROLL_FAIL = '이름을 바꾸지 못했어요 · 연결을 확인해 주세요';
 export const TELEMETRY_TIP = '익명으로 판 결과만 보내요 · 화면은 수집하지 않아요';
 // 이름 바꾸기를 가리키면 머리줄 오른쪽에 뜨는 한 줄(오늘 남은 횟수 — 서버가 알려 준 뒤에만)
 export const rerollTip = (left) => (left == null ? '순위에 오르는 이름을 바꿔요' : left > 0 ? `오늘 ${left}번 더 바꿀 수 있어요` : '오늘은 더 바꿀 수 없어요 · 내일 다시 바꿀 수 있어요');
@@ -145,7 +147,7 @@ export class SettingsScreen {
     app.rank.reroll().then((r) => {
       this.rolling = false;
       if (r.ok) { app.track('name_reroll', {}, { always: true }); return; }
-      app.toast(r.why === 'limit' ? '오늘은 더 바꿀 수 없어요' : '순위를 불러오지 못했어요', PAL.ink);
+      app.toast(r.why === 'limit' ? '오늘은 더 바꿀 수 없어요' : REROLL_FAIL, PAL.ink);
     }, () => { this.rolling = false; });
   }
   close() { if (this.back) this.app.openOverlay(this.back); else this.app.closeOverlay(); }

@@ -57,7 +57,7 @@ export const HINTS = {
 
 // 안내 id → 그것을 가르치는 튜토리얼 수업 id(src/ui/lessons.js). 여기 없는 안내는 튜토리얼에 없는 것이라 처음 한 번 뜬다
 export const TAUGHT = {
-  incoming: 'reinforce', brilliant: 'redraw', fairy: 'fairy',
+  incoming: 'reinforce', fairy: 'fairy',
   shop: 'shop', pack: 'shop', family: 'shop',
 };
 export const taught = (app, id) => !!(TAUGHT[id] && app.records.lessonsSeen && app.records.lessonsSeen[TAUGHT[id]]);

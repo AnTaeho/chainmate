@@ -45,9 +45,9 @@ export const LESSONS = [
   // ── 대국
   { id: 'reinforce', group: 'battle', title: '목표 · 수 · 증원', target: 60, moves: 2, hand: ['N', 'N'], board: { e5: 'P' }, incoming: [{ sq: 'c6', t: 'R' }],
     steps: [
-      { pick: 0, say: '점수 아래 막대가 목표야. 다 채우면 이겨. 왼쪽 아래 금빛 구슬은 남은 수야' },
+      { pick: 0, say: '점수 아래 막대가 목표야. 다 채우면 이겨. 나이트를 눌러 봐' },
       { drop: 'd3', say: '▼ 그림자는 증원이야. 이 수가 끝나면 그 칸에 적이 들어와' },
-      { cap: 'e5', say: '폰을 잡아 봐. 수가 끝나면 구슬 하나가 꺼져' },
+      { cap: 'e5', say: '왼쪽 아래 금빛 구슬은 남은 수야. 폰을 잡아 수를 끝내면 하나가 꺼져' },
       { pick: 0, say: '들어온 룩을 잡을 차례야. 나이트를 눌러 봐' },
       { drop: 'a5', say: '놓아 봐' },
       { cap: 'c6', say: '룩을 잡으면 목표가 다 차' },
@@ -56,12 +56,12 @@ export const LESSONS = [
     steps: [
       { pick: 0, say: '폰은 놓을 곳이 없어. 희생할 폰을 눌러 봐' },
       { discard: true, say: '희생하면 새로 뽑아. 희생한 폰은 이번 대국에 안 돌아와' },
-      { pick: 3, say: '새로 뽑은 나이트를 눌러 봐. 이걸로 곧바로 메이트하면 탁월수야' },
+      { pick: 3, say: '새로 뽑은 나이트를 눌러 봐' },
       { drop: 'g6' },
       { cap: 'h8', say: '퀸을 잡아' },
     ] },
   { id: 'mate', group: 'battle', title: '체크메이트', target: 99999, hand: ['N'], board: { e7: 'K', a7: 'R', h1: 'P' }, preview: true,
-    after: '킹을 지키던 적을 둘 잡은 콤보로는 킹을 못 잡아요',
+    after: '킹은 지키는 적부터 치우고 잡아요',
     steps: [
       { pick: 0, say: '킹은 지키는 적이 있으면 못 잡아. 지금은 룩이 지키고 있어' },
       { drop: 'b5', say: '킹을 지키는 룩을 잡을 수 있는 칸에 놓아 봐' },
@@ -80,6 +80,9 @@ export const LESSONS = [
     ] },
   { id: 'shop', group: 'run', title: '상점과 시너지', shop: true },
 ];
+
+// 상점 수업(여덟째) 마지막 걸음: 시너지 문턱(families.js THRESHOLDS)을 말한다 — test/lessons.test.js가 문턱과 맞는지 잰다
+export const SHOP_FAMILY_SAY = '격언 둘로 기사 시너지가 2개야. 첫 효과가 켜졌고, 4개 · 5개면 더 켜져';
 
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((L) => [L.id, L]));
 

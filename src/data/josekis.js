@@ -105,7 +105,7 @@ joseki('gomoku', '오목', 'rainbow', ['line', 'diag'], '한 콤보가 한 줄�
     if (!c.flags.gomoku && collinear5(sqs)) { c.flags.gomoku = true; ctx.emit({ type: 'gomoku', squares: sqs }); }
   },
 });
-joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 시너지는 1 · 3 · 5개에서 켜진다');
+joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 시너지는 1 · 3 · 4개에서 켜진다');
 
 
 // ── 밤샘 2: 열하나 더

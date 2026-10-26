@@ -66,7 +66,7 @@ export const TERMS = [
   T('step', 'run', '발판', 'Golden step', /발판/, /\bgolden steps?\b/i, '레퍼토리 「발판」의 금빛 칸. 그 칸의 적을 잡으면 배수 ×2', 'Gold squares from the Stepping Stones repertoire. Take on one: ×2 Mult'),
   // ── 물건
   T('maxim', 'item', '격언', 'Maxim', /격언/, /\bmaxims?\b/i, '사면 판 내내 효과를 낸다', 'Buy it once and it works all run'),
-  T('chart', 'item', '기보', 'Tome', /(?<!불멸의 )기보/, /\btomes?\b/i, '모습 하나의 단계를 올린다. 그 모습으로 잡을 때마다 값과 배수를 더 받는다', 'Levels up one form. Takes in that form earn more'),
+  T('chart', 'item', '기보', 'Tome', /(?<!불멸의 )기보/, /\btomes?\b/i, '모습 하나를 Lv 1 올린다. 그 모습으로 잡을 때마다 값과 배수를 더 받는다', 'Levels up one form. Takes in that form earn more'),
   T('engraving', 'item', '각인', 'Engraving', /각인/, /\bengrav\w*/i, '기물 하나에 새긴다. 그 기물로 시작한 콤보에서 효과를 낸다', 'Carved into one piece. Works on chains it starts'),
   T('soul', 'item', '혼', 'Soul', /혼(?=$|[\s이을은의]|이나)/, /\bsouls?\b/i, '기물 하나에 붙는 특별한 규칙', 'A special rule that lives in one piece'),
   T('joseki', 'item', '레퍼토리', 'Repertoire', /레퍼토리/, /\brepertoires?\b/i, '1 · 3 · 5관 앞에서 고르는 큰 선택. 판 끝까지 간다', 'A big pick before Halls 1, 3 and 5. Lasts all run'),

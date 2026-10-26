@@ -5,7 +5,7 @@ import { W, H, text, box, rect, R_SM } from '../../render/gfx.js';
 import { button } from '../ui.js';
 import { createRun } from '../../sim/run.js';
 import { createRng, fork } from '../../sim/rng.js';
-import { LESSONS, LESSON_GROUPS } from '../lessons.js';
+import { LESSONS, LESSON_GROUPS, SHOP_FAMILY_SAY } from '../lessons.js';
 import { startGuide, kingNoteLayout, kingNote } from '../coach.js';
 import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
 import { pageHead, pageButtons, bottomBar } from './common.js';
@@ -107,7 +107,7 @@ export function startLessonShop(app, i) {
       } },
     { screen: 'pack', target: 'pack:pick:0', say: '나이트를 골라 봐. 기사도는 나이트로 시작할 때 효과를 내', done: () => run.phase === 'shop' && on('shop') && run.deck.filter((p) => p.t === 'N').length > knights },
     { screen: 'shop', target: 'shop:buy:1', say: '격언 「첫수」도 사 봐. 기사도와 같은 기사 시너지야', done: () => run.maxims.length > 1 },
-    { screen: 'shop', target: 'fam:leap', say: '격언 둘로 기사 시너지가 2개야. 첫 효과가 켜졌고, 4개 · 6개면 더 켜져', ok: true },
+    { screen: 'shop', target: 'fam:leap', say: SHOP_FAMILY_SAY, ok: true },
   ], () => lessonDone(app, i));
 }
 

@@ -79,7 +79,7 @@ test('영어: 데이터 글(이름 · 효과 · 이야기 · 재현 · 단 · �
   assert.deepEqual(missing(all), []);
 });
 
-test('영어: 안내 · 알림 글(처음 안내 · 킹의 말 · 수업 · 계정 · 기기 연결 · 순위 · 설정 · 복기)이 모두 옮겨진다', async () => {
+test('영어: 안내 · 알림 글(처음 안내 · 킹의 말 · 수업 · 계정 · 기기 연결 · 순위 · 설정 · 복기 · 판본 카드 머릿말)이 모두 옮겨진다', async () => {
   const { missing } = await import('../src/ui/lang.js');
   const { HINTS } = await import('../src/ui/coach.js');
   const { LESSONS } = await import('../src/ui/lessons.js');
@@ -92,12 +92,16 @@ test('영어: 안내 · 알림 글(처음 안내 · 킹의 말 · 수업 · 계�
   const LS = await import('../src/ui/screens/lessons.js');
   const LN = await import('../src/ui/screens/lesson.js');
   const V = await import('../src/ui/review.js');
+  const LN0 = await import('../src/ui/lessons.js');
+  const P = await import('../src/ui/parts.js');
+  const { EDITIONS: EDS } = await import('../src/data/editions.js');
   const fork = { move: 3, mate: true, scores: { mine: 120, best: 2340, target: 150 }, best: [{ kind: 'reboard' }], mines: [] };
   const all = [
     ...Object.values(HINTS), ...LESSONS.flatMap((l) => [l.title, l.after, ...[...(l.steps || []), ...(l.demo || [])].map((s) => s.say)]),
     ...Object.values(A.ACCOUNT_FAIL), ...Object.values(A.ACCOUNT_OK), ...A.ACCOUNT_INFO, A.LOGOUT_TEXT, A.DELETE_TEXT, A.DELETE_TEXT2, A.FORGOT_TEXT, A.lockedText(15),
     ...Object.values(K.REDEEM_FAIL), K.CONFIRM_TEXT, K.UNLINK_TEXT, K.agoText(0), K.agoText(180000), ...[{ codex: 2 }, { openings: 1 }, { runs: 3 }].map(K.gainText),
-    ...R.STALE_LINES, S.TELEMETRY_TIP, S.LINK_TIP, S.rerollTip(null), S.rerollTip(2), S.rerollTip(0), T.TELEMETRY_NOTE, WL.WELCOME_SAY, LS.END_SAY, LN.DEMO_FOOT, '튜토리얼부터', '바로 시작', '이어서', '처음부터', '목록',
+    LN0.SHOP_FAMILY_SAY, ...EDS.flatMap((e) => Object.values(P.ITEM_KIND).map((k) => `${e.name} ${k}`)),
+    ...R.STALE_LINES, S.TELEMETRY_TIP, S.REROLL_FAIL, S.LINK_TIP, S.rerollTip(null), S.rerollTip(2), S.rerollTip(0), T.TELEMETRY_NOTE, WL.WELCOME_SAY, LS.END_SAY, LN.DEMO_FOOT, '튜토리얼부터', '바로 시작', '이어서', '처음부터', '목록',
     V.NO_PATH, V.forkTitle(fork), V.forkLine(fork, []), V.forkScores(fork), ...V.forkScoreLines(fork), ...V.forkScoreRows(fork),
     V.forkLine({ ...fork, split: { best: { type: 'capture', sq: 36 } } }, []), V.forkLine({ ...fork, best: [{ kind: 'drop', t: 'N', sq: 18 }] }, []), V.forkLine({ ...fork, best: [{ kind: 'discard', t: 'P' }] }, []),
   ].filter(Boolean);

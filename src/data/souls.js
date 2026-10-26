@@ -47,7 +47,7 @@ export function martyrBurst(ctx) {
 }
 // 초월: 먹을 때마다 한 단계 위로, 아마존까지. 39a89d3에서 「두 번마다 · 룩까지」로 줄였다가 되돌렸다(2026-09-28, 순교자와 같은 까닭)
 export const UP = { P: 'N', N: 'B', B: 'R', R: 'Q', Q: 'Z' };
-export const TRANSCEND_TEXT = '잡을 때마다 한 단계 위 기물이 된다';
+export const TRANSCEND_TEXT = '잡을 때마다 다음 기물로 올라간다';
 export const TRANSCEND_MORE = '폰 › 나이트 › 비숍 › 룩 › 퀸 › 아마존';
 // 흡수: 처음 takes번 먹기까지 모습이 안 바뀌고, 먹은 적의 행마를 얻는다(마지막에 얻은 것 하나만).
 // 얻은 행마는 사슬 끝까지 남는다(흡수가 끝난 뒤 모습이 바뀌어도). 39a89d3 · c74068a에서 「다음 먹기까지 · 첫 먹기 한 번」으로

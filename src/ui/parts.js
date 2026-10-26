@@ -604,7 +604,7 @@ export function itemCardLayout(it, w, { run = null, price = true, hold = false }
   f.gap(GAP_GROUP);
   const lines = [];
   for (const l of wrap(itemEffect(it), IW)) lines.push([l, PAL.cardInk]);
-  if (it.kind === 'chart' && run) lines.push([`${run.charts[it.form] || 0} › ${(run.charts[it.form] || 0) + 1}단계`, PAL.cardDim]);
+  if (it.kind === 'chart' && run) lines.push([`Lv ${run.charts[it.form] || 0} › ${(run.charts[it.form] || 0) + 1}`, PAL.cardDim]);
   if (it.edition) for (const l of wrap(L(EDITION_BY_ID[it.edition].text), IW)) lines.push([l, PAL.goldDk]);
   // 쓰는 법도 카드 폭에서 줄을 바꾼다(「금이 간 혼에 쓴다」 99 · 「Use on a cracked soul」 143 > 94가 카드 밖으로 넘쳤다, CHM-42)
   if (itemUse(it)) for (const l of wrap(itemUse(it), IW)) lines.push([l, PAL.cardDim]);

@@ -548,6 +548,20 @@ test('줄 바꿈: 문장부호(마침표 · 쉼표 · 가운뎃점 …)는 줄 �
   M.lang.setLang('ko');
 });
 
+test('줄 바꿈: 수 목록(「2 · 4 · 5개」)은 한 덩이 — 줄 끝 가운뎃점을 빼 「4 5개」로 붙어 읽히지 않는다', () => {
+  const { wrap } = M.text;
+  M.lang.setLang('ko');
+  for (const s of ['같은 시너지를 2 · 4 · 5개 모으면 효과가 켜져', '가장 많이 모은 시너지는 1 · 3 · 4개에서 켜진다']) {
+    const list = s.match(/\d \S+ \d \S+ \d개/)[0];
+    for (let w = Math.ceil(M.text.textWidth(list)); w <= 200; w += 2) {
+      const lines = wrap(s, w);
+      assert.ok(lines.some((l) => l.includes(list)), `${w} ${JSON.stringify(lines)}`);
+    }
+  }
+  // 효과 사이 「 · 」는 그대로 줄 끝에서 뺀다(줄 바꿈이 곧 나눔)
+  assert.ok(wrap('폰 10 · 나이트 30 · 룩 50 · 퀸 90', 60).every((l) => !l.endsWith(' ·')));
+});
+
 // 행마 보기(CHM-26): 탭 셋 · 카드 두 칸 × 두 줄 · 쪽마다 고르게. 행마 글은 카드 안 세 줄까지, 이름은 「새로」와 한 줄
 test('행마 보기: 행마 글은 세 줄 안, 상자는 화면 틀(8 ~ 262) 안, 특수 기물은 쪽마다 셋', async () => {
   const { moves, text, frame } = M;
@@ -1091,7 +1105,7 @@ test('기기 잇기 화면: 숫자 여덟 칸 · 숫자판 열두 칸이 칸 안
   assert.equal(K.codeText('48271593'), '4827 1593');
   assert.deepEqual([0, 59999, 60000, 3599999, 3600000, 86400000 * 3].map(K.agoText), ['방금', '방금', '1분 전', '59분 전', '1시간 전', '3일 전']);
   assert.deepEqual([K.gainText({ codex: 12, openings: 1, runs: 3, ante: 5 }), K.gainText({ codex: 0, openings: 2, runs: 3, ante: 0 }), K.gainText({ codex: 0, openings: 0, runs: 3, ante: 0 }), K.gainText({ codex: 0, openings: 0, runs: 0, ante: 0 }), K.gainText(null)],
-    ['도감 12칸이 새로 채워졌어요', '레퍼토리 2개가 새로 열렸어요', '판 3개가 더해졌어요', null, null]);
+    ['도감 12칸이 새로 채워졌어요', '오프닝 2개가 새로 열렸어요', '판 3개가 더해졌어요', null, null]);
 
   for (const lang of LANGS) {
     const a = await rankApp({ lang, others: 0 });

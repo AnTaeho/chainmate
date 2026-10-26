@@ -95,3 +95,27 @@ test('떨굴 칸을 열어 둔 걸음은 빛나는 칸 어디서든 이긴다', 
     });
   }
 });
+
+// 문턱을 말하는 글은 families.js THRESHOLDS와 같아야 한다(CHM-78에서 6 → 5로 바꿀 때 글만 남았다 — U-1 · D-19)
+test('문턱을 말하는 글 = THRESHOLDS(수업 ⑧ · 복제 레퍼토리 · 낱말 상자 · 도움말 팁, 한국어 · 영어)', async () => {
+  const { THRESHOLDS } = await import('../src/data/families.js');
+  const { SHOP_FAMILY_SAY } = await import('../src/ui/lessons.js');
+  const { JOSEKI_BY_ID } = await import('../src/data/josekis.js');
+  const { TERMS } = await import('../src/ui/glossary.js');
+  const { HINTS } = await import('../src/ui/coach.js');
+  const { EN } = await import('../src/data/i18n/en.js');
+  const nums = (s) => (s.match(/\d+/g) || []).map(Number);
+  const set = TERMS.find((t) => t.id === 'set');
+  const cases = [
+    [SHOP_FAMILY_SAY, THRESHOLDS.slice(1), 'tail'],
+    [JOSEKI_BY_ID.clone.text, THRESHOLDS.map((x) => x - 1)],
+    [set.say, THRESHOLDS], [set.enSay, THRESHOLDS],
+    [HINTS.family, THRESHOLDS],
+  ];
+  for (const [s, want, tail] of cases) {
+    for (const t of [s, EN[s]].filter(Boolean)) {
+      const got = nums(t);
+      assert.deepEqual(tail ? got.slice(-want.length) : got, want, t);
+    }
+  }
+});
