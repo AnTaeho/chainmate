@@ -787,6 +787,8 @@ export class BattleScreen {
           },
         }); this.runEvents.push(e); break;
         case 'shatter': add(0.2, { begin: () => { this.toast(`유리 각인 ${josa(PIECE_NAME[e.piece], '이/가')} 깨졌어요`, PAL.sky); this.snd('glass'); } }); break;
+        // 레퍼토리 「결사」: 첫 콤보를 시작한 기물이 덱에서 떠난다(대국 끝) — 연출 없이 주머니만 줄었다(D-16)
+        case 'exile': add(0.2, { begin: () => { const t = this.pieceType(e.pieceId); this.toast(t ? `결사로 ${josa(PIECE_NAME[t], '이/가')} 떠났어요` : '결사로 기물 하나가 떠났어요', PAL.red, 2.4); this.snd('glass'); } }); this.runEvents.push(e); break;
         // 증원은 위에서 떨어져 들어온다. 떨어지는 시간은 한 수 연출 길이에 넣지 않는다(update가 따로 센다)
         case 'reinforce': add(0.1, {
           begin: () => {
@@ -1112,6 +1114,12 @@ export class BattleScreen {
       update: (dt, e) => { for (const p of e.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; } },
       draw: (ctx, e) => { ctx.globalAlpha = Math.max(0, 1 - e.t / e.life); for (const p of e.parts) dot(ctx, p.x, p.y, 2, col); ctx.globalAlpha = 1; },
     });
+  }
+  // 이 대국에서 쓴 기물의 종류(덱 id로) — 대국 끝 사건(결사)이 이름을 말할 때
+  pieceType(id) {
+    const b = this.bRef, all = b ? [...(b.hand || []), ...(b.bag || []), ...(b.used || []), ...(b.offered || []), ...(b.chainPiece ? [b.chainPiece] : [])] : [];
+    const p = all.find((x) => x && x.id === id) || (this.run && this.run.deck.find((x) => x.id === id));
+    return p ? p.t : null;
   }
   sparkle(sq, col, n) {
     const c = sqCenter(sq), x = c.x - 14, y = c.y - PIECE_TOP;

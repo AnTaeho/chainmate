@@ -102,7 +102,7 @@ test('영어: 안내 · 알림 글(처음 안내 · 킹의 말 · 수업 · 계�
     ...Object.values(HINTS), ...LESSONS.flatMap((l) => [l.title, l.after, ...[...(l.steps || []), ...(l.demo || [])].map((s) => s.say)]),
     ...Object.values(A.ACCOUNT_FAIL), ...Object.values(A.ACCOUNT_OK), ...A.ACCOUNT_INFO, A.LOGOUT_TEXT, A.DELETE_TEXT, A.DELETE_TEXT2, A.FORGOT_TEXT, A.lockedText(15),
     ...Object.values(K.REDEEM_FAIL), K.CONFIRM_TEXT, K.UNLINK_TEXT, K.agoText(0), K.agoText(180000), ...[{ codex: 2 }, { openings: 1 }, { runs: 3 }].map(K.gainText),
-    LN0.SHOP_FAMILY_SAY, CM.dailyNote('2026-10-08'), CM.EMPTY_BUILD, APP.SAVE_FULL, APP.OTHER_TAB, ...EDS.flatMap((e) => Object.values(P.ITEM_KIND).map((k) => `${e.name} ${k}`)),
+    LN0.SHOP_FAMILY_SAY, CM.dailyNote('2026-10-08'), CM.EMPTY_BUILD, '결사로 나이트가 떠났어요', '결사로 기물 하나가 떠났어요', APP.SAVE_FULL, APP.OTHER_TAB, ...EDS.flatMap((e) => Object.values(P.ITEM_KIND).map((k) => `${e.name} ${k}`)),
     ...R.STALE_LINES, S.TELEMETRY_TIP, S.REROLL_FAIL, S.LINK_TIP, S.rerollTip(null), S.rerollTip(2), S.rerollTip(0), T.TELEMETRY_NOTE, WL.WELCOME_SAY, LS.END_SAY, LN.DEMO_FOOT, LN.DEMO_WATCH, '튜토리얼부터', '바로 시작', '이어서', '처음부터', '목록',
     V.NO_PATH, V.forkTitle(fork), V.forkLine(fork, []), V.forkScores(fork), ...V.forkScoreLines(fork), ...V.forkScoreRows(fork),
     V.forkLine({ ...fork, split: { best: { type: 'capture', sq: 36 } } }, []), V.forkLine({ ...fork, best: [{ kind: 'drop', t: 'N', sq: 18 }] }, []), V.forkLine({ ...fork, best: [{ kind: 'discard', t: 'P' }] }, []),
