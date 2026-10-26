@@ -65,7 +65,9 @@ function seen(b) {
 function playChain(b, line, send, opts = {}) {
   if (!fogged(b)) { for (const c of lineCommands(line)) send(c); return; }
   for (let guard = 0; b.status === 'chain' && guard < 200; guard++) {
-    const r = bestChain(seen(b), { allow: chainCaptures(b), preferMate: opts.nomate ? 'avoid' : true, rank: opts.rank || null, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}) });
+    const o = { preferMate: opts.nomate ? 'avoid' : true, rank: opts.rank || null, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}) };
+    // 보이는 판으로 풀지 못하면(다시 놓기를 기다리는 사슬 · 보이는 판에서는 막히는 잡기) 그 한 걸음만 실제 판으로 — 화면에는 그 칸이 빛난다
+    const r = bestChain(seen(b), { ...o, allow: chainCaptures(b) }) || bestChain(b, o);
     if (!r || !r.line.length) throw new Error('fog bot: chain has no move');
     send(lineCommands([r.line[0]])[0]);
   }
