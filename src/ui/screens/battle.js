@@ -1981,19 +1981,29 @@ export class BattleScreen {
     }
   }
 
-  // 오른쪽 작은 판넬(격언 칸 위에 뜬다): 지금 [모습] › 먹으면 [모습] → 얻을 값 · 배수, 그 아래 한 줄 판넬에 그다음
+  // 오른쪽 작은 판넬(격언 칸 위에 뜬다): 지금 [모습] › 먹으면 [모습] → 얻을 값 · 배수 → 가로줄 → 그다음 한 줄.
+  // 그다음 줄도 같은 판넬 안 — 판넬 두 장(사이 틈 · 안 여백 두 번)이면 아래 시너지 칩 줄 윗부분을 덮었다(S-6)
   drawPreviewPanel(ctx) {
     const pv = this.pvNow, v = this.view;
     if (!pv || pv.kind !== 'capture' || !v.chain) return;
-    const P = PAD_BOX, f = flow(TOP + P);
+    const P = PAD_BOX;
+    const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['체크메이트', PAL.gold] : pv.redrop ? ['한 번 더 놓기', PAL.gold]
+      : pv.done ? ['콤보가 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red]
+      // 먹을 적이 두 자리면(넓은 행마의 새 특수 기물, CHM-55) 폭에 맞춰 짧은 말로
+      : [measure(L(`다음에 잡을 적 ${pv.next.length}`), true) <= RW - P * 2 ? `다음에 잡을 적 ${pv.next.length}` : `잡을 적 ${pv.next.length}`, PAL.gold];
+    const chip = col === PAL.red;
+    const f = flow(TOP + P);
     const labY = f.line();
     f.gap(GAP_IN);
     const artY = f.space(34);
     f.gap(GAP_GROUP);
     const valY = f.line();
-    const h1 = f.y + P - TOP;
-    openBox('panel', RX, TOP, RW, h1, P, { overlay: true, name: '먹으면' });
-    panel(ctx, RX, TOP, RW, h1);
+    const ruleY = f.y + (GAP_GROUP >> 1);
+    f.gap(GAP_GROUP);
+    const nextY = f.space(chip ? FAM_H : LINE);
+    const h = f.y + P - TOP;
+    openBox('panel', RX, TOP, RW, h, P, { overlay: true, name: '먹으면' });
+    panel(ctx, RX, TOP, RW, h);
     // 지금 › 잡으면: 그림 칸 둘을 판넬 안 여백(8)에 붙여 양쪽 끝에, 화살은 가운데(아래 값 · 배수 줄과 같은 양끝)
     const AW = 26, ax0 = RX + P, ax1 = RX + RW - P - AW;
     // 이름표는 그림 칸 가운데에, 칸보다 넓으면 판넬 안 여백 안으로 당긴다
@@ -2006,20 +2016,13 @@ export class BattleScreen {
     sprite(ctx, pv.form, 'w', ax1 + 5, artY + 6, this.look(pv.form));
     text(ctx, `+${short(pv.value)}`, RX + P, valY, PAL.val, { bold: true });
     text(ctx, `배수 +${short(pv.mult)}`, RX + RW - P, valY, PAL.gold, { align: 'right', bold: true });
-    closeBox();
-    const y2 = TOP + h1 + LIST_GAP * 2, h2 = P * 2 + LINE;
-    openBox('panel', RX, y2, RW, h2, P, { overlay: true, name: '그다음' });
-    panel(ctx, RX, y2, RW, h2);
-    const [msg, col] = pv.cut ? ['끊긴다', PAL.red] : pv.mate ? ['체크메이트', PAL.gold] : pv.redrop ? ['한 번 더 놓기', PAL.gold]
-      : pv.done ? ['콤보가 끝난다', PAL.dim] : pv.forced ? [`지키는 적 ${pv.next.length}`, PAL.red]
-      // 먹을 적이 두 자리면(넓은 행마의 새 특수 기물, CHM-55) 폭에 맞춰 짧은 말로
-      : [measure(L(`다음에 잡을 적 ${pv.next.length}`), true) <= RW - P * 2 ? `다음에 잡을 적 ${pv.next.length}` : `잡을 적 ${pv.next.length}`, PAL.gold];
+    rect(ctx, RX + P, ruleY, RW - P * 2, 1, PAL.frameDk);
     // 끊김 · 지키는 적(붉은 말)은 어두운 판넬 위에서 묻히지 않게 붉은 칩(잉크 테 · 밝은 글)에
-    if (col === PAL.red) {
-      const cw = Math.min(RW - P * 2, measure(L(msg), true) + CHIP_PAD * 2 + 2), cy = y2 + Math.floor((h2 - FAM_H) / 2);
-      box(ctx, RX + P, cy, cw, FAM_H, PAL.btnRed, PAL.frameDk, { r: R_SM });
-      fitText(ctx, msg, RX + P + CHIP_PAD + 1, inkY(cy, FAM_H), cw - CHIP_PAD * 2 - 2, PAL.btnRedInk);
-    } else fitText(ctx, msg, RX + P, y2 + textY(P), RW - P * 2, col);
+    if (chip) {
+      const cw = Math.min(RW - P * 2, measure(L(msg), true) + CHIP_PAD * 2 + 2);
+      box(ctx, RX + P, nextY, cw, FAM_H, PAL.btnRed, PAL.frameDk, { r: R_SM });
+      fitText(ctx, msg, RX + P + CHIP_PAD + 1, inkY(nextY, FAM_H), cw - CHIP_PAD * 2 - 2, PAL.btnRedInk);
+    } else fitText(ctx, msg, RX + P, textY(nextY), RW - P * 2, col);
     closeBox();
   }
 
