@@ -12,8 +12,9 @@
 //   목표가 있으면: 목표를 넘기는 수가 여럿이면 그중 아무거나(최선)로 충분하다.
 //   다시 놓기(밤샘 2 D2): 첫 수 전, 첫 손 최선 사슬 점수 × 수가 목표 × REBOARD.ratio에 못 미치면 판을 새로 깐다
 //   (첫 손 최선 사슬 점수가 대국 점수의 대리 지표 — docs/reports/luck.md ④).
-import { bestPerPiece, lineCommands } from '../src/sim/solver.js';
-import { canReboard, NEXT_DRAWS, nextDraws } from '../src/sim/battle.js';
+import { bestPerPiece, lineCommands, bestChain } from '../src/sim/solver.js';
+import { chainCaptures } from '../src/sim/chain.js';
+import { canReboard, NEXT_DRAWS, nextDraws, isHidden, dropSquaresFor, apply as applyCmd } from '../src/sim/battle.js';
 import { createRng, fork, next, shuffle } from '../src/sim/rng.js';
 import { valueOf } from '../src/data/pieces.js';
 import { bestMove } from '../src/sim/solver.js';
@@ -51,8 +52,42 @@ export function chaseRank(b) {
 }
 
 // rank: 풀이기에 넘길 줄 평가(판 봇의 「노리기」 정책이 황금 기물 · 재현에 덤을 준다). 없으면 점수.
-export function decideBattle(b, { nomate = false, pawnRatio = 0.5, rank = null, sacrifice = true } = {}) {
-  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true, rank, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}) });
+// 안개(마스터 「안개」): 봇은 사람처럼 안개 속 적(아직 드러나지 않은 칸)을 모른다 — 그 적을 지운 복사본으로 판단한다(D-6).
+// 그래서 사슬은 한 번에 끝까지 두지 않고, 잡을 때마다(새 칸이 드러날 때마다) 다시 푼다(playChain). 규칙 · 화면은 그대로
+const fogged = (b) => !!(b.rules && b.rules.fog);
+function seen(b) {
+  if (!fogged(b)) return b;
+  const t = cloneB(b);
+  for (let sq = 0; sq < 64; sq++) if (t.board[sq] && !t.board[sq].mine && isHidden(b, sq)) t.board[sq] = null;
+  return t;
+}
+// 사슬을 둔다: 안개가 없으면 정한 줄 그대로, 있으면 한 걸음씩 다시 풀어(드러난 칸으로) 둔다. send(c)는 명령 하나를 실제 대국에
+function playChain(b, line, send, opts = {}) {
+  if (!fogged(b)) { for (const c of lineCommands(line)) send(c); return; }
+  for (let guard = 0; b.status === 'chain' && guard < 200; guard++) {
+    const r = bestChain(seen(b), { allow: chainCaptures(b), preferMate: opts.nomate ? 'avoid' : true, rank: opts.rank || null, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}) });
+    if (!r || !r.line.length) throw new Error('fog bot: chain has no move');
+    send(lineCommands([r.line[0]])[0]);
+  }
+}
+// 결정 하나를 복사본에 둔다(내다보기 굴림 — 안개면 사슬은 한 걸음씩)
+function applyBot(t, d, opts) {
+  if (!d.play || !fogged(t)) return applyDecision(t, d);
+  applyCmd(t, { type: 'drop', handIndex: d.play.handIndex, sq: d.play.sq });
+  playChain(t, d.play.line, (c) => applyCmd(t, c), opts);
+}
+
+// 안개 판: 보이는 판으로 정한다. 보이는 판에 둘 수가 없을 때(막혀 희생 · 둘 것 없음)만 실제 판으로 — 안개 속 적을 노리는 칸도
+// 화면에서는 빛나(떨굴 수 있는 칸) 사람도 거기에 놓아 본다
+export function decideBattle(b, opts = {}) {
+  if (!fogged(b)) return decideOn(b, opts);
+  const d = decideOn(seen(b), { ...opts, drops: (p) => dropSquaresFor(b, p) }); // 떨굴 칸은 실제 판의 것(화면에 빛나는 칸)
+  if (d && !(d.discard && d.why === 'stuck')) return d;
+  const real = decideOn(b, opts);
+  return real && real.play ? real : d;
+}
+function decideOn(b, { nomate = false, pawnRatio = 0.5, rank = null, sacrifice = true, drops = null } = {}) {
+  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true, rank, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}), ...(drops ? { drops } : {}) });
   if (BOT.stats) { BOT.stats.decisions++; const lim = BOT.nodes ?? 10000; if (per.some((m) => m && m.nodes > lim)) BOT.stats.capped++; }
   let best = null;
   for (const m of per) if (m && betterMove(m, best, nomate, rank)) best = m;
@@ -220,10 +255,10 @@ function lookDecide(b, opts) {
       for (const s of seeds) {
         const t = cloneB(b);
         determinize(t, s);
-        try { applyDecision(t, d); } catch { wins = -1; break; }
+        try { applyBot(t, d, opts); } catch { wins = -1; break; }
         let guard = 0;
         // 굴림은 하네스 희생 기록(SACLOG)에 남기지 않는다
-        while (t.status === 'play' && guard++ < 200) { const d2 = decideBattle(t, opts); if (!d2) break; applyDecision(t, d2); }
+        while (t.status === 'play' && guard++ < 200) { const d2 = decideBattle(t, opts); if (!d2) break; applyBot(t, d2, opts); }
         if (t.status === 'won') wins++;
         score += Math.min(t.score, 2 * b.target);
       }
@@ -248,7 +283,7 @@ export function stepBattle(b, apply, opts) {
     return true;
   }
   apply({ type: 'drop', handIndex: d.play.handIndex, sq: d.play.sq });
-  for (const c of lineCommands(d.play.line)) apply(c);
+  playChain(b, d.play.line, apply, opts || {});
   const pend = SACLOG.pending.get(b);
   if (pend) {
     SACLOG.pending.delete(b);

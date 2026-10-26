@@ -88,7 +88,8 @@ export function bestMove(b, opts = {}) {
     seen.add(key);
     // 떨군 기물은 손에서 빠진다(실제 대국과 같게 — 손을 보는 조정자 「막내」 · 「맏이」 · 혼 「계주」)
     const rest = b.hand.filter((_, i) => i !== handIndex);
-    for (const sq of dropSquaresFor(b, piece)) {
+    // opts.drops(piece): 떨굴 칸을 바깥에서 준다(안개 판 봇 — 보이는 판으로 풀되 칸은 실제 판의 것, tools/bot.mjs)
+    for (const sq of opts.drops ? opts.drops(piece) : dropSquaresFor(b, piece)) {
       const t = cloneTable({ ...b, hand: rest, chain: null });
       // 각인 명세는 복사해서 쓴다(탐색 중 조정자 state가 실제 손 기물에 새지 않게)
       startChain(t, { type: piece.t, sq, engraving: forkSpec(piece.eng), soul: pieceSoul(piece), pieceId: piece.id });
@@ -100,6 +101,24 @@ export function bestMove(b, opts = {}) {
     }
   }
   if (best) best.nodes = stats.nodes;
+  return best;
+}
+
+// 사슬 도중(status 'chain')의 최선 줄 — 판 봇이 안개 판에서 잡을 때마다 다시 풀 때(tools/bot.mjs, D-6). 원래 대국은 바뀌지 않는다
+// opts.allow: 첫 잡기로 둘 수 있는 칸(실제 판에서 — 안개 판 봇은 보이는 판으로 풀지만 첫 걸음은 화면에 빛나는 칸 가운데서)
+export function bestChain(t, opts = {}) {
+  if (!t.chain || t.chain.done) return null;
+  const stats = { nodes: 0, max: opts.maxNodes ?? NODE_BUDGET }, preferMate = opts.preferMate ?? true, rank = opts.rank || null;
+  if (!opts.allow || t.chain.awaiting) return dfs(cloneTable(t), stats, preferMate, rank);
+  let best = null;
+  for (const sq of opts.allow) {
+    const u = cloneTable(t);
+    try { chainCapture(u, sq, true); } catch { continue; }
+    const r = dfs(u, stats, preferMate, rank);
+    if (!r) continue;
+    r.line = [sq, ...r.line];
+    if (better(r, best, preferMate, rank)) best = r;
+  }
   return best;
 }
 
