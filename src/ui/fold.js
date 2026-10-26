@@ -28,6 +28,8 @@ export function foldSide(ctx, items, cover, anchor, ground = null) {
       const hit = it.rows.filter(([t, b]) => t < c.y + c.h && c.y < b);
       if (!hit.length) continue;
       const above = it.rows.some(([, b]) => b <= c.y), below = it.rows.some(([t]) => t >= c.y + c.h);
+      // 줄이 모두 덮이면 판넬째 걷는다 — 빈 테 끝만 묶음 아래로 비어져 나오지 않게(S-22)
+      if (!above && !below && ground) { ground({ x: it.x - 1, y: it.y - 1, w: it.w + 2, h: it.h + 4 }); foldLog(it); continue; }
       const y0 = above ? Math.min(...hit.map(([t]) => t)) : inner.y;
       const y1 = below ? Math.max(...hit.map(([, b]) => b)) : inner.y + inner.h;
       paint(ctx, { x: inner.x, y: y0, w: inner.w, h: y1 - y0 }, inner);

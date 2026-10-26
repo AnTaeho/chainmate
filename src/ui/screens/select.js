@@ -124,6 +124,7 @@ export function tagIcon(ctx, tag, x, y, sc = 1) {
 const PORTRAIT = 36;
 const TAG_ICON = 24; // 건너뛰기 패 그림(12 × 2배)
 const BAR = { y: SP.xs, h: BTN_H }; // 본 칸 위 띠의 작은 단추(상점 화면 띠와 같다)
+const KIND_SHORT = { practice: '연습', official: '정식' }; // 남은 대국 카드 아래 줄 「연습 뒤에」
 // 대국 카드 셋은 본 칸을 꽉 채운다(사이 4 — 명인 규칙 글이 한 줄이라도 덜 접히게)
 const SEL = { gap: 4, get w() { return Math.floor((MAIN.w - this.gap * 2) / 3); } };
 const selX = (i) => MAIN.x + i * (SEL.w + SEL.gap);
@@ -342,6 +343,9 @@ export class SelectScreen {
           button(ctx, ui, 'select:play', x + P, by, pw, BTN_H, '시작', { onClick: () => this.play(), tone: 'gold', grow: { u: SP.s, d: P } });
           button(ctx, ui, 'select:skip', x + P + pw + SP.s, by, sw, BTN_H, '건너뛰기', { onClick: () => this.skip(), grow: { u: SP.s, d: P } });
         }
+      } else {
+        // 남은 대국: 단추 줄 자리에 차례 한 줄(흐림) — 아직 못 누르는 까닭, 세 카드 아래 줄이 같은 높이에 선다(S-17)
+        text(ctx, `${KIND_SHORT[lays[i - 1].info.kind]} 뒤에`, x + w / 2, inkY(by, BTN_H), PAL.dim, { align: 'center' });
       }
       closeBox();
       // 도전 스티커(지금 · 남은 연습 · 정식 대국): 카드 뒤에 그려 띠 · 카드 테 위에 뜨고, 구역은 카드 구역 뒤라 먼저 잡힌다

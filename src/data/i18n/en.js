@@ -209,7 +209,7 @@ export const EN = {
   '결사로 기물 하나가 떠났어요': 'Blood Pact: a piece left the deck',
   '멈춤': 'Paused', '계속': 'Continue', '메인 화면으로': 'To Main Menu', '메인 화면': 'Main Menu', '뒤로': 'Back', '다시': 'Again', '계속 두기': 'Play On',
   '소리': 'Sound', '음악': 'Music', '연출 속도': 'Speed', '화면 흔들림': 'Screen Shake', '큰 글자': 'Large Text', '켬': 'On', '끔': 'Off', '언어': 'Language', '화면': 'Display', '플레이': 'Play',
-  '연습 대국': 'Practice Match', '정식 대국': 'Rated Match', '마스터전': 'Master Match', '연습': 'Practice', '정식': 'Rated',
+  '연습 대국': 'Practice Match', '정식 대국': 'Rated Match', '마스터전': 'Master Match', '연습': 'Practice', '정식': 'Rated', '연습 뒤에': 'After Practice', '정식 뒤에': 'After Rated',
   '목표': 'Target', '이기면': 'Win', '건너뛰면': 'Skip', '건너뜀': 'Skipped', '승리': 'Won', '시작': 'Play', '건너뛰기': 'Skip',
   '끝없는 대국': 'Endless',
   // 건너뛰기 패(CHM-58 ②): 관 선택 카드 · 건너뛴 뒤 알림
