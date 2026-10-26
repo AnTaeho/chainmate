@@ -299,7 +299,7 @@ test('명인 안개: 안개 속에는 떨굴 수 없다', () => {
   b.hand = [{ t: 'N', id: 1, eng: null }];
   const drops = legalCommands(b).filter((c) => c.type === 'drop').map((c) => c.sq);
   assert.ok(drops.length > 0);
-  assert.ok(drops.every((sq) => (sq >> 3) < 3), drops.join(','));
+  assert.ok(drops.every((sq) => (sq >> 3) < 5), drops.join(','));
   const plain = createBattle({ seed: 1 });
   plain.board = boardFrom({ e7: 'P', a1: 'R' });
   plain.hand = [{ t: 'N', id: 1, eng: null }];
@@ -336,9 +336,9 @@ test('명인 거울: 같은 종류를 두 번 먹지 못한다', () => {
   assert.deepEqual(chainCaptures(u), [S('e5')]);
 });
 
-test('명인 안개: 위 다섯 줄은 내 기물이 닿은 칸만 드러난다', () => {
+test('명인 안개: 위 세 줄은 내 기물이 닿은 칸만 드러난다', () => {
   const b = createBattle({ seed: 1, mods: [{ id: 'fog' }] });
-  assert.equal(b.rules.fog, 5);
+  assert.equal(b.rules.fog, 3);
   b.board = boardFrom({ d2: 'B', h6: 'R', a8: 'P' });
   b.hand = [{ t: 'N', id: 1, eng: null }];
   assert.ok(isHidden(b, S('h6')) && isHidden(b, S('a8')) && !isHidden(b, S('d2')));

@@ -541,7 +541,7 @@ export const EN = {
   '값이 가장 큰 적 셋: 이번 수엔 못 지킨다': 'Top three enemies by Value: no guarding this move',
   '이번 대국 수 +1': '+1 Move this match', '빈칸에 적 폰 넷이 나타난다': 'Four enemy pawns step onto empty squares',
   '지켜진 적을 잡으면 곧바로 끊긴다': 'Taking a guarded enemy breaks the chain',
-  '위 다섯 줄은 안개라 놓을 수 없다 · 내 기물이 갈 수 있는 칸만 안개가 걷힌다': 'Fog on the top five ranks: no drops · only squares you can reach clear',
+  '위 세 줄은 안개라 놓을 수 없다 · 내 기물이 갈 수 있는 칸만 안개가 걷힌다': 'Fog on the top three ranks: no drops · only squares you can reach clear',
   '맨 위 격언 둘이 효과를 내지 않는다': 'Your top two maxims sleep',
   // 전설
   '지켜진 킹도 잡는다 · 체크메이트하면 적이 다시 나타나고 콤보가 이어진다': 'Take even guarded kings · a mate refills the board and the chain goes on',

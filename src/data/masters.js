@@ -14,8 +14,8 @@ function master(id, rule, text, def) {
 master('iron_wall', '철벽', '지켜진 적을 잡으면 곧바로 끊긴다', {
   onBattleStart(ctx) { ctx.rules.noReply = true; },
 });
-master('fog', '안개', '위 다섯 줄은 안개라 놓을 수 없다 · 내 기물이 갈 수 있는 칸만 안개가 걷힌다', {
-  onBattleStart(ctx) { ctx.rules.fog = 5; },
+master('fog', '안개', '위 세 줄은 안개라 놓을 수 없다 · 내 기물이 갈 수 있는 칸만 안개가 걷힌다', {
+  onBattleStart(ctx) { ctx.rules.fog = 3; },
 });
 // 한 사슬에서 같은 종류의 적을 두 번 먹지 못한다(킹은 하나뿐이라 뺀다)
 master('mirror', '거울', '한 콤보에서 같은 종류를 두 번 잡지 못한다', {

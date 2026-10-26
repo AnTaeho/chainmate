@@ -8,8 +8,8 @@ import { createBattle, apply, isHidden } from '../src/sim/battle.js';
 import { decideBattle, stepBattle } from '../tools/bot.mjs';
 
 function fogBattle(seed, target = 400) {
-  const b = createBattle({ seed, target, mods: [{ id: 'fog' }] }); // 마스터 「안개」(위 다섯 줄)
-  assert.equal(b.rules.fog, 5);
+  const b = createBattle({ seed, target, mods: [{ id: 'fog' }] }); // 마스터 「안개」(위 세 줄)
+  assert.equal(b.rules.fog, 3);
   return b;
 }
 

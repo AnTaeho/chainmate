@@ -93,11 +93,11 @@ test('버릇 · 성채: 넷째 줄에 성벽 일곱 칸, 가운데 네 칸 중 �
   }
 });
 
-test('버릇 · 숲 사냥꾼: 위 두 줄은 숲(떨굴 수 없다) · 우두머리는 다섯 줄', () => {
+test('버릇 · 숲 사냥꾼: 위 두 줄은 숲(떨굴 수 없다) · 우두머리는 세 줄', () => {
   const b = battleOf('hunters', 2, 4);
   assert.equal(b.rules.fog, 2);
   for (const p of b.hand) for (const sq of dropSquaresFor(b, p)) assert.ok(rankOf(sq) < 6);
-  assert.equal(battleOf('hunters', 2, 4, { master: FACTION_BY_ID.hunters.boss }).rules.fog, 5);
+  assert.equal(battleOf('hunters', 2, 4, { master: FACTION_BY_ID.hunters.boss }).rules.fog, 3);
 });
 
 test('버릇 · 전령단: 증원 +1 · 두 수 앞까지 보인다', () => {
