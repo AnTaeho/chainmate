@@ -2,11 +2,11 @@
 //   node tools/video-title.mjs [--out docs/media] [--seconds 10]  → <out>/title.mp4(1440×810, 게임이 3배로 그린 화면, 30fps, H.264, 소리 없음)
 // 녹화 방식은 tools/video.mjs와 같다: requestAnimationFrame을 잡아 1/30초씩 손으로 돌리며 한 장씩 찍는다(벽시계와 상관없이 같은 영상).
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역). ffmpeg는 PATH에서 찾는다.
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -15,19 +15,7 @@ const OUT = path.resolve(ROOT, opt('--out', 'docs/media'));
 const SECONDS = Number(opt('--seconds', 10));
 const W = 1440, H = 810, FPS = 30;
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });

@@ -1,11 +1,11 @@
 // 탁월수 짧은 영상(약 8초, CHM-43): 비숍을 바친다(카드가 흩어지고 나이트가 들어온다 · !?) → 새로 뽑은 나이트를 떨궈 사슬 → 킹을 먹어 메이트 → 탁월수 !! · ×3.
 //   node tools/video-brilliant.mjs [--out docs/media]  → <out>/brilliant.mp4 (1440×810, 게임이 3배로 그린 화면, H.264)
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역). ffmpeg는 PATH에서 찾는다.
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -14,19 +14,7 @@ const OUT = path.resolve(ROOT, opt('--out', 'docs/media'));
 const RAW = path.join(OUT, 'raw-brilliant');
 const W = 1440, H = 810;
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const port = srv.address().port;
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();

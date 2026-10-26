@@ -1,10 +1,9 @@
 // 대국 도전 스크린샷: 관 선택 카드(도전 스티커 · 말풍선) · 대국 중 도전 줄(쉬는 판 · 콤보 중 진행 · 이룬 순간) · 보상 · 진 대국 결과 · 처음 안내.
 //   node tools/shots-challenge.mjs [--out docs/shots/challenge] [--only battle,select] [--size 1440x810,844x390] [--lang ko,en]
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -15,19 +14,7 @@ const SIZES = opt('--size', '1440x810,844x390').split(',').map((s) => s.split('x
 const LANGS = opt('--lang', 'ko,en').split(',');
 const want = (k) => !ONLY || ONLY.includes(k);
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const errors = [];

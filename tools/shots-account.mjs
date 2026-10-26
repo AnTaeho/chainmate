@@ -10,11 +10,11 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { hashKey, LIMITS } from '../api/_lib/service.js';
 import { usernameId } from '../api/_lib/auth.js';
 import { fakeApi } from '../test/helpers/fakeapi.js';
+import { loadPlaywright } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -27,10 +27,6 @@ const PLAYER_KEY = 'chainmate.player.v1';
 const DAY = '2026-10-08';
 const USER = 'taeho_an', PW = 'moonlit-rook-42', PW2 = 'second-knight-77';
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
 
 // ── 로컬 서버: 정적 파일 + /api(지금 물린 가짜 서버 world). world.mode 'fail'이면 연결을 끊는다
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };

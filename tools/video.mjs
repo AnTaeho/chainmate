@@ -8,11 +8,11 @@
 //   끝난 뒤 같은 src/audio/audio.js를 OfflineAudioContext로 그 시각대로 다시 불러 소리 파일을 만들어 붙인다.
 //   마우스 바늘은 게임이 그리지 않아서 페이지 위에 도트 화살표를 얹어 함께 찍는다.
 // Playwright는 저장소 의존성에 넣지 않는다(전역 설치나 NPM_CONFIG_PREFIX). ffmpeg는 PATH · --ffmpeg · FFMPEG 순으로 찾는다.
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync, execFileSync, spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const args = process.argv.slice(2);
 if (args.includes('--first')) { await import('./video-first.mjs'); process.exit(0); }
@@ -25,10 +25,6 @@ const SILENT = args.includes('--silent');
 const W = 1440, H = 810, FPS = 30, RATE = 44100;
 const SEED = 45;   // 첫 대국: 폰으로 둘을 먹는 짧은 사슬 → 일곱을 잇는 사슬(! · !!)이 나오는 판(풀이기로 찾음)
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
 function findFfmpeg() {
   for (const c of [opt('--ffmpeg', null), process.env.FFMPEG, 'ffmpeg']) {
     if (!c) continue;
@@ -39,15 +35,7 @@ function findFfmpeg() {
 const FF = findFfmpeg();
 if (!FF) throw new Error('ffmpeg(libx264)가 없다 — 프레임을 영상으로 묶을 수 없다');
 
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const BASE = `http://localhost:${srv.address().port}`;
 
 const { chromium } = await loadPlaywright();

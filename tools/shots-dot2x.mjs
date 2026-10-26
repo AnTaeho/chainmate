@@ -4,11 +4,10 @@
 // stage2 장면(2단계 — 아이콘 · 딱지 문양 · 문장 · 초상 · 카드 그림): 타이틀 · 상점 · 대국(격언 칸) · 관 선택 · 마스터 띠 · 그림 모음판.
 //   파일 이름은 stage2-<prefix>-<장면>. 2배(N 2)는 타이틀만 찍는다(시연 판의 줄마다 마스크가 바뀌던 배율).
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -20,19 +19,7 @@ const SET = opt('--set', 'stage1');
 const SCALES = opt('--scale', SET === 'stage2' ? '1,2,3' : '1,3').split(',').map(Number);
 const NAME = SET === 'stage2' ? `stage2-${PREFIX}` : PREFIX;
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const port = srv.address().port;
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();

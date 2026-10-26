@@ -3,11 +3,10 @@
 // 찍는 것(세력마다): <prefix>-<세력>-select(그 세력의 관 · 연습 대국 앞) · <prefix>-<세력>-battle(연습 대국 첫 수 전)
 //   --extra: 명인 대국 첫 화면(<prefix>-<세력>-master) · 도감 세력 탭(<prefix>-codex) · 처음 안내(<prefix>-hint)
 // 관: 농민군 1관 · 왕궁 근위 8관 · 나머지는 2~7관 중 판의 차례대로. --variant: 시안 번호(화면이 window.__fv로 읽는다 — 고른 뒤에는 쓰지 않는다)
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -21,19 +20,7 @@ const ALL = ['peasants', 'cavalry', 'abbey', 'fortress', 'hunters', 'heralds', '
 const FS = opt('--factions', 'all') === 'all' ? ALL : opt('--factions').split(',');
 const TAG = LANG === 'en' ? 'en-' : '';
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 480, height: 270 }, deviceScaleFactor: 1 });

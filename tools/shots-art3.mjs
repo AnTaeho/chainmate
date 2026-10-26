@@ -4,7 +4,7 @@
 //   capture(콤보 도중 — 첫 잡기 뒤 다음 적을 가리켜 미리 보기 수가 뜬 때). 창 480×270(N 1) · 960×540(N 2) · 1440×810(N 3)
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { loadPlaywright } from './_lib/browser.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -13,11 +13,6 @@ const OUT = path.resolve(opt('--out', 'docs/shots/art3'));
 const VIEW = opt('--view', 'diamond');
 const SIZES = (opt('--sizes', '480x270,960x540,1440x810')).split(',').map((s) => s.split('x').map(Number));
 
-async function loadPlaywright() {
-  if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 fs.mkdirSync(OUT, { recursive: true });

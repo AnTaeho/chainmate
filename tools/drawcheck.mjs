@@ -10,8 +10,8 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -23,11 +23,6 @@ const PORT = Number(opt('--port', 8793));
 const FIT = opt('--fit', null);
 let fitShown = false;
 
-async function loadPlaywright() {
-  if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
 
 // ── 정적 서버(여러 모듈을 한꺼번에 받아도 끊기지 않게 Node로)
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };

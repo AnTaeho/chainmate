@@ -3,11 +3,10 @@
 // --fit은 주소에 ?fit=int|fill을 붙인다(기본은 꽉 채움 — 그 설정이 없는 옛 판본은 무시하고 정수 배율로 돈다). 찍은 뒤 캔버스 크기 · 배율과
 // 「뒷면 = 기기 화소」인 창에서는 뒷면 캔버스 화소와 찍은 화소의 차(1:1로 붙었나)를 적는다.
 // Playwright는 저장소 의존성에 넣지 않는다 — PLAYWRIGHT(index.mjs 경로) · 'playwright' · 전역 순.
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -34,20 +33,7 @@ const CROPS = {
 };
 const ZOOM = 4;
 
-async function loadPlaywright() {
-  if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const port = srv.address().port;
 const pw = await loadPlaywright();
 const browsers = {};

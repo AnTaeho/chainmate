@@ -3,11 +3,10 @@
 // 장면: 저장 없음 · 있음(한국어 · 영어), 움직임 줄이기, 먹는 순간 셋(멈칫 · 조각 · 다섯째 번쩍), 창 전체(여백 판이 장면을 잇는지 — 흔들리는 순간).
 // 하늘의 사슬 시계(screen.T)와 게임 시계(app.time)를 정해 두고 화면의 update를 멈춰 같은 장면을 찍는다.
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -16,19 +15,7 @@ const OUT = path.resolve(ROOT, opt('--out', 'docs/shots/title'));
 const ONLY = opt('--only', null);
 const SCALES = opt('--scale', '1,2,3').split(',').map(Number);
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.mp3': 'audio/mpeg' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const port = srv.address().port;
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();

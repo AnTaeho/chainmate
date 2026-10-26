@@ -1,11 +1,11 @@
 // 빛과 움직임 짧은 영상(약 8초): 가리킨 손 카드가 들린다(CHM-26부터 숨 쉬기 · 기울기는 없다) → 떨구기 · 사슬(미끄러지는 기물 · 그림자 · 값 × 배수 빛 · 흐르는 배경).
 //   node tools/video-light.mjs [--out docs/media]  → <out>/light-motion.mp4 (1440×810, 게임이 3배로 그린 화면, H.264)
 // Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역). ffmpeg는 PATH에서 찾는다.
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -14,19 +14,7 @@ const OUT = path.resolve(ROOT, opt('--out', 'docs/media'));
 const RAW = path.join(OUT, 'raw-light');
 const W = 1440, H = 810;
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const port = srv.address().port;
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();

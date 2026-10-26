@@ -3,7 +3,7 @@
 // 장면: sheet(모든 그림 모음판 — 화면과 같은 배율의 오프스크린) · shop · codex-<탭> · master · coach · pack · moves-<탭> · tip · title
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { loadPlaywright } from './_lib/browser.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -12,11 +12,6 @@ const OUT = path.resolve(opt('--out', 'docs/shots/art3-assets'));
 const ONLY = opt('--only', null);
 const SIZES = opt('--sizes', '960x540,1440x810').split(',').map((s) => s.split('x').map(Number));
 
-async function loadPlaywright() {
-  if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 fs.mkdirSync(OUT, { recursive: true });

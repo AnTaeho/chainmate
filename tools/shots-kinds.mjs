@@ -14,11 +14,10 @@
 //   10-scrolls 상점: 두루마리 넷(좁은 칸: 깨우기 · 선봉 혼 · 역행 혼 · 깃 각인 — 영어 이름이 긴 것, CHM-41)
 //   11-scrolls 상점: 두루마리 넷(좁은 칸: 진화 · 빙결 · 굶주림 혼 · 호박 각인, CHM-41)
 // Playwright는 저장소 의존성에 넣지 않는다(전역 또는 NPM_CONFIG_PREFIX).
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -29,19 +28,7 @@ const ONLY = opt('--only', null);
 const SCALES = opt('--scale', '1,3').split(',').map(Number);
 const LANG = opt('--lang', 'ko');
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const port = srv.address().port;
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();

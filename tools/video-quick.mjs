@@ -1,21 +1,13 @@
 // 빠른 소개 영상 녹화(약 55초): 타이틀 → 첫 대국 긴 사슬 → 보상 → 상점 → 꾸러미 → 명인의 상자 → 전설. Playwright는 저장소 의존성이 아니다(npx 등으로 따로 둔다).
 //   node tools/video-quick.mjs [출력 폴더]  → webm, 그 뒤 ffmpeg로 mp4
 
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { serveRoot } from './_lib/browser.mjs';
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const OUT = process.argv[2] || 'docs/media/raw';
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const port = srv.address().port;
 const W = 1440, H = 810;
 const browser = await chromium.launch();

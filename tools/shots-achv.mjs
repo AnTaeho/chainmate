@@ -1,11 +1,10 @@
 // 업적 · 도장 스크린샷: 기록 「업적」 탭(폰 844×390, 한국어 · 영어) · 업적 알림(대국, 하나 · 둘째) · 도장(새 판 · 레퍼토리 · 도감 오프닝 · 말풍선, 1440×810).
 // band: 도전 띠 자리를 빌린 업적 알림 → 수를 두면 걷히고 띠가 돌아온다. cover: 보상 상자 위 업적 알림(보상 줄 셋 · 일곱 — 상자 위 · 왼쪽 빈 칸)
 //   node tools/shots-achv.mjs [--out docs/shots/achv] [--only records,stamp,band,cover] [--size 1440x810,844x390] [--lang ko,en]
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -16,19 +15,7 @@ const want = (k) => !ONLY || ONLY.includes(k);
 const SIZES = opt('--size', '1440x810,844x390').split(',').map((s) => s.split('x').map(Number));
 const LANGS = opt('--lang', 'ko,en').split(',');
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png', '.webmanifest': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const errors = [];

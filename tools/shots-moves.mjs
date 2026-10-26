@@ -1,11 +1,10 @@
 // 행마 보기 탭 스크린샷(CHM-26): 대국에서 「행마」를 열고 이 판 · 기본 기물 · 특수 기물(쪽마다)을 1배(창 480×270)와 3배(창 1440×810)로 찍는다.
 //   node tools/shots-moves.mjs [--out docs/shots/moves-tabs] [--lang ko,en] [--scale 1,3]
 // 손 두 장을 포 · 까마귀로 바꿔 「새로」가 보이게 한다. Playwright는 저장소 의존성에 넣지 않는다(NPM_CONFIG_PREFIX 전역).
-import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright, serveRoot } from './_lib/browser.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -14,19 +13,7 @@ const OUT = path.resolve(ROOT, opt('--out', 'docs/shots/moves-tabs'));
 const LANGS = opt('--lang', 'ko,en').split(',');
 const SCALES = opt('--scale', '1,3').split(',').map(Number);
 
-async function loadPlaywright() {
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json' };
-const srv = http.createServer((req, res) => {
-  const u = decodeURIComponent(req.url.split('?')[0]);
-  const p = path.join(ROOT, u === '/' ? 'index.html' : u);
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
-});
-await new Promise((ok) => srv.listen(0, ok));
+const srv = await serveRoot(ROOT);
 const port = srv.address().port;
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();

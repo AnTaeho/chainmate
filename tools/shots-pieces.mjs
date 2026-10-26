@@ -4,7 +4,7 @@
 // --style은 window.__P3로 넘긴다(후보 그리기 스위치가 있을 때만 뜻이 있다)
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
+import { loadPlaywright } from './_lib/browser.mjs';
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -13,11 +13,6 @@ const TAG = opt('--tag', 'before');
 const STYLE = opt('--style', '');
 const ONLY = opt('--only', '');
 const OUT = path.resolve(opt('--out', 'docs/shots/pieces'));
-async function loadPlaywright() {
-  if (process.env.PLAYWRIGHT) return import(process.env.PLAYWRIGHT);
-  try { return await import('playwright'); } catch { /* 전역 */ }
-  return import(path.join(execSync('npm root -g').toString().trim(), 'playwright', 'index.mjs'));
-}
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 fs.mkdirSync(OUT, { recursive: true });
