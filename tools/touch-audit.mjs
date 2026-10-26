@@ -151,6 +151,7 @@ async function openPage(cfg, { touch }) {
     a.records.coachSeen = new Proxy({}, { get: () => true, has: () => true }); a.records.tutorialAsked = true;
     if (a.overlay && a.overlay.name === 'welcome') a.closeOverlay();
     window.__set0 = JSON.stringify(a.settings);
+    window.__rec0 = JSON.stringify({ ...a.records, coachSeen: {} });
     window.__step(5);
   });
   page.errors = errors;
@@ -159,6 +160,7 @@ async function openPage(cfg, { touch }) {
 
 // ── 장면(drawcheck.mjs와 같은 꾸밈). 문자열로 넘겨 페이지 안에서 돈다
 const NEW = (seed, after = '') => `(() => { const a = window.__app; a.toTitle(); a.overlay = null; a.nextSeed = ${seed}; a.newRun(); if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 }); ${after} })()`;
+// 상점 진열은 실제 판과 같은 둘 — 셋이면 셋째 카드가 격언 칸 밑에 깔려 찜 책갈피를 격언 칸이 덮었다(drawcheck S-23)
 const SHOP = `(() => {
   const a = window.__app; a.toTitle(); a.nextSeed = 11; a.newRun();
   if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
@@ -166,7 +168,7 @@ const SHOP = `(() => {
   for (const [id, edition] of [['chivalry', null], ['quick_change', 'foil'], ['first_move', null], ['whim', 'rainbow']]) r.maxims.push({ uid: r.nextUid++, id, data: {}, edition, paid: 5 });
   r.consumableSlots = 4; r.consumables = [{ kind: 'engraving', id: 'glass' }, { kind: 'soul', id: 'echo' }, { kind: 'evolve' }, { kind: 'tactic', id: 'freeze' }];
   r.money = 60; r.phase = 'shop';
-  r.shop = { rng: window.__rng(), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'N', price: 6, sold: false, edition: 'pearl' }, { kind: 'soul', id: 'echo', price: 99, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
+  r.shop = { rng: window.__rng(), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'N', price: 6, sold: false, edition: 'pearl' }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
   a.go('shop');
 })()`;
 const BATTLE = NEW(11, `const r = a.run; for (const id of ['chivalry', 'quick_change', 'first_move', 'whim', 'sacrifice']) r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: null, paid: 5 }); r.consumables = [{ kind: 'tactic', id: 'freeze' }]; r.ante = 3; r.blind = 0; a.cmd({ type: 'play' }); a.go('battle', { events: [] });`);
@@ -204,10 +206,14 @@ const SCENES = [
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
 async function enter(page, sc) {
   // 설정은 장면마다 처음으로 되돌린다 — 앞 장면에서 누른 횟수(손가락은 미리 보기 · 밀기로 더 누른다)에 따라 언어 · 큰 글자가 갈리면 뒤 장면이 모두 다르게 보인다
+  // 기록도 되돌린다 — 결과 화면이 해금 단계를 올리면 다음 들어감부터 「열렸어요」 단추가 없고, 도감 칸 자물쇠가 판마다 갈렸다(P-15)
   await page.evaluate(async () => {
     const a = window.__app; a.ui.move(-1, -1); a.ui.previewId = null; a.toasts = [];
     for (const k of Object.keys(a.settings)) delete a.settings[k];
     Object.assign(a.settings, JSON.parse(window.__set0));
+    for (const k of Object.keys(a.records)) delete a.records[k];
+    Object.assign(a.records, JSON.parse(window.__rec0));
+    a.records.coachSeen = new Proxy({}, { get: () => true, has: () => true });
     (await import('/src/ui/lang.js')).setLang(a.settings.lang);
   });
   await page.evaluate(sc.setup);
@@ -266,9 +272,12 @@ async function mouseRef(sc) {
     const base = await page.evaluate(() => window.__sig());
     await page.mouse.move(cx, cy); await page.evaluate(() => window.__step(3));
     const hover = await page.evaluate(() => window.__sig());
-    let clicked = null;
-    if (r.click && r.en) { await page.mouse.down(); await page.evaluate(() => window.__step(3)); await page.mouse.up(); await page.evaluate(() => window.__step(8)); clicked = await page.evaluate(() => window.__sig()); }
-    out.sig[r.id] = { base, hover, clicked };
+    let clicked = null, clicked2 = null;
+    const click = async () => { await page.mouse.down(); await page.evaluate(() => window.__step(3)); await page.mouse.up(); await page.evaluate(() => window.__step(8)); return page.evaluate(() => window.__sig()); };
+    if (r.click && r.en) clicked = await click();
+    // 마우스도 두 번 누르는 카드(레퍼토리 — 첫 누름은 금빛 테만, U-14): 손가락의 두 번째 누름과 견줄 두 번째 클릭
+    if (clicked && await page.evaluate(() => window.__app.screen && window.__app.screen.armed != null)) clicked2 = await click();
+    out.sig[r.id] = { base, hover, clicked, clicked2 };
     await page.mouse.move(1, 1);
     await leave(page, sc);
   }
@@ -301,9 +310,12 @@ async function touchRun(cfg, cfgName, sc, ref) {
   if (cfg.edgeOnly) return { fit, rows, edgeRows };
   // steal: 마우스가 잡는 구역과 손가락이 잡는 구역이 다른 그림 안 자리
   const thits = await page.evaluate((p) => window.__hits(p), ref.pts);
+  // 설명만 있는 바탕 구역(카드 전체 말풍선) 안에 그려진 단추가 그 바탕 안 여백으로 넓힌 것은 뺀다 — 이웃이 아니라 제 카드다(관 선택 「건너뛰기」, P-13)
+  const refBox = (id) => ref.regs.find((q) => q.id === id);
+  const own = (m, t) => { const M = refBox(m), T = refBox(t); return M && T && !M.click && !M.drag && T.x >= M.x && T.y >= M.y && T.x + T.w <= M.x + M.w && T.y + T.h <= M.y + M.h; };
   ref.pts.forEach((p, i) => {
     const m = ref.hits[i], t = thits[i];
-    if (m && t !== m) rows.push({ kind: 'steal', id: m, detail: `(${p[0]},${p[1]}) 손가락이 ${t || '없음'}을 잡는다` });
+    if (m && t !== m && !(t && own(m, t))) rows.push({ kind: 'steal', id: m, detail: `(${p[0]},${p[1]}) 손가락이 ${t || '없음'}을 잡는다` });
   });
   // map: 진짜 손가락 누름(가운데)이 같은 게임 좌표로 오나 — app.pointer를 잠시 받아 적기만 한다
   const centers = ref.tg.map(center);
@@ -339,8 +351,9 @@ async function touchRun(cfg, cfgName, sc, ref) {
     if (m.clicked) {
       let dd = rel(m.base, m.clicked, tb, t1);
       const first = t1.prev === r.id || (t1.tapSq != null && m.clicked.tapSq == null);
-      if (dd.length && first) { t2 = await tap(); dd = rel(m.base, m.clicked, tb, t2); }
-      if (dd.length) rows.push({ kind: 'tap', id: r.id, detail: `${first ? '두 번째 누름' : '누름'} 뒤 다름: ${dd.map((k) => `${k} 마우스 ${JSON.stringify(m.clicked[k])} / 손가락 ${JSON.stringify((t2 || t1)[k])}`).join(' · ')}` });
+      // 둘 다 두 번 누르는 것이면 두 번째 누름이 바꾼 것끼리(첫 누름은 마우스 금빛 테 · 알림 / 손가락 미리 보기로 다르다)
+      if (dd.length && first) { t2 = await tap(); dd = m.clicked2 ? rel(m.clicked, m.clicked2, t1, t2, KEYS.filter((k) => k !== 'prev')) : rel(m.base, m.clicked, tb, t2); }
+      if (dd.length) rows.push({ kind: 'tap', id: r.id, detail: `${first ? '두 번째 누름' : '누름'} 뒤 다름: ${dd.map((k) => `${k} 마우스 ${JSON.stringify((t2 && m.clicked2 || m.clicked)[k])} / 손가락 ${JSON.stringify((t2 || t1)[k])}`).join(' · ')}` });
       if (DRIFT && r.en && r.h <= 30) {
         await leave(page, sc); await enter(page, sc);
         const db = await page.evaluate(() => window.__sig());
@@ -361,16 +374,18 @@ async function touchRun(cfg, cfgName, sc, ref) {
         const narrowW = ox >= 1, narrowH = oy >= 1;
         const cand = [...(narrowW ? [[box0.x - ox, by], [box0.x + box0.w - 1 + ox, by]] : []), ...(narrowH ? [[bx, box0.y - oy], [bx, box0.y + box0.h - 1 + oy]] : [])].filter((q) => q[0] >= 0 && q[1] >= 0 && q[0] < 480 && q[1] < 270);
         const slipAt = narrowW ? [box0.x + box0.w + 3, gy] : [gx, box0.y + box0.h + 3];
+        // 빈 자리인지는 장면에 다시 들어가 잰다 — 가운데 누름이 화면을 옮긴 뒤에 재면 다음 화면의 구역으로 재진다(관 선택 「시작」 위는 판 보기 구역)
+        await leave(page, sc); await enter(page, sc);
         const ch = await page.evaluate((p) => window.__hits(p), [...cand, slipAt]);
         const np = cand.find((q, j) => ch[j] == null) || null;
         if (np) {
-          await leave(page, sc); await enter(page, sc);
           const nb = await page.evaluate(() => window.__sig());
           const n1 = await tapAt(np[0], np[1]);
           const dn = rel(tb, t1, nb, n1);
           if (dn.length) rows.push({ kind: 'near', id: r.id, detail: `그림 밖 (${np[0]},${np[1]}) 누름: ${dn.map((k) => `${k} 기대 ${JSON.stringify(t1[k])} / ${JSON.stringify(n1[k])}`).join(' · ')}` });
         }
-        if (ch[cand.length] == null && slipAt[0] < 480 && slipAt[1] < 270) {
+        // 끌 수 있는 구역은 재지 않는다 — 가운데에서 구역 밖까지 밀면 끌기 거리(8 도트)를 넘어 끌기다(상점 격언 칸)
+        if (!r.drag && ch[cand.length] == null && slipAt[0] < 480 && slipAt[1] < 270) {
           await leave(page, sc); await enter(page, sc);
           const sb = await page.evaluate(() => window.__sig());
           // 뗄 자리는 게임 좌표로 정해 창 좌표 차로 민다(돌려 그린 세로 화면은 축이 바뀐다)
