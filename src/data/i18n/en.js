@@ -232,7 +232,7 @@ export const EN = {
   '조각 셋이면 전설': 'Three make a legend', '불멸의 기보': 'Immortal Games', '전설': 'Legend', '흔함': 'Common', '드묾': 'Uncommon', '귀함': 'Rare', '잠듦': 'Asleep', '잠김': 'Locked',
   '첫 조각': 'First fragment', '재현 조각': 'Reenactment fragment', '금빛 조각': 'Golden fragment', '재현': 'Reenact', '금빛': 'Golden',
   '판이 끝났어요': 'The run is over', '8관 돌파!': 'All 8 halls cleared!', '도달': 'Reached', '최고 한 수': 'Best move',
-  '마지막 대국': 'Last match', '모자란 점수': 'Short by', '모은 조각': 'Fragments',
+  '마지막 대국': 'Last match', '모자란 점수': 'Short by', '이긴 대국': 'Matches won', '모은 조각': 'Fragments',
   '오프닝': 'Opening', '레이팅': 'Rating', '기본': 'Standard', '추가 규칙 없음': 'No extra rules',
   '마스터': 'Master', '명경기': 'Classic', '판본': 'Edition',
   '판': 'Runs', '이긴 판': 'Runs won', '최고 도달': 'Best hall', '전설 완성': 'Legends', '신의 한 수(★★★)': 'Divine moves (★★★)', '열린 레이팅': 'Rating unlocked', '아직': 'Not yet',

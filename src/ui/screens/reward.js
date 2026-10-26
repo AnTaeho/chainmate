@@ -62,8 +62,16 @@ export class RewardScreen {
     if (app.reducedMotion || !v) { this.sum += v; this.kick = app.time; return; }
     const g = this.geom(), n = Math.max(1, Math.min(CAP.coinsLine, v));
     // 금액(오른쪽 맞춤) 바로 오른쪽 칸에서 솟아 같은 칸으로 「합」 줄까지 내려간다 — 금액 · 이름 글을 덮지 않는다
-    const xr = g.x + g.w - INTER.pad - SP.s, by = g.y + g.lay.bodyY;
+    const xr = this.cols(g.x + INTER.pad, g.w - INTER.pad * 2).R0 + SP.m - SP.s, by = g.y + g.lay.bodyY;
     flyCoins(app.fx, xr, by + g.body.rows[i] + 5, xr, by + g.body.total + 5, { n, seed: i * 17 + v, rise: 8, jitter: 0, onHit: () => { this.sum += v / n; this.kick = app.time; } });
+  }
+  // 표 열: 이름 열은 가장 긴 이름 + 16, 금액은 그 열 끝에 오른쪽 맞춤 — 표째 상자 가운데(29절). 합 · 상금 줄도 같은 열(S-8)
+  cols(bx, bw) {
+    const names = this.lines.map(([l, , n]) => (n ? segW([[l, false], [' ', false], [n, true]]) : measure(l)));
+    const vals = [...this.lines.map(([, v]) => v), this.total, this.app.run.money].map((v) => measure(`$${v}`, true));
+    const tw = Math.max(measure('합'), measure('상금'), ...names) + SP.xl + Math.max(...vals);
+    const L0 = bx + Math.max(SP.m, (bw - tw) >> 1);
+    return { L0, R0: Math.min(bx + bw - SP.m, L0 + tw) };
   }
   // 점수 줄 조각: 「점수 500 / 목표 150」(이름 보통 · 수치 굵게)
   scoreSegs() {
@@ -98,15 +106,15 @@ export class RewardScreen {
     const done = this.shown > this.lines.length && !app.fx.list.some((f) => f.coin);
     const box = interlude(ctx, ui, x, y, w, B.h, (c, bx, by, bw) => {
       mixed(c, this.scoreSegs(), bx + (bw >> 1), by + B.score, { align: 'center' });
-      // 보상 줄: 이름(흐림, 이름 뒤 수치는 굵게) · 금액(오른쪽, 굵게) — 이름 · 금액은 안쪽 SP.m
-      const L0 = bx + SP.m, R0 = bx + bw - SP.m;
+      // 보상 줄: 이름(흐림, 이름 뒤 수치는 굵게) · 금액(표 열 끝에 오른쪽, 굵게)
+      const { L0, R0 } = this.cols(bx, bw);
       this.lines.forEach(([label, v, n], i) => {
         if (i >= this.shown) return;
         mixed(c, n ? [[label, false, PAL.dim], [' ', false, PAL.dim], [n, true, PAL.dim]] : [[label, false, PAL.dim]], L0, by + B.rows[i]);
         text(c, `$${v}`, R0, by + B.rows[i], PAL.gold, { align: 'right', bold: true });
       });
       // 「합」 줄은 처음부터 서 있고 동전이 닿을 때마다 오르며 튄다(0.25초, 큰 수는 상자 밖 연출 자리에)
-      rect(c, bx, by + B.rule, bw, 1, PAL.frameHi);
+      rect(c, L0, by + B.rule, R0 - L0, 1, PAL.frameHi);
       text(c, '합', L0, by + B.total, PAL.ink);
       const sumS = `$${done ? this.total : Math.min(this.total, Math.round(this.sum))}`;
       const k = app.reducedMotion ? 1 : (app.time - this.kick) / 0.25;
@@ -117,7 +125,8 @@ export class RewardScreen {
         closeBox();
       } else text(c, sumS, R0, by + B.total, PAL.gold, { align: 'right', bold: true });
       if (this.shown > this.lines.length) {
-        mixed(c, [['상금', false, PAL.ink], [' ', false, PAL.ink], [`$${app.run.money}`, true, PAL.gold]], bx + (bw >> 1), by + B.money, { align: 'center' });
+        text(c, '상금', L0, by + B.money, PAL.dim);
+        text(c, `$${app.run.money}`, R0, by + B.money, PAL.gold, { align: 'right', bold: true });
         if (this.gold) text(c, '금빛 팩이 상점에 나왔어요', bx + (bw >> 1), by + B.gold, PAL.gold, { align: 'center', bold: true });
       }
       // 넘친 목표 도장: 제목 줄 오른쪽 끝, 칠한 칩(모서리 R_SM)

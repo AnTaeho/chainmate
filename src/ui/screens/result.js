@@ -122,7 +122,10 @@ export class ResultScreen {
     const got = LEGENDS.filter((l) => run.fragments[l.id] && (run.fragments[l.id].first || run.fragments[l.id].feat || run.fragments[l.id].gold)).slice(0, 3);
     const labels = [];
     if (this.last) labels.push('도달');
-    if (!this.won && this.last) { labels.push('마지막 대국'); if (this.short > 0) labels.push('모자란 점수'); }
+    // 이긴 판도 진 판과 같은 넷째 줄 차림: 도달 · 마지막 대국 · (모자란 점수 | 이긴 대국) · 상금(S-9)
+    if (this.last) labels.push('마지막 대국');
+    if (!this.won && this.short > 0) labels.push('모자란 점수');
+    if (this.won) labels.push('이긴 대국');
     labels.push('상금');
     if (got.length) labels.push('모은 조각');
     const labW = Math.max(...labels.map((l) => measure(l))) + SP.xl;
@@ -130,10 +133,9 @@ export class ResultScreen {
     const nums = (f) => { const s = f(num); return measure(s, true) <= room ? s : f(short); };
     const rows = [];
     if (this.last) rows.push({ label: '도달', value: `${run.ante}관 ${KIND_NAME[this.last.kind]}` });
-    if (!this.won && this.last) {
-      rows.push({ label: '마지막 대국', value: nums((n) => `${n(this.last.score)} / ${n(this.last.target)}`) });
-      if (this.short > 0) rows.push({ label: '모자란 점수', value: nums((n) => `${n(this.short)} (${this.pct}%)`), col: PAL.red });
-    }
+    if (this.last) rows.push({ label: '마지막 대국', value: nums((n) => `${n(this.last.score)} / ${n(this.last.target)}`) });
+    if (!this.won && this.short > 0) rows.push({ label: '모자란 점수', value: nums((n) => `${n(this.short)} (${this.pct}%)`), col: PAL.red });
+    if (this.won) rows.push({ label: '이긴 대국', value: `${run.log.filter((l) => l.won).length}`, col: PAL.gold });
     rows.push({ label: '상금', value: `$${run.money}` });
     got.forEach((l, i) => rows.push({ label: i ? '' : '모은 조각', legend: l, vw: measure(l.name) + SP.s + SHARD.w * 3 + SP.xs * 2 }));
     for (const r of rows) if (r.vw == null) r.vw = measure(r.value, true);
