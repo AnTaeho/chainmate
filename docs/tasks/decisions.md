@@ -129,6 +129,7 @@
 - (가 · 권장) `@electric-sql/pglite`를 devDependency로 두고 `db/schema.sql`을 메모리 Postgres에 올려 `store.js`를 그대로 돌리는 시험. CLAUDE.md 「npm 패키지는 `api/`만」은 게임(`src/`)이 npm을 안 쓴다는 규칙이라 시험용 devDependency는 어긋나지 않는다고 읽지만, 규칙 문구를 바꿀지 사람이 정한다. (나) Neon 가지 DB에 대는 시험(비밀 열쇠가 든다).
 
 ### C-12 미리 보기 배포가 프로덕션 순위에 쓸 수 있다
+- **끝 — 고칠 것 없음(2026-10-26 확인)**: 미리 보기 주소는 Vercel 배포 보호로 막혀 있다. `POST https://chainmate-dtszofqon-paper-cut.vercel.app/api/player` → `302 https://vercel.com/sso-api?...`(페이지 `GET /`도 302).
 - 미리 보기 주소가 Vercel 배포 보호(로그인)로 막혀 있으면 문제없다 — **사람이 대시보드에서 확인**. 안 막혀 있으면 (가) 쓰기 길을 `VERCEL_ENV === 'production'`에서만 받거나 (나) 미리 보기용 `DATABASE_URL`을 Neon 가지로 나눈다.
 
 ### P-14 서비스 워커
