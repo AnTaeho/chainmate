@@ -1,6 +1,7 @@
 // 순위의 조작 막기(CHM-70, api/_lib/verify.js): 서버가 명령 줄을 다시 두어 낸 성적이 그 판을 둔 쪽의 성적과 같은가,
 // 고친 · 뺀 · 지어낸 명령을 거절하는가, 우승 뒤 끝없는 대국을 빼는가, 진행 중 판을 거절하는가, 명령 기록이 저장 왕복에 안전한가.
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { applyRun, createRun } from '../src/sim/run.js';
 import { createDailyRun, dailySeed, DAILY } from '../src/sim/daily.js';
@@ -13,13 +14,23 @@ import { rankKey, compareRank, better } from '../api/_lib/rank.js';
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const code = (fn) => { try { fn(); } catch (e) { assert.ok(e instanceof VerifyError, String(e)); return e.code; } return null; };
 // 봇이 오늘의 대국 판을 끝까지 둔다. 돌려주는 것: { run, cmds(JSON 왕복한 것 — 서버가 받는 꼴), want }
+// smart 봇은 한 판이 30초라 둔 명령 줄 · 기대 성적을 test/fixtures/daily-<날짜>-smart.json에 두고, 그 줄을 다시 둔 판을 쓴다(C-4).
+// 규칙을 바꿔 그 줄이 거절되거나 성적이 달라지면 node tools/fixture-daily.mjs로 다시 만든다
 const played = new Map();
+const FIXED = { '2026-10-08:smart': 'fixtures/daily-2026-10-08-smart.json' };
 function botDaily(date, policy) {
   const k = `${date}:${policy}`;
   if (!played.has(k)) {
     const run = createDailyRun(date);
-    playRun(run, policy);
-    played.set(k, { run, cmds: clone(run.cmds), want: summarize(run) });
+    if (FIXED[k]) {
+      const fx = JSON.parse(readFileSync(new URL(FIXED[k], import.meta.url), 'utf8'));
+      try { for (const c of clone(fx.cmds)) applyRun(run, c); } catch (e) { throw new Error(`${FIXED[k]}이 지금 규칙에서 거절된다 — node tools/fixture-daily.mjs ${date} (${e.message})`); }
+      assert.deepEqual(summarize(run), fx.want, `${FIXED[k]}의 성적이 지금 규칙과 다르다 — node tools/fixture-daily.mjs ${date}`);
+      played.set(k, { run, cmds: clone(fx.cmds), want: fx.want });
+    } else {
+      playRun(run, policy);
+      played.set(k, { run, cmds: clone(run.cmds), want: summarize(run) });
+    }
   }
   return played.get(k);
 }
@@ -82,7 +93,7 @@ test('다른 날짜의 명령 줄 · 명령을 고치거나 뺀 줄은 거절되
   const { cmds, want } = botDaily('2026-10-08', 'smart');
   assert.ok(['bad_cmd', 'unfinished'].includes(code(() => verifyDaily('2026-10-10', cmds))));
   let rejected = 0, same = 0, n = 0;
-  const step = Math.max(1, Math.floor(cmds.length / 40));
+  const step = Math.max(1, Math.floor(cmds.length / 12)); // 줄 하나를 다시 두는 데 0.3초 — 고르게 열둘쯤(C-4)
   for (let i = 0; i < cmds.length; i += step) {
     for (const forged of [cmds.filter((_, k) => k !== i), cmds.map((c, k) => (k === i && 'sq' in c ? { ...c, sq: (c.sq + 1) % 64 } : c))]) {
       if (JSON.stringify(forged) === JSON.stringify(cmds)) continue;
@@ -93,7 +104,7 @@ test('다른 날짜의 명령 줄 · 명령을 고치거나 뺀 줄은 거절되
       else if (JSON.stringify({ ...got, used: 0 }) === JSON.stringify({ ...want, used: 0 })) same++;
     }
   }
-  assert.ok(n >= 40);
+  assert.ok(n >= 12, `위조 줄 ${n}`);
   assert.ok(rejected > n / 2, `거절 ${rejected}/${n}`);
   assert.ok(same < n / 4, `같은 결과 ${same}/${n}`);
 });

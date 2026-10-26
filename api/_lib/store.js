@@ -89,7 +89,7 @@ export function createStore(sql) {
     // 새 코드: 그 사람의 앞 코드는 지운다. 같은 해시가 살아 있으면 거짓(다른 숫자로 다시)
     async putCode(id, codeHash, expires) {
       await sql('delete from link_codes where player_id = $1::bigint or expires_at < to_timestamp($2::double precision / 1000) - interval \'1 day\'', [id, expires]);
-      await sql('delete from link_limits where at < now() - interval \'2 days\'', []);
+      await this.sweep();
       return !!(await one(`insert into link_codes (code_hash, player_id, expires_at) values ($1, $2::bigint, to_timestamp($3::double precision / 1000))
         on conflict (code_hash) do nothing returning code_hash`, [codeHash, id, expires]));
     },
@@ -159,6 +159,11 @@ export function createStore(sql) {
     // 열쇠 하나를 지운다
     async dropKey(keyHash) {
       await sql('delete from player_keys where key_hash = $1', [keyHash]);
+    },
+    // 청소: 이틀 지난 한도 줄 · 하루 넘게 지난 코드. 코드를 받을 때와 제출 · 저장 100번에 한 번(service) — 코드 받기만 청소하면 표가 계속 자랐다(C-10)
+    async sweep() {
+      await sql('delete from link_limits where at < now() - interval \'2 days\'', []);
+      await sql('delete from link_codes where expires_at < now() - interval \'1 day\'', []);
     },
     // 플레이어와 딸린 것(계정 · 열쇠 · 성적 · 명령 줄 · 코드 · 저장 — cascade) + 그 사람의 한도 줄
     async deletePlayer(id) {

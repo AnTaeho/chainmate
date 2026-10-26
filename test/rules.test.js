@@ -12,7 +12,7 @@ test('규칙 파일 해시가 기록과 같다(다르면 RULES_VERSION을 올리
   const now = rulesHash();
   assert.ok(rulesFiles().includes('api/_lib/verify.js') && rulesFiles().some((p) => p.startsWith('src/data/')) && !rulesFiles().some((p) => p.startsWith('src/data/i18n')));
   if (now !== want.hash) assert.ok(RULES_VERSION > want.version, `규칙 파일이 바뀌었는데 RULES_VERSION(${RULES_VERSION})이 그대로다 — 올리고 node tools/rules-hash.mjs --write`);
-  assert.equal(now, want.hash, '해시 기록을 고쳐라: node tools/rules-hash.mjs --write');
+  assert.equal(now, want.hash, '해시 기록을 고쳐라: node tools/rules-hash.mjs --write (오늘의 대국 시험 자료도: node tools/fixture-daily.mjs)');
   assert.equal(RULES_VERSION, want.version, '기록의 판본과 RULES_VERSION이 다르다: node tools/rules-hash.mjs --write');
 });
 

@@ -24,6 +24,9 @@ function randomRecords(seed) {
   if (r() < 0.5) rec.tutorialAsked = r() < 0.5;
   if (r() < 0.5) rec.movesSeen = some();
   if (r() < 0.5) rec.runNew = { seed: n(3), keys: IDS.filter(() => r() < 0.4) };
+  // 업적 쪽 여섯 칸(C-14): 업적 · 기록 수 · 이긴 마스터 · 시너지 최고 · 도장(0 = 단 0으로 이겼다 — 열쇠가 있는 것이 뜻)
+  const nums = (k) => Object.fromEntries(IDS.filter(() => r() < 0.5).map((id) => [id, n(k)]));
+  rec.achv = some(); rec.feats = nums(12); rec.mastersBeaten = some(); rec.synergyTop = nums(7); rec.openingDan = nums(3); rec.josekiDan = nums(3);
   if (r() < 0.3) rec.someday = { n: n(5), on: r() < 0.5, word: IDS[n(6)] }; // 규칙이 없는 칸
   return normRecords(rec);
 }
@@ -38,6 +41,13 @@ test('합치기: 교환 · 결합 · 멱등(무작위 기록 300쌍)', () => {
     assert.deepEqual(mergeRecords(ab, a), ab, `합친 것에 다시 합쳐도 같다 ${i}`);
     assert.deepEqual(JSON.parse(JSON.stringify(ab)), ab, 'JSON 왕복');
   }
+});
+
+test('합치기: 도장의 0(단 0으로 이겼다)은 합친 뒤에도 열쇠째 남는다', () => {
+  const a = { ...emptyRecords(), openingDan: { standard: 0 }, josekiDan: { torch: 0 } }, b = { ...emptyRecords(), openingDan: { london: 2 } };
+  const m = mergeRecords(a, b);
+  assert.deepEqual(m.openingDan, { standard: 0, london: 2 });
+  assert.deepEqual(m.josekiDan, { torch: 0 });
 });
 
 test('합치기: 빈 기록은 아무것도 바꾸지 않는다 · 켜서 읽은 기록 꼴 그대로', () => {

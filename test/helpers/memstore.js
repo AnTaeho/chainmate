@@ -61,6 +61,8 @@ export function memStore() {
       codes.set(codeHash, { playerId: id, expires, used: false });
       return true;
     },
+    swept: 0,
+    async sweep() { this.swept++; },
     async findCode(codeHash) { const c = codes.get(codeHash); return c ? { ...c } : null; },
     async claimCode(codeHash, now) { const c = codes.get(codeHash); if (!c || c.used || c.expires <= now) return false; c.used = true; return true; },
     async absorb(from, to, oldKeyHash, newKeyHash) {

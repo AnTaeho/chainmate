@@ -236,3 +236,17 @@ test('함수: PUT도 JSON 본문만 받고, 저장 길은 본문 200KB에서 끊
   assert.equal(o.headers.get('access-control-allow-methods'), 'GET, PUT, OPTIONS');
   assert.equal(LIMITS.save, 200 * 1024);
 });
+
+test('한도 표 청소(C-10): 코드를 받을 때 말고도 제출 · 저장 성공 뒤 가끔(rand < LIMITS.sweep) 청소한다', async () => {
+  const { createService, LIMITS } = await import('../api/_lib/service.js');
+  const { memStore } = await import('./helpers/memstore.js');
+  const store = memStore();
+  let roll = 0.5;
+  const svc = createService({ store, rand: () => roll });
+  const p = (await svc.player({})).body;
+  assert.equal((await svc.savePut({ key: p.key, baseRev: 0, blob: blob() })).status, 200);
+  assert.equal(store.swept, 0);
+  roll = LIMITS.sweep / 2;
+  assert.equal((await svc.savePut({ key: p.key, baseRev: 1, blob: blob() })).status, 200);
+  assert.equal(store.swept, 1);
+});

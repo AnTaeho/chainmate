@@ -10,6 +10,7 @@ export const LIMITS = {
   body: 256 * 1024,        // 요청 본문(바이트)
   cmds: VERIFY_LIMITS.cmds, // 명령 수
   submits: 30,             // 플레이어당 하루 제출
+  sweep: 0.01,             // 제출 · 저장 성공 뒤 한도 표를 청소할 몫(store.sweep)
   rerolls: 20,             // 플레이어당 하루 다시 짓기
   page: 10,                // 순위표 한 쪽
   around: 2,               // 내 위아래 줄
@@ -66,7 +67,8 @@ const dayGap = (a, b) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`
 // store: api/_lib/store.js createStore 꼴. build: 이 배포의 식별자. now: () => ms. newKey: () => 64자 16진수. rand: () => [0, 1)
 // newCode: () => 숫자 여덟 자리 글
 // scryptN: 비번 해시의 N(시험은 작은 값을 넘긴다)
-export function createService({ store, build = 'dev', now = Date.now, newKey = () => randomBytes(32).toString('hex'), rand = Math.random, newCode = () => String(randomInt(0, 1e8)).padStart(8, '0'), scryptN = SCRYPT.N }) {
+// verify: 비번 견줌(시험이 바꿔 끼워 「없는 아이디도 진짜와 같은 꼴의 해시로 한 번 견준다」를 구조로 잰다 — C-3)
+export function createService({ store, build = 'dev', now = Date.now, newKey = () => randomBytes(32).toString('hex'), rand = Math.random, newCode = () => String(randomInt(0, 1e8)).padStart(8, '0'), scryptN = SCRYPT.N, verify = verifyPassword }) {
   const today = () => utcDate(now());
   const who = async (key) => (isKey(key) ? store.getPlayer(hashKey(key), today()) : null);
   const hourOf = () => new Date(now()).toISOString().slice(0, 13);
@@ -79,6 +81,8 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
   // 없는 아이디에도 같은 값의 해시 견줌을 한 번 한다(아이디가 있는지가 걸린 시간으로 새지 않게)
   let dummyP = null;
   const dummy = () => (dummyP ||= hashPassword(randomBytes(24).toString('hex'), { N: scryptN }));
+  // 한도 표 · 지난 코드 청소: 제출 · 저장 100번에 한 번쯤(store.sweep — C-10). 청소가 실패해도 답은 그대로
+  const sometimesSweep = async () => { if (store.sweep && rand() < LIMITS.sweep) { try { await store.sweep(); } catch { /* 다음에 */ } } };
   // 틀린 비번: 열쇠 · 전체 · (아이디) 한도를 센다. 아이디가 한도에 닿으면 잠근다. 답은 늘 같은 401
   const wrong = async (me, uid = null) => {
     await Promise.all([store.bump('loginkey', me.id, hourOf(), LIMITS.keyLoginFails), store.bump('loginall', 0, allOf(), LIMITS.loginAllFails)]);
@@ -139,6 +143,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       }
       // 남기는 명령 줄은 다시 둔 만큼만(우승 뒤 끝없는 대국은 뺀다)
       const improved = await store.putScore(p.id, date, result, build, JSON.stringify(cmds.slice(0, used)));
+      await sometimesSweep();
       const st = await store.standing(p.id, date);
       return ok({ ok: true, best: st.best, rank: st.rank, total: st.total, improved });
     },
@@ -241,7 +246,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       if (!p) return err(401, 'unknown_key');
       if ((await store.bump('save', p.id, today(), LIMITS.saves)) == null) return err(429, 'save_limit');
       const rev = await store.putSave(p.id, baseRev, text, now());
-      if (rev != null) return ok({ rev, updatedAt: now() });
+      if (rev != null) { await sometimesSweep(); return ok({ rev, updatedAt: now() }); }
       const s = await store.getSave(p.id);
       return err(409, 'conflict', s ? { rev: s.rev, updatedAt: s.updatedAt, blob: JSON.parse(s.blob) } : { rev: 0 });
     },
@@ -296,7 +301,7 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       if (until > now()) return err(429, 'locked', { retryAfter: Math.ceil((until - now()) / 1000) });
       if (mine && mine.username !== name) return err(409, 'other_account');
       const acct = name ? found : null;
-      const good = await verifyPassword(password, acct ? acct.hash : await dummy());
+      const good = await verify(password, acct ? acct.hash : await dummy());
       if (!acct || !good) return wrong(me, uid);
       await store.setMark('login', uid, failOf(), 0);
       const done = (p, k) => ok({ key: k, a: p.a, n: p.n, rerolls: Math.max(0, LIMITS.rerolls - p.rerolls), devices: p.devices, username: name });

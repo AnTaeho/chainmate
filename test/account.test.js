@@ -141,20 +141,20 @@ test('들어오기 실패: 틀린 비번 · 없는 아이디 · 규칙 밖 아�
   // 없는 아이디도 같은 한도 줄을 센다(잠금으로 아이디가 있는지 새지 않게)
   assert.equal(await store.peek('login', usernameId('nobody_here'), `fail:${Math.floor(NOW / LIMITS.loginSpan)}`), 1);
   assert.equal(await store.peek('login', usernameId('taeho_an'), `fail:${Math.floor(NOW / LIMITS.loginSpan)}`), 1);
-  // 가짜 견줌: 없는 아이디도 진짜 N으로 해시 한 번 값의 시간을 쓴다
-  const real = createService({ store: memStore(), now: () => NOW });
+  // 가짜 견줌: 없는 아이디 · 규칙 밖 아이디도 진짜 계정과 같은 꼴(같은 N)의 해시로 꼭 한 번 견준다 — 시간으로 아이디가 있는지 새지 않게.
+  // 벽시계 비율로 재면 부하에서 흔들려(C-3) 견줌 함수를 바꿔 끼워 구조로 잰다
+  const seen = [];
+  const real = createService({ store: memStore(), now: () => NOW, verify: async (pw, hash) => { seen.push(hash); return false; } });
   const p = (await real.player({})).body;
   await real.accountSignup({ key: p.key, username: 'real_user', password: PW });
-  const time = async (username) => { const t = process.hrtime.bigint(); await real.accountLogin({ key: p.key, username, password: 'wrong-password' }); return Number(process.hrtime.bigint() - t) / 1e6; };
-  await time('ghost_user'); // 가짜 해시를 처음 만드는 값은 뺀다
-  const miss = await time('ghost_user'), hit = await time('real_user');
-  // p는 real_user의 기기라 ghost_user는 other_account로 끝난다 — 다른 기기로 잰다
   const q = (await real.player({})).body;
-  const t0 = process.hrtime.bigint(); const r1 = await real.accountLogin({ key: q.key, username: 'ghost_user', password: 'wrong-password' }); const tMiss = Number(process.hrtime.bigint() - t0) / 1e6;
-  const t1 = process.hrtime.bigint(); const r2 = await real.accountLogin({ key: q.key, username: 'real_user', password: 'wrong-password' }); const tHit = Number(process.hrtime.bigint() - t1) / 1e6;
-  assert.deepEqual([r1, r2], [bad, bad]);
-  assert.ok(miss >= 0 && hit >= 0);
-  assert.ok(tMiss > tHit * 0.4 && tMiss < tHit * 2.5 && tMiss > 5, `없는 아이디 ${tMiss.toFixed(1)}ms · 있는 아이디 ${tHit.toFixed(1)}ms`);
+  const shape = (h) => h.split('$').slice(0, 4).join('$');
+  for (const username of ['real_user', 'ghost_user', '한글 아이디']) {
+    seen.length = 0;
+    assert.deepEqual(await real.accountLogin({ key: q.key, username, password: 'wrong-password' }), bad, username);
+    assert.equal(seen.length, 1, `${username}: 견줌 한 번`);
+    assert.equal(shape(seen[0]), `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}`, `${username}: 진짜와 같은 꼴`);
+  }
 });
 
 test('잠금: 아이디당 15분에 5번 틀리면 15분 잠금(맞는 비번도 429) · 열쇠당 한 시간 20번 · 전체 10분 1000번', async () => {
