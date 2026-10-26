@@ -203,9 +203,9 @@ test('갈림길 카드 글: 떨구기 · 희생 · 다시 놓기 · 같은 떨�
   assert.equal(L(R.forkLine(drop, [])), 'Knight on c3 would have won');
   assert.equal(L('폰을 희생했다면 이겼어요'), 'Sacrificing the pawn would have won');
   assert.equal(L(R.forkLine(split, board)), 'Taking the bishop on e5 would have won');
-  assert.equal(L(R.forkScores(drop)), 'You 120 · Winning line 2,340 / Target 150');
+  assert.equal(L(R.forkScores(drop)), 'Yours 120 · Best 2,340 / Target 150');
   assert.equal(L('복기 · 2/4수'), 'Review · 2/4');
-  assert.deepEqual(R.forkScoreLines(drop).map(L), ['You 120 · Winning line 2,340', 'Target 150']);
+  assert.deepEqual(R.forkScoreLines(drop).map(L), ['Yours 120 · Best 2,340', 'Target 150']);
   for (const s of [R.NO_PATH, R.THINKING, '다시 두기', '건너뛰기', '판을 다시 놓았다면 이겼어요', '복기']) assert.ok(!/[가-힣]/.test(L(s)), s);
   M.lang.setLang('ko');
 });
