@@ -5,7 +5,7 @@ import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { H, text, box, rect, rrect, rframe, fitNum, measure, R_SM } from '../../render/gfx.js';
-import { live } from '../../render/look.js';
+import { beat, LOOK } from '../../render/look.js';
 import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
 import { challengeText, CHALLENGE_TEXT } from '../../data/challenges.js';
@@ -51,8 +51,8 @@ export function antePath(ctx, ui, run, cx, y, time) {
   text(ctx, label, x0, y, PAL.ink, { bold: true });
   const px = x0 + lw + 10, py = y + 2;
   rect(ctx, px + 4, py + 4, (ANTES - 1) * step, 1, PAL.feltHi);
-  const pulse = 0.5 + 0.5 * Math.sin(time * 5);
-  live();
+  // 숨은 계단(초당 6번 — beat): 쉬는 관 선택이 초당 60번 그렸다(P-8). 움직임 줄이기면 멈춘 밝기
+  const pulse = LOOK.calm ? 1 : 0.5 + 0.5 * Math.sin((beat(time, 6) / 6) * 5);
   for (let i = 0; i < ANTES; i++) {
     const a = i + 1, x = px + i * step;
     const done = a < run.ante, cur = a === run.ante;

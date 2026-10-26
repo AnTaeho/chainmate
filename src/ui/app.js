@@ -750,7 +750,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
       if (want || app.alwaysDraw || LOG.on) {
         const asked = need, hov = app.ui.hover ? app.ui.hover.id : null;
         need = false;
-        MOTION.live = false; MOTION.beats.clear();
+        MOTION.live = false; MOTION.beats.clear(); MOTION.now = app.time;
         swayBegin(app.time);
         app.draw();
         // 움직이던 것이 멈춘 뒤 · 바뀐 것을 그린 뒤 한 번 더 그린다(사라진 알림을 지우고, 이번 그림이 고른 가리킴 · 자리를 보인다)

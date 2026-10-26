@@ -2,7 +2,7 @@
 // 칸은 그림 상자 하나(22×26, 진화만 44×26, 두루마리 칸은 18×22)이고 안 3 벡터 그림을 (물건, 칸 크기, 배율 N)마다 한 번 굽고 붙인다.
 // 격언 · 전설: 가족 빛깔 상자 + 가족 모양(밝은 그림자) + 문양(emblems.js). 각인 · 혼 · 전술 · 조각 · 도박 · 깨우기 · 판본은 제 물건 그림.
 import { PAL } from '../render/palette.js';
-import { live } from '../render/look.js';
+import { beatAt, LOOK } from '../render/look.js';
 import { rect, dot } from '../render/gfx.js';
 import { tierOf } from '../render/sprites.js';
 import { fitPiece } from '../render/pieces3.js';
@@ -208,7 +208,7 @@ function paintCell(g, n, it, w, h, hue) {
 }
 
 // 도박의 도는 빛깔: 한 바퀴를 스물넷으로 끊는다(구운 칸을 그만큼만 둔다)
-const gambleHue = (t) => { if (t) live(); return (Math.floor((t * 200) / 15) * 15) % 360; };
+const gambleHue = (t) => (t ? (beatAt(t, 200 / 15) * 15) % 360 : 0); // 계단(초당 약 13번 — beat, P-8)
 export const artW = (it) => (it.kind === 'evolve' ? ART.w * 2 : ART.w);
 
 // 네 귀 꺾쇠
@@ -235,9 +235,10 @@ export function itemArt(ctx, it, x, y, t = 0, run = null, { w = artW(it), h = AR
   blitVec(ctx, `art:${it.kind}:${it.id || ''}:${hue}`, x, y, w, h, (g, n) => paintCell(g, n, it, w, h, hue));
   // 움직이는 것은 정수 칸에: 혼의 도는 점 셋 · 깨우기의 귀 반짝임
   const cx = x + w / 2, cy = y + h / 2;
-  if ((it.kind === 'soul' || it.kind === 'awaken') && t) live();
-  if (it.kind === 'soul') for (let k = 0; k < 3; k++) { const q = t * 2 + (k * Math.PI * 2) / 3; dot(ctx, cx + Math.cos(q) * 6.5 - 1, cy + Math.sin(q) * 6.5 - 1, 2, PAL.white); }
-  if (it.kind === 'awaken') { const k = Math.floor(t * 4) % 2; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (!(((sx + sy) / 2 + k) & 1)) dot(ctx, cx + (sx > 0 ? 7 : -8) - 0.2, cy + (sy > 0 ? 7 : -8) - 0.2, 1.4, PAL.goldHi); }
+  // 계단(beat)으로만 바뀐다 — 혼은 초당 12번, 깨우기는 4번. 움직임 줄이기면 멈춘다(P-8: 혼 두루마리를 든 상점이 초당 60번 그렸다)
+  const turns = it.kind === 'soul' || it.kind === 'awaken', still = !t || LOOK.calm || !turns, ts = still ? 0 : beatAt(t, 12) / 12;
+  if (it.kind === 'soul') for (let k = 0; k < 3; k++) { const q = ts * 2 + (k * Math.PI * 2) / 3; dot(ctx, cx + Math.cos(q) * 6.5 - 1, cy + Math.sin(q) * 6.5 - 1, 2, PAL.white); }
+  if (it.kind === 'awaken') { const k = still ? 0 : beatAt(t, 4) % 2; for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) if (!(((sx + sy) / 2 + k) & 1)) dot(ctx, cx + (sx > 0 ? 7 : -8) - 0.2, cy + (sy > 0 ? 7 : -8) - 0.2, 1.4, PAL.goldHi); }
   return w;
 }
 // 격언 칸 · 도감 칸의 작은 그림 칸(20 × 22): 진열 카드와 같은 그림
