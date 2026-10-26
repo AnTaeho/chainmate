@@ -45,7 +45,7 @@ export class SetupScreen {
     const rec = this.app.records;
     rec.lastOpening = this.opening; rec.lastDan = this.dan;
     this.app.saveRecords();
-    this.app.newRun({ opening: this.opening, dan: this.dan });
+    this.app.askNewRun({ opening: this.opening, dan: this.dan });
   }
   // 오프닝 카드 쌓기(PAD_CARD): 열린 카드는 이름(제목 줄) → 묶음 틈 → 덱 모습(두 줄) → 묶음 안 틈 → 더하는 것(덱 모습의 풀이),
   // 잠긴 카드는 「?」(두 배, 줄 28) → 묶음 틈 → 해금 과제 글. 다섯 카드는 가장 긴 카드의 높이

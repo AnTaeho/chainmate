@@ -37,6 +37,8 @@ function tierSeal(ctx, cx, cy, r, col) {
   for (const [rr, c] of [[r, PAL.frameDk], [r - 1, col]]) { ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); }
 }
 
+export const ARM_SAY = '한 번 더 누르면 이 레퍼토리로 정해요';
+
 export class DraftScreen {
   constructor(app) { this.app = app; this.t = 0; this.chosen = null; this.notes = 'side'; app.sfx('pack'); }
   get run() { return this.app.run; }
@@ -52,6 +54,15 @@ export class DraftScreen {
       if (this.app.autoPlay && this.run.phase === 'select') { this.app.autoPlay = false; const ev = this.app.cmd({ type: 'play' }); this.app.go('battle', { events: ev }); }
       else this.app.goPhase();
     }
+  }
+  // 마우스는 두 번: 처음 누름은 그 카드에 금빛 테만, 한 번 더 누르면 판 끝까지 가는 선택이 정해진다. 손가락은 첫 누름이 미리 보기(ui preview)라 그대로,
+  // 숫자 키 · 다 뒤집히기 전 누름(넘기기)도 그대로(U-14)
+  choose(i) {
+    if (this.chosen) return;
+    if (this.app.touch || this.armed === i || this.t < at(i) + 0.25) return this.pick(i);
+    this.armed = i;
+    this.app.sfx('pick');
+    this.app.toast(ARM_SAY, PAL.gold);
   }
   pick(i) {
     if (this.chosen) return;
@@ -81,9 +92,10 @@ export class DraftScreen {
       const sx = Math.abs(1 - 2 * p);
       const x = x0 + i * (CW + CARD.gap), y = draftY(CH);
       const uid = `draft:${i}`;
-      ui.region(uid, x, y, CW, CH, { onClick: () => this.pick(i), preview: uid, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
+      ui.region(uid, x, y, CW, CH, { onClick: () => this.choose(i), preview: uid, keys: () => [...j.families.map((f) => ({ id: `fam_${f}` })), j.text], tip: j.more ? () => tipLines(j.name, j.more) : null });
       // 도장 구역(drawCard)을 가리켜도 카드는 들린 채로 — 내려앉으면 도장이 커서 밑에서 빠져 떨린다
-      const hov = (ui.isHover(uid) || ui.isHover(`${uid}:stamp`)) && !this.chosen;
+      // 처음 누른 카드(마우스, U-14)는 가리키지 않아도 들린 채 금빛 테
+      const hov = (ui.isHover(uid) || ui.isHover(`${uid}:stamp`) || this.armed === i) && !this.chosen;
       const nw = Math.max(2, Math.round(CW * sx)), xx = x + Math.floor((CW - nw) / 2);
       if (p < 0.5) { box(ctx, xx, y, nw, CH, PAL.fogHi, PAL.frameDk); if (nw > 30) tierSeal(ctx, xx + Math.floor(nw / 2), y + CH / 2, 9, TIER_COL[j.tier]); return; }
       if (j.tier === 'rainbow') motion();
@@ -107,12 +119,12 @@ export class DraftScreen {
       text(ctx, TIER_NAME[j.tier], x + P, y + lay.tier, j.tier === 'silver' ? PAL.cardDim : PAL.goldDk);
       for (const [l, ly] of lay.names) text(ctx, l, x + P, y + ly, PAL.cardInk, { bold: true });
       rect(ctx, x + P, y + lay.rule, lay.IW, 1, col);
-      for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, PAL.cardInk, { ui, under: { onClick: () => this.pick(i) } });
+      for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, PAL.cardInk, { ui, under: { onClick: () => this.choose(i) } });
       if (lay.chips != null) familyChips(ctx, j.families, x + P, y + lay.chips + (CH - lay.h), lay.IW, CARD_CHIP_ROWS);
       closeBox();
       // 도장: 이 레퍼토리로 이긴 가장 높은 레이팅 — 새 판 오프닝 카드처럼 윗변에 반쯤 걸친 스티커(오른쪽 안 4). 등급 줄 오른끝은 영어 「Rainbow」와 겹친다
       const won = (this.app.records.josekiDan || {})[id];
-      if (won != null) danStamp(ctx, x + CW - SP.s, y - (STAMP.h >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.pick(i), preview: `draft:${i}` });
+      if (won != null) danStamp(ctx, x + CW - SP.s, y - (STAMP.h >> 1), won, { ui, id: `draft:${i}:stamp`, tip: () => stampTip(j.name, won), onClick: () => this.choose(i), preview: `draft:${i}` });
       if (picked) { const k = Math.min(1, (this.t - this.chosen.t) / 0.3); ctx.globalAlpha = 0.5 * (1 - k); rrect(ctx, x, y, CW, CH, radiusOf(CW, CH), PAL.white); ctx.globalAlpha = 1; }
       ctx.globalAlpha = 1;
     }

@@ -201,6 +201,8 @@ export const EN = {
   '문': 'Gate', '흡수': 'Mimic', '다섯 칸': 'Five in a Row',
   '체인메이트': 'CHAINMATE', '잡으면 그 기물로 바뀐다': 'Take It, Become It', '잡고, 변하고, 또 잡는다': 'Take. Become. Take again.',
   '이어 하기': 'Continue', '새 판': 'New Run', '오늘의 대국': "Today's Match", '도감': 'Almanac', '기록': 'Records', '설정': 'Settings',
+  '지금 판을 그만두고 새로 시작할까요?': 'End the current run and start over?', '지금 판을 그만둘까요? 그만둔 판은 이어 할 수 없어요': 'End the current run? You can’t continue it later', '새로 시작': 'Start Over', '그만두기': 'End Run', '돌아가기': 'Go Back',
+  '한 번 더 누르면 이 레퍼토리로 정해요': 'Click again to take this repertoire',
   '멈춤': 'Paused', '계속': 'Continue', '메인 화면으로': 'To Title', '메인 화면': 'Title', '뒤로': 'Back', '다시': 'Again', '계속 두기': 'Play On',
   '소리': 'Sound', '음악': 'Music', '연출 속도': 'Speed', '화면 흔들림': 'Screen Shake', '큰 글자': 'Large Text', '켬': 'On', '끔': 'Off', '언어': 'Language', '화면': 'Display', '플레이': 'Play',
   '연습 대국': 'Practice Match', '정식 대국': 'Rated Match', '마스터전': 'Master Match', '연습': 'Practice', '정식': 'Rated',

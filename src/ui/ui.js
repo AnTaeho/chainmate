@@ -81,7 +81,7 @@ export class UI {
       let best = null, bd = Infinity;
       for (let i = this.regions.length - 1; i >= 0; i--) {
         const r = this.regions[i];
-        if (r.passive || !r.enabled || !(r.onClick || r.drag || r.tip || r.keys) || r.w <= 0 || r.h <= 0) continue;
+        if (r.passive || r.nosnap || !r.enabled || !(r.onClick || r.drag || r.tip || r.keys) || r.w <= 0 || r.h <= 0) continue;
         const d = reach(r);
         if (d >= 0 && d < bd) { const p = into(r); if (p && this.hitIn(this.regions, p[0], p[1]) === r) { best = p; bd = d; } }
       }
@@ -157,11 +157,12 @@ export function pillR(w, h, tw) {
 // 글에 맞춘 단추 폭(29절): 글 + 양쪽 BTN_PAD(12), 가장 좁아도 min(BTN_MIN 64). icon이면 아이콘 자리(10)를 더한다
 export const btnW = (label, { icon = false, min = BTN_MIN } = {}) => Math.max(min, (label ? measure(label, true) : 0) + (icon ? 10 : 0) + BTN_PAD * 2);
 // w · h를 null로 주면 w는 btnW(글), h는 BTN_H
-export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null, grow = null, preview = null } = {}) {
+// nosnap: 빈 자리 손가락 누름을 이 단추로 붙이지 않는다(되돌릴 수 없는 단추 곁에 작은 구역이 있을 때 — 상점 「다음 대국」, P-5)
+export function button(ctx, ui, id, x, y, w, h, label, { enabled = true, onClick = null, tone = 'plain', icon = null, tip = null, grow = null, preview = null, nosnap = false } = {}) {
   if (w == null) w = btnW(label, { icon: !!icon });
   if (h == null) h = BTN_H;
   const g = grow && ui.finger ? growHit(x, y, w, h, ui.finger, grow) : { x, y, w, h };
-  const r = ui.region(id, g.x, g.y, g.w, g.h, { enabled, onClick, ...(tip ? { tip } : {}), ...(preview ? { preview } : {}) });
+  const r = ui.region(id, g.x, g.y, g.w, g.h, { enabled, onClick, ...(tip ? { tip } : {}), ...(preview ? { preview } : {}), ...(nosnap ? { nosnap } : {}) });
   const hov = enabled && ui.isHover(id);
   const pressed = hov && ui.press && ui.press.id === id;
   // 알약 단추(안 3 — layout.md 27절): 크림(보조) · 금빛(주) · 붉은(위험), 꺼진 단추는 빈 자리 빛깔. 잉크 테 1 + 바로 아래 잉크 그림자 2(누르면 1 내려앉고 1)

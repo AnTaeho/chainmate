@@ -218,6 +218,48 @@ test('처음 안내가 떠 있는 동안 설명 묶음이 그 위를 덮지 않�
   assert.equal(app.ui.hover && app.ui.hover.id, 'draft:0');
 });
 
+test('끝나지 않은 판이 있으면 「오늘의 대국」 · 「새 판」 시작은 확인 상자를 거친다 · 멈춤 「그만두기」(U-2 · U-15)', async () => {
+  const app = await fresh({ tutorialAsked: true, runs: 1 });
+  const reg = (id) => app.ui.regions.find((r) => r.id === id);
+  // 판이 없으면 곧바로
+  reg('title:daily').onClick(); tick(app);
+  assert.equal(app.overlay, null);
+  assert.ok(app.run.daily, '판이 없으면 확인 없이 오늘의 대국');
+  const seed = app.run.seed;
+  app.toTitle(); tick(app);
+  // 판이 있으면 확인 상자: Enter · 「돌아가기」는 판을 그대로 둔다
+  reg('title:daily').onClick(); tick(app);
+  assert.equal(app.overlay && app.overlay.name, 'confirm');
+  app.key('Enter'); tick(app);
+  assert.equal(app.overlay, null);
+  assert.ok(app.hasSave());
+  app.go('setup'); tick(app);
+  app.key('Enter'); tick(app);
+  assert.equal(app.overlay && app.overlay.name, 'confirm', '새 판 화면 「시작」도 묻는다');
+  reg('confirm:back').onClick(); tick(app);
+  assert.equal(app.overlay, null);
+  assert.equal(app.screen.name, 'setup');
+  // 「새로 시작」: 옛 판은 그만둔 판으로 남고 새 판
+  app.key('Enter'); tick(app);
+  reg('confirm:yes').onClick(); tick(app);
+  assert.equal(app.overlay, null);
+  assert.ok(!app.run.daily && app.run.seed !== seed, '새 판');
+  // 멈춤 「그만두기」 → 확인 → 「돌아가기」는 멈춤으로, 「그만두기」는 판을 접고 메인 화면
+  app.openOverlay('pause'); tick(app);
+  reg('pause:quit').onClick(); tick(app);
+  assert.equal(app.overlay.name, 'confirm');
+  app.key('Escape'); tick(app);
+  assert.equal(app.overlay && app.overlay.name, 'pause');
+  reg('pause:quit').onClick(); tick(app);
+  reg('confirm:yes').onClick(); tick(app);
+  assert.equal(app.screen.name, 'title');
+  assert.equal(app.hasSave(), false);
+  assert.equal(app.runInProgress(), false);
+  // 판이 없으면 멈춤에 「그만두기」가 없다(수업 · 메인 화면)
+  app.openOverlay('pause'); tick(app);
+  assert.equal(reg('pause:quit'), undefined);
+});
+
 test('설정 「움직임 줄이기」는 기기 설정이 없어도 켠다', async () => {
   const app = await fresh({ tutorialAsked: true });
   const { LOOK } = await import('../src/render/look.js');

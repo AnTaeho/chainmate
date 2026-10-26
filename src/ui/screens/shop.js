@@ -236,9 +236,13 @@ function withHoldLine(tip, run, it, i) {
   return { ...tip, extra: [...lines, ...(tip.extra || [])] };
 }
 
+// 상점에 들어온 뒤 Enter(「다음 대국」)를 받지 않는 초 — 보상 Enter → Enter → Enter 연타로 사지 않고 지나갔다(P-11)
+const ENTER_REST = 0.6;
+
 export class ShopScreen {
   constructor(app) {
     this.app = app;
+    this.born = app.time;  // 들어온 때: 보상 화면에서 이어 누른 Enter가 곧바로 상점을 떠나지 않게(ENTER_REST)
     this.menu = null;      // { kind: 'maxim', index } | { kind: 'piece', id }
     this.target = null;    // 각인 두루마리를 쓸 대상 고르기 { index }
     this.notes = 'side';   // 설명 자리: 왼쪽 칸(placement.js)
@@ -337,7 +341,8 @@ export class ShopScreen {
     const rc = rerollCost(run);
     const bar = buttonRow(ctx, ui, [
       { id: 'shop:reroll', label: `리롤 $${rc}`, enabled: run.money >= rc, onClick: () => this.act({ type: 'reroll' }, 'coin') },
-      { id: 'shop:leave', label: '다음 대국', onClick: () => this.leave(), tone: 'gold' },
+      // 바로 아래 둘째 진열 카드의 책갈피(찜)와 2도트 — 빈 자리를 빗누른 손가락이 「다음 대국」으로 붙지 않게(P-5)
+      { id: 'shop:leave', label: '다음 대국', onClick: () => this.leave(), tone: 'gold', nosnap: true },
     ], CX + CENTER.w, BAR_Y, { anchor: 'right' });
     if (CX + measure('진열') + SP.m <= bar.x) text(ctx, '진열', CX, textY(BAR_Y, BAR_H), PAL.dim);
     // 두루마리를 쓰는 중: 진열 · 꾸러미 자리에 미리 보기 판(고른 기물이 어떻게 되는지 보이고 확인을 받는다), 그 아래 덱
@@ -566,6 +571,6 @@ export class ShopScreen {
       }
       if (this.menu || this.target) { this.menu = null; this.target = null; return; }
       this.app.openOverlay('pause');
-    } else if (k === 'Enter') this.leave();
+    } else if (k === 'Enter' && this.app.time - this.born >= ENTER_REST) this.leave();
   }
 }

@@ -307,7 +307,7 @@ export async function boot(env = {}) {
   touchEl.addEventListener('touchmove', (e) => { e.preventDefault(); const t = own1(e); if (!t) return; const [x, y] = toGame(t); app.pointer('move', x, y); }, { passive: false });
   touchEl.addEventListener('touchend', (e) => { e.preventDefault(); const t = own1(e); if (!t) return; finger = null; const [x, y] = toGame(t); app.pointer('up', x, y); landscapeLock(); }, { passive: false });
   // 끊긴 손가락(전화 · 알림): 아무것도 누르지 않은 것으로
-  touchEl.addEventListener('touchcancel', () => { if (finger == null) return; finger = null; app.pointer('up', -1, -1); app.pointer('move', -1, -1); });
+  touchEl.addEventListener('touchcancel', () => { if (finger == null) return; finger = null; app.pointer('cancel', -1, -1); });
   // 캔버스 밖(여백 판)에서도 화면이 끌려가거나 확대되지 않게
   if (doc.addEventListener) {
     const stop = (e) => { if (e.cancelable) e.preventDefault(); };
@@ -320,6 +320,8 @@ export async function boot(env = {}) {
     // 입력 칸에 초점이 있는 동안 게임은 키를 받지 않는다(빈칸 · Enter · 방향키 · 단축키 모두). Esc는 초점만 푼다
     if (fields.owns(e.target) || fields.focused()) { if (e.key === 'Escape') { if (e.preventDefault) e.preventDefault(); fields.blur(); } return; }
     if (e.repeat) return;
+    // 수정 키(Cmd · Ctrl · Alt)와 함께 누른 키와 수정 키 혼자는 게임이 받지 않는다 — 브라우저 · 운영체제 단축키(창 바꾸기 · 탭 · 화면 찍기)가 연출을 넘기거나 손 카드를 골랐다(P-11)
+    if (e.metaKey || e.ctrlKey || e.altKey || ['Shift', 'Meta', 'Control', 'Alt', 'CapsLock'].includes(e.key)) return;
     const k = e.key;
     if ([' ', 'Enter', 'Escape', 'Backspace', '1', '2', '3', '4', '5', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(k)) e.preventDefault();
     app.key(k);

@@ -24,6 +24,7 @@ import { LinkScreen } from './link.js';
 import { AccountScreen } from './account.js';
 import { HighlightScreen } from './highlight.js';
 import { UnlocksScreen } from './unlocks.js';
+import { ConfirmScreen } from './confirm.js';
 
 export const SCREENS = {
   title: TitleScreen,
@@ -37,6 +38,7 @@ export const SCREENS = {
   pack: PackScreen,
   result: ResultScreen,
   pause: PauseScreen,
+  confirm: ConfirmScreen,
   settings: SettingsScreen,
   setup: SetupScreen,
   codex: CodexScreen,

@@ -107,7 +107,7 @@ export class RankScreen {
         rowLine(ctx, me, app.rank.nameOf(me), my + PAD_BOX + ((BTN_H - LINE) >> 1), { mine: true, total: seen.total });
       } else if (this.tab === 'today') {
         text(ctx, '오늘은 아직 플레이하지 않았어요', COL.rank, inkY(my + PAD_BOX, BTN_H), PAL.dim);
-        buttonRow(ctx, ui, [{ id: 'rank:play', label: '오늘의 대국 시작', tone: 'gold', onClick: () => app.newRun({ daily: true }) }], COL.x1 - PAD_BOX, my + PAD_BOX, { anchor: 'right' });
+        buttonRow(ctx, ui, [{ id: 'rank:play', label: '오늘의 대국 시작', tone: 'gold', onClick: () => app.askNewRun({ daily: true }) }], COL.x1 - PAD_BOX, my + PAD_BOX, { anchor: 'right' });
       } else text(ctx, '어제는 플레이하지 않았어요', COL.rank, inkY(my + PAD_BOX, BTN_H), PAL.dim);
       closeBox();
     }

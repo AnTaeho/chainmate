@@ -107,7 +107,7 @@ export function makeFakeDom({ width = 1280, height = 720, dpr = 1 } = {}) {
       if (type === 'mouseup') fire(winListeners.mouseup, e);
       else fire(screen.listeners[type], e);
     },
-    key(k) { fire(winListeners.keydown, { key: k, repeat: false, preventDefault() {}, target: document.activeElement || body }); },
+    key(k, mods = {}) { fire(winListeners.keydown, { key: k, repeat: false, preventDefault() {}, target: document.activeElement || body, ...mods }); },
     // 글자 입력 칸: 지금 문서에 붙어 있는 <input> · 이름으로 찾기 · 사람이 치듯 값 넣기(input 사건) · Enter(form 제출)
     inputs() { return walk(body).filter((el) => el.tagName === 'INPUT'); },
     input(id) { return walk(body).find((el) => el.tagName === 'INPUT' && el.id === `tf-${id}`) || null; },

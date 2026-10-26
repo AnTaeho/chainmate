@@ -268,6 +268,8 @@ function click(id) {
   pump(1);
   return r;
 }
+// 레퍼토리 고르기: 마우스는 두 번 누른다(처음 누름은 금빛 테만 — U-14). 다 뒤집히기 전 누름은 넘기기라 한 번 더
+function pickDraft(i) { for (let k = 0; k < 4 && screen() === 'draft' && !app.screen.chosen && region(`draft:${i}`); k++) click(`draft:${i}`); }
 function drag(id, toGx, toGy) {
   const r = region(id);
   if (!r) return false;
@@ -940,16 +942,19 @@ async function reload() {
   log('  이어 하기 확인', phase, ante);
 }
 
+// 끝나지 않은 판이 있으면 새 판 시작은 확인 상자를 거친다(U-2): 「새로 시작」
+const confirmSeen = { asked: 0 };
+function yesNewRun() { if (app.overlay && app.overlay.name === 'confirm') { confirmSeen.asked++; click('confirm:yes'); } }
 async function playOne(seed, { inject = null, opening = null, dan = null, daily = false } = {}) {
   app.nextSeed = seed;
   if (screen() !== 'title') app.toTitle();
   pump(1);
-  if (daily) click('title:daily');
+  if (daily) { click('title:daily'); yesNewRun(); }
   else {
     click('title:new');
     if (opening) click(`setup:op:${opening}`);
     if (dan != null) click(`setup:dan:${dan}`);
-    click('setup:start');
+    click('setup:start'); yesNewRun();
     if (opening && app.run.opening !== opening) throw new Error('opening not chosen');
     if (dan != null && app.run.dan !== dan) throw new Error('dan not chosen');
   }
@@ -964,7 +969,7 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
       if (region('faction')) facSeen.band++; else facSeen.bad.push(`세력 띠 없음 ${app.run.ante}관`);
       if (app.run.ante < 7 && !app.run.endless) { if (region('select:next')) facSeen.next++; else facSeen.bad.push(`다음 관 문장 없음 ${app.run.ante}관`); }
     }
-    if (name === 'draft') { pump(40); notesOnce('draft', 4); for (let k = 0; k < app.run.draft.options.length; k++) keyBoxesAt(`draft:${k}`, 'draft'); click(`draft:${Math.floor(rnd() * app.run.draft.options.length)}`); pump(60); continue; }
+    if (name === 'draft') { pump(40); notesOnce('draft', 4); for (let k = 0; k < app.run.draft.options.length; k++) keyBoxesAt(`draft:${k}`, 'draft'); pickDraft(Math.floor(rnd() * app.run.draft.options.length)); pump(60); continue; }
     if (name === 'select' && !tipSeen.path) { hover('select:path'); if (hoverTip()) tipSeen.path++; }
     if (name === 'select' && !app.run.shop && region('select:shop')) shopBack.stray++;
     if (name === 'select' && app.run.shop && shopBack.trips < 2 && region('select:shop')) {
@@ -1128,7 +1133,7 @@ function firstLaunch() {
     pump(80);
     if (screen() === 'select') break;
     if (app.hintShown) { click(app.hintShown.regionId); continue; }
-    if (screen() === 'draft') click('draft:0');
+    if (screen() === 'draft') pickDraft(0);
   }
   for (let n = 0; n < 60 && !app.hintShown; n++) pump(1);
   tutSeen.faction = screen() === 'select' && app.run.ante === 1 && app.run.blind === 0 && !!app.hintShown && app.hintShown.id === 'faction_peasants';
@@ -1408,7 +1413,7 @@ if (app.run.phase === 'won') {
   endless = true;
   for (let steps = 0; steps < 3000 && screen() !== 'result'; steps++) {
     const name = screen();
-    if (name === 'draft') { pump(40); click('draft:0'); pump(60); continue; }
+    if (name === 'draft') { pump(40); pickDraft(0); pump(60); continue; }
     if (name === 'select') { click('select:play'); pump(2); continue; }
     if (name === 'battle' && app.screen.rv) { reviewStep(); continue; }
     if (name === 'review') { reviewWalk(); continue; }
@@ -1967,7 +1972,7 @@ const mainApp = app;
   if (app.screen.name !== 'title' || !app.overlay || app.overlay.name !== 'welcome') throw new Error('fresh boot did not offer the tutorial');
   click('welcome:play');
   if (screen() !== 'draft' || !app.records.tutorialAsked) throw new Error(`「바로 시작」 did not start a plain run (${screen()})`);
-  for (let n = 0; n < 20 && screen() !== 'select'; n++) { pump(60); if (screen() === 'draft' && region('draft:0') && !app.screen.chosen) click('draft:0'); }
+  for (let n = 0; n < 20 && screen() !== 'select'; n++) { pump(60); if (screen() === 'draft' && region('draft:0') && !app.screen.chosen) pickDraft(0); }
   if (app.hintShown) dismissHint();
   click('select:play'); pump(2);
   if (screen() !== 'battle' || !app.run.battle || app.run.ante !== 1 || app.run.battle.target !== targetFor(1, 'practice')) throw new Error('「바로 시작」 did not reach a plain practice battle');
@@ -2056,7 +2061,7 @@ function walkShops(name, { until = 'select', shops = 1 } = {}) {
       continue;
     }
     if (sc === 'pack') { click('pack:skip'); continue; }
-    if (sc === 'draft') { if (app.screen.chosen) { pump(10); continue; } pump(40); out.push({ where: '레퍼토리', ids: hintsHere() }); if (screen() === 'draft' && region('draft:0')) click('draft:0'); pump(30); continue; }
+    if (sc === 'draft') { if (app.screen.chosen) { pump(10); continue; } pump(40); out.push({ where: '레퍼토리', ids: hintsHere() }); if (screen() === 'draft' && region('draft:0')) pickDraft(0); pump(30); continue; }
     if (sc === 'select') {
       if (until === 'select' && app.run.ante === 1 && app.run.blind >= 1) { out.push({ where: `관 선택 ${app.run.ante}:${app.run.blind}`, ids: hintsHere() }); break; }
       pump(30); hintsHere(); click('select:play'); pump(2); continue;
@@ -2095,7 +2100,7 @@ function playNow(seed) {
   // ③ 첫 대국 중 멈춤 → 타이틀로 → 이어 하기 → 관 선택
   await freshBoot({ welcome: true });
   playNow(7);
-  for (let n = 0; n < 20 && screen() !== 'select'; n++) { pump(60); if (app.hintShown) { dismissHint(); continue; } if (screen() === 'draft' && region('draft:0') && !app.screen.chosen) click('draft:0'); }
+  for (let n = 0; n < 20 && screen() !== 'select'; n++) { pump(60); if (app.hintShown) { dismissHint(); continue; } if (screen() === 'draft' && region('draft:0') && !app.screen.chosen) pickDraft(0); }
   hintsHere(); click('select:play'); pump(2);
   dom.key('Escape'); pump(1); click('pause:title');
   if (screen() !== 'title' || !region('title:continue') || app.overlay) paths.bad.push(`첫 대국 멈춤 → 타이틀로(${screen()}, 덮개 ${app.overlay ? app.overlay.name : '없음'})`);
@@ -2108,7 +2113,7 @@ function playNow(seed) {
   app.records.lessonsSeen = Object.fromEntries(lessonMod.LESSONS.map((L) => [L.id, true]));
   app.saveRecords();
   app.nextSeed = 6;
-  click('title:new'); click('setup:start'); pump(2);
+  click('title:new'); click('setup:start'); yesNewRun(); pump(2);
   const taughtOut = walkShops('taught', { until: 'shopHint', shops: 4 });
   const taughtIds = taughtOut.flatMap((o) => o.ids);
   const leak = taughtIds.filter((id) => coachMod.TAUGHT[id]);
@@ -2145,7 +2150,7 @@ const telNote = { shown: 0, gone: 0, again: 0, off: 0 };
   await freshBoot(); pump(2);
   click('title:rank'); pump(2); await netSettle(); pump(3);
   if (screen() === 'rank' && region('rank:play') && drew('오늘은 아직 플레이하지 않았어요') && !region('rank:mine')) rankSeen.unplayed = 1; else rankSeen.bad.push('오늘 안 둔 사람의 순위 화면이 어긋났다');
-  click('rank:play'); pump(2);
+  click('rank:play'); yesNewRun(); pump(2);
   if (app.run && app.run.daily === DATE && Array.isArray(app.run.cmds)) rankSeen.play = 1; else rankSeen.bad.push('「오늘의 대국 두기」가 오늘의 대국을 열지 않았다');
   app.toTitle(); pump(1);
   rankApi.mode = 'fail';
@@ -2390,6 +2395,8 @@ console.log(`완성한 명경기 도감: 칸 ${codexDone.cells} · 누를 것 �
 console.log(`다 본 도감: 쪽 ${codexAll.pages}`);
 if (codexAll.pages < 7) { console.log('다 본 도감의 탭을 다 지나지 못했다'); fail = true; }
 if (codexDone.cells !== LEGENDS.length) { console.log('완성한 명경기 도감 칸을 모두 가리키지 못했다'); fail = true; }
+console.log(`확인 상자: 끝나지 않은 판 위 새 판 · 오늘의 대국 ${confirmSeen.asked}`);
+if (!confirmSeen.asked) { console.log('끝나지 않은 판 위에서 새 판을 시작할 때 확인 상자를 보지 못했다'); fail = true; }
 console.log(`수업 중 멈춤: Esc ${pauseSeen.esc} · ≡ ${pauseSeen.button} · 상점 수업 타이틀로 ${pauseSeen.lessonTitle}${pauseSeen.bad.length ? ` · 어긋남 ${pauseSeen.bad.join(' | ')}` : ''}`);
 if (pauseSeen.bad.length || pauseSeen.esc < 3 || pauseSeen.button < 3 || !pauseSeen.lessonTitle) { console.log('수업 중에 멈춤이 열리지 않았거나, 닫은 뒤 · 타이틀로가 어긋났다'); fail = true; }
 if (hintFail.length) { console.log(`처음 안내가 뜨고 사라지지 않았다: ${hintFail.join(' ')}`); fail = true; }

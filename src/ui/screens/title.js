@@ -98,7 +98,7 @@ export class TitleScreen {
     const fresh = ['title:new', '새 판', () => app.go('setup')];
     const rest = [
       ['title:lesson', '튜토리얼', () => app.go('lessons')],
-      ['title:daily', '오늘의 대국', () => app.newRun({ daily: true })],
+      ['title:daily', '오늘의 대국', () => app.askNewRun({ daily: true })],
       ['title:rank', '순위', () => app.go('rank')],
       ['title:codex', '도감', () => app.go('codex')],
       ['title:records', '기록', () => app.go('records')],

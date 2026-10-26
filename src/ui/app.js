@@ -25,6 +25,7 @@ import { ACHIEVEMENT_BY_ID } from '../data/achievements.js';
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
 import { keepRow, exportText } from './runlog.js';
 import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps, unlockTierProps } from './telemetry.js';
+import { NEW_RUN_ASK, QUIT_RUN_ASK } from './screens/confirm.js';
 import { createRank } from './rank.js';
 import { createCloud } from './cloud.js';
 import { createFields } from './textfield.js';
@@ -273,14 +274,31 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
 
   // ── 판
   app.hasSave = () => !!store.get(KEYS.run);
+  // 끝나지 않은 판(저장된 판 · 지금 판 — 수업용 판은 빼고)
+  const openRun = () => { const r = app.run && !app.run.scratch ? app.run : store.get(KEYS.run); return r && !r.scratch && r.phase !== 'won' && r.phase !== 'lost' ? r : null; };
+  app.runInProgress = () => !!openRun();
+  // 끝나지 않은 판을 접는다: 「그만둠」으로 남긴다(이긴 뒤 끝없는 대국이면 그 판 줄을 갈아 끼운다). 새 판이 덮어쓸 때 · 멈춤 「판 그만두기」
+  const quitOpen = () => {
+    const old = openRun();
+    if (!old) return;
+    if (old.track) app.keepRun(old, old.endless ? 'endless' : 'quit');
+    if (quitEndless(app.records, old)) app.saveRecords();
+  };
+  // 새 판 · 오늘의 대국 시작: 끝나지 않은 판이 있으면 확인 상자를 한 번 거친다(U-2 — 한 번 누름에 8관 가까이 간 판도 사라졌다)
+  app.askNewRun = (opts = {}) => {
+    if (!app.runInProgress()) return app.newRun(opts);
+    app.openOverlay('confirm', { say: NEW_RUN_ASK, yesLabel: '새로 시작', yes: () => { app.closeOverlay(); app.newRun(opts); } });
+  };
+  // 멈춤 「판 그만두기」(U-15): 확인 상자 → 판을 접고 메인 화면으로
+  app.askQuitRun = () => app.openOverlay('confirm', {
+    say: QUIT_RUN_ASK, yesLabel: '그만두기', back: 'pause',
+    yes: () => { quitOpen(); app.run = null; if (store.get(KEYS.run)) app.cloud.noteRunEnd(); store.del(KEYS.run); app.toTitle(); },
+  });
   app.newRun = (opts = {}) => {
     const daily = opts.daily ? app.today() : null;
     const seed = daily ? dailySeed(daily) : opts.seed ?? app.nextSeed ?? ((Math.floor(now() * 7919) ^ Date.now()) >>> 0) % 2147483647;
     app.nextSeed = null;
-    // 끝나지 않은 판을 새 판으로 덮어쓴다: 「그만둠」으로 남긴다(이긴 뒤 끝없는 대국이면 그 판 줄을 갈아 끼운다)
-    const old = app.run && !app.run.scratch ? app.run : store.get(KEYS.run);
-    if (old && old.track && !old.scratch && old.phase !== 'won' && old.phase !== 'lost') app.keepRun(old, old.endless ? 'endless' : 'quit');
-    if (old && !old.scratch && old.phase !== 'won' && old.phase !== 'lost' && quitEndless(app.records, old)) app.saveRecords();
+    quitOpen();
     // 오늘의 대국 판은 서버와 같은 함수로 만든다(src/sim/daily.js — 넣은 명령을 run.cmds에 남겨 순위에 낸다, CHM-70)
     // 새 판은 지금까지 연 묶음만 나온다(끝없는 대국은 그 판의 것 그대로). 오늘의 대국은 모두가 같은 판이라 전부 열린 채
     app.run = daily ? createDailyRun(daily) : createRun({ seed, opening: opts.opening, dan: opts.dan || 0, unlockTier: app.records.unlockTier || 0 });
@@ -422,6 +440,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.invalidate();
     const t0 = now();
     if (type === 'move') app.ui.move(x, y);
+    // 끊긴 손가락(전화 · 알림 · 운영체제 몸짓): 누르던 것 · 끌던 것을 놓기만 한다 — 떼기(up)로 치면 끌던 격언이 (-1, -1)에 떨어져 맨 앞으로 옮겨졌다(P-10)
+    else if (type === 'cancel') { app.ui.press = null; app.ui.drag = null; app.ui.move(-1, -1); }
     else if (type === 'down') {
       // 오른쪽 누르기: 판 위 표시(칸 · 화살표)만. 멈춤 · 내려놓기는 Esc 키로만(판이 없는 화면에서는 아무 일도 없다)
       if (button === 2) { app.ui.move(x, y); const s = app.overlay || app.screen; if (s && s.rightDown) s.rightDown(x, y); return; }

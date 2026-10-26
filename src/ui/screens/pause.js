@@ -1,4 +1,4 @@
-// 일시정지(덮개): 계속 · 설정 · 메인 화면. 막간 상자(29절 제목 자리 3): 두 배 제목 가운데, 단추 셋은 같은 폭 한 줄 가운데.
+// 일시정지(덮개): 계속 · 설정 · 메인 화면 · (판 안이면) 그만두기. 막간 상자(29절 제목 자리 3): 두 배 제목 가운데, 단추 셋은 같은 폭 한 줄 가운데.
 import { W } from '../../render/gfx.js';
 import { rowWidth } from '../ui.js';
 import { INTER, interlude, interludeLayout } from './common.js';
@@ -16,6 +16,8 @@ export class PauseScreen {
       { id: 'pause:settings', label: '설정', onClick: () => app.openOverlay('settings', { back: 'pause' }) },
       { id: 'pause:title', label: '메인 화면', onClick: () => app.toTitle() },
     ];
+    // 판 그만두기(U-15): 판 안에서만(수업 · 연습용 판은 없다) — 확인 상자를 거친다
+    if (app.run && !app.run.scratch && app.screen && app.screen.name !== 'lesson' && app.runInProgress()) buttons.push({ id: 'pause:quit', label: '그만두기', onClick: () => app.askQuitRun() });
     const w = rowWidth(buttons).w + INTER.pad * 2, h = interludeLayout(0).h;
     interlude(ctx, ui, Math.floor((W - w) / 2), Math.floor((270 - h) / 2), w, 0, null, { title: '멈춤', buttons, name: '멈춤' });
   }
