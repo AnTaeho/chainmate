@@ -317,7 +317,7 @@ export function rankSubmitProps(st) {
 //   highlight_share { ok }    공유 시트를 열었다(ok: 끝까지 보냈나 — 그만두면 false)
 // ── 기기 잇기 · 클라우드 저장(CHM-71, src/ui/screens/link.js · cloud.js): 열쇠 · 코드 · 이름은 싣지 않는다.
 //   link_code {}   이 기기의 코드를 받았다
-//   link_redeem { ok, reason }   다른 기기의 코드를 넣었다(reason: bad · expired · self · limit · unreached, 이어졌으면 null)
+//   link_redeem { ok, reason }   다른 기기의 코드를 넣었다(reason: bad · expired · self · limit · unreached · account, 이어졌으면 null)
 //   link_unlink {}   이 기기를 뗐다
 //   save_sync { pulled, pushed, conflict }   하루 동안 저장을 당긴 · 올린 · 어긋난 수(날이 바뀐 뒤 한 번)
 // ── 계정(CHM-72, src/ui/screens/account.js): 아이디 · 비번 · 열쇠 · 이름은 싣지 않는다.
