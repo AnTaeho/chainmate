@@ -114,8 +114,13 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   // flash: 화면 전체 번쩍임(전설 · 상자, surroundFlash). dim: 덮개(0.72) · 따라 하는 길(0.45)이 화면을 어둡게 한 만큼
   app.coachDim = 0;
   app.surround = () => {
-    const s = app.screen;
-    return { time: app.time, tint: app.tint(), scene: s && s.surroundScene ? s.surroundScene() : null, flash: s && s.surroundFlash ? s.surroundFlash() : null, dim: app.overlay ? 0.72 : app.coachDim || 0 };
+    const s = app.screen, o = app.overlay;
+    // 바탕을 스스로 다 덮는 덮개(설정 — opaque)는 여백 판도 판 밖 남색 흐름 그대로(어둡게 하면 캔버스 테두리에 경계가 생겼다, S-1)
+    if (o && o.opaque) return { time: app.time, tint: null, scene: null, flash: null, dim: 0 };
+    // 화면 · 덮개가 캔버스를 한 겹 더 어둡게 덮는 만큼(surroundDim — 튜토리얼 끝 카드 · 하이라이트 · 점화 막간)도 여백 판에 겹친다(S-2)
+    const more = (x) => (x && x.surroundDim ? x.surroundDim() || 0 : 0), over = (a, b) => 1 - (1 - a) * (1 - b);
+    const dim = o ? over(0.72, more(o)) : over(app.coachDim || 0, more(s));
+    return { time: app.time, tint: app.tint(), scene: s && s.surroundScene ? s.surroundScene() : null, flash: s && s.surroundFlash ? s.surroundFlash() : null, dim };
   };
   app.speed = () => app.settings.speed || 1;
   app.records = loadRecords(store);

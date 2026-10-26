@@ -102,9 +102,9 @@ export class MovesScreen {
     shown.forEach((it, i) => this.card(ctx, it, x0 + (i % COLS) * (CW + GAP), y + top + Math.floor(i / COLS) * (CH + GAP), CW, CH));
     if (pages > 1) {
       // 쪽 줄: 가운데 ‹ 쪽 ›
-      const label = `${page + 1}/${pages}`, lw = Math.max(28, measure(label) + 8), px = x + Math.floor((w - (PAGE_BTN * 2 + lw)) / 2);
+      const label = `${page + 1}/${pages}`, lw = Math.max(28, measure(label, true) + 8), px = x + Math.floor((w - (PAGE_BTN * 2 + lw)) / 2);
       button(ctx, ui, 'moves:prev', px, y + py, PAGE_BTN, BTN_S, '‹', { enabled: page > 0, onClick: () => { this.page = page - 1; } });
-      text(ctx, label, px + PAGE_BTN + lw / 2, y + textY(py, BTN_S), PAL.dim, { align: 'center' });
+      text(ctx, label, px + PAGE_BTN + lw / 2, y + textY(py, BTN_S), PAL.dim, { align: 'center', bold: true }); // 쪽 · 개수 숫자는 어디서나 굵게(S-7)
       button(ctx, ui, 'moves:next', px + PAGE_BTN + lw, y + py, PAGE_BTN, BTN_S, '›', { enabled: page < pages - 1, onClick: () => { this.page = page + 1; } });
     }
     const bw = Math.max(64, measure('뒤로', true) + 8);

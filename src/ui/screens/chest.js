@@ -35,7 +35,8 @@ function scaled(ctx, cx, cy, w, h, draw) {
 function drawItem(ctx, it, cx, cy) {
   if (it.kind === 'money') { coin(ctx, cx, cy); text(ctx, '$', cx, cy - (INK_H * K) / 2, PAL.cardInk, { align: 'center', bold: true, scale: K }); }
   // 기물 그림(16 × 22)은 K배 상자가 (cx, cy) 가운데에 오게(sprite는 발밑 가운데에 맞춰 키운다)
-  else if (it.kind === 'chart') sprite(ctx, it.form, 'b', cx - 8, cy, { sx: K, sy: K });
+  // 기보: 상점 · 꾸러미와 같은 기보 그림(눈금 테 + 내 편 기물) — 'b'(적 남색)로 그려 「적 나이트」로 읽혔다(S-18)
+  else if (it.kind === 'chart') { const ch = { kind: 'chart', form: it.form }; scaled(ctx, cx, cy, artW(ch), ART_H, () => itemArt(ctx, ch, 0, 0)); }
   else if (it.kind === 'engrave') sprite(ctx, it.piece, 'w', cx - 8, cy, { sx: K, sy: K, eng: it.eng });
   else if (it.kind === 'piece') sprite(ctx, it.t, 'w', cx - 8, cy, { sx: K, sy: K });
   else if (it.kind === 'awaken') { const aw = artW({ kind: 'awaken' }); scaled(ctx, cx, cy, aw, ART_H, () => awakenArt(ctx, 0, 0, 0)); }

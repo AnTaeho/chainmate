@@ -152,6 +152,7 @@ function helpers(page) {
   return { step, ev, move, click, regions, press, hoverAll, settle };
 }
 
+// 진열은 실제 판과 같은 둘(셋이면 셋째 카드가 격언 칸 밑에 깔렸다 — 실제 판에 없는 꼴, S-23)
 const SHOP = () => {
   const a = window.__app; a.overlay = null; a.nextSeed = 11; a.newRun();
   if (a.run.phase === 'draft') a.cmd({ type: 'joseki', index: 0 });
@@ -160,7 +161,7 @@ const SHOP = () => {
   r.consumableSlots = 4; r.consumables = [{ kind: 'engraving', id: 'glass' }, { kind: 'soul', id: 'echo' }, { kind: 'evolve' }, { kind: 'tactic', id: 'freeze' }];
   if (r.deck[0]) r.deck[0].soul = 'echo';
   r.money = 60; r.phase = 'shop';
-  r.shop = { rng: window.__rng(), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'N', price: 6, sold: false, edition: 'pearl' }, { kind: 'soul', id: 'echo', price: 4, sold: false }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
+  r.shop = { rng: window.__rng(), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'piece', t: 'N', price: 6, sold: false, edition: 'pearl' }], packs: [{ kind: 'engraving', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false };
   a.go('shop');
 };
 // 움직이는 그림(판본 · 혼)이 없는 상점: 가만히 있으면 흐르는 배경만 바뀐다

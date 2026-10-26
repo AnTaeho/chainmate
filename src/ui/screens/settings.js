@@ -75,6 +75,7 @@ export function settingsLayout(app) {
 
 export class SettingsScreen {
   constructor(app, { back = null } = {}) { this.app = app; this.back = back; }
+  get opaque() { return true; } // 바탕을 다 덮는다 — 여백 판도 어둡게 하지 않는다(app.surround)
   // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
   animating() { return false; }
   draw(ctx, ui) {

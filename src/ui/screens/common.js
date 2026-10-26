@@ -16,6 +16,8 @@ import { emberMark } from '../ignite.js';
 import { moneyShake } from '../juice.js';
 import { glowText } from '../../render/light.js';
 import { blitVec } from '../../render/vec.js';
+import { drawIcon, ICON as ICON_SIZE } from '../../render/icons.js';
+import { INK_H } from '../../render/type.js';
 
 // 세력 빛깔을 짙은 판넬 위 글자로 읽히게 조금 밝힌다
 export function lightHue(hex, k = 0.25) {
@@ -218,6 +220,16 @@ export const clockRow = (app, run) => ({ id: 'clock', label: '시계', tip: () =
 export const hasClock = (run) => !!run && !run.scratch && (run.clockMax || 0) > 0;
 
 const JS_IND = 6; // 두 줄 레퍼토리 이름의 둘째 줄 들임
+// 오늘의 대국 표시(S-13): 관 줄 오른끝에 해 아이콘 — 가리키면 「오늘의 대국 · 10월 8일 순위에 올라요」. right = 아이콘 오른끝 x, y = 관 줄 글 y
+export const dailyNote = (day) => { const [, m, d] = String(day).split('-').map(Number); return `${m}월 ${d}일 순위에 올라요`; };
+export function dailyMark(ctx, ui, run, right, y) {
+  if (!run || !run.daily) return 0;
+  const x = right - ICON_SIZE, iy = y + ((INK_H - ICON_SIZE) >> 1);
+  drawIcon(ctx, 'menu_daily', x, iy);
+  ui.region('daily', x - SP.xs, iy - SP.xs, ICON_SIZE + SP.xs * 2, ICON_SIZE + SP.xs * 2, { tip: () => tipLines('오늘의 대국', [dailyNote(run.daily)]) });
+  return ICON_SIZE + SP.s;
+}
+export const EMPTY_BUILD = '고른 레퍼토리와 시너지가 여기에 쌓여요';
 export function runSide(ctx, ui, app, title) {
   const run = app.run;
   const L = LEFT.x, LW = LEFT.w, P = PAD_BOX;
@@ -233,6 +245,7 @@ export function runSide(ctx, ui, app, title) {
   // 점화(CHM-67): 관 줄 옆에 불씨 — 가리키면 이 판의 콤비네이션
   if (run.ignite && !run.scratch) emberMark(ctx, ui, run.ignite, L + P + measure(hallText(run)) + 4, st.head.y + head.kicker);
   drawName(ctx, title, tn, L + P, head.titles.map((t) => st.head.y + t), LW - P * 2, PAL.gold);
+  dailyMark(ctx, ui, run, L + LW - P, st.head.y + head.kicker);
   closeBox();
   // 짜임 칸: 시너지(이름표 → 세로 칩) → 묶음 틈 → 정석(이름표 → 이름 줄). 칸은 머리 칸과 아래 칸 사이
   const { y: top, h: midH } = st.mid;
@@ -264,6 +277,10 @@ export function runSide(ctx, ui, app, title) {
     text(ctx, '시너지', L + P, ly, PAL.dim);
     familyMore(ctx, ui, run, L + P + measure('시너지') + 4, ly);
     rows.push(rowSpan(ly));
+  }
+  // 시너지도 레퍼토리도 없으면(판 첫 레퍼토리 고르기) 빈 판넬 대신 흐린 한 줄 — 무엇이 쌓일 자리인지(S-14)
+  if (!js.length && !familyCount(run) && midH - P * 2 >= LINE * 2) {
+    wrap(EMPTY_BUILD, LW - P * 2).slice(0, 3).forEach((l) => { const ly = f.line(); text(ctx, l, L + P, ly, PAL.dim); rows.push(rowSpan(ly)); });
   }
   if (js.length) {
     f.gap(GAP_GROUP);
@@ -300,7 +317,7 @@ export function tabRow(ctx, ui, prefix, tabs, cur, x, y, h, go, pad = 8) {
 export function pageButtons(ctx, ui, prefix, page, pages, go) {
   const x = W - PAGE.titleX - 112;
   button(ctx, ui, `${prefix}:prev`, x, PAGE.btnY, 36, PAGE.btnH, '‹', { enabled: page > 0, onClick: () => go(page - 1) });
-  text(ctx, `${page + 1}/${pages}`, x + 56, PAGE.btnY + 3, PAL.dim, { align: 'center' });
+  text(ctx, `${page + 1}/${pages}`, x + 56, PAGE.btnY + 3, PAL.dim, { align: 'center', bold: true }); // 쪽 · 개수 숫자는 어디서나 굵게(S-7)
   button(ctx, ui, `${prefix}:next`, x + 76, PAGE.btnY, 36, PAGE.btnH, '›', { enabled: page < pages - 1, onClick: () => go(page + 1) });
 }
 

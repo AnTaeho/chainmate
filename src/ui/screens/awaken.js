@@ -108,7 +108,7 @@ export class AwakenScreen {
       text(c, L1.name, cx, by + nameY, this.s.col, { align: 'center', bold: true });
       L1.awake.forEach((l, i) => text(c, l, cx, by + awakeY[i], PAL.gold, { align: 'center', alpha: a }));
       if (fromY != null) text(c, L1.from, cx, by + fromY, PAL.dim, { align: 'center' });
-    }, { title, edge: PAL.gold, name: '각성', buttons: [{ id: 'next', label: '계속', tone: done ? 'gold' : 'plain', onClick: () => this.next() }] });
+    }, { title, name: '각성', buttons: [{ id: 'next', label: '계속', tone: done ? 'gold' : 'plain', onClick: () => this.next() }] });
   }
   next() {
     if (this.t < DONE) { if (this.t < BURST) this.app.sfx('awaken'); this.t = DONE; return; }

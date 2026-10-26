@@ -270,22 +270,23 @@ export class LessonScreen extends BattleScreen {
       target: this.L.target < 99999 ? `${this.L.target}` : '체크메이트',
     };
   }
-  // 흐린 손가락(화살 모양 벡터 — 잉크 테 · 흰 몸). 누르는 순간 둥근 고리가 퍼진다
+  // 시범 손가락(화살 모양 벡터 — 금빛 몸 · 잉크 테 · 오른쪽 아래 그림자 1, 판 기물 키 쯤). 누르는 순간 금빛 고리가 퍼진다.
+  // 흰 몸 · 높이 10은 크림 칸 위에서 테 한 줄만 보였다(S-19)
   drawFinger(ctx) {
-    const { x, y } = this.demo.at;
+    const { x, y } = this.demo.at, K = 1.6;
     const px = Math.round(x) + 0.5, py = Math.round(y) + 0.5 + (this.demo.press > 0 ? 1 : 0);
     const P = [[0, 0], [0, 9.5], [2.3, 7.4], [3.8, 10.6], [5.4, 9.9], [3.9, 6.8], [6.8, 6.6]];
+    const path = (dx, dy) => { ctx.beginPath(); P.forEach(([u, v], k) => (k ? ctx.lineTo(px + dx + u * K, py + dy + v * K) : ctx.moveTo(px + dx + u * K, py + dy + v * K))); ctx.closePath(); };
     ctx.save();
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    P.forEach(([dx, dy], k) => (k ? ctx.lineTo(px + dx, py + dy) : ctx.moveTo(px + dx, py + dy)));
-    ctx.closePath();
-    ctx.fillStyle = PAL.white; ctx.fill();
-    ctx.lineJoin = 'round'; ctx.lineWidth = 1; ctx.strokeStyle = PAL.frameDk; ctx.stroke();
+    ctx.lineJoin = 'round';
+    path(1, 1); ctx.fillStyle = PAL.shadow; ctx.globalAlpha = 0.5; ctx.fill();
+    ctx.globalAlpha = 1;
+    path(0, 0); ctx.fillStyle = PAL.gold; ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = PAL.frameDk; ctx.stroke();
     if (this.demo.press > 0) {
       ctx.globalAlpha = Math.min(1, this.demo.press * 2);
-      ctx.beginPath(); ctx.ellipse(px, py, 5.5, 5.5, 0, 0, Math.PI * 2);
-      ctx.lineWidth = 1.2; ctx.strokeStyle = PAL.white; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(px, py, 7, 7, 0, 0, Math.PI * 2);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = PAL.goldHi; ctx.stroke();
     }
     ctx.restore();
   }

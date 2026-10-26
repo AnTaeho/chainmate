@@ -48,9 +48,9 @@ function rowLine(ctx, r, name, top, { mine = false, total = null } = {}) {
 
 // 쪽 넘기기(맨 아래 단추 줄 오른쪽): ‹ · 「14/121」 · ›. 쪽 글 칸은 가장 넓은 꼴(「121/121」)에 맞춘다 — 공통 pageButtons는 두 자리 쪽까지만 들어간다
 function pager(ctx, ui, page, pages, go) {
-  const lw = Math.max(40, measure(`${pages}/${pages}`) + 12), nx = W - PAGE.titleX - 36, px = nx - lw - 36;
+  const lw = Math.max(40, measure(`${pages}/${pages}`, true) + 12), nx = W - PAGE.titleX - 36, px = nx - lw - 36;
   button(ctx, ui, 'rank:prev', px, PAGE.btnY, 36, PAGE.btnH, '‹', { enabled: page > 0, onClick: () => go(page - 1) });
-  text(ctx, `${page + 1}/${pages}`, px + 36 + Math.floor(lw / 2), PAGE.btnY + 3, PAL.dim, { align: 'center' });
+  text(ctx, `${page + 1}/${pages}`, px + 36 + Math.floor(lw / 2), PAGE.btnY + 3, PAL.dim, { align: 'center', bold: true });
   button(ctx, ui, 'rank:next', nx, PAGE.btnY, 36, PAGE.btnH, '›', { enabled: page < pages - 1, onClick: () => go(page + 1) });
 }
 

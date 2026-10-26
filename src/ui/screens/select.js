@@ -4,7 +4,7 @@
 import { richText } from '../glossary.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { text, box, rect, rrect, rframe, fitNum, measure, R_SM } from '../../render/gfx.js';
+import { H, text, box, rect, rrect, rframe, fitNum, measure, R_SM } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
 import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
@@ -18,7 +18,7 @@ import { kindTab } from '../kinds.js';
 import { envelope, edgeRing, STAMP } from '../parts.js';
 import { L } from '../lang.js';
 import { runSide, pauseButton } from './common.js';
-import { MAIN, TOP, BTN_H, PAD_CARD, LINE, GAP_IN, GAP_GROUP, SP, flow, textY, inkY } from '../frame.js';
+import { MAIN, TOP, BTN_H, BTN_S, PAD_CARD, LINE, GAP_IN, GAP_GROUP, SP, flow, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { tipLines, fitText } from '../parts.js';
 import { drawPortrait } from '../../render/portraits.js';
@@ -251,6 +251,14 @@ export class SelectScreen {
   // 떠나온 상점이 있으면 판의 길 띠 왼쪽에 「상점」)
   // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(움직이는 그림은 live()로 알린다)
   animating() { return false; }
+  // 업적 알림 자리: 카드 줄 아래 한 줄(위 가운데에 뜨면 판의 길 띠 — 관 동그라미를 덮었다, S-11). 자리가 없으면 다음 화면까지 기다린다
+  achvSpot() {
+    const run = this.app.run;
+    if (!run) return null;
+    const plan = selectPlan(run, selectLays(run));
+    const bottom = Math.max(...plan.cards.map((c) => c.y + c.h)), y = H - SP.m - BTN_S;
+    return y >= bottom + SP.s ? { cx: MAIN.x + Math.round(MAIN.w / 2), w: MAIN.w, y } : { hold: true };
+  }
   draw(ctx, ui) {
     const app = this.app, run = app.run;
     const fid = blindInfo(run).faction, fa = FACTION_BY_ID[fid];

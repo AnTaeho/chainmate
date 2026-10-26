@@ -36,7 +36,7 @@ import { keyHeight } from '../glossary.js';
 import { SIDE_W, NOTE_GAP } from '../placement.js';
 import { pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel, maximCard, maximTip, edgeRing, chartBadge, soulMark, fragmentStrip } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
-import { pauseButton, shardTo, hasClock, clockPips, clockTip, SIDE } from './common.js';
+import { pauseButton, shardTo, hasClock, clockPips, clockTip, SIDE, dailyMark } from './common.js';
 import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, CHIP_H, CHIP_PAD, flow, textY, inkY, BTN_S, INK_H, SP } from '../frame.js';
 import { INK_DESC } from '../../render/layoutlog.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
@@ -269,6 +269,13 @@ const bagTip = (b) => {
 //   cmd(c)   명령 하나 → 사건 배열
 //   run      판(런) 상태(없으면 상금 · 격언 칸 · 막간을 그리지 않는다)
 export const runSource = (app) => ({ kind: 'run', live: () => app.run.battle, cmd: (c) => app.cmd(c), get run() { return app.run; } });
+
+// 손 카드 이름 꼴(한 손이 한 꼴): list = [[이름, 들어갈 폭]]. 모두 굵게 들어가면 'bold', 모두 보통으로 들어가면 'normal', 아니면 'none'
+export function handNameMode(list) {
+  if (list.every(([nm, room]) => measure(nm, true) <= room)) return 'bold';
+  if (list.every(([nm, room]) => measure(nm) <= room)) return 'normal';
+  return 'none';
+}
 
 export class BattleScreen {
   constructor(app, { events = [], source = null } = {}) {
@@ -1319,7 +1326,8 @@ export class BattleScreen {
         let best = cands[0], bestHit = hit(...cands[0]);
         for (const c of cands.slice(1)) { if (bestHit <= 0) break; const u = hit(...c); if (u < bestHit) { best = c; bestHit = u; } }
         let y = Math.max(1, Math.min(270 - h - 1, best[1]));
-        const x = Math.max(2 + w / 2, Math.min(W - 2 - w / 2, best[0]));
+        // 판 자리 안으로 묶는다: 판 밖 오른쪽 칸에 나가면 미리 보기 판넬에 가렸다(S-5)
+        const x = Math.max(Math.max(2, BX) + w / 2, Math.min(Math.min(W - 2, BX + S * 8) - w / 2, best[0]));
         // 판 가운데 큰 글자(「프로모션」 · 「목표 달성」)가 떠 있으면 그 띠 밖으로 비킨다: 위에 자리가 있으면 위, 없으면 아래
         for (const f of this.fx.list) {
           const b = f.word && f.band;
@@ -1412,6 +1420,14 @@ export class BattleScreen {
   // 손이 들썩일 때(한동안 아무것도 들지 않으면 — drawRight)
   nudging() { const b = this.live(); return !!(b && b.status === 'play' && !this.busy && !this.sel.length && this.idleT > 2.5); }
   // 그릴 때만 그린다: 연출 · 띠 · 도장 · 불꽃 · 복기 셈 동안, 그리고 손 들썩임이 막 켜지거나 꺼질 때. 시간 따라 바뀌는 그림은 그릴 때 live · beat를 부른다
+  // 캔버스를 덮는 막(마스터 등장 짙은 남색 · 점화 막간 그림자)을 여백 판도 같은 빛깔 · 세기로(app.surround — 캔버스 네모가 드러났다, S-2)
+  surroundFlash() {
+    const it = this.intro;
+    if (!it) return null;
+    const a = Math.max(0, Math.min(1, it.t / 0.12, (it.life - it.t) / 0.18)) * 0.96;
+    return a > 0 ? { col: PAL.feltDk, a } : null;
+  }
+  surroundDim() { const g = this.combo; return g ? (g.calm ? 1 : Math.min(1, g.t / 0.2)) * 0.45 : 0; }
   animating() {
     return this.busy || !!this.intro || !!(this.falls && this.falls.size) || !!this.glow || !!this.ring || !!this.banner || !!this.stamp
       || !!this.flameOn || !!(this.flames && this.flames.length) || !!(this.rv && this.rv.phase === 'think') || this.nudging() !== !!this.nudgeOn;
@@ -1828,7 +1844,9 @@ export class BattleScreen {
   drawGhost(ctx, sq, g, x, y, time) {
     const a = g.k ? 0.3 : 0.5;
     piece3(ctx, g.t, 'b', x, y, { alpha: a });
-    const bob = beat(time, 3, sq * 0.37) % 2, ty = y - PIECE_TOP - 7 + bob;
+    const bob = beat(time, 3, sq * 0.37) % 2;
+    // 판 위 띠(도전 · 업적 알림)가 떠 있으면 ▼는 띠 아랫변 아래로 — 8단 그림자의 ▼가 띠 글 한가운데를 가렸다(S-12)
+    const ty = Math.max(y - PIECE_TOP - 7 + bob, this.hasBand() ? 1 + CHIP_H + SP.xs * 2 + 1 : -Infinity);
     ctx.globalAlpha = g.k ? 0.5 : 1;
     ctx.beginPath(); ctx.moveTo(x - 3.5, ty); ctx.lineTo(x + 3.5, ty); ctx.lineTo(x, ty + 5); ctx.closePath();
     ctx.fillStyle = PAL.red; ctx.fill(); ctx.strokeStyle = INK3; ctx.lineWidth = 0.8; ctx.lineJoin = 'round'; ctx.stroke();
@@ -2096,12 +2114,15 @@ export class BattleScreen {
     const t0 = lay.titles[0] - ((LINE_TITLE - INK_H) >> 1);
     this.sideSpot(ui, LX, t0, LW, LINE_TITLE * spec.titles.length);
     openBox('tile', LX, t0, LW, LINE_TITLE * spec.titles.length, 0, { name: '대국 이름' });
-    const dot = spec.faction ? 9 : 0;
-    if (dot) rrect(ctx, LX + PX, lay.titles[0] + 3, 6, 6, 3, spec.faction.look ? spec.faction.look.dark : PAL.dark);
+    // 오늘의 대국이면 세력 점 자리에 해 아이콘(가리키면 그날 순위에 오른다는 말 — S-13. 관 줄은 영어 「Hall 1/8」 · 「이기면」 알약으로 차 있다)
+    // 해 아이콘이 들어가도 첫 제목 줄이 굵게 다 들어갈 때만(안 들어가면 세력 점 그대로 — 이름을 보통 굵기로 줄이지 않게)
+    const daily = this.src.kind === 'run' && run && run.daily && measure(spec.titles[0] || '', true) <= LW - PX * 2 - 12 - SP.s;
+    const dot = daily ? dailyMark(ctx, ui, run, LX + PX + 12, lay.titles[0]) : spec.faction ? 9 : 0;
+    if (dot && !daily) rrect(ctx, LX + PX, lay.titles[0] + 3, 6, 6, 3, spec.faction.look ? spec.faction.look.dark : PAL.dark);
     spec.titles.forEach((l, k) => fitText(ctx, l, LX + PX + (k ? 0 : dot), lay.titles[k], LW - PX * 2 - (k ? 0 : dot), spec.titleCol));
     closeBox();
     if (spec.master) { const m = spec.master; ui.region('master', LX + 2, t0, LW - 4, LINE_TITLE, { tip: () => tipLines(`마스터 ${m.name}`, m.text) }); }
-    else if (spec.faction) { const fa = spec.faction; ui.region('faction', LX + 2, t0, LW - 4, LINE_TITLE, { tip: () => tipLines(fa.name, fa.habit.text) }); }
+    else if (spec.faction) { const fa = spec.faction, dx = daily ? dot : 0; ui.region('faction', LX + 2 + dx, t0, LW - 4 - dx, LINE_TITLE, { tip: () => tipLines(fa.name, fa.habit.text) }); }
     // 「점수」 이름표(불씨 · 얻을 몫은 이 줄) → 큰 점수 · 오른쪽 「목표 / 150」
     const sl = lay.scoreLab, sy = lay.score;
     // 접기 몫은 가리킬 수 있는 것마다 따로(이름표 줄 · 큰 점수 · 막대) — 가리킨 것을 품은 큰 몫은 접기가 판넬 빛깔로 칠한다
@@ -2115,9 +2136,18 @@ export class BattleScreen {
     const tgt = spec.targetN ?? spec.target;
     const gS = `/ ${typeof tgt === 'number' ? fitNum(tgt, LW / 2) : L(String(tgt))}`;
     const gw = Math.max(measure('목표'), measure(gS, true));
-    text(ctx, '목표', LX + LW - PX - gw, sy + 4, PAL.dim);
-    text(ctx, gS, LX + LW - PX - gw, sy + 4 + LINE, PAL.ink, { bold: true });
-    const big = this.bigNum(score, LW - PX * 2 - gw - 6);
+    // 큰 점수가 목표 옆(두 줄)에서 두 배도 안 들어가면 목표를 윗줄 한 줄로 올리고 점수가 온 폭을 쓴다 — 6관부터 1,000만 넘어도 한 배로 뚝 떨어졌다(S-25)
+    let big = this.bigNum(score, LW - PX * 2 - gw - 6), goalLine = false;
+    const lineW = measure('목표') + SP.xs + measure(gS, true);
+    if (big.k < 2 && lineW <= LW - PX * 2) { const wide = this.bigNum(score, LW - PX * 2, 2); if (wide.k >= 2) { big = wide; goalLine = true; } }
+    if (!goalLine) {
+      text(ctx, '목표', LX + LW - PX - gw, sy + 4, PAL.dim);
+      text(ctx, gS, LX + LW - PX - gw, sy + 4 + LINE, PAL.ink, { bold: true });
+    } else {
+      const vw = measure(gS, true);
+      text(ctx, '목표', LX + LW - PX - lineW, sy, PAL.dim);
+      text(ctx, gS, LX + LW - PX - vw, sy, PAL.ink, { bold: true });
+    }
     const by = sy + INK_H * (3 - big.k);
     {
       const up = this.pulseAt('score', score, app.time);
@@ -2475,7 +2505,7 @@ export class BattleScreen {
   }
   // 손 카드 하나(크림 카드 · 기물 그림 · 이름이 들어가면 이름): 고른 카드는 금빛 테 + 빛
   // vis: 다음 카드에 덮이지 않고 보이는 폭(이름은 그 안 가운데에, 안 들어가면 뺀다)
-  handCard(c, p, x, y, w, h, { selected = false, hover = false, dim = false, alpha = 1, tier = 0, level = 0, time = null, loose = false, vis = w } = {}) {
+  handCard(c, p, x, y, w, h, { selected = false, hover = false, dim = false, alpha = 1, tier = 0, level = 0, time = null, loose = false, vis = w, names = null } = {}) {
     if (alpha !== 1) c.globalAlpha = alpha;
     openBox('card', x, y, w, h, 2, { overlay: true, loose, name: '손 카드' });
     // 고른 카드: 금빛 테 1 + 바깥 빛(29절 — parts.js pieceCard와 같은 꼴)
@@ -2483,7 +2513,9 @@ export class BattleScreen {
     box(c, x, y, w, h, PAL.card, selected ? PAL.gold : hover ? PAL.goldDk : PAL.frameDk);
     if (p.eng && ENG_EDGE[p.eng.id]) edgeRing(c, x, y, w, h, 1, ENG_EDGE[p.eng.id]);
     const nm = L(PIECE_NAME[p.t] || ''), vw = Math.min(w, vis), room = vw - 4;
-    const bold = measure(nm, true) <= room, show = bold || measure(nm) <= room;
+    // 이름 꼴은 손 전체가 하나(names — drawHand가 고른다: 굵게 · 보통 · 없음). 따로 부르면 이 카드만 재어 고른다(S-4 · S-21)
+    const mode = names || handNameMode([[nm, room]]);
+    const bold = mode === 'bold', show = mode !== 'none';
     fitPiece(c, p.t, 'w', x + 3, y + 3, w - 6, h - 19, { alpha: dim ? 0.5 : 1, eng: p.eng ? p.eng.id : null, tier, time, soul: p.soul || null, awake: !!p.awake });
     if (show) text(c, nm, x + Math.floor(vw / 2), y + h - 14, dim ? PAL.cardDim : PAL.cardInk, { align: 'center', bold });
     if (level > 0) chartBadge(c, level, x + w - 3, y + 3, { dim });
@@ -2528,6 +2560,8 @@ export class BattleScreen {
     const nudging = this.nudgeOn = this.nudging();
     const n = v.hand.length;
     const nc = nextColumn(lay, this.fanEdge(n, lay)), nextRight = nc.x + nc.w;
+    // 이름 꼴: 보이는 카드 모두가 굵게 들어가면 굵게, 아니면 모두 보통, 그것도 한 장이라도 안 들어가면 모두 그림만(한 손 한 꼴)
+    const names = handNameMode(v.hand.map((p, i) => { const hr = this.handRect(i, n, lay); return [L(PIECE_NAME[p.t] || ''), Math.min(hr.w, i < n - 1 ? hr.step : hr.w) - 4]; }));
     v.hand.forEach((p, i) => {
       const hr = this.handRect(i, n, lay);
       const w = hr.w, x = hr.x, id = `hand:${i}`;
@@ -2555,7 +2589,7 @@ export class BattleScreen {
         c.save(); c.translate(px, py); c.rotate(hr.rot); c.translate(-px, -py);
         c.imageSmoothingEnabled = true; // 기운 카드에 붙이는 구운 기물 · 글 그림이 최근접 늘이기로 줄줄이 어긋나지 않게(restore가 되돌린다)
         try {
-          this.handCard(c, p, x, y - lift, w, hr.h, { selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(level), level, time: app.time + i, alpha: dk < 1 ? dk : 1, loose: dk < 1, vis });
+          this.handCard(c, p, x, y - lift, w, hr.h, { selected, hover: hov || nudge > 0, dim: !usable, tier: tierOf(level), level, time: app.time + i, alpha: dk < 1 ? dk : 1, loose: dk < 1, vis, names });
           // !? 흥미로운 수: 희생으로 새로 뽑은 기물(이것으로 시작한 다음 사슬이 체크메이트면 탁월수). 기보 표가 있으면 왼쪽 위
           if (drawn.includes(p.id)) { const r = handTagRect(x, y - lift, w, level); drawAnnot(c, '!?', r.x, r.y, ANNOT.red); }
         } finally { c.restore(); }
@@ -2569,6 +2603,8 @@ export class BattleScreen {
   // 다음 수(CHM-60): 덱 맨 앞 둘(왼쪽이 먼저), 손 부채 왼쪽 아래에 「다음」 이름표와 작은 칸 둘. 덱이 비면 빈 자리
   drawNext(ctx, ui, lay) {
     const col = nextColumn(lay, this.fanEdge(this.view.hand.length, lay)), next = this.view.next || [];
+    // 수업에서 덱이 비면 「다음」 칸을 그리지 않는다(판 대국의 빈 칸은 바닥났다는 정보라 그대로, S-20)
+    if (this.src.kind === 'lesson' && !next.length) return;
     ui.region('next', col.x, col.labelY, col.w, col.y + col.h - col.labelY, { tip: () => this.nextTip() });
     text(ctx, '다음', col.x, col.labelY, PAL.dim);
     col.slots.forEach((r, k) => {

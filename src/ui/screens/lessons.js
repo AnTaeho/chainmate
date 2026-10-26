@@ -127,6 +127,7 @@ export class LessonsScreen {
   constructor(app, { end = false } = {}) { this.app = app; this.end = end; }
   // 그릴 때만 그린다: 이 화면은 스스로 움직이지 않는다(끝 카드의 킹은 kingNote가 live()로 알린다)
   animating() { return false; }
+  surroundDim() { return this.end && !this.terms ? 0.6 : 0; } // 끝 카드의 어둡기를 여백 판도 같이(app.surround)
   draw(ctx, ui) {
     const app = this.app, seen = seenOf(app);
     if (this.terms) return this.drawTerms(ctx, ui);
@@ -146,7 +147,7 @@ export class LessonsScreen {
       const n = list.filter(({ L }) => seen[L.id]).length;
       const ty = f.line(true);
       text(ctx, g.name, x + PAD_BOX, ty, PAL.gold, { bold: true });
-      text(ctx, `${n}/${list.length}`, x + colW - PAD_BOX, ty, n === list.length ? PAL.gold : PAL.dim, { align: 'right' });
+      text(ctx, `${n}/${list.length}`, x + colW - PAD_BOX, ty, n === list.length ? PAL.gold : PAL.dim, { align: 'right', bold: true });
       f.gap(SP.s);
       list.forEach(({ L, i }, k) => {
         if (k) f.gap(LESSON_GAP);

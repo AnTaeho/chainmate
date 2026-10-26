@@ -21,6 +21,7 @@ export class HighlightScreen {
   }
   update() {}
   animating() { return false; }
+  surroundDim() { return 0.6; } // 밑 화면을 한 겹 더 어둡게 — 여백 판도 같이(app.surround)
   draw(ctx, ui) {
     // 밑의 결과 화면을 한 겹 더 어둡게
     ctx.globalAlpha = 0.6; rect(ctx, 0, 0, W, H, PAL.shadow); ctx.globalAlpha = 1;
