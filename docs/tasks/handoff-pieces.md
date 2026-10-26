@@ -36,7 +36,7 @@
 10. `tools/icons.mjs`는 돌리지 않는다 — 새 킹으로 앱 아이콘(`assets/icons/`)이 바뀐다. 따로 할 일로 알린다.
 
 ## 범위 밖
-`src/sim/` · `src/data/` 수치, `src/ui/fit.js`, `src/main.js` · 입력, `src/ui/i18n/en.js`, `desktop/`. 판 빛깔 · 배치는 그대로.
+`src/sim/` · `src/data/` 수치, `src/ui/fit.js`, `src/main.js` · 입력, `src/data/i18n/en.js`, `desktop/`. 판 빛깔 · 배치는 그대로.
 
 ## 다음 명령
 ```sh

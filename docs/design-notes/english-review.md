@@ -32,7 +32,7 @@
 | 각인 · 혼 · 각성 | Engraving · Soul · Awakening(동사 Awaken) | |
 | 진화 | Evolve | 낱말 풀이 제목도 Evolution에서 두루마리 이름과 같은 Evolve로 |
 | 특수 기물 · 기본 기물 | Special piece · Chess pieces | 행마 보기 탭 「Basic pieces」를 Chess pieces로 |
-| 시너지 | Synergy | 기사 Rider · 성채 Fortress · 사제 Cleric · 변신 Shift · 희생 Sacrifice · 왕관 Crown · 행진 March · 사냥 Hunt · 역습 Counter · 매복 Ambush |
+| 시너지 | Synergy | 기사 Rider · 성채 Fortress · 사제 Cleric · 변신 Shift · 불굴 Resolve · 왕관 Crown · 행진 March · 사냥 Hunt · 역습 Counter · 매복 Ambush |
 | 세력 · 버릇 | Faction · Habit | |
 | 팩 · 두루마리 · 도감 · 진열 | Bundle · Scroll · Almanac · For Sale | 진열은 상점 머리 글이라 Display보다 For Sale |
 | 명경기 · 명경기 조각 · 재현 · 불멸의 기보 | Classic · Classic Fragment · Reenact · Immortal Games | |

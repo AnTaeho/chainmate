@@ -72,7 +72,7 @@
 | `account_logout` · `account_delete` | — |
 | `account_password` | `reset` |
 | `link_code` · `link_unlink` | — |
-| `link_redeem` | `ok` · `reason`(bad · expired · self · limit · unreached · null) |
+| `link_redeem` | `ok` · `reason`(bad · expired · self · limit · unreached · account — 계정이 붙은 기기라 코드는 계정 쪽에서 받는다 · null) |
 | `save_sync` | `pulled` · `pushed` · `conflict` — **하루 한 번 요약**(날이 바뀐 뒤 처음 맞출 때 지난 날의 수, `saveSyncProps`) |
 | `telemetry_off` | — |
 | `$exception` | `$exception_list`(PostHog Error Tracking 꼴) · `screen` · `app_version` — `window.onerror` · `unhandledrejection`. 같은 메시지 + 첫 스택 줄은 세션에 한 번, 세션당 5건 |

@@ -42,7 +42,7 @@ PLAYWRIGHT=… node tools/touch-audit.mjs --json /tmp/touch-before.json         
 2. 원인을 한 곳(`src/ui/ui.js` `UI.down/up/hitIn`, `src/main.js` 손가락 처리)에서 고친다 — 단추마다 따로 고치지 않는다. `this.touch`일 때만 바꿔 마우스는 그대로.
 3. 보이는 것이 바뀌면 시안 2~4장.
 4. 검증: `npm test`(905) · `npm run smoke`(SMOKE OK · 넘침 0 · 한 수 ≤4초) · 그리기를 바꿨으면 `node tools/drawcheck.mjs` · `node tools/drawcheck.mjs --scale 1280x720 --fit fill` · 도구 고친 뒤 표.
-5. 범위 밖: `src/sim/` · `src/data/` · `tuning.js` · `src/ui/i18n/en.js` · `desktop/`.
+5. 범위 밖: `src/sim/` · `src/data/` · `tuning.js` · `src/data/i18n/en.js` · `desktop/`.
 
 ## 결과(2026-10-25, 클라우드 세션)
 
