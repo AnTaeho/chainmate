@@ -1,5 +1,6 @@
 // 순위 서버 로직(CHM-70, api/_lib/service.js · http.js): 플레이어 만들기 · 다시 짓기 한도 · 제출의 처리 차례(열쇠 → 배포 → 날짜 → 한도 → 다시 두기)
 // · 좋은 기록만 갈아 끼우기 · 순위표 쪽 넘김 · 내 위아래 · 출처 확인 · JSON 읽기. DB는 기억 저장소(test/helpers/memstore.js) — 진짜 SQL은 tools/daily-e2e.mjs가 본다.
+import { RULES_VERSION } from '../src/sim/rules.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,9 +29,9 @@ function botLog(date, policy = 'none') {
 }
 const DATE = '2026-10-08';
 
-test('hello: 배포 식별자', async () => {
+test('hello: 배포 식별자 · 규칙 판본', async () => {
   const { svc } = setup({ build: 'dpl_x' });
-  assert.deepEqual(await svc.hello(), { status: 200, body: { build: 'dpl_x' } });
+  assert.deepEqual(await svc.hello(), { status: 200, body: { build: 'dpl_x', rules: RULES_VERSION } });
 });
 
 test('플레이어: 새로 만들면 열쇠 · 이름 번호를 주고 DB에는 해시만 남는다, 열쇠로 다시 물으면 같은 이름', async () => {
@@ -135,12 +136,15 @@ test('제출의 처리 차례: 꼴 400 → 모르는 열쇠 401 → 배포가 �
   const p = (await svc.player({})).body;
   const { cmds } = botLog(DATE);
   const ok = { key: p.key, date: DATE, build: 'b1', cmds };
-  for (const bad of [null, {}, { ...ok, key: 'x' }, { ...ok, cmds: 'no' }, { ...ok, build: 3 }, { ...ok, build: 'x'.repeat(101) }]) {
+  for (const bad of [null, {}, { ...ok, key: 'x' }, { ...ok, cmds: 'no' }, { ...ok, build: 3 }, { ...ok, build: 'x'.repeat(101) }, { ...ok, rules: '1' }, { ...ok, rules: 1.5 }]) {
     assert.deepEqual(await svc.submit(bad), { status: 400, body: { error: 'bad_request' } });
   }
   assert.deepEqual(await svc.submit({ ...ok, cmds: Array(LIMITS.cmds + 1).fill({ type: 'play' }) }), { status: 413, body: { error: 'too_many_cmds' } });
   assert.deepEqual(await svc.submit({ ...ok, key: 'e'.repeat(64), build: 'old' }), { status: 401, body: { error: 'unknown_key' } });
-  assert.deepEqual(await svc.submit({ ...ok, build: 'old', date: '1999-01-01' }), { status: 409, body: { error: 'stale', stale: true, build: 'b1' } });
+  assert.deepEqual(await svc.submit({ ...ok, build: 'old', date: '1999-01-01' }), { status: 409, body: { error: 'stale', stale: true, build: 'b1', rules: RULES_VERSION } });
+  // 규칙 판본을 실으면 배포 식별자는 보지 않는다(글 · 화면만 바꾼 배포에 두던 판이 stale이 되지 않게 — C-1) · 판본이 다르면 409
+  assert.deepEqual(await svc.submit({ ...ok, build: 'old', rules: RULES_VERSION - 1, date: '1999-01-01' }), { status: 409, body: { error: 'stale', stale: true, build: 'b1', rules: RULES_VERSION } });
+  assert.deepEqual(await svc.submit({ ...ok, build: 'old', rules: RULES_VERSION, date: '1999-01-01' }), { status: 422, body: { error: 'bad_date' } });
   for (const d of ['2026-10-06', '2026-10-10', '2026-1-1', 'today', null]) assert.deepEqual(await svc.submit({ ...ok, date: d }), { status: 422, body: { error: 'bad_date' } }, String(d));
   // 여기까지는 하루 한도를 쓰지 않았다
   assert.equal(store.players[0].sn, 0);
@@ -245,7 +249,7 @@ test('함수: GET은 주소의 물음을, POST는 JSON 본문만 받는다 — J
   assert.equal(ok.status, 200);
   assert.match(ok.headers.get('content-type'), /^application\/json/);
   assert.equal(ok.headers.get('cache-control'), 'no-store');
-  assert.deepEqual(await ok.json(), { build: 'dpl_t' });
+  assert.deepEqual(await ok.json(), { build: 'dpl_t', rules: RULES_VERSION });
   const board = route('GET', (s, q) => s.board(q), fake);
   assert.deepEqual((await (await board.GET(req('https://a.b/api/daily/board?date=2026-10-08&page=2'))).json()).page, 2);
   assert.equal((await board.GET(req('https://a.b/api/daily/board?page=x'))).status, 400);

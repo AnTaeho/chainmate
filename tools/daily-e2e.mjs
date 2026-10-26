@@ -4,6 +4,7 @@
 // --vercel: 배포 보호가 걸린 미리 보기 배포는 `vercel curl`로 부른다(로그인한 CLI가 통과시켜 준다). 없으면 fetch.
 // 미리 보기 배포도 프로덕션과 같은 DB를 쓴다 — 만든 플레이어는 곧바로 test 표시를 하고(.env.local의 직접 연결), 끝나면(실패해도) 지운다.
 // 열쇠 · 비밀 값은 찍지 않는다. 열쇠는 Authorization 머리말로만 보낸다.
+import { RULES_VERSION } from '../src/sim/rules.js';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -70,6 +71,7 @@ try {
   const build = hello.body && hello.body.build;
   check('GET /api/hello → { build }', hello.status === 200 && typeof build === 'string' && build.length > 0, `build ${build}`);
   check('배포 식별자가 dev가 아니다(배포에서만)', /localhost|127\.0\.0\.1/.test(BASE) || build !== 'dev', String(build));
+  check('hello의 규칙 판본 = 이 저장소의 RULES_VERSION(판본이 다르면 이 저장소와 다른 규칙이 배포됐다)', hello.body && hello.body.rules === RULES_VERSION, `rules ${hello.body && hello.body.rules} · 저장소 ${RULES_VERSION}`);
 
   // 봇이 오늘의 대국을 두 번 둔다(약한 판 · 나은 판) — 서버가 같은 성적을 내는지 본다
   const logs = ['none', 'random'].map((policy) => { const run = createDailyRun(DATE); playRun(run, policy); return { policy, cmds: JSON.parse(JSON.stringify(run.cmds)), want: summarize(run) }; });
@@ -88,7 +90,8 @@ try {
   const again = await call('POST', '/api/player', {}, me.key);
   check('같은 열쇠로 물으면 같은 이름', again.status === 200 && again.body.a === me.a && again.body.n === me.n);
 
-  const s1 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: weak.cmds }, me.key);
+  // 첫 제출은 지금 화면처럼 규칙 판본을 실어, 나머지는 옛 화면처럼 배포 식별자로(두 길 모두)
+  const s1 = await call('POST', '/api/daily/submit', { date: DATE, build, rules: RULES_VERSION, cmds: weak.cmds }, me.key);
   check(`제출(봇 ${weak.policy} 판, 명령 ${weak.cmds.length}개) → 서버 셈 = 봇 판`, s1.status === 200 && s1.body.ok && s1.body.improved === true && same(s1.body.best, weak.want), `${s1.status} ${s1.body && s1.body.best ? show(s1.body.best) : JSON.stringify(s1.body)} · ${s1.body && s1.body.rank}등/${s1.body && s1.body.total}명`);
   const s2 = await call('POST', '/api/daily/submit', { date: DATE, build, cmds: strong.cmds }, me.key);
   check(`더 좋은 판(봇 ${strong.policy}, 명령 ${strong.cmds.length}개) → 갈아 끼움`, s2.status === 200 && s2.body.improved === true && same(s2.body.best, strong.want), `${s2.body && s2.body.best ? show(s2.body.best) : JSON.stringify(s2.body)}`);

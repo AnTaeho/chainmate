@@ -32,7 +32,7 @@ test('오늘의 대국 판: 화면과 서버가 같은 판을 만든다(시드 �
   assert.equal(run.daily, '2026-10-08');
   assert.deepEqual(run.cmds, []);
   const plain = createRun({ seed: dailySeed('2026-10-08'), ...DAILY });
-  const { daily, cmds, ...rest } = run;
+  const { daily, cmds, rulesVersion, ...rest } = run;
   assert.deepEqual(rest, plain);
   assert.notEqual(dailySeed('2026-10-08'), dailySeed('2026-10-09'));
 });

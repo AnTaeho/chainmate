@@ -32,7 +32,7 @@
   - 8관 우승에서 끊는다. 끝나지 않은 줄은 `unfinished`.
   - 성적(`summarize`): `ante` · `blind` · `won` · `score_total` · `battles` · `moves` · `ignite`(점화가 난 대국이 몇째인지, 없으면 null).
 - 다시 두기 한 번 40~120ms(명령 5000개도 1초 안). 함수 한도 30초.
-- **규칙(`src/sim` · `src/data`)을 바꾸면 서버의 다시 두기도 바뀐다.** 정적 파일과 함수가 한 묶음으로 배포되지만, 옛 배포에서 두던 판은 새 배포에서 다르게 풀릴 수 있어 배포 식별자를 견준다(`stale`). 식별자는 켠 세션이 `/api/hello`로 받은 값이라, 옛 배포에서 시작한 판을 새로 켜 이어 둔 뒤 내거나 대기열에서 다시 보내면 새 식별자가 실려 `stale`을 비켜 간다 — 규칙이 바뀌었으면 다시 두기가 어긋나 422 `bad_cmd`로 조용히 버려진다.
+- **규칙(`src/sim` · `src/data`)을 바꾸면 서버의 다시 두기도 바뀐다.** 그래서 **규칙 판본**(`src/sim/rules.js` `RULES_VERSION`)을 견준다(2026-10-26, C-1 · P-9). 오늘의 대국 판은 시작할 때 판본을 적고(`run.rulesVersion`), 낼 때 · 대기열에 함께 싣는다. 서버는 제 판본과 같을 때만 다시 두고 다르면 409 `stale`. 글 · 화면 · `api/`만 바꾼 배포는 판본이 그대로라 두던 판이 그대로 오른다. 옛 판본에서 시작한 판을 새 화면에서 이어 두고 내도 그 판의 판본이 실려 422로 조용히 버려지지 않고 409가 된다. `test/rules.test.js`가 규칙 파일(`src/sim` · `src/data`(i18n 빼고) · `api/_lib/verify.js`, 줄 머리 주석 빼고) 해시를 `test/fixtures/rules-hash.json`과 견준다 — 규칙 파일을 바꿨으면 판본을 올리고 `node tools/rules-hash.mjs --write`. 판본이 없는 옛 판(이 변경 전에 시작)과 옛 화면은 예전대로 배포 식별자 `build`를 견준다.
 - 증명: `test/daily-verify.test.js`, smoke 「순위 확인: 화면 판 = 서버 셈」.
 - 막지 못하는 것: 프로그램(풀이기)이 두는 것. 상위권은 `daily_logs`의 명령 줄로 다시 볼 수 있다.
 
@@ -56,11 +56,11 @@
 
 | 길 | 받는 것 | 주는 것 |
 |---|---|---|
-| `GET /api/hello` | — | `{ build }` — 배포 식별자(`VERCEL_DEPLOYMENT_ID` → `VERCEL_GIT_COMMIT_SHA` → `'dev'`) |
+| `GET /api/hello` | — | `{ build, rules }` — 배포 식별자(`VERCEL_DEPLOYMENT_ID` → `VERCEL_GIT_COMMIT_SHA` → `'dev'`) · 규칙 판본 |
 | `POST /api/player` | `{}`(열쇠 없이) | 새 플레이어 `{ key, a, n, rerolls }`. 전체 한도 429 `player_limit` + `retryAfter` |
 | | 열쇠 + `{}` | 지금 이름 `{ key, a, n, rerolls }`. 모르는 열쇠 401 `unknown_key` |
 | | 열쇠 + `{ reroll: true }` | 새 이름(앞과 다르다). 429 `reroll_limit` |
-| `POST /api/daily/submit` | 열쇠 + `{ date, build, cmds }` | `{ ok: true, best, rank, total, improved }` |
+| `POST /api/daily/submit` | 열쇠 + `{ date, build, rules?, cmds }` | `{ ok: true, best, rank, total, improved }` |
 | `GET /api/daily/board` | `?date=YYYY-MM-DD&page=N` + 열쇠 | `{ date, total, page, pages, rows, me, around }` |
 
 - `best` = `{ ante, blind, won, score, battles, moves, ignite }`(그날 가장 좋은 기록), `rank` · `total` · `improved`(방금 판으로 갈아 끼웠나).
@@ -68,9 +68,9 @@
 - `date` 기본은 서버 날짜(UTC). 내일보다 뒤는 400 `bad_date`.
 
 ### 제출의 처리 차례
-1. 꼴(열쇠 64자 16진수 · build 글 · cmds 배열) — 400 `bad_request`. 명령 5000개 넘으면 413 `too_many_cmds`
+1. 꼴(열쇠 64자 16진수 · rules 정수 또는(없으면) build 글 · cmds 배열) — 400 `bad_request`. 명령 5000개 넘으면 413 `too_many_cmds`
 2. 열쇠 — 401 `unknown_key`
-3. `build`가 서버와 다르면 409 `{ error: 'stale', stale: true, build }` — 다시 두지 않는다
+3. `rules`가 있으면 그것이, 없으면 `build`가 서버와 다르면 409 `{ error: 'stale', stale: true, build, rules }` — 다시 두지 않는다
 4. `date`가 서버 날짜 ±1일 밖이면 422 `bad_date`
 5. 하루 제출 한도 — 429 `submit_limit`(조작한 줄도 센다)
 6. 다시 두기 — 422 `bad_cmd`(+ `at`) · `unfinished`
@@ -119,7 +119,7 @@
 | 열쇠 | 값 | 언제 |
 |---|---|---|
 | `chainmate.player.v1` | `{ key, a, n }` | 처음 필요할 때 만든다(판을 처음 두어 저장을 올릴 때 · 오늘의 대국을 끝냈을 때 · 순위 화면을 열 때). 켠 뒤 처음 쓸 때 열쇠를 실어 이름 · 남은 다시 짓기를 맞추고, 401이면 새로 만든다. 429 `player_limit`이면 말한 때까지 물러난다 |
-| `chainmate.rankq.v1` | `{ date, cmds }` — 못 보낸 판 하나 | 대기열 |
+| `chainmate.rankq.v1` | `{ date, cmds, rules? }` — 못 보낸 판 하나(시작한 규칙 판본과 함께) | 대기열 |
 
 **열쇠는 화면 · 콘솔 · 기록 보내기 어디에도 싣지 않는다**(`rank.player()`는 이름과 남은 횟수만 — `test/rank.test.js`).
 
@@ -131,12 +131,12 @@
 | (보내는 중) | — | `pending` |
 | 200 | 등수 · 사람 수를 받고 내 쪽을 한 번 더 읽는다 | `ok` |
 | 401 `unknown_key` | 플레이어를 새로 만들어 한 번 더 낸다 | — |
-| 409 `stale` | **다시 보내지 않는다**(이 세션에서는 더 내지 않는다) | `stale` |
+| 409 `stale` | **다시 보내지 않는다**. 서버 판본이 이 화면과 다르면(새로 배포됐다) 이 세션에서는 더 내지 않고, 이 판만 옛 판본이면 이 판만 | `stale` |
 | 400 · 413 · 422 · 429 | 조용히 버린다. 앞서 낸 기록이 있으면 그 등수 | `ok`(`sent: false`) · `none` |
 | 닿지 못함 | 대기열에 남긴다 | `unreached` |
 
 ### 대기열
-못 보낸 판 **하나**(덮어쓴다)를 다음에 켤 때 · 순위 화면을 열 때 한 번 더 보낸다(`rank.retry()`). 그날 것이 아니면 버린다. 서버가 답하면(오르든 거절이든) 지운다.
+못 보낸 판 **하나**(덮어쓴다)를 다음에 켤 때 · 순위 화면을 열 때 · 망이 돌아올 때(`online`) 한 번 더 보낸다(`rank.retry()`). 서버가 받는 날(오늘 · 어제 — 자정 직전에 끝낸 판)이 아니면 버린다(C-13). 서버가 답하면(오르든 거절이든) 지운다.
 
 ### 조회
 `rank.board(date, page)`는 지금 아는 쪽을 곧바로 돌려주고 뒤에서 묻는다. 같은 쪽은 30초 동안 다시 묻지 않고(`CACHE_MS`), 닿지 못한 쪽은 5초 뒤에(`RETRY_MS`). 판을 내거나 이름을 다시 지으면 그날 쪽을 버린다.

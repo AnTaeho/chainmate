@@ -5,6 +5,7 @@
 // base: 도구 전용(연기 시험 · 스크린샷 · 실제 서버 확인)이 주소 머리를 직접 준다 — 주면 호스트 · webdriver 조건을 보지 않는다.
 import { RANK_HOSTS, RANK_APP_BASE } from '../config.js';
 import { nameText } from '../data/names.js';
+import { RULES_VERSION } from '../sim/rules.js';
 
 export const PLAYER_KEY = 'chainmate.player.v1'; // { key, a, n } — 열쇠 원문은 이 기기의 저장에만 있다
 export const QUEUE_KEY = 'chainmate.rankq.v1';   // { date, cmds } — 못 보낸 판 하나(그날 것만)
@@ -117,17 +118,18 @@ export function createRank({
 
   // ── 대기열(못 보낸 판 하나)
   const queued = () => { try { const q = JSON.parse((storage && storage.getItem(QUEUE_KEY)) || 'null'); return q && typeof q.date === 'string' && Array.isArray(q.cmds) ? q : null; } catch { return null; } };
-  const enqueue = (date, cmds) => { try { if (storage) storage.setItem(QUEUE_KEY, JSON.stringify({ date, cmds })); } catch { /* 저장이 막히면 버린다 */ } };
+  // 판을 시작한 규칙 판본(rules)도 함께 남긴다 — 다시 보낼 때 그 판본으로 판정받는다(옛 대기열은 rules 없이 — 옛 길 build)
+  const enqueue = (date, cmds, rules) => { try { if (storage) storage.setItem(QUEUE_KEY, JSON.stringify(rules != null ? { date, cmds, rules } : { date, cmds })); } catch { /* 저장이 막히면 버린다 */ } };
   const dequeue = (date) => { try { const q = queued(); if (storage && (!q || date == null || q.date === date)) storage.removeItem(QUEUE_KEY); } catch { /* 그대로 */ } };
   let retrying = null;
-  // 켤 때 · 순위 화면을 열 때 한 번 더 보낸다. 그날 것이 아니면 버린다
+  // 켤 때 · 순위 화면을 열 때 · 망이 돌아올 때 한 번 더 보낸다. 서버가 받는 날(오늘 · 어제 — 자정 직전에 끝낸 판)이 아니면 버린다(C-13)
   rank.retry = () => {
     if (!allowed) return Promise.resolve(null);
     if (retrying) return retrying;
     const q = queued();
     if (!q) return Promise.resolve(null);
-    if (q.date !== today()) { dequeue(null); return Promise.resolve(null); }
-    retrying = rank.submit(q.date, q.cmds).finally(() => { retrying = null; });
+    if (q.date !== today() && q.date !== shiftDate(today(), -1)) { dequeue(null); return Promise.resolve(null); }
+    retrying = rank.submit(q.date, q.cmds, q.rules).finally(() => { retrying = null; });
     return retrying;
   };
   rank.queued = () => { const q = queued(); return q ? q.date : null; };
@@ -169,21 +171,24 @@ export function createRank({
     st.rank = data.me.rank; st.total = data.total; st.me = data.me; st.around = data.around;
   }
   // 오늘의 대국 판이 끝났을 때: 명령 줄을 낸다. 돌려주는 것: 그 날의 status
-  rank.submit = async (date, cmds) => {
+  // rules: 판을 시작한 규칙 판본(run.rulesVersion, src/sim/rules.js). 서버는 그 판본이 제 것과 같을 때만 다시 둔다. 없으면(옛 판) 이 세션의 배포 식별자로
+  rank.submit = async (date, cmds, rules = null) => {
     if (!allowed || !Array.isArray(cmds)) return null;
     if (stale) return settle(date, { date, phase: 'stale' });
     subs.set(date, { date, phase: 'pending' });
-    const fail = () => { enqueue(date, cmds); return settle(date, { date, phase: 'unreached' }); };
+    const fail = () => { enqueue(date, cmds, rules); return settle(date, { date, phase: 'unreached' }); };
     const b = await hello();
     if (!b) return fail();
     let p = await ensurePlayer();
     if (!p) return fail();
-    let r = await call('POST', '/api/daily/submit', { date, build: b, cmds }, null, p.key);
-    if (r.status === 401) { checked = false; keep(null); p = await ensurePlayer(); if (!p) return fail(); r = await call('POST', '/api/daily/submit', { date, build: b, cmds }, null, p.key); }
+    const body = rules != null ? { date, build: b, rules, cmds } : { date, build: b, cmds };
+    let r = await call('POST', '/api/daily/submit', body, null, p.key);
+    if (r.status === 401) { checked = false; keep(null); p = await ensurePlayer(); if (!p) return fail(); r = await call('POST', '/api/daily/submit', body, null, p.key); }
     if (r.status === 0) return fail();
     dequeue(date);
-    // 새로 배포됐다: 규칙이 다를 수 있어 서버가 다시 두지 않는다 — 이 세션에서는 더 보내지 않는다
-    if (r.status === 409) { stale = true; return settle(date, { date, phase: 'stale' }); }
+    // 판본이 다르다: 서버가 다시 두지 않는다. 이 화면의 규칙까지 서버와 다르면(새로 배포됐다) 이 세션에서는 더 보내지 않는다 —
+    // 이 판만 옛 규칙이면(옛 판본에서 시작한 판) 이 판만 stale, 이 세션에서 새로 시작한 판은 낸다
+    if (r.status === 409) { if (rules == null || !(r.body && r.body.rules === RULES_VERSION)) stale = true; return settle(date, { date, phase: 'stale' }); }
     for (const k of [...pages.keys()]) if (k.startsWith(`${date}:`)) pages.delete(k);
     const st = { date, phase: 'ok', sent: r.status === 200, improved: r.status === 200 && !!r.body.improved, rank: r.status === 200 ? r.body.rank : null, total: r.status === 200 ? r.body.total : null, me: null, around: [] };
     // 거절(422 · 429 …)은 조용히 버린다 — 앞서 낸 기록이 있으면 그 등수를 보인다

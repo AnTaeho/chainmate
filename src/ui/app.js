@@ -23,10 +23,11 @@ import { loadRecords, emptyRecords, observe, finishRun, finishEndless, quitEndle
 import { noteFeats, checkAchievements } from './achievements.js';
 import { ACHIEVEMENT_BY_ID } from '../data/achievements.js';
 import { newTrack, trackBefore, trackCommand, runRow } from '../sim/runlog.js';
-import { keepRow, exportText } from './runlog.js';
+import { keepRow, exportText, makeRoom } from './runlog.js';
 import { telBefore, commandEvents, runStartProps, runEndProps, rankSubmitProps, unlockTierProps } from './telemetry.js';
 import { clearBakes } from '../render/vec.js';
 import { clearPieceCache } from '../render/pieces3.js';
+import { mergeInto } from './merge.js';
 import { NEW_RUN_ASK, QUIT_RUN_ASK } from './screens/confirm.js';
 import { createRank } from './rank.js';
 import { createCloud } from './cloud.js';
@@ -56,6 +57,11 @@ const OUTSIDE = new Set(['title', 'settings', 'setup', 'codex', 'records', 'less
 // cloud: 클라우드 저장(CHM-71, src/ui/cloud.js createCloud) — main.js가 넘긴다. 없으면 아무것도 맞추지 않는다
 // alwaysDraw: 프레임마다 그린다(시험 · 도구). 끄면 바뀐 것이 있을 때만 그린다(main.js — layout.md 「그릴 때만 그린다」)
 // platform: 'web' | 'app'(Tauri). share(name, data, type, anywhere) · download(name, data, type) · copyText(text): 기록 · 그림 내보내기(main.js가 DOM으로 넘긴다, 없으면 못 내보낸다)
+// 저장 공간이 모자라 저장하지 못했을 때 한 번(판 기록을 덜어도 안 될 때)
+export const SAVE_FULL = '저장 공간이 모자라 저장하지 못했어요';
+// 다른 창에서 판을 바꿨을 때(이 창의 판을 내려놓고 메인 화면으로)
+export const OTHER_TAB = '다른 창에서 판을 이어 두고 있어요 · 이어 하기로 불러와요';
+
 export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, fields = null, openPage = null, today: dayNow = today, alwaysDraw = true }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
@@ -136,7 +142,15 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
   setLang(app.settings.lang);
   app.fresh = [];   // 이번 판에 새로 채운 도감 칸
-  app.saveRecords = () => { const ok = store.set(KEYS.records, app.records); if (app.cloud) app.cloud.mark(); app.invalidate(); return ok; };
+  // 저장이 꽉 차 실패하면 판 기록(오래된 것부터)을 덜어 자리를 내고 다시 쓴다. 그래도 안 되면 한 번 알린다(P-6 · C-11 — 진행이 말없이 사라졌다)
+  let roomWarned = false;
+  const keep = (key, value) => {
+    if (store.set(key, value)) return true;
+    while (makeRoom(store)) if (store.set(key, value)) return true;
+    if (!roomWarned) { roomWarned = true; app.toast(SAVE_FULL, PAL.red, 4); }
+    return false;
+  };
+  app.saveRecords = () => { const ok = keep(KEYS.records, app.records); if (app.cloud) app.cloud.mark(); app.invalidate(); return ok; };
   // 사람 판 기록(CHM-50): 판마다 run.track에 세고, 판이 끝나면 한 줄을 KEYS.runs에 남긴다. 수업 · 대본 대국 · scratch 판은 남기지 않는다
   app.appInfo = { version: VERSION, commit: COMMIT, platform };
   // 기록 보내기(CHM-63): scratch 판 위에서는 always(수업 진행 · 설정)만 나간다. 판 사건은 app.cmd가 표(commandEvents)로 옮긴다
@@ -183,7 +197,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
   };
   app.submitDaily = (run) => {
     if (!run || run.scratch || run.endless || !run.daily || !Array.isArray(run.cmds)) return null;
-    return app.rank.submit(run.daily, clone(run.cmds));
+    return app.rank.submit(run.daily, clone(run.cmds), run.rulesVersion ?? null);
   };
   app.keepRun = (run, end) => {
     if (!run || run.scratch || !run.track) return -1;
@@ -333,7 +347,28 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     if (!r || r.scratch) return;   // 수업용 판은 남기지 않는다
     // 저장한 때(updatedAt): 기기 사이에서 더 늦은 판이 이긴다(CHM-71). 끝난 판은 지운 때를 남긴다
     if (r.phase === 'lost' || r.phase === 'won') { if (store.get(KEYS.run)) app.cloud.noteRunEnd(); store.del(KEYS.run); }
-    else { r.updatedAt = app.cloud.now(); store.set(KEYS.run, r); app.cloud.mark(); }
+    else { r.updatedAt = app.cloud.now(); keep(KEYS.run, r); app.cloud.mark(); }
+  };
+  // 다른 탭(같은 기기의 다른 창)이 저장을 바꿨다(window storage 사건, P-18): 기록은 합치고, 판이 바뀌었으면 이 탭의 판은 내려놓는다 —
+  // 그대로 두면 늦게 쓰는 탭이 다른 탭의 기록 · 판을 통째로 덮었다
+  app.otherTab = (key, raw) => {
+    let v = null;
+    try { v = raw ? JSON.parse(raw) : null; } catch { return; }
+    if (key === KEYS.records && v) {
+      const merged = mergeInto(app.records, v);
+      if (JSON.stringify(merged) === JSON.stringify(app.records)) return;
+      for (const k of Object.keys(app.records)) delete app.records[k];
+      Object.assign(app.records, merged);
+      if (JSON.stringify(merged) !== JSON.stringify(v)) store.set(KEYS.records, app.records); // 이 탭에만 있던 것을 남긴다(다른 탭이 다시 합쳐도 같아 멈춘다)
+      app.invalidate();
+    } else if (key === KEYS.run) {
+      const r = app.run;
+      if (!r || r.scratch || r.phase === 'won' || r.phase === 'lost') return;
+      if (app.overlay) app.overlay = null;
+      app.run = null;
+      app.toTitle();
+      app.toast(OTHER_TAB, PAL.gold, 4);
+    }
   };
   app.saveSettings = () => { const ok = store.set(KEYS.settings, app.settings); app.cloud.noteSettings(); app.invalidate(); return ok; };
   // 명령 하나(봇과 같은 명령). 이벤트를 돌려준다.

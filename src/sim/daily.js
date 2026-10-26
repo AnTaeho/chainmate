@@ -2,6 +2,7 @@
 // 같은 함수로 판을 만든다 — 서버는 화면이 남긴 명령(run.cmds)을 이 판에 처음부터 다시 두어 성적을 스스로 셈한다.
 // 판 만들기(오프닝 · 단 · 시드)나 규칙(src/sim)을 바꾸면 서버의 다시 두기도 같이 바뀐다 — 배포는 정적 파일과 함수가 한 묶음이다.
 import { createRun } from './run.js';
+import { RULES_VERSION } from './rules.js';
 
 export const DAILY = { opening: 'standard', dan: 0 };
 
@@ -19,5 +20,6 @@ export function createDailyRun(date) {
   const run = createRun({ seed: dailySeed(date), ...DAILY });
   run.daily = date;
   run.cmds = [];
+  run.rulesVersion = RULES_VERSION; // 시작한 규칙 판본 — 낼 때 싣는다(src/sim/rules.js). run.rules는 판 규칙 칸이라 따로
   return run;
 }

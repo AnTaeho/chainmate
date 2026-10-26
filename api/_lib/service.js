@@ -1,5 +1,6 @@
 // 순위(CHM-70) · 기기 잇기와 클라우드 저장(CHM-71) · 계정(CHM-72) 서버 로직: 요청 하나 → { status, body }. HTTP · DB를 모른다(저장소 · 시계 · 무작위를 받아 쓴다) — 시험은 가짜를 넘긴다.
 // 오류는 { error: 코드 }뿐. API · 한도 표는 docs/design-notes/leaderboard.md.
+import { RULES_VERSION } from '../../src/sim/rules.js';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { randomName } from '../../src/data/names.js';
 import { verifyDaily, VerifyError, isDate, LIMITS as VERIFY_LIMITS } from './verify.js';
@@ -95,7 +96,8 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
     return { key: fresh, a: p.a, n: p.n, rerolls: LIMITS.rerolls, devices: 1 };
   };
   return {
-    hello: async () => ok({ build }),
+    // build: 배포 식별자 · rules: 규칙 판본(src/sim/rules.js) — 화면은 rules로 판이 서버와 같은 규칙인지 안다
+    hello: async () => ok({ build, rules: RULES_VERSION }),
 
     // { key?, reroll? } → { key, a, n, rerolls(오늘 남은 다시 짓기) }. key가 없으면 새 플레이어(모두 합쳐 한 시간 한도 — 429 player_limit)
     async player(body) {
@@ -118,14 +120,16 @@ export function createService({ store, build = 'dev', now = Date.now, newKey = (
       return ok({ key, a: r.a, n: r.n, rerolls: Math.max(0, LIMITS.rerolls - r.rerolls) });
     },
 
-    // { key, date, build, cmds } → { ok, best, rank, total, improved }. 차례: 꼴 → key → build → date → 하루 한도 → 다시 두기 → 갈아 끼우기
+    // { key, date, rules | build, cmds } → { ok, best, rank, total, improved }. 차례: 꼴 → key → 판본 → date → 하루 한도 → 다시 두기 → 갈아 끼우기
+    // 판본: rules(판을 시작한 규칙 판본)가 있으면 그것을 이 서버의 RULES_VERSION과 견준다. 없으면(옛 화면) 옛 길대로 배포 식별자 build를 견준다
     async submit(body) {
-      const { key, date, build: theirs, cmds } = body || {};
-      if (!isKey(key) || typeof theirs !== 'string' || theirs.length > 100 || !Array.isArray(cmds)) return err(400, 'bad_request');
+      const { key, date, build: theirs, rules, cmds } = body || {};
+      if (!isKey(key) || !Array.isArray(cmds)) return err(400, 'bad_request');
+      if (rules != null ? !Number.isInteger(rules) : typeof theirs !== 'string' || theirs.length > 100) return err(400, 'bad_request');
       if (cmds.length > LIMITS.cmds) return err(413, 'too_many_cmds');
       const p = await store.getPlayer(hashKey(key), today());
       if (!p) return err(401, 'unknown_key');
-      if (theirs !== build) return err(409, 'stale', { stale: true, build });
+      if (rules != null ? rules !== RULES_VERSION : theirs !== build) return err(409, 'stale', { stale: true, build, rules: RULES_VERSION });
       if (!isDate(date) || Math.abs(dayGap(date, today())) > LIMITS.dateSpan) return err(422, 'bad_date');
       if (!(await store.bumpSubmit(p.id, today(), LIMITS.submits))) return err(429, 'submit_limit');
       let result, used;

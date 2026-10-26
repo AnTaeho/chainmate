@@ -26,7 +26,7 @@
 
 ## git · 배포
 - 커밋 갈래에 「수치 조정」도 있다. 올라간 커밋은 amend · force-push 하지 않는다.
-- **main 푸시 = 프로덕션 배포**(chainmate.papercut.kr, 화면 · 규칙 · `api/` 한 묶음). 사용자가 「올려」라고 한 뒤에만 모아서 푸시하고, 뒤에 `tools/daily-e2e.mjs` · `link-e2e.mjs` · `account-e2e.mjs`를 프로덕션 주소로 돌린다. 배포 순간 두던 오늘의 대국은 409 `stale`로 순위에 못 오른다. 옛 판본에서 시작한 판을 새로 켜 이어 두거나 대기열에서 다시 보내면 새 판본 식별자가 실려, 규칙이 바뀌었으면 422 `bad_cmd`로 조용히 버려진다.
+- **main 푸시 = 프로덕션 배포**(chainmate.papercut.kr, 화면 · 규칙 · `api/` 한 묶음). 사용자가 「올려」라고 한 뒤에만 모아서 푸시하고, 뒤에 `tools/daily-e2e.mjs` · `link-e2e.mjs` · `account-e2e.mjs`를 프로덕션 주소로 돌린다. 오늘의 대국은 규칙 판본(`src/sim/rules.js` `RULES_VERSION`)으로 판정한다 — 규칙 파일을 바꾼 배포만 두던 판이 409 `stale`(화면 · 글 · `api/`만 바꾼 배포는 그대로 오른다). 규칙 파일을 바꾸면 판본을 올리고 `node tools/rules-hash.mjs --write`(`test/rules.test.js`가 잡는다). 판본이 없는 옛 판은 예전처럼 배포 식별자로 견준다.
 - 배포 빌드 `node tools/stamp.mjs`가 `dist/`를 만들고 `src/` · `style.css` 주소에 판본을 붙인다. 루트에 새 정적 파일을 두면 `STATIC`에도 넣는다. 미리 보기 배포도 프로덕션과 같은 DB를 쓴다.
 
 ## 일하는 방식
@@ -46,7 +46,7 @@
 - 해금: 뽑거나 만드는 자리는 `src/sim/unlock.js` `openPool`(대국은 `openTypes`)을 거친다. 새 물건은 `src/data/unlocks.js` `UNLOCK_TIERS`에. 단계는 `records.unlockTier`에 따로 둔다. 판을 만드는 화면 길은 `app.newRun` 하나, 오늘의 대국에는 단계를 넘기지 않는다.
 - 기록(`app.records`)에 칸을 더하면 `src/ui/merge.js` `RULES`에도(이 기기에만 둘 칸은 `LOCAL_ONLY`).
 - 판 하네스 열쇠를 바꾸면 `src/sim/runlog.js` `runRow`와 `tools/run.mjs` `one()` 둘 다. 규칙 사건이나 `runRow`를 바꾸면 `src/ui/telemetry.js` 표와 `docs/design-notes/telemetry.md`도.
-- 순위 서버(`api/_lib/verify.js`)는 오늘의 대국 명령 줄을 같은 규칙으로 다시 둔다. sim 규칙 · 판 만들기 · 명령 꼴을 바꾸면 서버도 바뀌고, 새 명령 종류 · 칸은 `SHAPES`에. 서버 응답 꼴을 바꾸면 `src/ui/rank.js`도.
+- 순위 서버(`api/_lib/verify.js`)는 오늘의 대국 명령 줄을 같은 규칙으로 다시 둔다. sim 규칙 · 판 만들기 · 명령 꼴을 바꾸면 서버도 바뀌고, 새 명령 종류 · 칸은 `SHAPES`에. 규칙 파일을 바꾸면 `RULES_VERSION`도 올린다. 서버 응답 꼴을 바꾸면 `src/ui/rank.js`도.
 - 기록 보내기 · 순위 · 클라우드 맞추기는 배포 주소 · 앱에서만 나가고 로컬 · smoke는 0건. 순위 화면을 로컬에서 보려면 `boot({ rankBase })`(가짜 서버 `test/helpers/fakeapi.js`).
 - 계정 · 열쇠: 글자 입력 칸은 `src/ui/textfield.js`로만(그릴 때마다 부르고, 화면을 떠난 뒤 `<input>` 0). 입력 칸에 초점이 있으면 게임은 키를 받지 않는다(`main.js` keydown). 열쇠는 `Authorization` 머리말로만 보내고, 열쇠가 드는 부름은 `src/ui/rank.js` 안에만 둔다. 아이디 · 비번 · 열쇠는 로그 · 기록 보내기 · 오류 답에 싣지 않는다. 나가기 · 지우기는 서버가 새 열쇠를 준 뒤에 기기를 비운다. 플레이어를 지우는 길(`store.absorb`)은 계정이 붙어 있는지 먼저 본다. 모으는 것이 바뀌면 `privacy.html`도.
 - 하이라이트 카드는 화면과 내보낸 그림이 같은 그리기다(움직이는 것 금지). 받기 · 공유 앞에 await를 두지 않는다.

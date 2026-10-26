@@ -204,6 +204,8 @@ export const EN = {
   '지금 판을 그만두고 새로 시작할까요?': 'End the current run and start over?', '지금 판을 그만둘까요? 그만둔 판은 이어 할 수 없어요': 'End the current run? You can’t continue it later', '새로 시작': 'Start Over', '그만두기': 'End Run', '돌아가기': 'Go Back',
   '한 번 더 누르면 이 레퍼토리로 정해요': 'Click again to take this repertoire',
   '고른 레퍼토리와 시너지가 여기에 쌓여요': 'Your repertoire and synergies stack up here',
+  '저장 공간이 모자라 저장하지 못했어요': 'Out of storage space · progress not saved',
+  '다른 창에서 판을 이어 두고 있어요': 'This run is being played in another window', '이어 하기로 불러와요': 'Continue to load it here',
   '멈춤': 'Paused', '계속': 'Continue', '메인 화면으로': 'To Title', '메인 화면': 'Title', '뒤로': 'Back', '다시': 'Again', '계속 두기': 'Play On',
   '소리': 'Sound', '음악': 'Music', '연출 속도': 'Speed', '화면 흔들림': 'Screen Shake', '큰 글자': 'Large Text', '켬': 'On', '끔': 'Off', '언어': 'Language', '화면': 'Display', '플레이': 'Play',
   '연습 대국': 'Practice Match', '정식 대국': 'Rated Match', '마스터전': 'Master Match', '연습': 'Practice', '정식': 'Rated',

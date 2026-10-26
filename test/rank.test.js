@@ -1,5 +1,6 @@
 // 순위의 화면 쪽(CHM-70, src/ui/rank.js · docs/design-notes/leaderboard.md 「화면」): 열쇠 만들기 · 저장, 제출 조건, 새 배포(stale) · 망 실패 · 대기열,
 // 순위표 캐시, 로컬 서버 · 자동화 브라우저에서 0건, 열쇠 · 이름이 로그 · 기록 보내기에 안 실리는가. 서버는 진짜 로직에 기억 저장소를 물린 가짜(helpers/fakeapi.js).
+import { RULES_VERSION } from '../src/sim/rules.js';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRank, PLAYER_KEY, QUEUE_KEY, CACHE_MS, RETRY_MS, shiftDate } from '../src/ui/rank.js';
@@ -162,6 +163,28 @@ test('새 배포(409 stale): 다시 보내지 않고 대기열에도 남기지 �
   assert.deepEqual(rankSubmitProps(st), { ok: false, improved: false, rank: null, total: null, stale: true });
 });
 
+test('규칙 판본: 판을 시작한 판본을 실어 내고, 배포가 바뀌어도 판본이 같으면 받는다 · 옛 판본의 판만 stale(이 세션의 새 판은 낸다) — C-1', async () => {
+  const { rank, api, storage } = fakeRank();
+  await rank.open();
+  api.setBuild('next-build'); // 글만 바꾼 배포
+  const { cmds } = botDaily();
+  const st = await rank.submit(DATE, cmds, RULES_VERSION);
+  assert.equal(st.phase, 'ok', '판본이 같으면 배포가 바뀌어도 받는다');
+  assert.equal(api.named('/api/daily/submit')[0].body.rules, RULES_VERSION);
+  // 옛 판본으로 시작한 판: 그 판만 stale, 세션은 그대로
+  const old = await rank.submit(DATE, cmds, RULES_VERSION - 1);
+  assert.equal(old.phase, 'stale');
+  assert.equal(rank.stale(), false);
+  assert.equal((await rank.submit(DATE, cmds, RULES_VERSION)).phase, 'ok');
+  // 못 보낸 판은 판본과 함께 대기열에
+  api.mode = 'fail';
+  await rank.submit(DATE, cmds, RULES_VERSION);
+  assert.deepEqual(stored(storage, QUEUE_KEY), { date: DATE, cmds, rules: RULES_VERSION });
+  api.mode = 'ok';
+  assert.equal((await rank.retry()).phase, 'ok');
+  assert.equal(api.named('/api/daily/submit').at(-1).body.rules, RULES_VERSION);
+});
+
 test('망 실패: 한 건을 대기열에 남기고, 다음에 켤 때 한 번 더 보낸다 · 그날 것이 아니면 버린다', async () => {
   const { cmds } = botDaily();
   for (const mode of ['fail', 'html']) {
@@ -184,9 +207,14 @@ test('망 실패: 한 건을 대기열에 남기고, 다음에 켤 때 한 번 �
     assert.equal(api.store.scores.length, 1);
     assert.equal(storage.getItem(QUEUE_KEY), null);
   }
-  // 날이 바뀐 뒤에 켜면 버린다(한 건도 내지 않는다)
+  // 하루 지난 것(자정 직전에 끝낸 판)은 서버가 아직 받으니 보낸다, 이틀 지난 것은 버린다(한 건도 내지 않는다 — C-13)
+  const late = fakeRank();
+  late.storage.setItem(QUEUE_KEY, JSON.stringify({ date: shiftDate(DATE, -1), cmds }));
+  await late.rank.open();
+  assert.equal(late.storage.getItem(QUEUE_KEY), null);
+  assert.equal(late.api.named('/api/daily/submit').length, 1);
   const old = fakeRank();
-  old.storage.setItem(QUEUE_KEY, JSON.stringify({ date: shiftDate(DATE, -1), cmds }));
+  old.storage.setItem(QUEUE_KEY, JSON.stringify({ date: shiftDate(DATE, -2), cmds }));
   await old.rank.open();
   assert.equal(old.storage.getItem(QUEUE_KEY), null);
   assert.equal(old.api.named('/api/daily/submit').length, 0);

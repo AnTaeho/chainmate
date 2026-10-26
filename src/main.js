@@ -260,6 +260,10 @@ export async function boot(env = {}) {
   // 바뀐 것이 있을 때만 그린다(layout.md 「그릴 때만 그린다」). 자동화 브라우저(스크린샷 · 영상 도구)는 늘 그린다 — env.alwaysDraw로 바꾼다
   const alwaysDraw = env.alwaysDraw ?? !!(win.navigator && win.navigator.webdriver);
   app = createApp({ canvas, storage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, fields, openPage, today: env.today, alwaysDraw });
+  // 망이 돌아오면 못 보낸 오늘의 대국을 한 번 더 보낸다(P-9)
+  win.addEventListener('online', () => { if (rank.retry) rank.retry(); });
+  // 다른 창(탭)이 저장을 바꿨다: 기록은 합치고 판은 내려놓는다(P-18)
+  win.addEventListener('storage', (e) => { if (e && e.key) app.otherTab(e.key, e.newValue); });
   win.addEventListener('error', (e) => tel.error((e && e.error) || (e && e.message) || 'error'));
   win.addEventListener('unhandledrejection', (e) => tel.error((e && e.reason) || 'unhandledrejection'));
   // 화면이 숨거나 떠날 때 남은 것을 보낸다
