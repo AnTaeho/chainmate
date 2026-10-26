@@ -253,9 +253,9 @@ test('수업 할 일: 모든 걸음 글이 손 이름표 줄 위에 들어간다
   const lay = M.battle.BattleScreen.prototype.rightLayout.call({});
   for (const lang of LANGS) {
     M.lang.setLang(lang);
-    for (const L of M.lessons.LESSONS) for (const st of L.steps || []) {
+    for (const L of M.lessons.LESSONS) for (const st of [...(L.steps || []), ...(L.demo || [])]) {
       if (!st.say) continue;
-      const h = M.lesson.lessonPanelLayout(st.say, true).h;
+      const h = M.lesson.lessonPanelLayout(st.say, L.demo ? 'watch' : true).h;
       assert.ok(M.frame.TOP + h <= lay.rowY - M.frame.GAP_GROUP, `${lang} ${L.id}: ${st.say} (${h})`);
     }
   }

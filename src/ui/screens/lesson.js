@@ -18,7 +18,9 @@ import { finishLessons, lessonDone } from './lessons.js';
 
 // 킹의 말 상자(오른쪽 칸 위 — 수업에는 격언이 없다): 킹 머리줄 → 묶음 안 틈 → 할 일 글 → 묶음 틈 → 「누르면 직접」(보기 때만)
 export const DEMO_FOOT = '화면을 눌러 직접 해 봐';
-export function lessonPanelLayout(say, demo) { return kingNoteLayout(say, RW, demo ? DEMO_FOOT : null); }
+// 시범 자체가 가르칠 거리인 수업(L.demo — 「지키는 적부터」는 한 번 끊겨 보인다)은 누름으로 건너뛰지 않고 끝까지 보여 준다(U-10)
+export const DEMO_WATCH = '다 보면 직접 해 봐';
+export function lessonPanelLayout(say, demo) { return kingNoteLayout(say, RW, demo ? (demo === 'watch' ? DEMO_WATCH : DEMO_FOOT) : null); }
 
 const AFTER_SEC = 3; // 끝맺는 한 줄이 떠 있는 시간
 const BAND_Y = SP.s; // 판 위 띠(29절 제목 자리 4): 화면 윗변에서 4
@@ -106,7 +108,7 @@ export class LessonScreen extends BattleScreen {
       this.clickSq(sq);
     }
   }
-  skipDemo() { if (this.phase === 'demo') this.app.go('lesson', { index: this.index, phase: 'play' }); }
+  skipDemo() { if (this.phase === 'demo' && !this.L.demo) this.app.go('lesson', { index: this.index, phase: 'play' }); }
 
   // ── 누를 곳: 지금 걸음만
   filterTargets(t, b) {
@@ -217,7 +219,7 @@ export class LessonScreen extends BattleScreen {
   drawRight(ctx, ui) {
     super.drawRight(ctx, ui);
     // 킹의 말(오른쪽 칸 위 — 수업에는 격언이 없다). 이긴 뒤에는 금관이 반짝인다
-    const demo = this.phase === 'demo', lay = lessonPanelLayout(this.say, demo);
+    const demo = this.phase === 'demo' && (this.L.demo ? 'watch' : true), lay = lessonPanelLayout(this.say, demo);
     const won = this.ended && this.hold.b.status === 'won';
     kingNote(ctx, this.app, RX, TOP, RW, this.say, lay, { joy: won, name: '킹 말 · 할 일', line: (l, x, y) => richText(ctx, l, x, y, PAL.cardInk, { termCol: PAL.goldDk, ui }) });
   }

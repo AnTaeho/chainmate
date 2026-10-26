@@ -339,7 +339,7 @@ function keyBoxesAt(id, kind) {
   const expect = termsIn([...(h && h.keys ? h.keys() : []), ...(tip ? tipTexts(tip) : [])]).length;
   // 설명 묶음이 화면에 다 안 들어가 상자를 뺀 것(layout.md 「설명 자리 규칙」 — 뒤의 상자부터 뺀다)은 따로 센다
   const dropped = app.noteStack ? app.noteStack.dropped : 0;
-  if (boxes.length) keySeen[kind]++; else if (expect && dropped) { keySeen.dropped = (keySeen.dropped || 0) + 1; if (VERBOSE) console.log('자리가 없어 뺀 상자', id); } else if (expect) { keySeen.none = (keySeen.none || 0) + 1; if (VERBOSE) console.log('상자 없음', id); }
+  if (boxes.length) keySeen[kind]++; else if (app.hintShown) keySeen.hint = (keySeen.hint || 0) + 1; else if (expect && dropped) { keySeen.dropped = (keySeen.dropped || 0) + 1; if (VERBOSE) console.log('자리가 없어 뺀 상자', id); } else if (expect) { keySeen.none = (keySeen.none || 0) + 1; if (VERBOSE) console.log('상자 없음', id); }
   if (boxes.length > KEY_MAX) keySeen.many++;
   const own = ownKind(id);
   if (own && boxes.some((b) => b.id === own)) { keySeen.own++; if (VERBOSE) console.log('카드 종류 상자', id, own); }
@@ -386,7 +386,8 @@ function checkStack(id) {
   if (st && st.rects.length) covTally('note', id, st.rects, st.anchor);
   // 말풍선이 있는 구역인데 아무것도 안 떴다(자리가 없어 버린 것)
   const h = app.ui.hover, tip = h && h.tip ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null;
-  if (tip && (!st || !st.rects.length)) { placeBad('none', id); return false; }
+  // 처음 안내가 떠 있는 동안은 설명 묶음을 띄우지 않는다(app.js planNotes — U-4)
+  if (tip && (!st || !st.rects.length) && !app.hintShown) { placeBad('none', id); return false; }
   if (!st || !st.rects.length) return false;
   // 말풍선 하나도 그 자리에 다 안 들어가 자른 것(「…」로 마침 — placement.js clip): 자리 규칙은 그대로 재고 따로 센다
   if (st.lean) place.lean++;
@@ -442,6 +443,7 @@ function moreCheck(id) {
   const lines = tip ? tipTexts(tip) : [];
   const missed = hidden.filter((f) => !lines.some((l) => l.startsWith(`${L(f.name)} `)));
   const st = app.noteStack, rs = st && st.rects && st.rects[0];
+  if (!rs && app.hintShown) return; // 처음 안내가 떠 있는 동안은 설명 묶음이 쉰다(U-4)
   const whole = rs && rs.y >= 0 && rs.y + rs.h <= 270;
   moreSeen.n++; moreSeen.screens.add(screen());
   if (screen() === 'battle' && FAMILIES.filter((f) => n[f.id] > 0).length >= 6) moreSeen.battle6++;
@@ -484,6 +486,8 @@ const HINT_SUBJECT = {
   joseki: (id, run) => id.startsWith('joseki:') && run.josekis.length > 0,
   tactic: (id, run) => id.startsWith('tactic:') && run.consumables.some((c) => c.kind === 'tactic'),
   bigText: (id) => scrName() === 'title' && id === 'title:settings',
+  // 첫 수(U-5): 손의 첫 카드
+  firstDrop: (id) => scrName() === 'battle' && id === 'hand:0' && !!(app.screen.view && app.screen.view.hand && app.screen.view.hand.length),
   clock: (id, run) => id === 'clock' && run.log.some((x) => x.clockLost),
   crack: (id, run) => { const p = run.deck.find((x) => `deck:${x.id}` === id); return !!(p && isCracked(p)); },
   // 탁월수(CHM-43): 가리킨 손 카드가 희생으로 새로 뽑은 기물(「!?」 딱지)
@@ -2414,7 +2418,7 @@ console.log(`기보 몫: 판을 도는 동안 ${chartSeen.run} · 세운 대국 
 if (!chartSeen.scene || !chartSeen.grow || !chartSeen.tick || chartSeen.growBad) { console.log('기보 몫 연출이 뜨지 않았거나 기보를 쓴 순간이 자라지 않았다'); fail = true; }
 console.log(`찜: 찜 ${holdSeen.on} · 풀기 ${holdSeen.off} · 옮기기 ${holdSeen.moved} · 손가락 한 번 ${holdSeen.touch} · 다음 상점 같은 칸 ${holdSeen.carried} · 얻어서 버림 ${holdSeen.dropped} · 넘어온 카드 삼 ${holdSeen.bought}${holdSeen.bad.length ? ` · 어긋남: ${holdSeen.bad.join(' | ')}` : ''}`);
 if (holdSeen.bad.length || !holdSeen.on || !holdSeen.off || !holdSeen.moved || !holdSeen.touch || !holdSeen.carried) { console.log('찜이 어긋났다(책갈피 · 풀기 · 손가락 · 다음 상점 같은 칸)'); fail = true; }
-console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);
+console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 안내가 떠 있어 쉼 ${keySeen.hint || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);
 if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none || keySeen.many || keySeen.basic || keySeen.own || !keySeen.chip || keySeen.chipBox) { console.log('낱말 상자를 보지 못했거나, 카드를 가리거나, 둘을 넘거나, 기본 낱말을 띄웠다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }

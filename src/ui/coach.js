@@ -17,33 +17,35 @@ import { openBox, closeBox } from '../render/layoutlog.js';
 
 // 처음 만나는 것마다 한 줄. 글은 「언제 → 무엇」, 한 문장.
 export const HINTS = {
-  shop: '산 격언은 오른쪽 칸에 들어가. 판이 끝날 때까지 효과가 있어',
-  pack: '셋 중 하나를 골라 봐. 건너뛰어도 돼',
+  // 튜토리얼을 건너뛴 사람의 첫 대국 첫 안내: 손 카드를 가리킨다(누르면 사라지고 그 누름이 기물을 든다 — U-5)
+  firstDrop: '기물을 눌러 빛나는 칸에 놓아 봐',
+  shop: '산 격언은 판 끝까지 오른쪽 칸에서 효과를 내',
+  pack: '셋 중 하나를 고르거나 건너뛰어',
   scroll: '두루마리를 누른 뒤 덱에서 기물을 골라',
-  draft: '레퍼토리는 판 끝까지 가. 레퍼토리마다 시너지가 달라',
+  draft: '레퍼토리는 판 끝까지 가고, 저마다 시너지가 달라',
   family: '같은 시너지를 2 · 4 · 5개 모으면 효과가 켜져',
   master: '마스터전에는 특수 규칙이 하나 붙어',
   golden: '금빛 적을 잡고 이기면 금빛 팩을 받아',
-  trait: '발밑 문양은 특성이야. 가리키면 설명이 나와',
-  things: '벽이나 보석을 가리키면 설명이 나와',
-  fairy: '특수 기물은 체스에 없는 행마를 써. 누르면 잡을 칸이 보여',
-  incoming: '점선 그림자는 증원이야. 이 수가 끝나면 그 칸에 적이 들어와',
-  next: '흐린 둘은 다음에 뽑을 기물이야. 위가 먼저 나와',
+  trait: '발밑 문양(특성)을 누르면 설명이 나와',
+  things: '벽이나 보석을 누르면 설명이 나와',
+  fairy: '특수 기물을 누르면 체스에 없는 행마로 잡을 칸이 보여',
+  incoming: '이 수가 끝나면 점선 칸에 증원이 들어와',
+  next: '흐린 둘은 다음에 뽑을 기물이야',
   preview: '카드의 작은 판은 그 대국에서 만날 판 그대로야',
   maximSell: '격언을 누르면 팔 수 있고, 끌면 순서가 바뀌어',
-  hold: '책갈피를 누르면 찜이야. 그 카드는 다음 상점에도 남아',
-  joseki: '고른 레퍼토리를 가리키면 효과가 나와',
+  hold: '책갈피로 찜한 카드는 다음 상점에도 남아',
+  joseki: '고른 레퍼토리를 누르면 효과가 나와',
   tactic: '전술은 놓기 전에 눌러서 이번 대국에 한 번 써',
-  bigText: '창이 작아서 글이 작아. 설정에서 큰 글자를 켤 수 있어',
-  clock: '대국을 지면 시계 한 칸이 줄어. 시계를 다 쓰면 판이 끝나',
-  crack: '혼에 금이 갔어. 금빛 적 · 마스터의 상자 · 깨우기로 깨어나',
+  bigText: '글이 작으면 설정에서 큰 글자를 켜 봐',
+  clock: '대국을 질 때마다 시계 한 칸이 줄고, 다 쓰면 판이 끝나',
+  crack: '금 간 혼은 금빛 적 · 마스터의 상자 · 깨우기로 깨어나',
   replay: '이기는 수도 이 대국의 실제 뽑기와 증원 그대로야',
   rankName: '이름은 설정에서 바꿀 수 있어',
   unlocks: '칸을 누르면 그 묶음에 든 것을 볼 수 있어',
   // 대국 도전 · 숙적(docs/reports/goty.md): 처음 도전이 붙은 대국 · 처음 숙적이 생긴 순간
-  challenge: '대국마다 도전이 하나 붙어. 콤보 하나로 해내면 상금을 받아',
-  nemesis: '내 콤보를 끊은 적은 숙적이 돼. 다시 나오면 잡아서 갚아 줘',
-  brilliant: '이 기물로 곧바로 메이트하면 탁월수야. 희생한 기물이 무거울수록 배수가 커지고 명경기 조각도 하나 얻어',
+  challenge: '도전을 콤보 하나로 해내면 상금을 받아',
+  nemesis: '내 콤보를 끊은 적은 숙적이 되고, 다시 나오면 잡아 갚을 수 있어',
+  brilliant: '이 기물로 곧바로 메이트하면 탁월수야',
   // 세력(factions.js): 새 세력을 처음 만나는 관 선택에서, 버릇만
   faction_peasants: '농민군 땅이야. 적 폰이 옆 칸도 지켜',
   faction_cavalry: '기병대 땅이야. 증원으로 나이트와 낙타만 와',
@@ -57,7 +59,7 @@ export const HINTS = {
 
 // 안내 id → 그것을 가르치는 튜토리얼 수업 id(src/ui/lessons.js). 여기 없는 안내는 튜토리얼에 없는 것이라 처음 한 번 뜬다
 export const TAUGHT = {
-  incoming: 'reinforce', fairy: 'fairy',
+  firstDrop: 'become', incoming: 'reinforce', fairy: 'fairy',
   shop: 'shop', pack: 'shop', family: 'shop',
 };
 export const taught = (app, id) => !!(TAUGHT[id] && app.records.lessonsSeen && app.records.lessonsSeen[TAUGHT[id]]);
@@ -65,8 +67,10 @@ const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id])
 
 // 화면이 그리는 중에 부른다: 이번 프레임에 보일 수 있는 안내 후보(부른 차례대로).
 // 화면은 말하는 것이 그 순간 화면에 있을 때만 부른다(격언 안내는 진열에 격언이 있을 때 — CHM-36).
+// 한 화면에 안내 하나: 이 화면에서 안내 하나를 본 뒤에는 다음 화면(다음 대국 · 다음 상점)까지 쉰다 — 첫 대국 첫 수 전에 넷이 연달아 떴다(U-5)
 export function hint(app, id, regionId) {
   if (app.guide || app.settings.coach === false || seen(app, id) || !HINTS[id]) return;
+  if (app.hintRest && app.hintRest === app.screen) return;
   if (!app.hintNow) app.hintNow = [];
   app.hintNow.push({ id, regionId });
 }
@@ -79,7 +83,7 @@ export function markSeen(app, id) {
 
 // 누르면: 떠 있는 안내는 본 것으로 사라진다(누른 것은 그대로 전해진다)
 export function coachDown(app, x, y) {
-  if (app.hintShown) { markSeen(app, app.hintShown.id); app.hintShown = null; app.hintNow = null; }
+  if (app.hintShown) { markSeen(app, app.hintShown.id); app.hintShown = null; app.hintNow = null; app.hintRest = app.screen; }
   const g = app.guide;
   if (!g || app.overlay) return true;   // 덮개(행마 보기 · 멈춤)는 길과 상관없이 누른다
   const st = g.steps[g.i];

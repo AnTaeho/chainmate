@@ -132,7 +132,8 @@ export class TitleScreen {
   surroundFlash() { const f = this.snap; return f && f.flash > 0 ? { col: '#fff8e8', a: f.flash } : null; }
   draw(ctx, ui) {
     const app = this.app;
-    if (app.pixelScale && app.pixelScale < 2 && !app.settings.big) hint(app, 'bigText', 'title:settings');
+    // 큰 글자 안내는 판을 한 번 끝낸 뒤 첫 화면에서(처음 켠 사람은 튜토리얼 · 첫 판 권유가 먼저 — U-8)
+    if (app.pixelScale && app.pixelScale < 2 && !app.settings.big && (app.records.runs || 0) > 0) hint(app, 'bigText', 'title:settings');
     // 순위에 이름이 생긴 뒤 첫 화면에 돌아온 순간 한 번(CHM-70): 이름은 설정에서 다시 짓는다 — 설정 칸을 가리킨다.
     // 가리키는 네모는 설정 칸에서 화면 오른끝까지(누르지 못하는 구역 — drawMenu): 말풍선(폭 176)이 오른끝에 붙어 주인공 단추를 덮지 않는다
     if (app.rank.player()) hint(app, 'rankName', 'title:settings:tip');

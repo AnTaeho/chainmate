@@ -35,7 +35,7 @@ export const LESSONS = [
       { cap: 'h2' },
     ] },
   { id: 'guard', group: 'basic', title: '지키는 적부터', target: 160, hand: ['N'], board: { d5: 'R', f7: 'B' }, preview: true,
-    demo: [{ pick: 0 }, { drop: 'c3' }, { cap: 'd5', say: '룩부터 잡으면 비숍이 그 칸을 지켜. 룩 모습으로는 비숍을 못 잡아서 끊겨' }],
+    demo: [{ pick: 0, say: '먼저 보기만 해. 룩부터 잡으면 어떻게 될까?' }, { drop: 'c3' }, { cap: 'd5', say: '룩부터 잡으면 비숍이 그 칸을 지켜. 룩 모습으로는 비숍을 못 잡아서 끊겨' }],
     steps: [
       { pick: 0, say: '이번엔 끊기지 않게 해 보자. 나이트를 눌러 봐' },
       { drop: null, say: '비숍을 잡을 수 있는 칸에 놓아 봐' },

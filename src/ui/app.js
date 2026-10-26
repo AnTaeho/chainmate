@@ -254,15 +254,20 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.ui.press = null;
     app.ui.drag = null;
     app.ui.previewId = null; // 손가락으로 한 번 누른 카드는 화면을 옮기면 잊는다(다음 화면의 같은 구역이 곧바로 눌리지 않게)
+    liftFinger();
     app.invalidate();
   };
+  // 손가락은 떼도 가리킴이 그 자리에 남는다(누르면 설명 — 같은 화면 안). 화면 · 덮개가 바뀌면 지운다:
+  // 앞 화면에서 누른 자리에 다음 화면의 카드가 있으면 설명 묶음이 저절로 떠 처음 안내를 덮었다(U-4 · P-12). 마우스는 그대로
+  const liftFinger = () => { if (app.touch) app.ui.move(-1, -1); };
   app.openOverlay = (name, args = {}) => {
     app.overlay = new SCREENS[name](app, args);
     app.overlay.name = name;
     app.visited.add(name);
+    liftFinger();
     app.invalidate();
   };
-  app.closeOverlay = () => { app.overlay = null; app.invalidate(); };
+  app.closeOverlay = () => { app.overlay = null; liftFinger(); app.invalidate(); };
   // 오늘 날짜(YYYY-MM-DD): 오늘의 대국 시드 · 기록 화면의 오늘 줄이 이것을 쓴다. 게임은 진짜 달력, 연기 시험은 고정 날짜를 넣는다
   app.today = () => dayNow();
 
@@ -577,11 +582,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     app.keyBoxes = [];
     app.tipRect = null;
     app.noteStack = null;
-    if (app.settings.big) { const h = ui.hover, tip = h && h.tip && !ui.drag && !(app.guide && !app.overlay) ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null; if (tip) app.tipRect = bigTooltip(ctx, tip); return; }
+    if (app.settings.big) { const h = ui.hover, tip = h && h.tip && !ui.drag && !(app.guide && !app.overlay) && !app.hintShown ? (typeof h.tip === 'function' ? h.tip() : h.tip) : null; if (tip) app.tipRect = bigTooltip(ctx, tip); return; }
     // 접기(foldUnder)가 잰 묶음을 그대로 쓴다 — 그 뒤 구역 · 낱말 자리 · 가리킴이 바뀌었으면 다시 잰다
     const pf = planFold;
     planFold = null;
-    const plan = pf && pf.n === ui.regions.length && pf.s === ui.termSpans.length && pf.h === ui.hover ? pf.plan : planNotes();
+    const plan = app.hintShown ? null : pf && pf.n === ui.regions.length && pf.s === ui.termSpans.length && pf.h === ui.hover ? pf.plan : planNotes();
     if (!plan) return;
     const { lay, hs, tip, ids, hot, clip, mode, anchor, h } = plan;
     let y = lay.y, k = 0;
@@ -608,6 +613,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const ui = app.ui;
     const h = ui.hover;
     if (ui.drag || (app.guide && !app.overlay)) return null; // 따라 하는 길 중에는 말풍선을 띄우지 않는다(덮개 — 행마 보기 — 는 띄운다)
+    // 처음 안내(킹 말풍선)가 떠 있는 동안은 설명 묶음을 띄우지 않는다 — 둘 다 왼쪽 칸을 써서 묶음이 안내를 덮었다(U-4). 안내는 누르면 사라진다
+    if (app.hintShown && !app.overlay) return null;
     const mx = ui.mouse.x, my = ui.mouse.y;
     const span = ui.termSpans.find((q) => mx >= q.x && my >= q.y && mx < q.x + q.w && my < q.y + q.h);
     const hot = span ? span.id : null;
@@ -654,7 +661,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const c = coachPlan(app);
     if (c && c.rect) foldSide(ctx, ui.side, c.rect, c.r, ground);
     if (app.settings.big) return;
-    const p = planNotes();
+    const p = c ? null : planNotes(); // 처음 안내가 뜨는 프레임에는 설명 묶음이 없다(planNotes · U-4)
     planFold = { plan: p, n: ui.regions.length, s: ui.termSpans.length, h: ui.hover };
     if (p) foldSide(ctx, ui.side, { x: p.lay.x, y: p.lay.y, w: p.lay.w, h: p.total }, p.anchor, ground);
   }

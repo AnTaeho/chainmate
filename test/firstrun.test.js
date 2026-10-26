@@ -190,6 +190,34 @@ test('튜토리얼에서 가르친 도움말 팁은 그 수업을 끝낸 사람�
   assert.deepEqual(app.hintNow.map((c) => c.id), ['next'], '튜토리얼에 없는 것만');
 });
 
+test('처음 안내가 떠 있는 동안 설명 묶음이 그 위를 덮지 않고, 손가락 가리킴은 화면이 바뀌면 지워진다(U-4 · P-12)', async () => {
+  const app = await fresh({ tutorialAsked: true });
+  app.newRun(); tick(app);
+  assert.equal(app.screen.name, 'draft');
+  const card = () => app.ui.regions.find((r) => r.id === 'draft:0');
+  const at = (r) => [r.x + r.w / 2, r.y + r.h / 2];
+  // 마우스로 카드를 가리킨 채: 레퍼토리 안내가 떠 있으면 카드 설명 묶음은 없다
+  app.pointer('move', ...at(card())); tick(app, 90); // 카드가 다 뒤집힌 뒤(1.2초) 안내가 뜬다
+  assert.equal(app.hintShown && app.hintShown.id, 'draft');
+  assert.equal(app.noteStack, null, '안내가 떠 있는 동안 설명 묶음 없음');
+  // 아무 데나 한 번 누르면 안내는 본 것으로 사라지고, 그 뒤에는 카드 설명이 뜬다
+  app.pointer('down', 2, 2); app.pointer('up', 2, 2); app.pointer('move', ...at(card())); tick(app);
+  assert.equal(app.hintShown, null);
+  assert.ok(app.records.coachSeen.draft);
+  assert.ok(app.noteStack && app.noteStack.rects.length, '안내가 없으면 설명 묶음');
+  // 손가락: 뗀 자리의 가리킴은 같은 화면 안에서만 남는다(누르면 설명). 화면이 바뀌면 지운다
+  app.touch = true;
+  app.pointer('move', ...at(card())); tick(app);
+  assert.equal(app.ui.hover && app.ui.hover.id, 'draft:0');
+  app.go('draft'); tick(app);
+  assert.equal(app.ui.hover, null);
+  assert.equal(app.noteStack, null, '다음 화면의 같은 자리 카드에 설명이 저절로 뜨지 않는다');
+  // 마우스는 그대로 남는다
+  app.touch = false;
+  app.pointer('move', ...at(card())); app.go('draft'); tick(app);
+  assert.equal(app.ui.hover && app.ui.hover.id, 'draft:0');
+});
+
 test('설정 「움직임 줄이기」는 기기 설정이 없어도 켠다', async () => {
   const app = await fresh({ tutorialAsked: true });
   const { LOOK } = await import('../src/render/look.js');

@@ -1518,6 +1518,8 @@ export class BattleScreen {
     const b = this.live();
     if (!b || this.busy || this.banner || b.status !== 'play') return;
     const app = this.app, v = this.view;
+    // 튜토리얼을 건너뛴 사람의 첫 수: 손의 첫 기물을 가리킨다(U-5)
+    if (!this.sel.length && v.hand.length) hint(app, 'firstDrop', 'hand:0');
     // 탁월수: 희생으로 새로 뽑은 기물의 「!?」 딱지가 처음 뜬 순간(CHM-43)
     const nb = v.hand.findIndex((p) => (v.drawn || []).includes(p.id));
     if (nb >= 0) hint(app, 'brilliant', `hand:${nb}`);
@@ -1537,8 +1539,9 @@ export class BattleScreen {
     // 다음 수(CHM-60): 덱 맨 앞이 보일 때
     if ((v.next || []).length) hint(app, 'next', 'next');
     const reg = (p) => app.ui.regions.find((r) => r.id.startsWith(p));
-    if (reg('fam:')) hint(app, 'family', reg('fam:').id);
-    if (reg('joseki:')) hint(app, 'joseki', reg('joseki:').id);
+    // 시너지 · 레퍼토리는 첫 상점을 지난 뒤에(대국 안내가 첫 대국에 몰리지 않게 — U-5)
+    if (app.visited.has('shop') && reg('fam:')) hint(app, 'family', reg('fam:').id);
+    if (app.visited.has('shop') && reg('joseki:')) hint(app, 'joseki', reg('joseki:').id);
     if (reg('tactic:')) hint(app, 'tactic', reg('tactic:').id);
   }
 
