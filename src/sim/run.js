@@ -60,8 +60,8 @@ import { openPool } from './unlock.js';
 //   앞 값 [150, 725, 5174, 15006, 66944, 222551, 487084, 1024241] — docs/tasks/decisions.md 「넣은 것 — 합친 판」
 export const B = [150, 761, 5433, 15756, 70291, 233679, 511438, 1075453];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
-// 관마다 마스터 목표만 더 곱한다(빈 칸은 1) — D-12 1관 마스터 통과율 손잡이
-export const MASTER_MULT = [];
+// 관마다 마스터 목표만 더 곱한다(빈 칸은 1). 1관 ×3: 마스터 통과 100 → 93.5%(D-12, 200판), 판 승률 33.5% 그대로
+export const MASTER_MULT = [3];
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
 export const ENDLESS_GROWTH = 2.2; // 9관부터 관마다 목표 ×
