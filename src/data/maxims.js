@@ -12,6 +12,14 @@ import { PIECES, chartForm } from './pieces.js';
 const EDGE = (sq) => (sq & 7) === 0 || (sq & 7) === 7 || sq >> 3 === 0 || sq >> 3 === 7;
 const CENTER = [27, 28, 35, 36]; // d4 e4 d5 e5
 const num = (x, d = 0) => (typeof x === 'number' ? x : d);
+// 방금 잡은 적이 킹을 지키고 있었나(왕의 목 · 대국의 기억). 먹은 칸에서 그 적의 행마가 킹에 닿으면
+const tookKingGuard = (ctx) => {
+  const { piece, to } = ctx.event;
+  if (piece === 'K') return false;
+  const board = ctx.t.board;
+  return reach(board, piece, to, -1).some((s) => board[s] && !board[s].mine && board[s].t === 'K');
+};
+export const MEMORY_STEP = 0.05;
 
 export const MAXIMS = [];
 
@@ -25,8 +33,8 @@ function maxim(id, name, text, verb, rarity, price, { more = null, ...def }) {
 maxim('chivalry', '기사도', '나이트로 시작: 배수 ×1.5', '놓기', 'uncommon', 5, {
   onChainEnd(ctx) { if (ctx.chain.dropType === 'N') ctx.mulMult(1.5); },
 });
-maxim('pawn_march', '폰의 행진', '폰으로 시작: 값 +40', '놓기', 'common', 3, {
-  onChainEnd(ctx) { if (ctx.chain.dropType === 'P') ctx.addValue(40); },
+maxim('pawn_march', '폰의 행진', '폰으로 시작: 배수 +4', '놓기', 'common', 3, {
+  onChainEnd(ctx) { if (ctx.chain.dropType === 'P') ctx.addMult(4); },
 });
 
 // ── 갈아입기
@@ -36,8 +44,8 @@ maxim('quick_change', '빠른 갈아입기', '모습이 바뀔 때마다 배수 
 maxim('whim', '변덕', '모습을 넷 이상 거친 콤보: 배수 ×2', '갈아입기', 'rare', 7, {
   onChainEnd(ctx) { if (ctx.chain.forms.length >= 4) ctx.mulMult(2); },
 });
-maxim('steadfast', '한결같음', '모습이 안 바뀐 콤보: 배수 ×3', '갈아입기', 'uncommon', 6, {
-  onChainEnd(ctx) { if (ctx.chain.transforms === 0 && ctx.chain.promotions === 0) ctx.mulMult(3); },
+maxim('steadfast', '한결같음', '모습이 안 바뀐 콤보: 배수 ×4', '갈아입기', 'uncommon', 6, {
+  onChainEnd(ctx) { if (ctx.chain.transforms === 0 && ctx.chain.promotions === 0) ctx.mulMult(4); },
 });
 maxim('coronation', '대관식', '퀸 모습이 될 때마다 값 +50', '갈아입기', 'common', 4, {
   onTransform(ctx) { if (ctx.event.to === 'Q') ctx.addValue(50); },
@@ -103,12 +111,7 @@ maxim('mate_hunter', '메이트 사냥꾼', '킹을 지키는 적이 하나 적�
 });
 maxim('kings_neck', '왕의 목', '킹을 지키는 적을 잡으면 배수 +2 · 체크메이트: 배수 ×3', '체크메이트', 'uncommon', 6, {
   more: '지키는 적이 없는 킹은 빛난다',
-  onCapture(ctx) {
-    const { piece, to } = ctx.event;
-    if (piece === 'K') return;
-    const board = ctx.t.board;
-    if (reach(board, piece, to, -1).some((s) => board[s] && !board[s].mine && board[s].t === 'K')) ctx.addMult(2);
-  },
+  onCapture(ctx) { if (tookKingGuard(ctx)) ctx.addMult(2); },
   // 화면용: 지금 지키는 적이 없는 킹 칸. b.hints.openKings
   onBoard(ctx) {
     const t = ctx.t;
@@ -121,10 +124,15 @@ maxim('kings_neck', '왕의 목', '킹을 지키는 적을 잡으면 배수 +2 �
   },
   onChainEnd(ctx) { if (ctx.event.reason === 'mate') ctx.mulMult(3); },
 });
-maxim('memory', '대국의 기억', '체크메이트 승리마다 커진다: 배수 ×1.5 · ×2 · ×2.5 …', '체크메이트', 'rare', 8, {
-  onChainEnd(ctx) { const m = num(ctx.data.mates); if (m > 0) ctx.mulMult(1 + 0.5 * m); },
+// D-10: 옛 「체크메이트 승리마다」는 메이트가 드물어 판에 한두 번만 자랐다 — 메이트로 가는 길(킹을 지키는 적)에서 자란다
+maxim('memory', '대국의 기억', '킹을 지키는 적을 잡을수록 커진다: 배수 ×1.05 · ×1.1 …', '체크메이트', 'rare', 8, {
+  more: '판 내내 쌓인다',
+  onCapture(ctx) { if (tookKingGuard(ctx)) ctx.state.g = num(ctx.state.g) + 1; },
+  onChainEnd(ctx) { const g = num(ctx.data.g) + num(ctx.state.g); if (g > 0) ctx.mulMult(1 + MEMORY_STEP * g); },
   onRunEvent(spec, ev) {
-    if (ev.type === 'battleWon' && ev.reason === 'mate') spec.data = { ...spec.data, mates: num(spec.data && spec.data.mates) + 1 };
+    const mine = ev.type === 'battleEnd' && (ev.mods || []).find((m) => m.id === spec.id && m.uid === spec.uid);
+    const g = mine && mine.state ? num(mine.state.g) : 0;
+    if (g > 0) spec.data = { ...spec.data, g: num(spec.data && spec.data.g) + g };
   },
 });
 
@@ -172,16 +180,15 @@ maxim('shadow_reading', '그림자 읽기', '증원을 두 수 앞까지 본다 
 });
 
 // ── 각인
-maxim('ivory_tower', '상아탑', '상아 각인 기물로 시작: 배수 +5', '각인', 'uncommon', 5, {
-  onChainEnd(ctx) { if (ctx.chain.engraving && ctx.chain.engraving.id === 'ivory') ctx.addMult(5); },
+maxim('ivory_tower', '상아탑', '상아 각인 기물로 시작: 배수 ×2', '각인', 'uncommon', 5, {
+  onChainEnd(ctx) { if (ctx.chain.engraving && ctx.chain.engraving.id === 'ivory') ctx.mulMult(2); },
 });
 
 // ── 기보
+// D-13: 산 뒤에 쓴 기보만 세면 사는 순간 0이라 산 판이 3.7%였다 — 판의 기보 레벨 합을 센다
 maxim('collector', '기보 수집가', '이번 판에 쓴 기보마다 배수 +1', '기보', 'rare', 7, {
+  onBuild(spec, build) { spec.data = { ...(spec.data || {}), n: Object.values(build.charts || {}).reduce((a, x) => a + num(x), 0) }; },
   onChainEnd(ctx) { ctx.addMult(num(ctx.data.n)); },
-  onRunEvent(spec, ev) {
-    if (ev.type === 'chartUsed') spec.data = { ...spec.data, n: num(spec.data && spec.data.n) + 1 };
-  },
 });
 
 // ── 밤샘 D-8: 여덟 더(뿌리의 동사마다 하나 이상)
@@ -213,12 +220,8 @@ maxim('reinforce_hunt', '증원 사냥', '증원을 잡을 때마다 배수 +2',
 });
 
 // ── 깊이 G: 증강체스의 나머지 카드에서(뿌리의 동사를 비튼 셋)
-maxim('promotion_rush', '패스드 폰', '폰 모습으로 두 번 잡고 나면 어느 줄에서든 프로모션한다', '프로모션', 'uncommon', 5, {
-  onCapture(ctx) {
-    if (ctx.event.form !== 'P') return;
-    ctx.flags.pawnTakes = (ctx.flags.pawnTakes || 0) + 1;
-    if (ctx.flags.pawnTakes >= 2) ctx.flags.promoteFrom = 0;
-  },
+maxim('promotion_rush', '패스드 폰', '폰 모습으로 잡고 나면 어느 줄에서든 프로모션한다', '프로모션', 'uncommon', 5, {
+  onCapture(ctx) { if (ctx.event.form === 'P') ctx.flags.promoteFrom = 0; },
 });
 maxim('mad_horse', '광마', '가장자리에서 나이트 모습으로 잡으면: 지키는 적을 무시한다', '지키는 적', 'common', 4, {
   more: '콤보마다 한 번',
@@ -317,8 +320,8 @@ maxim('gambler', '도박사', '콤보가 끝날 때 4번에 1번: 배수 ×3', '
 maxim('lucky_coin', '행운의 동전', '잡을 때마다 6번에 1번: 상금 +1', '잡기', 'common', 3, {
   onChainLuck(ctx) { let n = 0; for (let i = 0; i < ctx.chain.captures.length; i++) if (ctx.roll() < 1 / 6) n++; if (n) { ctx.t.money = num(ctx.t.money) + n; ctx.emit({ type: 'money', money: n }); } },
 });
-maxim('reversal', '역전', '콤보가 끊긴 바로 다음 수: 배수 ×2', '끊김', 'uncommon', 5, {
-  onChainEnd(ctx) { const h = ctx.t.history; if (h && h.length && h[h.length - 1].reason === 'cut') ctx.mulMult(2); },
+maxim('reversal', '역전', '콤보가 끊긴 바로 다음 수: 배수 ×3', '끊김', 'uncommon', 5, {
+  onChainEnd(ctx) { const h = ctx.t.history; if (h && h.length && h[h.length - 1].reason === 'cut') ctx.mulMult(3); },
 });
 maxim('pilgrimage', '순례', '판의 네 구역을 모두 밟은 콤보: 배수 ×4', '잡기', 'rare', 7, {
   more: '판을 가로 · 세로 반으로 나눈 네 구역',

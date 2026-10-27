@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRun, applyRun, legalRunCommands, blindInfo, targetFor, B, REWARD, sellPrice } from '../src/sim/run.js';
+import { createRun, applyRun, legalRunCommands, blindInfo, targetFor, B, REWARD, sellPrice, battleMods } from '../src/sim/run.js';
 import { SHOP, rerollCost } from '../src/sim/shop.js';
 import { MASTERS, FINAL_MASTER } from '../src/data/masters.js';
 import { FACTION_BY_ID } from '../src/data/factions.js';
@@ -135,7 +135,7 @@ test('기보는 얻는 길마다 곧바로 쓰인다: 진열 · 꾸러미 · 건
   assert.equal(run.charts[form], lv + 1);
   assert.ok(ev.some((e) => e.type === 'chart' && e.form === form));
   assert.ok(!run.consumables.some((c) => c.kind === 'chart'));
-  assert.deepEqual(run.maxims[0].data, { n: 2 });
+  assert.equal(battleMods(run).find((m) => m.id === 'collector').data.n, 2);
 });
 
 test('옛 저장: 두루마리 칸에 남은 기보는 눌러 쓴다', () => {
@@ -154,7 +154,7 @@ test('소모품: 기보는 레벨을 올리고(기보 수집가 +1), 각인 두�
   run.consumables = [{ kind: 'chart', form: 'N' }, { kind: 'engraving', id: 'ebony' }];
   applyRun(run, { type: 'use', index: 0 });
   assert.equal(run.charts.N, 1);
-  assert.deepEqual(run.maxims[0].data, { n: 1 });
+  assert.equal(battleMods(run).find((m) => m.id === 'collector').data.n, 1);
   const target = run.deck[5].id;
   assert.ok(legalRunCommands(run).some((c) => c.type === 'use' && c.index === 0 && c.target === target));
   applyRun(run, { type: 'use', index: 0, target });

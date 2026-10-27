@@ -329,9 +329,9 @@ export function battleMods(build, master = null, faction = null) {
   mods.push(...familyMods(counts, dropFor));
   // 정석(깊이 E)
   for (const id of build.josekis || []) mods.push({ id: `joseki:${id}` });
-  // onBuild: 짜임에서 셀 값(격언 「혼 수집가」 · 「금욕」). 격언 칸 빈자리는 판의 칸 수로(봇의 그려 보기는 기본 칸)
+  // onBuild: 짜임에서 셀 값(격언 「혼 수집가」 · 「금욕」 · 「기보 수집가」). 격언 칸 빈자리는 판의 칸 수로(봇의 그려 보기는 기본 칸)
   const room = maximCapacity({ maximSlots: build.maximSlots ?? RUN_DEFAULTS.maximSlots, maxims: build.maxims }) - build.maxims.filter((m) => !m.legendary).length;
-  const view = { deck: build.deck || [], maximFree: Math.max(0, room) };
+  const view = { deck: build.deck || [], maximFree: Math.max(0, room), charts: build.charts || {} };
   for (const m of build.maxims) {
     const spec = { id: m.id, uid: m.uid, data: clone(m.data || {}) };
     const def = getModifier(m.id);
@@ -431,6 +431,8 @@ function endBattle(run, events) {
   const info = blindInfo(run);
   const best = b.history.reduce((a, h) => Math.max(a, h.score), 0);
   const won = b.status === 'won';
+  // 대국 state를 판에 남기는 격언(「대국의 기억」): 이기든 지든
+  runEvent(run, { type: 'battleEnd', won, mods: b.mods || [] });
   // 깨진 기물(유리)은 덱에서 빠진다
   if (b.shattered.length) run.deck = run.deck.filter((p) => !b.shattered.includes(p.id));
   // 정석 「결사」: 첫 사슬을 푼 기물은 판에서 사라진다(덱 여섯은 남긴다) · 「왕좌」: 승급한 폰은 퀸으로

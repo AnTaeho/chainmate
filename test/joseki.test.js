@@ -48,7 +48,7 @@ test('기물을 바꾸는 정석: 기사 서약 · 성벽 쌓기 · 주교관 ·
   JOSEKI_BY_ID.mitre.pick(run, []);
   JOSEKI_BY_ID.archery.pick(run, []);
   const kinds = run.deck.map((p) => p.t).sort().join('');
-  assert.equal(kinds, 'EMNPPSST');
+  assert.equal(kinds, 'EMMPPSST');
 });
 
 test('고속도로: b · g 줄에서는 세로로 룩처럼도 먹는다', () => {

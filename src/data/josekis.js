@@ -47,8 +47,8 @@ const collinear5 = (squares) => {
 const pick3 = (rng, free, n) => { const out = []; while (out.length < n && free.length) out.push(free.splice(Math.floor(rng() * free.length), 1)[0]); return out; };
 
 // ── 은: 기물 하나를 바꾸거나 판에 작은 규칙
-joseki('knight_oath', '기사 서약', 'silver', ['leap'], '나이트 하나가 광대가 된다', {
-  pick(run, events) { evolve(run, 'N', 'M', 1, events); },
+joseki('knight_oath', '기사 서약', 'silver', ['leap'], '나이트 둘이 광대가 된다', {
+  pick(run, events) { evolve(run, 'N', 'M', 2, events); },
 });
 joseki('rampart', '성벽 쌓기', 'silver', ['line'], '룩 하나가 꺾쇠가 된다', {
   pick(run, events) { evolve(run, 'R', 'T', 1, events); },
@@ -136,16 +136,23 @@ joseki('river', '강', 'silver', ['line'], '강을 건너서 잡을 때마다 �
 joseki('torch', '횃불', 'gold', ['counter'], '대국마다 값이 가장 큰 적 둘은 아무것도 지키지 못한다', {
   onSetup(ctx) { const b = ctx.t.board; for (const sq of heavyFirst(b).slice(0, 2)) b[sq] = { ...b[sq], muted: true }; },
 });
-joseki('trap', '함정', 'gold', ['ambush'], '대국마다 빈칸 둘이 함정이 된다 · 함정에 들어온 증원은 곧바로 잡힌다', {
-  more: '붙잡은 증원의 값이 곧바로 점수가 된다',
+// D-13: 값만 점수로 들면 5관부터 목표의 0.2%도 안 됐다 — 직전 콤보의 배수를 곱하고 함정을 셋으로
+joseki('trap', '함정', 'gold', ['ambush'], '대국마다 빈칸 셋이 함정이 된다 · 함정에 들어온 증원은 곧바로 잡힌다', {
+  more: '붙잡은 증원의 값 × 직전 콤보의 배수가 곧바로 점수가 된다',
   onSetup(ctx) {
     const b = ctx.t.board, free = [];
     for (let sq = 24; sq < 64; sq++) if (!b[sq]) free.push(sq);
     const traps = [];
-    while (traps.length < 2 && free.length) traps.push(free.splice(Math.floor(ctx.rng() * free.length), 1)[0]);
+    while (traps.length < 3 && free.length) traps.push(free.splice(Math.floor(ctx.rng() * free.length), 1)[0]);
     ctx.t.rules = { ...ctx.t.rules, traps };
   },
-  onArrive(ctx) { const tr = ctx.t.rules && ctx.t.rules.traps; if (tr && tr.includes(ctx.event.sq)) ctx.event.caught = true; },
+  onArrive(ctx) {
+    const tr = ctx.t.rules && ctx.t.rules.traps;
+    if (!tr || !tr.includes(ctx.event.sq)) return;
+    const last = (ctx.t.history || []).at(-1);
+    ctx.event.caught = true;
+    ctx.event.score = Math.floor(PIECES[ctx.event.t].value * Math.max(1, (last && last.mult) || 1));
+  },
 });
 joseki('blitz', '속기', 'gold', ['change'], '수 +1 · 손 −1', {
   onBattleStart(ctx) { ctx.rules.moves = (ctx.rules.moves ?? 4) + 1; ctx.rules.hand = Math.max(2, (ctx.rules.hand ?? 4) - 1); },
@@ -153,16 +160,27 @@ joseki('blitz', '속기', 'gold', ['change'], '수 +1 · 손 −1', {
 joseki('long_think', '장고', 'gold', ['hunt'], '수 −1 · 손 +2 · 희생 +1', {
   onBattleStart(ctx) { ctx.rules.moves = Math.max(1, (ctx.rules.moves ?? 4) - 1); ctx.rules.hand = (ctx.rules.hand ?? 4) + 2; ctx.rules.discards = (ctx.rules.discards ?? 3) + 1; },
 });
-joseki('first_mover', '선수', 'rainbow', ['crown'], '대국이 시작되면 값이 가장 큰 적 하나가 사라진다', {
-  onSetup(ctx) { const b = ctx.t.board; const sq = heavyFirst(b)[0]; if (sq != null) { const piece = b[sq].t; b[sq] = null; ctx.emit({ type: 'firstMover', sq, piece }); } },
+// D-13: 옛 「값이 가장 큰 적」은 고른 판 승률 12.5%였다 — 킹을 지키는 적을 지워 체크메이트로 가는 길을 연다
+joseki('first_mover', '선수', 'rainbow', ['crown'], '대국이 시작되면 킹을 지키는 적 하나가 사라진다', {
+  more: '값이 가장 큰 것부터',
+  onSetup(ctx) {
+    const b = ctx.t.board;
+    const guards = new Set(b.flatMap((c, k) => (c && !c.mine && c.t === 'K' ? ctx.attackers(k) : [])));
+    const sq = heavyFirst(b).find((s) => guards.has(s)) ?? heavyFirst(b)[0];
+    if (sq != null) { const piece = b[sq].t; b[sq] = null; ctx.emit({ type: 'firstMover', sq, piece }); }
+  },
 });
-joseki('captive', '포로', 'rainbow', ['change'], '대국 첫 콤보에서 마지막에 잡은 적이 내 덱에 들어온다', {
+// D-13: 옛 「마지막에 잡은 적」은 고른 판 승률 23.1%였다 — 첫 콤보에서 값이 가장 큰 적으로
+joseki('captive', '포로', 'rainbow', ['change'], '대국 첫 콤보에서 잡은 적 가운데 값이 가장 큰 하나가 내 덱에 들어온다', {
   more: '덱 열넷까지',
   onChainEnd(ctx) {
-    const c = ctx.chain, last = c.captures.at(-1);
-    if ((ctx.t.movesUsed ?? 0) || !last || last.piece === 'K' || (PIECES[last.piece] && PIECES[last.piece].thing)) return;
-    (c.traitors || (c.traitors = [])).push(last.piece);
-    ctx.emit({ type: 'captive', piece: last.piece });
+    if (ctx.t.movesUsed ?? 0) return;
+    const c = ctx.chain;
+    const ok = c.captures.map((x) => x.piece).filter((p) => p !== 'K' && PIECES[p] && !PIECES[p].thing);
+    if (!ok.length) return;
+    const best = ok.reduce((a, p) => (PIECES[p].value > PIECES[a].value ? p : a));
+    (c.traitors || (c.traitors = [])).push(best);
+    ctx.emit({ type: 'captive', piece: best });
   },
 });
 

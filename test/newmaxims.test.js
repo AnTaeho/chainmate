@@ -108,10 +108,11 @@ test('그림자 읽기: 증원이 올 칸에 떨구면 연쇄 +4', () => {
 });
 
 // ── 깊이 G
-test('특진: 폰 모습으로 둘을 먹으면 곧바로 승급', () => {
-  const c = chain({ c4: 'P', d5: 'P', a8: 'R' }, 'P', 'b3', ['c4', 'd5'], ['promotion_rush']);
+test('패스드 폰: 폰 모습으로 하나를 먹으면 곧바로 승급', () => {
+  const c = chain({ c4: 'P', a8: 'R' }, 'P', 'b3', ['c4'], ['promotion_rush']);
   assert.equal(c.promotions, 1);
   assert.equal(c.form, 'Q');
+  assert.equal(chain({ c4: 'P', a8: 'R' }, 'P', 'b3', ['c4'], []).promotions, 0);
 });
 test('광마: 나이트 모습이 가장자리에서 먹으면 노림을 한 번 무시', () => {
   const t = { board: boardFrom({ a6: 'N', a8: 'R', c7: 'P' }), rules: {}, mods: [{ id: 'mad_horse' }], chain: null, movesUsed: 0 };
