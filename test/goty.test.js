@@ -60,17 +60,26 @@ test('도전 판정: 종류마다 끝난 콤보 요약 하나로', () => {
   const ok = (ch, h) => challengeMet(ch, sum(h));
   assert.ok(ok({ id: 'forms', n: 3 }, { forms: 3 }) && !ok({ id: 'forms', n: 4 }, { forms: 3 }));
   assert.ok(ok({ id: 'take', n: 5 }, { captures: 5 }) && !ok({ id: 'take', n: 5 }, { captures: 4 }));
-  assert.ok(ok({ id: 'end', form: 'N' }, { captures: 2, end: 'N' }));
-  assert.ok(!ok({ id: 'end', form: 'N' }, { captures: 1, end: 'N' }), '둘 이상 잡은 콤보만');
+  assert.ok(ok({ id: 'end', form: 'N' }, { captures: 2, end: 'N' }) && ok({ id: 'end', form: 'N' }, { captures: 1, end: 'N' }));
+  assert.ok(!ok({ id: 'end', form: 'N' }, { captures: 0, end: 'N' }), '하나라도 잡은 콤보만');
   assert.ok(!ok({ id: 'end', form: 'N' }, { captures: 3, end: 'B' }));
   assert.ok(ok({ id: 'guards', n: 2 }, { forced: 2 }) && !ok({ id: 'guards', n: 2 }, { forced: 1 }));
+  assert.ok(ok({ id: 'guards', n: 1 }, { forced: 1 }) && !ok({ id: 'guards', n: 3 }, { forced: 2 }) && ok({ id: 'guards' }, { forced: 2 }));
   assert.ok(ok({ id: 'promote' }, { promotions: 1 }) && !ok({ id: 'promote' }, {}));
   assert.ok(ok({ id: 'mate' }, { mates: 1 }) && !ok({ id: 'mate' }, {}));
   assert.ok(ok({ id: 'same' }, { caps: 'NPPPB' }) && !ok({ id: 'same' }, { caps: 'NPPBP' }));
+  assert.ok(ok({ id: 'same', n: 2 }, { caps: 'NPPB' }) && !ok({ id: 'same', n: 2 }, { caps: 'NPBP' }) && !ok({ id: 'same', n: 3 }, { caps: 'NPPBP' }));
   assert.ok(!challengeMet(null, sum({})) && !challengeMet({ id: 'nope' }, sum({})));
   // 도전 글: 수치가 끼는 꼴
   assert.equal(challengeText({ id: 'take', n: 5 }), '한 콤보에 5번 잡는다');
   assert.equal(challengeText({ id: 'end', form: 'N' }), '나이트 모습으로 콤보를 끝낸다');
+  assert.equal(challengeText({ id: 'guards', n: 1 }), '한 콤보에서 지키는 적을 하나 잡는다');
+  assert.equal(challengeShort({ id: 'same', n: 2 }), '같은 종류 둘 잇달아');
+  // 관이 오르면 어려워진다: 모습 4 → 5 → 6가지 · 지키는 적 하나 → 넷 · 같은 종류 둘 → 셋
+  const p = (id, ante) => CHALLENGE_BY_ID[id].param(ante, createRng(1)).n;
+  assert.deepEqual([1, 3, 4, 5, 9].map((a) => p('forms', a)), [4, 4, 5, 6, 6]);
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 9].map((a) => p('guards', a)), [1, 1, 2, 3, 3, 4, 4]);
+  assert.deepEqual([1, 4, 5, 9].map((a) => p('same', a)), [2, 2, 3, 3]);
   assert.equal(CHALLENGE_TEXT.reward(2), '이루면: 상금 +2');
 });
 
