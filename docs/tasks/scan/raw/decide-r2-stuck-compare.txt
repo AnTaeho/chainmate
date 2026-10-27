@@ -1,0 +1,12 @@
+# 막힘으로 끝난 판 견주기(smart, seed 1). head200 stuckEnd = 같은 seed 첫 200판 가운데 막힘으로 끝난 판 수
+# base = 8ba2623(합치기 전) 200판 · C1 = 최종 B3 300판(첫 200판이 base와 판 행 200/200 같다) · d13 = D-13 300판 · d17-v2 = D-17 300판
+# try2 = D-3 · D-2 300판 · c0 = 합친 판 200 · final = + 2~8관 ×1.05 · cur = + 1관 마스터 ×3(026abe7, 지금 main 규칙)
+# 칸: 종류별 대국 수/막힘 패배(p 연습 · o 정식 · m 마스터), 진 판의 마지막 대국 종류, 막힘으로 끝난 판의 종류 · 관
+base-smart200.json     n 200 head200 stuckEnd 12 | battles/stuck p 1334/15 1.12% · o 1303/8 0.61% · m 1267/19 1.50% | lost-end {"master":58,"practice":31,"official":39} | stuck-end {"m8":5,"m4":1,"m5":1,"p7":1,"o4":1,"o3":1,"o7":1,"p6":1}
+C1-smart.json          n 300 head200 stuckEnd 12 | battles/stuck p 1988/18 0.91% · o 1946/12 0.62% · m 1891/29 1.53% | lost-end {"master":95,"practice":42,"official":61} | stuck-end {"m8":5,"m4":1,"m5":1,"p7":1,"o4":1,"o3":1,"o7":1,"p6":1}
+d13-smart300.json      n 300 head200 stuckEnd 16 | battles/stuck p 1990/19 0.95% · o 1947/14 0.72% · m 1900/37 1.95% | lost-end {"master":89,"practice":43,"official":62} | stuck-end {"m8":6,"m4":1,"m6":1,"m7":1,"m5":3,"p7":1,"o6":2,"o4":1,"o7":1,"p6":2,"o5":1,"o8":1}
+d17-v2.json            n 300 head200 stuckEnd 15 | battles/stuck p 2013/20 0.99% · o 1966/17 0.86% · m 1916/27 1.41% | lost-end {"master":94,"practice":47,"official":56} | stuck-end {"o7":2,"p6":3,"m8":4,"p5":1,"m5":2,"o4":1,"o3":1,"m6":1,"p8":1,"o5":2,"m7":1,"o6":1,"p7":1}
+try2.json              n 300 head200 stuckEnd 13 | battles/stuck p 1976/20 1.01% · o 1938/14 0.72% · m 1889/23 1.22% | lost-end {"master":104,"official":63,"practice":38} | stuck-end {"m8":8,"p6":1,"m6":2,"m5":1,"o4":1,"o3":1,"m7":1,"p8":1,"o5":2,"p7":1}
+c0-smart.json          n 200 head200 stuckEnd 11 | battles/stuck p 1363/11 0.81% · o 1337/11 0.82% · m 1309/12 0.92% | lost-end {"master":60,"practice":26,"official":36} | stuck-end {"o7":2,"o6":1,"m7":1,"m8":1,"p8":2,"p5":1,"m5":2,"p7":1}
+final-smart.json       n 200 head200 stuckEnd 13 | battles/stuck p 1338/10 0.75% · o 1311/11 0.84% · m 1281/15 1.17% | lost-end {"master":67,"practice":27,"official":39} | stuck-end {"o7":2,"o6":1,"m8":2,"p8":1,"p5":1,"m5":2,"m7":2,"p6":1,"p7":1}
+cur-smart200.json      n 200 head200 stuckEnd 12 | battles/stuck p 1326/9 0.68% · o 1291/18 1.39% · m 1261/16 1.27% | lost-end {"official":37,"practice":35,"master":61} | stuck-end {"p7":4,"o7":2,"m8":3,"o6":1,"o4":1,"p6":1}
