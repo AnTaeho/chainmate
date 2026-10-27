@@ -314,14 +314,15 @@ test('첫 조각 확률: 진열 칸 · 꾸러미 덤이 SHOP.fragmentChance대�
   assert.ok(frag / slots > pd * 0.7 && frag / slots < pd * 1.3, `display ${frag / slots} (기대 ${pd})`);
   for (const kind of ['piece', 'chart', 'engraving']) {
     let got = 0;
-    for (let i = 0; i < 4000; i++) {
+    const N = 12000; // 0.65%면 4000번은 26개쯤이라 ±25%가 2σ 안팎 — 12000번으로 3.5σ
+    for (let i = 0; i < N; i++) {
       run.shop = { rng: createRng(99 + i), display: [], packs: [], rerolls: 0 };
       const { options, bonus } = rollPack(run, kind);
       assert.equal(options.length, 3);
       assert.ok(!options.some((x) => x.kind === 'fragment'));
       if (bonus) { got++; assert.equal(LEGEND_BY_ID[bonus.legend].source, kind); }
     }
-    assert.ok(got / 4000 > pp * 0.75 && got / 4000 < pp * 1.25, `${kind} ${got / 4000} (기대 ${pp})`);
+    assert.ok(got / N > pp * 0.75 && got / N < pp * 1.25, `${kind} ${got / N} (기대 ${pp})`);
   }
   run.fragments = { immortal: { first: true, feat: false, gold: false }, opera: { first: true, feat: false, gold: false } };
   for (let i = 0; i < 2000; i++) {

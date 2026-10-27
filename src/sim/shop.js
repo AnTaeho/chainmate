@@ -43,8 +43,8 @@ export const SHOP = {
   // 8%(칸당 4.4%)에서는 판 봇의 81%가 판본 격언을 가졌고 은박(배수 +5)이 1~4관을 거의 공짜로 넘겼다. 금빛 꾸러미의 격언은 늘 판본.
   editionChance: 0.04,
   // 불멸의 기보 첫 조각: 진열 칸마다 · 꾸러미를 열 때마다 이 확률(명국마다 나오는 곳이 다르다, legends.js source).
-  // 꾸러미 조각이 덤이 된 뒤(D-3) 전설 완성 smart 6~8% 과녁으로 낮췄다(D-2, docs/tasks/decisions.md).
-  fragmentChance: { display: 0.006, pack: 0.008 },
+  // 꾸러미 조각이 덤이 된 뒤(D-3) 전설 완성 smart 6~8% 과녁으로 낮췄다(D-2, docs/tasks/decisions.md). 전 0.006 · 0.008(합친 판 8.0%)
+  fragmentChance: { display: 0.005, pack: 0.0065 },
   fragmentPrice: 4,
   // 금빛 꾸러미(금빛 적을 먹은 대국 뒤 상점에 공짜로): 판본 붙은 격언 셋 중 하나. 등급은 드묾 쪽으로.
   goldenRarity: [['common', 40], ['uncommon', 45], ['rare', 15]],
@@ -59,7 +59,8 @@ export const SHOP = {
   // 물건(격언 · 특수 기물 · 혼 · 전술)의 무게를 ×pull. 같은 종류 안에서만 무게를 바꾼다(종류 무게 · 난수 쓰는 횟수는 그대로).
   // 하나 앞인 시너지가 여럿이면 모두 올린다 — 물건 하나에 그런 시너지가 둘 붙어도 ×pull 한 번. 1이면 굴림이 끌어당김 앞과 같다
   pull: 3,
-  pity: { golden: { step: 0.004, max: 0.2 }, edition: { step: 0.004, max: 0.15 }, fragment: { step: 0.001, max: 0.03 } },
+  // 판본 상한은 D-18에서 15% → 10%
+  pity: { golden: { step: 0.004, max: 0.2 }, edition: { step: 0.004, max: 0.1 }, fragment: { step: 0.001, max: 0.03 } },
 };
 
 // 연줄 상태: run.pity = { golden, edition, fragment } — 옛 저장 · 수업 판에 없으면 0으로 돈다
