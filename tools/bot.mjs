@@ -13,7 +13,7 @@
 //   다시 놓기(밤샘 2 D2): 첫 수 전, 첫 손 최선 사슬 점수 × 수가 목표 × REBOARD.ratio에 못 미치면 판을 새로 깐다
 //   (첫 손 최선 사슬 점수가 대국 점수의 대리 지표 — docs/reports/luck.md ④).
 import { bestPerPiece, lineCommands, bestChain } from '../src/sim/solver.js';
-import { chainCaptures } from '../src/sim/chain.js';
+import { chainCaptures, chainRedrops } from '../src/sim/chain.js';
 import { canReboard, NEXT_DRAWS, nextDraws, isHidden, dropSquaresFor, apply as applyCmd } from '../src/sim/battle.js';
 import { createRng, fork, next, shuffle } from '../src/sim/rng.js';
 import { valueOf } from '../src/data/pieces.js';
@@ -67,7 +67,10 @@ function playChain(b, line, send, opts = {}) {
   for (let guard = 0; b.status === 'chain' && guard < 200; guard++) {
     const o = { preferMate: opts.nomate ? 'avoid' : true, rank: opts.rank || null, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}) };
     // 보이는 판으로 풀지 못하면(다시 놓기를 기다리는 사슬 · 보이는 판에서는 막히는 잡기) 그 한 걸음만 실제 판으로 — 화면에는 그 칸이 빛난다
-    const r = bestChain(seen(b), { ...o, allow: chainCaptures(b) }) || bestChain(b, o);
+    let r = bestChain(seen(b), { ...o, allow: chainCaptures(b) });
+    // 보이는 판에서 고른 다시 놓기 칸이 실제로는 못 놓는 칸(안개 속 적이 노린다)이면 그 걸음도 실제 판으로
+    if (r && r.line[0] && r.line[0].type === 'redrop' && !chainRedrops(b).includes(r.line[0].sq)) r = null;
+    r = r || bestChain(b, o);
     if (!r || !r.line.length) throw new Error('fog bot: chain has no move');
     send(lineCommands([r.line[0]])[0]);
   }
