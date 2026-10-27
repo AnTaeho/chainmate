@@ -394,7 +394,9 @@ const PLAY = async ({ k, sac = false }) => {
   await scene(page, 'pack bonus fragment', async () => {
     await h.ev(SHOP); await h.step(20);
     await h.ev(async () => { const { SHOP: S } = await import('/src/sim/shop.js'); window.__keepFrag = S.fragmentChance; S.fragmentChance = { ...S.fragmentChance, pack: 1 }; });
-    if (await h.press(/^shop:pack:1$/, 160)) { await h.hoverAll(/^pack:bonus$/, 40); await h.step(60); await h.press(/^pack:pick:0$/, 120); await h.step(120); }
+    // 앞 장면이 남긴 누름 상태에 흔들리지 않게 꾸러미는 상점 명령으로 산다(그리기만 잰다)
+    await h.ev(() => window.__app.screen.act({ type: 'buyPack', slot: 1 })); await h.step(160);
+    await h.hoverAll(/^pack:bonus$/, 40); await h.step(60); await h.press(/^pack:pick:0$/, 120); await h.step(120);
     await h.ev(async () => { const { SHOP: S } = await import('/src/sim/shop.js'); S.fragmentChance = window.__keepFrag; });
   });
   await scene(page, 'settings toggles (calm · lang)', async () => {
