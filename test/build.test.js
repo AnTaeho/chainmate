@@ -9,7 +9,7 @@ import { maximForm, ledger, buildState, measurePower, buildLog, firstBelow, grow
 test('격언 효과 꼴: 카드 글이 먼저, 글에 없으면 훅의 셈', () => {
   assert.equal(maximForm('chivalry'), 'x');      // 배수 ×1.5
   assert.equal(maximForm('quick_change'), 'm');  // 배수 +2
-  assert.equal(maximForm('pawn_march'), 'v');    // 값 +40
+  assert.equal(maximForm('pawn_march'), 'm');    // 배수 +4
   assert.equal(maximForm('last_square'), 'v');   // 값 ×2 — 값 쪽
   assert.equal(maximForm('gambler'), 'x');       // 넷에 하나 배수 ×3(onChainLuck라 훅 셈에는 안 보인다)
   assert.equal(maximForm('vault'), 'o');         // 상금

@@ -88,11 +88,11 @@ export function arrive(b, events = []) {
   for (const r of b.incoming) {
     const sq = b.board[r.sq] ? nearestEmpty(b.board, r.sq) : r.sq;
     if (sq < 0) continue;
-    // onArrive(정석 「함정」): 들어오는 칸에서 붙잡히면 판에 서지 않고 값이 점수에 곧바로 든다
+    // onArrive(정석 「함정」): 들어오는 칸에서 붙잡히면 판에 서지 않고 점수에 곧바로 든다(ev.score, 없으면 값)
     const ev = { sq, t: r.t, caught: false };
     if (b.mods && b.mods.length) runHook(b, 'onArrive', ev, events);
     if (ev.caught) {
-      const v = PIECES[r.t].value;
+      const v = ev.score ?? PIECES[r.t].value;
       b.score += v;
       events.push({ type: 'trapped', sq, planned: r.sq, piece: r.t, value: v, score: b.score });
       continue;

@@ -103,7 +103,7 @@ test('두 번째 바람 · 승부수 · 역전', () => {
   assert.equal(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['second_wind'], { movesUsed: 2 }).score, 30);
   assert.equal(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['all_in'], { movesLeft: 1, target: 1000, score: 100 }).score, 90);
   assert.equal(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['all_in'], { movesLeft: 1, target: 1000, score: 600 }).score, 30);
-  assert.equal(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['reversal'], { history: [{ reason: 'cut' }] }).score, 60);
+  assert.equal(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['reversal'], { history: [{ reason: 'cut' }] }).score, 90);
   assert.equal(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['reversal'], { history: [{ reason: 'blocked' }] }).score, 30);
 });
 test('연타: 같은 모습으로 잇달아 먹으면 배수 +2', () => {
@@ -211,17 +211,23 @@ test('정석 횃불: 값이 가장 큰 적 둘은 아무것도 지키지 못한�
   assert.deepEqual(muted.map((s) => PIECES[b.board[s].t].value).sort((x, y) => y - x), vals.slice(0, 2));
   for (let sq = 0; sq < 64; sq++) for (const a of attackers(b.board, sq)) assert.ok(!b.board[a].muted);
 });
-test('정석 함정: 빈칸 둘 · 증원이 들면 값이 점수로', () => {
+test('정석 함정: 빈칸 셋 · 증원이 들면 값 × 직전 콤보 배수가 점수로', () => {
   const b = createBattle({ seed: 12, ante: 3, target: 1e9, mods: [{ id: 'joseki:trap' }] });
   const tr = b.rules.traps;
-  assert.equal(tr.length, 2);
+  assert.equal(tr.length, 3);
   for (const s of tr) assert.equal(b.board[s], null);
   b.incoming = [{ sq: tr[0], t: 'R' }];
   const ev = [];
   arrive(b, ev);
-  assert.ok(ev.some((e) => e.type === 'trapped' && e.value === 50));
+  assert.ok(ev.some((e) => e.type === 'trapped' && e.value === 50), '직전 콤보가 없으면 값 그대로');
   assert.equal(b.score, 50);
   assert.equal(b.board[tr[0]], null);
+  b.history.push({ mult: 12.5 });
+  b.incoming = [{ sq: tr[1], t: 'N' }];
+  const ev2 = [];
+  arrive(b, ev2);
+  assert.ok(ev2.some((e) => e.type === 'trapped' && e.value === 375));
+  assert.equal(b.score, 425);
 });
 test('정석 속기 · 장고: 수 · 손 · 희생', () => {
   const a = createBattle({ seed: 1, mods: [{ id: 'joseki:blitz' }] });
@@ -229,11 +235,16 @@ test('정석 속기 · 장고: 수 · 손 · 희생', () => {
   const b = createBattle({ seed: 1, mods: [{ id: 'joseki:long_think' }] });
   assert.equal(b.movesLeft, 3); assert.equal(b.hand.length, 6); assert.equal(b.discardsLeft, 4);
 });
-test('정석 선수: 값이 가장 큰 적 하나가 빠진다', () => {
+test('정석 선수: 킹을 지키는 적 가운데 값이 가장 큰 하나가 빠진다', () => {
   const a = createBattle({ seed: 21, ante: 5, mods: [{ id: 'joseki:first_mover' }] });
   const p = createBattle({ seed: 21, ante: 5 });
   const count = (b) => b.board.filter((c) => c && !c.mine && c.t !== 'X' && c.t !== 'J').length;
   assert.equal(count(a), count(p) - 1);
+  const king = p.board.findIndex((c) => c && !c.mine && c.t === 'K');
+  const guards = attackers(p.board, king);
+  const gone = a.setup[0].sq;
+  assert.ok(guards.includes(gone), '지킨 적이 빠진다');
+  for (const g of guards) assert.ok(PIECES[p.board[g].t].value <= PIECES[p.board[gone].t].value);
   // 지운 칸 · 종류를 사건으로 남긴다(판(런)이 대국 시작 사건 뒤에 옮겨 싣는다 — 화면 연출, D-16)
   assert.equal(a.setup.length, 1);
   const e = a.setup[0];
@@ -242,8 +253,9 @@ test('정석 선수: 값이 가장 큰 적 하나가 빠진다', () => {
   assert.equal(p.board[e.sq].t, e.piece);
   assert.equal(p.setup, undefined, '사건이 없으면 칸도 없다');
 });
-test('정석 포로: 대국 첫 사슬이 마지막에 먹은 적이 주머니로', () => {
+test('정석 포로: 대국 첫 사슬이 먹은 적 가운데 값이 가장 큰 하나가 주머니로', () => {
   assert.deepEqual(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['joseki:captive']).traitors, ['B']);
+  assert.deepEqual(chain({ e5: 'R', e8: 'P' }, 'N', 'd3', ['e5', 'e8'], ['joseki:captive']).traitors, ['R']);
   assert.equal(chain({ e5: 'B', a8: 'R' }, 'N', 'd3', ['e5'], ['joseki:captive'], { movesUsed: 1 }).traitors, undefined);
 });
 

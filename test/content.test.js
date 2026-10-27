@@ -63,7 +63,7 @@ const CASES = [
   ['quick_change', 'mate', 340 * 14],
   ['whim', 'mate', 4080],
   ['whim', 'knight', 30],
-  ['steadfast', 'pawn', 30],
+  ['steadfast', 'pawn', 40],
   ['steadfast', 'knight', 30],
   ['steadfast', 'promote', 10], // 승급도 모습이 바뀐 것
   ['coronation', 'toQueen', 140],
@@ -158,30 +158,35 @@ test('끝줄의 꿈: 승급한 사슬의 끊김을 한 번 넘긴다', () => {
   assert.equal(play('cut', [{ id: 'back_rank_dream' }]).score, 50);
 });
 
-test('대국의 기억: 판에 쌓인 외통 수만큼 ×(1 + 0.5n), 판(런)이 data를 올린다', () => {
-  const spec = { id: 'memory', data: {} };
+test('대국의 기억: 킹을 지키는 적을 잡을 때마다 ×(1 + 0.05n), 대국이 끝나면 판(런)이 data에 쌓는다', () => {
+  const spec = { id: 'memory', uid: 7, data: {} };
   assert.equal(play('knight', [spec]).score, 30);
+  // mate 장면: a8 룩이 a4 킹을 지키고 있었다 — 잡는 순간 ×1.05(같은 대국 state)
+  const e = play('mate', [spec]);
+  assert.deepEqual(e.mods[0].state, { g: 1 });
+  assert.equal(e.score, 2142); // 2040 × 1.05
   const def = getModifier('memory');
-  def.onRunEvent(spec, { type: 'battleWon', reason: 'score' });
-  assert.deepEqual(spec.data, {});
-  def.onRunEvent(spec, { type: 'battleWon', reason: 'mate' });
-  def.onRunEvent(spec, { type: 'battleWon', reason: 'mate' });
-  assert.deepEqual(spec.data, { mates: 2 });
-  assert.equal(play('knight', [spec]).score, 60);
+  def.onRunEvent(spec, { type: 'battleEnd', won: true, mods: [{ id: 'memory', uid: 8, state: { g: 5 } }] });
+  assert.deepEqual(spec.data, {}, '다른 격언의 state는 세지 않는다');
+  def.onRunEvent(spec, { type: 'battleEnd', won: false, mods: e.mods });
+  def.onRunEvent(spec, { type: 'battleEnd', won: true, mods: e.mods });
+  assert.deepEqual(spec.data, { g: 2 });
+  assert.equal(play('knight', [{ id: 'memory', uid: 7, data: spec.data }]).score, 33); // 30 × 1.1
 });
 
-test('기보 수집가: 기보를 쓸 때마다 연쇄 +1 영구', () => {
+test('기보 수집가: 판의 기보 레벨 합마다 배수 +1(산 순간부터)', () => {
   const spec = { id: 'collector', data: {} };
   assert.equal(play('knight', [spec]).score, 30);
-  for (let i = 0; i < 3; i++) getModifier('collector').onRunEvent(spec, { type: 'chartUsed', form: 'N' });
+  getModifier('collector').onBuild(spec, { deck: [], maximFree: 0, charts: { P: 0, N: 2, B: 0, R: 1, Q: 0 } });
+  assert.deepEqual(spec.data, { n: 3 });
   assert.equal(play('knight', [spec]).score, 120);
 });
 
-test('상아탑: 상아 기물로 떨군 사슬 연쇄 +5(상아 값 +30과 함께)', () => {
+test('상아탑: 상아 기물로 떨군 사슬 배수 ×2(상아 값 +30과 함께)', () => {
   const e = play('knight', [{ id: 'ivory_tower' }], {}, { id: 'ivory' });
   assert.equal(e.value, 60);
-  assert.equal(e.mult, 6);
-  assert.equal(e.score, 360);
+  assert.equal(e.mult, 2);
+  assert.equal(e.score, 120);
 });
 
 test('왕의 목: 지키는 이 없는 킹을 hints.openKings로 알린다', () => {
