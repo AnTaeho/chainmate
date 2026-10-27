@@ -15,7 +15,8 @@
 - `src/sim/` · `src/data/`는 DOM · canvas 금지(Node에서 돈다). 무작위는 시드 rng, 상태는 JSON 왕복 안전.
 - 상태 변경은 명령 객체로만(`apply`, `applyRun`). 봇 · 화면 · 순위 서버가 같은 명령을 쓴다.
 - 격언 · 기보 · 각인 · 마스터는 `scoring.js` `defineModifier` 훅으로. 규칙 코드에 id별 분기를 박지 않는다.
-- 검증: `npm test` · `npm run smoke` · 그리기를 바꿨으면 `node tools/drawcheck.mjs`(어김 0). 대국 하네스 `node tools/sim.mjs --battles 300 --seed 1`, 판 하네스 `node tools/run.mjs --runs 300 --policy smart|random|none --seed 1 --workers 10 --limit 400`(전후 비교는 둘 다 `--dump`, 걸리는 시간은 `docs/reports/perf.md`).
+- 검증: `npm test` · `npm run smoke` · 그리기를 바꿨으면 `node tools/drawcheck.mjs`(어김 0). 대국 하네스 `node tools/sim.mjs --battles 300 --seed 1`, 판 하네스 `node tools/run.mjs --runs 200 --policy smart|random|none --seed 1 --workers 10 --limit 400`(전후 비교는 둘 다 `--dump`, 걸리는 시간은 `docs/reports/perf.md`).
+- 판 하네스는 200판으로 잰다(300판은 너무 오래 걸린다). seed 1의 앞 200판이라 옛 300판 원문과 견줄 때는 `--dump`의 앞 200판끼리.
 
 ## 화면 글
 - 낱말 · 목소리 기준은 `docs/design-notes/voice.md`와 `src/ui/glossary.js` `TERMS`. 말끝: 안내 · 알림 「~해요」, 킹 말풍선 반말, 효과 글 · 정의 「~다」, 단추 · 이름표 명사형.
