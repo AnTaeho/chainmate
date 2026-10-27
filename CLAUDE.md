@@ -10,7 +10,7 @@
 
 ## 구조
 - 게임(`src/` · `index.html`)은 바닐라 JS ES 모듈, 빌드 · npm 의존성 없음. 로컬은 `npm run serve`(`python3 -m http.server`는 연결 대기열 5라 모듈을 받다 끊긴다).
-- npm 패키지는 순위 서버 함수 `api/`(Vercel Functions)만 쓴다. `src/`는 npm을 import하지 않고, `api/`는 `tools/` · `test/`에 기대지 않는다(배포에서 빠진다).
+- npm 패키지는 순위 서버 함수 `api/`(Vercel Functions)와 시험용 devDependency(`@electric-sql/pglite` — `test/store-sql.test.js`)만 쓴다. `src/`는 npm을 import하지 않고, `api/`는 `tools/` · `test/`에 기대지 않는다(배포에서 빠진다).
 - 데스크톱 포장(Tauri 2)은 `desktop/` 안에만. 게임 파일은 `desktop/collect.sh`가 모은다.
 - `src/sim/` · `src/data/`는 DOM · canvas 금지(Node에서 돈다). 무작위는 시드 rng, 상태는 JSON 왕복 안전.
 - 상태 변경은 명령 객체로만(`apply`, `applyRun`). 봇 · 화면 · 순위 서버가 같은 명령을 쓴다.

@@ -336,7 +336,7 @@ CHM-70은 열쇠 해시를 `players.key_hash`(not null unique)에 두었다. 지
 마이그레이션(더하기만) → 새 코드 배포. 거꾸로 하면 계정 길이 500. 새 코드 뒤 옛 배포로 되돌리면 계정 길만 사라진다(열쇠는 `player_keys`에 있어 옛 코드도 읽는다).
 
 ## 확인하는 법
-- `npm test`: `names` · `daily-verify` · `leaderboard`(기억 저장소 `test/helpers/memstore.js`) · `rank`(가짜 서버 `test/helpers/fakeapi.js` = 진짜 `service.js` + 기억 저장소) · `merge` · `link` · `cloud` · `account` · `accountui` · `layout`.
+- `npm test`: `names` · `daily-verify` · `leaderboard`(기억 저장소 `test/helpers/memstore.js`) · `rank`(가짜 서버 `test/helpers/fakeapi.js` = 진짜 `service.js` + 기억 저장소) · `merge` · `link` · `cloud` · `account` · `accountui` · `layout` · `store-sql`(`store.js`의 진짜 SQL을 PGlite 메모리 Postgres에 `db/schema.sql`을 올려 돌린다).
 - `npm run smoke`: 「순위 확인: 화면 판 = 서버 셈」 · 「순위」 · 「기기 잇기」(앱 둘) · 「계정」(남은 입력 칸 0).
 - 진짜 DB: `node tools/daily-e2e.mjs` · `link-e2e.mjs` · `account-e2e.mjs` `<주소>`(로컬은 `vercel dev --listen 3210`, 보호된 미리 보기는 `--vercel`). 만든 플레이어는 `test` 표시 뒤 지운다(`--cleanup`은 지우기만).
 - 스크린샷: `node tools/shots-leaderboard.mjs` · `shots-link.mjs` · `shots-account.mjs`(크로미움 · 웹킷, `--live <주소>`는 진짜 서버로 두 기기).
