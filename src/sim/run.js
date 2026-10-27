@@ -58,6 +58,8 @@ import { openPool } from './unlock.js';
 //   앞 값 [150, 725, 5174, 15006, 74382, 278189, 541204, 1138045] — docs/tasks/decisions.md
 export const B = [150, 725, 5174, 15006, 66944, 222551, 487084, 1024241];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
+// 관마다 마스터 목표만 더 곱한다(빈 칸은 1) — D-12 1관 마스터 통과율 손잡이
+export const MASTER_MULT = [];
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
 export const ENDLESS_GROWTH = 2.2; // 9관부터 관마다 목표 ×
@@ -161,7 +163,7 @@ export function danRules(dan) {
 
 export function targetFor(ante, kind, mult = 1) {
   const base = ante <= ANTES ? B[ante - 1] : B[ANTES - 1] * ENDLESS_GROWTH ** (ante - ANTES);
-  const raw = base * KIND_MULT[kind] * mult;
+  const raw = base * KIND_MULT[kind] * (kind === 'master' ? MASTER_MULT[ante - 1] ?? 1 : 1) * mult;
   // 보기 좋게: 유효 숫자 둘
   const mag = 10 ** Math.max(0, Math.floor(Math.log10(raw)) - 1);
   return Math.round(raw / mag) * mag;

@@ -10,7 +10,7 @@ import { Worker, isMainThread, parentPort, workerData } from 'node:worker_thread
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRun, B, targetFor, REWARD, CHEST, TAGS, igniteKey } from '../src/sim/run.js';
+import { createRun, B, MASTER_MULT, targetFor, REWARD, CHEST, TAGS, igniteKey } from '../src/sim/run.js';
 import { applyNight2 } from './night2.mjs';
 import { MATE } from '../src/sim/tuning.js';
 import { GOLDEN } from '../src/sim/battle.js';
@@ -127,6 +127,7 @@ if (!isMainThread) {
   if (tune && tune.chest) CHEST.counts = tune.chest;
   if (tune && tune.chestItems) CHEST.items = tune.chestItems;
   if (tune && tune.masterBase != null) REWARD.base.master = tune.masterBase;
+  if (tune && tune.masterMult) tune.masterMult.forEach((x, i) => { MASTER_MULT[i] = x; }); // 관마다 마스터 목표 배수 {"masterMult":[3]}
   if (tune && tune.base) Object.assign(REWARD.base, tune.base); // {"practice":2,"official":3}
   if (tune && tune.chestMoney != null) CHEST.money = tune.chestMoney;
   if (tune && tune.golden != null) GOLDEN.chance = tune.golden;
