@@ -9,10 +9,11 @@ export const EN = {
   // 대국 도전 · 숙적(docs/reports/goty.md, src/data/challenges.js · nemesis.js)
   '도전': 'Challenge', '도전 성공': 'Challenge done', '도전을 이뤘어요': 'Challenge done', '이기는 데는 필요 없어요': "You don't need it to win",
   '건너뛰면 이 도전도 사라져요': 'Skipping drops this challenge too', '도전 상금': 'Challenge purse',
-  '한 콤보에서 지키는 적을 둘 잡는다': 'Take two guards in one chain', '콤보 중에 프로모션한다': 'Promote during a chain',
+  '한 콤보에서 지키는 적을 하나 잡는다': 'Take a guard in one chain', '한 콤보에서 지키는 적을 둘 잡는다': 'Take two guards in one chain', '한 콤보에서 지키는 적을 넷 잡는다': 'Take four guards in one chain', '콤보 중에 프로모션한다': 'Promote during a chain',
   '킹을 잡아 체크메이트한다': 'Take the king for checkmate', '같은 종류의 적을 셋 잇달아 잡는다': 'Take three of the same kind in a row',
+  '같은 종류의 적을 둘 잇달아 잡는다': 'Take two of the same kind in a row',
   // 좁은 자리의 도전 이름표(challengeShort)
-  '지키는 적 둘 잡기': 'Take two guards', '콤보 중 프로모션': 'Promote in a chain', '킹 잡기': 'Take the king', '같은 종류 셋 잇달아': '3 alike in a row',
+  '지키는 적 하나 잡기': 'Take a guard', '지키는 적 둘 잡기': 'Take two guards', '지키는 적 셋 잡기': 'Take three guards', '지키는 적 넷 잡기': 'Take four guards', '콤보 중 프로모션': 'Promote in a chain', '킹 잡기': 'Take the king', '같은 종류 셋 잇달아': '3 alike in a row', '같은 종류 둘 잇달아': '2 alike in a row',
   '숙적': 'Nemesis', '이 적이 숙적이 됐어요': 'This enemy is now your nemesis', '숙적이 돌아왔어요': 'Your nemesis is back',
   '숙적이 더 세졌어요': 'Your nemesis grew stronger', '숙적을 잡았어요': 'Nemesis taken', '또 끊기면 더 세진다': 'Grows if it breaks you again',
   '도전을 콤보 하나로 해내면 상금을 받아': 'Pull off the challenge in one chain for extra $',
@@ -602,9 +603,11 @@ export const PRE = [
   [/^한 콤보에서 모습 (\d+)가지를 거친다$/, (m) => `Pass through ${m[1]} forms in one chain`],
   [/^한 콤보에 (\d+)번 잡는다$/, (m) => `Take ${m[1]} times in one chain`],
   [/^(폰|나이트|비숍|룩|퀸) 모습으로 콤보를 끝낸다$/, (m, tr) => `End a chain as a ${tr(m[1]).toLowerCase()}`],
+  [/^(폰|나이트|비숍|룩|퀸)(?:이나|나) (폰|나이트|비숍|룩|퀸) 모습으로 콤보를 끝낸다$/, (m, tr) => `End a chain as a ${tr(m[1]).toLowerCase()} or ${tr(m[2]).toLowerCase()}`],
   [/^모습 (\d+)가지 거치기$/, (m) => `${m[1]} forms in a chain`],
   [/^한 콤보에 (\d+)번 잡기$/, (m) => `Take ${m[1]} in a chain`],
   [/^(폰|나이트|비숍|룩|퀸)(?:으로|로) 끝내기$/, (m, tr) => `End as a ${tr(m[1]).toLowerCase()}`],
+  [/^(폰|나이트|비숍|룩|퀸)(?:이나|나) (폰|나이트|비숍|룩|퀸)(?:으로|로) 끝내기$/, (m, tr) => `End as a ${tr(m[1]).toLowerCase()} or ${tr(m[2]).toLowerCase()}`],
   // 업적 알림 「업적 · 이름」: 쪼개기 전에(탭 이름 「업적」은 복수 Achievements)
   [/^업적 · (.+)$/, (m, tr) => `Achievement · ${tr(m[1])}`],
   // 하이라이트 카드(CHM-73)
