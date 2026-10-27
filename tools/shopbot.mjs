@@ -88,7 +88,7 @@ function noteDisplay(run) {
 function notePack(run) {
   if (run.pack.kind === 'golden') SEEN.golden++;
   else SEEN.packs++;
-  if (run.pack.options.some((o) => o.kind === 'fragment')) SEEN.fragPack++;
+  if (run.pack.bonus || run.pack.options.some((o) => o.kind === 'fragment')) SEEN.fragPack++;
 }
 // 찜(CHM-58 F) 세기: 다음 상점에 넘어온 카드(상점에 들어설 때 한 번) · 그 카드를 산 것 · 종류별(playRun마다 새로, src/sim/runlog.js와 같은 셈)
 export const HOLDS = { reset() { Object.assign(this, { carried: 0, bought: 0, kinds: {} }); } };
@@ -353,8 +353,8 @@ function pickGolden(run, ctx, hunt) {
   } else act(run, { type: 'skipPack' });
 }
 
-// 열린 꾸러미(기물 · 기보 · 각인)에서 가장 좋은 것(오르지 않으면 넘김, hunt는 첫 조각) — 상점 · 건너뛰기 패 공용
-function pickPack(run, ctx, build, base, hunt) {
+// 열린 꾸러미(기물 · 기보 · 각인)에서 가장 좋은 것(오르지 않으면 넘김) — 상점 · 건너뛰기 패 공용. 끼어 나온 첫 조각은 덤이라 열 때 이미 받았다
+function pickPack(run, ctx, build, base) {
   let pick = null;
   run.pack.options.forEach((o, index) => {
     const v = variantFor(run, build, o, ctx);
@@ -362,9 +362,7 @@ function pickPack(run, ctx, build, base, hunt) {
     const s = ctx.score(v.build) * (1 + famBonus(build, v.build));
     if (!pick || s > pick.s) pick = { s, cmd: { type: 'pick', index, target: v.target } };
   });
-  const frag = run.pack.options.findIndex((o) => o.kind === 'fragment');
-  if (frag >= 0 && (hunt || !pick || pick.s <= base)) act(run, { type: 'pick', index: frag });
-  else if (pick && pick.s > base * 1.0) act(run, pick.cmd);
+  if (pick && pick.s > base * 1.0) act(run, pick.cmd);
   else act(run, { type: 'skipPack' });
 }
 // 건너뛰기 패로 상점 밖에서 열린 꾸러미(CHM-58 ②): 짜임 재기는 다음 대국(건너뛴 대국의 다음)으로
@@ -378,7 +376,7 @@ function tagPack(run, policy, r) {
   const ctx = makeCtx({ ...run, phase: 'shop' });
   if (run.pack.kind === 'golden') { pickGolden(run, ctx, policy === 'hunt'); return; }
   const build = buildOf(run);
-  pickPack(run, ctx, build, Math.max(1, ctx.score(build)), policy === 'hunt');
+  pickPack(run, ctx, build, Math.max(1, ctx.score(build)));
 }
 
 // 찜(CHM-58 F): 떠날 때 지금 못 사는(돈이 모자라거나 다른 것을 사느라 남은) 진열 카드 중 짜임 재기 득이 가장 큰 것을 찜한다.
@@ -479,7 +477,7 @@ function smartShop(run, hunt = false) {
     const pk = run.shop.packs.findIndex((p) => !p.sold && run.money - p.price >= (hunt ? Math.min(reserve, 4) : reserve));
     if (pk >= 0) {
       act(run, { type: 'buyPack', slot: pk });
-      pickPack(run, ctx, build, base, hunt);
+      pickPack(run, ctx, build, base);
       continue;
     }
     // 다시 진열: 돈이 넉넉할 때만(hunt는 조각을 찾으려 조금 더 자주). 건너뛰기 패의 값 없는 다시 진열은 늘 쓴다

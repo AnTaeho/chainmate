@@ -9,7 +9,7 @@ import { createRng } from '../src/sim/rng.js';
 import {
   createRun, applyRun, legalRunCommands, battleMods, REWARD, CHEST, maximCapacity, hasMaximRoom, sellPrice, canBuy, awaitingGold,
 } from '../src/sim/run.js';
-import { SHOP, rollDisplay, rollPackOptions, maximPrice } from '../src/sim/shop.js';
+import { SHOP, rollDisplay, rollPack, maximPrice } from '../src/sim/shop.js';
 import { EDITIONS, EDITION_BY_ID } from '../src/data/editions.js';
 import { LEGENDS, LEGEND_BY_ID, OPERA_REFILLS } from '../src/data/legends.js';
 import { MAXIM_BY_ID } from '../src/data/maxims.js';
@@ -299,7 +299,7 @@ test('첫 조각: 진열에서 사거나 꾸러미에서 고른다', () => {
   assert.equal(run.fragments.eight_pawns.first, true);
 });
 
-test('첫 조각 확률: 진열 칸 3% · 꾸러미 4%, 나오는 곳이 맞는 명국만, 가진 첫 조각은 다시 안 나온다', () => {
+test('첫 조각 확률: 진열 칸 · 꾸러미 덤이 SHOP.fragmentChance대로, 나오는 곳이 맞는 명국만, 가진 첫 조각은 다시 안 나온다', () => {
   const run = createRun({ draft: false, seed: 1 });
   let frag = 0, slots = 0;
   for (let i = 0; i < 6000; i++) {
@@ -310,17 +310,18 @@ test('첫 조각 확률: 진열 칸 3% · 꾸러미 4%, 나오는 곳이 맞는 
       if (it.kind === 'fragment') { frag++; assert.equal(LEGEND_BY_ID[it.legend].source, 'display'); }
     }
   }
-  assert.ok(frag / slots > 0.022 && frag / slots < 0.038, `display ${frag / slots}`);
+  const pd = SHOP.fragmentChance.display, pp = SHOP.fragmentChance.pack;
+  assert.ok(frag / slots > pd * 0.7 && frag / slots < pd * 1.3, `display ${frag / slots} (기대 ${pd})`);
   for (const kind of ['piece', 'chart', 'engraving']) {
     let got = 0;
     for (let i = 0; i < 4000; i++) {
       run.shop = { rng: createRng(99 + i), display: [], packs: [], rerolls: 0 };
-      const o = rollPackOptions(run, kind);
-      assert.equal(o.length, 3);
-      const f = o.find((x) => x.kind === 'fragment');
-      if (f) { got++; assert.equal(LEGEND_BY_ID[f.legend].source, kind); }
+      const { options, bonus } = rollPack(run, kind);
+      assert.equal(options.length, 3);
+      assert.ok(!options.some((x) => x.kind === 'fragment'));
+      if (bonus) { got++; assert.equal(LEGEND_BY_ID[bonus.legend].source, kind); }
     }
-    assert.ok(got / 4000 > 0.03 && got / 4000 < 0.05, `${kind} ${got / 4000}`);
+    assert.ok(got / 4000 > pp * 0.75 && got / 4000 < pp * 1.25, `${kind} ${got / 4000} (기대 ${pp})`);
   }
   run.fragments = { immortal: { first: true, feat: false, gold: false }, opera: { first: true, feat: false, gold: false } };
   for (let i = 0; i < 2000; i++) {
@@ -445,7 +446,8 @@ test('셋째 조각: 첫 조각이 없으면 금빛 꾸러미에 첫 조각이 �
     if (f) { withFrag++; applyRun(run, { type: 'pick', index: run.pack.options.indexOf(f) }); assert.equal(run.fragments[f.legend].first, true); }
     assert.equal(!!f, run.shop.goldenFragment);
   }
-  assert.ok(withFrag / N > 0.3 && withFrag / N < 0.7, `${withFrag}/${N}`);
+  const p = SHOP.goldenFragmentChance;
+  assert.ok(withFrag / N > p * 0.4 && withFrag / N < p * 1.6, `${withFrag}/${N} (기대 ${p})`);
 });
 
 // ── 전설 다섯: 점수

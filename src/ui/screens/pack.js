@@ -4,19 +4,21 @@
 import { sway, tiltHit } from '../sway.js';
 import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
-import { box, measure, fine } from '../../render/gfx.js';
+import { box, measure, fine, text, dot } from '../../render/gfx.js';
+import { glow } from '../../render/light.js';
 import { hasMaximRoom, canSell, sellPrice, maximCapacity, maximCount } from '../../sim/run.js';
 import { LEGEND_BY_ID } from '../../data/legends.js';
 import { CHARTS } from '../../data/charts.js';
 import { button, btnW } from '../ui.js';
-import { itemCard, itemRowH, itemKeys, itemExtraTip, itemEffect, itemName, maximGrid, maximGridH, envelope, ENV_COL, targetPanel, targetPanelLayout, targetOk, isSwap, cardBase, fitText, shardIcon } from '../parts.js';
+import { itemCard, itemRowH, itemKeys, itemExtraTip, itemEffect, itemName, maximGrid, maximGridH, envelope, ENV_COL, targetPanel, targetPanelLayout, targetOk, isSwap, cardBase, fitText, shardIcon, fragmentTip } from '../parts.js';
+import { sheen } from '../juice.js';
 import { PACK_NAME, PART_NAME } from '../words.js';
-import { runSide, pauseButton } from './common.js';
+import { runSide, pauseButton, shardTo } from './common.js';
 import { MAIN, TOP, CARD, BTN_H, GAP_GROUP, LIST_GAP, PAD_CARD, SP, flow } from '../frame.js';
 import { bagRow } from './shop.js';
 import { familyCounts } from '../../data/families.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
-import { LOOK } from '../../render/look.js';
+import { LOOK, live } from '../../render/look.js';
 
 // 봉투가 열리는 시간, 카드 i가 뒤집히기 시작하는 때
 const OPEN = 0.4;
@@ -38,6 +40,12 @@ export function shardCellLayout(w) {
   const name = f.line(), effect = f.line();
   return { tx, tw: w - tx - P, name, effect, h: Math.max(f.y, P + 26) + P };
 }
+// 덤 조각: 기물 · 기보 · 각인 꾸러미에 끼어 나온 첫 조각(run.pack.bonus)은 고르지 않아도 열 때 받는다. 카드 셋이 다 뒤집힌 뒤 빛나며 드러난다
+// 자리는 금빛 꾸러미의 명경기 조각 칸과 같은 건너뛰기 줄 왼쪽(고르는 칸이 아니라 금빛 테 · 「덤」 표로 가른다)
+const bonusAt = (n) => flipAt(n) + 0.1;
+const BURST = 0.6; // 드러날 때 번지는 빛 · 금빛 점이 사라지는 때(초, 드러난 뒤)
+const DUM_H = 14;
+const dumW = () => measure('덤', true) + 10;
 // 위 띠의 격언 이름표 단추(판 틀 위 띠 — 관 선택의 「상점」 단추와 같은 자리 · 높이)
 const TAG_Y = SP.xs;
 export const maximTagW = (run) => measure(`격언 ${maximCount(run)}/${maximCapacity(run)}`, true) + 12;
@@ -69,11 +77,14 @@ export function packLayout(run, pack, panel = null) {
   const rowY = TOP + top + GAP_GROUP;
   const cw2 = 2 * CARD.w + CARD.gap;
   const cell = !panel && out.length ? { i: out[0], x: MAIN.x, y: rowY, w: cw2, h: shardCellLayout(cw2).h } : null;
-  const rowH = cell ? cell.h : BTN_H;
   // 건너뛰기 · 취소(같은 자리에 번갈아 선다)는 둘 중 넓은 글에 맞춘 폭
   const sw = Math.max(btnW('건너뛰기'), btnW('취소'));
-  const skip = { x: cell ? MAIN.x + MAIN.w - sw : MAIN.x + Math.floor((MAIN.w - sw) / 2), y: rowY + Math.floor((rowH - BTN_H) / 2), w: sw };
-  return { cards, n, cw, gap, x0, ch, tag, grid, chosen, cell, rowY, rowH, skip, bottom: rowY + rowH };
+  const bw = MAIN.w - sw - CARD.gap; // 덤 조각 칸은 건너뛰기 단추 앞까지
+  const bonus = !panel && pack.bonus ? { x: MAIN.x, y: rowY, w: bw, h: shardCellLayout(bw).h } : null;
+  const low = cell || bonus;
+  const rowH = low ? low.h : BTN_H;
+  const skip = { x: low ? MAIN.x + MAIN.w - sw : MAIN.x + Math.floor((MAIN.w - sw) / 2), y: rowY + Math.floor((rowH - BTN_H) / 2), w: sw };
+  return { cards, n, cw, gap, x0, ch, tag, grid, chosen, cell, bonus, rowY, rowH, skip, bottom: rowY + rowH };
 }
 
 export class PackScreen {
@@ -88,13 +99,26 @@ export class PackScreen {
   }
   get run() { return this.app.run; }
   // 봉투가 열리고 카드가 뒤집히는 동안 · 도움말 팁이 뜰 때(1.2초)까지 움직인다
-  animating() { const n = this.run.pack ? this.run.pack.options.length : 0; return this.t <= Math.max(1.25, OPEN + 0.3, flipAt(n) + 0.35, RAYS); }
+  animating() {
+    const pk = this.run.pack, n = pk ? pk.options.length : 0;
+    return this.t <= Math.max(1.25, OPEN + 0.3, flipAt(n) + 0.35, RAYS, pk && pk.bonus ? bonusAt(n) + BURST : 0);
+  }
   update(dt) {
     const before = this.t;
     this.t += dt * this.app.speed();
-    const n = this.run.pack ? this.run.pack.options.length : 0;
+    const pk = this.run.pack, n = pk ? pk.options.length : 0;
     if (before < 0.12 && this.t >= 0.12) this.app.sfx('engrave');
     for (let i = 0; i < n; i++) { const at = flipAt(i) + 0.12; if (before < at && this.t >= at) this.app.sfx('flip'); }
+    if (pk && pk.bonus && before < bonusAt(n) && this.t >= bonusAt(n)) this.revealBonus(pk);
+  }
+  // 덤 조각이 드러나는 순간: 소리 · 알림 · 조각이 상금 줄의 조각 띠로 날아간다(펼친 격언 칸이면 날지 않는다)
+  revealBonus(pk) {
+    this.app.sfx('fragment');
+    this.app.toast(`${LEGEND_BY_ID[pk.bonus.legend].name} · ${PART_NAME.first}`, PAL.gold, 2.6);
+    const lay = packLayout(this.run, pk, this.panel);
+    if (!lay.bonus) return;
+    const to = shardTo();
+    this.app.flyShard(lay.bonus.x + 12, lay.bonus.y + Math.floor(lay.bonus.h / 2), to.x, to.y);
   }
   pick(i) {
     const o = this.run.pack && this.run.pack.options[i];
@@ -239,6 +263,7 @@ export class PackScreen {
         closeBox();
       });
     }
+    if (lay.bonus) this.drawBonus(ctx, ui, lay.bonus, pack.bonus, bonusAt(pack.options.length));
     // 봉투: 봉랍이 깨지고 덮개가 젖혀진 뒤 카드가 솟아 나온다
     if (this.t < OPEN + 0.25) {
       const k = Math.min(1, this.t / OPEN);
@@ -247,6 +272,34 @@ export class PackScreen {
       ctx.globalAlpha = Math.max(0, fade);
       // 봉투가 내려가며 사라진다(소수점 자리로)
       fine(() => envelope(ctx, ex, ey, ew, eh, pack.kind, { open: k }));
+      ctx.globalAlpha = 1;
+    }
+  }
+  // 덤 조각: 드러나는 순간 흰빛이 걷히며 금빛 점이 번지고, 그 뒤로 반짝 띠가 지나간다. 누르는 칸이 아니라 가리키면 풀이만
+  drawBonus(ctx, ui, b, o, at) {
+    const since = this.t - at;
+    if (since < 0) return;
+    const { x, y, w, h } = b;
+    const l = LEGEND_BY_ID[o.legend];
+    ui.region('pack:bonus', x, y, w, h, { tip: () => fragmentTip(this.run, l) });
+    const hover = ui.isHover('pack:bonus');
+    const k = Math.min(1, since / BURST);
+    if (k < 1 && !LOOK.calm) { live(); glow(ctx, x, y, w, h, PAL.goldHi, 0.9 * (1 - k), 10); }
+    const s = shardCellLayout(w), dw = dumW(), dy = y + Math.floor((h - DUM_H) / 2);
+    openBox('card', x, y, w, h, PAD_CARD, { name: '덤 조각 칸' });
+    cardBase(ctx, x, y, w, h, { fill: '#f3e2b0', hover, edge: PAL.gold });
+    shardIcon(ctx, x + PAD_CARD + 3, y + Math.floor((h - 14) / 2));
+    fitText(ctx, itemName(o), x + s.tx, y + s.name, s.tw - dw - SP.s, PAL.cardInk);
+    fitText(ctx, '첫 조각 · 셋이면 전설', x + s.tx, y + s.effect, s.tw - dw - SP.s, PAL.cardInk, { bold: false });
+    box(ctx, x + w - PAD_CARD - dw, dy, dw, DUM_H, PAL.gold, PAL.frameDk);
+    text(ctx, '덤', x + w - PAD_CARD - dw / 2, dy + 2, PAL.cardInk, { bold: true, align: 'center' });
+    closeBox();
+    sheen(ctx, x, y, w, h, ui.time, 3);
+    // 드러날 때 금빛 점 열둘이 칸 가운데서 번진다
+    if (k < 1 && !LOOK.calm) {
+      const cx = x + w / 2, cy = y + h / 2, r = 6 + k * Math.max(w, h) * 0.7;
+      ctx.globalAlpha = 1 - k;
+      for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; dot(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.6, 2, PAL.goldHi); }
       ctx.globalAlpha = 1;
     }
   }
