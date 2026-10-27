@@ -156,7 +156,7 @@ test('판본: 값에 판본 값이 붙고(팔면 절반), 흑요는 격언 칸 +
   assert.equal(sellPrice(m), 5);
 });
 
-test('판본: 진열 격언에 약 4%(칸당 ~2%), 무게는 은박 > 자개 > 무지개 > 흑요', () => {
+test('판본: 진열 격언에 약 1.5%(칸당 ~0.8%), 무게는 은박 > 자개 > 무지개 > 흑요', () => {
   const run = createRun({ draft: false, seed: 1 });
   const counts = {}; let maxims = 0, slots = 0;
   for (let i = 0; i < 8000; i++) {
@@ -171,9 +171,9 @@ test('판본: 진열 격언에 약 4%(칸당 ~2%), 무게는 은박 > 자개 > �
     }
   }
   const total = Object.values(counts).reduce((a, x) => a + x, 0);
-  assert.equal(SHOP.editionChance, 0.04);
-  assert.ok(total / maxims > 0.03 && total / maxims < 0.05, `edition share ${total / maxims}`);
-  assert.ok(total / slots > 0.015 && total / slots < 0.03, `per slot ${total / slots}`);
+  assert.equal(SHOP.editionChance, 0.015);
+  assert.ok(total / maxims > 0.01 && total / maxims < 0.02, `edition share ${total / maxims}`);
+  assert.ok(total / slots > 0.005 && total / slots < 0.012, `per slot ${total / slots}`);
   assert.ok(counts.foil > counts.pearl && counts.pearl > counts.rainbow && counts.rainbow > counts.obsidian, JSON.stringify(counts));
 });
 
