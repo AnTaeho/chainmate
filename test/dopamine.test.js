@@ -446,7 +446,8 @@ test('셋째 조각: 첫 조각이 없으면 금빛 꾸러미에 첫 조각이 �
     if (f) { withFrag++; applyRun(run, { type: 'pick', index: run.pack.options.indexOf(f) }); assert.equal(run.fragments[f.legend].first, true); }
     assert.equal(!!f, run.shop.goldenFragment);
   }
-  assert.ok(withFrag / N > 0.3 && withFrag / N < 0.7, `${withFrag}/${N}`);
+  const p = SHOP.goldenFragmentChance;
+  assert.ok(withFrag / N > p * 0.4 && withFrag / N < p * 1.6, `${withFrag}/${N} (기대 ${p})`);
 });
 
 // ── 전설 다섯: 점수

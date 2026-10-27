@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRun, applyRun, blindInfo, targetFor, DANS, danRules, chestCounts, CHEST, maximCapacity } from '../src/sim/run.js';
-import { rerollCost, rollDisplay, rollPacks, rollItem } from '../src/sim/shop.js';
+import { rerollCost, rollDisplay, rollPacks, rollItem, SHOP } from '../src/sim/shop.js';
 import { OPENINGS } from '../src/data/openings.js';
 import { FINAL_MASTER } from '../src/data/masters.js';
 import { stepBattle } from '../tools/bot.mjs';
@@ -100,7 +100,7 @@ test('단 3부터: 명인의 상자 다섯 칸 무게 반(덜어 낸 몫은 한 
   assert.equal(chestCounts(createRun({ draft: false, seed: 1 })), CHEST.counts);
 });
 
-test('단 3부터: 첫 조각 확률 반(진열 3000칸)', () => {
+test('단 3부터: 첫 조각 확률 반(진열 6000칸)', () => {
   const rate = (dan) => {
     const run = createRun({ draft: false, seed: 1, dan });
     const rng = { s: 12345 };
@@ -109,8 +109,9 @@ test('단 3부터: 첫 조각 확률 반(진열 3000칸)', () => {
     return n / 6000;
   };
   const r0 = rate(0), r6 = rate(6);
-  assert.ok(r0 > 0.02 && r0 < 0.04, `단 0 ${r0}`);
-  assert.ok(r6 > 0.008 && r6 < 0.022, `단 6 ${r6}`);
+  const p = SHOP.fragmentChance.display;
+  assert.ok(r0 > p * 0.6 && r0 < p * 1.4, `단 0 ${r0} (기대 ${p})`);
+  assert.ok(r6 > p * 0.2 && r6 < p * 0.8, `단 6 ${r6} (기대 ${p / 2})`);
 });
 
 test('단은 저장 왕복 뒤에도 같다', () => {
