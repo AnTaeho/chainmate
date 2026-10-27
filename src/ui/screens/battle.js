@@ -766,9 +766,9 @@ export class BattleScreen {
           tick: (p) => { if (p >= 0.5 && !v.reboarded) { v.reboarded = true; const b = this.bRef; v.board = clone(b.board); this.news = this.newThings(b); } },
           done: () => { v.reboarded = false; this.sync(); },
         }); break;
-        // 함정(정석): 증원이 함정에 들어 곧바로 점수가 된다
+        // 함정(정석): 증원이 함정에 들어 곧바로 점수가 된다(값 × 직전 콤보 배수라 점수 줄에 띄운다)
         case 'trapped': add(0.3, {
-          begin: () => { this.sparkle(e.sq, '#c0c8d0', 10); this.pop(`+${short(e.value)}`, 'value'); this.snd('coin'); },
+          begin: () => { this.sparkle(e.sq, '#c0c8d0', 10); this.pop(`+${short(e.value)}`, 'score'); this.snd('coin'); },
           done: () => { v.score = e.score; },
         }); break;
         case 'freeze': add(0.05, { begin: () => { for (const sq of e.squares) this.sparkle(sq, '#9fd3e0', 5); } }); break;
@@ -1271,7 +1271,9 @@ export class BattleScreen {
   pop(s, where, { col = null, delay = 0, dx = 0, align = 'center' } = {}) {
     // 안 3: 값 칸 위는 목표 막대라 몫은 값 칸 바로 아래 빈 자리에 머문다
     const lay = this.leftLayout(), vy = lay.val.y + VAL_H + 2;
-    const pos = where === 'value' ? { x: LX + 24 + dx, y: vy } : where === 'mult' ? { x: LX + 88 + dx, y: vy } : { x: LX + LW - 20, y: shardTo().y - 6 };
+    // score: 콤보 밖에서 점수에 곧바로 드는 몫(함정) — 얻을 몫(drawGain)과 같은 자리 · 빛깔, 점수 이름표 줄 오른끝
+    const pos = where === 'value' ? { x: LX + 24 + dx, y: vy } : where === 'mult' ? { x: LX + 88 + dx, y: vy } : where === 'score' ? { x: LX + LW - PX + dx, y: lay.scoreLab } : { x: LX + LW - 20, y: shardTo().y - 6 };
+    if (where === 'score') align = 'right';
     const rise = where === 'money' ? 10 : 0;
     const c = col || (where === 'value' ? PAL.val : PAL.gold);
     // 머무는 몫은 같은 자리에 겹치지 않게: 앞선 순간에 뜬 같은 칸의 몫은 새 몫이 뜰 때 지운다(같은 순간에 나란히 뜬 몫은 둔다)
