@@ -240,9 +240,11 @@
 ## 코드 · 운영 쪽(하네스 아님)
 
 ### C-2 전역 한도를 열쇠 50개로 채우면 모두가 막힌다
+- **초안(2026-10-27)**: Hobby에서도 규칙을 쓸 수 있다(`vercel firewall status` — Firewall Not configured, 규칙 추가 됨). 규칙 「API 쓰기 IP 한도」(POST `/api/player` · `/api/account/login` · `/api/account/signup` · `/api/link/redeem`, IP당 60초 20번, fixed_window)를 초안으로 걸었다. 프로덕션에 올리는 `vercel firewall publish`는 사람이 돌린다.
 - 앱은 IP를 남기지 않으니 플랫폼 앞단에서 막아야 한다: Vercel Firewall 속도 제한 규칙(IP 기준, 분당 10~20)을 `POST /api/player` · `/api/account/login` · `/api/account/signup` · `/api/link/redeem`에. **플랜에서 규칙을 쓸 수 있는지 사람이 대시보드에서 확인**해야 한다. 안 되면 전역 한도를 열쇠당 한도 합보다 크게 올리는 쪽(막힘은 줄고 공격 비용만 오른다).
 
 ### C-5 store.js의 진짜 SQL이 시험에서 안 돈다
+- **끝(2026-10-27)**: (가)로 넣었다 — `test/store-sql.test.js`가 `db/schema.sql`을 메모리 PGlite에 올려 `store.js` 내보낸 함수 27개와 `createService` 한 바퀴를 실제 SQL로 돈다(시험 8, 3초). SQL 버그는 없었다.
 - (가 · 권장) `@electric-sql/pglite`를 devDependency로 두고 `db/schema.sql`을 메모리 Postgres에 올려 `store.js`를 그대로 돌리는 시험. CLAUDE.md 「npm 패키지는 `api/`만」은 게임(`src/`)이 npm을 안 쓴다는 규칙이라 시험용 devDependency는 어긋나지 않는다고 읽지만, 규칙 문구를 바꿀지 사람이 정한다. (나) Neon 가지 DB에 대는 시험(비밀 열쇠가 든다).
 
 ### C-12 미리 보기 배포가 프로덕션 순위에 쓸 수 있다
