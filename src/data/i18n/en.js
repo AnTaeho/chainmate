@@ -603,9 +603,11 @@ export const PRE = [
   [/^한 콤보에서 모습 (\d+)가지를 거친다$/, (m) => `Pass through ${m[1]} forms in one chain`],
   [/^한 콤보에 (\d+)번 잡는다$/, (m) => `Take ${m[1]} times in one chain`],
   [/^(폰|나이트|비숍|룩|퀸) 모습으로 콤보를 끝낸다$/, (m, tr) => `End a chain as a ${tr(m[1]).toLowerCase()}`],
+  [/^(폰|나이트|비숍|룩|퀸)(?:이나|나) (폰|나이트|비숍|룩|퀸) 모습으로 콤보를 끝낸다$/, (m, tr) => `End a chain as a ${tr(m[1]).toLowerCase()} or ${tr(m[2]).toLowerCase()}`],
   [/^모습 (\d+)가지 거치기$/, (m) => `${m[1]} forms in a chain`],
   [/^한 콤보에 (\d+)번 잡기$/, (m) => `Take ${m[1]} in a chain`],
   [/^(폰|나이트|비숍|룩|퀸)(?:으로|로) 끝내기$/, (m, tr) => `End as a ${tr(m[1]).toLowerCase()}`],
+  [/^(폰|나이트|비숍|룩|퀸)(?:이나|나) (폰|나이트|비숍|룩|퀸)(?:으로|로) 끝내기$/, (m, tr) => `End as a ${tr(m[1]).toLowerCase()} or ${tr(m[2]).toLowerCase()}`],
   // 업적 알림 「업적 · 이름」: 쪼개기 전에(탭 이름 「업적」은 복수 Achievements)
   [/^업적 · (.+)$/, (m, tr) => `Achievement · ${tr(m[1])}`],
   // 하이라이트 카드(CHM-73)

@@ -10,21 +10,24 @@ import { PIECES } from './pieces.js';
 
 export { CHALLENGE };
 
-// 끝내기 도전의 모습(체스 기물 셋 — 특수 기물 모습은 세력 · 해금에 따라 판에 없을 수 있다)
+// 끝내기 도전의 모습(체스 기물 셋 가운데 둘 — 특수 기물 모습은 세력 · 해금에 따라 판에 없을 수 있다)
 const END_FORMS = ['N', 'B', 'R'];
 // 같은 글자가 가장 길게 잇단 수(같은 종류를 잇달아 잡음)
 const runOf = (s) => { let best = 0, k = 0; for (let i = 0; i < s.length; i++) { k = i && s[i] === s[i - 1] ? k + 1 : 1; best = Math.max(best, k); } return best; };
 const NUM = { 1: '하나', 2: '둘', 3: '셋', 4: '넷' };
 // 「나이트로」 · 「비숍으로」 · 「룩으로」(받침이 없거나 ㄹ이면 「로」)
-const withRo = (w) => { const c = w.charCodeAt(w.length - 1) - 0xac00, j = c >= 0 && c <= 11171 ? c % 28 : 0; return w + (j === 0 || j === 8 ? '로' : '으로'); };
+const jong = (w) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 ? c % 28 : 0; };
+const withRo = (w) => w + (jong(w) === 0 || jong(w) === 8 ? '로' : '으로');
+// 「나이트나 룩」 · 「비숍이나 룩」(끝내기 모습 둘 — 옛 판의 한 글자 form도 그대로 읽는다)
+const endNames = (form) => [...form].map((t) => PIECES[t].name).map((w, i, a) => (i < a.length - 1 ? w + (jong(w) ? '이나' : '나') : w)).join(' ');
 
 export const CHALLENGES = [
   // 갈아입기: 떨군 모습까지 세어 서로 다른 모습 n가지(1~3관 4 · 4관 5 · 5관부터 6)
   { id: 'forms', weight: 1, param: (ante) => ({ n: ante >= 5 ? 6 : ante === 4 ? 5 : 4 }), check: (h, ch) => (h.forms || 0) >= ch.n, count: (h) => h.forms || 0, text: (ch) => `한 콤보에서 모습 ${ch.n}가지를 거친다`, short: (ch) => `모습 ${ch.n}가지 거치기` },
   // 잡기: 한 콤보에 n번(관이 오르면 하나씩)
   { id: 'take', weight: 1, param: (ante) => ({ n: 4 + Math.floor((ante - 1) / 2) }), check: (h, ch) => h.captures >= ch.n, count: (h) => h.captures || 0, text: (ch) => `한 콤보에 ${ch.n}번 잡는다`, short: (ch) => `한 콤보에 ${ch.n}번 잡기` },
-  // 갈아입기: 콤보가 끝날 때의 모습(하나라도 잡은 콤보) — 콤보 중에 맞아도 끝날 때의 모습만 센다(sticks: false)
-  { id: 'end', weight: 1, param: (ante, r) => ({ form: END_FORMS[int(r, END_FORMS.length)] }), check: (h, ch) => h.captures >= 1 && h.end === ch.form, sticks: false, text: (ch) => `${PIECES[ch.form].name} 모습으로 콤보를 끝낸다`, short: (ch) => `${withRo(PIECES[ch.form].name)} 끝내기` },
+  // 갈아입기: 콤보가 끝날 때의 모습이 둘 가운데 하나(하나라도 잡은 콤보) — 콤보 중에 맞아도 끝날 때의 모습만 센다(sticks: false)
+  { id: 'end', weight: 1, param: (ante, r) => { const out = int(r, END_FORMS.length); return { form: END_FORMS.filter((_, i) => i !== out).join('') }; }, check: (h, ch) => h.captures >= 1 && !!h.end && ch.form.includes(h.end), sticks: false, text: (ch) => `${endNames(ch.form)} 모습으로 콤보를 끝낸다`, short: (ch) => `${withRo(endNames(ch.form))} 끝내기` },
   // 응수: 지키는 적을 잡은 수(forcedReplies) — 1~2관 하나 · 3관 둘 · 4~5관 셋 · 6관부터 넷
   { id: 'guards', weight: 1, param: (ante) => ({ n: ante <= 2 ? 1 : ante === 3 ? 2 : ante <= 5 ? 3 : 4 }), check: (h, ch) => (h.forced || 0) >= (ch.n ?? 2), count: (h) => h.forced || 0, text: (ch) => `한 콤보에서 지키는 적을 ${NUM[ch.n ?? 2]} 잡는다`, short: (ch) => `지키는 적 ${NUM[ch.n ?? 2]} 잡기` },
   // 프로모션

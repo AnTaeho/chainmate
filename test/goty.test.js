@@ -63,6 +63,7 @@ test('도전 판정: 종류마다 끝난 콤보 요약 하나로', () => {
   assert.ok(ok({ id: 'end', form: 'N' }, { captures: 2, end: 'N' }) && ok({ id: 'end', form: 'N' }, { captures: 1, end: 'N' }));
   assert.ok(!ok({ id: 'end', form: 'N' }, { captures: 0, end: 'N' }), '하나라도 잡은 콤보만');
   assert.ok(!ok({ id: 'end', form: 'N' }, { captures: 3, end: 'B' }));
+  assert.ok(ok({ id: 'end', form: 'NR' }, { captures: 2, end: 'R' }) && ok({ id: 'end', form: 'NR' }, { captures: 2, end: 'N' }) && !ok({ id: 'end', form: 'NR' }, { captures: 2, end: 'B' }), '끝내기 모습 둘 가운데 하나');
   assert.ok(ok({ id: 'guards', n: 2 }, { forced: 2 }) && !ok({ id: 'guards', n: 2 }, { forced: 1 }));
   assert.ok(ok({ id: 'guards', n: 1 }, { forced: 1 }) && !ok({ id: 'guards', n: 3 }, { forced: 2 }) && ok({ id: 'guards' }, { forced: 2 }));
   assert.ok(ok({ id: 'promote' }, { promotions: 1 }) && !ok({ id: 'promote' }, {}));
@@ -73,13 +74,16 @@ test('도전 판정: 종류마다 끝난 콤보 요약 하나로', () => {
   // 도전 글: 수치가 끼는 꼴
   assert.equal(challengeText({ id: 'take', n: 5 }), '한 콤보에 5번 잡는다');
   assert.equal(challengeText({ id: 'end', form: 'N' }), '나이트 모습으로 콤보를 끝낸다');
+  assert.equal(challengeText({ id: 'end', form: 'BR' }), '비숍이나 룩 모습으로 콤보를 끝낸다');
+  assert.equal(challengeShort({ id: 'end', form: 'NB' }), '나이트나 비숍으로 끝내기');
   assert.equal(challengeText({ id: 'guards', n: 1 }), '한 콤보에서 지키는 적을 하나 잡는다');
   assert.equal(challengeShort({ id: 'same', n: 2 }), '같은 종류 둘 잇달아');
-  // 관이 오르면 어려워진다: 모습 4 → 5 → 6가지 · 지키는 적 하나 → 넷 · 같은 종류 둘 → 셋
+  // 관이 오르면 어려워진다: 모습 4 → 5 → 6가지 · 지키는 적 하나 → 넷 · 같은 종류 둘 → 셋, 끝내기는 나이트 · 비숍 · 룩 가운데 둘
   const p = (id, ante) => CHALLENGE_BY_ID[id].param(ante, createRng(1)).n;
   assert.deepEqual([1, 3, 4, 5, 9].map((a) => p('forms', a)), [4, 4, 5, 6, 6]);
   assert.deepEqual([1, 2, 3, 4, 5, 6, 9].map((a) => p('guards', a)), [1, 1, 2, 3, 3, 4, 4]);
   assert.deepEqual([1, 4, 5, 9].map((a) => p('same', a)), [2, 2, 3, 3]);
+  for (let i = 1; i <= 30; i++) { const f = CHALLENGE_BY_ID.end.param(1, createRng(i)).form; assert.ok(f.length === 2 && [...f].every((t) => 'NBR'.includes(t)) && f[0] !== f[1], f); }
   assert.equal(CHALLENGE_TEXT.reward(2), '이루면: 상금 +2');
 });
 
