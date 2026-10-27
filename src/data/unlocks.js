@@ -5,10 +5,10 @@ export const UNLOCK_KINDS = ['maxims', 'pieces', 'souls', 'engravings', 'josekis
 export const UNLOCK_TIERS = [
   { // 0: 기본 기물만으로 뜻이 서는 것
     maxims: [
-      'pawn_march', 'low_stance', 'farmer', 'light_step', 'first_move', 'close_call', 'chivalry',
+      'pawn_march', 'low_stance', 'light_step', 'first_move', 'close_call', 'chivalry',
       'wall_breaker', 'long_road', 'edge', 'diagonal', 'checkerboard', 'quick_change', 'collector_forms',
       'payback', 'lucky_coin', 'sacrifice', 'coronation', 'promotion_road', 'queen_hunt',
-      'combo', 'loner', 'reply_master', 'counter_book', 'welcome', 'reinforce_hunt',
+      'combo', 'loner', 'reply_master', 'counter_book', 'welcome', 'reinforce_hunt', 'ambusher', 'long_diagonal',
     ],
     pieces: [],
     souls: ['hunger', 'hunter', 'reaper', 'homing'],
@@ -18,8 +18,8 @@ export const UNLOCK_TIERS = [
   { maxims: ['disguise', 'youngest'], pieces: ['S'], souls: [], engravings: ['feather'], josekis: ['archery'] },
   { maxims: ['mate_hunter', 'empty_bag'], pieces: [], souls: ['retro'], engravings: ['iron'], josekis: [] },
   { maxims: ['cavalry_charge', 'mad_horse'], pieces: ['L'], souls: [], engravings: [], josekis: ['desert'] },
-  { maxims: ['shadow_reading', 'ambusher', 'full_board'], pieces: [], souls: [], engravings: [], josekis: ['trap'] },
-  { maxims: ['long_diagonal', 'center'], pieces: ['E'], souls: [], engravings: ['amber'], josekis: ['mitre'] },
+  { maxims: ['shadow_reading', 'farmer', 'full_board'], pieces: [], souls: [], engravings: [], josekis: ['trap'] },
+  { maxims: ['center'], pieces: ['E'], souls: [], engravings: ['amber'], josekis: ['mitre'] },
   { maxims: ['eldest', 'nobility'], pieces: [], souls: ['ripple'], engravings: [], josekis: ['gates'] },
   { maxims: ['rook_lift', 'no_regrets'], pieces: ['O'], souls: [], engravings: [], josekis: ['battery'] },
   { maxims: ['thrift', 'second_wind', 'promotion_feast'], pieces: [], souls: ['echo'], engravings: ['coral'], josekis: [] },
