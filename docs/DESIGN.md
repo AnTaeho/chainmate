@@ -390,7 +390,7 @@ test/              node --test
 - 판(런)의 대국은 판 후보를 넷 지어 「첫 손 최선 사슬 점수」(풀이기, 마디 3000)가 가장 낮은 판을 버리고 남은 셋 중 하나를 시드로 고른다. 좋은 판은 버리지 않고 아래 꼬리만 자른다. 1관 연습(첫 사슬 보장)과 수업 · 봇의 짜임 재기는 거르지 않는다. 다시 놓기도 같은 거르기를 탄다.
 
 ### 새 일반 훅 (`scoring.js`)
-onSetup(판을 깐 뒤: 횃불 · 함정 · 선수) · onArrive(증원이 들 때: 함정) · onBattleEnd(절약) · onChainLuck(대국에서만 굴리는 확률: 도박사 · 행운의 동전 — 풀이기는 모른다) · onBuild(짜임에서 셀 값: 혼 수집가 · 금욕 · 기보 수집가) · onRunEvent `battleEnd`(이기든 지든 대국의 명세 state를 판의 data로: 대국의 기억). 판 위 성질 muted(횃불: 대국 내내 못 지킨다), 사슬 깃발 pawnBack(역행) · spring(도약), 사슬 끝 처리 relay(계주) · returnHome(귀환) · becomes(계승).
+onSetup(판을 깐 뒤: 횃불 · 선수) · onArrive(증원이 들 때: 함정 — 예고된 증원 가운데 값이 가장 큰 하나가 snared로 선다) · onBattleEnd(절약) · onChainLuck(대국에서만 굴리는 확률: 도박사 · 행운의 동전 — 풀이기는 모른다) · onBuild(짜임에서 셀 값: 혼 수집가 · 금욕 · 기보 수집가) · onRunEvent `battleEnd`(이기든 지든 대국의 명세 state를 판의 data로: 대국의 기억). 판 위 성질 muted(횃불: 대국 내내 못 지킨다) · snared(함정에 빠진 증원: 대국 내내 못 지키고, 잡으면 배수 ×2), 사슬 깃발 pawnBack(역행) · spring(도약), 사슬 끝 처리 relay(계주) · returnHome(귀환) · becomes(계승).
 
 ### 가짓수: 레퍼토리 24 · 격언 70 · 시너지 10 · 혼 16 · 각인 12
 설계서 그대로 넣었다(달라진 곳은 `docs/reports/night2.md` 2부). 새것마다 시너지 칩 하나.
