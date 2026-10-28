@@ -7,7 +7,7 @@ import { createBattle, apply, legalCommands, arrive } from '../src/sim/battle.js
 import { createRun, battleMods } from '../src/sim/run.js';
 import { bestMove } from '../src/sim/solver.js';
 import { MAXIMS, MAXIM_BY_ID } from '../src/data/maxims.js';
-import { JOSEKIS, JOSEKI_BY_ID } from '../src/data/josekis.js';
+import { JOSEKIS, JOSEKI_BY_ID, snareIndex } from '../src/data/josekis.js';
 import { SOULS } from '../src/data/souls.js';
 import { ENGRAVINGS } from '../src/data/engravings.js';
 import { MASTERS } from '../src/data/masters.js';
@@ -211,23 +211,49 @@ test('정석 횃불: 값이 가장 큰 적 둘은 아무것도 지키지 못한�
   assert.deepEqual(muted.map((s) => PIECES[b.board[s].t].value).sort((x, y) => y - x), vals.slice(0, 2));
   for (let sq = 0; sq < 64; sq++) for (const a of attackers(b.board, sq)) assert.ok(!b.board[a].muted);
 });
-test('정석 함정: 빈칸 셋 · 증원이 들면 값 × 직전 콤보 배수가 점수로', () => {
+test('정석 함정: 수마다 예고된 증원 가운데 값이 가장 큰 하나가 빠져 선다', () => {
   const b = createBattle({ seed: 12, ante: 3, target: 1e9, mods: [{ id: 'joseki:trap' }] });
-  const tr = b.rules.traps;
-  assert.equal(tr.length, 3);
-  for (const s of tr) assert.equal(b.board[s], null);
-  b.incoming = [{ sq: tr[0], t: 'R' }];
+  assert.equal(b.rules.snare, true);
+  const free = b.board.map((c, s) => (c || s < 24 ? -1 : s)).filter((s) => s >= 0);
+  b.incoming = [{ sq: free[0], t: 'N' }, { sq: free[1], t: 'R' }, { sq: free[2], t: 'R' }];
+  assert.equal(snareIndex(b.incoming), 1, '같은 값이면 먼저 뽑힌 것');
   const ev = [];
   arrive(b, ev);
-  assert.ok(ev.some((e) => e.type === 'trapped' && e.value === 50), '직전 콤보가 없으면 값 그대로');
-  assert.equal(b.score, 50);
-  assert.equal(b.board[tr[0]], null);
-  b.history.push({ mult: 12.5 });
-  b.incoming = [{ sq: tr[1], t: 'N' }];
+  assert.ok(b.board[free[1]].snared);
+  assert.ok(!b.board[free[0]].snared && !b.board[free[2]].snared);
+  assert.deepEqual(ev.filter((e) => e.type === 'reinforce' && e.snared).map((e) => e.sq), [free[1]]);
+  assert.equal(b.score, 0, '들어올 때는 점수가 들지 않는다');
+  // 예고 칸이 막혀도 빠진 채 가까운 빈칸에 선다
+  b.incoming = [{ sq: free[0], t: 'Q' }];
   const ev2 = [];
   arrive(b, ev2);
-  assert.ok(ev2.some((e) => e.type === 'trapped' && e.value === 375));
-  assert.equal(b.score, 425);
+  const q = ev2.find((e) => e.type === 'reinforce');
+  assert.notEqual(q.sq, free[0]);
+  assert.ok(q.snared && b.board[q.sq].snared && b.board[q.sq].t === 'Q');
+  // 함정이 없는 대국은 빠지지 않는다
+  const p = createBattle({ seed: 12, ante: 3 });
+  const pf = p.board.findIndex((c, s) => !c && s >= 24);
+  p.incoming = [{ sq: pf, t: 'R' }];
+  arrive(p, []);
+  assert.ok(!p.board[pf].snared);
+});
+test('정석 함정: 빠진 적은 아무것도 지키지 못하고, 잡으면 배수 ×2', () => {
+  const run = (snareAt, mods) => {
+    const t = tbl({ d4: 'N', d8: 'R' }, mods);
+    if (snareAt) t.board[S(snareAt)].snared = true;
+    const ev = startChain(t, { type: 'R', sq: S('d1'), engraving: null, soul: null });
+    ev.push(...chainCapture(t, S('d4')));
+    return { c: t.chain, ev };
+  };
+  const plain = run(null, ['joseki:trap']);
+  assert.equal(plain.c.mult, 1);
+  assert.equal(plain.c.reason, 'cut', '룩이 d4를 지켜 끊긴다');
+  const took = run('d4', ['joseki:trap']);
+  assert.equal(took.c.mult, 2);
+  assert.ok(took.ev.some((e) => e.type === 'snareTaken' && e.sq === S('d4')));
+  const guard = run('d8', ['joseki:trap']);
+  assert.equal(guard.c.reason, 'blocked', '빠진 룩은 지키지 못한다');
+  assert.equal(run('d4', []).c.mult, 1, '정석이 없으면 배수는 그대로');
 });
 test('정석 속기 · 장고: 수 · 손 · 희생', () => {
   const a = createBattle({ seed: 1, mods: [{ id: 'joseki:blitz' }] });

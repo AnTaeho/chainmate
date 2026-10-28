@@ -156,7 +156,7 @@ export function chainCapture(t, sq, legal = false) {
   board[at] = { t: c.form, mine: true };
   c.sq = at;
   const dist = Math.max(Math.abs((from & 7) - (sq & 7)), Math.abs((from >> 3) - (sq >> 3)));
-  const cap = { from, to: sq, at, via, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold, stay, ...(move === 'V' && at !== sq && formBefore !== 'V' ? { hop: true } : {}), ...(formBefore === 'M' ? { move } : {}) };
+  const cap = { from, to: sq, at, via, piece: target.t, form: formBefore, dist, index: c.captures.length, forced: wasForced, born: target.born ?? -1, gold: !!target.gold, stay, ...(target.snared ? { snared: true } : {}),...(move === 'V' && at !== sq && formBefore !== 'V' ? { hop: true } : {}), ...(formBefore === 'M' ? { move } : {}) };
   c.captures.push(cap);
   c.hop = move === 'V' && at !== sq;
   if (wasForced) c.forcedReplies++;

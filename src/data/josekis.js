@@ -116,6 +116,8 @@ joseki('clone', '복제', 'rainbow', [], '가장 많이 모은 시너지는 1 ·
 const foeAt = (c) => c && !c.mine && c.t !== 'K' && c.t !== 'X' && c.t !== 'J';
 // 값이 큰 적 차례(같으면 칸 번호)
 const heavyFirst = (board) => board.map((c, sq) => (foeAt(c) ? sq : -1)).filter((sq) => sq >= 0).sort((x, y) => PIECES[board[y].t].value - PIECES[board[x].t].value || x - y);
+// 함정에 빠질 예고 증원: 값이 가장 큰 것(같으면 먼저 뽑힌 것). 규칙 · 화면이 같은 것을 가리킨다
+export const snareIndex = (wave) => (wave || []).reduce((best, r, i) => (best < 0 || PIECES[r.t].value > PIECES[wave[best].t].value ? i : best), -1);
 joseki('desert', '사막', 'silver', ['leap'], '나이트 둘이 낙타가 된다', {
   pick(run, events) { evolve(run, 'N', 'L', 2, events); },
 });
@@ -136,23 +138,12 @@ joseki('river', '강', 'silver', ['line'], '강을 건너서 잡을 때마다 �
 joseki('torch', '횃불', 'gold', ['counter'], '대국마다 값이 가장 큰 적 둘은 아무것도 지키지 못한다', {
   onSetup(ctx) { const b = ctx.t.board; for (const sq of heavyFirst(b).slice(0, 2)) b[sq] = { ...b[sq], muted: true }; },
 });
-// D-13: 값만 점수로 들면 5관부터 목표의 0.2%도 안 됐다 — 직전 콤보의 배수를 곱하고 함정을 셋으로
-joseki('trap', '함정', 'gold', ['ambush'], '대국마다 빈칸 셋이 함정이 된다 · 함정에 들어온 증원은 곧바로 잡힌다', {
-  more: '붙잡은 증원의 값 × 직전 콤보의 배수가 곧바로 점수가 된다',
-  onSetup(ctx) {
-    const b = ctx.t.board, free = [];
-    for (let sq = 24; sq < 64; sq++) if (!b[sq]) free.push(sq);
-    const traps = [];
-    while (traps.length < 3 && free.length) traps.push(free.splice(Math.floor(ctx.rng() * free.length), 1)[0]);
-    ctx.t.rules = { ...ctx.t.rules, traps };
-  },
-  onArrive(ctx) {
-    const tr = ctx.t.rules && ctx.t.rules.traps;
-    if (!tr || !tr.includes(ctx.event.sq)) return;
-    const last = (ctx.t.history || []).at(-1);
-    ctx.event.caught = true;
-    ctx.event.score = Math.floor(PIECES[ctx.event.t].value * Math.max(1, (last && last.mult) || 1));
-  },
+// 빈칸에 깔던 함정은 대국에 한 번도 못 붙잡았다(D-13) — 예고된 증원에 깔아 늘 걸리고, 빠진 적은 잡을 먹이로 남긴다
+joseki('trap', '함정', 'gold', ['ambush'], '수마다 예고된 증원 하나가 함정에 빠진다 · 빠진 적은 아무것도 지키지 못하고, 잡으면 배수 ×2', {
+  more: '값이 가장 큰 증원부터',
+  onBattleStart(ctx) { ctx.rules.snare = true; },
+  onArrive(ctx) { if (ctx.event.i === snareIndex(ctx.t.incoming)) ctx.event.snared = true; },
+  onCapture(ctx) { if (ctx.event.snared) { ctx.emit({ type: 'snareTaken', sq: ctx.event.to, piece: ctx.event.piece }); ctx.mulMult(2); } },
 });
 joseki('blitz', '속기', 'gold', ['change'], '수 +1 · 손 −1', {
   onBattleStart(ctx) { ctx.rules.moves = (ctx.rules.moves ?? 4) + 1; ctx.rules.hand = Math.max(2, (ctx.rules.hand ?? 4) - 1); },

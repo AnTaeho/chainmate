@@ -85,21 +85,15 @@ export function nearestEmpty(board, sq) {
 }
 
 export function arrive(b, events = []) {
-  for (const r of b.incoming) {
+  b.incoming.forEach((r, i) => {
     const sq = b.board[r.sq] ? nearestEmpty(b.board, r.sq) : r.sq;
-    if (sq < 0) continue;
-    // onArrive(정석 「함정」): 들어오는 칸에서 붙잡히면 판에 서지 않고 점수에 곧바로 든다(ev.score, 없으면 값)
-    const ev = { sq, t: r.t, caught: false };
+    if (sq < 0) return;
+    // onArrive(정석 「함정」): ev.snared면 함정에 빠진 채 선다(아무것도 지키지 못한다)
+    const ev = { sq, t: r.t, i, snared: false };
     if (b.mods && b.mods.length) runHook(b, 'onArrive', ev, events);
-    if (ev.caught) {
-      const v = ev.score ?? PIECES[r.t].value;
-      b.score += v;
-      events.push({ type: 'trapped', sq, planned: r.sq, piece: r.t, value: v, score: b.score });
-      continue;
-    }
-    b.board[sq] = { t: r.t, id: b.nextId++, born: b.movesUsed };
-    events.push({ type: 'reinforce', sq, planned: r.sq, piece: r.t });
-  }
+    b.board[sq] = { t: r.t, id: b.nextId++, born: b.movesUsed, ...(ev.snared ? { snared: true } : {}) };
+    events.push({ type: 'reinforce', sq, planned: r.sq, piece: r.t, ...(ev.snared ? { snared: true } : {}) });
+  });
   telegraph(b);
   markFairy(b);
   refreshHints(b);
@@ -538,7 +532,6 @@ function endMove(b, events) {
   if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
   if (b.movesLeft <= 0) return finishBattle(b, 'lost', 'moves', events);
   arrive(b, events);
-  if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events); // 함정이 붙잡은 증원으로 넘길 때
   draw(b);
   checkStuck(b, events);
 }

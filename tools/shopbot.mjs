@@ -160,7 +160,7 @@ export function evalBuild(run, build, seeds, ante, master = null, faction = null
       collect = [];
       best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes, collect }) : null;
     }
-    total += b.score + (best ? best.score : 0); // b.score: 함정이 지나간 수에서 붙잡은 증원의 값
+    total += best ? best.score : 0;
   });
   return total / seeds.length;
 }

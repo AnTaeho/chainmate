@@ -24,9 +24,9 @@
 //                  ctx.chain.scoreMul(기본 1)을 곱하면 최종 점수 배율(예: 명인 「앙갚음」 0.5).
 //   onBoard        대국판이 바뀐 뒤(시작 · 먹기 · 증원). 화면용 표시를 ctx.t.hints에 적는다. 점수와 무관, 풀이기는 부르지 않는다.
 //   ── 밤샘 2(가짓수 늘리기)에서 더한 일반 훅
-//   onSetup        판을 다 깐 뒤(대국 시작 · 다시 놓기). 판 위 적 · 사물을 고칠 수 있다(정석 「횃불」 · 「함정」 · 「선수」).
+//   onSetup        판을 다 깐 뒤(대국 시작 · 다시 놓기). 판 위 적 · 사물을 고칠 수 있다(정석 「횃불」 · 「선수」).
 //                  ctx.rng()는 (대국 시드, 조정자 id, 몇째 다시 놓기)로 정해진 난수.
-//   onArrive       증원 하나가 들어오기 직전. ctx.event = { sq, t }. ctx.event.caught = true면 들어오지 않고 먹은 것으로(값을 점수에 곧바로).
+//   onArrive       증원 하나가 들어오기 직전. ctx.event = { sq, t, i(예고 차례) }. ctx.event.snared = true면 함정에 빠진 채 선다(아무것도 지키지 못한다, 정석 「함정」).
 //   onBattleEnd    대국이 끝날 때. ctx.event = { status, reason }. ctx.addBattleMoney(n)로 상금.
 //   onChainLuck    사슬이 끝나 점수를 대국에 더하기 직전(battle.js endMove에서만 — 풀이기는 모른다, 각인 「유리」와 같은 자리).
 //                  ctx.roll()은 대국의 운 흐름에서 0~1, ctx.rescore(x)는 사슬 배수를 곱하고 점수를 다시 셈한다.
