@@ -707,8 +707,8 @@ function battleStep() {
   s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {};
   s.seq.trace = [];
   // 증원 그림자 위에 올리면 말풍선
-  // 판 위 사물(발판 · 문 · 고속도로 줄 · 벽 · 보석) 칸에 올리면 말풍선
-  const objSq = { step: (b.rules.steps || [])[0], gate: (b.rules.gates || [])[0], highway: (b.rules.highways || []).length ? b.rules.highways[0] + 8 * 3 : undefined, wall: b.board.findIndex((c) => c && c.t === 'X'), gem: b.board.findIndex((c) => c && c.t === 'J'), trap: (b.rules.traps || []).find((q) => !b.board[q]) };
+  // 판 위 사물(발판 · 문 · 고속도로 줄 · 벽 · 보석) · 함정에 빠진 적 칸에 올리면 말풍선
+  const objSq = { step: (b.rules.steps || [])[0], gate: (b.rules.gates || [])[0], highway: (b.rules.highways || []).length ? b.rules.highways[0] + 8 * 3 : undefined, wall: b.board.findIndex((c) => c && c.t === 'X'), gem: b.board.findIndex((c) => c && c.t === 'J'), trap: b.board.findIndex((c) => c && c.snared) };
   for (const [k, sq] of Object.entries(objSq)) if (sq != null && sq >= 0 && objTips[k] < 5 && !isHidden(b, sq)) { hover(`sq:${sq}`); if (hoverTip()) objTips[k]++; }
   const ghost = (b.incoming || []).find((r) => !b.board[r.sq]);
   if (ghost && tipSeen.incoming < 20) { hover(`sq:${ghost.sq}`); if (hoverTip()) tipSeen.incoming++; }

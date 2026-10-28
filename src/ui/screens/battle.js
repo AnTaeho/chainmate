@@ -17,7 +17,7 @@ import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
 import { FAMILY_BY_ID, maximFamilies } from '../../data/families.js';
 import { familyStrip, familyGlyph, traitMark } from '../parts-depth.js';
 import { TRAIT_BY_ID } from '../../data/traits.js';
-import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
+import { JOSEKI_BY_ID, TIER_COL, snareIndex } from '../../data/josekis.js';
 import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
@@ -188,7 +188,6 @@ export function objectsAt(rules, sq) {
   if ((rules.steps || []).includes(sq)) out.push(['발판', JOSEKI_BY_ID.stepping.text]);
   if ((rules.gates || []).includes(sq)) out.push(['문', JOSEKI_BY_ID.gates.text]);
   if ((rules.highways || []).includes(sq & 7)) out.push(['고속도로', JOSEKI_BY_ID.highway.text]);
-  if ((rules.traps || []).includes(sq)) out.push(['함정', JOSEKI_BY_ID.trap.text]);
   return out;
 }
 // 판 위 사물 「문」: size×size 칸 안의 아치 문(어두운 청록 안쪽 · 굵은 테 · 문턱). glow = 문 안쪽 빛(0~1)
@@ -212,11 +211,23 @@ function gateArch(ctx, x, y, size, glow) {
 const WATER = '#4fa6c6'; // 물수제비가 튕긴 칸의 물방울 · 고리(나뭇결 위에서도 보이게 하늘빛보다 진하게)
 const FALL = 0.2, FALL_PX = 14; // 증원이 위에서 떨어지는 시간(×1) · 높이
 
-// 판 위 함정(정석): 칸 안의 어두운 구덩이 + 네 꼭짓점 말뚝(투영한 칸)
-function trapSq(ctx, sq) {
-  ctx.globalAlpha = 0.55; fillSq(ctx, sq, '#1a1512', 5); ctx.globalAlpha = 1;
-  strokeSq(ctx, sq, '#c0c8d0', 1, 5);
-  for (const p of projectSq(sq).pts) { const c = sqCenter(sq), x = c.x + (p.x - c.x) * 0.55, y = c.y + (p.y - c.y) * 0.55; rect(ctx, x - 1, y - 1, 2, 2, '#c0c8d0'); }
+// 함정(정석): 빠질 증원의 예고 칸 · 빠진 적의 칸 바닥에 어두운 구덩이 + 네 꼭짓점 말뚝(투영한 칸). a: 두 수 앞은 흐리게
+const SNARE = { rim: '#c0c8d0', dk: '#6e767e', pit: '#1a1512' };
+function trapSq(ctx, sq, a = 1) {
+  ctx.globalAlpha = 0.7 * a; fillSq(ctx, sq, SNARE.pit, 4); ctx.globalAlpha = a;
+  strokeSq(ctx, sq, SNARE.rim, 1, 4);
+  for (const p of projectSq(sq).pts) { const c = sqCenter(sq), x = c.x + (p.x - c.x) * 0.62, y = c.y + (p.y - c.y) * 0.62; rect(ctx, x - 1.5, y - 1.5, 3, 3, SNARE.rim); }
+  ctx.globalAlpha = 1;
+}
+// 함정 표(8×8): 어두운 받침 위 쇠 턱 둘(위 · 아래 반원, 이빨) — 빠진 적 · 빠질 증원의 머리 옆
+function snareMark(ctx, x, y, a = 1) {
+  ctx.globalAlpha = a;
+  rrect(ctx, x - 1, y - 1, 9, 9, 2.5, SNARE.pit);
+  ctx.strokeStyle = SNARE.rim; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x + 3.5, y + 3.5, 2.9, 0, Math.PI * 2); ctx.stroke();
+  seg(ctx, x + 0.4, y + 3.5, x + 6.6, y + 3.5, SNARE.rim, 1);
+  for (const dx of [1.8, 3.5, 5.2]) { seg(ctx, x + dx, y + 1.6, x + dx, y + 2.8, SNARE.dk, 0.8); seg(ctx, x + dx, y + 4.2, x + dx, y + 5.4, SNARE.dk, 0.8); }
+  ctx.globalAlpha = 1;
 }
 // 먹으러 가는 시간: 미끄러지는 기물은 지나는 칸 수만큼, 나이트는 L자로 한 번 튀고, 폰 · 킹은 한 칸
 const dist = (a, b) => Math.max(Math.abs((a & 7) - (b & 7)), Math.abs((a >> 3) - (b >> 3)));
@@ -335,7 +346,7 @@ export class BattleScreen {
     if ((r.steps || []).length) add('obj:steps', { obj: 'step' });
     if ((r.gates || []).length) add('obj:gates', { obj: 'gate' });
     if ((r.highways || []).length) add('obj:highway', { obj: 'highway' });
-    if ((r.traps || []).length) add('obj:traps', { obj: 'trap' });
+    if (r.snare) add('obj:snare', { obj: 'trap' });
     if (r.river) add('obj:river', { obj: 'river' });
     b.board.forEach((c) => { if (c && c.muted && !c.mine) add('torch', { t: c.t, muted: true }); });
     const fresh = [...found].filter(([k]) => !seen.includes(k));
@@ -766,11 +777,8 @@ export class BattleScreen {
           tick: (p) => { if (p >= 0.5 && !v.reboarded) { v.reboarded = true; const b = this.bRef; v.board = clone(b.board); this.news = this.newThings(b); } },
           done: () => { v.reboarded = false; this.sync(); },
         }); break;
-        // 함정(정석): 증원이 함정에 들어 곧바로 점수가 된다(값 × 직전 콤보 배수라 점수 줄에 띄운다)
-        case 'trapped': add(0.3, {
-          begin: () => { this.sparkle(e.sq, '#c0c8d0', 10); this.pop(`+${short(e.value)}`, 'score'); this.snd('coin'); },
-          done: () => { v.score = e.score; },
-        }); break;
+        // 함정(정석): 빠진 적을 잡았다 — 함정이 터지며 은빛이 튀고, 뒤따르는 배수 ×2가 배수 칸에 뜬다
+        case 'snareTaken': add(0.12, { begin: () => { this.burst(e.sq, SNARE.rim, 16); this.word('함정 ×2', PAL.white, 0.9, 2); this.snd('snap'); this.shake(1, 0.1); } }); break;
         case 'freeze': add(0.05, { begin: () => { for (const sq of e.squares) this.sparkle(sq, '#9fd3e0', 5); } }); break;
         case 'returnHome': add(0.05, { begin: () => { this.toast(`${josa(PIECE_NAME[e.piece], '이/가')} 손으로 돌아왔어요`, PAL.gold); } }); break;
         case 'captive': add(0.05, { begin: () => { this.toast(`${PIECE_NAME[e.piece]} 포로가 덱에 들어와요`, PAL.gold); } }); break;
@@ -799,6 +807,7 @@ export class BattleScreen {
             if (this.app.reducedMotion) this.flash(e.sq, PAL.dim);
             else (this.falls || (this.falls = new Map())).set(e.sq, 0);
             this.snd('reinforce');
+            if (e.snared) this.snareShut(e.sq);
           },
         }); break;
         case 'regrip': add(0.45, {
@@ -1107,6 +1116,27 @@ export class BattleScreen {
   winFx() {
     if (this.app.reducedMotion) return;
     confetti(this.fx, BX + 112, BY + 120, { n: CAP.confetti, seed: (this.run ? this.run.ante : 1) * 31 + 7, spread: 230, life: 1.5 });
+  }
+  // 함정(정석): 빠진 증원이 내려앉는 순간(떨어지는 시간 뒤) 쇠 턱 둘이 칸 가운데로 닫힌다 · 쇳소리 · 작은 흔들림
+  snareShut(sq) {
+    const c = sqCenter(sq), wait = this.app.reducedMotion ? 0 : FALL, close = 0.1, fade = 0.25;
+    this.fx.add({
+      life: wait + close + fade, layer: 1,
+      update: (dt, e) => { if (!e.rang && e.t >= wait + close) { e.rang = true; this.snd('snap'); this.shake(1, 0.08); this.sparkle(sq, SNARE.rim, 8); } },
+      draw: (ctx, e) => {
+        const t = e.t - wait;
+        if (t < 0) return;
+        const k = Math.min(1, t / close), gap = (1 - k) * 6 + 1;
+        ctx.globalAlpha = t > close ? Math.max(0, 1 - (t - close) / fade) : 1;
+        for (const s of [-1, 1]) {
+          const yy = c.y + s * gap;
+          ctx.beginPath(); ctx.moveTo(c.x - 10, yy); ctx.quadraticCurveTo(c.x, yy + s * 5, c.x + 10, yy);
+          ctx.strokeStyle = SNARE.rim; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.stroke();
+          for (const dx of [-6, -2, 2, 6]) seg(ctx, c.x + dx, yy + s * 0.5, c.x + dx, yy - s * 2.5, SNARE.rim, 1);
+        }
+        ctx.lineCap = 'butt'; ctx.globalAlpha = 1;
+      },
+    });
   }
   burst(sq, col, n) {
     const { x, y } = this.bodyOf(sq);
@@ -1567,6 +1597,8 @@ export class BattleScreen {
     if (this.chBand() && !this.achvOnBand()) hint(app, 'challenge', 'challenge');
     const ghost = (b.incoming || []).find((r) => !v.board[r.sq] && !isHidden(b, r.sq));
     if (ghost) hint(app, 'incoming', `sq:${ghost.sq}`);
+    const snared = b.rules.snare ? (b.incoming || [])[snareIndex(b.incoming)] : null;
+    if (snared && !v.board[snared.sq] && !isHidden(b, snared.sq)) hint(app, 'snare', `sq:${snared.sq}`);
     const find = (f) => v.board.findIndex((c, sq) => c && !c.mine && !isHidden(b, sq) && f(c));
     let sq = find((c) => c.gold);
     if (sq >= 0) hint(app, 'golden', `sq:${sq}`);
@@ -1692,7 +1724,11 @@ export class BattleScreen {
     const openKings = b.hints && b.hints.openKings ? new Set(b.hints.openKings) : null;
     // 증원 그림자: 이번 수 뒤(k 0) · 그다음 수 뒤(k 1)
     const ghosts = new Map();
-    visibleIncoming(b).forEach((wave, k) => { for (const r of wave || []) if (!v.board[r.sq] && !isHidden(b, r.sq) && !ghosts.has(r.sq)) ghosts.set(r.sq, { t: r.t, k }); });
+    // snare: 함정에 빠질 증원(정석 「함정」 — 물결마다 값이 가장 큰 하나)
+    visibleIncoming(b).forEach((wave, k) => {
+      const si = b.rules.snare ? snareIndex(wave) : -1;
+      (wave || []).forEach((r, i) => { if (!v.board[r.sq] && !isHidden(b, r.sq) && !ghosts.has(r.sq)) ghosts.set(r.sq, { t: r.t, k, snare: i === si }); });
+    });
     // 누르기: 아래 기물 층에서 그리는 기물 · 사물이 선 칸은 그 몸도 가진다(증원 그림자는 바닥)
     const pick = (this.pick = picker((sq) => {
       const c = v.board[sq];
@@ -1709,14 +1745,18 @@ export class BattleScreen {
       }
       const id = `sq:${sq}`;
       const g = ghosts.get(sq);
-      let tip = g ? [`증원 · ${PIECE_NAME[g.t]}`, [g.k ? '두 수 뒤에 들어와요' : '이번 수 뒤에 들어와요']] : null;
+      let tip = g ? [`증원 · ${PIECE_NAME[g.t]}`, [g.k ? '두 수 뒤에 들어와요' : '이번 수 뒤에 들어와요', g.snare && '함정에 빠진 채 들어와요'].filter(Boolean)] : null;
       if (forced && forced.has(sq) && !v.cut && !this.busy && !isHidden(b, sq)) tip = ['지키는 적', [t.kind === 'capture' && tset.has(sq) ? '이 적을 잡아야 콤보가 이어져요' : '지금 모습으로는 잡을 수 없어요']];
       const cell = v.board[sq];
+      // 함정(정석): 빠질 증원의 예고 칸 · 빠진 적의 칸 바닥에 구덩이
+      if (((g && g.snare) || (cell && !cell.mine && cell.snared)) && !isHidden(b, sq)) trapSq(ctx, sq, g && g.k ? 0.5 : 1);
       // 적 기물: 특성 · 특수 기물은 늘, 체스 기물은 지금 누를 칸이 아닐 때만(누를 칸은 먹기 미리 보기가 말한다). 행마 그림을 곁들인다
       let diag = null;
       if (!tip && cell && !cell.mine && cell.trait && !isHidden(b, sq)) { const tr = TRAIT_BY_ID[cell.trait]; tip = [`${tr.name} · ${PIECE_NAME[cell.t]}`, [tr.text, PIECE_MOVE[cell.t] || '']]; diag = cell.t; }
       if (!tip && cell && !cell.mine && (FAIRY_MOVE(cell.t) || (PIECE_MOVE[cell.t] && !tset.has(sq))) && !isHidden(b, sq)) { tip = [PIECE_NAME[cell.t], [PIECE_MOVE[cell.t]]]; diag = cell.t; }
       if (cell && !cell.mine && cell.muted && !isHidden(b, sq)) tip = tip ? [tip[0], [...tip[1], `횃불: ${L('아무것도 지키지 못해요')}`]] : [`횃불 · ${PIECE_NAME[cell.t]}`, ['아무것도 지키지 못해요']];
+      // 함정에 빠진 적: 이름 앞에 「함정」, 함정 풀이 두 줄이 먼저(행마 글 · 그림은 그 아래)
+      if (cell && !cell.mine && cell.snared && !isHidden(b, sq)) tip = [`함정 · ${tip ? tip[0] : PIECE_NAME[cell.t]}`, ['아무것도 지키지 못해요', '잡으면 배수 ×2', ...(tip ? tip[1] : [])]];
       // 외통 조건: 지키던 적을 둘 잡은 콤보에서는 킹을 가리키면 까닭을 말한다
       const shut = cell && !cell.mine && cell.t === 'K' && !this.busy && b.status === 'chain' && mateBlocked(b.chain) && !b.rules.openKings && !isHidden(b, sq);
       // 행마 글 · 그림만 까닭 줄로 갈아 끼운다. 특성 글(이 콤보로는 못 잡아 덜 쓸모 있다)이 체크메이트 낱말 상자를 밀어낼 때만 뺀다
@@ -1810,9 +1850,12 @@ export class BattleScreen {
       if (this.falls && this.falls.has(sq)) { const p = this.falls.get(sq) / FALL; dy -= (1 - p * p) * FALL_PX; }
       // 금빛 적: 몸 뒤에 은은한 금빛(천천히 숨 쉰다)
       if (c.gold) glowText(ctx, x - 9, y - PIECE_TOP + dy, 18, 22, PAL.gold, 0.45 * flicker(time + sq, 2.4, 0.3), 5);
-      this.putPiece(ctx, c.t, c.gold ? 'g' : 'b', x, y + dy, {}, -dy);
+      // 함정에 빠진 적: 구덩이에 조금 가라앉아 선다 · 머리 옆 함정 표
+      const sink = c.snared ? 2 : 0;
+      this.putPiece(ctx, c.t, c.gold ? 'g' : 'b', x, y + dy + sink, {}, -dy);
       if (c.trait) traitMark(ctx, c.trait, x - 12, y - 1);
       if (c.muted) torchMark(ctx, x + 6, y - PIECE_TOP - 2, time);
+      if (c.snared) snareMark(ctx, x + 5, y - PIECE_TOP - 1 + dy + sink);
       if (c.gold) {
         const k = beat(time, 8, sq) % 12;
         if (k < 3) dot(ctx, x - 7.25 + k * 5, y - PIECE_TOP + 1.75 + k * 4 + dy, 1.5, PAL.goldHi);
@@ -1875,6 +1918,7 @@ export class BattleScreen {
     ctx.beginPath(); ctx.moveTo(x - 3.5, ty); ctx.lineTo(x + 3.5, ty); ctx.lineTo(x, ty + 5); ctx.closePath();
     ctx.fillStyle = PAL.red; ctx.fill(); ctx.strokeStyle = INK3; ctx.lineWidth = 0.8; ctx.lineJoin = 'round'; ctx.stroke();
     ctx.globalAlpha = 1;
+    if (g.snare) snareMark(ctx, x + 5, y - PIECE_TOP - 1, g.k ? 0.5 : 1);
   }
   // 끊긴 내 기물 위 붉은 금(칸 반 폭 · 반 높이 단위로)
   drawCrack(ctx, sq) {
@@ -1912,7 +1956,7 @@ export class BattleScreen {
     }
   }
 
-  // 판 위 사물(정석): 고속도로 줄 · 금빛 발판 · 강 · 함정 · 문
+  // 판 위 사물(정석): 고속도로 줄 · 금빛 발판 · 강 · 문
   drawBoardThings(ctx, rules, time) {
     if (!rules) return;
     // 고속도로: 그 줄을 따라 금빛 점선 두 줄(칸 가운데 양옆)
@@ -1938,7 +1982,6 @@ export class BattleScreen {
       };
       wave(-0.5, '#6fa8d8', 1.3, 0); wave(0.8, '#c8e0f0', 0.7, 1.4);
     }
-    for (const sq of rules.traps || []) trapSq(ctx, sq);
     // 문: 어두운 청록 문 안쪽 + 굵은 아치 테 + 문턱(칸 가운데에 선 작은 아치). 기물이 서도 기둥 · 윗테가 남는다. 두 문이 번갈아 숨 쉰다
     (rules.gates || []).forEach((sq, k) => {
       motion();

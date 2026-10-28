@@ -126,6 +126,8 @@ export function createAudio(win = globalThis, opts = {}) {
       noise({ dur: 0.2 + k * 0.08, vol: 0.06 * k, freq: 800, q: 0.7, sweep: 6000 });
     },
     reinforce: () => tone(160, { dur: 0.08, type: 'triangle', vol: 0.12, slide: 120 }),
+    // 함정(정석): 쇠 턱이 닫히는 소리 — 짧은 쇳소리 + 낮게 떨어지는 울림
+    snap: () => { noise({ dur: 0.04, vol: 0.22, freq: 3200, q: 4 }); tone(NOTE(62), { dur: 0.12, type: 'square', vol: 0.06, slide: 180 }); bell(NOTE(86), { t: 0.03, dur: 0.25, vol: 0.06 }); },
     discard: () => noise({ dur: 0.12, vol: 0.15, freq: 2500, q: 0.8, sweep: 1200 }),
     win: () => arp([72, 76, 79, 84], 0.09, { dur: 0.25, type: 'square', vol: 0.08 }),
     lose: () => arp([67, 63, 60, 55], 0.14, { dur: 0.35, type: 'triangle', vol: 0.18 }),
