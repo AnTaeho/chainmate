@@ -61,8 +61,8 @@ import { openPool } from './unlock.js';
 // D-18 판본 1.5% · 6관 마스터 ×0.7 뒤 smart 32.5%라 7관 ×0.9 → 34.0%. 앞 값 [150, 761, 5433, 15756, 70291, 233679, 511438, 1075453]
 export const B = [150, 761, 5433, 15756, 70291, 233679, 460294, 1075453];
 export const KIND_MULT = { practice: 1, official: 1.5, master: 2 };
-// 관마다 마스터 목표만 더 곱한다(빈 칸은 1). 1관 ×3: 마스터 통과 100 → 93.5%(D-12). 6관 ×0.75(= 정식 ×1.5): 53.7 → 60.9%(가장 낮던 관)
-export const MASTER_MULT = [3, 1, 1, 1, 1, 0.75];
+// 관마다 마스터 목표만 더 곱한다(빈 칸은 1). 1관 ×3: 마스터 통과 100 → 93.5%(D-12). 6관 ×0.75(= 정식 ×1.5): 53.7 → 60.9%(가장 낮던 관). 7관 ×0.85: 56.3 → 63.1%(0.75 · 0.8도 같았다)
+export const MASTER_MULT = [3, 1, 1, 1, 1, 0.75, 0.85];
 export const KINDS = ['practice', 'official', 'master'];
 export const ANTES = 8;
 export const ENDLESS_GROWTH = 2.2; // 9관부터 관마다 목표 ×
