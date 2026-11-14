@@ -33,7 +33,8 @@ import { useTactic, evolveTo } from '../data/tactics.js';
 import { TRAIT_CHANCE } from '../data/traits.js';
 import { FAIRIES } from '../data/pieces.js';
 import { unlockedAt } from '../data/unlocks.js';
-import { openPool } from './unlock.js';
+import { openPool, coreOff, coreKeep } from './unlock.js';
+import { CORE } from '../data/core.js';
 
 // ── 수치
 // 관별 목표 기준. 대국 목표 = B[관] × 종류 배율. tools/run.mjs(smart 봇)로 맞춤:
@@ -232,7 +233,7 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
     target: targetFor(ante, kind, mult),
     faction,
     master,
-    tag: kind === 'master' ? null : tagFor(run, ante, blind),
+    tag: kind === 'master' || coreOff(run, 'skip') ? null : tagFor(run, ante, blind),
     challenge: challengeFor(run, ante, blind),
   };
 }
@@ -240,15 +241,16 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
 // 대국 도전(src/data/challenges.js): 판 시드 · 관 · 대국으로 정해진다(관 선택에 미리 보인다 — 건너뛰면 그 도전도 없다).
 // 수업 판(scratch)에는 붙지 않는다. 붙지 않는 대국(마스터전 · tuning.js CHALLENGE.on 끔)은 null
 export function challengeFor(run, ante = run.ante, blind = run.blind) {
-  if (run.scratch) return null;
+  if (run.scratch || coreOff(run, 'challenge')) return null;
   return drawChallenge(fork(root(run), `challenge:${ante}:${blind}`), ante, KINDS[blind]);
 }
 // 숙적을 대국에 넘기나: 판(런)의 대국이면 지금 숙적(없으면 null), 수업 판 · tuning.js NEMESIS.on 끔이면 넘기지 않는다(undefined)
-const nemesisOpt = (run) => (run.scratch || !NEMESIS.on ? undefined : run.nemesis ? { t: run.nemesis.t, lv: run.nemesis.lv } : null);
+const nemesisOpt = (run) => (run.scratch || !NEMESIS.on || coreOff(run, 'nemesis') ? undefined : run.nemesis ? { t: run.nemesis.t, lv: run.nemesis.lv } : null);
 
 // draft: false면 정석 드래프트 없이(깊이 E 이전 규칙 — 시험 · 하네스 비교용)
 // unlockTier: 해금 단계(src/data/unlocks.js). 주지 않으면 잠금 없이 전부 열린 판
-export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true, unlockTier = null } = {}) {
+// core: 코어 판(src/data/core.js) — 체스 기물 · 격언 · 기보만. 열린 목록 · 대국 규칙 깃발 · 판 쪽 깃발(run.core)을 싣는다(unlockTier보다 앞선다)
+export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft = true, unlockTier = null, core = false } = {}) {
   const op = OPENINGS[opening];
   if (!op) throw new Error(`unknown opening ${opening}`);
   const conf = { ...RUN_DEFAULTS, ...op.run };
@@ -293,7 +295,13 @@ export function createRun({ seed = 1, opening = DEFAULT_OPENING, dan = 0, draft 
   };
   // 해금: 열린 목록을 판에 싣고(저장 · 재생에 그대로), 대국에는 규칙 깃발 rules.pieces로 넘긴다
   if (unlockTier != null) { run.unlocked = unlockedAt(unlockTier); run.rules.pieces = [...run.unlocked.pieces]; }
-  if (!draft) run.noDraft = true;
+  if (core) {
+    run.core = { off: { ...CORE.off }, keep: clone(CORE.keep) };
+    run.unlocked = clone(CORE.unlocked);
+    Object.assign(run.rules, clone(CORE.rules));
+    run.consumableSlots = CORE.consumableSlots;
+  }
+  if (!draft || core) run.noDraft = true;
   openDraft(run);
   syncBoards(run);
   return run;
@@ -332,11 +340,13 @@ export function battleMods(build, master = null, faction = null) {
   if (faction) mods.push({ id: `faction:${faction}` });
   if (master) mods.push({ id: master });
   mods.push({ id: 'charts', data: { table: CHART_TABLE, levels: { ...build.charts } } });
-  // 가족(깊이 B): 문턱을 넘은 가족마다 하나(정석 familyDrop — 「복제」면 가장 많이 모은 가족의 문턱이 하나 낮다)
-  const counts = familyCounts(build);
-  let dropFor = null;
-  for (const id of build.josekis || []) { const j = JOSEKI_BY_ID[id]; if (j && j.familyDrop) dropFor = j.familyDrop(counts) ?? dropFor; }
-  mods.push(...familyMods(counts, dropFor));
+  // 가족(깊이 B): 문턱을 넘은 가족마다 하나(정석 familyDrop — 「복제」면 가장 많이 모은 가족의 문턱이 하나 낮다). 코어 판(build.core)은 시너지가 없다
+  if (!coreOff(build, 'families')) {
+    const counts = familyCounts(build);
+    let dropFor = null;
+    for (const id of build.josekis || []) { const j = JOSEKI_BY_ID[id]; if (j && j.familyDrop) dropFor = j.familyDrop(counts) ?? dropFor; }
+    mods.push(...familyMods(counts, dropFor));
+  }
   // 정석(깊이 E)
   for (const id of build.josekis || []) mods.push({ id: `joseki:${id}` });
   // onBuild: 짜임에서 셀 값(격언 「혼 수집가」 · 「금욕」 · 「기보 수집가」). 격언 칸 빈자리는 판의 칸 수로(봇의 그려 보기는 기본 칸)
@@ -364,7 +374,7 @@ export function battleOpts(run, blind = run.blind) {
       seed: battleSeed(run, run.ante, blind), ante: run.ante, kind: info.kind, target: info.target,
       bag: run.deck.map((p) => ({ t: p.t, id: p.id, eng: p.eng, ...soulOf(p) })),
       rules: run.rules, mods: battleMods(run, info.master, info.faction),
-      goldenChance: pityChance(awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance, 'golden', pityOf(run, 'golden')), // 연줄(CHM-68)
+      goldenChance: coreOff(run, 'golden') ? 0 : pityChance(awaitingGold(run) ? GOLDEN.calling : GOLDEN.chance, 'golden', pityOf(run, 'golden')), // 연줄(CHM-68). 코어 판은 금빛 적이 없다
       golden: null,
       filter: run.scratch ? 0 : boardFilter(), // 판 조정(tuning.js) — 나쁜 판 거르기
       challenge: info.challenge,
@@ -376,7 +386,7 @@ function startBattle(run) {
   const { opts } = battleOpts(run);
   run.battle = createBattle({ ...opts, layout: layoutFor(run, run.blind) });
   // 연줄(CHM-68): 금빛 적이 선 대국이면 처음으로, 없으면 하나 더(수업 판은 세지 않는다)
-  if (!run.scratch) {
+  if (!run.scratch && !coreOff(run, 'pity')) {
     if (run.battle.board.some((c) => c && c.gold)) pityHit(run, 'golden');
     else pityMiss(run, 'golden');
   }
@@ -597,6 +607,7 @@ function checkFeats(run, h, events) {
 // 굴림에 지면 없다), 모든 명경기의 첫 조각이 있으면 재현 조각이 빠진 명경기 하나의 재현 조각, 다 있으면 없다.
 // 사다리(첫 → 재현 → 금빛)는 그대로라 셋이 모이면 전설 격언이 들어온다. 돌려주는 값: 준 조각 { legend, part } 또는 null
 export function brilliantFragment(run, events) {
+  if (coreOff(run, 'legends')) return null; // 코어 판: 탁월수 배수는 남고 조각만 없다
   const b = run.battle;
   const k = b && b.brilliants ? b.brilliants.length : 0;
   const r = fork(root(run), `brilliant:${run.ante}:${run.blind}:${k}`);
@@ -689,7 +700,7 @@ const litCells = (n) => { const mid = (CHEST.cells - 1) / 2, h = (n - 1) / 2; re
 
 // 칸 하나를 굴려 구체적인 물건으로 정한다. 앞 칸(prev)이 고른 격언 · 기물은 다시 고르지 않는다.
 function chestItem(run, r, prev) {
-  const kind = weighted(r, CHEST.items);
+  const kind = weighted(r, coreKeep(run, 'chest', CHEST.items)); // 코어 판: 상금 · 기보 칸만
   if (kind === 'edition') {
     const pool = run.maxims.filter((m) => !m.legendary && !m.edition && !prev.some((x) => x.uid === m.uid));
     if (pool.length) {
@@ -750,7 +761,7 @@ function openShop(run) {
     delete run.shop.display[held.slot].base;
   }
   // 연줄(CHM-68): 상점을 열 때마다 판본 · 첫 조각 연줄에 하나씩(이 상점에서 나오면 shop.js가 0으로 되돌린다)
-  if (!run.scratch) { pityMiss(run, 'edition'); pityMiss(run, 'fragment'); }
+  if (!run.scratch && !coreOff(run, 'pity')) { pityMiss(run, 'edition'); pityMiss(run, 'fragment'); }
   rollDisplay(run);
   rollPacks(run);
   run.phase = 'shop';
@@ -871,6 +882,9 @@ export function canBuy(run, it) {
   return true;
 }
 
+// 지금 대국을 건너뛸 수 있나: 연습 · 정식만, 코어 판은 건너뛰기가 없다
+export const canSkip = (run) => run.blind < 2 && !coreOff(run, 'skip');
+
 // 관 선택에서 떠나온 상점으로 돌아갈 수 있나(판의 첫 대국 앞 · 건너뛴 뒤 · 두기 뒤에는 상점이 없다)
 export const canReopenShop = (run) => run.phase === 'select' && !!run.shop && run.shop.ante != null;
 
@@ -907,7 +921,7 @@ export function applyRun(run, cmd) {
     case 'skip': {
       need('select');
       const info = blindInfo(run);
-      if (info.kind === 'master') throw new Error('cannot skip master');
+      if (!canSkip(run)) throw new Error(info.kind === 'master' ? 'cannot skip master' : 'cannot skip in this run');
       const tag = info.tag;
       run.shop = null;
       const ev = [];
@@ -1157,7 +1171,7 @@ export function legalRunCommands(run) {
   for (let i = 0; i + 1 < (legendAt >= 0 ? legendAt : run.maxims.length); i++) out.push({ type: 'moveMaxim', from: i, to: i + 1 });
   if (ph === 'select') {
     out.push({ type: 'play' });
-    if (run.blind < 2) out.push({ type: 'skip' });
+    if (canSkip(run)) out.push({ type: 'skip' });
     return out;
   }
   // shop

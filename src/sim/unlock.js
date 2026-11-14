@@ -11,6 +11,13 @@ export function openPool(run, kind, list) {
   if (!open) return list;
   return list.filter((x) => { const id = idOf(x); return fairyOnly(kind, id) || open.includes(id); });
 }
+// 코어 판(src/data/core.js): run.core.off[k]가 켜졌으면 그 층이 없다. run.core가 없으면 늘 거짓(옛 판 그대로)
+export const coreOff = (run, k) => !!(run && run.core && run.core.off && run.core.off[k]);
+// 코어 판이 남기는 종류만(where: shop · packs · chest), 차례는 그대로. 코어 판이 아니면 list 그대로
+export function coreKeep(run, where, list) {
+  const keep = run && run.core && run.core.keep && run.core.keep[where];
+  return keep ? list.filter((x) => keep.includes(idOf(x))) : list;
+}
 // 대국은 판을 모른다: 열린 특수 기물은 대국 규칙 깃발 rules.pieces로 받아 무게 표 [종류, 무게]를 거른다
 export function openTypes(rules, pairs) {
   const open = rules && rules.pieces;

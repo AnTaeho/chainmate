@@ -103,7 +103,8 @@ function placeThings(b, rng, board, reserve) {
     const n = lo + int(rng, hi - lo + 1);
     for (let i = 0; i < n; i++) { const sq = randomEmpty(rng, board, 2, reserve); if (sq >= 0) board[sq] = { t: 'X', id: b.nextId++, born: -1 }; }
   }
-  if ((b.ante ?? 1) < THINGS.from || b.rules.things === false) return;
+  // rules.randomThings === false(코어 판): 무작위 보석 · 벽만 없다(세력 버릇의 벽은 남는다)
+  if ((b.ante ?? 1) < THINGS.from || b.rules.things === false || b.rules.randomThings === false) return;
   if (next(rng) < THINGS.gem) { const sq = randomEmpty(rng, board, 2, reserve); if (sq >= 0) board[sq] = { t: 'J', id: b.nextId++, born: -1 }; }
   if (next(rng) < THINGS.wall) {
     const n = 1 + int(rng, 2);

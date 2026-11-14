@@ -10,7 +10,7 @@ import { SOULS, SOUL_RARITY, soulPrice, isCracked } from '../data/souls.js';
 import { TACTICS, TACTIC_PRICE, EVOLVE, EVOLVE_PRICE } from '../data/tactics.js';
 import { PIECES, FAIRIES } from '../data/pieces.js';
 import { familyCounts, maximFamilies, THRESHOLDS } from '../data/families.js';
-import { openPool } from './unlock.js';
+import { openPool, coreOff, coreKeep } from './unlock.js';
 
 // 수치(내가 정한 것 — DESIGN에 없는 값)
 export const SHOP = {
@@ -101,7 +101,7 @@ export function rollSoul(rng, near = null, run = null) {
 // 끌어당길 시너지: 문턱 바로 하나 앞인 가족 id 모음(없거나 pull 1이면 null — 그때는 예전 굴림 그대로)
 const NEAR = THRESHOLDS.map((t) => t - 1);
 export function nearFamilies(run) {
-  if (!run || !run.deck || SHOP.pull === 1) return null;
+  if (!run || !run.deck || SHOP.pull === 1 || coreOff(run, 'families')) return null;
   const c = familyCounts(run);
   const out = new Set(Object.keys(c).filter((f) => NEAR.includes(c[f])));
   return out.size ? out : null;
@@ -126,7 +126,8 @@ function rollMaxim(rng, exclude, { rarityWeights = SHOP.rarityWeights, edition =
   if (!pool.length) pool = all.filter((m) => m.rarity !== 'legendary' && !exclude.includes(m.id));
   if (!pool.length) return null;
   const m = pickPulled(rng, pool, near, (x) => maximFamilies(x.id));
-  const ed = edition || next(rng) < (run ? pityChance(SHOP.editionChance, 'edition', shopPity(run, 'edition')) : SHOP.editionChance) ? rollEdition(rng) : null;
+  // 코어 판은 판본을 굴리지 않는다
+  const ed = edition || (!coreOff(open, 'editions') && next(rng) < (run ? pityChance(SHOP.editionChance, 'edition', shopPity(run, 'edition')) : SHOP.editionChance)) ? rollEdition(rng) : null;
   if (ed && !edition) pityHit(run, 'edition');
   return { kind: 'maxim', id: m.id, edition: ed, price: maximPrice(m.id, ed) };
 }
@@ -159,11 +160,11 @@ export function rollPiece(run, rng, near = null) {
 }
 
 export function rollItem(run, rng, exclude, near = nearFamilies(run)) {
-  if (next(rng) < pityChance(SHOP.fragmentChance.display, 'fragment', shopPity(run, 'fragment')) * fragmentMult(run)) {
+  if (!coreOff(run, 'legends') && next(rng) < pityChance(SHOP.fragmentChance.display, 'fragment', shopPity(run, 'fragment')) * fragmentMult(run)) {
     const f = fragmentOffer(run, rng, 'display');
     if (f && !exclude.includes(f.legend)) { pityHit(run, 'fragment'); return { ...f, price: SHOP.fragmentPrice }; }
   }
-  const kind = weighted(rng, run.deck && run.deck.some(isCracked) ? [...SHOP.kindWeights, ['awaken', SHOP.awaken.weight]] : SHOP.kindWeights);
+  const kind = weighted(rng, coreKeep(run, 'shop', run.deck && run.deck.some(isCracked) ? [...SHOP.kindWeights, ['awaken', SHOP.awaken.weight]] : SHOP.kindWeights));
   if (kind === 'awaken') return { kind: 'awaken', price: SHOP.awaken.price };
   if (kind === 'maxim') {
     const it = rollMaxim(rng, exclude, { run, near });
@@ -177,7 +178,8 @@ export function rollItem(run, rng, exclude, near = nearFamilies(run)) {
   if (kind === 'gamble') return { kind: 'gamble', id: next(rng) < 0.5 || !openPool(run, 'pieces', FAIRIES).length ? 'potion' : 'roulette', price: SHOP.gamblePrice };
   if (kind === 'tactic') return { kind: 'tactic', id: pickPulled(rng, TACTICS, near, (x) => x.families).id, price: TACTIC_PRICE };
   const t = rollPiece(run, rng, near);
-  if (next(rng) < SHOP.soulOnPiece) { const soul = rollSoul(rng, near, run); return { kind: 'piece', t, soul, price: SHOP.piecePrice[t] + soulPrice(soul) }; }
+  // 열린 혼이 하나도 없으면(코어 판) 혼 깃든 기물은 없다
+  if (openPool(run, 'souls', SOULS).length && next(rng) < SHOP.soulOnPiece) { const soul = rollSoul(rng, near, run); return { kind: 'piece', t, soul, price: SHOP.piecePrice[t] + soulPrice(soul) }; }
   return { kind: 'piece', t, price: SHOP.piecePrice[t] };
 }
 
@@ -215,8 +217,9 @@ export function rollDisplay(run) {
 export function rollPacks(run) {
   const rng = run.shop.rng;
   run.shop.packs = [];
+  const kinds = coreKeep(run, 'packs', SHOP.packKinds);
   for (let i = 0; i < (run.shop.packSlots ?? SHOP.packSlots); i++) {
-    const kind = SHOP.packKinds[int(rng, SHOP.packKinds.length)];
+    const kind = kinds[int(rng, kinds.length)];
     run.shop.packs.push({ kind, price: SHOP.packPrice + priceBonus(run), sold: false });
   }
 }
@@ -250,7 +253,7 @@ export function rollPack(run, kind, rng = run.shop.rng, { goldenFragment = !!(ru
     } else out.push({ kind: 'engraving', id: rollEngravingId(rng, out.map((o) => o.id), run) });
   }
   let bonus = null;
-  if (next(rng) < pityChance(SHOP.fragmentChance.pack, 'fragment', shopPity(run, 'fragment')) * fragmentMult(run)) {
+  if (!coreOff(run, 'legends') && next(rng) < pityChance(SHOP.fragmentChance.pack, 'fragment', shopPity(run, 'fragment')) * fragmentMult(run)) {
     bonus = fragmentOffer(run, rng, kind);
     if (bonus) pityHit(run, 'fragment');
   }

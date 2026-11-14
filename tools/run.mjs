@@ -1,6 +1,7 @@
 // 판(런) 하네스: 판을 N개 끝까지 돌려 곡선을 잰다.
 //   node tools/run.mjs --runs 1000 --policy smart|hunt|random|none|nosac --seed 1 [--workers 10] [--k 6]
 //   --unlock <단계>: 해금 단계(src/data/unlocks.js, 0 = 처음)까지만 열린 판. 주지 않으면 잠금 없음
+//   --core: 뼈대 판(src/data/core.js — 체스 기물 · 격언 · 기보만, 레퍼토리 없음)
 //   nosac: smart 상점 + 막혔을 때만 바치는 대국 봇(CHM-35 비교용). --tune '{"brilliant":1}': 탁월수 세기(src/data/sacrifice.js BRILLIANT.per)
 // 대국 안은 풀이기 봇(tools/bot.mjs), 상점은 tools/shopbot.mjs의 정책.
 // 찍는 것: 판 승률, 관 도달 분포, 관별 대국 점수/목표, 종류별 통과율, 외통 · 첫수외통 · 막힘 비율,
@@ -50,6 +51,7 @@ function parseArgs(argv) {
     else if (k === '--unlock') a.unlock = Number(argv[++i]);             // 해금 단계 0~MAX_TIER(주지 않으면 전부 열림)
     else if (k === '--give') a.give = argv[++i].split(',');
     else if (k === '--nodraft') a.nodraft = true;
+    else if (k === '--core') a.core = true;                             // 뼈대 판(CHM-79)
     else if (k === '--limit') a.limit = Number(argv[++i]);             // 판 하나 시간 상한(초)
     else if (k === '--quiet') a.quiet = true;
     else if (k === '--strong') a.strong = Number(argv[++i]);           // 봇 세기: 예산 ×N(짜임 재기 K · 마디 · 대국 마디 · 희생 마디, shopbot applyStrength)
@@ -76,9 +78,9 @@ function parseArgs(argv) {
   return a;
 }
 
-function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = false, unlock = null) {
+function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = false, unlock = null, core = false) {
   const t0 = performance.now();
-  const run = createRun({ seed, opening, dan, draft: !nodraft, unlockTier: unlock });
+  const run = createRun({ seed, opening, dan, draft: !nodraft, unlockTier: unlock, core });
   for (const id of give || []) run.maxims.push({ uid: run.nextUid++, id, data: {}, edition: null, paid: 0 });
   if (BEATS.on) BEATS.log = beatLog(run);
   if (BUILD.on) BUILD.log = buildLog(run);
@@ -105,7 +107,7 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
 }
 
 if (!isMainThread) {
-  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, unlock, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats, build, chase, chaseWeight } = workerData;
+  const { seeds, policy, k, B: b, shop, tune, opening, dan, give, nodraft, unlock, core, joseki, strong, look, next, botstats, replay, replayNodes, replayBeam, peekLog, peekSkip, peekAlt, peekNodes, beats, build, chase, chaseWeight } = workerData;
   if (chase != null) CHASE.on = !!chase;
   if (chaseWeight != null) CHASE.weight = chaseWeight;
   // 대국 도전 · 숙적 실험: --tune '{"challenge":{"reward":1,"kinds":[…]},"nemesis":{"on":false},"chWeights":{"mate":0}}'
@@ -144,7 +146,7 @@ if (!isMainThread) {
   if (b) b.forEach((x, i) => { B[i] = x; });
   if (shop) Object.assign(SHOP, shop);
   const out = [];
-  for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft, unlock ?? null));
+  for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft, unlock ?? null, !!core));
   parentPort.postMessage(out);
 } else {
   const args = parseArgs(process.argv.slice(2));
@@ -162,7 +164,7 @@ if (!isMainThread) {
   const seeds = Array.from({ length: args.runs }, (_, i) => (args.seed * 1000003 + ((args.from || 0) + i) * 7919) >>> 0);
   const t0 = performance.now();
   // 판 하나에 일꾼 하나: 시간 상한(--limit 초, 기본 120)을 넘으면 그 일꾼을 끊고 「시간 초과」로 따로 센다
-  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, unlock: args.unlock, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, build: args.build, chase: args.chase, chaseWeight: args.chaseWeight };
+  const data = { policy: args.policy, k: args.k, B: args.B, shop: args.shop, tune: args.tune, opening: args.opening, dan: args.dan, unlock: args.unlock, core: args.core, give: args.give, nodraft: args.nodraft, joseki: args.joseki, strong: args.strong, look: args.look, next: args.next, botstats: args.botstats, replay: args.replay, replayNodes: args.replayNodes, replayBeam: args.replayBeam, peekLog: args.peekLog, peekSkip: args.peekSkip, peekAlt: args.peekAlt, peekNodes: args.peekNodes, beats: args.beats, build: args.build, chase: args.chase, chaseWeight: args.chaseWeight };
   const results = [], timeouts = [];
   let next = 0, done = 0;
   await new Promise((finish) => {
@@ -207,7 +209,7 @@ function report(R, args, wall) {
   console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
   if (args.botstats) { const d = R.reduce((a, r) => a + (r.botStats ? r.botStats.decisions : 0), 0), c = R.reduce((a, r) => a + (r.botStats ? r.botStats.capped : 0), 0); console.log(`대국 결정 ${d}번 중 풀이기가 마디 예산에 닿은 결정 ${c}번(${pc(c / Math.max(1, d))})`); }
   if (args.timeouts && args.timeouts.length) console.log(`시간 초과 ${args.timeouts.length}판(${args.limit}초, 표에서 뺐다): seed ${args.timeouts.join(' ')}`);
-  console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.strong && args.strong !== 1 ? `, 세기 ×${args.strong}` : ''}${args.look ? `, 내다보기 ${args.look}` : ''}${args.next != null ? `, 다음 수 ${args.next}` : ''}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''}${args.chase === 0 ? ', 도전 무시' : ''}${args.chaseWeight != null ? `, 쫓는 덤 ${args.chaseWeight}` : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
+  console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.strong && args.strong !== 1 ? `, 세기 ×${args.strong}` : ''}${args.look ? `, 내다보기 ${args.look}` : ''}${args.next != null ? `, 다음 수 ${args.next}` : ''}${args.core ? ', 뼈대 판' : ''}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''}${args.chase === 0 ? ', 도전 무시' : ''}${args.chaseWeight != null ? `, 쫓는 덤 ${args.chaseWeight}` : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
 
   // 관별
   const rows = [];
@@ -360,7 +362,7 @@ function report(R, args, wall) {
     const avg = (c, n) => (n ? (c / n).toFixed(2) : '-');
     console.log(`광대 진단: 광대 모습의 먹기 ${J.a + J.m} — 붙은 칸이라서만 ${J.a} (${pc(J.a / (J.a + J.m))}) · 그 적의 행마로 ${J.m} · 광대로 떨군 사슬 ${J.dropN}(평균 먹은 수 ${avg(J.dropCaps, J.dropN)}) · 광대 모습을 거친 사슬 ${J.viaN}(평균 ${avg(J.viaCaps, J.viaN)}) · 모든 사슬 ${J.allN}(평균 ${avg(J.allCaps, J.allN)})`);
   }
-  if (!args.nodraft) {
+  if (!args.nodraft && !args.core) {
     // 외통 = 정석을 고른 뒤(1 · 3 · 5관부터)의 대국 중 외통으로 이긴 몫
     const afterJ = (r, id) => { const k = r.josekis.indexOf(id); return r.log.filter((b) => !b.skipped && b.ante >= DRAFT_ANTES[k]); };
     const jr = JOSEKIS.map((j) => { const has = R.filter((r) => r.josekis.includes(j.id)); const first = R.filter((r) => r.josekis[0] === j.id); const bs = has.flatMap((r) => afterJ(r, j.id)); return [j.name, j.tier, pc(has.length / n), pc(has.filter((r) => r.won).length / has.length), String(bs.length), pc(bs.filter((b) => b.reason === 'mate').length / bs.length), String(first.length), pc(first.filter((r) => r.won).length / first.length)]; });

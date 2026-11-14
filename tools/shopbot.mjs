@@ -9,7 +9,7 @@
 import { createRng, fork, int, next } from '../src/sim/rng.js';
 import { createBattle, soulOf, arrive, apply as applyBattle } from '../src/sim/battle.js';
 import { isCracked } from '../src/data/souls.js';
-import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult, previewBattle } from '../src/sim/run.js';
+import { applyRun, legalRunCommands, battleMods, canBuy, sellPrice, blindInfo, maximCapacity, canSell, josekiTargetMult, previewBattle, canSkip } from '../src/sim/run.js';
 import { EDITION_BY_ID } from '../src/data/editions.js';
 import { LEGENDS } from '../src/data/legends.js';
 import { SHOP, PROMOTE, rerollCost } from '../src/sim/shop.js';
@@ -20,6 +20,7 @@ import { rollDisplay, rollPacks } from '../src/sim/shop.js';
 import { bestMove } from '../src/sim/solver.js';
 import { familyCounts, FAMILIES, levelOf } from '../src/data/families.js';
 import { evolveTo } from '../src/data/tactics.js';
+import { coreOff } from '../src/sim/unlock.js';
 import { noteStep, review, REVIEW } from '../src/sim/replay.js';
 
 export const SMART = {
@@ -113,8 +114,9 @@ function act(run, cmd) {
 }
 
 // ── 짜임 재기
+// 뼈대 판(run.core)이면 그 깃발도 싣는다 — battleMods가 시너지 조정자를 빼고 famBonus가 0이 되게
 function buildOf(run) {
-  return { deck: clone(run.deck), maxims: clone(run.maxims), charts: { ...run.charts }, josekis: [...(run.josekis || [])] };
+  return { deck: clone(run.deck), maxims: clone(run.maxims), charts: { ...run.charts }, josekis: [...(run.josekis || [])], ...(run.core ? { core: run.core } : {}) };
 }
 function nextAnte(run) {
   return run.phase === 'shop' && run.blind === 2 ? run.ante + 1 : run.ante;
@@ -172,7 +174,7 @@ function evalSeeds(run, K) {
 
 // 가장 많이 모은 가족(둘 이상일 때)을 한 걸음 채우면 덤. 문턱을 넘는 걸음은 그려 보기에 이미 보이니 문턱 앞 걸음만
 export function famBonus(before, after) {
-  if (!SMART.famAware) return 0;
+  if (!SMART.famAware || coreOff(before, 'families')) return 0;
   const a = familyCounts(before), b = familyCounts(after);
   const top = Math.max(...Object.values(a));
   if (top < 1) return 0;
@@ -565,12 +567,12 @@ function altPlay(run, opts) {
   return !!(row && row.ante === run.ante && row.blind === run.blind && !row.skipped && row.won);
 }
 function selectStep(run, policy, r) {
-  if (policy === 'random' && run.blind < 2 && int(r, 5) === 0) { act(run, { type: 'skip' }); return; }
+  if (policy === 'random' && run.blind < 2 && int(r, 5) === 0 && canSkip(run)) { act(run, { type: 'skip' }); return; }
   const peek = policy !== 'random' && run.blind < 2 && (PEEK.log || PEEK.skipBelow != null);
   const rd = peek ? boardRead(run) : null;
   const tag = rd ? blindInfo(run).tag : null;
-  const skip = !!rd && PEEK.skipBelow != null && rd.read < PEEK.skipBelow + (TAG_BONUS[tag.kind] || 0);
-  if (rd) PEEK.rows.push({ ante: run.ante, blind: run.blind, read: Math.round(rd.read * 1000) / 1000, max: Math.round(rd.max * 1000) / 1000, skip, tag: tag.kind, ...(skip && PEEK.alt ? { altWon: altPlay(run, policy === 'nosac' ? { sacrifice: false } : {}) } : {}) });
+  const skip = !!rd && canSkip(run) && PEEK.skipBelow != null && rd.read < PEEK.skipBelow + ((tag && TAG_BONUS[tag.kind]) || 0);
+  if (rd) PEEK.rows.push({ ante: run.ante, blind: run.blind, read: Math.round(rd.read * 1000) / 1000, max: Math.round(rd.max * 1000) / 1000, skip, tag: tag ? tag.kind : null, ...(skip && PEEK.alt ? { altWon: altPlay(run, policy === 'nosac' ? { sacrifice: false } : {}) } : {}) });
   act(run, { type: skip ? 'skip' : 'play' });
 }
 
