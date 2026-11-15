@@ -1,7 +1,7 @@
 // 대국 승리: 보상이 한 줄씩(기본 · 남은 수 · 적립 · 외통 · 넘친 목표 · 도전 상금 · 대국 중 번 상금) 쌓인다.
 import { PAL } from '../../render/palette.js';
 import { W, text, rect, rrect, num, measure, R_SM } from '../../render/gfx.js';
-import { LINE, GAP_GROUP, SP, BTN_H, flow, inkY } from '../frame.js';
+import { GAP_GROUP, SP, BTN_H, flow, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { flyCoins, boldText, stepScale, CAP } from '../juice.js';
 import { live } from '../../render/look.js';
@@ -69,7 +69,7 @@ export class RewardScreen {
   cols(bx, bw) {
     const names = this.lines.map(([l, , n]) => (n ? segW([[l, false], [' ', false], [n, true]]) : measure(l)));
     const vals = [...this.lines.map(([, v]) => v), this.total, this.app.run.money].map((v) => measure(`$${v}`, true));
-    const tw = Math.max(measure('합'), measure('상금'), ...names) + SP.xl + Math.max(...vals);
+    const tw = Math.max(measure('합', true), measure('상금'), ...names) + SP.xl + Math.max(...vals);
     const L0 = bx + Math.max(SP.m, (bw - tw) >> 1);
     return { L0, R0: Math.min(bx + bw - SP.m, L0 + tw) };
   }
@@ -78,16 +78,26 @@ export class RewardScreen {
     const last = this.last;
     return [['점수', false, PAL.ink], [' ', false, PAL.ink], [num(last.score || 0), true, PAL.ink], [' / ', false, PAL.dim], ['목표', false, PAL.ink], [' ', false, PAL.ink], [num(last.target || 0), true, PAL.ink]];
   }
-  // 막간 상자 본문 쌓기(상자 안 위부터): 점수 줄 → 묶음 틈 → 보상 줄들 → 묶음 틈(가운데 가로줄) → 합 · 상금 · 금빛 꾸러미
-  body() {
+  // 막간 상자 본문 쌓기(상자 안 위부터): 점수 줄 → 묶음 틈 → 보상 줄들(사이 row) → 묶음 틈(가운데 가로줄) → 합 → after → 상금 · 금빛 꾸러미.
+  // 틈은 상자가 화면(위아래 4 남김)에 드는 가장 넓은 것(줄 사이 4 · 합 뒤 4 → 2 · 4 → 2 · 0 → 0 · 0 — 보상 줄 일곱 · 금빛 꾸러미)
+  body(gap = this.gapFit()) {
     const f = flow(0);
     const score = f.line();
     f.gap(GAP_GROUP);
-    const rows = this.lines.map(() => f.line());
+    const rows = this.lines.map((_, i) => { if (i) f.y += gap.row; return f.line(); });
     const rule = f.y + Math.floor(GAP_GROUP / 2);
     f.gap(GAP_GROUP);
-    const total = f.line(), money = f.line(), gold = this.gold ? f.line() : null;
+    const total = f.line();
+    f.y += gap.after;
+    const money = f.line(), gold = this.gold ? f.line() : null;
     return { score, rows, rule, total, money, gold, h: f.y };
+  }
+  gapFit() {
+    if (!this.gap) {
+      const opts = [{ row: SP.s, after: SP.s }, { row: SP.xs, after: SP.s }, { row: SP.xs, after: 0 }, { row: 0, after: 0 }];
+      this.gap = opts.find((g) => interludeLayout(this.body(g).h).h <= 270 - SP.m) || opts[opts.length - 1];
+    }
+    return this.gap;
   }
   // 상자 자리(그리기와 동전이 같이 쓴다). 폭은 글에 맞춘다(끝없는 대국의 큰 점수 줄): 240 이상.
   // 넘친 목표 도장(제목 줄 오른쪽)이 있으면 가운데 제목과 SP.m 띄울 만큼 넓힌다(영어 「Match Won」)
@@ -115,7 +125,7 @@ export class RewardScreen {
       });
       // 「합」 줄은 처음부터 서 있고 동전이 닿을 때마다 오르며 튄다(0.25초, 큰 수는 상자 밖 연출 자리에)
       rect(c, L0, by + B.rule, R0 - L0, 1, PAL.frameHi);
-      text(c, '합', L0, by + B.total, PAL.ink);
+      text(c, '합', L0, by + B.total, PAL.ink, { bold: true });
       const sumS = `$${done ? this.total : Math.min(this.total, Math.round(this.sum))}`;
       const k = app.reducedMotion ? 1 : (app.time - this.kick) / 0.25;
       if (k >= 0 && k < 1) {

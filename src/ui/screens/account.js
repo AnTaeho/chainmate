@@ -8,7 +8,7 @@ import { W, text, box, slot, measure } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { btnW, buttonRow } from '../ui.js';
 import { pageHead, bottomBar } from './common.js';
-import { PAGE, PAD_BOX, LINE, BTN_H, SP, textY } from '../frame.js';
+import { PAGE, PAD_BOX, LINE, LINE_TITLE, BTN_H, SP, GROUP, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { L } from '../lang.js';
 import { accountProps } from '../telemetry.js';
@@ -24,19 +24,20 @@ export function accountTabs(ctx, ui, app, cur) {
 }
 
 // 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다). 입력 칸은 위쪽 띠(y 110 위)에 둔다 — 폰 키보드가 올라와도 보이게.
-// 줄 사이 4(묶음 안), 세로로 쌓은 단추 사이 8. 상자 높이는 그리는 쪽이 상태마다 내용에 맞춘다(h는 가장 큰 것 — 들어와 있음)
+// 판넬 이름은 묶음 판넬 자리(위 4 · 제목 줄 18 → 4, 29절 「묶음」), 줄 사이 4(묶음 안), 세로로 쌓은 단추 사이 8, 끝 단추 줄 아래 4.
+// 상자 높이는 그리는 쪽이 상태마다 내용에 맞춘다(h는 가장 큰 것 — 들어와 있음)
 export function accountLayout() {
   const P = PAD_BOX, y = PAGE.bodyY, IN = SP.s;
   // 왼쪽 칸이 조금 넓다: 가장 넓은 아이디(「m」 스무 자 212)가 안 여백 안에 한 줄로 든다
   const lw = 232, gap = SP.m;
-  const titleY = y + P, r1 = titleY + LINE + IN, r2 = r1 + FIELD_H + IN, msgY = r2 + FIELD_H + IN, btnY = msgY + MSG_LINES * LINE + IN;
-  const btn2Y = btnY + BTN_H + SP.m, btn3Y = btn2Y + BTN_H + SP.m, h = btn3Y + BTN_H + P - y;
+  const titleY = y + GROUP.padBtn, r1 = titleY + LINE_TITLE + GROUP.nameGap, r2 = r1 + FIELD_H + IN, msgY = r2 + FIELD_H + IN, btnY = msgY + MSG_LINES * LINE + IN;
+  const btn2Y = btnY + BTN_H + SP.m, btn3Y = btn2Y + BTN_H + SP.m, h = btn3Y + BTN_H + GROUP.padBtn - y;
   const left = { x: PAGE.titleX, y, w: lw, h }, right = { x: PAGE.titleX + lw + gap, y, w: W - PAGE.titleX * 2 - lw - gap, h };
   const cell = (b, top) => ({ x: b.x + P + LABEL_W, y: top, w: b.w - P * 2 - LABEL_W, h: FIELD_H });
   return {
     left, right, titleY, r1, r2, msgY, btnY, btn2Y, btn3Y,
     fields: { user: cell(left, r1), pass: cell(left, r2), cur: cell(right, r1), next: cell(right, r2), del: cell(right, r1) },
-    privacyY: y + h - P - BTN_H,
+    privacyY: y + h - GROUP.padBtn - BTN_H,
   };
 }
 
@@ -173,7 +174,7 @@ export class AccountScreen {
   // 오른쪽 칸 알림 줄(알아 둘 것): 문단 자리 · 처리방침 단추 y
   infoLay(lay) {
     const w = lay.right.w - PAD_BOX * 2;
-    let y = lay.titleY + LINE + SP.s;
+    let y = lay.titleY + LINE_TITLE + GROUP.nameGap;
     const paras = ACCOUNT_INFO.map((s, i) => { if (i) y += SP.s; const lines = wrap(s, w), top = y; y += lines.length * LINE; return { lines, top }; });
     return { paras, privacyY: y + SP.m };
   }
@@ -183,7 +184,7 @@ export class AccountScreen {
     const left = (this.in() ? lay.btn3Y : outStacked(lay.left.w) ? lay.btn2Y : lay.btnY) + BTN_H;
     const rows = mode ? this.modeRows(mode, lay) : null;
     const right = rows ? rows[rows.length - 1].y + BTN_H : this.infoLay(lay).privacyY + BTN_H;
-    return Math.max(left, right) + PAD_BOX - lay.left.y;
+    return Math.max(left, right) + GROUP.padBtn - lay.left.y;
   }
   draw(ctx, ui) {
     const app = this.app, lay = accountLayout(), h = this.boxH(lay);
@@ -197,9 +198,9 @@ export class AccountScreen {
   // 계정 없음: 아이디 · 비번 + [들어오기] [계정 만들기]
   drawOut(ctx, ui, lay) {
     const b = lay.left, P = PAD_BOX, f = this.app.fields;
-    openBox('panel', b.x, b.y, b.w, b.h, P, { name: '아이디로 로그인' });
+    openBox('panel', b.x, b.y, b.w, b.h, GROUP.padBtn, { name: '아이디로 로그인' });
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, PAL.frameHi);
-    text(ctx, '아이디로 로그인', b.x + P, textY(lay.titleY), PAL.dim);
+    text(ctx, '아이디로 로그인', b.x + P, textY(lay.titleY, LINE_TITLE), PAL.gold, { bold: true });
     this.cell(ctx, 'user', '아이디', lay.fields.user, { type: 'text', autocomplete: 'username', name: 'username', max: 20, filter: USERNAME_FILTER, hint: 'next', enter: () => f.focus('pass') });
     this.cell(ctx, 'pass', '비밀번호', lay.fields.pass, { type: 'password', autocomplete: 'current-password', name: 'password', max: 72, hint: 'go', enter: () => this.login() });
     // 한글 자판으로 친 아이디는 걸러진다 — 한 줄로 알린다
@@ -221,9 +222,9 @@ export class AccountScreen {
   // 들어와 있음: 아이디 · 기기 수 + 할 일 셋
   drawIn(ctx, ui, lay) {
     const b = lay.left, P = PAD_BOX, a = this.acct;
-    openBox('panel', b.x, b.y, b.w, b.h, P, { name: '이 기기의 계정' });
+    openBox('panel', b.x, b.y, b.w, b.h, GROUP.padBtn, { name: '이 기기의 계정' });
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, PAL.gold);
-    text(ctx, '이 기기의 계정', b.x + P, textY(lay.titleY), PAL.dim);
+    text(ctx, '이 기기의 계정', b.x + P, textY(lay.titleY, LINE_TITLE), PAL.gold, { bold: true });
     // 「아이디」 이름표는 아이디 옆에 들어갈 때만(가장 넓은 아이디면 뺀다)
     const wide = measure(a.username) > b.w - P * 2 - LABEL_W;
     if (!wide) text(ctx, '아이디', b.x + P, textY(lay.r1, FIELD_H), PAL.dim);
@@ -259,9 +260,9 @@ export class AccountScreen {
   drawRight(ctx, ui, lay) {
     const app = this.app, b = lay.right, P = PAD_BOX, x = b.x + P, mode = this.in() ? this.mode : null;
     const title = { password: '비밀번호 바꾸기', logout: '로그아웃', delete1: '계정 삭제', delete2: '계정 삭제' }[mode] || '알아 둘 것';
-    openBox('panel', b.x, b.y, b.w, b.h, P, { name: title });
+    openBox('panel', b.x, b.y, b.w, b.h, GROUP.padBtn, { name: title });
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, mode === 'delete1' || mode === 'delete2' ? PAL.red : PAL.frameHi);
-    text(ctx, title, x, textY(lay.titleY), PAL.dim);
+    text(ctx, title, x, textY(lay.titleY, LINE_TITLE), PAL.gold, { bold: true });
     const para = (s, y, col = PAL.ink) => { const lines = wrap(s, b.w - P * 2); lines.forEach((l, i) => text(ctx, l, x, textY(y + i * LINE), col)); return y + lines.length * LINE; };
     if (mode) { this.say(ctx, b, lay); for (const r of this.modeRows(mode, lay)) this.row(ctx, ui, x, r.y, r.items, r.w); }
     if (mode === 'password') {

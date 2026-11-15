@@ -36,9 +36,10 @@ export function walk(L, steps) {
   return b;
 }
 
-test('수업은 일곱, 묶음 셋 · 수업마다 걸음 3~6 · 킹의 말은 반말', () => {
+test('수업은 일곱, 묶음 둘(기초 셋 · 대국 넷) · 수업마다 걸음 3~6 · 킹의 말은 반말', () => {
   assert.equal(LESSONS.length, 7);
   for (const L of LESSONS) assert.ok(LESSON_GROUPS.some((g) => g.id === L.group), L.id);
+  assert.deepEqual(LESSON_GROUPS.map((g) => LESSONS.filter((L) => L.group === g.id).length), [3, 4]);
   for (const L of LESSONS.filter((x) => !x.shop)) {
     assert.ok(L.steps.length >= 3 && L.steps.length <= 6, `${L.id} 걸음 ${L.steps.length}`);
     for (const st of [...L.steps, ...(L.demo || [])]) if (st.say) assert.ok(!/(세요|해요|예요|이에요|어요|아요|돼요|워요)$/.test(st.say), `${L.id}: ${st.say}`);

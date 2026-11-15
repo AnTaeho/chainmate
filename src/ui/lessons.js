@@ -1,4 +1,4 @@
-// 튜토리얼: 기초 셋 · 대국 셋 · 판 하나(docs/design-notes/tutorial.md). 손으로 짠 고정 판(시드 무관), 규칙은 실제 sim(createBattle + 판 넣기)에 코어 판 대국 규칙(CORE.rules)을 켠 그대로.
+// 튜토리얼: 기초 셋 · 대국 넷(상점 포함)(docs/design-notes/tutorial.md). 손으로 짠 고정 판(시드 무관), 규칙은 실제 sim(createBattle + 판 넣기)에 코어 판 대국 규칙(CORE.rules)을 켠 그대로.
 // 수업마다 시범(흐린 손가락이 한 번 둔다 → 판이 처음으로) → 내 차례(지금 누를 곳만 빛나고, 오른쪽에서 킹이 할 일을 한 줄로 말한다).
 //   hand    손(처음 쥔 기물들) · bag 덱(희생하면 여기서 뽑는다) · board 적 { 칸: 종류 } · incoming 첫 수 뒤 증원 그림자 [{ sq, t }]
 //   target  목표 · moves 수 · discards 희생
@@ -14,7 +14,6 @@ import { CORE } from '../data/core.js';
 export const LESSON_GROUPS = [
   { id: 'basic', name: '기초' },
   { id: 'battle', name: '대국' },
-  { id: 'run', name: '판' },
 ];
 
 export const LESSONS = [
@@ -73,8 +72,7 @@ export const LESSONS = [
       { cap: 'a7', say: '지키던 룩을 잡으면 내 기물이 룩이 돼' },
       { cap: 'e7', say: '지키는 적이 없는 킹을 잡으면 체크메이트. 수가 남아도 곧바로 이겨' },
     ] },
-  // ── 판
-  { id: 'shop', group: 'run', title: '상점', shop: true },
+  { id: 'shop', group: 'battle', title: '상점', shop: true },
 ];
 
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((L) => [L.id, L]));

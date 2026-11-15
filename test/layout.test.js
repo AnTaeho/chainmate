@@ -964,7 +964,8 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
     // 판 밖 알림 줄: 카드 아래 · 단추 줄 위의 글
     const note = (f, card) => { const by = a.app.ui.regions.find((r) => r.id === 'result:again').y; return f.texts.some((q) => q.y >= card.y + card.h && q.y + q.h <= by); };
     const draw = async (o) => { await endDaily(a.app, o); a.app.go('result'); return a.frame(); };
-    for (const [won, frags, rows, wantNote] of [[false, 0, 4, true], [true, 0, 4, true], [false, 3, null, false], [true, 3, null, false], [false, 1, null, false]]) {
+    // 조각이 없는 판은 이웃이 하나씩(세 줄 — 기록 · 최고 한 수 판넬(29절 「묶음」)의 안 여백만큼 상자가 커져 둘씩은 안 든다)
+    for (const [won, frags, rows, wantNote] of [[false, 0, 3, true], [true, 0, 3, true], [false, 3, null, false], [true, 3, null, false], [false, 1, null, false]]) {
       const tag = `${lang} ${won ? '이긴 판' : '진 판'} 조각 ${frags}`;
       st = ok;
       const f = await draw({ won, frags });
@@ -976,7 +977,7 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
       assert.ok(a.has('result:rank') && a.has('result:again') && a.has('result:title'), `${tag}: 단추`);
       // 이웃 줄 수: 카드 안의 이름 글
       const names = f.texts.filter((q) => q.box === card && q.s === a.app.rank.nameOf(a.long));
-      if (rows != null) assert.equal(names.length, rows, `${tag}: 줄 수`); // 나는 둘째라 둘씩이어도 위는 하나(네 줄)
+      if (rows != null) assert.equal(names.length, rows, `${tag}: 줄 수`);
       else assert.ok(names.length <= 3, `${tag}: 줄 수 ${names.length}`);
       if (wantNote) assert.ok(note(f, card), `${tag}: 판 밖 알림 줄이 빠졌다`);
       // 카드 줄의 글끼리 4 이상 떨어져 있다(이름 · 도달 · 점수)
@@ -996,15 +997,15 @@ test('결과 화면 순위 카드: 상자가 270 안, 진 판도 판 밖 알림 
         if (phase === 'stale') for (const s of R.STALE_LINES) assert.ok(measure(s) <= gc.w - 16, `${tag}: 「${s}」`);
       }
     }
-    // 카드 줄의 칸: 가장 넓은 이름 + 열 자리 점수면 도달이 다 들어가거나(한국어) 칸을 줄 전체에서 뺀다(영어 — 굵은 영어 이름이 넓다). 어느 쪽이든 이름과 다음 글 사이 6 이상
-    const names = data.around.map((r) => a.app.rank.nameOf(r)), at = R.cardCols(data.around, names, 20, 298);
-    assert.equal(at.reachOf, lang === 'en' ? null : R.reachText, `${lang}: 도달 칸`);
+    // 카드 줄의 칸(결과 상자 왼쪽 칸 폭 280 — 오른쪽 「최고 한 수」 판넬만큼 좁다): 가장 넓은 이름 + 열 자리 점수면 도달을 짧은 꼴로(한국어) 또는 칸을 줄 전체에서 뺀다(영어 — 굵은 영어 이름이 넓다). 어느 쪽이든 이름과 다음 글 사이 6 이상
+    const names = data.around.map((r) => a.app.rank.nameOf(r)), at = R.cardCols(data.around, names, 20, 280);
+    assert.equal(at.reachOf, lang === 'en' ? null : R.reachShort, `${lang}: 도달 칸`);
     assert.equal(at.reach == null, lang === 'en', `${lang}: 도달 칸`);
     const { fitNum } = await import('../src/render/gfx.js');
     // 보통 이름 + 일곱 자리 점수(영어는 「Hall 8 Practice」가 넓어 여섯 자리까지): 순위 화면과 같은 글(관 + 대국)이 다 들어간다 — 대국 셋 · 이김 모두
     const kinds = [{ ante: 8, blind: 0, won: false }, { ante: 8, blind: 1, won: false }, { ante: 8, blind: 2, won: false }, { ante: 8, blind: 2, won: true }];
     const plain = kinds.map((k, i) => ({ ...k, rank: 97 + i, a: 0, n: 0, score: (lang === 'ko' ? 3482150 : 519509) - i })), plainNames = plain.map((r) => a.app.rank.nameOf(r));
-    const pt = R.cardCols(plain, plainNames, 20, 298);
+    const pt = R.cardCols(plain, plainNames, 20, 280);
     assert.equal(pt.reachOf, R.reachText, `${lang}: 보통 이름이면 관 + 대국을 다 적는다(이름 ${measure(plainNames[0], true)})`);
     plain.forEach((r, i) => {
       assert.equal(pt.reachOf(r), R.reachText(r), `${lang}: 순위 화면과 같은 글`);
@@ -1284,7 +1285,8 @@ test('계정 화면: 입력 칸 · 단추가 칸 안에서 서로 닿지 않고,
     assert.ok(f.y >= lay.titleY + 14 && f.y + f.h <= 110, `입력 칸 ${id} 위쪽 띠`);
   }
   assert.ok(lay.fields.user.y + lay.fields.user.h + 4 <= lay.fields.pass.y && lay.fields.cur.y + lay.fields.cur.h + 4 <= lay.fields.next.y);
-  assert.ok(lay.fields.pass.y + lay.fields.pass.h + 4 <= lay.msgY && lay.msgY + K.MSG_LINES * 14 <= lay.btnY && lay.btn3Y + 18 <= lay.left.y + lay.left.h - 8 && lay.btn2Y + 18 + 8 <= lay.privacyY + 18);
+  // 끝 단추 줄 아래는 4(29절 「묶음」 — 단추 줄 판넬)
+  assert.ok(lay.fields.pass.y + lay.fields.pass.h + 4 <= lay.msgY && lay.msgY + K.MSG_LINES * 14 <= lay.btnY && lay.btn3Y + 18 <= lay.left.y + lay.left.h - 4 && lay.btn2Y + 18 + 8 <= lay.privacyY + 18);
   assert.equal(K.lockedText(15), '잠겼어요 · 15분 뒤에 다시 로그인하세요');
 
   for (const lang of LANGS) {

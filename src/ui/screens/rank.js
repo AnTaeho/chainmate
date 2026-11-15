@@ -151,7 +151,8 @@ export function cardCols(rows, names, x, w) {
   const scoreW = Math.max(0, ...rows.map((r) => measure(num(r.score), true)));
   const reachR = scoreR - scoreW - 6;
   const nameEnd = Math.max(0, ...rows.map((r, i) => nameX + measure(names[i], true)));
-  const reachOf = [reachText, reachShort].find((f) => nameEnd + 6 <= reachR - Math.max(0, ...rows.map((r) => measure(f(r))))) || null;
+  // 이름 → 도달 사이 8(굵은 이름은 잉크가 잰 폭보다 넓다)
+  const reachOf = [reachText, reachShort].find((f) => nameEnd + SP.m <= reachR - Math.max(0, ...rows.map((r) => measure(f(r))))) || null;
   return { rank: x + P + 4, name: nameX, reach: reachOf ? reachR : null, reachOf, score: scoreR, scoreRoom: (i) => scoreR - (nameX + measure(names[i], true) + 6) };
 }
 export function drawRankCard(ctx, ui, app, card, x, y, w, { fill = CARD_BG } = {}) {

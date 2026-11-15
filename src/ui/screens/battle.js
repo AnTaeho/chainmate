@@ -2284,9 +2284,12 @@ export class BattleScreen {
     this.drawGain(ctx, lay);
     closeBox();
     if (slamming) {
-      const sc = big.k * stepScale(1 + 0.5 * (1 - sk) * (1 - sk));
-      openBox('fx', LX, sy - 20, LW, 60, 0, { loose: true, name: '꽂힌 점수' });
-      fine(() => boldText(ctx, big.s, LX + PX, sy + INK_H * 3 - INK_H * sc, sk < 0.2 ? PAL.white : hot ? PAL.gold : PAL.goldHi, { scale: sc, edge: PAL.shadow }));
+      // 제 자리 글의 가운데를 축으로 커지되 화면 안: 왼끝은 왼쪽 칸 왼끝(LX) 안, 오른끝은 판 자리(BX) 앞까지(넘으면 그만큼만 커진다)
+      const gw = measure(big.s, true), room = BX - LX;
+      const sc = Math.min(big.k * stepScale(1 + 0.5 * (1 - sk) * (1 - sk)), Math.max(big.k, room / gw)), w = gw * sc;
+      const lx = Math.max(LX, Math.min(LX + PX + (gw * big.k - w) / 2, BX - w));
+      openBox('fx', LX, sy - 20, room, 60, 0, { loose: true, name: '꽂힌 점수' });
+      fine(() => boldText(ctx, big.s, lx, sy + INK_H * 3 - INK_H * sc, sk < 0.2 ? PAL.white : hot ? PAL.gold : PAL.goldHi, { scale: sc, edge: PAL.shadow, align: 'left' }));
       closeBox();
     }
     this.drawFlames(ctx);

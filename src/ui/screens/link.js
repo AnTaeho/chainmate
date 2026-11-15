@@ -6,7 +6,7 @@ import { W, text, box, rrect, slot, selectRing, measure, R_SM } from '../../rend
 import { wrap } from '../../render/text.js';
 import { button, pillR, buttonRow } from '../ui.js';
 import { bottomBar } from './common.js';
-import { PAGE, PAD_BOX, LINE, BTN_H, BTN_HERO, SP, textY, inkY } from '../frame.js';
+import { PAGE, PAD_BOX, LINE, LINE_TITLE, BTN_H, BTN_HERO, SP, GROUP, textY, inkY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { linkRedeemProps } from '../telemetry.js';
 import { mergeGain } from '../merge.js';
@@ -26,13 +26,13 @@ const backIcon = (ctx, x, y, col) => {
 // 숫자판: 세 줄 × 네 칸(오른쪽 칸이 지우기 · 0 · 잇기)
 export const PAD_ROWS = [['1', '2', '3', 'del'], ['4', '5', '6', '0'], ['7', '8', '9', 'go']];
 
-// 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다). 두 상자는 숫자판까지 내용에 맞춘 같은 높이, 아래 한 줄 상자는 그 아래 8.
-// 숫자판 칸은 손가락 단추(BTN_HERO 26 — 29절 예외), 칸 사이 4
+// 칸 자리(재는 쪽 test/layout.test.js와 같이 쓴다). 두 상자는 숫자판까지 내용에 맞춘 같은 높이, 아래 한 줄 상자는 그 아래 12.
+// 판넬 이름은 묶음 판넬 자리(위 4 · 제목 줄 18 → 4, 29절 「묶음」). 숫자판 칸은 손가락 단추(BTN_HERO 26 — 29절 예외), 칸 사이 4 · 아래 8(넓힌 손가락 구역이 상자 안)
 export function linkLayout() {
-  const P = PAD_BOX, y = PAGE.bodyY, IN = SP.s, cw = 224;
-  const titleY = y + P, cellsY = titleY + LINE + IN, ch = 22, cg = IN, mid = SP.l, dw = 20;
+  const y = PAGE.bodyY, IN = SP.s, cw = 224;
+  const titleY = y + GROUP.padBtn, cellsY = titleY + LINE_TITLE + GROUP.nameGap, ch = 22, cg = IN, mid = SP.l, dw = 20;
   const msgY = cellsY + ch + IN, padY = msgY + LINE + IN, kw = 48, kh = BTN_HERO, gx = IN, gy = IN;
-  const h = padY + PAD_ROWS.length * kh + (PAD_ROWS.length - 1) * gy + P - y;
+  const h = padY + PAD_ROWS.length * kh + (PAD_ROWS.length - 1) * gy + PAD_BOX - y;
   const left = { x: PAGE.titleX, y, w: cw, h }, right = { x: W - PAGE.titleX - cw, y, w: cw, h };
   const cellsW = CODE_LEN * dw + (CODE_LEN - 2) * cg + mid, cx0 = right.x + Math.floor((right.w - cellsW) / 2);
   const cells = Array.from({ length: CODE_LEN }, (_, i) => ({ x: cx0 + i * (dw + cg) + (i >= 4 ? mid - cg : 0), y: cellsY, w: dw, h: ch }));
@@ -194,9 +194,9 @@ export class LinkScreen {
 
   drawMine(ctx, ui, lay) {
     const app = this.app, { left: b } = lay, P = PAD_BOX, m = this.mine, cx = b.x + (b.w >> 1);
-    openBox('panel', b.x, b.y, b.w, b.h, P, { name: '이 기기의 코드' });
+    openBox('panel', b.x, b.y, b.w, b.h, GROUP.padBtn, { name: '이 기기의 코드' });
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, m.phase === 'linked' ? PAL.gold : PAL.frameHi);
-    text(ctx, '이 기기의 코드', b.x + P, textY(lay.titleY), PAL.dim);
+    text(ctx, '이 기기의 코드', b.x + P, textY(lay.titleY, LINE_TITLE), PAL.gold, { bold: true });
     const say = (s, y, col = PAL.dim, bold = false) => text(ctx, s, cx, textY(y), col, { align: 'center', bold });
     const get = (y) => buttonRow(ctx, ui, [{ id: 'link:code', label: '코드 받기', tone: 'gold', onClick: () => this.getCode() }], cx, y, { anchor: 'center' });
     const y0 = lay.cells[0].y;
@@ -225,9 +225,9 @@ export class LinkScreen {
 
   drawEntry(ctx, ui, lay) {
     const { right: b } = lay, P = PAD_BOX, e = this.entry, cx = b.x + (b.w >> 1);
-    openBox('panel', b.x, b.y, b.w, b.h, P, { name: '다른 기기의 코드 입력' });
+    openBox('panel', b.x, b.y, b.w, b.h, GROUP.padBtn, { name: '다른 기기의 코드 입력' });
     box(ctx, b.x, b.y, b.w, b.h, PAL.feltDk, e.phase === 'done' ? PAL.gold : PAL.frameHi);
-    text(ctx, '다른 기기의 코드 입력', b.x + P, textY(lay.titleY), PAL.dim);
+    text(ctx, '다른 기기의 코드 입력', b.x + P, textY(lay.titleY, LINE_TITLE), PAL.gold, { bold: true });
     if (e.phase === 'done') {
       // 「이어졌다 · 이름 졸린 수달」 + 합쳐진 것 한 줄
       const y0 = lay.cells[0].y + 4;

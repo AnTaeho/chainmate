@@ -10,7 +10,7 @@ import { PIECE_NAME } from '../words.js';
 import { button, fingerDots, growHit, btnW, buttonRow, toggleGroup, rowWidth } from '../ui.js';
 import { familyList, familyMore } from '../parts-depth.js';
 import { familyCounts } from '../../data/families.js';
-import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, BTN_H, SP, flow, rowSpan, textY } from '../frame.js';
+import { LEFT, PAUSE, PAGE, M, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, FAM_ROW, FAM_H, BTN_H, SP, GROUP, flow, rowSpan, textY } from '../frame.js';
 import { wrap } from '../../render/text.js';
 import { openBox, closeBox, logClip, logHead } from '../../render/layoutlog.js';
 import { L as L_ } from '../lang.js';
@@ -97,6 +97,40 @@ export function bottomBar(ctx, ui, { back = null, primary = null, extras = [] } 
   return out;
 }
 
+// ── 묶음 판넬(29절 「묶음」): 판 밖 화면에 묶음이 둘 이상이면 묶음마다 둥근 판넬. 틈 토큰은 frame.js GROUP.
+// rows: [{ h, kind: 'btn' | 'text' }] — 위아래 여백 · 줄 사이는 줄 종류로(layout.md 29절). textGap · btnGap은 화면이 덮어쓴다(결과 상자 · 튜토리얼 목록 칸)
+export function groupLayout(y, rows, { name = false, textGap = GROUP.textGap, btnGap = GROUP.btnGap } = {}) {
+  const k = (r) => r.kind || 'text';
+  const top = name || (rows.length && k(rows[0]) === 'btn') ? GROUP.padBtn : GROUP.padText;
+  const bottom = rows.length && k(rows[rows.length - 1]) === 'btn' ? GROUP.padBtn : GROUP.padText;
+  let cy = y + top;
+  const nameY = name ? textY(cy, LINE_TITLE) : null;
+  if (name) cy += LINE_TITLE + GROUP.nameGap;
+  const ys = rows.map((r, i) => { if (i) cy += k(r) === 'btn' && k(rows[i - 1]) === 'btn' ? btnGap : textGap; const t = cy; cy += r.h; return t; });
+  return { y, nameY, rows: ys, h: cy + bottom - y };
+}
+// 묶음 판넬 그리기: 판넬(fill을 주면 그 빛깔 — 막간 상자 안의 한 단 밝은 판넬) + 이름(금빛 굵게, 왼쪽 위) + 오른끝 개수(굵게, 기본 흐림). body()가 줄을 그린다
+export function groupPanel(ctx, x, y, w, h, { name = null, count = null, countCol = PAL.dim, fill = null, box: boxName = null } = {}, body = null) {
+  openBox('panel', x, y, w, h, GROUP.padBtn, { name: boxName || name || '묶음' });
+  if (fill) box(ctx, x, y, w, h, fill, PAL.frameDk); else panel(ctx, x, y, w, h);
+  if (name) {
+    const ty = textY(y + GROUP.padBtn, LINE_TITLE);
+    text(ctx, name, x + GROUP.padX, ty, PAL.gold, { bold: true });
+    if (count != null) text(ctx, count, x + w - GROUP.padX, ty, countCol, { align: 'right', bold: true });
+  }
+  if (body) body();
+  closeBox();
+}
+// 이름 열 → 단추 틈: 가장 긴 이름 + 16, 안 들어가면 12 → 8(fits(틈)이 참인 가장 큰 것)
+export const labelGap = (fits) => GROUP.labelGaps.find((g) => fits(g)) ?? GROUP.labelGaps[GROUP.labelGaps.length - 1];
+// 판넬 안 표 한 줄: 이름(흐림) 왼쪽 · 값은 오른끝 x2에 오른쪽 맞춤 — 값은 굵게 크림(col로 빛깔), 빈 값(아직 · -)은 보통 흐림
+export const isEmptyVal = (v) => v === '아직' || v === '-';
+export function statRow(ctx, label, value, x, x2, ty, { col = null } = {}) {
+  if (label) text(ctx, label, x, ty, PAL.dim);
+  const empty = isEmptyVal(value);
+  text(ctx, value, x2, ty, empty ? PAL.dim : col || PAL.ink, { align: 'right', bold: !empty });
+}
+
 // 막간 상자(29절 제목 자리 3 — 보상 · 결과 · 상자 · 전설 · 각성 · 멈춤): 안 위 12에 두 배 제목 가운데(줄 28),
 // 본문은 제목 아래 12, 단추 줄은 안 아래 12에 가운데 한 줄(같은 폭 · 사이 8). bodyH: 본문 높이, buttons: 단추가 있는지
 export const INTER = { pad: SP.l, titleH: 28, gap: SP.l };
@@ -159,8 +193,8 @@ export function sideStack(headH, footH) {
 // 명국 조각이 날아드는 곳: 아래 칸의 상금 줄(끝에서 둘째 줄) 조각 자리
 export const shardTo = () => ({ x: LEFT.x + 44, y: SIDE.bottom - PAD_BOX - LINE * 2 + 6 });
 
-// 판넬 한 줄: 이름표(흐림) 왼쪽 · 값 오른쪽
-function rowText(ctx, label, val, y, { valCol = PAL.ink, bold = false } = {}) {
+// 판넬 한 줄: 이름표(흐림) 왼쪽 · 값 오른쪽(수치는 굵게 — 29절)
+function rowText(ctx, label, val, y, { valCol = PAL.ink, bold = true } = {}) {
   const L = LEFT.x, LW = LEFT.w, P = PAD_BOX;
   text(ctx, label, L + P, y, PAL.dim);
   if (val != null) text(ctx, val, L + LW - P, y, valCol, { align: 'right', bold });

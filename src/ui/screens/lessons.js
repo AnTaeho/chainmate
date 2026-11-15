@@ -1,4 +1,4 @@
-// 튜토리얼 목록: 장 셋(기초 · 대국 · 판), 끝낸 수업에 표, 아래 큰 단추 「이어서」(안 끝낸 첫 수업부터 차례로). 누르면 그 수업 하나.
+// 튜토리얼 목록: 장 판넬 둘(기초 · 대국), 끝낸 수업에 표, 아래 큰 단추 「이어서」(안 끝낸 첫 수업부터 차례로). 누르면 그 수업 하나.
 // 흐름(처음 켬 덮개 「튜토리얼부터」 · 「이어서」 → 수업을 차례로 → 끝 카드 「새 판」)과 수업 「상점」(코어 판 연습용 판 위에서 따라 하는 길)도 여기서.
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, R_SM } from '../../render/gfx.js';
@@ -8,15 +8,15 @@ import { createRng, fork } from '../../sim/rng.js';
 import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide, kingNoteLayout, kingNote } from '../coach.js';
 import { TERMS, TERM_GROUPS, termWord, termSay, termShown } from '../glossary.js';
-import { pageHead, pageButtons, bottomBar } from './common.js';
+import { pageHead, pageButtons, bottomBar, groupLayout, groupPanel } from './common.js';
 import { wrapName, drawName } from '../parts.js';
-import { PAGE, PAD_BOX, LINE, LINE_TITLE, GAP_GROUP, BTN_H, BTN_HERO, SP, flow, textY } from '../frame.js';
+import { PAGE, PAD_BOX, LINE, GAP_GROUP, BTN_H, BTN_HERO, SP, GROUP, textY } from '../frame.js';
 import { openBox, closeBox, layerUp } from '../../render/layoutlog.js';
 
 const TERM_DEF_X = 120; // 낱말 풀이: 풀이 글이 시작하는 x
 const TERM_BOX = { x: PAGE.titleX, h: PAGE.btnY - SP.l - PAGE.bodyY }; // 낱말 풀이: 본 칸 상자(왼쪽 x · 쪽의 가장 큰 높이 — 쪽마다 내용에 맞춘다)
-// 수업 칸(목록 칸 — 단추가 아니다): 이름 두 줄(14 × 2) + 위아래 2. 칸 사이 4
-const LESSON_H = LINE * 2 + SP.s, LESSON_GAP = SP.s;
+// 수업 칸(목록 칸 — 단추가 아니다): 모든 이름이 한 줄에 들면 24(번호 원 16 + 위아래 4 — 손가락 44pt), 아니면 이름 두 줄(14 × 2) + 위아래 2
+const LESSON_H1 = BTN_HERO - SP.xs, LESSON_H2 = LINE * 2 + SP.s;
 export const GO = { w: 176, h: BTN_HERO }; // 목록 아래 큰 단추(「이어서」 · 「새 판」 — 29절 수업 「시작」 26)
 export const END_SAY = '튜토리얼 끝! 이제 진짜 판을 시작해 볼까?';
 import { wrap } from '../../render/text.js';
@@ -134,41 +134,32 @@ export class LessonsScreen {
     if (this.terms) return this.drawTerms(ctx, ui);
     const done = LESSONS.filter((L) => seen[L.id]).length, next = nextLesson(app);
     pageHead(ctx, '튜토리얼', `${done}/${LESSONS.length}`, { big: true });
-    // 장 판넬 셋: 판 밖 폭(12 ~ 468)을 사이 8로 나눈다
-    const colW = Math.floor((W - PAGE.titleX * 2 - SP.m * 2) / 3), x0 = PAGE.titleX;
-    // 장 칸 쌓기: 장 이름(제목 줄) → 묶음 안 틈 → 수업 칸들(사이 4) — 세 칸은 가장 긴 칸의 높이
+    // 장 판넬(29절 「묶음」): 판 밖 폭(12 ~ 468)을 사이 8로 나눈다. 장 이름(금빛 굵게) · 끝낸 수(굵게 흐림, 다 끝내면 금빛) → 4 → 수업 칸들(사이 4 — 손가락으로 고르는 칸)
     const groups = LESSON_GROUPS.map((g) => LESSONS.map((L, i) => ({ L, i })).filter((o) => o.L.group === g.id));
-    const colH = Math.max(...groups.map((list) => PAD_BOX * 2 + LINE_TITLE + SP.s + list.length * LESSON_H + (list.length - 1) * LESSON_GAP));
-    const top = PAGE.bodyY;
+    const nG = groups.length, colW = Math.floor((W - PAGE.titleX * 2 - GROUP.gap * (nG - 1)) / nG), x0 = PAGE.titleX;
+    const cw = colW - GROUP.padX * 2, nw = cw - SP.s * 2 - 16 - SP.s;
+    const one = LESSONS.every((L) => wrapName(L.title, nw, { bold: false, max: 1 })), LH = one ? LESSON_H1 : LESSON_H2;
+    const lays = groups.map((list) => groupLayout(PAGE.bodyY, list.map(() => ({ h: LH, kind: 'btn' })), { name: true, btnGap: SP.s }));
+    const colH = Math.max(...lays.map((q) => q.h)), top = PAGE.bodyY;
     LESSON_GROUPS.forEach((g, gi) => {
-      const x = x0 + gi * (colW + 8), list = groups[gi];
-      const f = flow(top + PAD_BOX);
-      openBox('panel', x, top, colW, colH, PAD_BOX, { name: `수업 장 ${g.id}` });
-      box(ctx, x, top, colW, colH, PAL.feltDk);
-      const n = list.filter(({ L }) => seen[L.id]).length;
-      const ty = f.line(true);
-      text(ctx, g.name, x + PAD_BOX, ty, PAL.gold, { bold: true });
-      text(ctx, `${n}/${list.length}`, x + colW - PAD_BOX, ty, n === list.length ? PAL.gold : PAL.dim, { align: 'right', bold: true });
-      f.gap(SP.s);
-      list.forEach(({ L, i }, k) => {
-        if (k) f.gap(LESSON_GAP);
-        const y = f.space(LESSON_H), id = `lessons:${i}`, cx = x + PAD_BOX, cw = colW - PAD_BOX * 2;
+      const x = x0 + gi * (colW + GROUP.gap), list = groups[gi], n = list.filter(({ L }) => seen[L.id]).length;
+      groupPanel(ctx, x, top, colW, colH, { name: g.name, count: `${n}/${list.length}`, countCol: n === list.length ? PAL.gold : PAL.dim, box: `수업 장 ${g.id}` }, () => list.forEach(({ L, i }, k) => {
+        const y = lays[gi].rows[k], id = `lessons:${i}`, cx = x + GROUP.padX;
         const ok = !!seen[L.id];
         // 목록 칸(크림 칸 · 모서리 4): 누르면 그 수업 하나. 가리키면 금빛 테
-        ui.region(id, cx, y, cw, LESSON_H, { onClick: () => openLesson(app, i, 'list') });
-        openBox('tile', cx, y, cw, LESSON_H, 0, { name: `수업 칸 ${i}` });
-        box(ctx, cx, y, cw, LESSON_H, ok ? PAL.slot : PAL.btn, ui.isHover(id) ? PAL.gold : PAL.frameDk, { r: R_SM, drop: 0 });
+        ui.region(id, cx, y, cw, LH, { onClick: () => openLesson(app, i, 'list') });
+        openBox('tile', cx, y, cw, LH, 0, { name: `수업 칸 ${i}` });
+        box(ctx, cx, y, cw, LH, ok ? PAL.slot : PAL.btn, ui.isHover(id) ? PAL.gold : PAL.frameDk, { r: R_SM, drop: 0 });
         closeBox();
         // 번호 원: 끝낸 수업은 금빛 원에 잉크 표, 아니면 잉크 원에 번호(다음 수업은 금빛)
-        const sx = cx + SP.s, sy = y + ((LESSON_H - 16) >> 1);
+        const sx = cx + SP.s, sy = y + ((LH - 16) >> 1);
         numberDisc(ctx, sx, sy, ok);
         if (!ok) text(ctx, `${i + 1}`, sx + 8, textY(sy, 16), i === next ? PAL.gold : PAL.ink, { bold: true, align: 'center' });
-        // 수업 이름은 두 줄까지(낱말 단위) — 칸 32에 두 줄(14 × 2)이 테와 2씩 띄워 들어간다. 끝낸 수업은 어두운 칸에 흐린 글
-        const nx = sx + 16 + SP.s, nw = cx + cw - SP.s - nx, nm = wrapName(L.title, nw, { bold: false });
-        const ys = nm && nm.lines.length > 1 ? nm.lines.map((_, q) => y + textY(((LESSON_H - nm.lines.length * LINE) >> 1) + q * LINE)) : [y + textY(0, LESSON_H)];
+        // 수업 이름(낱말 단위, 두 줄 칸이면 두 줄까지). 끝낸 수업은 어두운 칸에 흐린 글
+        const nx = sx + 16 + SP.s, nm = wrapName(L.title, nw, { bold: false, max: one ? 1 : 2 });
+        const ys = nm && nm.lines.length > 1 ? nm.lines.map((_, q) => y + textY(((LH - nm.lines.length * LINE) >> 1) + q * LINE)) : [y + textY((LH - LINE) >> 1)];
         drawName(ctx, L.title, nm, nx, ys, nw, ok ? PAL.dim : PAL.cardInk, { bold: false });
-      });
-      closeBox();
+      }));
     });
     // 큰 단추: 안 끝낸 첫 수업부터 차례로(하나도 안 했으면 「처음부터」), 다 끝냈으면 판으로
     const gy = top + colH + SP.l, gx = Math.floor(W / 2 - GO.w / 2);

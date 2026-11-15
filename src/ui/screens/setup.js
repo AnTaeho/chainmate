@@ -6,8 +6,8 @@ import { DANS } from '../../sim/run.js';
 import { wrap } from '../../render/text.js';
 import { buttonRow } from '../ui.js';
 import { OPENING_ORDER, UNLOCKS, nextUnlock } from '../records.js';
-import { pageHead, bottomBar } from './common.js';
-import { PAGE, PAD_CARD, GAP_IN, GAP_GROUP, BTN_H, SP, flow, textY } from '../frame.js';
+import { pageHead, bottomBar, groupLayout, groupPanel, labelGap } from './common.js';
+import { PAGE, PAD_CARD, GAP_IN, GAP_GROUP, BTN_H, SP, LINE, GROUP, flow, textY } from '../frame.js';
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { danStamp, stampTip, STAMP } from '../parts.js';
 import { L } from '../lang.js';
@@ -117,25 +117,29 @@ export class SetupScreen {
       const won = (rec.openingDan || {})[id];
       if (won != null) danStamp(ctx, x + w - SP.s, y - (STAMP.h >> 1), won, { ui, id: sid, tip: () => stampTip(op.name, won), onClick: choose });
     });
-    // 레이팅(단): 이름표와 단추 줄 한 줄 → 묶음 안 틈 → 더하는 규칙
-    f.gap(GAP_GROUP);
-    const dy = f.space(BTN_H);
-    text(ctx, '레이팅', PAGE.titleX, textY(dy, BTN_H), PAL.dim);
-    // 레이팅 아홉: 같은 폭 토글(남는 폭을 사이 4로 나눈다)
-    const dx = PAGE.titleX + measure('레이팅') + SP.m, dw = Math.floor((W - PAGE.titleX - dx - SP.s * 8) / 9);
-    buttonRow(ctx, ui, Array.from({ length: 9 }, (_, d) => {
-      const open = d <= rec.unlocked.dan;
-      return { id: `setup:dan:${d}`, label: open ? danName(d) : '?', enabled: open, tone: this.dan === d ? 'gold' : 'plain', onClick: () => { this.dan = d; this.app.sfx('pick'); } };
-    }), dx, dy, { w: dw, gap: SP.s });
-    f.gap(GAP_IN);
-    this.drawRules(ctx, f);
+    // 레이팅 판넬(29절 「묶음」): 이름표(크림) · 단추 줄 한 줄 → 4 → 더하는 규칙(보조 글 — 흐림)
+    const px = PAGE.titleX, pw = W - PAGE.titleX * 2, ix = px + GROUP.padX, iw = pw - GROUP.padX * 2;
+    const rules = this.ruleLines(iw);
+    const g = groupLayout(f.gap(GAP_GROUP).y, [{ h: BTN_H, kind: 'btn' }, { h: rules.length * LINE }]);
+    const dy = g.rows[0];
+    // 레이팅 아홉: 같은 폭 토글(남는 폭을 사이 4로 나눈다). 이름표 → 단추 틈은 16 → 12 → 8 중 단추가 가장 넓은 수 + 양옆 4에 드는 것
+    const lw = measure('레이팅'), need = Math.max(...Array.from({ length: 9 }, (_, d) => measure(danName(d), true))) + SP.m;
+    const btnWAt = (gap) => Math.floor((ix + iw - (ix + lw + gap) - SP.s * 8) / 9);
+    const dx = ix + lw + labelGap((gap) => btnWAt(gap) >= need), dw = Math.floor((ix + iw - dx - SP.s * 8) / 9);
+    groupPanel(ctx, px, g.y, pw, g.h, { box: '레이팅' }, () => {
+      text(ctx, '레이팅', ix, textY(dy, BTN_H), PAL.ink);
+      buttonRow(ctx, ui, Array.from({ length: 9 }, (_, d) => {
+        const open = d <= rec.unlocked.dan;
+        return { id: `setup:dan:${d}`, label: open ? danName(d) : '?', enabled: open, tone: this.dan === d ? 'gold' : 'plain', onClick: () => { this.dan = d; this.app.sfx('pick'); } };
+      }), dx, dy, { w: dw, gap: SP.s });
+      rules.forEach((l, k) => text(ctx, l, ix, textY(g.rows[1] + k * LINE), PAL.dim));
+    });
     bottomBar(ctx, ui, { back: { id: 'setup:back', onClick: () => this.app.go('title') }, primary: { id: 'setup:start', label: '시작', tone: 'gold', onClick: () => this.start() } });
   }
-  // 더하는 규칙(레이팅 묶음 안): 규칙 하나를 두 줄로 끊지 않는다
-  drawRules(ctx, f) {
+  // 더하는 규칙 줄(폭 w): 규칙 하나를 두 줄로 끊지 않는다. 없으면 「추가 규칙 없음」
+  ruleLines(w) {
     const items = activeRules(this.dan).flatMap((r) => r.split(' · ')).map((r) => L(r));
-    if (!items.length) { text(ctx, '추가 규칙 없음', PAGE.titleX, f.line(), PAL.dim); return; }
-    for (const r of pack(items, W - PAGE.titleX * 2)) text(ctx, r, PAGE.titleX, f.line(), PAL.red);
+    return items.length ? pack(items, w) : ['추가 규칙 없음'];
   }
   key(k) {
     if (k === 'Enter') this.start();

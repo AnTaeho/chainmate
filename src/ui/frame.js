@@ -18,6 +18,9 @@ export const BTN_MIN = 64;                   // 글에 맞춘 단추의 가장 �
 export const BTN_PAD = SP.l;                 // 글에 맞춘 단추의 글 양옆 여백
 // 판 밖 틀: 제목(12, 4) · 「뒤로」(12, 244) 폭 80 · 주 단추 오른쪽 끝(W − 12 − 폭)
 export const PAGE = { titleX: SP.l, titleY: 8, ruleY: 25, bodyY: 32, btnY: 244, btnH: BTN_H, backW: 80, gap: SP.m };
+// 판 밖 화면의 묶음 판넬(29절 「묶음」): 판넬 안 옆 8, 위아래는 단추 줄 4 · 글 줄 8(이름이 있으면 위 4), 이름 → 첫 줄 4,
+// 단추 줄 사이 2 · 글 줄 사이 4, 판넬 사이 8, 마지막 판넬 → 맨 아래 단추 줄 12 이상. 이름 열 → 단추 틈은 들어가는 가장 큰 것(16 → 12 → 8)
+export const GROUP = { padX: SP.m, padBtn: SP.s, padText: SP.m, nameGap: SP.s, btnGap: SP.xs, textGap: SP.s, gap: SP.m, foot: SP.l, labelGaps: [SP.xl, SP.l, SP.m] };
 
 // ── 글 간격 토큰(docs/design-notes/layout.md 「격자와 여백」): 이름 하나가 뜻 하나, 값도 하나다.
 //   PAD_BOX     상자(판넬 · 말풍선 · 낱말 상자 · 처음 안내 · 풀이 칸 · 막간 상자) 안 여백

@@ -1,13 +1,13 @@
-// 기록: 위에 표 둘(판 — 판 수 · 이긴 판 · 최고 도달 · 끝없는 대국 · 돌파한 관 · 열린 레이팅 / 수 — 체크메이트 · 탁월수 · 전설 완성 · 신의 한 수 · 오늘의 대국 · 튜토리얼),
+// 기록: 위에 표 판넬 둘(판 — 판 수 · 이긴 판 · 최고 도달 · 끝없는 대국 · 돌파한 관 · 열린 레이팅 / 수 — 체크메이트 · 탁월수 · 전설 완성 · 신의 한 수 · 오늘의 대국 · 튜토리얼),
 // 아래에 같은 높이 판넬 둘: 최고 한 수(점수와 사슬 모습 줄) · 가장 큰 탁월수(점수 · 바친 기물 · 곱한 배수, CHM-43).
-// 표 규칙(29절): 이름 열은 가장 긴 이름 + 16, 수치는 그 뒤 수치 열 끝에 오른쪽 맞춤. 수치는 굵게, 낱말(아직 · 끝 · -)은 보통.
+// 묶음 판넬(29절 「묶음」): 이름은 흐림 왼쪽, 값은 판넬 오른끝(안 여백 8)에 오른쪽 맞춤 — 아래 판넬의 점수와 같은 오른선. 값은 굵게 크림, 빈 값(아직 · -)은 보통 흐림.
 // 탭 둘(29절 제목 자리 1): 「전적」(위 표 · 판넬) · 「업적」(세 칸 격자 — 받은 것은 크림 카드 + 금빛 메달, 못 받은 것은 빈 칸에 조건, 숨은 것은 「?」).
 import { PAL } from '../../render/palette.js';
-import { W, text, box, sprite, fitNum, measure, slot } from '../../render/gfx.js';
+import { W, text, sprite, fitNum, measure, slot } from '../../render/gfx.js';
 import { wrap } from '../../render/text.js';
 import { danName } from './setup.js';
-import { pageHead, bottomBar, pageButtons, HEAD_BIG } from './common.js';
-import { PAGE, PAD_BOX, PAD_CARD, LINE, SP, GAP_IN, GAP_GROUP, textY } from '../frame.js';
+import { pageHead, bottomBar, pageButtons, HEAD_BIG, groupLayout, groupPanel, statRow } from './common.js';
+import { PAGE, PAD_CARD, LINE, LINE_TITLE, SP, GAP_IN, GAP_GROUP, GROUP, textY } from '../frame.js';
 import { cardBase } from '../parts.js';
 import { ACHIEVEMENTS } from '../../data/achievements.js';
 import { achvHave, achvDone } from '../achievements.js';
@@ -15,19 +15,13 @@ import { openBox, closeBox } from '../../render/layoutlog.js';
 import { brilliantMult } from '../../data/sacrifice.js';
 import { ANNOT, drawAnnot, annotSize } from '../annot.js';
 
-const ROW = LINE + SP.s;                 // 표 줄 14 + 사이 4
 const STEP = 22, ART_H = 22;             // 사슬 모습 기물 칸
-const hasNum = (s) => /\d/.test(s);
-// 표 하나: 이름 열(가장 긴 이름 + 16) + 수치 열(가장 긴 수치). 돌려주는 값은 표 폭
-export function recordTable(ctx, rows, x, y) {
-  const lw = Math.max(...rows.map(([a]) => measure(a))) + SP.xl;
-  const vw = Math.max(...rows.map(([, b]) => measure(b, hasNum(b))));
-  rows.forEach(([a, b], i) => {
-    const ty = textY(y + i * ROW);
-    text(ctx, a, x, ty, PAL.dim);
-    text(ctx, b, x + lw + vw, ty, PAL.ink, { align: 'right', bold: hasNum(b) });
-  });
-  return lw + vw;
+// 표 판넬 하나: 줄마다 이름(흐림) · 값(판넬 오른끝). 돌려주는 값은 판넬 높이
+export const recordPanelH = (n) => groupLayout(0, Array.from({ length: n }, () => ({ h: LINE }))).h;
+export function recordPanel(ctx, rows, x, y, w, name) {
+  const g = groupLayout(y, rows.map(() => ({ h: LINE })));
+  groupPanel(ctx, x, y, w, g.h, { box: name }, () => rows.forEach(([a, b], i) => statRow(ctx, a, b, x + GROUP.padX, x + w - GROUP.padX, textY(g.rows[i]))));
+  return g.h;
 }
 
 // 업적 격자: 세 칸, 칸 높이는 모든 업적의 조건 줄 수 중 가장 큰 것으로 같다(받아도 쪽이 바뀌지 않는다).
@@ -74,40 +68,35 @@ export class RecordsScreen {
       ['신의 한 수(★★★)', `${(r.grades['★★★'] || 0) + (r.grades['∞'] || 0)}`],
       ['오늘의 대국', d ? `${d.won ? '승리' : `${d.ante}관`} · ${d.runs}판` : '아직'], ['튜토리얼', r.lessonsDone ? '끝' : '아직'],
     ];
-    // 판넬 둘은 화면을 반씩(사이 8), 표는 각 판넬의 왼끝에 맞춘다
-    const pw = Math.floor((W - PAGE.titleX * 2 - SP.m) / 2), px = [PAGE.titleX, PAGE.titleX + pw + SP.m];
-    recordTable(ctx, runs, px[0], PAGE.bodyY);
-    recordTable(ctx, moves, px[1], PAGE.bodyY);
-    // 판넬(같은 높이): 이름표 · 점수 → 묶음 안 틈 → 기물 줄(아홉씩, 줄 사이 4)
-    const P = PAD_BOX, per = Math.floor((pw - P * 2) / STEP);
+    // 판넬 넷: 화면을 반씩(사이 8), 위 표 판넬 → 판넬 사이 8 → 아래 판넬(같은 높이)
+    const pw = Math.floor((W - PAGE.titleX * 2 - GROUP.gap) / 2), px = [PAGE.titleX, PAGE.titleX + pw + GROUP.gap];
+    const th = recordPanel(ctx, runs, px[0], PAGE.bodyY, pw, '판 표');
+    recordPanel(ctx, moves, px[1], PAGE.bodyY, pw, '수 표');
+    // 아래 판넬: 이름(금빛 굵게) · 관(굵게 흐림) · 점수(굵게 크림, 오른끝) → 4 → 기물 줄(아홉씩, 줄 사이 4)
+    const P = GROUP.padX, per = Math.floor((pw - P * 2) / STEP);
     const steps = r.bestMove ? r.bestMove.steps.slice(0, 16) : [];
     const bb = r.bestBrilliant, offered = bb ? (bb.pieces || []).slice(0, per - 1) : [];
     const artRows = Math.max(1, Math.ceil(steps.length / per));
-    const ph = P * 2 + LINE + SP.s + artRows * ART_H + (artRows - 1) * SP.s;
-    const py = PAGE.bodyY + ROW * 6 - SP.s + SP.l;
+    const py = PAGE.bodyY + th + GROUP.gap;
+    const g = groupLayout(py, [{ h: artRows * ART_H + (artRows - 1) * SP.s }], { name: true }), ph = g.h, ay = g.rows[0];
     const head = (x, label, ante, score) => {
-      const ty = textY(py + P);
-      text(ctx, label, x + P, ty, PAL.dim);
-      const lw = measure(label);
+      const ty = textY(py + GROUP.padBtn, LINE_TITLE), lw = measure(label, true);
       if (ante) text(ctx, `${ante}관`, x + P + lw + SP.m, ty, PAL.dim, { bold: true });
-      if (score != null) text(ctx, fitNum(score, pw - P * 2 - lw - SP.m * 2 - (ante ? measure(`${ante}관`, true) + SP.m : 0)), x + pw - P, ty, PAL.gold, { align: 'right', bold: true });
+      if (score != null) text(ctx, fitNum(score, pw - P * 2 - lw - SP.m * 2 - (ante ? measure(`${ante}관`, true) + SP.m : 0)), x + pw - P, ty, PAL.ink, { align: 'right', bold: true });
     };
-    const ay = py + P + LINE + SP.s;
-    openBox('panel', px[0], py, pw, ph, P, { name: '최고 한 수' });
-    box(ctx, px[0], py, pw, ph, PAL.feltDk, PAL.frameDk);
-    head(px[0], '최고 한 수', r.bestMove && r.bestMove.ante, r.bestMove ? r.bestMove.score : null);
-    if (r.bestMove) steps.forEach((t, i) => sprite(ctx, t, 'w', px[0] + P + (i % per) * STEP, ay + Math.floor(i / per) * (ART_H + SP.s)));
-    else text(ctx, '아직', px[0] + P, textY(ay), PAL.dimDk);
-    closeBox();
-    openBox('panel', px[1], py, pw, ph, P, { name: '가장 큰 탁월수' });
-    box(ctx, px[1], py, pw, ph, PAL.feltDk, PAL.frameDk);
-    head(px[1], '가장 큰 탁월수', bb && bb.ante, bb ? bb.score : null);
-    if (bb) {
-      offered.forEach((t, i) => sprite(ctx, t, 'w', px[1] + P + i * STEP, ay, { alpha: 0.7 }));
-      const mark = `×${brilliantMult(bb.weight || 0)}`, sz = annotSize(mark);
-      drawAnnot(ctx, mark, px[1] + P + offered.length * STEP + SP.xs, ay + (ART_H >> 1) - Math.floor(sz.h / 2), ANNOT.teal);
-    } else text(ctx, '아직', px[1] + P, textY(ay), PAL.dimDk);
-    closeBox();
+    groupPanel(ctx, px[0], py, pw, ph, { name: '최고 한 수' }, () => {
+      head(px[0], '최고 한 수', r.bestMove && r.bestMove.ante, r.bestMove ? r.bestMove.score : null);
+      if (r.bestMove) steps.forEach((t, i) => sprite(ctx, t, 'w', px[0] + P + (i % per) * STEP, ay + Math.floor(i / per) * (ART_H + SP.s)));
+      else text(ctx, '아직', px[0] + P, textY(ay), PAL.dim);
+    });
+    groupPanel(ctx, px[1], py, pw, ph, { name: '가장 큰 탁월수' }, () => {
+      head(px[1], '가장 큰 탁월수', bb && bb.ante, bb ? bb.score : null);
+      if (bb) {
+        offered.forEach((t, i) => sprite(ctx, t, 'w', px[1] + P + i * STEP, ay, { alpha: 0.7 }));
+        const mark = `×${brilliantMult(bb.weight || 0)}`, sz = annotSize(mark);
+        drawAnnot(ctx, mark, px[1] + P + offered.length * STEP + SP.xs, ay + (ART_H >> 1) - Math.floor(sz.h / 2), ANNOT.teal);
+      } else text(ctx, '아직', px[1] + P, textY(ay), PAL.dim);
+    });
   }
   drawAchv(ctx, ui, tabEnd) {
     const r = this.app.records, lay = achvLayout(), P = PAD_CARD, { medal: MD } = ACHV_GRID;
