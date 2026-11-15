@@ -12,6 +12,10 @@ import { PAD_BOX, GAP_GROUP, flow } from './frame.js';
 import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 
 const T = (id, group, word, enWord, re, en, say, enSay, basic = false) => ({ id, group, word, enWord, re, en, say, enSay, basic });
+// 코어 판(rules.mateLimit false 등)에서 풀이가 다른 낱말: [풀이, 영어 풀이]. 화면은 setTermCore로 지금 판이 코어 판인지 알린다(app.draw)
+const CORE_SAY = { mate: ['지키는 적이 없는 킹을 잡으면 곧바로 이긴다', 'Take an unguarded king and win at once'] };
+let termCore = false;
+export const setTermCore = (on) => { termCore = !!on; };
 // 기본 낱말(basic): 첫 수업이 가르치는 말. 글 안에서 빛깔을 받지 않고 카드 옆 상자도 띄우지 않는다(docs/design-notes/voice.md).
 //   그 낱말 자체를 가리킬 때({ id } 꼴로 넘길 때)만 상자가 뜬다.
 const B = (...a) => T(...a, true);
@@ -110,7 +114,11 @@ export function splitTerms(s) {
 }
 
 export const termWord = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enWord : TERM_BY_ID[id].word);
-export const termSay = (id) => (getLang() === 'en' ? TERM_BY_ID[id].enSay : TERM_BY_ID[id].say);
+export const termSay = (id) => {
+  const c = termCore && CORE_SAY[id];
+  if (c) return getLang() === 'en' ? c[1] : c[0];
+  return getLang() === 'en' ? TERM_BY_ID[id].enSay : TERM_BY_ID[id].say;
+};
 export const termTip = (id) => ({ title: termWord(id), body: [], extra: [[termSay(id), PAL.cardInk]], w: 170 });
 
 const VM_CHIP = { value: [PAL.val, PAL.valInk], links: [PAL.link, PAL.linkInk] };

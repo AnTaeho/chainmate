@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CORE } from '../src/data/core.js';
-import { createRun, applyRun, blindInfo, targetFor, B } from '../src/sim/run.js';
+import { createRun, applyRun, blindInfo, targetFor, B, MASTER_MULT } from '../src/sim/run.js';
 import { createBattle, apply, checkStuck, legalCommands, DEFAULT_RULES } from '../src/sim/battle.js';
 import { bestMove, lineCommands, previewDrop } from '../src/sim/solver.js';
 import { cloneBattle } from '../src/sim/replay.js';
@@ -50,10 +50,14 @@ test('명세: 코어 판에만 깃발이 켜지고 기본 규칙은 꺼져 있�
   for (const h of plain.battle.history) assert.ok(!('start' in h), '코어가 아닌 콤보 요약에는 시작 배수가 없다');
 });
 
-test('목표 곡선 · 넘침 덤: 코어 판은 CORE.B와 CORE.overflow를 쓴다', () => {
+test('목표 곡선 · 넘침 덤: 코어 판은 CORE.B · CORE.masterMult · CORE.overflow를 쓴다', () => {
   const core = createRun({ seed: 1, core: true });
-  for (let i = 0; i < 3; i++) assert.equal(blindInfo(core, 1, i).target, targetFor(1, ['practice', 'official', 'master'][i], 1, CORE.B));
+  for (let i = 0; i < 3; i++) assert.equal(blindInfo(core, 1, i).target, targetFor(1, ['practice', 'official', 'master'][i], 1, CORE.B, CORE.masterMult));
   assert.equal(blindInfo(core, 5, 1).target, targetFor(5, 'official', 1, CORE.B));
+  // 마스터전: 종류 배율 ×2 위에 관별 덧배율(옛 MASTER_MULT 대신)
+  assert.equal(CORE.masterMult.length, 8);
+  for (let a = 1; a <= 8; a++) assert.equal(blindInfo(core, a, 2).target, targetFor(a, 'master', 1, CORE.B, CORE.masterMult), `${a}관`);
+  assert.equal(blindInfo(createRun({ seed: 1 }), 1, 2).target, targetFor(1, 'master', 1, B, MASTER_MULT), '옛 판은 MASTER_MULT 그대로');
   assert.ok(blindInfo(core, 9, 0).target > CORE.B[7], '끝없는 대국은 코어 곡선의 8관 값에서 이어 간다');
   const plain = createRun({ seed: 1 });
   assert.equal(blindInfo(plain, 5, 1).target, targetFor(5, 'official', 1, B));

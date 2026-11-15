@@ -14,7 +14,7 @@ import { LINE, BTN_S, LIST_GAP, SP, inkY } from './frame.js';
 import { UI, tooltip, bigTooltip, tipHeight, tipTexts, fingerDots } from './ui.js';
 import { miniShard, VIEW } from './parts.js';
 import { setLang, getLang, L } from './lang.js';
-import { termsIn, keyList, keyHeight, drawKeyBox } from './glossary.js';
+import { termsIn, keyList, keyHeight, drawKeyBox, setTermCore } from './glossary.js';
 import { placeNotes, noteMode, noteWidth, NOTE_GAP } from './placement.js';
 import { familyCounts, THRESHOLDS, levelOf } from '../data/families.js';
 import { Fx } from './anim.js';
@@ -559,6 +559,7 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     const ui = app.ui;
     // 코어 판을 그리는 동안(판 밖 화면 · 수업 판 빼고): 시너지 칩 · 상자를 그리지 않는다(parts.js VIEW)
     VIEW.core = !!(app.run && app.run.core && !app.run.scratch && !(app.screen && OUTSIDE.has(app.screen.name)));
+    setTermCore(VIEW.core); // 낱말 풀이도 코어 판 규칙으로(체크메이트 — 외통 조건 없음)
     planFold = null;
     ui.begin();
     ui.finger = fingerDots(app);

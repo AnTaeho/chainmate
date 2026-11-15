@@ -23,7 +23,7 @@ import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
 import { CORE } from '../../data/core.js';
-import { FACTION_BY_ID } from '../../data/factions.js';
+import { FACTION_BY_ID, habitText } from '../../data/factions.js';
 
 // 대국의 세력(버릇 조정자 faction:<id>) — 수업은 없다
 export const factionOfBattle = (b) => { const s = b && b.mods && b.mods.find((x) => typeof x.id === 'string' && x.id.startsWith('faction:')); return s ? FACTION_BY_ID[s.id.slice(8)] : null; };
@@ -1801,7 +1801,7 @@ export class BattleScreen {
       // 함정에 빠진 적: 이름 앞에 「함정」, 함정 풀이 두 줄이 먼저(행마 글 · 그림은 그 아래)
       if (cell && !cell.mine && cell.snared && !isHidden(b, sq)) tip = [`함정 · ${tip ? tip[0] : PIECE_NAME[cell.t]}`, ['아무것도 지키지 못해요', '잡으면 배수 ×2', ...(tip ? tip[1] : [])]];
       // 외통 조건: 지키던 적을 둘 잡은 콤보에서는 킹을 가리키면 까닭을 말한다
-      const shut = cell && !cell.mine && cell.t === 'K' && !this.busy && b.status === 'chain' && mateBlocked(b.chain) && !b.rules.openKings && !isHidden(b, sq);
+      const shut = cell && !cell.mine && cell.t === 'K' && !this.busy && b.status === 'chain' && mateBlocked(b.chain, b.rules) && !b.rules.openKings && !isHidden(b, sq);
       // 행마 글 · 그림만 까닭 줄로 갈아 끼운다. 특성 글(이 콤보로는 못 잡아 덜 쓸모 있다)이 체크메이트 낱말 상자를 밀어낼 때만 뺀다
       if (shut) {
         const tr = cell.trait && TRAIT_BY_ID[cell.trait];
@@ -2237,7 +2237,7 @@ export class BattleScreen {
     spec.titles.forEach((l, k) => fitText(ctx, l, LX + PX + (k ? 0 : dot), lay.titles[k], LW - PX * 2 - (k ? 0 : dot), spec.titleCol));
     closeBox();
     if (spec.master) { const m = spec.master; ui.region('master', LX + 2, t0, LW - 4, LINE_TITLE, { tip: () => tipLines(`마스터 ${m.name}`, m.text) }); }
-    else if (spec.faction) { const fa = spec.faction, dx = daily ? dot : 0; ui.region('faction', LX + 2 + dx, t0, LW - 4 - dx, LINE_TITLE, { tip: () => tipLines(fa.name, fa.habit.text) }); }
+    else if (spec.faction) { const fa = spec.faction, dx = daily ? dot : 0; ui.region('faction', LX + 2 + dx, t0, LW - 4 - dx, LINE_TITLE, { tip: () => tipLines(fa.name, habitText(fa, run && run.rules)) }); }
     // 「점수」 이름표(불씨 · 얻을 몫은 이 줄) → 큰 점수 · 오른쪽 「목표 / 150」
     const sl = lay.scoreLab, sy = lay.score;
     // 접기 몫은 가리킬 수 있는 것마다 따로(이름표 줄 · 큰 점수 · 막대) — 가리킨 것을 품은 큰 몫은 접기가 판넬 빛깔로 칠한다

@@ -12,6 +12,7 @@ import { boardFrom } from '../src/sim/board.js';
 import { chainCaptures } from '../src/sim/chain.js';
 import { reboardOn } from '../src/sim/tuning.js';
 import { CRACK, isCracked } from '../src/data/souls.js';
+import { FACTION_BY_ID, habitText } from '../src/data/factions.js';
 import { verifyDaily, summarize } from '../api/_lib/verify.js';
 const { targetOk } = await import('../src/ui/parts.js');
 const { FAMILIES, familyCounts } = await import('../src/data/families.js');
@@ -528,7 +529,7 @@ function hintSubject() {
   const key = `${h.id}@${h.regionId}@${scrName()}`;
   const r = region(h.regionId), run = app.run;
   let ok = !!r && r.x >= 0 && r.y >= 0 && r.x + r.w <= 480 && r.y + r.h <= 270;
-  if (ok && h.id.startsWith('faction_')) ok = scrName() === 'select' && h.regionId === 'faction' && !!run && factionFor(run, run.ante) === h.id.slice(8);
+  if (ok && h.id.startsWith('faction_')) ok = scrName() === 'select' && h.regionId === 'faction' && !!run && factionFor(run, run.ante) === h.id.slice(8).replace(/_core$/, '') && h.id.endsWith("_core") === !!(run.rules && run.rules.chessHabits && coachMod.HINTS[`${h.id.replace(/_core$/, '')}_core`]);
   else if (ok) ok = !!HINT_SUBJECT[h.id] && (h.id === 'bigText' || h.id === 'rankName' || h.id === 'unlocks' || !!run) && HINT_SUBJECT[h.id](h.regionId, run);
   if (!subj.ids.has(key)) { subj.ids.add(key); subj.n++; }
   if (!ok && subj.bad.length < 20 && !subj.bad.includes(key)) subj.bad.push(key);
@@ -1151,7 +1152,7 @@ function firstLaunch() {
     if (screen() === 'draft') pickDraft(0);
   }
   for (let n = 0; n < 60 && !app.hintShown; n++) pump(1);
-  tutSeen.faction = screen() === 'select' && app.run.ante === 1 && app.run.blind === 0 && !!app.hintShown && app.hintShown.id === 'faction_peasants';
+  tutSeen.faction = screen() === 'select' && app.run.ante === 1 && app.run.blind === 0 && !!app.hintShown && app.hintShown.id === (app.run.rules && app.run.rules.chessHabits ? 'faction_peasants_core' : 'faction_peasants');
   for (let n = 0; n < 600 && screen() !== 'shop' && screen() !== 'result'; n++) {
     const sc = screen();
     if (sc === 'select') { if (app.hintShown) { click(app.hintShown.regionId); continue; } click('select:play'); pump(2); continue; }
@@ -2367,7 +2368,7 @@ const acctSeen = { made: 0, fields: 0, keys: 0, name: '', same: 0, records: '', 
 // ── 코어 판(CHM-79): 새 판의 기본 길. 타이틀 → 새 판 → 관 선택 → 대국(목표를 넘긴 뒤에도 이어 두기 · 수를 다 써서 이김 · 짐 · 체크메이트) →
 // 보상 → 상점(격언 · 기보 · 기물 · 팩) → 마스터전 → 상자 → 다음 관 → 판 끝 결과. 자리 규칙 · 잘린 글 · 글 넘침 · 처음 안내는 다른 길과 같이 pump가 잰다.
 // 미리 보기의 값 × 배수(previewDrop · previewCapture — 시작 배수가 든다) · 콤보 중 배수 칸 · 이어 온 배수가 규칙 상태와 같은지도 잰다
-const coreSeen = { runs: 0, select: 0, playOn: 0, nextTier: 0, winMoves: 0, lost: 0, mate: 0, mateMoves: 0, reward: 0, buy: { maxim: 0, chart: 0, piece: 0 }, pack: 0, master: 0, chest: 0, nextHall: 0, result: 0, pv: 0, chain: 0, streak: 0, up: 0, cut: 0, bad: [] };
+const coreSeen = { runs: 0, band: new Set(), shops: 0, select: 0, playOn: 0, nextTier: 0, winMoves: 0, lost: 0, mate: 0, mateMoves: 0, reward: 0, buy: { maxim: 0, chart: 0, piece: 0 }, pack: 0, master: 0, chest: 0, nextHall: 0, result: 0, pv: 0, chain: 0, streak: 0, up: 0, cut: 0, bad: [] };
 const coreBad = (m) => { if (coreSeen.bad.length < 12) coreSeen.bad.push(`${app.run ? `${app.run.ante}:${app.run.blind} ` : ''}${m}`); };
 const drawnText = (k) => LL.LOG.texts.some((x) => x.s === L(k));
 const drawnLike = (re) => LL.LOG.texts.some((x) => re.test(x.s));
@@ -2380,6 +2381,11 @@ function coreSelect() {
   if (drawnText('건너뛰면')) coreBad('「건너뛰면」 글이 있다');
   if (drawnText('시너지') || drawnText('레퍼토리')) coreBad('짜임 칸에 시너지 · 레퍼토리');
   if (!region(`select:board:${run.blind}`)) coreBad('지금 대국 카드에 판 보기가 없다');
+  // 세력 띠: 체스에 없는 버릇은 걷었다 — 버릇이 없는 세력은 주력 적 한 줄(factions.js habitText)
+  { const fa = FACTION_BY_ID[factionFor(run, run.ante)], want = habitText(fa, run.rules);
+    if (!drawnText(want)) coreBad(`세력 띠에 「${want}」가 없다`);
+    if (!fa.habit.chess && drawnText(fa.habit.text)) coreBad(`걷은 버릇 글 「${fa.habit.text}」`);
+    coreSeen.band.add(fa.id); }
   if (run.blind === 2) coreSeen.master++;
   if (run.blind === 0 && run.ante > 1) coreSeen.nextHall++;
   click('select:play'); pump(2);
@@ -2411,6 +2417,8 @@ function coreBattle(plan) {
   const s = app.screen, b = app.run.battle;
   if (s.busy || s.intro || s.banner) { pump(1); return; }
   if (!s.newsCore) { s.newsCore = true; notesOnce('core-battle', 6); if (app.ui.regions.some((r) => r.id.startsWith('fam:'))) coreBad('시너지 띠가 있다'); }
+  if (region('btn:reboard')) coreBad('다시 놓기 단추가 있다');
+  if (b.offering || (s.view.drawn || []).length) coreBad('희생 뒤 탁월수 표(!?)가 있다');
   if (b.status === 'chain') { click(`sq:${s.clickable().list[0]}`); idle(); return; }
   // 이어 온 배수: 콤보가 없을 때 배수 칸 = 규칙의 b.streak
   coreSeen.streak++;
@@ -2444,6 +2452,8 @@ function coreShop() {
   notesOnce('core-shop', 6);
   if (app.ui.regions.some((r) => r.id.startsWith('cons:'))) coreBad('두루마리 칸이 있다');
   if (drawnText('두루마리')) coreBad('「두루마리」 이름표가 있다');
+  if (app.ui.regions.some((r) => r.id.startsWith('shop:hold:'))) coreBad('찜 책갈피가 있다');
+  coreSeen.shops++;
   for (const kind of ['chart', 'maxim', 'piece']) {
     const i = run.shop.display.findIndex((it) => it.kind === kind && !it.sold && canBuy(run, it));
     if (i < 0) continue;
@@ -2498,7 +2508,7 @@ async function coreWalk(seed) {
       }
       continue;
     }
-    if (name === 'reward') { pump(40); notesOnce('core-reward', 3); coreSeen.reward++; if (run.last && run.last.overflow >= 2 && !drawnLike(/^(목표 초과|Overflow)/)) coreBad('넘친 목표 줄이 없다'); click('next'); pump(1); if (screen() === name) click('next'); continue; }
+    if (name === 'reward') { pump(40); for (let i = 0; i < 200 && screen() === 'reward' && app.screen.shown <= app.screen.lines.length; i++) pump(1); pump(2); notesOnce('core-reward', 3); coreSeen.reward++; if (run.last && run.last.overflow >= 2 && !drawnLike(/^(목표 초과|Overflow)/)) coreBad('넘친 목표 줄이 없다'); click('next'); pump(1); if (screen() === name) click('next'); continue; }
     if (name === 'chest') { click('next'); pump(2); notesOnce('core-chest', 4); coreSeen.chest++; click('next'); pump(1); continue; }
     if (name === 'shop') { coreShop(); continue; }
     if (name === 'pack') { corePack(); continue; }
@@ -2515,7 +2525,7 @@ async function coreWalk(seed) {
   seen();
 }
 await coreWalk(SEED + 300);
-log(`  코어 판: ${JSON.stringify({ ...coreSeen, bad: coreSeen.bad.length })}`);
+log(`  코어 판: ${JSON.stringify({ ...coreSeen, band: [...coreSeen.band], bad: coreSeen.bad.length })}`);
 
 seen();
 const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank', 'link', 'account', 'highlight', 'unlocks'];
@@ -2608,10 +2618,10 @@ console.log(`찜: 찜 ${holdSeen.on} · 풀기 ${holdSeen.off} · 옮기기 ${ho
 if (holdSeen.bad.length || !holdSeen.on || !holdSeen.off || !holdSeen.moved || !holdSeen.touch || !holdSeen.carried) { console.log('찜이 어긋났다(책갈피 · 풀기 · 손가락 · 다음 상점 같은 칸)'); fail = true; }
 console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 안내가 떠 있어 쉼 ${keySeen.hint || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);
 if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none || keySeen.many || keySeen.basic || keySeen.own || !keySeen.chip || keySeen.chipBox) { console.log('낱말 상자를 보지 못했거나, 카드를 가리거나, 둘을 넘거나, 기본 낱말을 띄웠다'); fail = true; }
-console.log(`코어 판: 관 선택 ${coreSeen.select} · 마스터전 ${coreSeen.master} · 다음 관 ${coreSeen.nextHall} · 넘긴 뒤 이어 두기 ${coreSeen.playOn}(다음 눈금 ${coreSeen.nextTier}) · 수를 다 써서 이김 ${coreSeen.winMoves} · 짐 ${coreSeen.lost} · 체크메이트 ${coreSeen.mate}(남은 수 ${coreSeen.mateMoves}) · 보상 ${coreSeen.reward} · 산 것 격언 ${coreSeen.buy.maxim} · 기보 ${coreSeen.buy.chart} · 기물 ${coreSeen.buy.piece} · 팩 ${coreSeen.pack} · 상자 ${coreSeen.chest} · 결과 ${coreSeen.result} · 미리 보기 ${coreSeen.pv} · 콤보 중 ${coreSeen.chain} · 쌓임 ${coreSeen.up} · 끊김 ${coreSeen.cut} · 어긋남 ${coreSeen.bad.length}`);
+console.log(`코어 판: 관 선택 ${coreSeen.select} · 마스터전 ${coreSeen.master} · 다음 관 ${coreSeen.nextHall} · 넘긴 뒤 이어 두기 ${coreSeen.playOn}(다음 눈금 ${coreSeen.nextTier}) · 수를 다 써서 이김 ${coreSeen.winMoves} · 짐 ${coreSeen.lost} · 체크메이트 ${coreSeen.mate}(남은 수 ${coreSeen.mateMoves}) · 보상 ${coreSeen.reward} · 산 것 격언 ${coreSeen.buy.maxim} · 기보 ${coreSeen.buy.chart} · 기물 ${coreSeen.buy.piece} · 팩 ${coreSeen.pack} · 상자 ${coreSeen.chest} · 결과 ${coreSeen.result} · 미리 보기 ${coreSeen.pv} · 콤보 중 ${coreSeen.chain} · 쌓임 ${coreSeen.up} · 끊김 ${coreSeen.cut} · 세력 띠 ${[...coreSeen.band].join(',')} · 상점 ${coreSeen.shops} · 어긋남 ${coreSeen.bad.length}`);
 if (coreSeen.bad.length) console.log('  코어 판 어긋난 곳: ' + coreSeen.bad.join(' | '));
 console.log(`  코어 판 처음 안내: ${['streak', 'streakCut', 'playOut'].map((id) => `${id} ${hintsShown.has(id) ? '뜸' : '안 뜸'}`).join(' · ')}`);
-if (coreSeen.bad.length || !coreSeen.select || !coreSeen.master || !coreSeen.nextHall || !coreSeen.playOn || !coreSeen.nextTier || !coreSeen.winMoves || !coreSeen.lost || !coreSeen.mate || !coreSeen.mateMoves || !coreSeen.reward || !coreSeen.buy.maxim || !coreSeen.buy.chart || !coreSeen.buy.piece || !coreSeen.pack || !coreSeen.chest || !coreSeen.result || !coreSeen.pv || !coreSeen.chain || !coreSeen.up) { console.log('코어 판 길을 끝까지 지나지 못했거나 화면이 규칙과 어긋났다'); fail = true; }
+if (coreSeen.bad.length || !coreSeen.select || !coreSeen.master || !coreSeen.nextHall || !coreSeen.playOn || !coreSeen.nextTier || !coreSeen.winMoves || !coreSeen.lost || !coreSeen.mate || !coreSeen.mateMoves || !coreSeen.reward || !coreSeen.buy.maxim || !coreSeen.buy.chart || !coreSeen.buy.piece || !coreSeen.pack || !coreSeen.chest || !coreSeen.result || !coreSeen.pv || !coreSeen.chain || !coreSeen.up || coreSeen.band.size < 2 || !coreSeen.shops) { console.log('코어 판 길을 끝까지 지나지 못했거나 화면이 규칙과 어긋났다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }

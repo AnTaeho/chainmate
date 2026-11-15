@@ -7,12 +7,18 @@ import { isFairy } from '../src/data/pieces.js';
 import { createRun, applyRun, legalRunCommands, blindInfo, battleMods, GEN_RULES } from '../src/sim/run.js';
 import { nearFamilies } from '../src/sim/shop.js';
 import { createRng, int } from '../src/sim/rng.js';
+import { boardFrom, parseSq as S } from '../src/sim/board.js';
+import { createBattle, apply, canReboard, DEFAULT_RULES } from '../src/sim/battle.js';
+import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
+import { mateBlocked } from '../src/sim/tuning.js';
+import { FACTIONS, FACTION_BY_ID, habitText } from '../src/data/factions.js';
+import { table } from './helpers/chain.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const MAXIMS = new Set(CORE.unlocked.maxims);
 // 뼈대 판에 나오면 안 되는 판 · 대국 사건
 const GONE = new Set(['fragment', 'legend', 'goldenPack', 'edition', 'engrave', 'ensoul', 'awaken', 'crack', 'gamble', 'evolve', 'joseki', 'skip',
-  'challenge', 'nemesis', 'nemesisNew', 'nemesisGone', 'traitor', 'exile', 'shatter', 'tactic']);
+  'challenge', 'nemesis', 'nemesisNew', 'nemesisGone', 'traitor', 'exile', 'shatter', 'tactic', 'brilliant', 'reboard', 'hold']);
 
 function chess(t, where) { assert.ok(!isFairy(t), `${where}: 특수 기물 ${t}`); }
 function cells(board, rules, where) {
@@ -26,9 +32,9 @@ function cells(board, rules, where) {
     if (c.t === 'X') walls++;
     else chess(c.t, where);
   }
-  // 벽은 세력 버릇(돌기둥 · 성벽 한 줄)에서만
-  const habit = (rules && rules.walls ? rules.walls[1] : 0) + (rules && rules.wallRow ? 7 : 0);
-  assert.ok(walls <= habit, `${where}: 버릇 밖의 벽 ${walls}`);
+  // 코어 판에는 벽이 없다(돌기둥 · 성벽 버릇도 걷었다)
+  assert.equal(walls, 0, `${where}: 벽 ${walls}`);
+  assert.ok(!rules || (!rules.walls && !rules.wallRow && !rules.pawnSides), `${where}: 체스에 없는 세력 버릇`);
 }
 function bagPiece(p, where) { chess(p.t, where); assert.ok(!p.soul && !p.eng, `${where}: 혼 · 각인`); }
 function item(it, where) {
@@ -54,12 +60,24 @@ function look(run, events, stats) {
     assert.ok(!legalRunCommands(run).some((c) => c.type === 'skip'), `${where}: 건너뛰기`);
     assert.throws(() => applyRun(clone(run), { type: 'skip' }));
   }
+  assert.ok(!legalRunCommands(run).some((c) => c.type === 'hold'), `${where}: 찜`);
+  assert.equal(run.hold, null, `${where}: 찜`);
+  if (run.phase === 'shop' && run.shop.display.length) assert.throws(() => applyRun(clone(run), { type: 'hold', slot: 0 }), /no hold/);
   // 지어 둔 판의 규칙(벽 · 성벽 버릇)은 판 짓기 열쇠 gen에 실려 있다
   const genRules = (lay) => { const v = JSON.parse(lay.gen); return Object.fromEntries(GEN_RULES.map((k, i) => [k, v[i]])); };
   for (const lay of run.boards || []) if (lay) cells(lay.board, genRules(lay), `${where} 판 보기`);
   const b = run.battle;
   if (b) {
     cells(b.board, b.rules, `${where} 대국`);
+    // 외통 조건 · 탁월수 · 다시 놓기 없음, 안개는 사냥꾼 두령(마스터 규칙)만
+    assert.equal(b.rules.mateLimit, false, where);
+    assert.equal(b.rules.brilliant, false, where);
+    assert.equal(b.rules.reboards, 0, where);
+    assert.ok(!canReboard(b), `${where}: 다시 놓기`);
+    assert.equal(b.offering, null, `${where}: 기다리는 희생`);
+    assert.ok(!b.brilliants || !b.brilliants.length, `${where}: 탁월수`);
+    assert.ok(!b.rules.fog || (b.rules.fog === 3 && b.mods.some((m) => m.id === 'fog')), `${where}: 숲 안개`);
+    assert.ok(!mateBlocked(b.chain, b.rules), `${where}: 킹 못 잡음`);
     assert.ok(!b.challenge && !b.nem, `${where}: 도전 · 숙적`);
     assert.ok(!b.mods.some((m) => String(m.id).startsWith('family:') || String(m.id).startsWith('edition:')), `${where}: 시너지 · 판본 조정자`);
     for (const x of [...(b.incoming || []), ...(b.incomingNext || [])]) chess(x.t, `${where} 증원`);
@@ -79,11 +97,11 @@ function look(run, events, stats) {
     if (e.type === 'chest') { stats.chests++; for (const it of e.items) assert.ok(CORE.keep.chest.includes(it.kind), `${where}: 상자 칸 ${it.kind}`); }
     if (e.type === 'piece') chess(e.piece, `${where} 얻은 기물`);
     if (e.type === 'reinforce') chess(e.piece, `${where} 증원`);
-    if (e.type === 'brilliant') stats.brilliant++;
+    if (e.type === 'discard') { stats.discards++; assert.ok(!('offering' in e), `${where}: 희생 사건의 탁월수 표`); }
   }
 }
 
-const newStats = () => ({ battles: new Set(), shop: new Set(), chests: 0, brilliant: 0 });
+const newStats = () => ({ battles: new Set(), shop: new Set(), chests: 0, discards: 0 });
 // 무작위 정책(합법 명령만). 대국은 남은 수가 둘이면 목표를 0으로 내려 판이 끝 관까지 가게 한다(상자 · 4관부터의 특성 자리를 지나게)
 function drive(run, stats = newStats(), { until = 99 } = {}) {
   const r = createRng((run.seed * 2654435761) >>> 0);
@@ -129,25 +147,104 @@ test('뼈대 판을 무작위로 끝까지: 덜어 낸 것이 진열 · 꾸러�
   assert.ok(far >= 8, '끝 관까지 간 판이 있다');
   assert.ok(stats.chests >= 4, '마스터의 상자를 열었다');
   assert.deepEqual([...stats.shop].sort(), ['chart', 'maxim', 'piece'], '진열 세 종류를 다 봤다');
+  assert.ok(stats.discards > 10, '희생을 여러 번 했다');
 });
 
-test('세력 버릇은 그대로: 수도원 돌기둥 · 성채 성벽은 서고, 무작위 보석 · 벽 · 특성은 없다', () => {
-  let abbey = 0, fort = 0;
+test('세력 버릇: 체스에 없는 버릇(옆 칸 폰 · 돌기둥 · 성벽 · 숲 · 특성)은 걷고 적 구성만, 기병대 · 전령단 · 왕궁 근위는 남는다', () => {
+  const seen = new Set();
   for (const seed of [2, 5, 8, 13]) {
     const run = createRun({ seed, core: true });
-    for (let ante = 2; ante <= 7; ante++) {
+    for (let ante = 1; ante <= 8; ante++) {
       run.ante = ante; run.blind = 0; run.boards = null; run.phase = 'select';
-      const f = blindInfo(run).faction;
-      applyRun(run, { type: 'play' });
-      const xs = run.battle.board.filter((c) => c && c.t === 'X').length;
-      if (f === 'abbey') { abbey++; assert.ok(xs >= 3 && xs <= 5, `돌기둥 ${xs}`); }
-      else if (f === 'fortress') { fort++; assert.ok(xs >= 5, `성벽 ${xs}`); }
-      else assert.equal(xs, 0, `${f}: 벽`);
-      assert.ok(run.battle.board.every((c) => !c || (!c.trait && c.t !== 'J')));
+      const f = blindInfo(run).faction, r = (applyRun(run, { type: 'play' }), run.battle.rules);
+      seen.add(f);
+      assert.equal(run.battle.board.filter((c) => c && c.t === 'X').length, 0, `${f}: 벽`);
+      assert.ok(!r.pawnSides && !r.walls && !r.wallRow && !r.fog, `${f}: 걷은 버릇`);
+      assert.deepEqual(r.mix, FACTION_BY_ID[f].mix, `${f}: 적 구성은 남는다`);
+      if (f === 'cavalry') { assert.deepEqual(r.reinforceMix, { N: 4, L: 2 }); for (const x of run.battle.incoming) assert.equal(x.t, 'N', '증원은 나이트만(낙타는 코어 판에 없다)'); }
+      if (f === 'heralds') { assert.equal(r.reinforceBonus, 1); assert.equal(r.lookahead, 2); }
+      if (f === 'royal') assert.equal(r.guardsBonus, 1);
       run.battle = null;
     }
   }
-  assert.ok(abbey > 0 && fort > 0);
+  assert.ok(['abbey', 'fortress', 'hunters', 'cavalry', 'heralds'].every((f) => seen.has(f)), [...seen].join(' '));
+  // 옛 판은 버릇 그대로
+  const plain = createRun({ seed: 2, draft: false });
+  for (let ante = 2; ante <= 7; ante++) {
+    plain.ante = ante; plain.blind = 0; plain.boards = null; plain.phase = 'select';
+    const f = blindInfo(plain).faction;
+    applyRun(plain, { type: 'play' });
+    const r = plain.battle.rules;
+    if (f === 'abbey') assert.ok(r.walls);
+    if (f === 'fortress') assert.ok(r.wallRow);
+    if (f === 'hunters') assert.equal(r.fog, 2);
+    plain.battle = null;
+  }
+  assert.equal(createBattle({ seed: 1, mods: [{ id: 'faction:peasants' }] }).rules.pawnSides, true, '옛 판 농민군');
+});
+
+test('세력 버릇 글: 코어 판에서 버릇이 없는 세력은 주력 적 한 줄, 옛 판은 버릇 글', () => {
+  const core = { chessHabits: true };
+  const want = { peasants: '폰이 많이 나온다', abbey: '비숍이 많이 나온다', fortress: '룩이 많이 나온다', hunters: '나이트가 많이 나온다', mercs: '폰이 적게 나온다', cavalry: '증원으로 나이트만 온다' };
+  for (const f of FACTIONS) {
+    assert.equal(habitText(f, null), f.habit.text);
+    assert.equal(habitText(f, core), want[f.id] || f.habit.text, f.id);
+    assert.equal(!!f.habit.chess, ['cavalry', 'heralds', 'royal'].includes(f.id), f.id);
+  }
+  assert.equal(createRun({ seed: 1, core: true }).rules.chessHabits, true);
+});
+
+test('외통 조건: 코어 판은 킹을 지키던 적을 둘 잡은 콤보로도 킹을 잡는다, 옛 판은 못 잡는다', () => {
+  // h8 킹을 h1 룩 · a1 비숍이 지킨다. d1 룩으로 떨궈 h1 → a1을 잡으면 비숍 모습으로 h8이 열린다(test/mate.test.js와 같은 장면)
+  const scene = (rules) => {
+    const t = table({ h8: 'K', h1: 'R', a1: 'B' });
+    t.rules = rules;
+    startChain(t, { type: 'R', sq: S('d1') });
+    chainCapture(t, S('h1'));
+    chainCapture(t, S('a1'));
+    return t;
+  };
+  const old = scene({});
+  assert.deepEqual(chainCaptures(old), []);
+  const core = scene({ mateLimit: false });
+  assert.ok(!mateBlocked(core.chain, core.rules));
+  assert.deepEqual(chainCaptures(core), [S('h8')]);
+  assert.equal(chainCapture(core, S('h8')).at(-1).reason, 'mate');
+  assert.equal(DEFAULT_RULES.mateLimit, true);
+});
+
+test('희생: 코어 판은 바치고 다시 뽑기만 — 새로 뽑은 기물의 메이트도 탁월수가 아니다', () => {
+  const P = (t, id) => ({ t, id, eng: null });
+  const gamble = (rules) => {
+    const b = createBattle({ seed: 3, rules });
+    b.board = boardFrom({ e5: 'K' });
+    b.hand = [P('Q', 4), P('R', 2), P('P', 3), P('P', 10)];
+    b.bag = [P('N', 5), P('P', 6), P('P', 7), P('P', 8)];
+    b.incoming = []; b.incomingNext = [];
+    const ev = apply(b, { type: 'discard', handIndices: [0] });
+    apply(b, { type: 'drop', handIndex: b.hand.findIndex((p) => p.id === 5), sq: S('d3') });
+    return { b, ev: [...ev, ...apply(b, { type: 'capture', sq: S('e5') })] };
+  };
+  const core = gamble({ brilliant: false });
+  assert.equal(core.b.offering, null);
+  assert.ok(!core.ev.some((e) => e.type === 'brilliant'));
+  assert.deepEqual(core.b.offered.map((p) => p.id), [4], '바친 퀸은 돌아오지 않는다');
+  assert.equal(core.b.result.reason, 'mate');
+  const old = gamble({});
+  assert.ok(old.ev.some((e) => e.type === 'brilliant'));
+  assert.ok(old.b.score > core.b.score, '옛 판은 탁월수 배수가 곱해진다');
+});
+
+test('다시 놓기 · 찜: 코어 판에는 없다, 옛 판은 그대로', () => {
+  const core = createRun({ seed: 4, core: true });
+  applyRun(core, { type: 'play' });
+  assert.equal(core.battle.rules.reboards, 0);
+  assert.ok(!canReboard(core.battle));
+  assert.throws(() => apply(clone(core.battle), { type: 'reboard' }));
+  assert.equal(core.core.off.hold, true);
+  const plain = createRun({ seed: 4, draft: false });
+  applyRun(plain, { type: 'play' });
+  assert.ok(canReboard(plain.battle));
 });
 
 test('시너지: 칩이 문턱을 넘어도 뼈대 판에선 조정자 · 끌어당김이 켜지지 않는다', () => {

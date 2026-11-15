@@ -15,7 +15,7 @@ import { createRng, fork } from './rng.js';
 import { generateBoard } from './setup.js';
 import { UP, ABSORB } from '../data/souls.js';
 import { brilliantMult } from '../data/sacrifice.js';
-import { MATE, mateBlocked, NEMESIS } from './tuning.js';
+import { guardLimit, mateBlocked, NEMESIS } from './tuning.js';
 
 const NO_OPTS = {};
 // 판에 이형 적이 없으면(t.fairyFree) 노림 판정의 이형 줄을 건너뛴다(탐색 마디마다 25%를 쓰던 곳)
@@ -105,7 +105,7 @@ export function chainCaptures(t) {
     }
   }
   // 외통 조건: 이 콤보에서 킹을 지키던 적을 guardLimit보다 많이 잡았으면 킹은 못 잡는다(폭약 · 화약병 · 순교자로 터진 적은 세지 않는다)
-  if (mateBlocked(c) && !bo.openKings) list = list.filter((s) => t.board[s].t !== 'K');
+  if (mateBlocked(c, t.rules) && !bo.openKings) list = list.filter((s) => t.board[s].t !== 'K');
   if (c.forced) list = list.filter((s) => c.forced.includes(s));
   if (list.length && ((t.mods && t.mods.length) || c.engraving || c.soul)) {
     list = list.filter((s) => runHook(t, 'allowCapture', { from: c.sq, to: s, piece: t.board[s].t, form: c.form }));
@@ -152,7 +152,7 @@ export function chainCapture(t, sq, legal = false) {
   const via = pathVia(board, move, from, sq);
   const at = formBefore === 'S' ? from : landingOf(board, move, from, sq);
   const stay = at === from;
-  if (MATE.guardLimit !== Infinity && target.t !== 'K' && guardsKing(t, sq)) c.guardsTaken = (c.guardsTaken || 0) + 1;
+  if (guardLimit(t.rules) !== Infinity && target.t !== 'K' && guardsKing(t, sq)) c.guardsTaken = (c.guardsTaken || 0) + 1;
   board[sq] = null;
   board[from] = null;
   board[at] = { t: c.form, mine: true };
@@ -449,7 +449,7 @@ function finish(t, reason, events) {
   c.awaiting = false;
   runHook(t, 'onChainEnd', { reason }, events);
   // 탁월수 !!: 바친 바로 다음 사슬이 체크메이트로 끝났다 — 마지막 배수에 ×(1 + 바친 무게)
-  if (reason === 'mate' && c.offerWeight) {
+  if (reason === 'mate' && c.offerWeight && !(t.rules && t.rules.brilliant === false)) {
     const x = brilliantMult(c.offerWeight);
     c.mult *= x;
     events.push({ type: 'score', src: 'brilliant', xmult: x });

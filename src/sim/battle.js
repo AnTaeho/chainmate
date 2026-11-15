@@ -41,6 +41,9 @@ export const DEFAULT_RULES = {
   streakCut: 'reset', // 끊김으로 끝난 콤보 뒤 이어 온 수: 'reset' 0으로 · 'half' 절반(내림) · 'keep' 그대로(끊긴 콤보에서 잡은 수만 안 더한다)
   enemyMult: 1,     // 코어 판: 처음 판의 적 가운데 킹 · 킹을 지키는 적 밖의 수에 곱한다(setup.js generateBoard, 반올림)
   reinforceAdd: 0,  // 코어 판: 수마다 증원에 더한다(관별 셈 · 단 덤 위에)
+  mateLimit: true,  // 외통 조건(tuning.js MATE.guardLimit). 코어 판 false — 아무도 지키지 않는 킹은 잡는다
+  brilliant: true,  // 탁월수(희생으로 뽑은 기물의 메이트 배수). 코어 판 false — 희생은 바치고 다시 뽑기만
+  chessHabits: false, // 코어 판: 세력 버릇은 체스에 있는 것만(factions.js habit.chess)
 };
 
 // 희생(CHM-35): 바친 기물은 b.offered(이번 대국 동안 덱으로 돌아오지 않는다), 다음 수를 기다리는 희생은 b.offering.
@@ -445,12 +448,14 @@ export function apply(b, cmd) {
       b.discardsLeft--;
       b.discardsUsed++;
       b.discarded += gone.length;
-      for (const p of gone) b.offering = addOffering(b.offering, p.t);
+      // 코어 판(rules.brilliant false): 기다리는 희생(b.offering)을 두지 않는다 — 탁월수 · 「!?」가 없다
+      const brill = b.rules.brilliant !== false;
+      if (brill) for (const p of gone) b.offering = addOffering(b.offering, p.t);
       const had = new Set(b.hand.map((p) => p.id));
       draw(b);
       // 희생으로 새로 뽑은 기물: 이것으로 시작한 다음 사슬이 체크메이트면 탁월수
-      b.offering.drawn = [...(b.offering.drawn || []), ...b.hand.filter((p) => !had.has(p.id)).map((p) => p.id)];
-      events.push({ type: 'discard', pieces: gone.map((p) => p.t), offering: { ...b.offering } });
+      if (brill) b.offering.drawn = [...(b.offering.drawn || []), ...b.hand.filter((p) => !had.has(p.id)).map((p) => p.id)];
+      events.push({ type: 'discard', pieces: gone.map((p) => p.t), ...(brill ? { offering: { ...b.offering } } : {}) });
       checkStuck(b, events);
       break;
     }

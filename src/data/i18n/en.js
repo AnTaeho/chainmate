@@ -428,6 +428,12 @@ export const EN = {
   '전령단 땅이야. 증원이 하나 더 와': 'Herald land. One more recruit each move',
   '용병단 땅이야. 적 특성이 두 배로 붙어': 'Mercenary land. Enemy traits twice as often',
   '왕궁 근위 땅이야. 킹을 지키는 적이 하나 더 있어': 'Royal land. Every king has one more guard',
+  // 코어 판: 버릇 없는 세력의 주력 적 · 낙타가 빠진 기병대
+  '증원으로 나이트만 온다': 'Recruits are all knights', '폰이 많이 나온다': 'Lots of pawns', '나이트가 많이 나온다': 'Lots of knights',
+  '비숍이 많이 나온다': 'Lots of bishops', '룩이 많이 나온다': 'Lots of rooks', '퀸이 많이 나온다': 'Lots of queens', '폰이 적게 나온다': 'Fewer pawns',
+  '농민군 땅이야. 폰이 많이 나와': 'Peasant land. Lots of pawns', '기병대 땅이야. 증원으로 나이트만 와': 'Cavalry land. Recruits are all knights',
+  '수도원 땅이야. 비숍이 많이 나와': 'Abbey land. Lots of bishops', '성채 땅이야. 룩이 많이 나와': 'Fortress land. Lots of rooks',
+  '숲 사냥꾼 땅이야. 나이트가 많이 나와': 'Huntsmen land. Lots of knights', '용병단 땅이야. 폰이 적게 나와': 'Mercenary land. Fewer pawns',
   '마스터 대가를 이기면 클리어': 'Beat the Grandmaster to win the run', '다음 관': 'Next hall',
   // ── 명인
   '철벽': 'Iron Wall', '적 폰이 좌우 옆 칸도 지킨다': 'Enemy pawns also guard the squares beside them',

@@ -221,6 +221,7 @@ function chooseSacrifice(b, per, best, draws, { u, S0, S1, need, mateWins, futur
   const total = draws.reduce((a, d) => a + d.n, 0);
   const q = b.movesLeft > 1 ? SAC.keep : 0;
   const base = b.offering && b.offering.weight ? b.offering.weight : 0;
+  const brill = !(b.rules && b.rules.brilliant === false); // 코어 판은 탁월수가 없다(메이트도 그 점수 그대로)
   let pick = null;
   b.hand.forEach((piece, i) => {
     if (i === best.handIndex) return;
@@ -229,7 +230,7 @@ function chooseSacrifice(b, per, best, draws, { u, S0, S1, need, mateWins, futur
     let now = 0, kept = 0;
     for (const d of draws) {
       // 뽑은 기물이 메이트를 내면 탁월수: 목표가 있는 대국이면 이긴다, 없으면 배수 비율만큼 점수
-      const v = d.mate ? (mateWins ? need : u(Math.floor((d.score * x) / d.probe))) : u(d.score);
+      const v = d.mate ? (mateWins ? need : brill ? u(Math.floor((d.score * x) / d.probe)) : u(d.score)) : u(d.score);
       now += d.n * Math.max(S1, v);
       kept += d.n * Math.min(S1, d.mate && mateWins ? S1 : u(d.score)); // 이번에 안 쓴 쪽이 손에 남는다(탁월수 몫은 이번 수뿐)
     }

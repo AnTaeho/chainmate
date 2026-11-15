@@ -390,6 +390,7 @@ function tagPack(run, policy, r) {
 // 다음 상점에서는 넘어온 카드도 다른 카드와 똑같이 사거나 말거나 판단한다(따로 다루지 않는다)
 export const HOLD = { discount: 0.8, floor: 0.08, slot: 0.06 };
 function holdChoice(run, ctx) {
+  if (coreOff(run, 'hold')) return; // 코어 판은 찜이 없다
   const build = buildOf(run);
   const base = Math.max(1, ctx.score(build));
   let best = null;

@@ -17,8 +17,10 @@ export const reboardOn = () => !!BOARD_TUNING.reboard;
 // 외통 조건(docs/reports/mate.md). guardLimit: 한 콤보에서 킹을 지키던 적을 이만큼 넘게 잡았으면 그 콤보로는 킹을 못 잡는다(Infinity = 옛 규칙).
 //   하네스는 --tune '{"mate":{"guardLimit":…}}'(run.mjs) · --mate '{…}'(sim.mjs)로 바꿔 잰다.
 export const MATE = { guardLimit: 1 };
-// 이 콤보로는 킹을 못 잡나(규칙 chain.js chainCaptures · 화면 표시가 같이 쓴다)
-export const mateBlocked = (c) => !!c && !c.done && c.guardsTaken > MATE.guardLimit;
+// 대국의 외통 조건 한도: 대국 규칙 깃발 rules.mateLimit === false(코어 판)면 없다 — 아무도 지키지 않는 킹은 잡는다
+export const guardLimit = (rules) => (rules && rules.mateLimit === false ? Infinity : MATE.guardLimit);
+// 이 콤보로는 킹을 못 잡나(규칙 chain.js chainCaptures · 화면 표시가 같이 쓴다). rules = 대국 규칙
+export const mateBlocked = (c, rules) => !!c && !c.done && c.guardsTaken > guardLimit(rules);
 
 // 대국 도전(src/data/challenges.js, 보고서 docs/reports/goty.md). on: 끄면 도전이 붙지 않는다(옛 판과 같은 판) ·
 // kinds: 도전이 붙는 대국 종류(마스터전은 마스터 규칙이 그 자리를 쓴다) · reward: 이루면 대국이 끝날 때 받는 상금

@@ -9,14 +9,18 @@ export const CORE = {
   //   playOut: 목표를 넘겨도 수를 다 쓴다(battle.js endMove) · streak: 이어 잡은 수가 다음 콤보의 시작 배수(chain.js startChain)
   //   streakCut: 끊김으로 끝난 콤보 뒤 — 'keep' 쌓인 수는 남고 끊긴 콤보에서 잡은 수만 안 더한다('reset' 0 · 'half' 절반)
   //   enemyMult · reinforceAdd: 처음 판은 킹 · 지키는 적 밖의 적을 절반으로, 증원은 수마다 +3 — 판이 차오르다 마지막 수에 쓸어 낸다
-  rules: { pieces: [], traits: false, randomThings: false, playOut: true, streak: true, streakCut: 'keep', enemyMult: 0.5, reinforceAdd: 3 },
+  //   mateLimit: false — 외통 조건 없음(아무도 지키지 않는 킹은 잡는다, tuning.js mateBlocked) · brilliant: false — 희생은 바치고 다시 뽑기만(탁월수 · 「!?」 없음)
+  //   chessHabits: 세력 버릇은 체스에 있는 것만(factions.js habit.chess) · reboards: 0 — 다시 놓기 없음
+  rules: { pieces: [], traits: false, randomThings: false, playOut: true, streak: true, streakCut: 'keep', enemyMult: 0.5, reinforceAdd: 3, mateLimit: false, brilliant: false, chessHabits: true, reboards: 0 },
   // 넘친 목표 덤(run.js endBattle, 가장 높은 층 하나): 코어 판은 끝까지 두니 ×2부터 준다
   overflow: { 2: 1, 5: 2, 10: 4 },
-  // 관별 목표 기준(run.js B 대신, 종류 · 마스터 · 단 배율과 끝없는 대국 성장은 그대로 곱한다). smart 100판(--core, 끊김 뒤 keep · 차오르는 판)으로 맞춘 값 — 판 승률 36%
-  B: [200, 750, 2400, 5000, 9500, 20000, 34000, 140000],
+  // 관별 목표 기준(run.js B 대신, 종류 · 마스터 · 단 배율과 끝없는 대국 성장은 그대로 곱한다). 잘 두는 봇(--look 8) 200판 87.5% · 관별 통과 94.6% 이상으로 맞춘 값(기본 봇 60%)
+  B: [350, 1500, 2800, 6000, 12000, 26500, 45000, 128000],
+  // 관별 마스터 덧배율(run.js MASTER_MULT 대신, 종류 배율 마스터 ×2 위에). null이면 옛 판과 같은 MASTER_MULT
+  masterMult: [1.7, 0.4, 0.45, 0.45, 0.43, 0.31, 0.344, 0.74],
   consumableSlots: 0,
-  // 판 쪽 깃발(run.core.off): 금빛 적 · 연줄 · 대국 도전 · 숙적 · 건너뛰기와 패 · 명경기 조각과 전설 · 격언 판본 · 시너지 조정자와 끌어당김
-  off: { golden: true, pity: true, challenge: true, nemesis: true, skip: true, legends: true, editions: true, families: true },
+  // 판 쪽 깃발(run.core.off): 금빛 적 · 연줄 · 대국 도전 · 숙적 · 건너뛰기와 패 · 명경기 조각과 전설 · 격언 판본 · 시너지 조정자와 끌어당김 · 찜
+  off: { golden: true, pity: true, challenge: true, nemesis: true, skip: true, legends: true, editions: true, families: true, hold: true },
   // 남기는 종류(run.core.keep): 상점 진열 · 꾸러미 · 마스터의 상자 칸
   keep: { shop: ['maxim', 'chart', 'piece'], packs: ['piece', 'chart'], chest: ['money', 'chart'] },
 };

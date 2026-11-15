@@ -2,7 +2,8 @@
 // 세력마다 네 가지가 다르다(그리고 모습 look: 상자 면 · 판 어두운 칸 · 흐르는 얼룩 두 빛깔 — 판 안 화면이 이 빛깔로 바뀐다, layout.md 27절).
 //   주력 적  mix     관별 적 무게(setup.js enemyWeights)에 곱하는 수. fairy 키는 이형 전부에 곱한다
 //   고유 적  unique  1관부터 조금씩 섞이는 이형(무게는 관마다 는다, setup.js UNIQUE)
-//   버릇     habit   그 관의 모든 대국에 붙는 규칙 하나. 조정자 `faction:<id>`(kind faction)가 대국 규칙 깃발을 세운다
+//   버릇     habit   그 관의 모든 대국에 붙는 규칙 하나. 조정자 `faction:<id>`(kind faction)가 대국 규칙 깃발을 세운다.
+//                    chess: 체스에 있는 버릇(코어 판 rules.chessHabits에서도 선다) · chessText: 코어 판 글(특수 기물이 빠져 글이 달라질 때)
 //   우두머리 boss    명인 대국의 규칙. 옛 명인 여덟(masters.js)을 그대로 옮겼다 — 조정자 id가 같아 옛 저장이 그대로 읽힌다
 // 규칙 코드는 세력 id를 모른다: 깃발(rules.mix · unique · pawnSides · reinforceMix · walls · wallRow · fog · reinforceBonus · lookahead
 // · traitMult · traitFrom · guardsBonus)만 본다.
@@ -19,7 +20,7 @@ function faction(id, f) {
       const r = ctx.rules;
       if (mix) r.mix = { ...mix };
       if (unique) r.unique = { ...unique };
-      habit.apply(r);
+      if (!r.chessHabits || habit.chess) habit.apply(r); // 코어 판: 체스에 없는 버릇은 걷고 적 구성만
     },
   });
 }
@@ -38,7 +39,7 @@ faction('cavalry', {
   name: '기병대', crest: 'horseshoe', hue: '#c07a3a',
   look: { face: '#48294c', dark: '#a57cab', flow: ['#70297a', '#452664'] },
   mix: { P: 0.9, N: 2.8, B: 0.6, R: 0.6, Q: 0.6 }, unique: { L: 1.6 },
-  habit: { text: '증원으로 나이트와 낙타만 온다', apply(r) { r.reinforceMix = { N: 4, L: 2 }; } },
+  habit: { text: '증원으로 나이트와 낙타만 온다', chess: true, chessText: '증원으로 나이트만 온다', apply(r) { r.reinforceMix = { N: 4, L: 2 }; } },
   boss: 'mirror',
 });
 faction('abbey', {
@@ -66,7 +67,7 @@ faction('heralds', {
   name: '전령단', crest: 'horn', hue: '#5a8ec8',
   look: { face: '#233357', dark: '#7886a5', flow: ['#29417a', '#2a2664'] },
   mix: { P: 0.4, N: 0.8, B: 1, R: 0.4, Q: 0.3 }, unique: { E: 4, V: 2 },
-  habit: { text: '증원 +1 · 두 수 앞까지 보인다', apply(r) { r.reinforceBonus = (r.reinforceBonus || 0) + 1; r.lookahead = Math.max(r.lookahead || 1, 2); } },
+  habit: { text: '증원 +1 · 두 수 앞까지 보인다', chess: true, apply(r) { r.reinforceBonus = (r.reinforceBonus || 0) + 1; r.lookahead = Math.max(r.lookahead || 1, 2); } },
   boss: 'hourglass',
 });
 faction('mercs', {
@@ -80,11 +81,27 @@ faction('royal', {
   name: '왕궁 근위', crest: 'crown', hue: '#b04a6a',
   look: { face: '#532231', dark: '#a7818f', flow: ['#7a2941', '#64264f'] },
   mix: { P: 1.3, N: 0.6, B: 0.6, R: 0.9, Q: 1.7 }, unique: { Z: 0.3, T: 0.6 },
-  habit: { text: '킹을 지키는 적 +1', apply(r) { r.guardsBonus = (r.guardsBonus || 0) + 1; } },
+  habit: { text: '킹을 지키는 적 +1', chess: true, apply(r) { r.guardsBonus = (r.guardsBonus || 0) + 1; } },
   boss: 'grandmaster',
 });
 
 export const FACTION_BY_ID = Object.fromEntries(FACTIONS.map((f) => [f.id, f]));
+
+// 주력 적 한 줄(코어 판에서 버릇이 없는 세력): mix에서 가장 크게 곱한 체스 기물. 곱이 모두 1 이하면 가장 작게 곱한 것을 「적게」로
+const SUBJ = { P: '폰이', N: '나이트가', B: '비숍이', R: '룩이', Q: '퀸이' };
+export function mainEnemyText(f) {
+  const xs = Object.entries(f.mix || {}).filter(([t]) => SUBJ[t]);
+  if (!xs.length) return '';
+  const hi = xs.reduce((a, x) => (x[1] > a[1] ? x : a));
+  if (hi[1] > 1) return `${SUBJ[hi[0]]} 많이 나온다`;
+  const lo = xs.reduce((a, x) => (x[1] < a[1] ? x : a));
+  return `${SUBJ[lo[0]]} 적게 나온다`;
+}
+// 세력 띠 · 말풍선의 버릇 글. rules = 판(런) 규칙(코어 판이면 chessHabits)
+export function habitText(f, rules) {
+  if (!(rules && rules.chessHabits)) return f.habit.text;
+  return f.habit.chess ? f.habit.chessText || f.habit.text : mainEnemyText(f);
+}
 export const FIRST_FACTION = 'peasants';
 export const FINAL_FACTION = 'royal';
 // 2~7관에 섞는 여섯

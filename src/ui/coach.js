@@ -60,6 +60,13 @@ export const HINTS = {
   faction_heralds: '전령단 땅이야. 증원이 하나 더 와',
   faction_mercs: '용병단 땅이야. 적 특성이 두 배로 붙어',
   faction_royal: '왕궁 근위 땅이야. 킹을 지키는 적이 하나 더 있어',
+  // 코어 판(rules.chessHabits): 버릇이 없는 세력은 주력 적(factions.js mainEnemyText), 기병대는 낙타가 빠진 글
+  faction_peasants_core: '농민군 땅이야. 폰이 많이 나와',
+  faction_cavalry_core: '기병대 땅이야. 증원으로 나이트만 와',
+  faction_abbey_core: '수도원 땅이야. 비숍이 많이 나와',
+  faction_fortress_core: '성채 땅이야. 룩이 많이 나와',
+  faction_hunters_core: '숲 사냥꾼 땅이야. 나이트가 많이 나와',
+  faction_mercs_core: '용병단 땅이야. 폰이 적게 나와',
 };
 
 // 조작 안내의 그림 칸(U-6 — 「그림 + 동사 한 줄」): 말풍선 머리줄 오른끝에 손가락 하나. tap 누르기 · drag 끌기(글이 「누르면」 · 「끌면」인 안내)

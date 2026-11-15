@@ -166,9 +166,10 @@ export function danRules(dan) {
 }
 
 // curve: 관별 기준(코어 판은 CORE.B — curveOf)
-export function targetFor(ante, kind, mult = 1, curve = B) {
+// masters: 관별 마스터 덧배율(코어 판은 CORE.masterMult — mastersOf)
+export function targetFor(ante, kind, mult = 1, curve = B, masters = MASTER_MULT) {
   const base = ante <= ANTES ? curve[ante - 1] : curve[ANTES - 1] * ENDLESS_GROWTH ** (ante - ANTES);
-  const raw = base * KIND_MULT[kind] * (kind === 'master' ? MASTER_MULT[ante - 1] ?? 1 : 1) * mult;
+  const raw = base * KIND_MULT[kind] * (kind === 'master' ? masters[ante - 1] ?? 1 : 1) * mult;
   // 보기 좋게: 유효 숫자 둘
   const mag = 10 ** Math.max(0, Math.floor(Math.log10(raw)) - 1);
   return Math.round(raw / mag) * mag;
@@ -176,6 +177,7 @@ export function targetFor(ante, kind, mult = 1, curve = B) {
 
 // 판의 목표 곡선: 코어 판은 자기 곡선(src/data/core.js)
 export const curveOf = (run) => (run && run.core ? CORE.B : B);
+export const mastersOf = (run) => (run && run.core && CORE.masterMult ? CORE.masterMult : MASTER_MULT);
 
 // 관의 세력(docs/design-notes/factions.md): 1관 농민군 · 8관 왕궁 근위 고정, 2~7관은 판 시드로 섞은 여섯. 끝없는 대국은 관마다 아무 세력
 export function factionFor(run, ante) {
@@ -234,7 +236,7 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
   const mult = (st ? st.target * (master && faction === FINAL_FACTION ? st.finalTarget : 1) : 1) * josekiTargetMult(run);
   return {
     ante, blind, kind,
-    target: targetFor(ante, kind, mult, curveOf(run)),
+    target: targetFor(ante, kind, mult, curveOf(run), mastersOf(run)),
     faction,
     master,
     tag: kind === 'master' || coreOff(run, 'skip') ? null : tagFor(run, ante, blind),
@@ -1031,6 +1033,7 @@ export function applyRun(run, cmd) {
     // 봇은 떠날 때 따로 판단해 부른다(tools/shopbot.mjs holdChoice) — random 봇이 마구 누르지 않게 legalRunCommands에는 넣지 않는다.
     case 'hold': {
       need('shop');
+      if (coreOff(run, 'hold')) throw new Error('no hold in core'); // 코어 판은 찜이 없다
       const it = run.shop.display[cmd.slot];
       if (!it || it.sold) throw new Error('nothing to hold');
       if (run.hold && run.hold.slot === cmd.slot) {

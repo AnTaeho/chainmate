@@ -2,7 +2,7 @@
 // 떠나온 상점이 있으면 위 띠 왼쪽에 「상점」(돌아가 더 살 수 있다 — 진열 · 꾸러미는 떠날 때 그대로).
 // 판 보기(CHM-61, layout.md 17절): 지금 · 남은 대국 카드마다 작은 판(두기를 누르면 열릴 그 판), 카드를 가리키면 왼쪽 칸에 크게.
 import { richText } from '../glossary.js';
-import { hint } from '../coach.js';
+import { hint, HINTS } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { H, text, box, rect, rrect, rframe, fitNum, measure, R_SM } from '../../render/gfx.js';
 import { beat, LOOK } from '../../render/look.js';
@@ -22,7 +22,7 @@ import { MAIN, TOP, BTN_H, BTN_S, PAD_CARD, LINE, GAP_IN, GAP_GROUP, SP, flow, t
 import { openBox, closeBox } from '../../render/layoutlog.js';
 import { tipLines, fitText } from '../parts.js';
 import { drawPortrait } from '../../render/portraits.js';
-import { FACTION_BY_ID, bossOf } from '../../data/factions.js';
+import { FACTION_BY_ID, bossOf, habitText } from '../../data/factions.js';
 import { drawCrest, CREST_SIZE } from '../../render/crests.js';
 import { factionFor } from '../../sim/run.js';
 import { lightHue } from './common.js';
@@ -67,7 +67,7 @@ export function antePath(ctx, ui, run, cx, y, time) {
       const nf = factionFor(run, a);
       drawCrest(ctx, nf, x - 2, py - 2);
       const f = FACTION_BY_ID[nf];
-      ui.region('select:next', x - 3, py - 3, CREST_SIZE + 2, CREST_SIZE + 2, { tip: () => tipLines(`다음 관 · ${f.name}`, f.habit.text) });
+      ui.region('select:next', x - 3, py - 3, CREST_SIZE + 2, CREST_SIZE + 2, { tip: () => tipLines(`다음 관 · ${f.name}`, habitText(f, run.rules)) });
       continue;
     }
     if (done) box(ctx, x, py, pw, pw, PAL.gold, PAL.goldDk);
@@ -207,12 +207,12 @@ export function blindLayout(run, i, w = SEL.w, { tight = false, cell = PEEK.cell
   return out;
 }
 
-// 세력 띠: 문장 2배 왼쪽, 이름(제목 줄) → 버릇(본문 줄, 접힌다). 폭 = 연습 · 정식 카드 둘
+// 세력 띠: 문장 2배 왼쪽, 이름(제목 줄) → 버릇(본문 줄, 접힌다 — 코어 판에서 버릇이 없는 세력은 주력 적 한 줄). 폭 = 연습 · 정식 카드 둘
 const CREST2 = CREST_SIZE * 2;
-export function bandLayout(fa, w) {
+export function bandLayout(fa, w, rules = null) {
   const P = PAD_CARD, tx = P + CREST2 + 6, f = flow(P);
   const name = f.line(true);
-  const lines = wrap(fa.habit.text, w - tx - P).map((l) => [l, f.line()]);
+  const lines = wrap(habitText(fa, rules), w - tx - P).map((l) => [l, f.line()]);
   return { w, tx, name, lines, h: Math.max(P * 2 + CREST2, f.y + P) };
 }
 // 카드 셋의 쌓기: 본 칸(아래 여백 GAP_GROUP)을 넘으면 수치를 짧은 꼴로 다시 쌓는다
@@ -228,7 +228,7 @@ export function selectLays(run) {
 // 관 선택의 자리: 연습 · 정식 카드는 세력 띠 아래, 명인 카드는 본 칸 위부터 온 높이. 아랫변은 셋이 같다
 export function selectPlan(run, lays = selectLays(run)) {
   const fa = FACTION_BY_ID[blindInfo(run).faction];
-  const band = bandLayout(fa, SEL.w * 2 + SEL.gap);
+  const band = bandLayout(fa, SEL.w * 2 + SEL.gap, run.rules);
   const low = Math.max(lays[0].h, lays[1].h);
   const H = Math.max(lays[2].h, band.h + SEL.gap + low);
   const y = TOP + band.h + SEL.gap;
@@ -288,10 +288,10 @@ export class SelectScreen {
       drawCrest(ctx, fid, bx + PAD_CARD, by + Math.floor((bd.h - CREST_SIZE * 2) / 2), { scale: 2 });
       text(ctx, fa.name, bx + bd.tx, by + bd.name, lightHue(fa.hue), { bold: true });
       bd.lines.forEach(([l, ly]) => text(ctx, l, bx + bd.tx, by + ly, PAL.ink));
-      ui.region('faction', bx, by, bd.w, bd.h, { tip: () => tipLines(fa.name, [fa.habit.text, `마스터 ${bossOf(fid).name}`, bossOf(fid).text]) });
+      ui.region('faction', bx, by, bd.w, bd.h, { tip: () => tipLines(fa.name, [habitText(fa, run.rules), `마스터 ${bossOf(fid).name}`, bossOf(fid).text]) });
       closeBox();
-      // 새 세력을 처음 만나는 관 선택: 버릇 한 줄(처음 안내)
-      hint(app, `faction_${fid}`, 'faction');
+      // 새 세력을 처음 만나는 관 선택: 버릇 한 줄(처음 안내). 코어 판은 글이 다른 세력만 따로(coach.js faction_<id>_core)
+      hint(app, run.rules && run.rules.chessHabits && HINTS[`faction_${fid}_core`] ? `faction_${fid}_core` : `faction_${fid}`, 'faction');
     }
     for (let i = 0; i < 3; i++) {
       const lay = lays[i], info = lay.info, master = lay.master;
