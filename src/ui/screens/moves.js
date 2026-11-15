@@ -52,6 +52,8 @@ export function movesTab(tab, list, open = null) {
 // 연 특수 기물: 기록의 해금 단계까지 + 지금 판에 실린 목록
 export function openFairies(app) {
   const r = app.run;
+  // 코어 판은 특수 기물이 없다: 판에 실린 목록(빈 목록)만 — 「특수 기물」 탭이 빠진다
+  if (r && r.core && !r.scratch) return [...((r.unlocked && r.unlocked.pieces) || [])];
   return [...new Set([...unlockedAt(app.records.unlockTier || 0).pieces, ...((r && r.unlocked && r.unlocked.pieces) || [])])];
 }
 

@@ -88,6 +88,7 @@ export function runRow(run, track, { end = null, endedAt = null, id = null } = {
     best: Math.max(0, ...played.map((x) => x.best || 0)),
     souls: [...new Set(log.flatMap((b) => b.souls || []))], cracked: clone(run.cracked || []), awakened: clone(run.awakened || []),
     ignite: igniteKey(run, skip), // 점화(CHM-67): 몇째로 둔 대국 · 계기
+    ...(run.core ? { core: 1 } : {}), // 코어 판(CHM-79): 옛 판 줄에는 칸이 없다
     // ── 사람 판에만
     human: 1,
     id: id ?? `${tr.startedAt ?? 0}:${run.seed}`,

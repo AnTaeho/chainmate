@@ -22,13 +22,14 @@ const BOT_ONLY = ['sac'];
 const dumpKeys = () => Object.keys(dump).filter((k) => !BOT_ONLY.includes(k));
 const HUMAN_ONLY = ['human', 'id', 'end', 'dan', 'opening', 'daily', 'endless', 'startedAt', 'endedAt', 'sec', 'battles', 'sacrifices', 'brilliants', 'lostAt', 'buys', 'script', 'app'];
 
-// 하네스 판 하나(--policy none · seed 1 → 판 seed 1000003)
-let dump;
-before(() => {
+// 하네스 판 하나(--policy none · seed 1 → 판 seed 1000003) · 같은 씨앗의 코어 판(--core)
+let dump, coreDump;
+const harness = (more = []) => {
   const out = join(mkdtempSync(join(tmpdir(), 'runlog-')), 'dump.json');
-  execFileSync(process.execPath, ['tools/run.mjs', '--runs', '1', '--policy', 'none', '--seed', '1', '--workers', '1', '--quiet', '--dump', out], { cwd: ROOT, stdio: 'ignore' });
-  dump = JSON.parse(readFileSync(out, 'utf8')).runs[0];
-});
+  execFileSync(process.execPath, ['tools/run.mjs', '--runs', '1', '--policy', 'none', '--seed', '1', '--workers', '1', '--quiet', '--dump', out, ...more], { cwd: ROOT, stdio: 'ignore' });
+  return JSON.parse(readFileSync(out, 'utf8')).runs[0];
+};
+before(() => { dump = harness(); coreDump = harness(['--core']); });
 
 test('요약은 하네스 dump의 판별 열쇠를 모두 같은 값으로 낸다(봇이 센 것을 넘기면)', () => {
   const run = createRun({ seed: dump.seed, dan: 0, draft: true });
@@ -38,6 +39,16 @@ test('요약은 하네스 dump의 판별 열쇠를 모두 같은 값으로 낸�
   // 사람 판에만 있는 열쇠는 dump 열쇠와 겹치지 않는다
   for (const k of HUMAN_ONLY) assert.ok(!(k in dump), k);
   assert.deepEqual(Object.keys(row).sort(), [...dumpKeys(), ...HUMAN_ONLY].sort());
+  assert.ok(!('core' in row) && !('core' in dump), '옛 판 줄에는 코어 칸이 없다');
+});
+
+test('코어 판 요약: 하네스 --core dump와 같은 열쇠 · 값, 코어 표시 core: 1', () => {
+  const run = createRun({ seed: coreDump.seed, dan: 0, core: true });
+  const { bought, editions, legendAt, seen, holds } = playRun(run, 'none');
+  const row = runRow(run, { ...newTrack(), bought, editions, legendAt, seen, holds }, { end: 'lost' });
+  assert.equal(row.core, 1);
+  assert.equal(coreDump.core, 1);
+  for (const k of Object.keys(coreDump).filter((x) => !BOT_ONLY.includes(x))) assert.deepStrictEqual(row[k], coreDump[k], k);
 });
 
 // 화면이 세는 길(trackCommand)로 같은 판을 다시 둔다: shopbot playRun 'none'과 같은 차례
@@ -140,13 +151,38 @@ before(async () => {
   ({ boot } = await import('../src/main.js'));
 });
 after(() => { delete globalThis.document; delete globalThis.window; });
-const fresh = async () => { for (const k of [...dom.store.keys()]) dom.store.delete(k); const app = await boot({ window: dom.window, document: dom.document }); tick(app); return app; };
+const fresh = async (opts = {}) => { for (const k of [...dom.store.keys()]) dom.store.delete(k); const app = await boot({ window: dom.window, document: dom.document, ...opts }); tick(app); return app; };
 const rows = (app) => loadRuns(app.store);
 // 대국 하나를 봇으로 끝까지(앱 명령으로)
 const finishBattle = (app) => { for (let i = 0; i < 400 && app.run.phase === 'battle'; i++) if (!stepBattle(app.run.battle, (c) => app.cmd(c), chase(app.run.battle))) break; };
 
-test('앱: 판이 끝나면(짐) 한 줄, 판 시간과 앱 판이 함께', async () => {
+// 앱 판을 봇으로 끝까지(짐 — 상점은 그냥 떠난다)
+const playOut = (app) => {
+  const act = (cmd) => app.cmd(cmd);
+  for (let guard = 0; guard < 5000 && app.run.phase !== 'lost' && app.run.phase !== 'won'; guard++) {
+    const ph = app.run.phase;
+    if (ph === 'draft') act({ type: 'joseki', index: 0 });
+    else if (ph === 'select') act({ type: 'play' });
+    else if (ph === 'battle') finishBattle(app);
+    else if (ph === 'shop') act({ type: 'leave' });
+    else if (ph === 'pack') act({ type: 'skipPack' });
+  }
+};
+
+test('앱: 새 판은 코어 판 — 끝나면 core: 1 줄, 하네스 --core 판과 같은 값', async () => {
   const app = await fresh();
+  app.records.tutorialAsked = true; app.records.runs = 1;
+  app.newRun({ seed: coreDump.seed });
+  assert.ok(app.run.core, '새 판 = 코어 판');
+  playOut(app);
+  const r = rows(app)[0];
+  assert.equal(r.end, 'lost');
+  assert.equal(r.core, 1);
+  for (const k of Object.keys(coreDump).filter((x) => !BOT_ONLY.includes(x))) assert.deepStrictEqual(r[k], coreDump[k], k);
+});
+
+test('앱: 판이 끝나면(짐) 한 줄, 판 시간과 앱 판이 함께(옛 판 — 부트 옵션 full)', async () => {
+  const app = await fresh({ full: true });
   app.records.tutorialAsked = true; app.records.runs = 1;
   app.records.unlockTier = 20; // 하네스 판은 전부 열린 판이다 — 다 연 기록의 새 판이 그것과 한 수도 다르지 않다
   app.newRun({ seed: dump.seed });

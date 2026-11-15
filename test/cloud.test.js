@@ -424,6 +424,7 @@ test('앱: 관 선택에 설 때 · 상점을 떠날 때 · 판이 끝날 때 �
   const runsAt = []; // 올릴 때마다 그때의 판 수
   app.cloud.touch = () => { touched++; runsAt.push(app.records.runs); touch(); };
   const t0 = Date.now();
+  app.full = true; // 레퍼토리 고르기 → 관 선택에 서는 길(옛 판)
   app.newRun({ seed: 1000003 });
   assert.equal(touched, 0);
   app.cmd({ type: 'joseki', index: 0 });
@@ -473,6 +474,7 @@ test('앱: 관 선택에 설 때 · 상점을 떠날 때 · 판이 끝날 때 �
 test('앱: 다른 기기의 더 늦은 판은 첫 화면의 「이어 하기」가 연다 — 대국 한가운데면 덮지 않고 첫 화면으로 돌아왔을 때', async () => {
   const { api } = world();
   const A = await liveApp({ api });
+  A.app.full = true; // 레퍼토리 고르기가 있는 옛 판
   A.app.newRun({ seed: 1000003 });
   A.app.cmd({ type: 'joseki', index: 0 });
   await A.ring();

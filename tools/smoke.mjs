@@ -3,7 +3,7 @@
 // 확인: 예외 0 · 모든 화면 방문 · 프레임당 그리기 시간 · 한 수 연출 시간(×1) · 저장 → 이어 하기.
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle, stepBattle } from './bot.mjs';
-import { lineCommands, previewDrop, bestMove } from '../src/sim/solver.js';
+import { lineCommands, previewDrop, previewCapture, bestMove } from '../src/sim/solver.js';
 import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
@@ -37,6 +37,8 @@ if (opt('--spacing', null)) globalThis.__SPACING = opt('--spacing', null);
 const log = (...a) => { if (VERBOSE) console.log(...a); };
 
 globalThis.__CHAINMATE_NO_BOOT__ = true;
+// 새 판은 코어 판(CHM-79)이다. 옛 판 시나리오는 옛 판을 여는 부트 옵션(주소 ?full과 같다)으로 그대로 돌고, 코어 판 길은 끝에서 따로 돈다(coreWalk)
+const OLD = { full: true };
 // --window 1920x950@2: 창 크기 · dpr(기본 1366×700 · 1.25), --fit int: 정수 배율(주소 ?fit=int — 기본은 꽉 채움, src/main.js)
 const WIN = (opt('--window', '1366x700@1.25').match(/^(\d+)x(\d+)(?:@([\d.]+))?$/) || []).slice(1).map(Number);
 const dom = makeFakeDom({ width: WIN[0] || 1366, height: WIN[1] || 700, dpr: WIN[2] || 1.25 });
@@ -187,7 +189,7 @@ let app = null;
 
 async function start() {
   if (LANG !== 'ko') dom.store.set('chainmate.settings.v1', JSON.stringify({ lang: LANG }));
-  app = cpuClock(await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '' }));
+  app = cpuClock(await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '', ...OLD }));
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -514,6 +516,10 @@ const HINT_SUBJECT = {
   unlocks: (id) => scrName() === 'unlocks' && id === 'unlocks:here',
   // 대국 도전(layout.md 31절): 도전이 붙은 대국의 판 위 띠
   challenge: (id, run) => id === 'challenge' && scrName() === 'battle' && !!run.battle && !!run.battle.challenge,
+  // 코어 판(CHM-79): 배수가 쌓인 뒤 · 콤보가 끊긴 뒤의 배수 칸, 목표를 넘기고 수가 남은 대국의 목표 막대
+  streak: (id, run) => id === 'box:links' && scrName() === 'battle' && !!run.battle && run.battle.rules.streak && (run.battle.streak || 0) > 0 && app.screen.view.streak === run.battle.streak,
+  streakCut: (id, run) => id === 'box:links' && scrName() === 'battle' && !!run.battle && run.battle.rules.streak && !!app.screen.lastEnd && app.screen.lastEnd.reason === 'cut',
+  playOut: (id, run) => { const b = run.battle; return id === 'goal' && scrName() === 'battle' && !!b && b.rules.playOut && b.score >= b.target && b.movesLeft > 0; },
   brilliant: (id, run) => { const p = app.screen.view && app.screen.view.hand && app.screen.view.hand[num(id, 'hand:')], off = run.battle && run.battle.offering; return !!(p && off && (off.drawn || []).includes(p.id)); },
 };
 function hintSubject() {
@@ -941,7 +947,7 @@ async function reload() {
   seen();
   // 앞 앱은 같은 가짜 창에 듣개가 남아 있다: 누르기가 앞 앱 화면에도 닿지 않게 끊는다
   app.pointer = () => {}; app.key = () => {};
-  app = cpuClock(await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '' }));
+  app = cpuClock(await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '', ...OLD }));
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -1987,7 +1993,7 @@ const mainApp = app;
   seen();
   app.pointer = () => {}; app.key = () => {};
   for (const k of [...dom.store.keys()]) dom.store.delete(k);
-  app = cpuClock(await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '' }));
+  app = cpuClock(await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '', ...OLD }));
   apps.push(app);
   app.onError = (e) => { errors.push(e); console.error(e); };
   pump(2);
@@ -2203,7 +2209,7 @@ const linkSeen = { code: 0, typed: 0, name: '', same: 0, back: 0, run: '', cont:
   domB.window.fetch = dom.window.fetch; domB.window.navigator = dom.window.navigator;
   if (LANG !== 'ko') domB.store.set('chainmate.settings.v1', JSON.stringify({ lang: LANG }));
   let B = null, tB = 0;
-  const bootB = async () => { if (B) { B.pointer = () => {}; B.key = () => {}; } B = await boot({ window: domB.window, document: domB.document, today: () => DATE, rankBase: '' }); apps.push(B); B.onError = (e) => { errors.push(e); console.error(e); }; };
+  const bootB = async () => { if (B) { B.pointer = () => {}; B.key = () => {}; } B = await boot({ window: domB.window, document: domB.document, today: () => DATE, rankBase: '', ...OLD }); apps.push(B); B.onError = (e) => { errors.push(e); console.error(e); }; };
   const frameB = (n = 1) => { for (let i = 0; i < n; i++) { tB += 1000 / 60; domB.frame(tB); linkSeen.frames++; for (const q of LL.checkLayout()) if (!linkSeen.flow.includes(q.msg)) linkSeen.flow.push(q.msg); } };
   const regionB = (id) => B.ui.regions.find((r) => r.id === id);
   const clickB = (id) => { const r = regionB(id); if (!r) throw new Error(`둘째 기기: no region ${id} on ${B.overlay ? B.overlay.name : B.screen.name}`); const gx = r.x + (r.w >> 1), gy = r.y + (r.h >> 1); domB.mouse('mousemove', gx, gy); domB.mouse('mousedown', gx, gy); domB.mouse('mouseup', gx, gy); frameB(1); };
@@ -2295,7 +2301,7 @@ const acctSeen = { made: 0, fields: 0, keys: 0, name: '', same: 0, records: '', 
   domB.window.fetch = dom.window.fetch; domB.window.navigator = dom.window.navigator;
   if (LANG !== 'ko') domB.store.set('chainmate.settings.v1', JSON.stringify({ lang: LANG }));
   let tB = 0;
-  const B = await boot({ window: domB.window, document: domB.document, today: () => DATE, rankBase: '' });
+  const B = await boot({ window: domB.window, document: domB.document, today: () => DATE, rankBase: '', ...OLD });
   apps.push(B); B.onError = (e) => { errors.push(e); console.error(e); };
   const frameB = (n = 1) => { for (let i = 0; i < n; i++) { tB += 1000 / 60; domB.frame(tB); acctSeen.frames++; for (const q of LL.checkLayout()) if (!acctSeen.flow.includes(q.msg)) acctSeen.flow.push(q.msg); } };
   const clickB = (id) => { const r = B.ui.regions.find((q) => q.id === id); if (!r) throw new Error(`둘째 기기: no region ${id} on ${B.overlay ? B.overlay.name : B.screen.name}`); const gx = r.x + (r.w >> 1), gy = r.y + (r.h >> 1); domB.mouse('mousemove', gx, gy); domB.mouse('mousedown', gx, gy); domB.mouse('mouseup', gx, gy); frameB(1); };
@@ -2357,6 +2363,159 @@ const acctSeen = { made: 0, fields: 0, keys: 0, name: '', same: 0, records: '', 
   app.pointer = () => {}; app.key = () => {};
   app = mainApp;
 }
+
+// ── 코어 판(CHM-79): 새 판의 기본 길. 타이틀 → 새 판 → 관 선택 → 대국(목표를 넘긴 뒤에도 이어 두기 · 수를 다 써서 이김 · 짐 · 체크메이트) →
+// 보상 → 상점(격언 · 기보 · 기물 · 팩) → 마스터전 → 상자 → 다음 관 → 판 끝 결과. 자리 규칙 · 잘린 글 · 글 넘침 · 처음 안내는 다른 길과 같이 pump가 잰다.
+// 미리 보기의 값 × 배수(previewDrop · previewCapture — 시작 배수가 든다) · 콤보 중 배수 칸 · 이어 온 배수가 규칙 상태와 같은지도 잰다
+const coreSeen = { runs: 0, select: 0, playOn: 0, nextTier: 0, winMoves: 0, lost: 0, mate: 0, mateMoves: 0, reward: 0, buy: { maxim: 0, chart: 0, piece: 0 }, pack: 0, master: 0, chest: 0, nextHall: 0, result: 0, pv: 0, chain: 0, streak: 0, up: 0, cut: 0, bad: [] };
+const coreBad = (m) => { if (coreSeen.bad.length < 12) coreSeen.bad.push(`${app.run ? `${app.run.ante}:${app.run.blind} ` : ''}${m}`); };
+const drawnText = (k) => LL.LOG.texts.some((x) => x.s === L(k));
+const drawnLike = (re) => LL.LOG.texts.some((x) => re.test(x.s));
+function coreSelect() {
+  const run = app.run;
+  coreSeen.select++;
+  notesOnce('core-select', 4);
+  if (!run.core) coreBad('코어 판이 아니다');
+  if (region('select:skip')) coreBad('건너뛰기 단추가 있다');
+  if (drawnText('건너뛰면')) coreBad('「건너뛰면」 글이 있다');
+  if (drawnText('시너지') || drawnText('레퍼토리')) coreBad('짜임 칸에 시너지 · 레퍼토리');
+  if (!region(`select:board:${run.blind}`)) coreBad('지금 대국 카드에 판 보기가 없다');
+  if (run.blind === 2) coreSeen.master++;
+  if (run.blind === 0 && run.ante > 1) coreSeen.nextHall++;
+  click('select:play'); pump(2);
+}
+// 놓기 → 잡기 줄을 화면으로 둔다(미리 보기 · 콤보 중 배수 칸을 규칙 상태와 견준다)
+function coreMove(d) {
+  const s = app.screen, b = app.run.battle;
+  s.seq.total = 0; s.seq.stops = 0; s.seq.stopBy = {}; s.seq.trace = [];
+  click(`hand:${d.play.handIndex}`);
+  hover(`sq:${d.play.sq}`);
+  const want = previewDrop(b, d.play.handIndex, d.play.sq), pv = s.pvNow;
+  if (pv && pv.kind === 'drop') { coreSeen.pv++; if (pv.mult !== want.mult || want.mult < (b.streak || 0)) coreBad(`놓기 미리 보기 배수 ${pv.mult} · 규칙 ${want.mult} · 이어 온 ${b.streak}`); }
+  click(`sq:${d.play.sq}`); idle();
+  const chainCheck = () => { const cb = app.run.battle, v = s.view; if (cb && cb.status === 'chain' && v.chain) { coreSeen.chain++; if (v.chain.mult !== cb.chain.mult || v.chain.value !== cb.chain.value) coreBad(`콤보 중 값 × 배수 ${v.chain.value}×${v.chain.mult} · 규칙 ${cb.chain.value}×${cb.chain.mult}`); } };
+  chainCheck();
+  for (const c of lineCommands(d.play.line)) {
+    if (!app.run.battle || app.screen.name !== 'battle' || app.run.battle.status !== 'chain') break;
+    if (c.type === 'capture') {
+      hover(`sq:${c.sq}`);
+      const p2 = s.pvNow, w2 = previewCapture(app.run.battle, c.sq);
+      if (p2 && p2.kind === 'capture' && p2.sq === c.sq && (p2.mult !== w2.mult || p2.value !== w2.value)) coreBad(`잡기 미리 보기 ${p2.value}/${p2.mult} · 규칙 ${w2.value}/${w2.mult}`);
+    }
+    click(`sq:${c.sq}`); idle();
+    chainCheck();
+  }
+  measureSeq(s);
+}
+function coreBattle(plan) {
+  const s = app.screen, b = app.run.battle;
+  if (s.busy || s.intro || s.banner) { pump(1); return; }
+  if (!s.newsCore) { s.newsCore = true; notesOnce('core-battle', 6); if (app.ui.regions.some((r) => r.id.startsWith('fam:'))) coreBad('시너지 띠가 있다'); }
+  if (b.status === 'chain') { click(`sq:${s.clickable().list[0]}`); idle(); return; }
+  // 이어 온 배수: 콤보가 없을 때 배수 칸 = 규칙의 b.streak
+  coreSeen.streak++;
+  if (s.view.streak !== (b.streak || 0)) coreBad(`이어 온 배수 화면 ${s.view.streak} · 규칙 ${b.streak}`);
+  const links = region('box:links');
+  if (!links || !(typeof links.keys === 'function' ? links.keys() : links.keys || []).some((k) => k && k.id === 'streak')) coreBad('배수 칸에 이어 온 배수 상자가 없다');
+  // 목표를 넘겼는데 수가 남았다: 대국이 이어지고, 목표 자리에 다음 넘침 눈금
+  if (b.target && b.score >= b.target && b.movesLeft > 0) {
+    coreSeen.playOn++;
+    const nt = s.nextTier(s.view.score);
+    if (nt && drawnText(`다음 ×${nt}`)) coreSeen.nextTier++;
+    else if (b.score < 10 * b.target) coreBad(`목표를 넘긴 뒤 다음 눈금이 안 보인다 ${b.score}/${b.target}`);
+  }
+  const fx0 = s.streakFx;
+  if (plan === 'mate' && b.movesUsed === 0) {
+    // 체크메이트: 지키는 적 없는 킹 하나와 나이트 — 수가 남아도 곧바로 이긴다
+    b.board = Array(64).fill(null); b.board[36] = { t: 'K', id: 9901 }; b.incoming = []; b.incomingNext = [];
+    b.hand[0] = { t: 'N', id: 9902, eng: null }; s.sync();
+    const m = bestMove(b, { preferMate: true });
+    if (!m || !m.mate) { coreBad('심은 체크메이트 줄이 없다'); } else { coreMove({ play: m }); return; }
+  }
+  if (plan === 'lose' && b.movesUsed === 0) { b.movesLeft = 1; b.target = 1e12; s.sync(); }
+  const d = decideBattle(b);
+  if (!d) throw new Error('core: no decision');
+  if (d.reboard || d.discard) { battleStep(); return; }
+  coreMove(d);
+  if (s.streakFx && s.streakFx !== fx0) { if (s.streakFx.cut) coreSeen.cut++; else coreSeen.up++; }
+}
+function coreShop() {
+  const run = app.run;
+  notesOnce('core-shop', 6);
+  if (app.ui.regions.some((r) => r.id.startsWith('cons:'))) coreBad('두루마리 칸이 있다');
+  if (drawnText('두루마리')) coreBad('「두루마리」 이름표가 있다');
+  for (const kind of ['chart', 'maxim', 'piece']) {
+    const i = run.shop.display.findIndex((it) => it.kind === kind && !it.sold && canBuy(run, it));
+    if (i < 0) continue;
+    const r = region(`shop:buy:${i}`), keys = r && (typeof r.keys === 'function' ? r.keys() : r.keys || []);
+    if (keys && keys.some((k) => k && typeof k.id === 'string' && k.id.startsWith('fam_'))) coreBad(`${kind} 카드에 시너지 낱말 상자`);
+    keyBoxesAt(`shop:buy:${i}`, 'shop');
+    click(`shop:buy:${i}`);
+    if (run.shop.display[i].sold) coreSeen.buy[kind]++;
+  }
+  const p = run.shop.packs.findIndex((pk) => !pk.sold && run.money >= pk.price);
+  if (p >= 0 && coreSeen.pack < 2) { click(`shop:pack:${p}`); return; }
+  if (app.screen.name === 'shop') click('shop:leave');
+}
+function corePack() {
+  const pack = app.run.pack;
+  pump(100);
+  notesOnce('core-pack', 4);
+  if (pack.options.some((o) => !['piece', 'chart'].includes(o.kind))) coreBad(`팩에 코어 밖 물건 ${pack.options.map((o) => o.kind)}`);
+  coreSeen.pack++;
+  click('pack:pick:0');
+}
+async function coreWalk(seed) {
+  seen();
+  app.pointer = () => {}; app.key = () => {};
+  app = cpuClock(await boot({ window: dom.window, document: dom.document, today: () => DATE, rankBase: '' }));
+  apps.push(app);
+  app.onError = (e) => { errors.push(e); console.error(e); };
+  pump(2);
+  if (app.overlay && app.overlay.name === 'welcome') { dom.key('Escape'); pump(1); }
+  app.nextSeed = seed;
+  if (screen() !== 'title') { app.toTitle(); pump(1); }
+  click('title:new'); click('setup:start'); yesNewRun();
+  if (!app.run || !app.run.core) throw new Error('core: new run is not a core run');
+  coreSeen.runs++;
+  for (let steps = 0; steps < 3000; steps++) {
+    const name = screen(), run = app.run;
+    if (name === 'result') break;
+    if (name === 'select') { coreSelect(); continue; }
+    if (name === 'battle') {
+      if (app.screen.rv) { reviewStep(); continue; }
+      idle();
+      if (app.screen.name !== 'battle' || !app.run.battle) { pump(1); continue; }
+      const before = run.log.length;
+      // 1관 정식은 체크메이트, 2관 연습은 일부러 진다(시계 −1), 3관부터는 판이 끝날 때까지 진다(판 패배 결과)
+      const plan = run.ante === 1 && run.blind === 1 ? 'mate' : (run.ante === 2 && run.blind === 0) || run.ante >= 3 ? 'lose' : null;
+      coreBattle(plan);
+      if (run.log.length > before) {
+        const last = run.log.at(-1);
+        if (last.won && last.reason === 'mate') { coreSeen.mate++; if (last.movesLeft > 0 || (run.last && run.last.reward && run.last.reward.moves > 0)) coreSeen.mateMoves++; }
+        else if (last.won) { coreSeen.winMoves++; if (last.reason !== 'score') coreBad(`이긴 까닭 ${last.reason}`); }
+        else { coreSeen.lost++; if (last.reason !== 'moves') coreBad(`진 까닭 ${last.reason}`); }
+      }
+      continue;
+    }
+    if (name === 'reward') { pump(40); notesOnce('core-reward', 3); coreSeen.reward++; if (run.last && run.last.overflow >= 2 && !drawnLike(/^(목표 초과|Overflow)/)) coreBad('넘친 목표 줄이 없다'); click('next'); pump(1); if (screen() === name) click('next'); continue; }
+    if (name === 'chest') { click('next'); pump(2); notesOnce('core-chest', 4); coreSeen.chest++; click('next'); pump(1); continue; }
+    if (name === 'shop') { coreShop(); continue; }
+    if (name === 'pack') { corePack(); continue; }
+    if (name === 'review') { reviewWalk(); continue; }
+    if (name === 'pause') { click('pause:resume'); continue; }
+    if (name === 'awaken' || name === 'legend') coreBad(`코어 판에 ${name}`);
+    click('next'); pump(1);
+  }
+  if (screen() !== 'result') throw new Error(`core: run did not end (${screen()})`);
+  pump(30); notesOnce('core-result', 3);
+  coreSeen.result++;
+  if (region('result:unlocks') || drawnText('해금')) coreBad('결과 화면에 해금 줄');
+  if (!app.run.core || app.run.phase !== 'lost') coreBad(`결과 ${app.run.phase}`);
+  seen();
+}
+await coreWalk(SEED + 300);
+log(`  코어 판: ${JSON.stringify({ ...coreSeen, bad: coreSeen.bad.length })}`);
 
 seen();
 const need = ['title', 'lesson', 'lessons', 'setup', 'select', 'battle', 'reward', 'chest', 'shop', 'pack', 'result', 'pause', 'settings', 'legend', 'codex', 'records', 'moves', 'review', 'rank', 'link', 'account', 'highlight', 'unlocks'];
@@ -2449,6 +2608,10 @@ console.log(`찜: 찜 ${holdSeen.on} · 풀기 ${holdSeen.off} · 옮기기 ${ho
 if (holdSeen.bad.length || !holdSeen.on || !holdSeen.off || !holdSeen.moved || !holdSeen.touch || !holdSeen.carried) { console.log('찜이 어긋났다(책갈피 · 풀기 · 손가락 · 다음 상점 같은 칸)'); fail = true; }
 console.log(`낱말 상자: 진열 ${keySeen.shop} · 꾸러미 ${keySeen.pack} · 정석 ${keySeen.draft} · 카드와 겹침 ${keySeen.overlap} · 화면 밖 ${keySeen.off} · 손가락 두 번 ${keySeen.touch} · 상자 없음 ${keySeen.none || 0} · 안내가 떠 있어 쉼 ${keySeen.hint || 0} · 자리가 없어 뺌 ${keySeen.dropped || 0} · 셋 넘음 ${keySeen.many} · 기본 낱말 ${keySeen.basic} · 카드 종류 ${keySeen.own} · 시너지 칩 ${keySeen.chip}(상자 ${keySeen.chipBox})`);
 if (!keySeen.shop || !keySeen.pack || !keySeen.draft || keySeen.overlap || keySeen.off || !keySeen.touch || keySeen.none || keySeen.many || keySeen.basic || keySeen.own || !keySeen.chip || keySeen.chipBox) { console.log('낱말 상자를 보지 못했거나, 카드를 가리거나, 둘을 넘거나, 기본 낱말을 띄웠다'); fail = true; }
+console.log(`코어 판: 관 선택 ${coreSeen.select} · 마스터전 ${coreSeen.master} · 다음 관 ${coreSeen.nextHall} · 넘긴 뒤 이어 두기 ${coreSeen.playOn}(다음 눈금 ${coreSeen.nextTier}) · 수를 다 써서 이김 ${coreSeen.winMoves} · 짐 ${coreSeen.lost} · 체크메이트 ${coreSeen.mate}(남은 수 ${coreSeen.mateMoves}) · 보상 ${coreSeen.reward} · 산 것 격언 ${coreSeen.buy.maxim} · 기보 ${coreSeen.buy.chart} · 기물 ${coreSeen.buy.piece} · 팩 ${coreSeen.pack} · 상자 ${coreSeen.chest} · 결과 ${coreSeen.result} · 미리 보기 ${coreSeen.pv} · 콤보 중 ${coreSeen.chain} · 쌓임 ${coreSeen.up} · 끊김 ${coreSeen.cut} · 어긋남 ${coreSeen.bad.length}`);
+if (coreSeen.bad.length) console.log('  코어 판 어긋난 곳: ' + coreSeen.bad.join(' | '));
+console.log(`  코어 판 처음 안내: ${['streak', 'streakCut', 'playOut'].map((id) => `${id} ${hintsShown.has(id) ? '뜸' : '안 뜸'}`).join(' · ')}`);
+if (coreSeen.bad.length || !coreSeen.select || !coreSeen.master || !coreSeen.nextHall || !coreSeen.playOn || !coreSeen.nextTier || !coreSeen.winMoves || !coreSeen.lost || !coreSeen.mate || !coreSeen.mateMoves || !coreSeen.reward || !coreSeen.buy.maxim || !coreSeen.buy.chart || !coreSeen.buy.piece || !coreSeen.pack || !coreSeen.chest || !coreSeen.result || !coreSeen.pv || !coreSeen.chain || !coreSeen.up) { console.log('코어 판 길을 끝까지 지나지 못했거나 화면이 규칙과 어긋났다'); fail = true; }
 if (!pvSeen.capture || !pvSeen.drop || !pvSeen.kb || !pvSeen.touch) { console.log('미리 보기 경로를 다 지나지 못했다'); fail = true; }
 if (!tipSeen.incoming || !tipSeen.forced || !tipSeen.path) { console.log('말풍선(증원 · 노림수 · 판의 길)을 보지 못했다'); fail = true; }
 if (dom.audioCalls.nodes < 100) { console.log('소리가 거의 나지 않았다'); fail = true; }

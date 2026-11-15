@@ -34,6 +34,8 @@ export const TERMS = [
   // 값 · 배수: 글 안에서는 수가 붙은 꼴(「값 +20」 · 「배수 ×1.5」 — 카드에 색 칸으로 그린다)만 찾는다. 상자는 다른 낱말 뒤에(LATE)
   T('value', 'battle', '값', 'Value', VM_RE.value[0], VM_RE.value[1], '점수의 바탕. 잡은 적의 값이 더해진다. 폰 10 · 나이트 30 · 룩 50 · 퀸 90', 'What the chain took, added up. Pawn 10 · knight 30 · rook 50 · queen 90'),
   T('links', 'battle', '배수', 'Mult', VM_RE.links[0], VM_RE.links[1], '점수 = 값 × 배수. 잡을 때마다 1씩 오른다. +3은 더하고 ×1.5는 곱한다', 'Score = Value × Mult. +1 per take. +3 adds, ×1.5 multiplies'),
+  // 코어 판(CHM-79): 배수 칸이 콤보 사이에 드는 수(글 안에서는 찾지 않는다 — 배수 칸을 가리키면 배수 상자 뒤에)
+  T('streak', 'battle', '이어 온 배수', 'Carried Mult', null, null, '콤보가 끝나면 잡은 수만큼 쌓여 다음 콤보의 시작 배수가 된다. 끊긴 콤보는 안 쌓인다', 'Each finished chain adds its takes, and the next chain starts from there. A broken chain adds nothing'),
   B('form', 'battle', '모습', 'Form', /모습/, /\bforms?\b/i, '내 기물이 지금 어떤 기물인지. 그 기물의 행마로 잡는다', 'What your piece is now. It takes with that move'),
   B('change', 'battle', '갈아입기', 'Change', /갈아입\S*/, /\bchanges? form\b/i, '적을 잡으면 그 적과 같은 기물이 된다', 'Take an enemy and become that piece'),
   T('threat', 'battle', '지키는 적', 'Guard', /지키는 적|지키던 적|지켜진 \S+/, /\bguard\w*/i, '방금 잡은 칸을 지키는 적. 다음엔 이 적을 잡아야 이어진다', 'An enemy guarding the square you just took. Take it next to keep going'),

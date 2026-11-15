@@ -318,6 +318,8 @@ export class ShopScreen {
   // 오른쪽 칸 자리: 두루마리(아래에서부터, 넓은 칸은 한 줄에 하나 · 셋 이상은 두 칸씩) → 이름표 → 격언 칸(남는 높이)
   rightLayout() {
     const run = this.run, ch = rowBoxH(PAD_CARD);
+    // 두루마리 칸이 없는 판(코어 판): 이름표도 없이 격언 칸이 아래 끝까지
+    if (!run.consumableSlots) return { wide: true, ch, scrollY: BOTTOM, labelY: null, room: BOTTOM - TOP };
     const wide = run.consumableSlots <= 2;
     const rows = wide ? run.consumableSlots : Math.ceil(run.consumableSlots / 2);
     const scrollY = BOTTOM - (rows * ch + (rows - 1) * LIST_GAP);
@@ -415,7 +417,7 @@ export class ShopScreen {
       hotIndex: this.menu && this.menu.kind === 'maxim' ? this.menu.index : -1,
     });
     this.col = col;
-    text(ctx, '두루마리', RX, textY(rl.labelY), PAL.dim);
+    if (rl.labelY != null) text(ctx, '두루마리', RX, textY(rl.labelY), PAL.dim);
     for (let i = 0; i < run.consumableSlots; i++) {
       const cw = rl.wide ? RW : Math.floor((RW - LIST_GAP) / 2);
       const x = rl.wide ? RX : RX + (i % 2) * (cw + LIST_GAP), y = rl.scrollY + (rl.wide ? i : Math.floor(i / 2)) * (rl.ch + LIST_GAP);

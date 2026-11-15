@@ -6,6 +6,15 @@
 // 팩 Bundle · 두루마리 Scroll · 도감 Almanac · 명경기 Classic · 불멸의 기보 Immortal Games · 조각 Fragment · 재현 Reenactment · 판본 Edition
 // 효과 글: 「Condition: effect」, 수치는 +20 Value · ×2 Mult · +$2 · +1 Move. Value · Mult · Target은 늘 대문자, 다른 낱말과 기물 이름은 문장 안에서 소문자.
 export const EN = {
+  // 코어 판(CHM-79): 짜임 칸 · 끝까지 두기 · 이어 온 배수
+  '기보로 키운 모습이 여기에 쌓여요': 'Tomes you level up stack up here',
+  '수를 다 썼을 때 점수가 목표를 넘으면 이겨요': 'Beat the Target by the time your moves run out',
+  '×2 · ×5 · ×10을 넘기면 상금 +1 · +2 · +4': 'Reach ×2 · ×5 · ×10 for +$1 · +$2 · +$4',
+  '목표를 넘겨도 다 쓸 때까지 대국이 이어져요': 'The match goes on until they run out, even past the Target',
+  '점수 모자람': 'Short of Target', '이번 대국에 놓을 수 있는 횟수': 'Drops left this match',
+  '잡은 수만큼 배수가 쌓여서 다음 콤보는 이 배수에서 시작해': 'Each take adds to your Mult, and your next chain starts from it',
+  '콤보가 끊기면 그 콤보에서 잡은 수는 배수에 안 쌓여': "Takes in a broken chain don't add to your Mult",
+  '목표를 넘겨도 남은 수를 다 두고, ×2 · ×5 · ×10을 넘기면 상금이 붙어': 'Past the Target, play out your moves. Reach ×2 · ×5 · ×10 for extra $',
   // 대국 도전 · 숙적(docs/reports/goty.md, src/data/challenges.js · nemesis.js)
   '도전': 'Challenge', '도전 성공': 'Challenge done', '도전을 이뤘어요': 'Challenge done', '이기는 데는 필요 없어요': "You don't need it to win",
   '건너뛰면 이 도전도 사라져요': 'Skipping drops this challenge too', '도전 상금': 'Challenge purse',
@@ -652,6 +661,8 @@ export const PRE = [
 ];
 
 export const TEMPLATES = [
+  // 코어 판: 목표를 넘긴 뒤 목표 자리의 다음 눈금
+  [/^다음 ×(\d+)$/, (m) => `Next ×${m[1]}`],
   // 해금(CHM-73)
   [/^관 (\d+)개 더$/, (m) => `${m[1]} more ${m[1] === '1' ? 'hall' : 'halls'}`],
   [/^다음 해금까지 관 (\d+)개$/, (m) => `Next unlock in ${m[1]} ${m[1] === '1' ? 'hall' : 'halls'}`],

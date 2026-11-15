@@ -93,6 +93,10 @@ export function tipLines(title, body, w = 150, extra = []) {
   return { title, body: [].concat(body).filter(Boolean), extra, w };
 }
 
+// 코어 판(CHM-79): 시너지가 없는 판을 그리는 동안 참 — 카드 · 말풍선의 시너지 칩과 시너지 낱말 상자를 그리지 않는다(app.draw가 그릴 때마다 정한다)
+export const VIEW = { core: false };
+export const famsOf = (id) => (VIEW.core ? [] : maximFamilies(id));
+
 export function maximTip(m) {
   const info = maximInfo(m.id);
   const extra = [];
@@ -100,7 +104,7 @@ export function maximTip(m) {
     const e = EDITION_BY_ID[m.edition];
     extra.push([`${e.name} · ${e.text}`, PAL.goldDk]);
   }
-  const fams = maximFamilies(m.id);
+  const fams = famsOf(m.id);
   if (fams.length) extra.push({ chips: fams });
   if (info.rarity === 'legendary' && info.story) extra.push([`${info.year ? info.year + ' · ' : ''}${L(info.story)}`, PAL.goldDk]);
   return tipLines(info.name, [info.text, info.more], 150, extra);
@@ -251,7 +255,7 @@ export function maximColumn(ctx, ui, run, x, y, w, hTotal, { idPrefix = 'maxim',
       continue;
     }
     const id = `${idPrefix}:${i}`;
-    const r = ui.region(id, xx, yy, cw, h, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null, drag: drag ? true : false, onDrop: drag ? (mx, my) => drag(i, mx, my) : null });
+    const r = ui.region(id, xx, yy, cw, h, { tip: () => maximTip(m), keys: () => famsOf(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null, drag: drag ? true : false, onDrop: drag ? (mx, my) => drag(i, mx, my) : null });
     const dragging = ui.drag && ui.drag.region === r && ui.drag.moved;
     if (dragging) { dashRing(ctx, xx, yy, cw, h, radiusOf(cw, h), PAL.gold); spots.push({ i, x: xx, y: yy, w: cw, h }); continue; }
     maximCard(ctx, m, xx, yy, cw, h, { narrow: cols === 2, off: offUids.includes(m.uid), hot: ui.isHover(id) || hotIndex === i, lift: ui.isHover(id) && (onClick || drag) ? 1 : 0, t: ui.time + i * 0.37 });
@@ -276,7 +280,7 @@ export function maximGrid(ctx, ui, run, x, y, cols, cw, gapX, gapY, { idPrefix =
     const m = maxims[i];
     if (!m) { slot(ctx, xx, yy, cw, ch); continue; }
     const id = `${idPrefix}:${i}`;
-    ui.region(id, xx, yy, cw, ch, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null });
+    ui.region(id, xx, yy, cw, ch, { tip: () => maximTip(m), keys: () => famsOf(m.id).map((f) => ({ id: `fam_${f}` })), onClick: onClick ? () => onClick(i, m) : null });
     maximCard(ctx, m, xx, yy, cw, ch, { hot: ui.isHover(id) || hotIndex === i, t: ui.time + i * 0.37 });
     spots.push({ i, x: xx, y: yy, w: cw, h: ch });
   }
@@ -470,7 +474,7 @@ export function itemTip(it) {
 }
 
 // 물건이 채우는 시너지(격언 · 특수 기물 종류 · 혼)
-export const itemFams = (it) => (it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : []);
+export const itemFams = (it) => (VIEW.core ? [] : it.kind === 'maxim' ? maximFamilies(it.id) : it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy ? PIECES[it.t].families : it.kind === 'soul' ? SOUL_BY_ID[it.id].families : []);
 // 카드 옆 낱말 상자에 넘길 카드 글: 시너지 → 특수 기물 → 효과 글의 드문 낱말(app.draw가 둘까지).
 // 카드의 종류(격언 · 각인 · 혼 …)는 카드 윗줄이 이미 말하고 처음 안내가 풀어 주어 상자를 띄우지 않는다
 export function itemKeys(it) {
@@ -527,7 +531,7 @@ function narrowCard(ctx, it, x, y, w, h, { hover, sold, price, golden, t, run })
   text(ctx, ITEM_KIND[it.kind], x + w / 2, y + 4, PAL.cardDim, { align: 'center' });
   const cx = x + Math.floor(w / 2);
   if (it.kind === 'maxim' || (it.kind === 'piece' && PIECES[it.t] && PIECES[it.t].fairy)) {
-    const fams = it.kind === 'maxim' ? maximFamilies(it.id) : PIECES[it.t].families;
+    const fams = it.kind === 'maxim' ? famsOf(it.id) : PIECES[it.t].families;
     familyGlyphs(ctx, fams, x + w - 8 * fams.length - 1, y + 4);
   }
   // 그림은 진열 카드와 같은 그림 칸(art.js itemArt, 22×26 — 진화는 겹 꺾쇠만)

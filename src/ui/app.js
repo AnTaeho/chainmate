@@ -12,7 +12,7 @@ import { W, H, text, box, rect, dot, lift, fine, measure } from '../render/gfx.j
 import { wrap, textGen } from '../render/text.js';
 import { LINE, BTN_S, LIST_GAP, SP, inkY } from './frame.js';
 import { UI, tooltip, bigTooltip, tipHeight, tipTexts, fingerDots } from './ui.js';
-import { miniShard } from './parts.js';
+import { miniShard, VIEW } from './parts.js';
 import { setLang, getLang, L } from './lang.js';
 import { termsIn, keyList, keyHeight, drawKeyBox } from './glossary.js';
 import { placeNotes, noteMode, noteWidth, NOTE_GAP } from './placement.js';
@@ -62,7 +62,7 @@ export const SAVE_FULL = '저장 공간이 모자라 저장하지 못했어요';
 // 다른 창에서 판을 바꿨을 때(이 창의 판을 내려놓고 메인 화면으로)
 export const OTHER_TAB = '다른 창에서 판을 이어 두고 있어요 · 이어 하기로 불러와요';
 
-export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, fields = null, openPage = null, today: dayNow = today, alwaysDraw = true }) {
+export function createApp({ canvas, storage = null, now = () => 0, reducedMotion = false, audio = null, seed = null, platform = 'web', share = null, download = null, copyText = null, track = null, rank = null, cloud = null, fields = null, openPage = null, today: dayNow = today, alwaysDraw = true, full = false }) {
   // 화면 캔버스는 읽지 않는다(willReadFrequently 없이 — 큰 배율에서도 GPU로 그린다)
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -83,6 +83,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     shakeAmt: 0, shakeT: 0,
     flowQueue: [],
     nextSeed: seed,
+    // 옛 판(주소 ?full · 부트 옵션 full): 새 판을 코어 판 대신 해금 단계를 쓰는 옛 판으로 연다
+    full: !!full,
   };
 
   // 그릴 때만 그린다(layout.md 「빛과 움직임」): 입력 · 화면 바뀜 · 명령 · 알림 · 배율 · 설정이 다음 프레임을 그리게 한다
@@ -323,7 +325,10 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
     quitOpen();
     // 오늘의 대국 판은 서버와 같은 함수로 만든다(src/sim/daily.js — 넣은 명령을 run.cmds에 남겨 순위에 낸다, CHM-70)
     // 새 판은 지금까지 연 묶음만 나온다(끝없는 대국은 그 판의 것 그대로). 오늘의 대국은 모두가 같은 판이라 전부 열린 채
-    app.run = daily ? createDailyRun(daily) : createRun({ seed, opening: opts.opening, dan: opts.dan || 0, unlockTier: app.records.unlockTier || 0 });
+    // 새 판은 코어 판(src/data/core.js), ?full이면 옛 판(지금까지 연 묶음만)
+    app.run = daily ? createDailyRun(daily)
+      : app.full ? createRun({ seed, opening: opts.opening, dan: opts.dan || 0, unlockTier: app.records.unlockTier || 0 })
+        : createRun({ seed, opening: opts.opening, dan: opts.dan || 0, core: true });
     app.run.track = newTrack({ startedAt: Date.now(), app: app.appInfo });
     app.fresh = [];
     app.track('run_start', runStartProps(app.run));
@@ -552,6 +557,8 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
 
   app.draw = () => {
     const ui = app.ui;
+    // 코어 판을 그리는 동안(판 밖 화면 · 수업 판 빼고): 시너지 칩 · 상자를 그리지 않는다(parts.js VIEW)
+    VIEW.core = !!(app.run && app.run.core && !app.run.scratch && !(app.screen && OUTSIDE.has(app.screen.name)));
     planFold = null;
     ui.begin();
     ui.finger = fingerDots(app);

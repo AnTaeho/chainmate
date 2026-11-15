@@ -276,7 +276,7 @@ export function commandEvents(run, cmd, events, before) {
 }
 
 export function runStartProps(run) {
-  return { dan: run.dan || 0, opening: run.opening ?? null, daily: !!run.daily };
+  return { dan: run.dan || 0, opening: run.opening ?? null, daily: !!run.daily, core: !!run.core };
 }
 
 // 판 끝: runRow 한 줄을 통째로(row) + 대시보드에서 바로 쓸 납작한 속성
@@ -284,7 +284,7 @@ const END = { won: 'win', lost: 'lose', quit: 'quit', endless: 'endless' };
 export function runEndProps(row) {
   return {
     won: !!row.won, end: END[row.end] || row.end, ante: row.ante, blind: row.blind, dan: row.dan || 0, opening: row.opening ?? null,
-    daily: !!row.daily,
+    daily: !!row.daily, core: !!row.core,
     josekis: [...(row.josekis || [])], maxims: [...(row.final || [])], legends: [...(row.legends || [])],
     families_max: Math.max(0, ...Object.values(row.fam || {})),
     skips: (row.log || []).filter((x) => x.skipped).length,

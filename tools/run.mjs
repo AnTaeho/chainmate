@@ -99,6 +99,7 @@ function one(seed, policy, opening = undefined, dan = 0, give = null, nodraft = 
     // 혼 등급 · 각성(CHM-17): 판 동안 주머니에 있던 혼 · 금이 간 때 · 깨어난 때와 길
     souls: [...new Set(run.log.flatMap((b) => b.souls || []))], cracked: run.cracked || [], awakened: run.awakened || [],
     ignite: igniteKey(run), // 점화(CHM-67): 몇째로 둔 대국 · 계기(사슬 8 · 넘침 ×10)
+    ...(run.core ? { core: 1 } : {}), // 코어 판(CHM-79): 옛 판 줄에는 칸이 없다(dump가 그대로)
     ...(BOT.stats ? { botStats: { ...BOT.stats } } : {}),
     ...(REPLAY.on ? { replays: REPLAY.rows.slice() } : {}),
     ...(PEEK.log || PEEK.skipBelow != null ? { peek: PEEK.rows.slice() } : {}),

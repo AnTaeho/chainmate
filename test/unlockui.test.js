@@ -151,9 +151,14 @@ test('결과 화면: 막대와 「다음 해금까지 관 N개」, 묶음이 열
   M.lang.setLang('ko');
 });
 
-test('새 판은 지금까지 연 묶음으로, 오늘의 대국은 전부 열린 판 — 끝나면 돌파한 관은 똑같이 쌓인다', async () => {
+test('새 판은 코어 판(해금 단계와 상관없는 열린 목록), 옛 판(?full)은 지금까지 연 묶음으로, 오늘의 대국은 전부 열린 판 — 끝나면 돌파한 관은 똑같이 쌓인다', async () => {
   const a = await bootApp();
   a.at(4, 13);
+  a.app.newRun({ seed: 11 });
+  const { CORE } = await import('../src/data/core.js');
+  assert.ok(a.app.run.core, '새 판 = 코어 판');
+  assert.deepEqual(a.app.run.unlocked, CORE.unlocked);
+  a.app.full = true;
   a.app.newRun({ seed: 11 });
   assert.deepEqual(a.app.run.unlocked, M.data.unlockedAt(4));
   assert.deepEqual(a.app.run.rules.pieces, M.data.unlockedAt(4).pieces);
@@ -163,7 +168,7 @@ test('새 판은 지금까지 연 묶음으로, 오늘의 대국은 전부 열�
   a.app.run.log.push({ ante: 4, blind: 0, kind: 'practice', score: 10, target: 100, best: 10, won: false });
   a.app.go('result', { quiet: true }); a.frame();
   assert.deepEqual([a.app.records.gates, a.app.records.unlockTier], [16, 5]);
-  // 처음 켠 사람의 첫 판도 단계 0
+  // 처음 켠 사람의 첫 판도 단계 0(옛 판)
   a.at(0, 0);
   a.app.newRun();
   assert.deepEqual(a.app.run.unlocked, M.data.unlockedAt(0));

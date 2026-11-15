@@ -73,20 +73,20 @@ test('처음 켜면 첫 화면 위에 킹이 튜토리얼을 권한다 → 「�
   assert.equal(app.screen.name, 'lesson');
   assert.equal(app.screen.index, 0);
   assert.equal(app.lessonFrom, 'welcome');
-  // 「건너뛰기」: 곧바로 평범한 첫 판(레퍼토리 고르기부터)
+  // 「건너뛰기」: 곧바로 평범한 첫 판(코어 판 — 관 선택부터)
   app.ui.regions.find((r) => r.id === 'lesson:skip').onClick();
   tick(app);
-  assert.equal(app.screen.name, 'draft');
-  assert.ok(app.run && !app.run.script && !app.run.scratch);
+  assert.equal(app.screen.name, 'select');
+  assert.ok(app.run && app.run.core && !app.run.script && !app.run.scratch);
 });
 
 test('「바로 시작」은 평범한 첫 판, Esc는 덮개만 닫는다(이번 실행 동안)', async () => {
   let app = await fresh();
   app.ui.regions.find((r) => r.id === 'welcome:play').onClick();
   tick(app);
-  assert.equal(app.screen.name, 'draft');
+  assert.equal(app.screen.name, 'select', '코어 판은 레퍼토리 없이 관 선택부터');
   assert.equal(app.records.tutorialAsked, true);
-  assert.ok(app.run.phase === 'draft' && !app.run.script);
+  assert.ok(app.run.phase === 'select' && app.run.core && !app.run.script);
   // 한 번 고르면 다시 권하지 않는다
   app.toTitle(); tick(app);
   assert.equal(app.overlay, null);
@@ -151,7 +151,7 @@ test('튜토리얼 목록: 「이어서」는 안 끝낸 첫 수업부터, 마�
   assert.ok(app.ui.regions.some((r) => r.id === 'lessons:play'));
   app.ui.regions.find((r) => r.id === 'lessons:play').onClick();
   tick(app);
-  assert.equal(app.screen.name, 'draft', '새 판은 평범한 판(레퍼토리 고르기부터)');
+  assert.equal(app.screen.name, 'select', '새 판은 코어 판(관 선택부터)');
 });
 
 // 손가락 기기(CHM-52): 덮개 단추의 누르는 구역은 44pt까지 넓어지고 서로 겹치지 않는다(그림은 그대로)
@@ -192,6 +192,7 @@ test('튜토리얼에서 가르친 도움말 팁은 그 수업을 끝낸 사람�
 
 test('처음 안내가 떠 있는 동안 설명 묶음이 그 위를 덮지 않고, 손가락 가리킴은 화면이 바뀌면 지워진다(U-4 · P-12)', async () => {
   const app = await fresh({ tutorialAsked: true });
+  app.full = true; // 레퍼토리 고르기 화면으로 잰다(옛 판)
   app.newRun(); tick(app);
   assert.equal(app.screen.name, 'draft');
   const card = () => app.ui.regions.find((r) => r.id === 'draft:0');

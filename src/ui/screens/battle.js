@@ -14,7 +14,7 @@ import { challengeText, challengeShort, challengeProgress, challengeSticks, chal
 import { mateBlocked } from '../../sim/tuning.js';
 import { reach, SLIDERS, LEAPERS } from '../../sim/board.js';
 import { FAIRIES, chartForm, isFairy } from '../../data/pieces.js';
-import { FAMILY_BY_ID, maximFamilies } from '../../data/families.js';
+import { FAMILY_BY_ID } from '../../data/families.js';
 import { familyStrip, familyGlyph, traitMark } from '../parts-depth.js';
 import { TRAIT_BY_ID } from '../../data/traits.js';
 import { JOSEKI_BY_ID, TIER_COL, snareIndex } from '../../data/josekis.js';
@@ -22,6 +22,7 @@ import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
 import { MASTER_BY_ID } from '../../data/masters.js';
+import { CORE } from '../../data/core.js';
 import { FACTION_BY_ID } from '../../data/factions.js';
 
 // 대국의 세력(버릇 조정자 faction:<id>) — 수업은 없다
@@ -34,7 +35,7 @@ import { live as motion, beat } from '../../render/look.js';
 import { button, tipHeight, growHit, pillR, btnW, TIP_SEP } from '../ui.js';
 import { keyHeight } from '../glossary.js';
 import { SIDE_W, NOTE_GAP } from '../placement.js';
-import { pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel, maximCard, maximTip, edgeRing, chartBadge, soulMark, fragmentStrip } from '../parts.js';
+import { pieceTip, moveTip, discardIcon, panel, tipLines, fitText, itemTip, tacticIcon, SEAL, chartLevel, maximCard, maximTip, edgeRing, chartBadge, soulMark, fragmentStrip, famsOf } from '../parts.js';
 import { KIND_NAME, KIND_SHORT, PIECE_NAME, PIECE_MOVE, FAIRY_MOVE, PART_NAME, josa } from '../words.js';
 import { pauseButton, shardTo, hasClock, clockPips, clockTip, SIDE, dailyMark } from './common.js';
 import { TOP, PAUSE, PAD_BOX, LINE, LINE_TITLE, GAP_IN, GAP_GROUP, LIST_GAP, FAM_H, CHIP_H, CHIP_PAD, flow, textY, inkY, BTN_S, INK_H, SP } from '../frame.js';
@@ -118,6 +119,13 @@ export const VAL_H = 38;
 const INTRO = 1.5; // 마스터 등장 장면 길이(초, 벽시계)
 // 멈칫(hit-stop) 예산(초, ×1): 한 수의 멈칫 합은 move까지, 그중 잡기 멈칫은 impact까지. 멈칫은 Seq 밖의 시간이라 한 수 연출 4초 안에 같이 든다(smoke가 더해 잰다)
 export const STOP = { move: 0.25, impact: 0.15 };
+// 끝까지 두는 대국(rules.playOut — 코어 판)의 글: 목표 · 수 말풍선, 진 순간 한마디. 넘침 덤은 src/data/core.js
+export const PLAY_OUT = {
+  goal: '수를 다 썼을 때 점수가 목표를 넘으면 이겨요',
+  bonus: `×2 · ×5 · ×10을 넘기면 상금 ${Object.values(CORE.overflow).map((n) => `+${n}`).join(' · ')}`,
+  moves: '목표를 넘겨도 다 쓸 때까지 대국이 이어져요',
+  lose: '점수 모자람',
+};
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // 값 · 배수 상자에 들어가는 짧은 숫자(gfx.js — 다른 화면도 fitNum으로 쓴다)
@@ -419,6 +427,8 @@ export class BattleScreen {
     v.board = clone(b.board);
     v.hand = clone(b.hand);
     v.score = b.score; v.target = b.target;
+    // 이어 온 배수(rules.streak — 코어 판): 콤보가 없을 때 배수 칸이 이 수를 들고 있고, 다음 콤보는 여기서 시작한다
+    v.streak = b.rules.streak ? b.streak || 0 : null;
     v.movesLeft = b.movesLeft; v.moves = b.rules.moves;
     v.discardsLeft = b.discardsLeft; v.discards = b.rules.discards;
     v.bag = b.bag.length; v.deckSize = b.deckSize;
@@ -618,7 +628,7 @@ export class BattleScreen {
         case 'drop': add(0.14, {
           begin: () => {
             v.board[e.sq] = { t: e.piece, mine: true };
-            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: 0, steps: [e.piece], path: [e.sq], bends: [], forced: null, awaiting: null, cut: false, eng: this.dropEng || null, soul: this.dropSoul || null, awake: this.dropAwake || false };
+            v.chain = { sq: e.sq, form: e.piece, value: 0, mult: v.streak || 0, steps: [e.piece], path: [e.sq], bends: [], forced: null, awaiting: null, cut: false, eng: this.dropEng || null, soul: this.dropSoul || null, awake: this.dropAwake || false };
             v.dropIn = { sq: e.sq, p: 0 };
             this.snd('drop');
             if (!lastCap) this.chStep(chPost);
@@ -826,7 +836,8 @@ export class BattleScreen {
           },
         }); break;
         case 'win': if (this.src.kind === 'lesson') break; add(0.25, { begin: () => { this.word('대국 승리', PAL.gold, 1.2, 2); this.snd('win'); this.winFx(); } }); break;
-        case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '놓을 곳 없음' : '남은 수 없음', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
+        // 끝까지 두는 대국(코어 판)은 수를 다 써도 목표에 못 미쳐서 진다
+        case 'lose': if (this.src.kind === 'lesson') break; add(0.6, { begin: () => { this.word(e.reason === 'stuck' ? '놓을 곳 없음' : this.bRef && this.bRef.rules.playOut ? PLAY_OUT.lose : '남은 수 없음', PAL.red, 1.4, 1); this.snd('lose'); } }); break;
         // 점화(CHM-67): 걸음 없이 적어 두고, 한 수 연출이 끝난 뒤(afterSeq) 막간을 연다
         case 'ignite': this.ignPending = e; break;
         case 'fragment': add(0.05, { begin: () => { this.toast(`${LEGEND_BY_ID[e.legend].name} · ${PART_NAME[e.part]}`, PAL.gold, 2.6); this.snd('fragment'); { const to = shardTo(); this.app.flyShard(BX + 112, BY + 112, to.x, to.y); } } }); this.runEvents.push(e); break;
@@ -894,6 +905,7 @@ export class BattleScreen {
       done: () => {
         v.score = from + e.score;
         v.count = null;
+        this.streakStep(e);
         if (e.score > 0) this.slamFx(v.target && v.score >= v.target);
         this.lastEnd = { value: e.value, mult: e.mult, score: e.score, reason: e.reason, steps: v.chain ? v.chain.steps.slice() : [], eng: v.chain ? v.chain.eng : null };
         if (this.run && !this.rehearsal && e.score > 0 && app.noteMove(e.score, this.lastEnd.steps) && app.records.runs + app.records.wins > 0) this.toast('최고 한 수', PAL.gold);
@@ -906,6 +918,33 @@ export class BattleScreen {
         if (this.bRef) { v.movesLeft = this.bRef.movesLeft; }
       },
     });
+  }
+
+  // 이어 온 배수가 바뀌는 순간(콤보가 끝나 점수가 꽂힌 뒤 — 한 수 연출 시간은 늘리지 않는다): 쌓이면 배수 칸이 번쩍이고 「+N」,
+  // 끊기면 배수 칸에 붉은 테와 「끊김」 — 이번 콤보 몫은 안 쌓인다(rules.streakCut)
+  streakStep(e) {
+    const v = this.view, b = this.bRef;
+    if (v.streak == null || !b || !b.rules.streak) return;
+    const was = v.streak, now = b.streak || 0;
+    v.streak = now;
+    const cut = e.reason === 'cut';
+    if (!cut && now <= was) return;
+    this.streakFx = { t: this.app.time, cut, n: now - was };
+    if (cut) { this.pop('끊김', 'mult', { col: PAL.red }); this.snd('tick', 1); }
+    else { this.pop(`+${now - was}`, 'mult'); this.snd('tick', now); }
+  }
+  // 끝까지 두는 대국(rules.playOut)에서 목표를 넘긴 뒤 다음 넘침 눈금(×2 · ×5 · ×10). 넘기기 전 · 다 넘긴 뒤 · 옛 판은 null
+  nextTier(score) {
+    const v = this.view, b = this.b;
+    if (!v.target || !b || !b.rules || !b.rules.playOut || score < v.target) return null;
+    return BAR_TIERS.find((m) => score < m * v.target) ?? null;
+  }
+  // 이어 온 배수가 바뀐 순간부터 스러지는 세기(1 → 0, 0.5초)
+  streakGlow() {
+    const f = this.streakFx;
+    const k = f ? (this.app.time - f.t) / 0.5 : 9;
+    if (k >= 0 && k < 1) { motion(); return (1 - k) * (1 - k); }
+    return 0;
   }
 
   afterSeq() {
@@ -1595,6 +1634,10 @@ export class BattleScreen {
     if (nb >= 0) hint(app, 'brilliant', `hand:${nb}`);
     // 대국 도전: 처음 도전이 붙은 대국에서 판 위 띠를 가리킨다
     if (this.chBand() && !this.achvOnBand()) hint(app, 'challenge', 'challenge');
+    // 코어 판의 새 규칙: 처음 배수가 쌓인 · 처음 콤보가 끊긴 · 처음 목표를 넘기고 수가 남은 순간(그 순간 화면에 있는 배수 칸 · 목표 막대)
+    if (v.streak != null && this.lastEnd && this.lastEnd.reason === 'cut') hint(app, 'streakCut', 'box:links');
+    if (v.streak > 0 && this.lastEnd && this.lastEnd.reason !== 'cut') hint(app, 'streak', 'box:links');
+    if (this.nextTier(v.score) && b.movesLeft > 0) hint(app, 'playOut', 'goal');
     const ghost = (b.incoming || []).find((r) => !v.board[r.sq] && !isHidden(b, r.sq));
     if (ghost) hint(app, 'incoming', `sq:${ghost.sq}`);
     const snared = b.rules.snare ? (b.incoming || [])[snareIndex(b.incoming)] : null;
@@ -1661,7 +1704,7 @@ export class BattleScreen {
     // 목표 막대를 빈 상자로 적는다(막대 테) — smoke 「글 넘침」이 알림 · 다른 글과 겹치면 잡는다(CHM-48)
     openBox('tile', X - 1, Y - 1, Wd + 2, Hh + 2, 0, { name: '목표 막대' });
     closeBox();
-    this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => tipLines(`목표 ${num(tgt)}`, '콤보가 끝났을 때 점수가 목표를 넘으면 이겨요. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어나요') });
+    this.app.ui.region('goal', X - 1, Y - 3, Wd + 2, Hh + 6, { tip: () => (this.b.rules.playOut ? tipLines(`목표 ${num(tgt)}`, [PLAY_OUT.goal, PLAY_OUT.bonus]) : tipLines(`목표 ${num(tgt)}`, '콤보가 끝났을 때 점수가 목표를 넘으면 이겨요. 넘치면 ×2 · ×5 · ×10 눈금까지 늘어나요')) });
     if (score >= tgt) glow(ctx, X, Y, Math.round(Wd * Math.min(1, score / maxV)), Hh, PAL.gold, 0.3 * flicker(time, 4), 5);
     // 둥근 막대: 깊은 남색 + 옅은 테(빈 자리와 같은 결), 채움은 금빛 둥근 판
     rrect(ctx, X - 1, Y - 1, Wd + 2, Hh + 2, (Hh + 2) / 2, PAL.slotEdge);
@@ -2206,18 +2249,21 @@ export class BattleScreen {
     // 점화(CHM-67): 점수 이름표 옆에 불씨 — 가리키면 이 판의 콤비네이션. 규칙이 사슬 끝에 남기니 막간이 열리기 전(ignPending)에는 감춘다
     if (run && run.ignite && !this.ignPending) emberMark(ctx, ui, run.ignite, LX + PX + measure('점수') + 4, sl);
     const tgt = spec.targetN ?? spec.target;
-    const gS = `/ ${typeof tgt === 'number' ? fitNum(tgt, LW / 2) : L(String(tgt))}`;
-    const gw = Math.max(measure('목표'), measure(gS, true));
+    // 끝까지 두는 대국(코어 판): 목표를 넘긴 뒤에는 목표 자리에 다음 넘침 눈금 「다음 ×2 / 400」
+    const nt = this.nextTier(score);
+    const goalLab = nt ? `다음 ×${nt}` : '목표', goalN = nt ? nt * v.target : tgt;
+    const gS = `/ ${typeof goalN === 'number' ? fitNum(goalN, LW / 2) : L(String(goalN))}`;
+    const gw = Math.max(measure(goalLab), measure(gS, true));
     // 큰 점수가 목표 옆(두 줄)에서 두 배도 안 들어가면 목표를 윗줄 한 줄로 올리고 점수가 온 폭을 쓴다 — 6관부터 1,000만 넘어도 한 배로 뚝 떨어졌다(S-25)
     let big = this.bigNum(score, LW - PX * 2 - gw - 6), goalLine = false;
-    const lineW = measure('목표') + SP.xs + measure(gS, true);
+    const lineW = measure(goalLab) + SP.xs + measure(gS, true);
     if (big.k < 2 && lineW <= LW - PX * 2) { const wide = this.bigNum(score, LW - PX * 2, 2); if (wide.k >= 2) { big = wide; goalLine = true; } }
     if (!goalLine) {
-      text(ctx, '목표', LX + LW - PX - gw, sy + 4, PAL.dim);
+      text(ctx, goalLab, LX + LW - PX - gw, sy + 4, nt ? PAL.gold : PAL.dim);
       text(ctx, gS, LX + LW - PX - gw, sy + 4 + LINE, PAL.ink, { bold: true });
     } else {
       const vw = measure(gS, true);
-      text(ctx, '목표', LX + LW - PX - lineW, sy, PAL.dim);
+      text(ctx, goalLab, LX + LW - PX - lineW, sy, nt ? PAL.gold : PAL.dim);
       text(ctx, gS, LX + LW - PX - vw, sy, PAL.ink, { bold: true });
     }
     const by = sy + INK_H * (3 - big.k);
@@ -2244,8 +2290,10 @@ export class BattleScreen {
     this.drawGoalBar(ctx, lay);
     // 값 × 배수: 큰 칸 둘(크림 값 · 금빛 배수), 이름표는 칸 안 왼쪽 위
     const c = v.chain, g = v.gather;
-    const val = g ? g.value : c ? c.value : 0;
-    const mul = g ? g.mult : c ? c.mult : 0;
+    // 이어 온 배수(코어 판): 콤보가 없으면 배수 칸이 이어 온 배수를 든다. 놓을 칸을 가리키면 그 수가 시작할 값 × 배수(previewDrop — 시작 배수가 들어 있다)
+    const dpv = !c && !g && v.streak != null && this.pvNow && this.pvNow.kind === 'drop' ? this.pvNow : null;
+    const val = g ? g.value : c ? c.value : dpv ? dpv.value : 0;
+    const mul = g ? g.mult : c ? c.mult : dpv ? dpv.mult : v.streak || 0;
     const gp = g ? g.p : 0;
     const dx = gp * 32;
     const VY = lay.val.y, TW = VAL_W, MX = LX + LW - VAL_W;
@@ -2285,7 +2333,7 @@ export class BattleScreen {
       if (v.brill) this.brillTag(ctx, LX, VY, LW);
     } else {
       ui.region('box:value', LX, VY, TW, VAL_H, { keys: [{ id: 'value' }] });
-      ui.region('box:links', MX, VY, TW, VAL_H, { keys: [{ id: 'links' }] });
+      ui.region('box:links', MX, VY, TW, VAL_H, { keys: v.streak != null ? [{ id: 'links' }, { id: 'streak' }] : [{ id: 'links' }] });
       const drawVM = () => {
         tile(LX + dx, VY, TW, PAL.val, '값', '#6b6f9a', val, g ? 0 : punch(uv), '값');
         if (!g) text(ctx, '×', LX + LW / 2, VY + 13, PAL.ink, { align: 'center', bold: true });
@@ -2293,6 +2341,12 @@ export class BattleScreen {
       };
       if (g) fine(drawVM); else drawVM();
       if (v.brill) fine(() => this.brillTag(ctx, MX - dx, VY, TW));
+      // 이어 온 배수가 쌓인 순간은 금빛 번쩍, 끊겨 안 쌓인 순간은 붉은 테(0.5초)
+      const sg = v.streak != null && !c && !g ? this.streakGlow() : 0;
+      if (sg > 0.01) {
+        if (this.streakFx.cut) { ctx.globalAlpha = sg; rframe(ctx, MX - 1, VY - 1, TW + 2, VAL_H + 2, R_LG + 1, PAL.red); innerFrame(ctx, MX - 1, VY - 1, TW + 2, VAL_H + 2, R_LG, PAL.red); ctx.globalAlpha = 1; }
+        else glow(ctx, MX, VY, TW, VAL_H, PAL.goldHi, 0.8 * sg, 8);
+      }
     }
     this.drawChainPanel(ctx, ui, lay);
     this.drawFootRows(ctx, ui, lay);
@@ -2424,7 +2478,7 @@ export class BattleScreen {
       return x0;
     };
     const rows = [
-      { id: 'pips:moves', tip: () => tipLines('수', '이번 대국에 놓을 수 있는 횟수. 다 쓰면 대국이 끝나요'), draw: (ty) => { text(ctx, '수', LX + PX, ty, PAL.dim); pipRow(v.moves, v.movesLeft, PAL.gold, ty); } },
+      { id: 'pips:moves', tip: () => tipLines('수', this.b.rules.playOut ? ['이번 대국에 놓을 수 있는 횟수', PLAY_OUT.moves] : '이번 대국에 놓을 수 있는 횟수. 다 쓰면 대국이 끝나요'), draw: (ty) => { text(ctx, '수', LX + PX, ty, PAL.dim); pipRow(v.moves, v.movesLeft, PAL.gold, ty); } },
       { id: 'pips:discards', tip: () => this.offeredTip(), draw: (ty) => { text(ctx, '희생', LX + PX, ty, PAL.dim); const x0 = pipRow(v.discards, v.discardsLeft, PAL.btnRed, ty); this.offeredRow(ctx, LX + PX + measure('희생') + 4, x0 - 3, ty); } },
     ];
     if (hasClock(run)) rows.push({ id: 'clock', tip: () => clockTip(run), draw: (ty) => { text(ctx, '시계', LX + PX, ty, PAL.dim); clockPips(ctx, run, right, ty, app.time, app.clockFx); } });
@@ -2571,7 +2625,7 @@ export class BattleScreen {
       const m = run.maxims[i];
       if (!m) { slot(ctx, x, y, MAXC.w, MAXC.h, { r: radiusOf(MAXC.w, MAXC.h) }); continue; }
       const id = `maxim:${i}`;
-      ui.region(id, x, y, MAXC.w, MAXC.h, { tip: () => maximTip(m), keys: () => maximFamilies(m.id).map((f) => ({ id: `fam_${f}` })) });
+      ui.region(id, x, y, MAXC.w, MAXC.h, { tip: () => maximTip(m), keys: () => famsOf(m.id).map((f) => ({ id: `fam_${f}` })) });
       maximCard(ctx, m, x, y, MAXC.w, MAXC.h, { narrow: true, off: off.includes(m.uid), hot: ui.isHover(id), t: ui.time + i * 0.37 });
     }
   }
@@ -2608,7 +2662,7 @@ export class BattleScreen {
       button(ctx, ui, 'btn:moves', mx, 2, mw, BTN_S, '행마', { onClick: () => this.openMoves(), grow: { l: Math.max(0, mx - RX - 34), u: Infinity, d: Math.max(0, lay.comboY - 1 - 2 - BTN_S) } });
       josekiTiles(ctx, ui, run, bx, 2 + ((BTN_S - JOSEKI_TILE) >> 1)); // 행마 단추(y 2)와 가운데를 맞춘다
       this.drawComboSlots(ctx, ui, lay, mx - 4 - RX);
-      familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: lay.rows });
+      if (!run.core) familyStrip(ctx, ui, run, RX, lay.stripY, RW, { time: this.app.time, max: 4, glyph: false, rows: lay.rows }); // 코어 판은 시너지가 없다 — 그 줄에는 「격언 n/5」만
       this.maximCountLabel(ctx, ui, lay);
       this.drawMaxims(ctx, ui, lay);
     }

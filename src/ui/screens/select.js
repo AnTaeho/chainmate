@@ -6,7 +6,7 @@ import { hint } from '../coach.js';
 import { PAL } from '../../render/palette.js';
 import { H, text, box, rect, rrect, rframe, fitNum, measure, R_SM } from '../../render/gfx.js';
 import { beat, LOOK } from '../../render/look.js';
-import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES } from '../../sim/run.js';
+import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES, canSkip } from '../../sim/run.js';
 import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
 import { challengeText, CHALLENGE_TEXT } from '../../data/challenges.js';
 import { CHARTS } from '../../data/charts.js';
@@ -129,7 +129,8 @@ const KIND_SHORT = { practice: '연습', official: '정식' }; // 남은 대국 
 const SEL = { gap: 4, get w() { return Math.floor((MAIN.w - this.gap * 2) / 3); } };
 const selX = (i) => MAIN.x + i * (SEL.w + SEL.gap);
 // tight: 카드 줄이 본 칸을 넘을 때(영어 7 · 8관 큰 목표가 두 줄 + 패 글 두 줄 + 두 줄 세력 띠) 목표 · 이기면 수치를 짧은 꼴(470K)로 한 줄에 — selectLays
-export function blindLayout(run, i, w = SEL.w, { tight = false } = {}) {
+// cell: 코어 판(건너뛰기 · 패가 없다) 연습 · 정식 카드의 판 보기 칸 크기 — selectLays가 본 칸에 맞춰 고른다
+export function blindLayout(run, i, w = SEL.w, { tight = false, cell = PEEK.cell } = {}) {
   const blind = i;
   const info = blindInfo(run, run.ante, i);
   const master = info.kind === 'master';
@@ -182,6 +183,9 @@ export function blindLayout(run, i, w = SEL.w, { tight = false } = {}) {
     }
     f.gap(GAP_IN);
     out.lines = wrap(m.text, IW).map((l) => [l, f.line()]);
+  } else if (!info.tag) {
+    // 코어 판: 받는 것 없이 판 보기만 — 카드 안 폭 가운데에(지난 대국은 비운다)
+    if (peek) { const bw = peekSize(cell); out.peek = { x: (IW - bw) >> 1, y: f.space(bw), cell }; }
   } else if (peek) {
     // 시안 2(CHM-58 ②): 작은 판 왼쪽에 「건너뛰면」 → 그 아래 패 그림(2배, 24), 받는 것 글은 판 아래 온 폭(두 줄까지)
     const top = f.y;
@@ -212,9 +216,13 @@ export function bandLayout(fa, w) {
   return { w, tx, name, lines, h: Math.max(P * 2 + CREST2, f.y + P) };
 }
 // 카드 셋의 쌓기: 본 칸(아래 여백 GAP_GROUP)을 넘으면 수치를 짧은 꼴로 다시 쌓는다
+// 코어 판은 판 보기 칸을 들어가는 데까지 키운다(받는 것 글이 비운 자리 — 칸 9 · 판 74가 1관 카드 셋을 채운다)
+export const CORE_PEEK = [9, 8, 7, 6, PEEK.cell];
 export function selectLays(run) {
-  const lays = [0, 1, 2].map((i) => blindLayout(run, i));
-  if (TOP + selectPlan(run, lays).H <= 270 - GAP_GROUP) return lays;
+  for (const cell of run.core ? CORE_PEEK : [PEEK.cell]) {
+    const lays = [0, 1, 2].map((i) => blindLayout(run, i, SEL.w, { cell }));
+    if (TOP + selectPlan(run, lays).H <= 270 - GAP_GROUP) return lays;
+  }
   return [0, 1, 2].map((i) => blindLayout(run, i, SEL.w, { tight: true }));
 }
 // 관 선택의 자리: 연습 · 정식 카드는 세력 띠 아래, 명인 카드는 본 칸 위부터 온 높이. 아랫변은 셋이 같다
@@ -312,7 +320,7 @@ export class SelectScreen {
         const BS = peekSize(PEEK.big);
         const tip = { title: master ? `마스터 ${lay.m.name}` : KIND_NAME[info.kind], titleCol: master ? PAL.redDk : null, body: [], block: { h: BS, draw: (c, bx, by, bw) => bigBoard(c, pv, bx + ((bw - BS) >> 1), by) } };
         ui.region(`select:board:${i}`, x, y, w, h, { tip, keys: [master ? lay.m.text : tagText(info.tag)] });
-        miniBoard(ctx, pv, x + P + lay.peek.x, y + lay.peek.y, { dim: !cur });
+        miniBoard(ctx, pv, x + P + lay.peek.x, y + lay.peek.y, { dim: !cur, cell: lay.peek.cell || PEEK.cell });
         if (cur) hint(this.app, 'preview', `select:board:${i}`);
         if (ui.isHover(`select:board:${i}`)) this.app.trackOnce('peek_hover', { ante: run.ante, blind: i });
       }
@@ -323,7 +331,7 @@ export class SelectScreen {
         drawPortrait(ctx, info.master, x + P + 2, y + lay.portrait + 2, 1, past ? 0.6 : 1);
         for (const [l, ly] of lay.names) text(ctx, l, x + P + lay.nameX, y + ly, PAL.red, { bold: lay.nameBold });
         for (const [l, ly] of lay.lines) richText(ctx, l, x + P, y + ly, ink, { termCol: PAL.gold });
-      } else {
+      } else if (lay.skipLabel != null) {
         text(ctx, '건너뛰면', x + P, y + lay.skipLabel, PAL.dim);
         if (lay.icon2) tagIcon(ctx, info.tag, x + P + lay.icon2.x, y + lay.icon2.y, 2);
         // 받는 것 글 안 낱말(꾸러미 · 판본 · 명경기 조각)은 밝게 — 가리키면 낱말 상자(위 select:board keys)
@@ -336,6 +344,7 @@ export class SelectScreen {
         text(ctx, log && log.skipped ? '건너뜀' : lost ? '패배 · 시계 −1' : '승리', x + w / 2, inkY(by, BTN_H), lost ? PAL.red : PAL.dim, { align: 'center', bold: true });
       } else if (cur) {
         if (master) { button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '시작', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
+        else if (!canSkip(run)) button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '시작', { onClick: () => this.play(), tone: 'gold', grow: { u: SP.s, d: P } }); // 코어 판: 건너뛰기가 없다
         else {
           // 카드 안 폭(98)에 단추 둘을 같은 폭 · 최소 64로 놓을 수 없어 「건너뛰기」는 글 + 양옆 SP.m, 「시작」이 남는 폭
           const sw = measure('건너뛰기', true) + SP.m * 2, pw = w - P * 2 - SP.s - sw;
@@ -375,6 +384,7 @@ export class SelectScreen {
     this.app.go('battle', { events: ev });
   }
   skip() {
+    if (!canSkip(this.app.run)) return;
     const ev = this.app.cmd({ type: 'skip' });
     const s = ev.find((e) => e.type === 'skip');
     // 꾸러미 패는 알림 없이 곧바로 꾸러미 화면(이름은 왼쪽 칸 머리에) — 알림이 위 띠 격언 이름표를 덮었다

@@ -78,7 +78,8 @@ test('앱: 로컬 서버 · 자동화 브라우저 · 설정 끔에서는 판을
     const { app, net, d } = await play(wire, settings);
     app.records.tutorialAsked = true; app.records.runs = 1;
     app.newRun({ seed: 7 });
-    app.cmd({ type: 'joseki', index: 0 }); app.cmd({ type: 'play' });
+    if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
+    app.cmd({ type: 'play' });
     d.emit('error', { error: new Error('boom') });
     assert.equal(net.flush().length, 0, why);
     assert.equal(d.store.has(TID_KEY), false, why);
@@ -322,7 +323,7 @@ test('명령 길: 레퍼토리 · 대국 끝 · 상점 사기 · 떠나기 · �
 
 test('run_start 속성: 단 · 오프닝 · 오늘의 대국', () => {
   const run = createRun({ seed: 5 });
-  assert.deepEqual(runStartProps(run), { dan: 0, opening: run.opening ?? null, daily: false });
+  assert.deepEqual(runStartProps(run), { dan: 0, opening: run.opening ?? null, daily: false, core: false });
 });
 
 // ── 앱에 걸린 길(main.js boot 그대로, 배포 주소인 척)
@@ -426,7 +427,8 @@ test('앱: 설정을 바꾸면 setting_change, 기록 보내기를 끄면 teleme
   press('set:shake'); press('set:calm');
   app.records.tutorialAsked = true; app.records.runs = 1;
   app.newRun({ seed: 7 });
-  app.cmd({ type: 'joseki', index: 0 }); app.cmd({ type: 'play' });
+  if (app.run.phase === 'draft') app.cmd({ type: 'joseki', index: 0 });
+  app.cmd({ type: 'play' });
   d.emit('error', { error: new Error('boom') });
   assert.equal(net.flush().length, 3, '끈 뒤로는 아무것도');
   // 다시 켠다

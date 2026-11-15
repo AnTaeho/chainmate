@@ -95,7 +95,8 @@ const browser = await chromium.launch({ channel: 'chromium' });
 const results = [];
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
-async function openPage({ reducedMotion = 'no-preference', lang = 'ko', fresh = false, rank = false } = {}) {
+// full: 옛 판(주소 ?full — 새 판이 코어 판이 되기 전의 판). 장면들은 옛 판으로 돌고, 코어 판 장면(5절)만 끈다
+async function openPage({ reducedMotion = 'no-preference', lang = 'ko', fresh = false, rank = false, full = true } = {}) {
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, reducedMotion });
   const page = await ctx.newPage();
   const errors = [];
@@ -106,8 +107,9 @@ async function openPage({ reducedMotion = 'no-preference', lang = 'ko', fresh = 
     localStorage.clear();
     localStorage.setItem('chainmate.settings.v1', JSON.stringify({ volume: 0, music: 0, lang, telemetry: false }));
   }, { lang, rank });
-  await page.goto(`http://127.0.0.1:${PORT}/index.html${FIT ? `?fit=${FIT}` : ''}`);
-  if (rank) await page.evaluate(async (today) => { const m = await import('/src/main.js'); m.boot({ rankBase: '', today: () => today }); }, TODAY);
+  const q = [FIT ? `fit=${FIT}` : null, full ? 'full' : null].filter(Boolean).join('&');
+  await page.goto(`http://127.0.0.1:${PORT}/index.html${q ? `?${q}` : ''}`);
+  if (rank) await page.evaluate(async ([today, full]) => { const m = await import('/src/main.js'); m.boot({ rankBase: '', today: () => today, full }); }, [TODAY, full]);
   await page.waitForFunction(() => window.__app && window.__raf);
   if (FIT && !fitShown) { fitShown = true; console.log('# 맞춤', FIT, await page.evaluate(() => `K ${window.__fit.k} · 뒷면 ${window.__app.canvas.width}×${window.__app.canvas.height}`)); }
   await page.evaluate((fresh) => {
@@ -540,6 +542,31 @@ const PLAY = async ({ k, sac = false }) => {
     await h.ev(() => { const a = window.__app; a.toTitle(); a.go('codex'); }); await h.step(30); await h.hoverAll(/^codex:(?!tab|back)/, 4, 12);
   });
   results.push({ name: '(errors en)', errors: page.errors.slice(0, 5) });
+  await done(page);
+}
+
+// ── 5. 코어 판(CHM-79): 관 선택(판 보기만) · 대국(이어 온 배수가 쌓이고 · 끊기고, 목표를 넘긴 뒤 다음 눈금) · 상점(두루마리 없음)
+{
+  const page = await openPage({ full: false });
+  const h = helpers(page);
+  await scene(page, 'core select', async () => { await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 7; a.newRun(); }); await h.move(1, 1, 1); await h.step(120); await h.hoverAll(/^select:/, 10); await h.move(1, 1, 60); });
+  await scene(page, 'core battle: streak up · cut · past target', async () => {
+    await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 7; a.newRun(); a.cmd({ type: 'play' }); a.go('battle', { events: [] }); });
+    await h.step(20);
+    for (let k = 0; k < 12; k++) {
+      await h.settle();
+      if (k % 4 === 0) { await h.hoverAll(/^(hand:0|box:links|goal)$/, 4); await h.press(/^hand:0$/, 4); await h.hoverAll(/^sq:/, 2, 8); await h.ev(() => { const s = window.__app.screen; s.sel = []; s.targets = null; }); }
+      const r = await h.ev(PLAY, { k });
+      if (r === 'end') break;
+      await h.step(k % 2 ? 3 : 60);
+    }
+    await h.settle(); await h.move(1, 1, 200);
+  });
+  await scene(page, 'core shop (no scrolls)', async () => {
+    await h.ev(() => { const a = window.__app; a.overlay = null; a.nextSeed = 12; a.newRun(); const r = a.run; for (const id of ['chivalry', 'quick_change', 'first_move']) r.maxims.push({ uid: r.nextUid++, id, data: {}, edition: null, paid: 5 }); r.money = 60; r.phase = 'shop'; r.shop = { rng: window.__rng(), display: [{ kind: 'maxim', id: 'light_step', price: 5, sold: false }, { kind: 'chart', form: 'N', price: 3, sold: false }], packs: [{ kind: 'piece', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }], rerolls: 0, promoted: false, removed: false }; a.go('shop'); });
+    await h.move(1, 1, 1); await h.step(120); await h.hoverAll(/^(shop:buy|shop:pack|maxim:|deck:|build:)/, 6); await h.move(1, 1, 60);
+  });
+  results.push({ name: '(errors core)', errors: page.errors.slice(0, 5) });
   await done(page);
 }
 

@@ -259,7 +259,9 @@ export async function boot(env = {}) {
   const openPage = (url) => { try { if (typeof win.open === 'function') { win.open(url, '_blank', 'noopener'); return true; } } catch { /* 막혔다 */ } return false; };
   // 바뀐 것이 있을 때만 그린다(layout.md 「그릴 때만 그린다」). 자동화 브라우저(스크린샷 · 영상 도구)는 늘 그린다 — env.alwaysDraw로 바꾼다
   const alwaysDraw = env.alwaysDraw ?? !!(win.navigator && win.navigator.webdriver);
-  app = createApp({ canvas, storage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, fields, openPage, today: env.today, alwaysDraw });
+  // 옛 판(코어 판 전의 판): 주소 ?full 또는 부트 옵션 full(연기 시험 · 도구)
+  const full = env.full ?? !!(query && query.has('full'));
+  app = createApp({ canvas, storage, now, reducedMotion: reduced, audio, platform, share, download, copyText, track, rank, cloud, fields, openPage, today: env.today, alwaysDraw, full });
   // 망이 돌아오면 못 보낸 오늘의 대국을 한 번 더 보낸다(P-9)
   win.addEventListener('online', () => { if (rank.retry) rank.retry(); });
   // 다른 창(탭)이 저장을 바꿨다: 기록은 합치고 판은 내려놓는다(P-18)

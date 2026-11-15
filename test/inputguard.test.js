@@ -51,6 +51,7 @@ test('끊긴 손가락(touchcancel): 끌던 격언은 제자리, 누르던 단�
 
 test('수정 키(Cmd · Ctrl · Alt)가 낀 키 · 수정 키 혼자는 게임이 받지 않는다(P-11)', async () => {
   const app = await fresh();
+  app.full = true; // 숫자 키로 고르는 레퍼토리 화면(옛 판)
   app.newRun(); tick(app, 120);
   assert.equal(app.screen.name, 'draft');
   dom.key('1', { metaKey: true }); dom.key('1', { ctrlKey: true }); dom.key('1', { altKey: true }); dom.key('Shift'); dom.key('Meta');

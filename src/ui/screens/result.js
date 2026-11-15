@@ -151,9 +151,9 @@ export class ResultScreen {
     if (this.out.deeper) notes.push([`끝없는 대국 최고 도달 ${this.out.endless}관`, PAL.gold]);
     for (const id of this.out.unlocked) notes.push([`오프닝 ${josa(OPENINGS[id].name, '이/가')} 열렸어요`, PAL.gold]);
     if (this.out.dan) notes.push([`레이팅 ${rating(this.out.dan)}이 열렸어요`, PAL.gold]);
-    // 해금: 다 연 뒤에는 아무것도 없다(마지막 묶음을 연 판만 단추)
+    // 해금: 다 연 뒤에는 아무것도 없다(마지막 묶음을 연 판만 단추). 코어 판은 해금 묶음을 쓰지 않아 줄이 없다
     const st = unlockState(app.records);
-    const un = st.next == null && this.opened == null ? null
+    const un = run.core || (st.next == null && this.opened == null) ? null
       : { st, bar: st.next != null, line: st.next != null ? nextLine(st) : null, btn: this.opened != null ? `${bundleSize(this.opened)}개 열렸어요` : null };
     if (un) {
       un.btnW = un.btn ? btnW(un.btn) : 0;

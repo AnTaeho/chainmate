@@ -4,7 +4,9 @@ import { W, text, rect, rrect, measure, box, R_LG } from '../../render/gfx.js';
 import { live } from '../../render/look.js';
 import { ANTES } from '../../sim/run.js';
 import { JOSEKI_BY_ID, TIER_COL } from '../../data/josekis.js';
-import { panel, tipLines, optLine, fragmentStrip, wrapName, drawName } from '../parts.js';
+import { panel, tipLines, optLine, fragmentStrip, wrapName, drawName, chartTip } from '../parts.js';
+import { CHART_FORMS } from '../../data/charts.js';
+import { PIECE_NAME } from '../words.js';
 import { button, fingerDots, growHit, btnW, buttonRow, toggleGroup, rowWidth } from '../ui.js';
 import { familyList, familyMore } from '../parts-depth.js';
 import { familyCounts } from '../../data/families.js';
@@ -230,6 +232,28 @@ export function dailyMark(ctx, ui, run, right, y) {
   return ICON_SIZE + SP.s;
 }
 export const EMPTY_BUILD = '고른 레퍼토리와 시너지가 여기에 쌓여요';
+// 코어 판(CHM-79)의 짜임 칸: 시너지 · 레퍼토리가 없어 기보로 키운 모습을 적는다(「기보」 이름표 → 모습 이름과 「Lv 2」 줄). 하나도 없으면 흐린 한 줄
+export const EMPTY_CHARTS = '기보로 키운 모습이 여기에 쌓여요';
+export const coreCharts = (run) => CHART_FORMS.filter((f) => (run.charts && run.charts[f]) > 0).map((f) => ({ f, lv: run.charts[f] }));
+function coreBuild(ctx, ui, run, L, top, LW, midH, rows) {
+  const P = PAD_BOX, f = flow(top + P), list = coreCharts(run);
+  if (!list.length) {
+    if (midH - P * 2 >= LINE * 2) wrap(EMPTY_CHARTS, LW - P * 2).slice(0, 3).forEach((l) => { const ly = f.line(); text(ctx, l, L + P, ly, PAL.dim); rows.push(rowSpan(ly)); });
+    return;
+  }
+  const ly = f.line();
+  text(ctx, '기보', L + P, ly, PAL.dim);
+  rows.push(rowSpan(ly));
+  f.gap(GAP_IN);
+  const fit = Math.max(0, Math.floor((top + midH - P - f.y) / LINE));
+  for (const { f: form, lv } of list.slice(0, fit)) {
+    const ry = f.y, ty = f.line();
+    rows.push([ry, ry + LINE]);
+    ui.region(`build:chart:${form}`, L + 4, ry, LW - 8, LINE, { tip: () => chartTip(form, lv) });
+    text(ctx, PIECE_NAME[form], L + P, ty, PAL.ink);
+    text(ctx, `Lv ${lv}`, L + LW - P, ty, PAL.gold, { align: 'right', bold: true });
+  }
+}
 export function runSide(ctx, ui, app, title) {
   const run = app.run;
   const L = LEFT.x, LW = LEFT.w, P = PAD_BOX;
@@ -252,6 +276,12 @@ export function runSide(ctx, ui, app, title) {
   openBox('panel', L, top, LW, midH, P, { name: '짜임 칸' });
   panel(ctx, L, top, LW, midH);
   const rows = ui.sideItem(L, top, LW, midH, { rows: [] }).rows;
+  if (run.core) {
+    coreBuild(ctx, ui, run, L, top, LW, midH, rows);
+    closeBox();
+    drawFoot(ctx, ui, [...(clock ? [clockRow(app, run)] : []), { money: run }, { label: '덱', val: `${run.deck.length}` }]);
+    return;
+  }
   const js = run.josekis || [];
   const labelH = LINE + GAP_IN;
   // 레퍼토리 이름도 두 줄까지(영어 「Stepping Stones」) — 줄마다 본문 줄 하나. 둘째 줄은 JS_IND만큼 들여 다음 이름과 갈린다

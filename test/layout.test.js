@@ -194,6 +194,47 @@ test('관 선택: 세력 띠 · 카드 셋(1~7관 명인 · 8관 대가)이 본 
   }
 });
 
+// 코어 판(CHM-79): 건너뛰기 · 패가 없어 연습 · 정식 카드는 판 보기만 — 판 보기 칸을 키워(CORE_PEEK) 본 칸 안에 들게, 판은 카드 안 폭 가운데
+test('코어 판 관 선택: 판 보기만 든 카드 셋이 본 칸 안 · 판 보기는 카드 안 폭 가운데 · 「건너뛰면」 자리가 없다(모든 세력 · 1 · 4 · 7 · 8관, 한국어 · 영어)', async () => {
+  const { FACTIONS, FINAL_FACTION } = await import('../src/data/factions.js');
+  const { peekSize } = await import('../src/ui/peek.js');
+  const cells = new Set();
+  for (const lang of LANGS) {
+    M.lang.setLang(lang);
+    for (const f of FACTIONS) for (const ante of [1, 4, 7, 8]) for (const blind of [0, 1, 2]) {
+      if ((ante === 8) !== (f.id === FINAL_FACTION)) continue;
+      const run = M.run.createRun({ seed: 1, core: true });
+      run.ante = ante; run.blind = blind; run.factions[ante - 1] = f.id;
+      const lays = M.select.selectLays(run), plan = M.select.selectPlan(run, lays);
+      assert.ok(M.frame.TOP + plan.H <= 270 - M.frame.GAP_GROUP, `${lang} ${f.id} ${ante}관 ${plan.H}`);
+      for (const i of [0, 1]) {
+        const l = lays[i];
+        assert.equal(l.skipLabel, undefined, `${lang} ${f.id} ${ante}관 카드 ${i}: 건너뛰면`);
+        assert.ok(plan.cards[i].h >= l.h, `${lang} ${f.id} ${ante}관 카드 ${i} ${plan.cards[i].h} < ${l.h}`);
+        if (i < blind) { assert.equal(l.peek, undefined); continue; }
+        const bw = peekSize(l.peek.cell);
+        cells.add(l.peek.cell);
+        assert.ok(l.peek.x >= 0 && l.peek.x + bw <= l.IW && Math.abs(l.peek.x * 2 + bw - l.IW) <= 1, `${lang} 판 보기 가운데 ${l.peek.x} ${bw} ${l.IW}`);
+        assert.ok(l.peek.y + bw <= l.btn - M.frame.GAP_GROUP, `${lang} 판 보기가 단추 줄과 닿는다`);
+      }
+    }
+  }
+  assert.ok(Math.max(...cells) > 5, `판 보기 칸이 커지지 않았다 ${[...cells]}`);
+  M.lang.setLang('ko');
+});
+
+// 코어 판 대국: 오른쪽 칸 시너지 띠 자리에는 「격언 n/5」만(띠를 그리지 않는다), 왼쪽 칸 배치는 옛 판과 같다
+test('코어 판 대국 · 상점: 오른쪽 칸 쌓기는 옛 판과 같고, 두루마리 칸이 없는 상점은 격언 칸이 아래 끝까지', async () => {
+  const B = M.battle;
+  const core = M.run.createRun({ seed: 1, core: true }), old = M.run.createRun({ seed: 1, draft: false });
+  assert.deepEqual(B.BattleScreen.prototype.rightLayout.call({}, core), B.BattleScreen.prototype.rightLayout.call({}, old));
+  const { ShopScreen } = await import('../src/ui/screens/shop.js');
+  const rl = ShopScreen.prototype.rightLayout.call({ run: core });
+  assert.equal(core.consumableSlots, 0);
+  assert.equal(rl.labelY, null);
+  assert.ok(rl.room > ShopScreen.prototype.rightLayout.call({ run: old }).room, '격언 칸이 두루마리 자리까지');
+});
+
 test('대국 도전 띠: 모든 도전 · 진행 · 도장이 판 폭 − 8 안(온 글이 안 들어가면 짧은 이름표) — 한국어 · 영어', async () => {
   const { CHALLENGES } = await import('../src/data/challenges.js');
   const { measure } = await import('../src/render/gfx.js');
