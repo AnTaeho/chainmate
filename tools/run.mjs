@@ -12,6 +12,8 @@ import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRun, B, MASTER_MULT, targetFor, REWARD, CHEST, TAGS, igniteKey } from '../src/sim/run.js';
+import { CORE } from '../src/data/core.js';
+import { overflowTier } from '../src/sim/battle.js';
 import { applyNight2 } from './night2.mjs';
 import { MATE } from '../src/sim/tuning.js';
 import { GOLDEN } from '../src/sim/battle.js';
@@ -43,7 +45,7 @@ function parseArgs(argv) {
     else if (k === '--seed') a.seed = Number(argv[++i]);
     else if (k === '--workers') a.workers = Number(argv[++i]);
     else if (k === '--k') a.k = Number(argv[++i]);
-    else if (k === '--B') a.B = argv[++i].split(',').map(Number);       // 실험: 목표 기준 덮어쓰기
+    else if (k === '--B') a.B = argv[++i].split(',').map(Number);       // 실험: 목표 기준 덮어쓰기(--core면 코어 판 곡선 CORE.B)
     else if (k === '--shop') a.shop = JSON.parse(argv[++i]);            // 실험: 상점 수치 덮어쓰기(JSON)
     else if (k === '--tune') a.tune = JSON.parse(argv[++i]);
     else if (k === '--opening') a.opening = argv[++i];                  // 오프닝(판 밖 해금)
@@ -143,7 +145,8 @@ if (!isMainThread) {
   if (next != null) BOT.next = next;
   if (policy === 'nofam') SMART.famAware = false;
   if (policy === 'nosac') SMART.sacEval = false; // 희생 끈 봇은 짜임 재기에서도 바치지 않는다(CHM-51)
-  if (b) b.forEach((x, i) => { B[i] = x; });
+  if (b) b.forEach((x, i) => { (core ? CORE.B : B)[i] = x; });
+  if (tune && tune.streakCut) CORE.rules.streakCut = tune.streakCut; // 코어 판 끊김 뒤 이어 온 수 {"streakCut":"reset"|"half"|"keep"}
   if (shop) Object.assign(SHOP, shop);
   const out = [];
   for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft, unlock ?? null, !!core));
@@ -206,7 +209,8 @@ function report(R, args, wall) {
   const pctile = (arr, p) => { if (!arr.length) return NaN; const s = [...arr].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.round(p * (s.length - 1)))]; };
 
   const wins = R.filter((r) => r.won).length;
-  console.log(`B [${B.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
+  const curve = args.core ? CORE.B : B;
+  console.log(`${args.core ? '코어 B' : 'B'} [${curve.map((x, i) => (args.B && args.B[i] != null ? args.B[i] : x)).join(', ')}]${args.shop ? ' 상점 ' + JSON.stringify(args.shop) : ''}${args.tune ? ' 조정 ' + JSON.stringify(args.tune) : ''}`);
   if (args.botstats) { const d = R.reduce((a, r) => a + (r.botStats ? r.botStats.decisions : 0), 0), c = R.reduce((a, r) => a + (r.botStats ? r.botStats.capped : 0), 0); console.log(`대국 결정 ${d}번 중 풀이기가 마디 예산에 닿은 결정 ${c}번(${pc(c / Math.max(1, d))})`); }
   if (args.timeouts && args.timeouts.length) console.log(`시간 초과 ${args.timeouts.length}판(${args.limit}초, 표에서 뺐다): seed ${args.timeouts.join(' ')}`);
   console.log(`판 ${n}개, 정책 ${args.policy}, seed ${args.seed}, K ${args.k}${args.strong && args.strong !== 1 ? `, 세기 ×${args.strong}` : ''}${args.look ? `, 내다보기 ${args.look}` : ''}${args.next != null ? `, 다음 수 ${args.next}` : ''}${args.core ? ', 뼈대 판' : ''}${args.opening ? ', 오프닝 ' + args.opening : ''}${args.dan ? ', 단 ' + args.dan : ''}${args.give ? ', 쥐여 줌 ' + args.give.join(',') : ''}${args.chase === 0 ? ', 도전 무시' : ''}${args.chaseWeight != null ? `, 쫓는 덤 ${args.chaseWeight}` : ''} — 판 승률 ${pc(wins / n)}, 판당 ${f(R.reduce((a, r) => a + r.ms, 0) / n, 0)}ms(일꾼 ${args.workers}, 전체 ${(wall / 1000).toFixed(1)}s)`);
@@ -229,7 +233,7 @@ function report(R, args, wall) {
       pc(mates.length / bs.length), pc(mates.filter((b) => b.moves === 1).length / bs.length),
       pc(bs.filter((b) => b.reason === 'stuck').length / bs.length),
       String(pctile(bests, 0.5)), String(pctile(bests, 0.9)), String(Math.max(0, ...bests)),
-      String(targetFor(ante, 'practice')),
+      String(targetFor(ante, 'practice', 1, args.B ? curve.map((x, i) => args.B[i] ?? x) : curve)),
     ]);
   }
   table(['관', '도달', '통과', '대국', '연습', '정식', '명인', '점수/목표p10', 'p25', 'p50', 'p90', '외통', '첫수외통', '막힘', '최고수p50', 'p90', '최고', '연습목표'], rows);
@@ -415,6 +419,7 @@ function report(R, args, wall) {
   // ── JSON(--json): 관별 통과율 · 종류별 · 점수/목표 분포 · 시계 · 새것별 산 판 승률
   if (args.peekLog || args.peekSkip != null) peekReport(R, args, { pc, f, table });
   const beatsOut = args.beats ? beatsReport(R, { pc, f, f2, table, pctile }) : null;
+  if (beatsOut && args.core) beatsOut.core = corePaceReport(R, { pc, f, f2, table, pctile });
   const buildOut = args.build ? buildReport(R, { pc, f, f2, table, pctile }) : null;
   if (args.replay) { if (args.replayNodes) REVIEW.nodes = args.replayNodes; if (args.replayBeam) REVIEW.beam = args.replayBeam; replayReport(R, { pc, f, table, pctile }); }
   if (args.json) {
@@ -667,6 +672,67 @@ function beatsReport(R, { pc, f, f2, table, pctile }) {
   }
   console.log('시너지 문턱(가족 수 최댓값, 판 상태로 셈): 넘은 판 · 그 판 승률 · 못 넘은 판 승률 · 처음 넘은 관');
   table(['문턱', '넘은 판', '승률', '못 넘은 판 승률', '처음 넘은 관'], famRows);
+  return out;
+}
+
+// 코어 호흡(CHM-79, --core --beats): 끝까지 두기 · 이어지는 배수 판에서 대국 안의 호흡. 박자 기록기의 대국 줄(코어 판은 끝 칸 { cut, start, disc })로 센다
+function corePaceReport(R, { pc, f, f2, table, pctile }) {
+  const r3 = (x) => (Number.isFinite(x) ? Math.round(x * 1000) / 1000 : null);
+  const B = R.flatMap((r) => (r.beats ? r.beats.battles : []).map((x) => ({ ante: x[1], blind: x[2], won: !!x[3], reason: x[4], score: x[5], target: x[6], used: x[7], max: x[8], cross: x[9], money: x[10] || 0, scores: x[11] || [], p: x[12] || { cut: [], start: [], disc: 0 } })));
+  const n = B.length;
+  if (!n) return null;
+  const slot = (i) => Math.min(i, 4); // 1 · 2 · 3 · 4째 수 · 5째+
+  const SLOTS = ['1째', '2째', '3째', '4째', '5째+'];
+  const mean = (xs) => (xs.length ? xs.reduce((a, v) => a + v, 0) / xs.length : NaN);
+  const out = {};
+  console.log(`\n코어 호흡: 둔 대국 ${n} — 끝까지 두기 · 이어지는 배수`);
+  // 수 차례별 점수 몫(점수가 있는 대국마다 몫을 내 평균, 그 차례까지 못 간 대국은 0)
+  const share = [0, 0, 0, 0, 0];
+  const scored = B.filter((x) => x.scores.reduce((a, v) => a + v, 0) > 0);
+  for (const x of scored) { const tot = x.scores.reduce((a, v) => a + v, 0); x.scores.forEach((v, i) => { share[slot(i)] += v / tot; }); }
+  const two = B.filter((x) => x.scores.length >= 2);
+  const lastBig = two.filter((x) => { const m = Math.max(...x.scores); return m > 0 && x.scores.indexOf(m) === x.scores.length - 1; });
+  out.share = share.map((v) => r3(v / Math.max(1, scored.length)));
+  out.lastBiggest = r3(lastBig.length / Math.max(1, two.length));
+  console.log(`  수 차례별 대국 점수 몫(평균, 점수 있는 대국 ${scored.length}): ${SLOTS.map((s, i) => `${s} ${pc(out.share[i])}`).join(' · ')} · 가장 큰 콤보가 마지막 수인 대국 ${pc(out.lastBiggest)}(두 수 이상 둔 ${two.length} 중)`);
+  // 목표를 처음 넘긴 수 차례
+  const cr = [0, 0, 0, 0, 0]; let never = 0;
+  for (const x of B) { if (x.cross == null) never++; else cr[slot(x.cross - 1)]++; }
+  out.cross = { at: cr.map((v) => r3(v / n)), never: r3(never / n) };
+  console.log(`  목표를 처음 넘긴 수: ${SLOTS.map((s, i) => `${s} ${pc(cr[i] / n)}`).join(' · ')} · 못 넘김 ${pc(never / n)}`);
+  // 끊김으로 끝난 콤보의 몫(수 차례별) · 마지막 수 시작 때 이어 온 배수(수를 다 쓴 대국)
+  const cutAt = [0, 0, 0, 0, 0], chainsAt = [0, 0, 0, 0, 0];
+  for (const x of B) x.p.cut.forEach((c, i) => { chainsAt[slot(i)]++; cutAt[slot(i)] += c; });
+  const full = B.filter((x) => x.used === x.max && x.p.start.length === x.used);
+  const lastStart = full.map((x) => x.p.start[x.used - 1]);
+  out.cutShare = cutAt.map((c, i) => r3(c / Math.max(1, chainsAt[i])));
+  out.lastStart = [pctile(lastStart, 0.1), pctile(lastStart, 0.5), pctile(lastStart, 0.9)];
+  console.log(`  끊김으로 끝난 콤보: ${SLOTS.map((s, i) => `${s} ${pc(out.cutShare[i])}(${chainsAt[i]})`).join(' · ')} · 전체 ${pc(cutAt.reduce((a, v) => a + v, 0) / Math.max(1, chainsAt.reduce((a, v) => a + v, 0)))}`);
+  console.log(`  마지막 수 시작 때 이어 온 배수(수를 다 쓴 대국 ${full.length}): p10 ${f(out.lastStart[0])} · p50 ${f(out.lastStart[1])} · p90 ${f(out.lastStart[2])}`);
+  // 이긴 대국의 넘침 층 · 진 대국의 점수/목표 층
+  const won = B.filter((x) => x.won), lost = B.filter((x) => !x.won);
+  const tiers = [0, 1, 2, 5, 10], tw = {};
+  for (const t of tiers) tw[t] = won.filter((x) => overflowTier(x.score, x.target) === t).length;
+  const lr = lost.map((x) => x.score / x.target), lt = [lr.filter((v) => v < 0.5).length, lr.filter((v) => v >= 0.5 && v < 0.8).length, lr.filter((v) => v >= 0.8).length];
+  out.wonTier = Object.fromEntries(tiers.map((t) => [t, r3(tw[t] / Math.max(1, won.length))]));
+  out.lostTier = lt.map((v) => r3(v / Math.max(1, lost.length)));
+  console.log(`  이긴 대국 ${won.length}의 넘침 층: ×1 ${pc(out.wonTier[1])} · ×2 ${pc(out.wonTier[2])} · ×5 ${pc(out.wonTier[5])} · ×10 ${pc(out.wonTier[10])} · 목표 밑 체크메이트 ${pc(out.wonTier[0])}`);
+  console.log(`  진 대국 ${lost.length}의 점수/목표: <0.5 ${pc(out.lostTier[0])} · 0.5~0.8 ${pc(out.lostTier[1])} · 0.8~1 ${pc(out.lostTier[2])}`);
+  // 대국당 둔 수 · 희생 · 체크메이트로 끝난 몫 · 번 상금
+  out.perBattle = { moves: r3(mean(B.map((x) => x.used))), sacrifices: r3(mean(B.map((x) => x.p.disc))), mate: r3(B.filter((x) => x.reason === 'mate').length / n), money: r3(mean(B.map((x) => x.money))), moneyWon: r3(mean(won.map((x) => x.money))) };
+  console.log(`  대국당 둔 수 ${f2(out.perBattle.moves)} · 희생 ${f2(out.perBattle.sacrifices)} · 체크메이트로 끝난 대국 ${pc(out.perBattle.mate)} · 번 상금 ${f2(out.perBattle.money)}(이긴 대국 ${f2(out.perBattle.moneyWon)})`);
+  // 맞춤용 관별: 도달한 판 중 통과 · 종류별 점수/목표 p50(체크메이트 뺌)
+  const rows = [];
+  out.byAnte = [];
+  for (let a = 1; a <= 8; a++) {
+    const reached = R.filter((r) => r.won || r.ante >= a).length, cleared = R.filter((r) => r.won || r.ante > a).length;
+    const p50 = (blind) => pctile(B.filter((x) => x.ante === a && x.blind === blind && x.reason !== 'mate').map((x) => x.score / x.target), 0.5);
+    const o = { ante: a, reached, pass: r3(cleared / Math.max(1, reached)), practice: r3(p50(0)), official: r3(p50(1)), master: r3(p50(2)) };
+    out.byAnte.push(o);
+    rows.push([String(a), String(reached), pc(o.pass), f2(o.practice), f2(o.official), f2(o.master)]);
+  }
+  console.log('  관별(맞춤): 도달한 판 · 그중 통과 · 점수/목표 p50(체크메이트 뺌)');
+  table(['관', '도달', '통과', '연습 p50', '정식 p50', '마스터 p50'], rows);
   return out;
 }
 

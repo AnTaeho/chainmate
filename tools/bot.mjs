@@ -21,6 +21,37 @@ import { bestMove } from '../src/sim/solver.js';
 import { addOffering, weightOf as weightOfPiece } from '../src/data/sacrifice.js';
 import { cloneBattle, applyDecision, pieceKey } from '../src/sim/replay.js';
 import { challengeMet } from '../src/data/challenges.js';
+import { OVERFLOW_TIERS, streakAfterCut } from '../src/sim/battle.js';
+import { REWARD } from '../src/sim/run.js';
+import { CORE } from '../src/data/core.js';
+
+// 봇이 이번 대국에서 노리는 점수. 보통은 목표. 끝까지 두는 대국(rules.playOut, 코어 판)에서 목표를 넘긴 뒤에는
+// 덤이 붙는 다음 넘침 층(×2 · ×5 · ×10)을 노린다 — 넘긴 뒤에도 희생 판단 · 폰 아끼기 · 내다보기가 덤을 보고 돈다
+export function goalOf(b) {
+  if (b.target == null) return null;
+  if (!b.rules.playOut || b.score < b.target) return b.target;
+  for (const x of OVERFLOW_TIERS) if (x > 1 && b.score < x * b.target) return x * b.target;
+  return Infinity;
+}
+// 이어지는 배수(rules.streak, 코어 판)의 값. 끊기지 않고 끝나는 줄은 이어 온 수 + 이번에 잡은 수를 남은 수로 넘기고, 끊기는 줄은 rules.streakCut대로(0 · 절반 · 그대로).
+// 어림: 줄 평가 = 점수 + 넘길 수 × 남은 수(이번 수 빼고) × 콤보 하나의 값 × weight. 콤보 하나의 값은 이번 수의 가장 높은 점수 줄의 값(배수 곱하기 전).
+// weight는 남은 수가 다 콤보로 이어지지 않는 몫(막힘 · 약한 손)을 덜어 낸다
+export const STREAK = { weight: 0.75 };
+function streakRank(b, value, base) {
+  const left = b.movesLeft - 1;
+  if (!b.rules.streak || left <= 0 || !(value > 0)) return base;
+  const w = left * value * STREAK.weight, s0 = b.streak || 0, cut = streakAfterCut(b.rules, s0);
+  return (r) => (base ? base(r) : r.score) + (r.reason === 'cut' ? cut : s0 + r.captures) * w;
+}
+// 끝까지 두는 대국에서 목표를 넘긴 뒤 보이는 체크메이트: 지금 끝내면 받는 상금(체크메이트 · 남은 수 · 그 점수의 넘침 덤)과
+// 끝까지 두어 받을 넘침 덤(이번 수의 가장 좋은 메이트 아닌 줄을 남은 수만큼 둔다고 어림)을 견준다. 이기는 것은 어느 쪽이든 같다
+const overflowMoney = (score, target) => { let x = 0; for (const t of OVERFLOW_TIERS) if (score >= t * target) x = CORE.overflow[t] || 0; return x; };
+function mateNow(b, mate, alt) {
+  if (!alt) return true;
+  const now = REWARD.mate + REWARD.perMove * (b.movesLeft - 1) + overflowMoney(b.score + mate.score, b.target);
+  const later = overflowMoney(b.score + alt.score * b.movesLeft, b.target);
+  return now >= later;
+}
 
 // ratio 1 → 2(밤샘 2 3부): 1이면 대국당 0.08번만 다시 놓아 판을 끝낸 죽음의 판 운 몫이 52.6%, 2면 0.18번 · 31.3%(luck 30판)
 export const REBOARD = { ratio: 2 }; // 켜고 끄기는 src/sim/tuning.js BOARD_TUNING.reboard(끄면 canReboard가 늘 거짓)
@@ -92,12 +123,31 @@ export function decideBattle(b, opts = {}) {
   return real && real.play ? real : d;
 }
 function decideOn(b, { nomate = false, pawnRatio = 0.5, rank = null, sacrifice = true, drops = null } = {}) {
-  const per = bestPerPiece(b, { preferMate: nomate ? 'avoid' : true, rank, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}), ...(drops ? { drops } : {}) });
+  const opt = { preferMate: nomate ? 'avoid' : true, rank, ...(BOT.nodes ? { maxNodes: BOT.nodes } : {}), ...(drops ? { drops } : {}) };
+  let per = bestPerPiece(b, opt);
   if (BOT.stats) { BOT.stats.decisions++; const lim = BOT.nodes ?? 10000; if (per.some((m) => m && m.nodes > lim)) BOT.stats.capped++; }
   let best = null;
   for (const m of per) if (m && betterMove(m, best, nomate, rank)) best = m;
+  // 이어지는 배수(코어 판): 끊김으로 끝나는 줄에 잃는 배수의 값을 물려 다시 고른다
+  const sr = best && !best.mate ? streakRank(b, best.value, rank) : rank;
+  if (sr !== rank) {
+    rank = sr;
+    per = bestPerPiece(b, { ...opt, rank });
+    best = null;
+    for (const m of per) if (m && betterMove(m, best, nomate, rank)) best = m;
+  }
   const canDiscard = b.discardsLeft > 0 && b.bag.length > 0;
-  if (best && best.mate && !nomate) return { play: best };
+  if (best && best.mate && !nomate) {
+    if (!b.rules.playOut || b.target == null || b.score < b.target) return { play: best };
+    const ar = streakRank(b, best.value, rank);
+    const perAlt = bestPerPiece(b, { ...opt, preferMate: 'avoid', rank: ar });
+    let alt = null;
+    for (const m of perAlt) if (m && !m.mate && betterMove(m, alt, true, ar)) alt = m;
+    if (mateNow(b, best, alt)) return { play: best };
+    best = alt;
+    per = perAlt.map((m) => (m && !m.mate ? m : null));
+    rank = ar;
+  }
   if (b.target != null && canReboard(b) && (!best || best.score * b.movesLeft < (b.target - b.score) * REBOARD.ratio)) return { reboard: true };
   const roomy = b.bag.length >= b.movesLeft;
   if (!best) {
@@ -106,7 +156,7 @@ function decideOn(b, { nomate = false, pawnRatio = 0.5, rank = null, sacrifice =
     b.hand.forEach((p, i) => { if (valueOf(p.t) < valueOf(b.hand[low].t)) low = i; });
     return { discard: [low], why: 'stuck', before: 0 };
   }
-  const need = b.target != null ? b.target - b.score : Infinity;
+  const need = b.target != null ? goalOf(b) - b.score : Infinity;
   if (best.score >= need) return { play: best };
   if (sacrifice && canDiscard && roomy) {
     const pick = sacrificeChoice(b, per.map((m) => (m ? m.score : null)), best, { need, preferMate: nomate ? 'avoid' : true });
@@ -248,7 +298,7 @@ function determinize(t, s) {
 function lookDecide(b, opts) {
   const base = decideBattle(b, opts);
   if (!base || b.target == null) return base;
-  if (base.play && ((base.play.mate && !opts.nomate) || b.score + base.play.score >= b.target)) return base;
+  if (base.play && ((base.play.mate && !opts.nomate) || b.score + base.play.score >= goalOf(b))) return base;
   const cands = candidates(b, base, opts);
   if (cands.length < 2) return base;
   const r = fork(createRng((b.seed ^ (b.movesUsed * 7919) ^ ((b.discardsUsed || 0) * 104729) ^ ((b.reboards || 0) * 31)) >>> 0), 'look');

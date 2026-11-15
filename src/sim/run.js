@@ -165,13 +165,17 @@ export function danRules(dan) {
   };
 }
 
-export function targetFor(ante, kind, mult = 1) {
-  const base = ante <= ANTES ? B[ante - 1] : B[ANTES - 1] * ENDLESS_GROWTH ** (ante - ANTES);
+// curve: 관별 기준(코어 판은 CORE.B — curveOf)
+export function targetFor(ante, kind, mult = 1, curve = B) {
+  const base = ante <= ANTES ? curve[ante - 1] : curve[ANTES - 1] * ENDLESS_GROWTH ** (ante - ANTES);
   const raw = base * KIND_MULT[kind] * (kind === 'master' ? MASTER_MULT[ante - 1] ?? 1 : 1) * mult;
   // 보기 좋게: 유효 숫자 둘
   const mag = 10 ** Math.max(0, Math.floor(Math.log10(raw)) - 1);
   return Math.round(raw / mag) * mag;
 }
+
+// 판의 목표 곡선: 코어 판은 자기 곡선(src/data/core.js)
+export const curveOf = (run) => (run && run.core ? CORE.B : B);
 
 // 관의 세력(docs/design-notes/factions.md): 1관 농민군 · 8관 왕궁 근위 고정, 2~7관은 판 시드로 섞은 여섯. 끝없는 대국은 관마다 아무 세력
 export function factionFor(run, ante) {
@@ -230,7 +234,7 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
   const mult = (st ? st.target * (master && faction === FINAL_FACTION ? st.finalTarget : 1) : 1) * josekiTargetMult(run);
   return {
     ante, blind, kind,
-    target: targetFor(ante, kind, mult),
+    target: targetFor(ante, kind, mult, curveOf(run)),
     faction,
     master,
     tag: kind === 'master' || coreOff(run, 'skip') ? null : tagFor(run, ante, blind),
@@ -546,7 +550,7 @@ function endBattle(run, events) {
     moves: REWARD.perMove * b.movesLeft,
     interest: interest(run.money),
     mate: mate ? REWARD.mate : 0,
-    overflow: REWARD.overflow[b.overflow] || 0,
+    overflow: (run.core ? CORE.overflow : REWARD.overflow)[b.overflow] || 0, // 코어 판은 ×2부터(끝까지 두니)
     earned: b.money,
     challenge: chMoney,
   };

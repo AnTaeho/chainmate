@@ -36,6 +36,9 @@ export const DEFAULT_RULES = {
   fog: 0,           // 명인 「안개」: 위에서 몇 줄이 가려지나
   lookahead: 1,     // 증원 예고가 몇 수 앞까지 보이나(격언 「그림자 읽기」 2)
   reboards: 1,      // 다시 놓기: 첫 수 전에 판을 새로 까는 횟수(대국마다)
+  playOut: false,   // 코어 판: 목표를 넘겨도 수를 다 쓴다(끝에서 승패, 체크메이트는 곧바로 이김)
+  streak: false,    // 코어 판: 끊기지 않고 이어 잡은 수(b.streak)가 다음 콤보의 시작 배수
+  streakCut: 'reset', // 끊김으로 끝난 콤보 뒤 이어 온 수: 'reset' 0으로 · 'half' 절반(내림) · 'keep' 그대로(끊긴 콤보에서 잡은 수만 안 더한다)
 };
 
 // 희생(CHM-35): 바친 기물은 b.offered(이번 대국 동안 덱으로 돌아오지 않는다), 다음 수를 기다리는 희생은 b.offering.
@@ -218,6 +221,8 @@ function newBattle({ seed = 1, ante = 1, kind = 'practice', bag = DEFAULT_BAG, t
   // 숙적(tuning.js NEMESIS): 판(런)이 넘긴 지금 숙적(cur, 없으면 null). 판(런) 밖의 대국(수업 · 시험)은 nemesis를 넘기지 않아 이 칸이 없다.
   //   placed: 이 판에 표시된 적이 놓였나 · taken: 잡은 단(0 = 못 잡음) · ups: 또 끊어 오른 단 수 · born: 이 대국에서 새로 숙적이 된 적 { t, sq }
   if (nemesis !== undefined && NEMESIS.on) b.nem = { cur: nemesis ? { t: nemesis.t, lv: nemesis.lv } : null, placed: false, taken: 0, ups: 0, born: null };
+  // 이어 온 수(rules.streak): 콤보가 끝날 때마다 endMove가 고친다(끊김은 rules.streakCut대로)
+  if (b.rules.streak) b.streak = 0;
   runHook(b, 'onBattleStart', {}, []);
   b.movesLeft = b.rules.moves;
   b.discardsLeft = b.rules.discards;
@@ -474,6 +479,8 @@ function endMove(b, events) {
     b.overflow = overflowTier(b.score, b.target);
   }
   b.money += c.money || 0;
+  // 이어 온 수(rules.streak): 끊김으로 끝난 콤보는 rules.streakCut대로, 그 밖의 끝은 잡은 수를 더한다(기보 · 격언이 더한 배수는 넘기지 않는다)
+  if (b.rules.streak) b.streak = c.reason === 'cut' ? streakAfterCut(b.rules, b.streak || 0) : (b.streak || 0) + c.captures.length;
   b.movesLeft--;
   b.movesUsed++;
   // 각인 「유리」 꼴: 쓸 때마다 확률로 깨져 덱에서 사라진다. 판정은 여기서만(풀이기가 난수를 건드리지 않게).
@@ -529,12 +536,17 @@ function endMove(b, events) {
   thaw(b);
   if (c.reason === 'mate') { refreshHints(b); return finishBattle(b, 'won', 'mate', events); }
   if (c.flags.gomoku) return finishBattle(b, 'won', 'gomoku', events);
-  if (b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
-  if (b.movesLeft <= 0) return finishBattle(b, 'lost', 'moves', events);
+  // 끝까지 둔다(rules.playOut, 코어 판): 목표를 넘겨도 수를 다 쓴 뒤에 승패를 가린다
+  const reached = b.target != null && b.score >= b.target;
+  if (reached && !b.rules.playOut) return finishBattle(b, 'won', 'score', events);
+  if (b.movesLeft <= 0) return reached ? finishBattle(b, 'won', 'score', events) : finishBattle(b, 'lost', 'moves', events);
   arrive(b, events);
   draw(b);
   checkStuck(b, events);
 }
+
+// 끊김으로 끝난 콤보 뒤의 이어 온 수(봇의 끊김 손해 어림도 같은 셈을 쓴다)
+export const streakAfterCut = (rules, s) => (rules.streakCut === 'keep' ? s : rules.streakCut === 'half' ? Math.floor(s / 2) : 0);
 
 export function checkStuck(b, events) {
   if (b.status !== 'play') return;
@@ -550,6 +562,8 @@ export function checkStuck(b, events) {
     events.push({ type: 'regrip', hand: b.hand.map((p) => p.t) });
     if (hasLegalDrop(b)) return;
   }
+  // 끝까지 둔다(rules.playOut): 목표를 넘긴 채 막히면 이긴다
+  if (b.rules.playOut && b.target != null && b.score >= b.target) return finishBattle(b, 'won', 'score', events);
   finishBattle(b, 'lost', 'stuck', events);
 }
 

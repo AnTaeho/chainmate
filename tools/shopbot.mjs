@@ -46,6 +46,8 @@ export const SMART = {
   // sacNodes: 희생을 잴 때 주머니 기물 하나에 쓰는 풀이기 마디(짜임 재기는 하네스 시간의 9할이라 작게)
   sacEval: true,
   sacNodes: 300,
+  // 이어지는 배수(rules.streak, 코어 판): 짜임 재기는 몇째 수(m)인지만 정해 한 수를 재니, 앞 수마다 이만큼 잡아 이어 왔다고 친다
+  streakPerMove: 2,
 };
 // 하네스 세기 손잡이(실력 천장, docs/reports/agency-measure.md): 예산 ×n — 짜임 재기 판 K · 마디 · 희생 마디,
 // 대국 결정의 풀이기 마디 · 희생 판단 마디 · 재는 주머니 기물 수. look: 대국 내다보기 굴림 수(bot.mjs BOT.look).
@@ -145,6 +147,7 @@ export function evalBuild(run, build, seeds, ante, master = null, faction = null
     }
     b.movesUsed = m;
     b.movesLeft = b.rules.moves - m;
+    if (b.rules.streak) b.streak = m * SMART.streakPerMove;
     let collect = [];
     let best = b.hand.length ? bestMove(b, { preferMate: 'avoid', maxNodes: SMART.evalNodes, collect }) : null;
     // 희생(CHM-51): 대국 봇과 같은 판단으로 바칠 만하면 바치고(주머니 맨 위가 실제로 뽑힌다) 다시 잰다. 대국 봇처럼 주머니가 넉넉할 때만

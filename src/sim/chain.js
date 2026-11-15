@@ -59,10 +59,12 @@ export const PROMOTE_RANK = 7;
 
 export function startChain(t, { type, sq, engraving = null, soul = null, pieceId = null }) {
   const events = [];
+  // 이어지는 배수(rules.streak, 코어 판): 콤보는 이어 온 수(t.streak)에서 시작한다. 풀이기 · 미리 보기 · 봇의 복사본도 t를 펼쳐 같은 값을 본다
+  const start = t.rules && t.rules.streak ? (t.streak || 0) : null;
   t.chain = {
     dropType: type, dropSq: sq, engraving: engraving || null, soul: soul || null,
     sq, form: type,
-    value: 0, mult: 0, scoreMul: 1, money: 0,
+    value: 0, mult: start || 0, scoreMul: 1, money: 0, ...(start != null ? { start } : {}),
     captures: [], forms: [type],
     forced: null, flags: {},
     transforms: 0, promotions: 0, forcedReplies: 0,
@@ -466,6 +468,8 @@ export function chainSummary(c, move = 0) {
     captures: c.captures.length, transforms: c.transforms, promotions: c.promotions, forced: c.forcedReplies,
     caps: c.captures.map((x) => x.piece).join(''), took: c.captures.map((x) => x.form).join(''), cuts: c.cuts, mates: c.mates, golden: c.golden,
     refills: c.refills, redrops: c.redrops, move,
+    // 이어지는 배수(코어 판): 이 콤보의 시작 배수
+    ...(c.start != null ? { start: c.start } : {}),
     // 대국 도전(src/data/challenges.js): 거친 모습 수(떨군 모습 포함) · 끝난 모습
     forms: c.forms.length, end: c.form,
     // 하네스용(CHM-56): 광대 모습의 먹기마다 a = 붙은 칸이라서만 · m = 그 적의 행마로
