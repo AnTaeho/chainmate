@@ -207,6 +207,29 @@ test('끊김 뒤 이어 온 수(rules.streakCut): reset 0 · half 절반(내림)
   }
 });
 
+test('처음 적 수 곱(rules.enemyMult) · 증원 더하기(rules.reinforceAdd): 킹과 킹을 지키는 적은 그대로, 꺼진 값은 옛 판과 같다', () => {
+  assert.equal(DEFAULT_RULES.enemyMult, 1);
+  assert.equal(DEFAULT_RULES.reinforceAdd, 0);
+  const plainRules = { randomThings: false, traits: false, pieces: [] };
+  const enemies = (b) => b.board.filter((c) => c && !c.mine && c.t !== 'X');
+  for (const ante of [1, 4, 7]) {
+    const base = createBattle({ seed: 9, ante, rules: plainRules });
+    assert.deepEqual(createBattle({ seed: 9, ante, rules: { ...plainRules, enemyMult: 1, reinforceAdd: 0 } }).board, base.board, '꺼진 값은 같은 판');
+    const guards = (ante >= 6 ? 6 : ante >= 5 ? 5 : ante >= 3 ? 4 : 3);
+    const none = createBattle({ seed: 9, ante, rules: { ...plainRules, enemyMult: 0 } });
+    assert.equal(enemies(none).length, 1 + guards, `${ante}관: 곱 0이면 킹과 킹을 지키는 적만`);
+    assert.equal(enemies(none).filter((c) => c.t === 'K').length, 1);
+    const half = createBattle({ seed: 9, ante, rules: { ...plainRules, enemyMult: 0.5 } });
+    const others = enemies(base).length - 1 - guards;
+    assert.equal(enemies(half).length, 1 + guards + Math.round(others * 0.5));
+    const more = createBattle({ seed: 9, ante, rules: { ...plainRules, reinforceAdd: 3 } });
+    assert.equal(more.incoming.length, base.incoming.length + 3, '증원 +3');
+  }
+  // 단 덤(reinforceBonus) 위에 더한다
+  const dan = createBattle({ seed: 9, ante: 2, rules: { ...plainRules, reinforceBonus: 1, reinforceAdd: 2 } });
+  assert.equal(dan.incoming.length, 2 + 1 + 2);
+});
+
 test('이어지는 배수: 풀이기 · 미리 보기 · 복기 복사본이 실제 콤보와 같은 셈을 본다(코어 판 조정자 그대로)', () => {
   let checked = 0;
   for (let seed = 1; seed <= 12 && checked < 4; seed++) {

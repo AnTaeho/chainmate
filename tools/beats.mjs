@@ -90,7 +90,7 @@ const famMax = (run) => Math.max(0, ...Object.values(familyCounts(run)));
 //   ev: [bi, 관, m, key]  battles: [bi, 관, 대국(0~2), 이김 1/0, 끝난 까닭, 점수, 목표, 쓴 수, 둘 수 있던 수, 목표를 처음 넘긴 수 | null,
 //                                  번 상금(보상 합, 진 대국 0), 수마다 사슬 점수[]]
 //   목표를 처음 넘긴 수는 사슬마다 쌓인 점수(b.score)로 센다
-//   코어 판(rules.playOut · streak)이면 칸 하나를 더 붙인다: { cut: 수마다 끊김 1/0, start: 수마다 시작 배수, disc: 희생 수 }
+//   코어 판(rules.playOut · streak)이면 칸 하나를 더 붙인다: { cut: 수마다 끊김 1/0, start: 수마다 시작 배수, disc: 희생 수, caps: 수마다 잡은 수, regrip: 손을 새로 쥠 1/0 }
 //   seen: { edition | golden | frag: [bi …] } — 드문 층이 「보인」 대국(진열 · 꾸러미에 판본 격언 · 첫 조각 카드, 판에 금빛 적)
 export function beatLog(run) {
   const out = { ev: [], battles: [], seen: { edition: [], golden: [], frag: [] } };
@@ -128,7 +128,7 @@ export function beatLog(run) {
       if (row) flush();
       if (row && !row.skipped) {
         const hist = b.history || [];
-        const pace = b.rules && (b.rules.playOut || b.rules.streak) ? [{ cut: hist.map((h) => (h.reason === 'cut' ? 1 : 0)), start: hist.map((h) => h.start || 0), disc: b.discarded || 0 }] : [];
+        const pace = b.rules && (b.rules.playOut || b.rules.streak) ? [{ cut: hist.map((h) => (h.reason === 'cut' ? 1 : 0)), start: hist.map((h) => h.start || 0), disc: b.discarded || 0, caps: hist.map((h) => h.captures), regrip: b.regrip ? 1 : 0 }] : [];
         out.battles.push([bi, row.ante, row.blind, row.won ? 1 : 0, row.reason, row.score, row.target, b.movesUsed, b.movesUsed + b.movesLeft, cross, reward, hist.map((h) => h.score), ...pace]);
         if (row.goldenSeen) out.seen.golden.push(bi);
       }

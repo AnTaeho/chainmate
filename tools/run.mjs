@@ -147,6 +147,8 @@ if (!isMainThread) {
   if (policy === 'nosac') SMART.sacEval = false; // 희생 끈 봇은 짜임 재기에서도 바치지 않는다(CHM-51)
   if (b) b.forEach((x, i) => { (core ? CORE.B : B)[i] = x; });
   if (tune && tune.streakCut) CORE.rules.streakCut = tune.streakCut; // 코어 판 끊김 뒤 이어 온 수 {"streakCut":"reset"|"half"|"keep"}
+  if (tune && tune.enemyMult != null) CORE.rules.enemyMult = tune.enemyMult; // 코어 판 처음 적 수 곱 {"enemyMult":0.75}
+  if (tune && tune.reinforceAdd != null) CORE.rules.reinforceAdd = tune.reinforceAdd; // 코어 판 증원 더하기 {"reinforceAdd":1}
   if (shop) Object.assign(SHOP, shop);
   const out = [];
   for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft, unlock ?? null, !!core));
@@ -694,7 +696,14 @@ function corePaceReport(R, { pc, f, f2, table, pctile }) {
   const lastBig = two.filter((x) => { const m = Math.max(...x.scores); return m > 0 && x.scores.indexOf(m) === x.scores.length - 1; });
   out.share = share.map((v) => r3(v / Math.max(1, scored.length)));
   out.lastBiggest = r3(lastBig.length / Math.max(1, two.length));
-  console.log(`  수 차례별 대국 점수 몫(평균, 점수 있는 대국 ${scored.length}): ${SLOTS.map((s, i) => `${s} ${pc(out.share[i])}`).join(' · ')} · 가장 큰 콤보가 마지막 수인 대국 ${pc(out.lastBiggest)}(두 수 이상 둔 ${two.length} 중)`);
+  const last2 = two.filter((x) => { const m = Math.max(...x.scores); return m > 0 && x.scores.indexOf(m) >= x.scores.length - 2; });
+  out.last2Biggest = r3(last2.length / Math.max(1, two.length));
+  console.log(`  수 차례별 대국 점수 몫(평균, 점수 있는 대국 ${scored.length}): ${SLOTS.map((s, i) => `${s} ${pc(out.share[i])}`).join(' · ')} · 가장 큰 콤보가 마지막 수인 대국 ${pc(out.lastBiggest)} · 마지막 두 수 ${pc(out.last2Biggest)}(두 수 이상 둔 ${two.length} 중)`);
+  // 수 차례별 콤보 길이(잡은 수 평균)
+  const capSum = [0, 0, 0, 0, 0], capN = [0, 0, 0, 0, 0];
+  for (const x of B) (x.p.caps || []).forEach((c, i) => { capSum[slot(i)] += c; capN[slot(i)]++; });
+  out.caps = capSum.map((v, i) => r3(v / Math.max(1, capN[i])));
+  console.log(`  수 차례별 콤보 길이(잡은 수 평균): ${SLOTS.map((s, i) => `${s} ${f2(out.caps[i])}`).join(' · ')}`);
   // 목표를 처음 넘긴 수 차례
   const cr = [0, 0, 0, 0, 0]; let never = 0;
   for (const x of B) { if (x.cross == null) never++; else cr[slot(x.cross - 1)]++; }
@@ -719,8 +728,10 @@ function corePaceReport(R, { pc, f, f2, table, pctile }) {
   console.log(`  이긴 대국 ${won.length}의 넘침 층: ×1 ${pc(out.wonTier[1])} · ×2 ${pc(out.wonTier[2])} · ×5 ${pc(out.wonTier[5])} · ×10 ${pc(out.wonTier[10])} · 목표 밑 체크메이트 ${pc(out.wonTier[0])}`);
   console.log(`  진 대국 ${lost.length}의 점수/목표: <0.5 ${pc(out.lostTier[0])} · 0.5~0.8 ${pc(out.lostTier[1])} · 0.8~1 ${pc(out.lostTier[2])}`);
   // 대국당 둔 수 · 희생 · 체크메이트로 끝난 몫 · 번 상금
-  out.perBattle = { moves: r3(mean(B.map((x) => x.used))), sacrifices: r3(mean(B.map((x) => x.p.disc))), mate: r3(B.filter((x) => x.reason === 'mate').length / n), money: r3(mean(B.map((x) => x.money))), moneyWon: r3(mean(won.map((x) => x.money))) };
+  out.perBattle = { moves: r3(mean(B.map((x) => x.used))), sacrifices: r3(mean(B.map((x) => x.p.disc))), mate: r3(B.filter((x) => x.reason === 'mate').length / n), money: r3(mean(B.map((x) => x.money))), moneyWon: r3(mean(won.map((x) => x.money))),
+    stuck: r3(B.filter((x) => x.reason === 'stuck').length / n), regrip: r3(B.filter((x) => x.p.regrip).length / n) };
   console.log(`  대국당 둔 수 ${f2(out.perBattle.moves)} · 희생 ${f2(out.perBattle.sacrifices)} · 체크메이트로 끝난 대국 ${pc(out.perBattle.mate)} · 번 상금 ${f2(out.perBattle.money)}(이긴 대국 ${f2(out.perBattle.moneyWon)})`);
+  console.log(`  막힘으로 끝난 대국 ${pc(out.perBattle.stuck)} · 떨굴 곳이 없어 손을 새로 쥔 대국 ${pc(out.perBattle.regrip)}`);
   // 맞춤용 관별: 도달한 판 중 통과 · 종류별 점수/목표 p50(체크메이트 뺌)
   const rows = [];
   out.byAnte = [];

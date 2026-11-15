@@ -39,6 +39,8 @@ export const DEFAULT_RULES = {
   playOut: false,   // 코어 판: 목표를 넘겨도 수를 다 쓴다(끝에서 승패, 체크메이트는 곧바로 이김)
   streak: false,    // 코어 판: 끊기지 않고 이어 잡은 수(b.streak)가 다음 콤보의 시작 배수
   streakCut: 'reset', // 끊김으로 끝난 콤보 뒤 이어 온 수: 'reset' 0으로 · 'half' 절반(내림) · 'keep' 그대로(끊긴 콤보에서 잡은 수만 안 더한다)
+  enemyMult: 1,     // 코어 판: 처음 판의 적 가운데 킹 · 킹을 지키는 적 밖의 수에 곱한다(setup.js generateBoard, 반올림)
+  reinforceAdd: 0,  // 코어 판: 수마다 증원에 더한다(관별 셈 · 단 덤 위에)
 };
 
 // 희생(CHM-35): 바친 기물은 b.offered(이번 대국 동안 덱으로 돌아오지 않는다), 다음 수를 기다리는 희생은 b.offering.
@@ -55,7 +57,7 @@ export const BOARD_FILTER = { nodes: 3000 };
 // 무엇이 보이느냐는 rules.lookahead(기본 1, 격언 「그림자 읽기」 2)가 정하고, 뽑는 횟수는 같다
 // (격언이 있든 없든 같은 시드면 같은 판).
 function rollIncoming(b, taken) {
-  const n = (b.rules.reinforce ?? reinforceCount(b.ante)) + (b.rules.reinforceBonus || 0); // reinforceBonus: 단 2부터 +1
+  const n = (b.rules.reinforce ?? reinforceCount(b.ante)) + (b.rules.reinforceBonus || 0) + (b.rules.reinforceAdd || 0); // reinforceBonus: 단 1부터 +1 · reinforceAdd: 코어 판
   const out = [];
   for (let i = 0; i < n; i++) {
     const sq = randomEmpty(b.rng.reinf, b.board, 3, [...taken, ...out.map((x) => x.sq)]);

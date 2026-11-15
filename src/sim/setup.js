@@ -154,7 +154,9 @@ export function generateBoard(b, rng = b.rng.board, reserve = []) {
       }
     }
     if (!ok) continue;
-    for (let i = placed; i < count; i++) {
+    // 코어 판(rules.enemyMult): 킹 · 킹을 지키는 적 밖의 적 수만 곱한다
+    const total = b.rules.enemyMult != null && b.rules.enemyMult !== 1 ? placed + Math.max(0, Math.round((count - placed) * b.rules.enemyMult)) : count;
+    for (let i = placed; i < total; i++) {
       const sq = randomEmpty(rng, board, 2, reserve);
       if (sq < 0) break;
       put(sq, rollType(rng, b.ante, b.rules));
