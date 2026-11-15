@@ -50,15 +50,13 @@ test('명세: 코어 판에만 깃발이 켜지고 기본 규칙은 꺼져 있�
   for (const h of plain.battle.history) assert.ok(!('start' in h), '코어가 아닌 콤보 요약에는 시작 배수가 없다');
 });
 
-test('목표 곡선 · 넘침 덤: 코어 판은 CORE.B · CORE.masterMult · CORE.overflow를 쓴다', () => {
+test('목표 곡선 · 넘침 덤: 코어 판은 CORE.B · CORE.kindMult(관 공통) · CORE.overflow를 쓴다', () => {
   const core = createRun({ seed: 1, core: true });
-  for (let i = 0; i < 3; i++) assert.equal(blindInfo(core, 1, i).target, targetFor(1, ['practice', 'official', 'master'][i], 1, CORE.B, CORE.masterMult));
-  assert.equal(blindInfo(core, 5, 1).target, targetFor(5, 'official', 1, CORE.B));
-  // 마스터전: 종류 배율 ×2 위에 관별 덧배율(옛 MASTER_MULT 대신)
-  assert.equal(CORE.masterMult.length, 8);
-  for (let a = 1; a <= 8; a++) assert.equal(blindInfo(core, a, 2).target, targetFor(a, 'master', 1, CORE.B, CORE.masterMult), `${a}관`);
-  assert.equal(blindInfo(createRun({ seed: 1 }), 1, 2).target, targetFor(1, 'master', 1, B, MASTER_MULT), '옛 판은 MASTER_MULT 그대로');
+  for (let i = 0; i < 3; i++) assert.equal(blindInfo(core, 1, i).target, targetFor(1, ['practice', 'official', 'master'][i], 1, CORE.B, [], CORE.kindMult));
+  assert.equal(blindInfo(core, 5, 1).target, targetFor(5, 'official', 1, CORE.B, [], CORE.kindMult));
   assert.ok(blindInfo(core, 9, 0).target > CORE.B[7], '끝없는 대국은 코어 곡선의 8관 값에서 이어 간다');
+  assert.ok(!('masterMult' in CORE), '관별 마스터 덧배율은 없다');
+  assert.equal(blindInfo(createRun({ seed: 1 }), 1, 2).target, targetFor(1, 'master', 1, B, MASTER_MULT), '옛 판은 MASTER_MULT 그대로');
   const plain = createRun({ seed: 1 });
   assert.equal(blindInfo(plain, 5, 1).target, targetFor(5, 'official', 1, B));
   assert.deepEqual(CORE.overflow, { 2: 1, 5: 2, 10: 4 });
@@ -284,4 +282,20 @@ test('코어 판 대국은 JSON 왕복 뒤에도 같은 수를 잇는다(이어 
   assert.ok(ta.length > 0);
   assert.deepEqual(tb, ta);
   assert.deepEqual(clone(copy), clone(run));
+});
+
+test('목표가 차례대로 오른다: 코어 판은 어느 관에서도 연습 < 정식 < 마스터, 관이 오르면 같은 종류 목표가 늘 오른다', () => {
+  const k = CORE.kindMult;
+  assert.ok(k.practice < k.official && k.official < k.master, JSON.stringify(k));
+  for (let i = 1; i < CORE.B.length; i++) assert.ok(CORE.B[i] > CORE.B[i - 1], `B ${i}`);
+  for (const dan of [0, 4, 8]) {
+    const run = createRun({ seed: 3, core: true, dan });
+    let prev = [0, 0, 0];
+    for (let ante = 1; ante <= 10; ante++) {
+      const t = [0, 1, 2].map((blind) => blindInfo(run, ante, blind).target);
+      assert.ok(t[0] < t[1] && t[1] < t[2], `단 ${dan} ${ante}관 ${t}`);
+      for (let j = 0; j < 3; j++) assert.ok(t[j] > prev[j], `단 ${dan} ${ante}관 ${j}: ${prev[j]} → ${t[j]}`);
+      prev = t;
+    }
+  }
 });

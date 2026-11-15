@@ -4,7 +4,7 @@
 import { makeFakeDom } from './fakedom.mjs';
 import { decideBattle, stepBattle } from './bot.mjs';
 import { lineCommands, previewDrop, previewCapture, bestMove } from '../src/sim/solver.js';
-import { canBuy, canSell, factionFor, targetFor } from '../src/sim/run.js';
+import { canBuy, canSell, factionFor, targetFor, blindInfo } from '../src/sim/run.js';
 import { PIECES } from '../src/data/pieces.js';
 import { evolveTo } from '../src/data/tactics.js';
 import { isHidden, canReboard, dropSquaresFor, nextDraws, visibleIncoming } from '../src/sim/battle.js';
@@ -13,6 +13,7 @@ import { chainCaptures } from '../src/sim/chain.js';
 import { reboardOn } from '../src/sim/tuning.js';
 import { CRACK, isCracked } from '../src/data/souls.js';
 import { FACTION_BY_ID, habitText } from '../src/data/factions.js';
+import { MASTER_BY_ID, CORE_MASTER_TEXT } from '../src/data/masters.js';
 import { verifyDaily, summarize } from '../api/_lib/verify.js';
 const { targetOk } = await import('../src/ui/parts.js');
 const { FAMILIES, familyCounts } = await import('../src/data/families.js');
@@ -2386,7 +2387,13 @@ function coreSelect() {
     if (!drawnText(want)) coreBad(`세력 띠에 「${want}」가 없다`);
     if (!fa.habit.chess && drawnText(fa.habit.text)) coreBad(`걷은 버릇 글 「${fa.habit.text}」`);
     coreSeen.band.add(fa.id); }
-  if (run.blind === 2) coreSeen.master++;
+  if (run.blind === 2) {
+    coreSeen.master++;
+    // 마스터전: 비틀기 글 대신 「목표가 높다」 한 줄
+    const m = MASTER_BY_ID[blindInfo(run).master];
+    if (drawnText(m.text)) coreBad(`마스터 규칙 글 「${m.text}」`);
+    if (!drawnText(CORE_MASTER_TEXT)) coreBad('마스터 카드에 「목표가 높다」가 없다');
+  }
   if (run.blind === 0 && run.ante > 1) coreSeen.nextHall++;
   click('select:play'); pump(2);
 }

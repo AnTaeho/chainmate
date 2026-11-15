@@ -14,13 +14,14 @@ export const CORE = {
   rules: { pieces: [], traits: false, randomThings: false, playOut: true, streak: true, streakCut: 'keep', enemyMult: 0.5, reinforceAdd: 3, mateLimit: false, brilliant: false, chessHabits: true, reboards: 0 },
   // 넘친 목표 덤(run.js endBattle, 가장 높은 층 하나): 코어 판은 끝까지 두니 ×2부터 준다
   overflow: { 2: 1, 5: 2, 10: 4 },
-  // 관별 목표 기준(run.js B 대신, 종류 · 마스터 · 단 배율과 끝없는 대국 성장은 그대로 곱한다). 잘 두는 봇(--look 8) 200판 87.5% · 관별 통과 94.6% 이상으로 맞춘 값(기본 봇 60%)
-  B: [350, 1500, 2800, 6000, 12000, 26500, 45000, 128000],
-  // 관별 마스터 덧배율(run.js MASTER_MULT 대신, 종류 배율 마스터 ×2 위에). null이면 옛 판과 같은 MASTER_MULT
-  masterMult: [1.7, 0.4, 0.45, 0.45, 0.43, 0.31, 0.344, 0.74],
+  // 관별 목표 기준(run.js B 대신, 종류 · 마스터 · 단 배율과 끝없는 대국 성장은 그대로 곱한다). 잘 두는 봇(--look 8) 판 승률 80~90% · 관별 통과 93% 이상 · 기본 봇 40~60%로 맞춘 값
+  B: [350, 1500, 3300, 7200, 14500, 27000, 50000, 115000],
+  // 종류 배율(run.js KIND_MULT 대신, 모든 관 공통 — 옛 관별 마스터 덧배율 MASTER_MULT는 쓰지 않는다). 연습 < 정식 < 마스터
+  kindMult: { practice: 1, official: 1.6, master: 1.9 },
   consumableSlots: 0,
-  // 판 쪽 깃발(run.core.off): 금빛 적 · 연줄 · 대국 도전 · 숙적 · 건너뛰기와 패 · 명경기 조각과 전설 · 격언 판본 · 시너지 조정자와 끌어당김 · 찜
-  off: { golden: true, pity: true, challenge: true, nemesis: true, skip: true, legends: true, editions: true, families: true, hold: true },
+  // 판 쪽 깃발(run.core.off): 금빛 적 · 연줄 · 대국 도전 · 숙적 · 건너뛰기와 패 · 명경기 조각과 전설 · 격언 판본 · 시너지 조정자와 끌어당김 · 찜 ·
+  //   마스터 규칙(마스터전은 같은 규칙에 더 높은 목표 — run.js battleMods가 마스터 조정자를 꺼 둔다)
+  off: { golden: true, pity: true, challenge: true, nemesis: true, skip: true, legends: true, editions: true, families: true, hold: true, masters: true },
   // 남기는 종류(run.core.keep): 상점 진열 · 꾸러미 · 마스터의 상자 칸
   keep: { shop: ['maxim', 'chart', 'piece'], packs: ['piece', 'chart'], chest: ['money', 'chart'] },
 };

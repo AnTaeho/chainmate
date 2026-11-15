@@ -21,7 +21,7 @@ import { JOSEKI_BY_ID, TIER_COL, snareIndex } from '../../data/josekis.js';
 import { L } from '../lang.js';
 import { previewCapture, previewDrop } from '../../sim/solver.js';
 import { REWARD, ANTES, maximCapacity, maximCount } from '../../sim/run.js';
-import { MASTER_BY_ID } from '../../data/masters.js';
+import { MASTER_BY_ID, masterText } from '../../data/masters.js';
 import { CORE } from '../../data/core.js';
 import { FACTION_BY_ID, habitText } from '../../data/factions.js';
 
@@ -322,8 +322,8 @@ export class BattleScreen {
     // 이어 하기로 연 대국(대국 시작 사건이 없다)에는 등장 장면 없이 마스터 띠만 곧바로 세운다
     if (m) {
       const M = MASTER_BY_ID[m.id], at = info ? INTRO : 0;
-      if (info) { this.intro = { t: 0, life: INTRO, id: m.id, landed: false }; this.snd('start'); }
-      this.banner = { title: `마스터 ${M.name}`, sub: M.text, t: 0, life: at + 1.6, from: at, col: PAL.red, master: m.id };
+      if (info) { this.intro = { t: 0, life: INTRO, id: m.id, landed: false, off: !!m.off }; this.snd('start'); }
+      this.banner = { title: `마스터 ${M.name}`, sub: masterText(M, m.off), t: 0, life: at + 1.6, from: at, col: PAL.red, master: m.id };
     }
     else if (info && this.run) { const fa = factionOfBattle(b); this.banner = { title: `${this.run.ante}관 · ${KIND_NAME[b.kind]}`, sub: `${fa ? `${fa.name} · ` : ''}목표 ${num(b.target)}`, t: 0, life: 1.4, col: PAL.gold }; }
     // 레퍼토리 「선수」가 판을 깔 때 지운 적: 등장 장면 · 띠가 걷힌 뒤 그 칸에서 연기가 걷히고 알림 한 줄(D-16)
@@ -1600,17 +1600,17 @@ export class BattleScreen {
     fine(() => drawPortrait(ctx, it.id, px, py, 4));
     // 「마스터」(제목 한 배, 붉은) → 이름(두 배 굵게) → 별칭(금빛): 오른쪽에서
     const tx = Math.round(190 + (1 - slide(0.1, 0.24)) * 220), room = W - 190 - SP.m;
-    const big = measure(M.name, true) * 2 <= room, lines = wrap(M.text, W - 176 - PAD_BOX * 2).slice(0, 3);
-    // 글 묶음(「마스터」 · 이름 · 별칭 · 규칙 띠)을 초상 칸(py − 4 ~ py + 132) 가운데 높이에
-    const blockH = LINE_TITLE + (big ? 28 : LINE_TITLE) + SP.s + LINE + SP.l + PAD_BOX * 2 + lines.length * LINE;
+    const big = measure(M.name, true) * 2 <= room, lines = wrap(masterText(M, it.off), W - 176 - PAD_BOX * 2).slice(0, 3);
+    // 글 묶음(「마스터」 · 이름 · 별칭 · 규칙 띠)을 초상 칸(py − 4 ~ py + 132) 가운데 높이에. 코어 판(it.off)은 비틀기가 없어 별칭 줄을 뺀다
+    const blockH = LINE_TITLE + (big ? 28 : LINE_TITLE) + (it.off ? 0 : SP.s + LINE) + SP.l + PAD_BOX * 2 + lines.length * LINE;
     const f = flow(py - 4 + Math.max(0, (136 - blockH) >> 1));
     const kickY = f.line(true);
     const nameY = big ? f.space(28) + ((28 - INK_H * 2) >> 1) : f.line(true); // 두 배 제목 줄 28
-    f.gap(SP.s);
-    const aliasY = f.line();
+    if (!it.off) f.gap(SP.s);
+    const aliasY = it.off ? null : f.line();
     text(ctx, '마스터', tx, kickY, PAL.red, { bold: true });
     boldText(ctx, M.name, tx, nameY, PAL.ink, { align: 'left', scale: big ? 2 : 1 });
-    text(ctx, `「${L(M.rule)}」`, tx, aliasY, PAL.gold, { bold: true }); // 별칭만 옮긴다(괄호를 붙인 글은 표에 없다)
+    if (aliasY != null) text(ctx, `「${L(M.rule)}」`, tx, aliasY, PAL.gold, { bold: true }); // 별칭만 옮긴다(괄호를 붙인 글은 표에 없다)
     // 규칙 띠: 붉은 둥근 띠가 오른쪽에서 밀려 들어오고(오른쪽 끝은 화면 밖) 규칙 글이 선다
     const bx = Math.round(176 + (1 - slide(0.2, 0.22)) * 320);
     f.gap(SP.l);
@@ -2153,6 +2153,7 @@ export class BattleScreen {
       faction: fa,
       titleCol: master ? PAL.red : PAL.gold,
       master: master ? MASTER_BY_ID[master.id] : null,
+      masterOff: !!(master && master.off),
       target: num(this.view.target),
       targetN: this.view.target,
     };
@@ -2236,7 +2237,7 @@ export class BattleScreen {
     if (dot && !daily) rrect(ctx, LX + PX, lay.titles[0] + 3, 6, 6, 3, spec.faction.look ? spec.faction.look.dark : PAL.dark);
     spec.titles.forEach((l, k) => fitText(ctx, l, LX + PX + (k ? 0 : dot), lay.titles[k], LW - PX * 2 - (k ? 0 : dot), spec.titleCol));
     closeBox();
-    if (spec.master) { const m = spec.master; ui.region('master', LX + 2, t0, LW - 4, LINE_TITLE, { tip: () => tipLines(`마스터 ${m.name}`, m.text) }); }
+    if (spec.master) { const m = spec.master, mt = masterText(m, spec.masterOff); ui.region('master', LX + 2, t0, LW - 4, LINE_TITLE, { tip: () => tipLines(`마스터 ${m.name}`, mt) }); }
     else if (spec.faction) { const fa = spec.faction, dx = daily ? dot : 0; ui.region('faction', LX + 2 + dx, t0, LW - 4 - dx, LINE_TITLE, { tip: () => tipLines(fa.name, habitText(fa, run && run.rules)) }); }
     // 「점수」 이름표(불씨 · 얻을 몫은 이 줄) → 큰 점수 · 오른쪽 「목표 / 150」
     const sl = lay.scoreLab, sy = lay.score;

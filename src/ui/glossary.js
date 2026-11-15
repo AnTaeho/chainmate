@@ -13,7 +13,10 @@ import { openBox, closeBox, logClip } from '../render/layoutlog.js';
 
 const T = (id, group, word, enWord, re, en, say, enSay, basic = false) => ({ id, group, word, enWord, re, en, say, enSay, basic });
 // 코어 판(rules.mateLimit false 등)에서 풀이가 다른 낱말: [풀이, 영어 풀이]. 화면은 setTermCore로 지금 판이 코어 판인지 알린다(app.draw)
-const CORE_SAY = { mate: ['지키는 적이 없는 킹을 잡으면 곧바로 이긴다', 'Take an unguarded king and win at once'] };
+const CORE_SAY = {
+  mate: ['지키는 적이 없는 킹을 잡으면 곧바로 이긴다', 'Take an unguarded king and win at once'],
+  master: ['세력의 우두머리. 관의 마지막 대국을 더 높은 목표로 둔다', "The faction's leader. Plays the hall's last match at a higher target"],
+};
 let termCore = false;
 export const setTermCore = (on) => { termCore = !!on; };
 // 기본 낱말(basic): 첫 수업이 가르치는 말. 글 안에서 빛깔을 받지 않고 카드 옆 상자도 띄우지 않는다(docs/design-notes/voice.md).

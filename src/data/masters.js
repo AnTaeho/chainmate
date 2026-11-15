@@ -49,4 +49,7 @@ master('grandmaster', '대가', '킹이 둘 · 둘 다 잡아야 체크메이트
 });
 
 export const MASTER_BY_ID = Object.fromEntries(MASTERS.map((m) => [m.id, m]));
+// 코어 판(run.core.off.masters): 마스터전에 규칙 비틀기가 없다 — 규칙 글 자리에 이 한 줄
+export const CORE_MASTER_TEXT = '목표가 높다';
+export const masterText = (m, off) => (off ? CORE_MASTER_TEXT : m.text);
 export const FINAL_MASTER = 'grandmaster';

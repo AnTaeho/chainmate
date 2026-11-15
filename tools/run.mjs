@@ -150,7 +150,7 @@ if (!isMainThread) {
   if (tune && tune.streakCut) CORE.rules.streakCut = tune.streakCut; // 코어 판 끊김 뒤 이어 온 수 {"streakCut":"reset"|"half"|"keep"}
   if (tune && tune.enemyMult != null) CORE.rules.enemyMult = tune.enemyMult; // 코어 판 처음 적 수 곱 {"enemyMult":0.75}
   if (tune && tune.reinforceAdd != null) CORE.rules.reinforceAdd = tune.reinforceAdd; // 코어 판 증원 더하기 {"reinforceAdd":1}
-  if (tune && tune.coreMaster) CORE.masterMult = tune.coreMaster; // 코어 판 관별 마스터 덧배율 {"coreMaster":[2,1.5,1,1,1,1,1,1]}
+  if (tune && tune.coreKind) Object.assign(CORE.kindMult, tune.coreKind); // 코어 판 종류 배율(관 공통) {"coreKind":{"official":1.4,"master":1.8}}
   if (shop) Object.assign(SHOP, shop);
   const out = [];
   for (const s of seeds) out.push(one(s, policy, opening, dan || 0, give, nodraft, unlock ?? null, !!core));

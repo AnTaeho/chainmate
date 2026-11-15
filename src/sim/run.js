@@ -166,10 +166,10 @@ export function danRules(dan) {
 }
 
 // curve: 관별 기준(코어 판은 CORE.B — curveOf)
-// masters: 관별 마스터 덧배율(코어 판은 CORE.masterMult — mastersOf)
-export function targetFor(ante, kind, mult = 1, curve = B, masters = MASTER_MULT) {
+// masters: 관별 마스터 덧배율 · kinds: 종류 배율(코어 판은 관 공통 CORE.kindMult에 덧배율 없음 — kindsOf · mastersOf)
+export function targetFor(ante, kind, mult = 1, curve = B, masters = MASTER_MULT, kinds = KIND_MULT) {
   const base = ante <= ANTES ? curve[ante - 1] : curve[ANTES - 1] * ENDLESS_GROWTH ** (ante - ANTES);
-  const raw = base * KIND_MULT[kind] * (kind === 'master' ? masters[ante - 1] ?? 1 : 1) * mult;
+  const raw = base * kinds[kind] * (kind === 'master' ? masters[ante - 1] ?? 1 : 1) * mult;
   // 보기 좋게: 유효 숫자 둘
   const mag = 10 ** Math.max(0, Math.floor(Math.log10(raw)) - 1);
   return Math.round(raw / mag) * mag;
@@ -177,7 +177,9 @@ export function targetFor(ante, kind, mult = 1, curve = B, masters = MASTER_MULT
 
 // 판의 목표 곡선: 코어 판은 자기 곡선(src/data/core.js)
 export const curveOf = (run) => (run && run.core ? CORE.B : B);
-export const mastersOf = (run) => (run && run.core && CORE.masterMult ? CORE.masterMult : MASTER_MULT);
+const NO_MASTER_MULT = [];
+export const mastersOf = (run) => (run && run.core ? NO_MASTER_MULT : MASTER_MULT);
+export const kindsOf = (run) => (run && run.core ? CORE.kindMult : KIND_MULT);
 
 // 관의 세력(docs/design-notes/factions.md): 1관 농민군 · 8관 왕궁 근위 고정, 2~7관은 판 시드로 섞은 여섯. 끝없는 대국은 관마다 아무 세력
 export function factionFor(run, ante) {
@@ -236,7 +238,7 @@ export function blindInfo(run, ante = run.ante, blind = run.blind) {
   const mult = (st ? st.target * (master && faction === FINAL_FACTION ? st.finalTarget : 1) : 1) * josekiTargetMult(run);
   return {
     ante, blind, kind,
-    target: targetFor(ante, kind, mult, curveOf(run), mastersOf(run)),
+    target: targetFor(ante, kind, mult, curveOf(run), mastersOf(run), kindsOf(run)),
     faction,
     master,
     tag: kind === 'master' || coreOff(run, 'skip') ? null : tagFor(run, ante, blind),
@@ -344,7 +346,8 @@ export function josekiTargetMult(run) {
 export function battleMods(build, master = null, faction = null) {
   const mods = [];
   if (faction) mods.push({ id: `faction:${faction}` });
-  if (master) mods.push({ id: master });
+  // 코어 판(run.core.off.masters): 마스터전은 같은 규칙에 더 높은 목표 — 조정자는 이름 · 초상 · 등장 장면만 남기고 꺼 둔다(훅이 돌지 않는다)
+  if (master) mods.push(coreOff(build, 'masters') ? { id: master, off: true } : { id: master });
   mods.push({ id: 'charts', data: { table: CHART_TABLE, levels: { ...build.charts } } });
   // 가족(깊이 B): 문턱을 넘은 가족마다 하나(정석 familyDrop — 「복제」면 가장 많이 모은 가족의 문턱이 하나 낮다). 코어 판(build.core)은 시너지가 없다
   if (!coreOff(build, 'families')) {

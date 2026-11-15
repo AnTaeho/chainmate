@@ -7,7 +7,8 @@ import { PAL } from '../../render/palette.js';
 import { H, text, box, rect, rrect, rframe, fitNum, measure, R_SM } from '../../render/gfx.js';
 import { beat, LOOK } from '../../render/look.js';
 import { blindInfo, REWARD, ANTES, canReopenShop, TAG_RULES, canSkip } from '../../sim/run.js';
-import { MASTER_BY_ID, FINAL_MASTER } from '../../data/masters.js';
+import { MASTER_BY_ID, FINAL_MASTER, masterText } from '../../data/masters.js';
+import { coreOff } from '../../sim/unlock.js';
 import { challengeText, CHALLENGE_TEXT } from '../../data/challenges.js';
 import { CHARTS } from '../../data/charts.js';
 import { wrap } from '../../render/text.js';
@@ -182,7 +183,8 @@ export function blindLayout(run, i, w = SEL.w, { tight = false, cell = PEEK.cell
       out.names = names.map((l) => [l, nf.line()]);
     }
     f.gap(GAP_IN);
-    out.lines = wrap(m.text, IW).map((l) => [l, f.line()]);
+    out.text = masterText(m, coreOff(run, 'masters')); // 코어 판은 비틀기 없이 「목표가 높다」
+    out.lines = wrap(out.text, IW).map((l) => [l, f.line()]);
   } else if (!info.tag) {
     // 코어 판: 받는 것 없이 판 보기만 — 카드 안 폭 가운데에(지난 대국은 비운다)
     if (peek) { const bw = peekSize(cell); out.peek = { x: (IW - bw) >> 1, y: f.space(bw), cell }; }
@@ -288,7 +290,7 @@ export class SelectScreen {
       drawCrest(ctx, fid, bx + PAD_CARD, by + Math.floor((bd.h - CREST_SIZE * 2) / 2), { scale: 2 });
       text(ctx, fa.name, bx + bd.tx, by + bd.name, lightHue(fa.hue), { bold: true });
       bd.lines.forEach(([l, ly]) => text(ctx, l, bx + bd.tx, by + ly, PAL.ink));
-      ui.region('faction', bx, by, bd.w, bd.h, { tip: () => tipLines(fa.name, [habitText(fa, run.rules), `마스터 ${bossOf(fid).name}`, bossOf(fid).text]) });
+      ui.region('faction', bx, by, bd.w, bd.h, { tip: () => tipLines(fa.name, [habitText(fa, run.rules), `마스터 ${bossOf(fid).name}`, masterText(bossOf(fid), coreOff(run, 'masters'))]) });
       closeBox();
       // 새 세력을 처음 만나는 관 선택: 버릇 한 줄(처음 안내). 코어 판은 글이 다른 세력만 따로(coach.js faction_<id>_core)
       hint(app, run.rules && run.rules.chessHabits && HINTS[`faction_${fid}_core`] ? `faction_${fid}_core` : `faction_${fid}`, 'faction');
@@ -319,14 +321,14 @@ export class SelectScreen {
       if (pv) {
         const BS = peekSize(PEEK.big);
         const tip = { title: master ? `마스터 ${lay.m.name}` : KIND_NAME[info.kind], titleCol: master ? PAL.redDk : null, body: [], block: { h: BS, draw: (c, bx, by, bw) => bigBoard(c, pv, bx + ((bw - BS) >> 1), by) } };
-        ui.region(`select:board:${i}`, x, y, w, h, { tip, keys: [master ? lay.m.text : tagText(info.tag)] });
+        ui.region(`select:board:${i}`, x, y, w, h, { tip, keys: [master ? lay.text : tagText(info.tag)] });
         miniBoard(ctx, pv, x + P + lay.peek.x, y + lay.peek.y, { dim: !cur, cell: lay.peek.cell || PEEK.cell });
         if (cur) hint(this.app, 'preview', `select:board:${i}`);
         if (ui.isHover(`select:board:${i}`)) this.app.trackOnce('peek_hover', { ante: run.ante, blind: i });
       }
       if (master) {
         // 명인 카드: 가리키면 글 안 낱말의 상자(두기 단추는 뒤에 그려 먼저 눌린다)
-        if (!pv) ui.region(`select:card:${i}`, x, y, w, h, { keys: [lay.m.text] });
+        if (!pv) ui.region(`select:card:${i}`, x, y, w, h, { keys: [lay.text] });
         box(ctx, x + P, y + lay.portrait, PORTRAIT, PORTRAIT, PAL.well, cur ? PAL.red : PAL.frameDk);
         drawPortrait(ctx, info.master, x + P + 2, y + lay.portrait + 2, 1, past ? 0.6 : 1);
         for (const [l, ly] of lay.names) text(ctx, l, x + P + lay.nameX, y + ly, PAL.red, { bold: lay.nameBold });
@@ -343,7 +345,7 @@ export class SelectScreen {
         const lost = log && !log.skipped && log.won === false;
         text(ctx, log && log.skipped ? '건너뜀' : lost ? '패배 · 시계 −1' : '승리', x + w / 2, inkY(by, BTN_H), lost ? PAL.red : PAL.dim, { align: 'center', bold: true });
       } else if (cur) {
-        if (master) { button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '시작', { onClick: () => this.play(), tone: 'red' }); hint(this.app, 'master', 'select:play'); }
+        if (master) { button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '시작', { onClick: () => this.play(), tone: 'red' }); if (!coreOff(run, 'masters')) hint(this.app, 'master', 'select:play'); }
         else if (!canSkip(run)) button(ctx, ui, 'select:play', x + P, by, w - P * 2, BTN_H, '시작', { onClick: () => this.play(), tone: 'gold', grow: { u: SP.s, d: P } }); // 코어 판: 건너뛰기가 없다
         else {
           // 카드 안 폭(98)에 단추 둘을 같은 폭 · 최소 64로 놓을 수 없어 「건너뛰기」는 글 + 양옆 SP.m, 「시작」이 남는 폭

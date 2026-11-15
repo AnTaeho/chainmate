@@ -13,6 +13,7 @@ import { startChain, chainCaptures, chainCapture } from '../src/sim/chain.js';
 import { mateBlocked } from '../src/sim/tuning.js';
 import { FACTIONS, FACTION_BY_ID, habitText } from '../src/data/factions.js';
 import { table } from './helpers/chain.js';
+import { MASTER_BY_ID, MASTERS, masterText, CORE_MASTER_TEXT } from '../src/data/masters.js';
 
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const MAXIMS = new Set(CORE.unlocked.maxims);
@@ -76,7 +77,9 @@ function look(run, events, stats) {
     assert.ok(!canReboard(b), `${where}: 다시 놓기`);
     assert.equal(b.offering, null, `${where}: 기다리는 희생`);
     assert.ok(!b.brilliants || !b.brilliants.length, `${where}: 탁월수`);
-    assert.ok(!b.rules.fog || (b.rules.fog === 3 && b.mods.some((m) => m.id === 'fog')), `${where}: 숲 안개`);
+    assert.ok(!b.rules.fog, `${where}: 안개`);
+    // 마스터 조정자는 이름 · 초상만 남고 꺼져 있다(비틀기 없음)
+    for (const m of b.mods) if (MASTER_BY_ID[m.id]) assert.equal(m.off, true, `${where}: 마스터 규칙 ${m.id}`);
     assert.ok(!mateBlocked(b.chain, b.rules), `${where}: 킹 못 잡음`);
     assert.ok(!b.challenge && !b.nem, `${where}: 도전 · 숙적`);
     assert.ok(!b.mods.some((m) => String(m.id).startsWith('family:') || String(m.id).startsWith('edition:')), `${where}: 시너지 · 판본 조정자`);
@@ -245,6 +248,36 @@ test('다시 놓기 · 찜: 코어 판에는 없다, 옛 판은 그대로', () =
   const plain = createRun({ seed: 4, draft: false });
   applyRun(plain, { type: 'play' });
   assert.ok(canReboard(plain.battle));
+});
+
+test('마스터전: 코어 판은 규칙 비틀기 없이 같은 규칙에 더 높은 목표, 옛 판은 비틀기 그대로', () => {
+  const plainRules = createBattle({ seed: 1 }).rules;
+  const KEYS = ['kings', 'fog', 'noHeavyDrop', 'noReply', 'moves', 'discards'];
+  const seen = new Set();
+  for (const seed of [5, 6, 7]) {
+    const core = createRun({ seed, core: true }), old = createRun({ seed, draft: false });
+    for (let ante = 1; ante <= 8; ante++) {
+      for (const run of [core, old]) { run.ante = ante; run.blind = 2; run.boards = null; run.phase = 'select'; applyRun(run, { type: 'play' }); }
+      const id = blindInfo(core).master;
+      seen.add(id);
+      const spec = core.battle.mods.find((m) => m.id === id);
+      assert.ok(spec && spec.off === true, `${id}: 이름 · 초상은 남고 조정자는 꺼짐`);
+      for (const k of KEYS) assert.equal(core.battle.rules[k] ?? plainRules[k], plainRules[k], `${id}: ${k}`);
+      // 판 짓기가 읽는 값(GEN_RULES)도 기본값: 옛 판에서 비틀기가 바꾸는 값이 코어 판에선 그대로
+      assert.ok(!core.battle.board.some((c) => c && c.t === 'X'), `${id}: 벽`);
+      assert.equal(core.battle.board.filter((c) => c && c.t === 'K' && !c.mine).length, 1, `${id}: 킹 하나`);
+      assert.ok(!old.battle.mods.find((m) => m.id === id).off, `옛 판 ${id}`);
+      core.battle = null; old.battle = null;
+    }
+  }
+  assert.equal(seen.size >= 6, true, [...seen].join(' '));
+  // 옛 판의 비틀기는 그대로(대가 킹 둘 · 모래시계 수 2 · 안개 세 줄)
+  const tw = (id) => createBattle({ seed: 1, mods: [{ id }] }).rules;
+  assert.equal(tw('grandmaster').kings, 2); assert.equal(tw('hourglass').moves, 2); assert.equal(tw('fog').fog, 3);
+  const offd = (id) => createBattle({ seed: 1, mods: [{ id, off: true }] }).rules;
+  assert.equal(offd('grandmaster').kings, 1); assert.equal(offd('hourglass').moves, 4); assert.equal(offd('fog').fog, 0);
+  // 화면 글: 비틀기 글 자리에 한 줄
+  for (const m of MASTERS) { assert.equal(masterText(m, true), CORE_MASTER_TEXT); assert.equal(masterText(m, false), m.text); }
 });
 
 test('시너지: 칩이 문턱을 넘어도 뼈대 판에선 조정자 · 끌어당김이 켜지지 않는다', () => {
