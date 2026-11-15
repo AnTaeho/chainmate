@@ -184,7 +184,7 @@ test('튜토리얼에서 가르친 도움말 팁은 그 수업을 끝낸 사람�
   hint(app, 'incoming', 'sq:1');
   assert.equal(app.hintNow.length, 1, '「바로 시작」한 사람에게는 뜬다');
   app.hintNow = null;
-  app.records.lessonsSeen = { reinforce: true };
+  app.records.lessonsSeen = { playout: true };
   hint(app, 'incoming', 'sq:1');
   hint(app, 'next', 'next');
   assert.deepEqual(app.hintNow.map((c) => c.id), ['next'], '튜토리얼에 없는 것만');

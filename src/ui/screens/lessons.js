@@ -1,13 +1,13 @@
 // 튜토리얼 목록: 장 셋(기초 · 대국 · 판), 끝낸 수업에 표, 아래 큰 단추 「이어서」(안 끝낸 첫 수업부터 차례로). 누르면 그 수업 하나.
-// 흐름(처음 켬 덮개 「튜토리얼부터」 · 「이어서」 → 수업을 차례로 → 끝 카드 「새 판」)과 수업 「상점과 시너지」(연습용 판 위에서 따라 하는 길)도 여기서.
+// 흐름(처음 켬 덮개 「튜토리얼부터」 · 「이어서」 → 수업을 차례로 → 끝 카드 「새 판」)과 수업 「상점」(코어 판 연습용 판 위에서 따라 하는 길)도 여기서.
 import { PAL } from '../../render/palette.js';
 import { W, H, text, box, rect, R_SM } from '../../render/gfx.js';
 import { button } from '../ui.js';
 import { createRun } from '../../sim/run.js';
 import { createRng, fork } from '../../sim/rng.js';
-import { LESSONS, LESSON_GROUPS, SHOP_FAMILY_SAY } from '../lessons.js';
+import { LESSONS, LESSON_GROUPS } from '../lessons.js';
 import { startGuide, kingNoteLayout, kingNote } from '../coach.js';
-import { TERMS, TERM_GROUPS, termWord, termSay } from '../glossary.js';
+import { TERMS, TERM_GROUPS, termWord, termSay, termShown } from '../glossary.js';
 import { pageHead, pageButtons, bottomBar } from './common.js';
 import { wrapName, drawName } from '../parts.js';
 import { PAGE, PAD_BOX, LINE, LINE_TITLE, GAP_GROUP, BTN_H, BTN_HERO, SP, flow, textY } from '../frame.js';
@@ -78,17 +78,18 @@ finishLessons.mark = (app, id) => {
 const playLabel = (app) => (app.hasSave() ? '이어 하기' : '새 판');
 function play(app) { app.lessonFrom = null; if (!app.continueRun()) app.newRun(); }
 
-// 수업 ⑩ 상점과 시너지: 연습용 판(남기지 않는다)의 상점에서 격언 사기 → 팩 열기 → 나이트 고르기 → 격언 하나 더 → 시너지 띠.
-// 처음부터 열려 있는 격언 · 체스 기물만 쓴다(해금 단계 0)
+// 수업 「상점」: 코어 판 연습용 판(남기지 않는다)의 상점에서 격언 사기 → 팩 열기 → 나이트 고르기 → 기보 사기 → 왼쪽 칸에 쌓인 기보.
+// 코어 판 상점에 실제로 있는 것(격언 · 기보 · 기물 팩)만 쓴다
 export function startLessonShop(app, i) {
-  const run = createRun({ seed: 3, draft: false, unlockTier: 0 });
+  const run = createRun({ seed: 3, core: true });
   run.scratch = true;
-  run.money = 14;
+  run.money = 12;
   run.phase = 'shop';
   run.shop = {
+    ante: run.ante, blind: run.blind,
     rng: fork(createRng(3), 'lesson-shop'),
-    display: [{ kind: 'maxim', id: 'chivalry', price: 5, sold: false }, { kind: 'maxim', id: 'first_move', price: 4, sold: false }],
-    packs: [{ kind: 'piece', price: 4, sold: false }, { kind: 'chart', price: 4, sold: false }],
+    display: [{ kind: 'maxim', id: 'chivalry', price: 5, sold: false }, { kind: 'chart', form: 'N', price: 3, sold: false }],
+    packs: [{ kind: 'piece', price: 4, sold: false }],
     rerolls: 0, promoted: false, removed: false,
   };
   app.run = run;
@@ -106,8 +107,8 @@ export function startLessonShop(app, i) {
         return true;
       } },
     { screen: 'pack', target: 'pack:pick:0', say: '나이트를 골라 봐. 기사도는 나이트로 시작할 때 효과를 내', done: () => run.phase === 'shop' && on('shop') && run.deck.filter((p) => p.t === 'N').length > knights },
-    { screen: 'shop', target: 'shop:buy:1', say: '격언 「첫수」도 사 봐. 기사도와 같은 기사 시너지야', done: () => run.maxims.length > 1 },
-    { screen: 'shop', target: 'fam:leap', say: SHOP_FAMILY_SAY, ok: true },
+    { screen: 'shop', target: 'shop:buy:1', say: '기보 「나이트 모습」도 사 봐. 나이트 모습으로 잡을 때 값과 배수가 늘어', done: () => run.charts.N > 0 },
+    { screen: 'shop', target: 'build:chart:N', say: '산 기보는 왼쪽 칸에 쌓여. 같은 기보를 또 사면 더 세져', ok: true },
   ], () => lessonDone(app, i));
 }
 
@@ -197,7 +198,7 @@ export class LessonsScreen {
     // 판 밖 틀: 머리줄(제목 · 탭) + 본 칸 + 맨 아래 단추 줄(돌아가기 왼쪽 · 쪽 넘기기 오른쪽)
     // 큰 제목 오른쪽 가운데 줄에 탭. 다 안 들어가면 작은 제목 · 윗줄 탭(옛 머리줄)
     const tab = this.termTab || 'battle';
-    pageHead(ctx, '용어 사전', null, { big: true, tabs: { ui, prefix: 'terms', list: TERM_GROUPS, cur: tab, go: (id) => { this.termTab = id; this.termPage = 0; } } });
+    pageHead(ctx, '용어 사전', null, { big: true, tabs: { ui, prefix: 'terms', list: this.termGroups(), cur: tab, go: (id) => { this.termTab = id; this.termPage = 0; } } });
     const pages = this.termPages(tab);
     const page = Math.min(this.termPage || 0, pages.length - 1);
     const pg = pages[page];
@@ -212,12 +213,15 @@ export class LessonsScreen {
     if (pages.length > 1) pageButtons(ctx, ui, 'terms', page, pages.length, (p) => { this.termPage = p; });
     bottomBar(ctx, ui, { back: { id: 'lessons:back', onClick: () => { this.terms = false; } } });
   }
+  // 지금 판 규칙에 있는 낱말만(코어 판 — 옛 판 ?full이면 옛 낱말 전부). 낱말이 하나도 없는 묶음(코어 판의 시너지)은 탭도 없다
+  termList(tab) { return TERMS.filter((q) => q.group === tab && termShown(q.id, !this.app.full)); }
+  termGroups() { return TERM_GROUPS.filter(([id]) => this.termList(id).length); }
   // 한 묶음의 낱말을 쪽으로 나눈다: 낱말마다 풀이 줄들(본문 줄), 낱말 사이 GAP_GROUP. 쪽 높이는 상자 안 여백 안(TERM_BOX.h)
   termPages(tab) {
     const pages = [{ rows: [] }];
     const y0 = PAGE.bodyY + PAD_BOX, yEnd = PAGE.bodyY + TERM_BOX.h - PAD_BOX;
     let y = y0;
-    for (const t of TERMS.filter((q) => q.group === tab)) {
+    for (const t of this.termList(tab)) {
       const lines = wrap(termSay(t.id), W - TERM_BOX.x - PAD_BOX - TERM_DEF_X);
       const h = lines.length * LINE;
       const cur = pages[pages.length - 1];

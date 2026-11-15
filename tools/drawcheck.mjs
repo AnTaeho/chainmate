@@ -322,22 +322,21 @@ const PLAY = async ({ k, sac = false }) => {
     await h.ev(() => window.__app.go('lesson', { index: 0, phase: 'play' })); await h.step(60);
     for (let k = 0; k < 8; k++) {
       await h.settle();
-      const tgt = await h.ev(() => { const s = window.__app.screen; if (s.name !== 'lesson') return null; const st = s.step; if (!st) return null; const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : st.moves ? 'btn:moves' : null; if (id) return id; const t = s.clickable(); return t.list.length ? `sq:${t.list[0]}` : null; });
+      const tgt = await h.ev(() => { const s = window.__app.screen; if (s.name !== 'lesson') return null; const st = s.step; if (!st) return null; const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : null; if (id) return id; const t = s.clickable(); return t.list.length ? `sq:${t.list[0]}` : null; });
       if (!tgt) break;
       await h.press(new RegExp(`^${tgt}$`), 30);
-      if (tgt === 'btn:moves') { await h.hoverAll(/^moves:/, 4, 6); await h.ev(() => window.__app.key('Escape')); await h.step(20); }
     }
     await h.step(200);
   });
-  // 「행마」 걸음이 있는 수업(체스 밖의 행마): 행마 단추 숨 쉬는 테 → 행마 보기 → 닫고 이어 두기
-  await scene(page, 'lesson moves step', async () => {
-    await h.ev(async () => { const { LESSONS } = await import('/src/ui/lessons.js'); window.__app.go('lesson', { index: LESSONS.findIndex((L) => L.id === 'fairy'), phase: 'play' }); }); await h.step(90);
+  // 두 수짜리 수업(배수는 다음 수로 이어진다): 첫 걸음에 행마 보기를 열고 닫은 뒤 두 수를 끝까지 — 이어 온 배수 칸 · 둘째 수
+  await scene(page, 'lesson two moves', async () => {
+    await h.ev(async () => { const { LESSONS } = await import('/src/ui/lessons.js'); window.__app.go('lesson', { index: LESSONS.findIndex((L) => L.id === 'streak'), phase: 'play' }); }); await h.step(90);
+    await h.press(/^btn:moves$/, 40); await h.hoverAll(/^moves:/, 4, 6); await h.ev(() => window.__app.key('Escape')); await h.step(30);
     for (let k = 0; k < 8; k++) {
       await h.settle();
-      const tgt = await h.ev(() => { const s = window.__app.screen; if (s.name !== 'lesson') return null; const st = s.step; if (!st) return null; const id = st.pick != null ? `hand:${st.pick}` : st.moves ? 'btn:moves' : null; if (id) return id; const t = s.clickable(); return t.list.length ? `sq:${t.list[0]}` : null; });
+      const tgt = await h.ev(() => { const s = window.__app.screen; if (s.name !== 'lesson') return null; const st = s.step; if (!st) return null; const id = st.pick != null ? `hand:${st.pick}` : null; if (id) return id; const t = s.clickable(); return t.list.length ? `sq:${t.list[0]}` : null; });
       if (!tgt) break;
       await h.press(new RegExp(`^${tgt}$`), 30);
-      if (tgt === 'btn:moves') { await h.step(40); await h.hoverAll(/^moves:/, 4, 6); await h.ev(() => window.__app.key('Escape')); await h.step(30); }
     }
     await h.step(240);
   });

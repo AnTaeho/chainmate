@@ -1027,7 +1027,7 @@ async function playOne(seed, { inject = null, opening = null, dan = null, daily 
   return run;
 }
 
-// 튜토리얼 수업: 시범을 끝까지 보고, 누를 수 없는 칸은 반응이 없고, 걸음대로 두면 이긴다. 「행마」 걸음은 행마 보기를 열고 닫는다.
+// 튜토리얼 수업: 시범을 끝까지 보고, 누를 수 없는 칸은 반응이 없고(든 기물은 그대로), 걸음대로 두면 이긴다. 「배수」 수업 첫 걸음에서 「행마」 보기를 열고 닫는다.
 // 킹의 말 상자(오른쪽 칸 위)는 손 이름표 줄 위에 들어간다. pauseAt: 그 걸음에서 멈춤을 열고 닫아 본다
 function playLesson(i, { pauseAt = -1 } = {}) {
   const s = app.screen;
@@ -1044,13 +1044,15 @@ function playLesson(i, { pauseAt = -1 } = {}) {
     const king = LL.LOG.boxes.find((b) => b.name === '킹 말 · 할 일');
     if (!king || king.x !== 360 || king.y + king.h > region('btn:discard').y - 2) tutSeen.bad.push(`수업 ${i} 걸음 ${k}: 킹 말 상자 자리 ${king ? `${king.x},${king.y},${king.h}` : '없음'}`);
     if (k === pauseAt) pauseCheck(`수업 ${i} 걸음 ${k}`);
-    if (st.moves) {
+    if (k === 0 && p.L.id === 'streak') {
       click('btn:moves'); pump(2);
       if (screen() !== 'moves') throw new Error(`lesson ${i}: moves overlay did not open`);
       notesCheck();
       tutSeen.moves++;
       click('moves:back'); pump(1);
-    } else if (st.pick != null) {
+      if (p.si !== k) throw new Error(`lesson ${i}: moves overlay moved the step`);
+    }
+    if (st.pick != null) {
       if (st.pick > 0 || p.view.hand.length > 1) { click(`hand:${p.view.hand.length - 1 === st.pick ? 0 : p.view.hand.length - 1}`); if (p.sel.length) throw new Error('lesson picked a wrong piece'); }
       click(`hand:${st.pick}`);
     } else if (st.discard) click('btn:discard');
@@ -1062,7 +1064,8 @@ function playLesson(i, { pauseAt = -1 } = {}) {
         const off = [...Array(64).keys()].find((sq) => !list.includes(sq) && !p.view.board[sq]);
         click(`sq:${off}`);
         if (p.busy || p.hold.b.status !== 'play') throw new Error('lesson reacted to a wrong square');
-        if (!p.sel.length) click(`hand:${p.steps[k - 1].pick}`);
+        // 빛나지 않는 칸을 눌러도 든 기물 · 걸음은 그대로(내려놓으면 빛나는 칸을 눌러도 반응이 없었다 — CHM-79 사람 판)
+        if (!p.sel.length || p.at !== k) { tutSeen.bad.push(`수업 ${i} 걸음 ${k}: 빛나지 않는 칸을 누르자 든 기물을 내려놓음`); click(`hand:${p.steps[k - 1].pick}`); }
       }
       if (st.cap && list.length !== 1) throw new Error(`lesson ${i} step ${k} shows ${list.length} targets`);
       click(`sq:${list[list.length - 1]}`);
@@ -1082,7 +1085,7 @@ function playShopLesson(i) {
     const st = app.guide.steps[app.guide.i];
     pump(30);
     // 꾸러미 걸음에서 Esc: 꾸러미를 넘기지 않고 멈춤이 열린다 → 계속이면 그 걸음에서 잇는다
-    if (st.screen === 'pack' && screen() === 'pack') pauseCheck('수업 ⑩ 꾸러미');
+    if (st.screen === 'pack' && screen() === 'pack') pauseCheck('수업 상점 팩');
     if (st.ok) click('guide:ok'); else click(st.target);
     pump(30);
   }
@@ -1108,7 +1111,7 @@ function lessons() {
   pump(1);
 }
 const movesTabs = [];
-// 수업 · 따라 하는 길(수업 「상점과 시너지」) 중의 멈춤: Esc · ≡ 단추가 늘 멈춤을 열고, 닫으면 같은 걸음에서 잇는다
+// 수업 · 따라 하는 길(수업 「상점」) 중의 멈춤: Esc · ≡ 단추가 늘 멈춤을 열고, 닫으면 같은 걸음에서 잇는다
 const pauseSeen = { esc: 0, button: 0, lessonTitle: 0, bad: [] };
 function pauseCheck(where) {
   const g = app.guide, i0 = g && g.i, sc = app.screen, si = sc.si, phase = app.run && app.run.phase;
@@ -1172,7 +1175,7 @@ const t0 = performance.now();
 await start();
 firstLaunch();
 lessons();
-// 수업 「상점과 시너지」 중 멈춤 → 타이틀로: 길과 연습 판이 함께 닫힌다
+// 수업 「상점」 중 멈춤 → 타이틀로: 길과 연습 판이 함께 닫힌다
 {
   click('title:lesson');
   const i = lessonMod.LESSONS.findIndex((L) => L.shop);
@@ -1186,7 +1189,7 @@ lessons();
   click('lessons:back');
   pump(1);
 }
-// 이 뒤의 판은 튜토리얼을 건너뛴 사람처럼 둔다: 튜토리얼이 가르친 도움말 팁(격언 · 팩 · 시너지 · 증원 · 특수 기물 · 탁월수)도 자리를 재려고
+// 이 뒤의 판은 튜토리얼을 건너뛴 사람처럼 둔다: 튜토리얼이 가르친 도움말 팁(격언 · 팩 · 증원 · 이어 온 배수 · 끊김 · 끝까지 두기)도 자리를 재려고
 app.records.lessonsSeen = {}; app.records.lessonsDone = false; app.saveRecords();
 const results = [];
 for (let k = 0; k < RUNS; k++) results.push(await playOne(SEED + k));
@@ -2137,7 +2140,7 @@ function playNow(seed) {
   click('title:continue');
   if (screen() !== 'battle') paths.bad.push(`이어 하기가 첫 대국으로 돌아오지 않았다(${screen()})`);
   checkShops('멈춤 → 이어 하기', walkShops('resume'));
-  // ④ 튜토리얼을 다 끝낸 기기의 새 판: 튜토리얼이 가르친 안내(격언 · 팩 · 시너지 · 증원 · 특수 기물 · 탁월수)는 뜨지 않는다
+  // ④ 튜토리얼을 다 끝낸 기기의 새 판: 튜토리얼이 가르친 안내(격언 · 팩 · 증원 · 이어 온 배수 · 끊김 · 끝까지 두기)는 뜨지 않는다
   await freshBoot();
   app.records.tutorialAsked = true; app.records.lessonsDone = true;
   app.records.lessonsSeen = Object.fromEntries(lessonMod.LESSONS.map((L) => [L.id, true]));

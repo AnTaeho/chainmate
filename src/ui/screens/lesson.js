@@ -61,7 +61,6 @@ export class LessonScreen extends BattleScreen {
   stepXY(st) {
     const reg = (id, dy = 16) => { const r = this.app.ui.regions.find((x) => x.id === id); return r ? { x: r.x + r.w / 2, y: r.y + Math.min(dy, r.h / 2) } : null; };
     if (st.pick != null) return reg(`hand:${st.pick}`) || { x: 380, y: 240 };
-    if (st.moves) return reg('btn:moves', 6) || { x: 440, y: 10 };
     if (st.discard) return reg('btn:discard', 8) || { x: 440, y: 210 };
     let sq = lessonSq(st.drop ?? st.cap);
     if (sq == null && 'drop' in st) sq = this.clickable().list[0];
@@ -98,8 +97,7 @@ export class LessonScreen extends BattleScreen {
   }
   // 걸음 하나를 실제로(시범 손가락)
   doStep(st) {
-    if (st.moves) this.si++; // 시범은 「행마」를 가리켜 누르기만 한다(덮개는 내 차례에 연다)
-    else if (st.pick != null) this.toggle(st.pick);
+    if (st.pick != null) this.toggle(st.pick);
     else if (st.discard) this.discard();
     else {
       let sq = lessonSq(st.drop ?? st.cap);
@@ -136,6 +134,8 @@ export class LessonScreen extends BattleScreen {
   }
   clickSq(sq) {
     if (!this.canAct()) return;
+    // 내 차례에 빛나지 않는 칸을 누르면 흔들기만 하고 든 기물은 그대로 둔다(대국처럼 내려놓으면 걸음이 앞으로 돌아가 빛나는 칸을 눌러도 반응이 없었다)
+    if (this.phase === 'play' && !this.busy && !this.clickable().list.includes(sq)) { this.missSq(sq); return; }
     super.clickSq(sq);
   }
   discard() {
@@ -143,11 +143,9 @@ export class LessonScreen extends BattleScreen {
     if (!this.canAct() || !st || !st.discard) return;
     super.discard();
   }
-  // 「행마」: 언제든 열 수 있고, 「행마」 걸음이면 넘어간다
+  // 「행마」: 내 차례에 언제든 열 수 있다
   openMoves() {
     if (this.phase !== 'play') return;
-    const st = this.step;
-    if (st && st.moves) this.si++;
     super.openMoves();
   }
   // 명령이 실제로 나가면 걸음을 넘긴다
@@ -223,11 +221,11 @@ export class LessonScreen extends BattleScreen {
     const won = this.ended && this.hold.b.status === 'won';
     kingNote(ctx, this.app, RX, TOP, RW, this.say, lay, { joy: won, name: '킹 말 · 할 일', line: (l, x, y) => richText(ctx, l, x, y, PAL.cardInk, { termCol: PAL.goldDk, ui }) });
   }
-  // 누를 곳이 손이면 그 카드에 숨 쉬는 테, 희생 · 행마면 단추에(이름표 줄의 「행마」까지 그린 뒤)
+  // 누를 곳이 손이면 그 카드에 숨 쉬는 테, 희생이면 단추에
   drawPress(ctx, ui) {
     const st = this.step;
     if (this.phase === 'play' && st && !this.busy) {
-      const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : st.moves ? 'btn:moves' : null;
+      const id = st.pick != null ? `hand:${st.pick}` : st.discard ? 'btn:discard' : null;
       const r = id && ui.regions.find((x) => x.id === id);
       if (!r) return;
       motion(); ctx.globalAlpha = 0.5 + 0.4 * Math.sin(this.app.time * 6);

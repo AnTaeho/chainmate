@@ -1,7 +1,7 @@
 // 처음 안내: 무언가를 처음 만나는 순간에 그 자리를 가리키는 한 줄(말풍선 + 화살표).
 //   hint  — 화면이 그리는 중에 app.hint(id, 구역 id)로 부른다. 처음 한 번만, 누르면 사라지고 본 것으로 적는다.
 //           설정 「처음 안내」로 끄고, 「안내 다시 보기」로 본 기록을 지운다.
-//   guide — 수업 「상점과 시너지」처럼 차례로 따라 하는 길. 지금 가리키는 구역만 누를 수 있다.
+//   guide — 수업 「상점」처럼 차례로 따라 하는 길. 지금 가리키는 구역만 누를 수 있다.
 //   TAUGHT — 튜토리얼 수업이 가르친 안내. 그 수업을 끝낸 사람에게는 판 안에서 다시 말하지 않는다(records.lessonsSeen).
 //   말하는 이는 내 편 킹(bubble): 상아 몸 · 금관 킹이 말풍선 머리에서 말하고, 말할 때 살짝 들썩이며 기쁠 때 금관이 반짝인다.
 import { PAL } from '../render/palette.js';
@@ -101,8 +101,9 @@ export function gestureIcon(ctx, kind, x, y) {
 
 // 안내 id → 그것을 가르치는 튜토리얼 수업 id(src/ui/lessons.js). 여기 없는 안내는 튜토리얼에 없는 것이라 처음 한 번 뜬다
 export const TAUGHT = {
-  firstDrop: 'become', incoming: 'reinforce', fairy: 'fairy',
-  shop: 'shop', pack: 'shop', family: 'shop',
+  firstDrop: 'become', streak: 'streak', streakCut: 'cut',
+  incoming: 'playout', playOut: 'playout',
+  shop: 'shop', pack: 'shop',
 };
 export const taught = (app, id) => !!(TAUGHT[id] && app.records.lessonsSeen && app.records.lessonsSeen[TAUGHT[id]]);
 const seen = (app, id) => !!(app.records.coachSeen && app.records.coachSeen[id]) || taught(app, id);

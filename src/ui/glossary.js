@@ -16,9 +16,15 @@ const T = (id, group, word, enWord, re, en, say, enSay, basic = false) => ({ id,
 const CORE_SAY = {
   mate: ['지키는 적이 없는 킹을 잡으면 곧바로 이긴다', 'Take an unguarded king and win at once'],
   master: ['세력의 우두머리. 관의 마지막 대국을 더 높은 목표로 둔다', "The faction's leader. Plays the hall's last match at a higher target"],
+  match: ['수를 다 두었을 때 목표 점수를 넘으면 이기는 한 번의 승부', 'One game you win by being past the Target when your moves run out'],
 };
 let termCore = false;
 export const setTermCore = (on) => { termCore = !!on; };
+// 코어 판에 없는 낱말(용어 사전이 코어 판 기준으로 감춘다 — 옛 판 ?full이면 보인다). 이어 온 배수는 코어 판에만 있다
+const CORE_HIDE = new Set(['set', 'brilliant', 'challenge', 'nemesis', 'scroll', 'golden', 'trait', 'wall', 'gem', 'step',
+  'engraving', 'soul', 'joseki', 'tactic', 'evolve', 'fairy', 'edition', 'fragment', 'feat']);
+const coreHidden = (id) => CORE_HIDE.has(id) || id.startsWith('fam_') || id.startsWith('p_');
+export const termShown = (id, core) => (core ? !coreHidden(id) : id !== 'streak');
 // 기본 낱말(basic): 첫 수업이 가르치는 말. 글 안에서 빛깔을 받지 않고 카드 옆 상자도 띄우지 않는다(docs/design-notes/voice.md).
 //   그 낱말 자체를 가리킬 때({ id } 꼴로 넘길 때)만 상자가 뜬다.
 const B = (...a) => T(...a, true);

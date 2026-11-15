@@ -557,9 +557,11 @@ export function createApp({ canvas, storage = null, now = () => 0, reducedMotion
 
   app.draw = () => {
     const ui = app.ui;
-    // 코어 판을 그리는 동안(판 밖 화면 · 수업 판 빼고): 시너지 칩 · 상자를 그리지 않는다(parts.js VIEW)
-    VIEW.core = !!(app.run && app.run.core && !app.run.scratch && !(app.screen && OUTSIDE.has(app.screen.name)));
-    setTermCore(VIEW.core); // 낱말 풀이도 코어 판 규칙으로(체크메이트 — 외통 조건 없음)
+    // 코어 판을 그리는 동안(판 밖 화면 빼고 — 수업 「상점」의 연습용 판도 코어 판): 시너지 칩 · 상자를 그리지 않는다(parts.js VIEW)
+    VIEW.core = !!(app.run && app.run.core && !(app.screen && OUTSIDE.has(app.screen.name)));
+    // 낱말 풀이도 코어 판 규칙으로(체크메이트 — 외통 조건 없음). 수업은 늘 코어 판, 용어 사전은 옛 판(?full)이 아니면 코어 판
+    const sn = app.screen && app.screen.name;
+    setTermCore(VIEW.core || sn === 'lesson' || (sn === 'lessons' && !app.full));
     planFold = null;
     ui.begin();
     ui.finger = fingerDots(app);

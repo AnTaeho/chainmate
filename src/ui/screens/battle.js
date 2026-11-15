@@ -520,7 +520,9 @@ export class BattleScreen {
 
   toggle(i) {
     const b = this.live();
-    if (this.busy || this.rv || !b || b.status !== 'play' || i >= b.hand.length) return;
+    // 연출 중에 손 카드를 누르면 칸을 누를 때처럼 연출을 빨리 감는다(아무 반응 없이 삼키면 눌러도 안 먹는 것처럼 보였다)
+    if (this.busy) { this.fast = true; return; }
+    if (this.rv || !b || b.status !== 'play' || i >= b.hand.length) return;
     // 손은 하나만 든다: 다른 기물을 누르면 바꿔 들고, 든 것을 다시 누르면 놓는다
     this.sel = this.sel.includes(i) ? [] : [i];
     this.targets = null;
